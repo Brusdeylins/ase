@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+
+const path = require("node:path")
+const fs   = require("node:fs")
+
+const md = fs.readFileSync(path.join(process.env.CLAUDE_PLUGIN_ROOT, "meta/soul.md"), "utf8")
+
+const result = {
+    "hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": md
+    }
+}
+
+process.stdout.write(JSON.stringify(result))
+
