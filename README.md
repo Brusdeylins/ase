@@ -2,7 +2,12 @@
 Agentic Software Engineering (ASE)
 ==================================
 
+> [!Note]
+> **ASE** is still under heavy development, fully incomplete and hence
+> not ready for any production use. Visit this repository later, plase!
+
 https://ase.tools
+
 https://github.com/rse/ase
 
 ```
