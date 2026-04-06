@@ -1,5 +1,5 @@
 ---
-name: code-elaborate
+name: ase-code-elaborate
 description: "Elaborate on a source code problem in depth to fix it."
 model: opus
 effort: high

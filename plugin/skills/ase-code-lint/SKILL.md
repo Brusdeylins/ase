@@ -1,5 +1,5 @@
 ---
-name: code-lint
+name: ase-code-lint
 argument-hint: "[source-reference]"
 description: Lint Source Code
 user-invocable: true
@@ -10,7 +10,7 @@ effort: medium
 ---
 
 <execute>
-@${CLAUDE_SKILL_DIR}/../../meta/prolog.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 </execute>
 
 <command>

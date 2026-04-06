@@ -3,7 +3,7 @@
 const path = require("node:path")
 const fs   = require("node:fs")
 
-const md = fs.readFileSync(path.join(process.env.CLAUDE_PLUGIN_ROOT, "meta/soul.md"), "utf8")
+const md = fs.readFileSync(path.join(process.env.CLAUDE_PLUGIN_ROOT, "meta/ase-soul.md"), "utf8")
 
 const result = {
     "hookSpecificOutput": {

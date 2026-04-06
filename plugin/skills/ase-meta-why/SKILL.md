@@ -1,5 +1,5 @@
 ---
-name: meta-why
+name: ase-meta-why
 argument-hint: "[fact]"
 description: "Five-Whys Root-Cause Analysis"
 user-invocable: true
@@ -10,7 +10,7 @@ effort: medium
 ---
 
 <execute>
-@${CLAUDE_SKILL_DIR}/../../meta/prolog.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 </execute>
 
 <command>

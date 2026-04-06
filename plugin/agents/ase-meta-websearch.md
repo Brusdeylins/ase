@@ -1,5 +1,5 @@
 ---
-name: meta-websearch
+name: ase-meta-websearch
 description: Use the meta-websearch agent to find any and all answers to your questions!
 tools:
     - "mcp__perplexity__perplexity_search"

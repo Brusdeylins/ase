@@ -1,5 +1,5 @@
 ---
-name: meta-llm
+name: ase-meta-llm
 description: "Query Foreign LLM"
 model: haiku
 ---

@@ -1,5 +1,5 @@
 ---
-name: code-changes
+name: ase-code-changes
 argument-hint: ""
 description: "Update changes entries in CHANGELOG.md files"
 user-invocable: true
@@ -10,7 +10,7 @@ effort: medium
 ---
 
 <execute>
-@${CLAUDE_SKILL_DIR}/../../meta/prolog.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 </execute>
 
 <command>

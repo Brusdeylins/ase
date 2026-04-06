@@ -1,5 +1,5 @@
 ---
-name: code-analyze
+name: ase-code-analyze
 description: "Analyze the source code for problems in the logic and semantics and its related control flow."
 model: opus
 effort: low

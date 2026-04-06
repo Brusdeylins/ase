@@ -1,5 +1,5 @@
 ---
-name: prolog
+name: ase-skill
 argument-hint: "[none]"
 description: Skill Meta Information
 user-invocable: false
