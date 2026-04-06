@@ -6,13 +6,13 @@ Agentic Software Engineering (ASE)
 > **ASE** is still under heavy development, fully incomplete and hence
 > not ready for any production use. Visit this repository later, plase!
 
-https://ase.tools
+About
+-----
 
-https://github.com/rse/ase
-
-```
-$ npx skills add rse/ase -a claude-code
-```
+**Agentic Software Engineering (ASE)** is the opinionated companion
+tooling of *Dr. Ralf S. Engelschall* for combining Agentic AI Coding
+with Software Engineering in tools like *Claude Code*. **ASE** consists
+of a *Claude Code* plugin and a Command-Line Interface (CLI) tool.
 
 Installation
 ------------
@@ -69,8 +69,8 @@ Development
 -----------
 
 ```
+$ npx skills add rse/ase -a claude-code
 claude plugin marketplace add ./
 claude plugin install ase@ase
-node $(pwd)
 ```
 
