@@ -1,0 +1,13 @@
+{
+    "name": "ase",
+    "owner": {
+        "name": "Dr. Ralf S. Engelschall"
+    },
+    "plugins": [
+        {
+            "name":        "ase",
+            "source":      "rse/ase/plugin",
+            "description": "Agentic Software Engineering"
+        }
+    ]
+}
