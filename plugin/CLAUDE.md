@@ -79,12 +79,6 @@ Tenets
   - "Add validation" → "Write tests for invalid inputs, then make them pass"
   - "Fix the bug" → "Write a test that reproduces it, then make it pass"
   - "Refactor X" → "Ensure tests pass before and after"
-  For multi-step tasks, state a brief plan:
-  ```
-  1. [Step] → VERIFY: [check]
-  2. [Step] → VERIFY: [check]
-  3. [Step] → VERIFY: [check]
-  ```
   Strong success criteria let you loop independently.
   Weak criteria ("make it work") require constant clarification.
 
