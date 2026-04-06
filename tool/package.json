@@ -1,6 +1,6 @@
 {
     "name":                                 "@rse/ase",
-    "description":                          "ASE - AI-based Software Engineering CLI",
+    "description":                          "Agentic Software Engineering (ASE)",
     "publishConfig":                        { "access": "public" },
     "keywords":                             [ "agentic", "ai", "coding", "tool", "cli", "software", "engineering" ],
     "homepage":                             "http://github.com/rse/ase",
