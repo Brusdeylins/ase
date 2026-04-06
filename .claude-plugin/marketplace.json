@@ -7,7 +7,7 @@
         {
             "name":        "ase",
             "source":      "./plugin/",
-            "description": "Agentic Software Engineering"
+            "description": "Agentic Software Engineering (ASE)"
         }
     ]
 }
