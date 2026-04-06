@@ -6,7 +6,7 @@
 
 CLAUDE = ~/.local/bin/claude
 
-all: update
+all: reinstall
 
 install:
 	$(CLAUDE) plugin marketplace add ./
