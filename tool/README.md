@@ -35,3 +35,8 @@ Agents
 - OPS (Operations)
   Objective: Solution Operations
 
+- spec req
+- arch arc
+- code src
+- docs doc
+

@@ -1,5 +1,5 @@
 ---
-name: lint
+name: code-lint
 argument-hint: "[source-reference]"
 description: Lint Source Code
 user-invocable: true
