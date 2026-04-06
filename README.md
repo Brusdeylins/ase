@@ -18,59 +18,47 @@ Installation
 ------------
 
 ```
+#   install ASE tool
 npm install -g @rse/ase
 ```
 
 ```
+#   install ASE plugin
 claude plugin marketplace add rse/ase
 claude plugin install ase@ase
-```
-
-```
-/plugin marketplace add rse/ase
-/plugin install ase@ase
 ```
 
 Update
 ------
 
 ```
+#   update ASE tool
 npm update -g @rse/ase
 ```
 
 ```
+#   update ASE plugin
 claude plugin marketplace update ase
 claude plugin update ase@ase
 ```
 
-```
-/plugin marketplace update ase
-/plugin update ase@ase
-```
-
-Deinstallation
+Uninstallation
 --------------
 
 ```
+#   uninstall ASE tool
 npm uninstall -g @rse/ase
 ```
 
 ```
+#   uninstall ASE plugin
 claude plugin uninstall ase@ase
 claude plugin marketplace remove ase
 ```
 
-```
-/plugin uninstall ase@ase
-/plugin marketplace remove ase
-```
+Copyright & License
+-------------------
 
-Development
------------
-
-```
-$ npx skills add rse/ase -a claude-code
-claude plugin marketplace add ./
-claude plugin install ase@ase
-```
+Copyright &copy; 2025-2026 [Dr. Ralf S. Engelschall](https://engelschall.com)<br/>
+Licensed under [GPL 3.0](https://spdx.org/licenses/GPL-3.0-only)
 
