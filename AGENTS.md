@@ -1,8 +1,10 @@
 
-CLAUDE
-------
+## About
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**Agentic Software Engineering (ASE)** is the opinionated companion
+tooling of *Dr. Ralf S. Engelschall* for combining Agentic AI Coding
+with Software Engineering in tools like *Claude Code*. **ASE** consists
+of a *Claude Code* plugin and a Command-Line Interface (CLI) tool.
 
 ## Repository Layout
 
