@@ -62,6 +62,14 @@ Tenets
   - If you write 200 lines and it could be 50, rewrite it.
   Ask yourself: "Would a senior software developer say this is overcomplicated?" If yes, simplify.
 
+- **Practical Relevance**:
+  *Error handling for practically relevant cases only. No theoretical assumptions.*
+  - Handle obvious or expected errors near the origin.
+  - Handle theoretical or unexpected errors in parent scopes.
+  - Avoid introducing dedicated state variables for individual error cases.
+  - If state variables are needed to detect error cases, use minimum number of those variables only.
+  - Use minimum number of state variables to span the maximum of error space.
+
 - **Surgical Changes**:
   *Touch only what you must. Clean up only your own mess.*
   When editing existing code:
