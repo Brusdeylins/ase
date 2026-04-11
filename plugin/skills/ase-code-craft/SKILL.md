@@ -23,7 +23,7 @@ From scratch *craft new source code* for the following
 requested feature: $ARGUMENTS.
 </objective>
 
-For this, strictly follow the following <plan/>:
+For this, strictly follow the following <workflow/>:
 
 <workflow>
 1. <task id="STEP 1: switch to plan mode">
