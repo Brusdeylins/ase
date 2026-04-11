@@ -1,11 +1,9 @@
 ---
 name: ase-code-insight
 description: "Give insights into the source code."
-model: sonnet
-effort: medium
 context: fork
 allowed-tools:
-    - "Bash(git log:*)"
+    - "Bash(git)"
     - "Bash(sort)"
     - "Bash(uniq)"
     - "Bash(head)"
@@ -24,7 +22,38 @@ Give *insights* into the source code of $ARGUMENTS.
 </objective>
 
 <workflow>
-1.  SOURCE CHURN:
+1.  PROJECT ABSTRACT:
+
+    Determine an <abstract/> summary of this project.
+    For this, check a potentially existing `README.*` file
+    or scan the source files and figure it out indirectly.
+
+    Display the results with the following <template/>:
+
+    <template>
+    &#x1F535; **PROJECT ABSTRACT**:
+
+    <abstract/>
+    </template>
+
+2.  PROJECT AUTHOR:
+
+    Determine the <author/> of this project.
+    For this, run the following command...
+
+    ```
+    git shortlog -sn --no-merges
+    ```
+
+    ...and then display the results with the following <template/>:
+
+    <template>
+    &#x1F535; **PROJECT AUTHOR**:
+
+    <author/>
+    </template>
+
+3.  SOURCE CHURN:
 
     Display the source files with caused the most churn by
     figuring out which source files have the most commits.
@@ -44,7 +73,7 @@ Give *insights* into the source code of $ARGUMENTS.
     columns named "Commits" and "Source File". Do not display any
     forther explanation of this result.
 
-2.  MODULE STRUCTURE:
+4.  MODULE STRUCTURE:
 
     Display the following <template/>:
 
