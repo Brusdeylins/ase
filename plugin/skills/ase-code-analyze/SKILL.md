@@ -99,11 +99,11 @@ flow* is found.
      <template>HIGH</template>.
    </hints>
 
-4  FINAL HINT
+4  FINAL HINT:
    Finally, output the following <template/> to give a final hint:
 
    <template>
-   &#x26AA; **HINT** For deeper analysis, suggestions on
+   &#x26AA; **HINT**: For deeper analysis, suggestions on
    solution approaches and then final source code changes, use
    `/ase-code-elaborate P<n>` in the same Claude Code session or or open
    a new Claude Code session and copy & paste one of the above problem
