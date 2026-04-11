@@ -4,7 +4,7 @@ Agentic Software Engineering (ASE)
 
 > [!CAUTION]
 > **ASE** is still under heavy development, fully incomplete and hence
-> not ready for any production use. Visit this repository later, plase!
+> not ready for any production use. Visit this repository later, please!
 
 About
 -----
