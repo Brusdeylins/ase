@@ -55,6 +55,13 @@ flow* is found.
    - Focus on *practically relevant* cases and especially do *not*
      investigate on theoretical or fictive cases.
 
+   - In case of problems related to *obvious or expected* errors,
+     they *should* be handled *near the origin*.
+
+   - In case of problems related to *theoretical or unexpected* errors,
+     they *should* be handled in parent scopes to
+     avoid cluttering the source code with too much error handling at all.
+
    - Focus on the *problem only* and do *not* investigate on any
      possible *solution*.
    </hints>
@@ -91,5 +98,16 @@ flow* is found.
      of <template>LOW</template>, <template>MEDIUM</template> or
      <template>HIGH</template>.
    </hints>
+
+4  FINAL HINT
+   Finally, output the following <template/> to give a final hint:
+
+   <template>
+   &#x26AA; **HINT** For deeper analysis, suggestions on solution
+   approaches and then final source code changes, pass use
+   `/ase-code-elaborate P<n>` or open a new Claude Code instance and
+   copy & paste one of the above problem descriptions as a whole with
+   `/ase-code-elaborate <problem>`.
+   </template>
 </workflow>
 
