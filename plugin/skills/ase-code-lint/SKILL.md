@@ -28,10 +28,10 @@ Your role is an expert-level developer.
 Plan
 ----
 
-Closely follow the following *<plan/>* of distinct *<task/>*,
+Closely follow the following *<workflow/>* of distinct *<task/>*,
 in the given chronological order:
 
-<plan>
+<workflow>
 1.  <task id="PREPARATION">
     Find and read all the corresponding source code files.
     </task>
@@ -206,7 +206,7 @@ in the given chronological order:
 22. <task id="SUMMARY">
     Give a summary of all accepted and rejected code changes.
     </task>
-</plan>
+</workflow>
 
 Procedure
 ---------

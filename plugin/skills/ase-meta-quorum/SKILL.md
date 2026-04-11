@@ -29,17 +29,17 @@ by querying multiple AIs for an optimal consensus.
 PLAN
 ----
 
-Closely follow the following *<plan/>* of distinct *<task/>*,
+Closely follow the following *<workflow/>* of distinct *<task/>*,
 in the given chronological order:
 
-<plan>
+<workflow>
 1. <task id="ANSWER">Determine your own answer.</task>
 2. <task id="PREVIEW">Show your own answer as a sneak preview.</task>
 3. <task id="QUERY">For additional answers, query multiple AIs via *sub-tasks* and the `ase--meta-llm` *agent*.</task>
 4. <task id="SUMMARY">Determine a summary of all answers in total.</task>
 5. <task id="RATING">Determine a consensus rating of all answers.</task>
 6. <task id="OUTPUT">Give a consolidated output.</task>
-</plan>
+</workflow>
 
 EXECUTION
 ---------

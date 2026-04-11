@@ -7,7 +7,7 @@ disable-model-invocation: false
 ---
 
 - *IMPORTANT*: You *MUST* read and sequentially execute every <task/> in
-  a <plan/> *EXACTLY* as the instructions specify.
+  a <workflow/> *EXACTLY* as the instructions specify.
 
 - *IMPORTANT*: For any <task/> that specifies an *agent* in its
   `agent="[...]"` XML attribute, you *MUST* use the specified

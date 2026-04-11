@@ -26,9 +26,9 @@ Help to complete, consolidate and sort *ChangeLog* entries,
 based on underling Git commit messages.
 </objective>
 
-For this, strictly follow the following <plan/>:
+For this, strictly follow the following <workflow/>:
 
-<plan>
+<workflow>
 1. <task id="STEP 1: Locate and read existing `CHANGELOG.md` file">
    The *ChangeLog* file `CHANGELOG.md` contains sections
    with headers in the style `N.M.K (YYYY-MM-DD)`.
@@ -76,5 +76,5 @@ For this, strictly follow the following <plan/>:
    Also, update the date `YYYY-MM-DD` in the `N.M.K (YYYY-MM-DD)`
    headline of the first (most recent) section.
    </task>
-</plan>
+</workflow>
 

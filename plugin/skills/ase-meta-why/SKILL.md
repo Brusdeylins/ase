@@ -33,9 +33,9 @@ For this, iteratively ask "why" to drill down from symptoms to the root-cause.
 This helps to identify the fundamental reason behind a problem rather than just
 addressing surface-level symptoms.
 
-To apply the method, strictly follow the following plan:
+To apply the method, strictly follow the following <workflow/>:
 
-<plan>
+<workflow>
 1. Start with the problem statement.
 2. Check sources for initial hints on the problem.
 3. Perform the analysis iteration cycle:
@@ -44,7 +44,7 @@ To apply the method, strictly follow the following plan:
    c. Continue for at least 5 iterations or until root-cause is found.
 4. Validate the root-cause by working backwards the causality chain.
 5. Propose solutions that address and solve the root-cause.
-</plan>
+</workflow>
 
 Notice the following points:
 
