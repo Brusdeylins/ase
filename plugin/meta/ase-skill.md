@@ -6,17 +6,16 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
-- *IMPORTANT*: You *MUST* read and sequentially and chronologically
-  execute every <task/> in a <workflow/> *EXACTLY* as the instructions
-  specify.
+- *IMPORTANT*: For each <task/> in <workflow/>, and in the given *chronological order*
+  and *sorted by STEP <n/>*, you *MUST* use the `TaskCreate` tool to
+  create a corresponding task. Transform each `<task id="xxx" [...]/>`
+  into `TaskCreate({ subject: "xxx", description: "xxx" })`.
 
-- *IMPORTANT*: For each <task/>, and in the given chronological order
-  or **sorted by STEP <n/>**, you *MUST* use the `TaskCreate` tools
-  (with the `id="[...]"` XML attribute of the <task/>) for tracking it.
+- *IMPORTANT*: For each <task/> you *MUST* use the `TaskUpdate` tool
+  for updating its status during processing.
 
-- *IMPORTANT*: For each <task/> you *MUST* use the `TaskUpdate` tools
-  (with the `id="[...]"` XML attribute of the <task/>) for update its
-  status during processing.
+- *IMPORTANT*: You *MUST* sequentially execute every <task/> in
+  a <workflow/> *EXACTLY* as the instructions specify.
 
 - *IMPORTANT*: For any <task/> that specifies an *agent* in its
   `agent="[...]"` XML attribute, you *MUST* use the specified
@@ -26,8 +25,8 @@ disable-model-invocation: false
   <task/>, stop and ask the user specific numbered questions, and then
   continue once you have all of the information you need.
 
-- *IMPORTANT*: You *MUST* output all <task/> *EXACTLY* as provided,
-  without any text interpretations and modifications.
+- *IMPORTANT*: You *MUST* output the result of all <task/> *EXACTLY* as
+  provided, without any further text interpretations and modifications.
 
 - *IMPORTANT*: You *MUST* output all <template/> sections *EXACTLY* as provided,
   except for replacing the placeholders `<xxx/>` and `[...]` and replacing

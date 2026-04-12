@@ -1,6 +1,9 @@
 ---
 name: ase-code-analyze
+argument-hint: "[source-reference]"
 description: "Analyze the source code for problems in the logic and semantics and its related control flow."
+user-invocable: true
+disable-model-invocation: false
 model: opus
 effort: low
 ---
@@ -24,7 +27,7 @@ flow* is found.
 </objective>
 
 <workflow>
-1. <task id="STEP 1: INVESTIGATE">
+1. <task id="STEP 1: Investigate Code Base">
    Investigate on the code. If the code base is large, you *MUST* use
    the `Agent` tool (not inline work) to create multiple sub-agents to
    split the investigation task into appropriate chunks.
@@ -56,7 +59,7 @@ flow* is found.
    </hints>
    </task>
 
-2. <task id="STEP 2: SHOW RESULTS">
+2. <task id="STEP 2: Show Results">
    For every detected problem, immediately report it with the following
    output <template/>, based on concise bullet points.
 
@@ -72,7 +75,7 @@ flow* is found.
 
    - Uniquely identify the problems with `P<n/>` where <n/> is 1, 2, ...
 
-   - In <description/>, use *brief* but as *precise* as possible problem
+   - In <description/>, use *very brief* but as *precise* as possible problem
      descriptions.
 
    - In <description/>, highlight *code* as <template>`<code/>`</template>
@@ -90,7 +93,7 @@ flow* is found.
    </hints>
    </task>
 
-3. <task id="STEP 3: FINAL HINT">
+3. <task id="STEP 3: Give Final Hint">
    Finally, output the following <template/> to give a final hint:
 
    <template>

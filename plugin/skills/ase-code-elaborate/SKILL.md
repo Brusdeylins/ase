@@ -1,6 +1,9 @@
 ---
 name: ase-code-elaborate
+argument-hint: "[problem-reference]"
 description: "Elaborate on a source code problem in depth to fix it."
+user-invocable: true
+disable-model-invocation: false
 model: opus
 effort: high
 ---
@@ -22,7 +25,7 @@ specialized in *debugging and fixing source code*.
 </objective>
 
 <workflow>
-1. <task id="STEP 1: INVESTIGATE PROBLEM">
+1. <task id="STEP 1: Investigate Problem">
    Investigate and *figure out details* related to this problem.
    Report those details with the following <template/>:
 
@@ -45,7 +48,7 @@ specialized in *debugging and fixing source code*.
    </hints>
    </task>
 
-2. <task id="STEP 2: INVESTIGATE SOLUTIONS">
+2. <task id="STEP 2: Investigate Solutions">
    *Propose* corresponding *solution approach*, including optionally,
    some *alternative* solution approaches. Annotate the approach you
    prefer. Report each solution approach with the following <template/>:
@@ -73,14 +76,15 @@ specialized in *debugging and fixing source code*.
    </hints>
    </task>
 
-3. <task id="STEP 3: ASK USER TO CHOOSE APPROACH">
+3. <task id="STEP 3: Ask User To Choose Approach">
    Let the *user interactively choose* the preferred solution approach A<n/>
    with the help of the `AskUserQuestion` tool. Use *single-selection* only
    and provide small *code change previews*.
    </task>
 
-4. <task id="STEP 4: WRITE PLAN">
-   Enter *plan mode* and *write a plan* with code references, a precise description of the
+4. <task id="STEP 4: Write Plan">
+   Enter *plan mode* by using the `EnterPlanMode` tool.
+   Then *write a plan* with code references, a precise description of the
    problem, the chosen solution approach, a preview of the *unified
    diff* of the necessary code changes, and a possible way to verify the
    success of the solution, by using the following <template/> for the
@@ -109,6 +113,11 @@ specialized in *debugging and fixing source code*.
    </template>
 
    <hints>
+   For all summary texts:
+   - Use *very brief* but as *precise* as possible problem descriptions.
+   - Highlight *code* as <template>`<code/>`</template>
+     and *key aspects* as <template>*<aspect/>*</template>.
+
    In the source code changes:
    - Avoid introducing dedicated state variables for individual error cases.
    - If state variables are needed to detect error cases, at least use
