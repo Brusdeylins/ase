@@ -4,118 +4,108 @@ argument-hint: "<question>"
 description: "Query Multiple AIs for Quorum Answer"
 user-invocable: true
 disable-model-invocation: false
-context: fork
 model: opus
 effort: medium
 ---
 
-<execute>
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
-</execute>
 
-<command>
 Query Multiple AIs for Quorum Answer
-</command>
+====================================
 
-<role>
 Your role is an expert-level assistant.
-</role>
 
 <objective>
-Find a quorum answer on an arbitrary question,
-by querying multiple AIs for an optimal consensus.
+Find a *quorum answer* on an arbitrary question,
+by querying *multiple* AIs for an *optimal consensus*.
 </objective>
 
-PLAN
-----
+<flow>
+1.  <step id="STEP 1: ANSWER">
+    Determine your own answer.
+    For yourself (Anthropic Claude), first answer the following *<query/>* in advance:
 
-Closely follow the following *<workflow/>* of distinct *<task/>*,
-in the given chronological order:
+    <query>
+    $ARGUMENTS.
+    Please respond with facts and very concise and brief only,
+    usually with just 1 to 7 corresponding bullet points and with short sentences.
+    Optionally, mention potential cruxes which should be noticed.
+    Beside bullet points, do not provide any additional explanations.
+    Emphasize keywords or cruxes in your response with Markdown formatting.
+    Format code parts with Markdown formatting.
+    </query>
+    </step>
 
-<workflow>
-1. <task id="ANSWER">Determine your own answer.</task>
-2. <task id="PREVIEW">Show your own answer as a sneak preview.</task>
-3. <task id="QUERY">For additional answers, query multiple AIs via *sub-tasks* and the `ase--meta-llm` *agent*.</task>
-4. <task id="SUMMARY">Determine a summary of all answers in total.</task>
-5. <task id="RATING">Determine a consensus rating of all answers.</task>
-6. <task id="OUTPUT">Give a consolidated output.</task>
-</workflow>
+2.  <step id="STEP 2: PREVIEW">
+    Show your own answer as a sneak preview.
+    Use the following output <template/>:
 
-EXECUTION
----------
+    <template>
+    **Anthropic Claude** (sneak preview in advance):
+    - [...]
+    - [...]
+    </template>
+    </step>
 
-For yourself (Anthropic Claude), first answer the following *<query/>* in advance:
+3.  <step id="STEP 3: QUERY">
+    Then, for each of the following foreign AIs and their potentially
+    available, given, corresponding MCP servers, use a *sub-task* and the
+    `ase-meta-llm` *agent* to perform the above same *<query/>* again:
 
-<query>
-$ARGUMENTS.
-Please respond with facts and very concise and brief only,
-usually with just 1 to 7 corresponding bullet points and with short sentences.
-Optionally, mention potential cruxes which should be noticed.
-Beside bullet points, do not provide any additional explanations.
-Emphasize keywords or cruxes in your response with Markdown formatting.
-Format code parts with Markdown formatting.
-</query>
+    - OpenAI ChatGPT: `chat-openai-chatgpt`
+    - Google Gemini:  `chat-google-gemini`
+    - DeepSeek:       `chat-deepseek`
+    - xAI Grok:       `chat-xai-grok`
 
-Then show your results based on the following outout <template/>:
+    Silently skip those AIs where the corresponding MCP server is not available.
+    </step>
 
-<template>
-**Anthropic Claude** (sneak preview in advance):
-- [...]
-- [...]
-</template>
+4.  <step id="STEP 4: SUMMARY">
+    Summarize all responses, of both yourself and all MCP servers,
+    with just 1 to 7 corresponding bullet points and with short sentences.
+    </step>
 
-Then, for each of the following foreign AIs and their potentially
-available, given, corresponding MCP servers, use a *sub-task* and the
-`meta-llm` *agent* to perform the above same *<query/>* again:
+5.  <step id="STEP 5: RATING">
+    Determine, on a Likert scale of 0..5, the amount of the overall
+    consensus of all the responses.
+    </step>
 
-- OpenAI ChatGPT: `chat-openai-chatgpt`
-- Google Gemini:  `chat-google-gemini`
-- DeepSeek:       `chat-deepseek`
-- xAI Grok:       `chat-xai-grok`
+6.  <step id="STEP 6: OUTPUT">
+    Finally show the summary, the consensus and the complete and unmodified responses
+    of yourself and each of the MCP servers, based on the following output <template/>:
 
-Silently skip those AIs where the corresponding MCP server is not available.
+    <template>
+    **QUESTION**:
+    $ARGUMENTS
 
-Then:
+    &#x25CF; **CONSENSUS ANSWER**:
+    - [...]
+    - [...]
 
-1. Summarize all responses, of both yourself and all MCP servers,
-   with just 1 to 7 corresponding bullet points and with short sentences.
-2. Determine, on a Likert scale of 0..5, the amount of the overall
-   consensus of all the responses.
+    **CONSENSUS RATE**: [...]
 
-OUTPUT
-------
+    &#x25CB; **Anthropic Claude**:
+    - [...]
+    - [...]
 
-Finally show the summary, the consensus and the complete and unmodified responses
-of yourself and each of the MCP servers, based on the following output <template/>:
+    &#x25CB; **OpenAI ChatGPT**:
+    - [...]
+    - [...]
 
-<template>
-**QUESTION**:
-$ARGUMENTS
+    &#x25CB; **Google Gemini**:
+    - [...]
+    - [...]
 
-&#x25CF; **CONSENSUS ANSWER**:
-- [...]
-- [...]
+    &#x25CB; **DeepSeek**:
+    - [...]
+    - [...]
 
-**CONSENSUS RATE**: [...]
+    &#x25CB; **xAI Grok**:
+    - [...]
+    - [...]
+    </template>
 
-&#x25CB; **Anthropic Claude**:
-- [...]
-- [...]
-
-&#x25CB; **OpenAI ChatGPT**:
-- [...]
-- [...]
-
-&#x25CB; **Google Gemini**:
-- [...]
-- [...]
-
-&#x25CB; **DeepSeek**:
-- [...]
-- [...]
-
-&#x25CB; **xAI Grok**:
-- [...]
-- [...]
-</template>
+    Remove the sections of AIs which were not available.
+    </step>
+</flow>
 

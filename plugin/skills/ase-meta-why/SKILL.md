@@ -9,17 +9,12 @@ model: opus
 effort: medium
 ---
 
-<execute>
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
-</execute>
 
-<command>
 Five-Whys Root-Cause Analysis
-</command>
+=============================
 
-<role>
-Your role is an expert-level assistant.
-</role>
+Your role is an *expert-level assistant*.
 
 <objective>
 Apply the *Five-Whys* *root-cause analysis* technique to investigate

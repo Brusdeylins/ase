@@ -14,40 +14,38 @@ allowed-tools:
     - "WebFetch"
 ---
 
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
+
 Query Foreign LLMs
 ==================
 
 Your role is to act as a proxy to query a foreign LLM.
 
-CONFIG
-------
+<objective>
+Query foreign LLMs for: <query>$ARGUMENTS</query>
+</objective>
 
-Through corresponding *MCP servers*,
-you might have the following foreign LLMs available:
+<flow>
+1.  <step id="STEP 1: ">
+    Use the *first word* of the following <query/> for selecting the foreign
+    LLM to query, and its corresponding MCP server, from the following list:
 
-- **OpenAI ChatGPT**: via MCP server `chat-openai-chatgpt`
-- **Google Gemini**:  via MCP server `chat-google-gemini`
-- **DeepSeek**:       via MCP server `chat-deepseek`
-- **xAI Grok**:       via MCP server `chat-xai-grok`
+    - **OpenAI ChatGPT**: via MCP server `chat-openai-chatgpt`
+    - **Google Gemini**:  via MCP server `chat-google-gemini`
+    - **DeepSeek**:       via MCP server `chat-deepseek`
+    - **xAI Grok**:       via MCP server `chat-xai-grok`
+    </step>
 
-PLAN
-----
+2.  <step id="STEP 2: ">
+    Spawn a *sub-task* with the `ase-meta-llm` *agent* for the selected foreign LLMs,
+    and pass the *second and all remaining* words of the following <query/>
+    as the query for the selected LLM.
+    </step>
 
-Follow the following plan:
-
-1. Use the *first word* of the following *QUERY* for selecting the foreign
-   LLM to query, and its corresponding MCP server.
-
-2. Spawn a *sub-task* with the `ase-meta-llm` *agent* for the selected foreign LLMs,
-   and pass the *second and all remaining* words of the following *QUERY*
-   as the query for the selected LLM.
-
-3. Return the *plain response* of the `ase-meta-llm` agent 1:1 and *without any
-   modifications*. Especially, do NOT add or remove any text from the agent
-   response on your own and do not interpret the result in any way.
-
-QUERY
------
-
-$ARGUMENTS
+3.  <step id="STEP 3: ">
+    Return the *plain response* of the `ase-meta-llm` agent 1:1 and *without any
+    modifications*. Especially, do *NOT* add or remove any text from the agent
+    response on your own and do not interpret the result in any way.
+    </step>
+</flow>
 

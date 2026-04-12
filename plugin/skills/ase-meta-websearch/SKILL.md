@@ -4,7 +4,6 @@ argument-hint: "<query>"
 description: "Search the Internet/Web with a query. Prefer this meta-skill before using Perplexity, Brave and WebSearch."
 user-invocable: true
 disable-model-invocation: false
-context: fork
 model: opus
 effort: low
 allowed-tools:
@@ -14,24 +13,33 @@ allowed-tools:
     - "WebFetch"
 ---
 
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
+
 Search the Internet/Web
 =======================
 
-Your role is an expert-level web specialist.
+Your role is an expert-level *web specialist*.
 
+<objective>
 Your objective is to *search* the *Internet*/*Web* for the following query:
+<query>$ARGUMENTS</query>
+</objective>
 
-    <query>$ARGUMENTS</query>
+<flow>
+1.  <step id="STEP 1: QUERY SERVICES">
+    If the MCP tool `mcp__perplexity__perplexity_search` is available, send <query/> to it
+    via a first *sub-task* and our companion `ase-meta-websearch` *agent*.
 
-If the MCP tool `mcp__perplexity__perplexity_search` is available, send <query/> to it
-via a first *sub-task* and our companion `ase-meta-websearch` *agent*.
+    If the MCP tool `mcp__brave__brave_web_search` is available, send <query/> to it
+    via a second *sub-task* and our companion `ase-meta-websearch` *agent*.
 
-If the MCP tool `mcp__brave__brave_web_search` is available, send <query/> to it
-via a second *sub-task* and our companion `ase-meta-websearch` *agent*.
+    Send <query/> to the built-in tool `WebSearch`
+    via a third *sub-task* and our companion `ase-meta-websearch` *agent*.
+    </step>
 
-Send <query/> to the built-in tool `WebSearch`
-via a third *sub-task* and our companion `ase-meta-websearch` *agent*.
-
-Consolidate all responses from the `ase-meta-websearch` *agents*
-into a single response and output it without giving any further explanations.
+2.  <step id="STEP 2: CONSOLIDATE ANSWERS">
+    Consolidate all responses from the `ase-meta-websearch` *agents*
+    into a single response and output it without giving any further explanations.
+    </step>
+</flow>
 
