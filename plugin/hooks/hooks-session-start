@@ -3,7 +3,14 @@
 const path = require("node:path")
 const fs   = require("node:fs")
 
-const md = fs.readFileSync(path.join(process.env.CLAUDE_PLUGIN_ROOT, "meta/ase-constitution.md"), "utf8")
+const file_pkg = path.join(process.env.CLAUDE_PLUGIN_ROOT, ".claude-plugin/plugin.json")
+const file_md  = path.join(process.env.CLAUDE_PLUGIN_ROOT, "meta/ase-constitution.md")
+
+const pkg = fs.readFileSync(file_pkg, "utf8")
+let   md  = fs.readFileSync(file_md,  "utf8")
+
+const version = JSON.parse(pkg).version
+md = md.replace(/\$VERSION/g, version)
 
 const result = {
     "hookSpecificOutput": {
