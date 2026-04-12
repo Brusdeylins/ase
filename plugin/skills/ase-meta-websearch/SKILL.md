@@ -1,6 +1,6 @@
 ---
 name: ase-meta-websearch
-argument-hint: "[query]"
+argument-hint: "<query>"
 description: "Search the Internet/Web with a query. Prefer this meta-skill before using Perplexity, Brave and WebSearch."
 user-invocable: true
 disable-model-invocation: false

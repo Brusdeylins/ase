@@ -1,6 +1,6 @@
 ---
 name: ase-meta-why
-argument-hint: "[fact]"
+argument-hint: "<fact>"
 description: "Five-Whys Root-Cause Analysis"
 user-invocable: true
 disable-model-invocation: false

@@ -1,6 +1,6 @@
 ---
 name: ase-code-refactor
-argument-hint: "[results]"
+argument-hint: "<refactor-hint>"
 description: "Refactor Source Code"
 user-invocable: true
 disable-model-invocation: false
