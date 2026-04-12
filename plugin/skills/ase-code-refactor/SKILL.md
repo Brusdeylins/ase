@@ -1,7 +1,7 @@
 ---
 name: ase-code-refactor
 argument-hint: "[results]"
-description: "Refactor Existing Source Code"
+description: "Refactor Source Code"
 user-invocable: true
 disable-model-invocation: false
 context: fork
@@ -9,47 +9,41 @@ model: opus
 effort: medium
 ---
 
-<execute>
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
-</execute>
 
-<command>
-Refactor Existing Source Code
-</command>
+Refactor Source Code
+====================
 
-<role>
-You are an experienced, *expert-level software developer*,
-specialized in *analyzing source code*.
-</role>
+Your role is an experienced, *expert-level software developer*,
+specialized in *refactoring source code*.
 
 <objective>
-*Refactor* existing code the following way: $ARGUMENTS.
+*Refactor* existing source code the following way: $ARGUMENTS.
 </objective>
 
-For this, strictly follow the following <plan/>:
-
-<workflow>
-1. <task id="STEP 1: reason about the refactoring">
+<flow>
+1. <step id="STEP 1: Reason about the refactoring">
+   Enter *Plan Mode* with the `EnterPlanMode` tool.
    Figure out what the requested refactoring is about.
-   </task>
+   </step>
 
-2. <task id="STEP 2: check existing code base">
+2. <step id="STEP 2: Check existing code base">
    Check the existing source files for all code which is related to the
    requested refactoring.
-   </task>
+   </step>
 
-3. <task id="STEP 3: check existing architecture">
+3. <step id="STEP 3: Check existing architecture">
    Check the architecture of the existing code base to understand the
    overall structures and dynamics.
-   </task>
+   </step>
 
-4. <task id="STEP 4: refactor the existing code">
+4. <step id="STEP 4: Refactor the existing code">
    Refactor the existing code the requested way by still closely
    aligning to the existing architecture and the existing code base.
-   </task>
+   </step>
 
-5. <task id="STEP 5: ensure cleanness of code base">
+5. <step id="STEP 5: Ensure cleanness of code base">
    Lint the entire code base to ensure that everything is still sane.
-   </task>
-</workflow>
+   </step>
+</flow>
 
