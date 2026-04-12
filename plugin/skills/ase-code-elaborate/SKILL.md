@@ -8,38 +8,21 @@ effort: high
 Elaborate
 =========
 
+<execute>
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
+</execute>
+
 <role>
 You are an experienced, *expert-level software developer*,
 specialized in *debugging and fixing source code*.
 </role>
 
 <objective>
-*Elborate* on the following problem: $ARGUMENTS.
+*Elaborate* on the following problem: $ARGUMENTS.
 </objective>
 
 <workflow>
-1. SWITCH MODE:
-   Enter *plan mode*.
-
-2. INITIALIZATION:
-   Introduce your objective by showing the following <template/>,
-   as is and with all markup:
-
-   <template>
-   &#x1F535; **OBJECTIVE**: <objective/>
-   </template>
-
-   <hints>
-   - You *MUST* output *ONLY* <template/> sections.
-     You are especially *NOT* allowed to output anything else.
-
-   - You *MUST* output all <template/> sections *EXACTLY* as provided,
-     except for replacing the placeholders `<xxx/>` and `[...]` and
-     replacing XML entities like `&#x25CB;` with the corresponding Unicode
-     characters.
-   </hints>
-
-3. INVESTIGATE PROBLEM:
+1. <task id="STEP 1: INVESTIGATE PROBLEM">
    Investigate and *figure out details* related to this problem.
    Report those details with the following <template/>:
 
@@ -60,8 +43,9 @@ specialized in *debugging and fixing source code*.
    - Give a short one-sentence <summary/> of the problem plus detailed code
      processing information to understand the problem.
    </hints>
+   </task>
 
-4. INVESTIGATE SOLUTIONS:
+2. <task id="STEP 2: INVESTIGATE SOLUTIONS">
    *Propose* corresponding *solution approach*, including optionally,
    some *alternative* solution approaches. Annotate the approach you
    prefer. Report each solution approach with the following <template/>:
@@ -87,12 +71,16 @@ specialized in *debugging and fixing source code*.
      or unexpected* errors, they *should* be handled in parent scopes to
      avoid cluttering the source code with too much error handling at all.
    </hints>
+   </task>
 
-5. ASK USER:
-   Let the *user interactively choose* the preferred solution approach A<n/>.
+3. <task id="STEP 3: ASK USER TO CHOOSE APPROACH">
+   Let the *user interactively choose* the preferred solution approach A<n/>
+   with the help of the `AskUserQuestion` tool. Use *single-selection* only
+   and provide small *code change previews*.
+   </task>
 
-6. WRITE PLAN:
-   *Write a plan* with code references, a precise description of the
+4. <task id="STEP 4: WRITE PLAN">
+   Enter *plan mode* and *write a plan* with code references, a precise description of the
    problem, the chosen solution approach, a preview of the *unified
    diff* of the necessary code changes, and a possible way to verify the
    success of the solution, by using the following <template/> for the
@@ -127,11 +115,16 @@ specialized in *debugging and fixing source code*.
      minimum number of those variables only.
    - In general, use minimum number of state variables to span the
      maximum of error space.
-   </hints>
 
-7. ASK USER:
-   Let the *user interactively choose* whether to accept this plan, exit
-   the plan mode and this way finally execute the plan, or how this plan
-   should be further revised in a loop.
+   For the planning mode:
+   - Let the *user interactively choose* whether to accept this plan, exit
+     the plan mode and this way finally execute the plan, or how this plan
+     should be further revised in a loop.
+   - When the plan was approved, switch to *Accept Edits* mode and
+     apply the plan.
+   - After applying the plan, just stop. Do not run build procedure 
+     or tests automatically.
+   </hints>
+   </task>
 </workflow>
 

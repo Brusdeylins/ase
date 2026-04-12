@@ -8,6 +8,10 @@ effort: low
 Analyze
 =======
 
+<execute>
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
+</execute>
+
 <role>
 You are an experienced, *expert-level software developer*,
 specialized in *analyzing source code*.
@@ -20,25 +24,7 @@ flow* is found.
 </objective>
 
 <workflow>
-1. INITIALIZATION:
-   Introduce your objective by showing the following <template/>,
-   as is and with all markup:
-
-   <template>
-   &#x1F535; **OBJECTIVE**: <objective/>
-   </template>
-
-   <hints>
-   - You *MUST* output *ONLY* <template/> sections.
-     You are especially *NOT* allowed to output anything else.
-
-   - You *MUST* output all <template/> sections *EXACTLY* as provided,
-     except for replacing the placeholders `<xxx/>` and `[...]` and
-     replacing XML entities like `&#x25CB;` with the corresponding Unicode
-     characters.
-   </hints>
-
-2. INVESTIGATION:
+1. <task id="STEP 1: INVESTIGATE">
    Investigate on the code. If the code base is large, create multiple
    agents to split the investigation task into appropriate chunks.
    During your investigation, continously report your current <topic/>
@@ -65,8 +51,9 @@ flow* is found.
    - Focus on the *problem only* and do *not* investigate on any
      possible *solution*.
    </hints>
+   </task>
 
-3. RESULTS:
+2. <task id="STEP 2: SHOW RESULTS">
    For every detected problem, immediately report it with the following
    output <template/>, based on concise bullet points.
 
@@ -98,8 +85,9 @@ flow* is found.
      of <template>LOW</template>, <template>MEDIUM</template> or
      <template>HIGH</template>.
    </hints>
+   </task>
 
-4  FINAL HINT:
+3. <task id="STEP 3: FINAL HINT">
    Finally, output the following <template/> to give a final hint:
 
    <template>
@@ -109,5 +97,6 @@ flow* is found.
    a new Claude Code session and copy & paste one of the above problem
    descriptions as a whole with `/ase-code-elaborate <problem>`.
    </template>
+   </task>
 </workflow>
 
