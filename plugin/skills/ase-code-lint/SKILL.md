@@ -8,20 +8,17 @@ model: opus
 effort: medium
 ---
 
-<execute>
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
-</execute>
 
-<command>
 Lint Source Code
-</command>
+================
 
-<role>
-Your role is an expert-level developer.
-</role>
+You role is an experienced, *expert-level software developer*,
+specialized in *analyzing source code*.
 
 <objective>
-*Analyze* the code of $ARGUMENTS for *potential problems*.
+*Analyze* the code of $ARGUMENTS for *potential problems*
+related to a set of linting rules.
 </objective>
 
 Plan
@@ -32,7 +29,8 @@ in the given chronological order:
 
 <workflow>
 1.  <task id="PREPARATION">
-    Find and read all the corresponding source code files.
+    Find and read all the corresponding source code files
+    and their related source code files.
     </task>
 
 2.  <task id="A01 - FORMATTING">
