@@ -68,6 +68,9 @@ ASE commands/skills:
 
 The following ASE commands/skills exist on the meta-level:
 
+- `/ase-meta-why <question>`:
+  Perform a Five-Whys root-cause analysis.
+
 - `/ase-meta-websearch <query>`:
   Search the Internet/Web with a query.
 
@@ -78,14 +81,11 @@ The following ASE commands/skills exist on the meta-level:
   Query a foreign LLM like OpenAI ChatGPT, Google Gemini, DeepSeek or
   xAI Grok.
 
-- `/ase-meta-why <fact>`:
-  Perform a Five-Whys root-cause analysis.
-
 ### Code Commands
 
 The following ASE commands/skills exist on the code-level:
 
-- `/ase-code-craft [feature]`:
+- `/ase-code-craft <feature-description>`:
   Craft source code from scratch.
 
 - `/ase-code-changes`:
@@ -94,7 +94,7 @@ The following ASE commands/skills exist on the code-level:
 - `/ase-code-insight`:
   Give insights into the project.
 
-- `/ase-code-describe`:
+- `/ase-code-explain <source-reference>`:
   Explain code with visual diagrams and analogies.
 
 - `/ase-code-analyze <source-reference>`:
