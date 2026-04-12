@@ -5,6 +5,8 @@ ChangeLog
 0.0.3 (2026-04-12)
 ------------------
 
+- IMPROVEMENT: add ase-code-refactor skill
+
 0.0.2 (2026-04-12)
 ------------------
 
