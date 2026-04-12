@@ -6,10 +6,21 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
-- *IMPORTANT*: For each <task/> in <workflow/>, and in the given *chronological order*
-  and *sorted by STEP <n/>*, you *MUST* use the `TaskCreate` tool to
-  create a corresponding task. Transform each `<task id="xxx" [...]/>`
-  into `TaskCreate({ subject: "xxx", description: "xxx" })`.
+- *IMPORTANT*: For each <task/> in <workflow/>, and in the given
+  *chronological order*, you *MUST* use the `TaskCreate` tool to create
+  a corresponding task. Transform each `<task id="xxx" [...]/>` into
+  `TaskCreate({ subject: "xxx", description: "xxx", activeForm: "xxx" })`.
+  In order words, use the text of the `id` attribute of <task/> for the
+  `subject`, `description`, and `activeForm` fields of `TaskCreate`.
+
+- *IMPORTANT*: Do *not* call `TaskCreate` tools in parallel. Instead
+  *wait* for each `TaskCreate` tool call to complete before proceeding
+  with the next.
+
+- *IMPORTANT*: You *MUST* use the `TaskUpdate` tool with its `addBlockedBy`
+  parameter to ensure that all tasks are running in the given *chronological order*,
+  i.e., `TaskUpdate({ taskId: "<id-of-step2/>", addBlockedBy: [ "<id-of-step-1/>" ] })`,
+  i.e., `TaskUpdate({ taskId: "<id-of-step3/>", addBlockedBy: [ "<id-of-step-2/>" ] })`, etc.
 
 - *IMPORTANT*: For each <task/> you *MUST* use the `TaskUpdate` tool
   for updating its status during processing.
