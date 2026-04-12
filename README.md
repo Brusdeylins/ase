@@ -113,26 +113,26 @@ The following ASE commands/skills exist on the code-level:
       During lint: reject the last proposed code change and continue
       with the review.
 
-    - `/ase-code-lint:complete`:
-      During lint: tell the assistant that its last proposed code change
-      set was not complete and ask it to re-propose the entire change set.
-
-    - `/ase-code-lint:explain [issue]`:
+    - `/ase-code-lint:explain <issue>`:
       During lint: ask the assistant to improve its explanation of the
       last proposed code change.
 
-    - `/ase-code-lint:reassess [question]`:
+    - `/ase-code-lint:reassess <question>`:
       During lint: ask the assistant to re-assess and reason on its
       last proposed code change.
+
+    - `/ase-code-lint:refine <hint>`:
+      During lint: ask the assistant to refine its last proposed code
+      change.
+
+    - `/ase-code-lint:complete`:
+      During lint: tell the assistant that its last proposed code change
+      set was not complete and ask it to re-propose the entire change set.
 
     - `/ase-code-lint:recheck`:
       During lint: tell the assistant that the source code was updated
       externally and ask it to re-propose its last code change against
       the latest source code.
-
-    - `/ase-code-lint:refine [hint]`:
-      During lint: ask the assistant to refine its last proposed code
-      change.
 
 Copyright & License
 -------------------
