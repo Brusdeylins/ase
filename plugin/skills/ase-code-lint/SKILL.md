@@ -4,7 +4,6 @@ argument-hint: "[source-reference]"
 description: Lint Source Code
 user-invocable: true
 disable-model-invocation: false
-context: fork
 model: opus
 effort: medium
 ---
