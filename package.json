@@ -16,11 +16,8 @@
     "devDependencies": {
         "@rse/stx":                         "1.1.5",
         "shx":                              "0.4.0",
-        "stdver":                           "0.9.16",
         "json-asty":                        "1.2.7",
-        "tsx":                              "4.21.0"
-    },
-    "dependencies": {
+        "stdver":                           "0.9.16"
     },
     "engines": {
         "npm":                              ">=10.0.0",
