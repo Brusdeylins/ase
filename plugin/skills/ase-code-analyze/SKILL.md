@@ -30,7 +30,8 @@ flow* is found.
    split the investigation task into appropriate chunks.
 
    During your investigation, continously report your current <topic/>
-   with the following <template/>:
+   with the following <template/>, but *no* other outputs, especially
+   *no* thinking information:
  
    <template>
    &#x26AA; **INVESTIGATION**: <topic/>

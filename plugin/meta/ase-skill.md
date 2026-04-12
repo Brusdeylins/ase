@@ -6,9 +6,17 @@ user-invocable: false
 disable-model-invocation: false
 ---
 
-- *IMPORTANT*: You *MUST* read and sequentially execute every <task/> in
-  a <workflow/> *EXACTLY* as the instructions specify and use
-  the `TaskCreate` and `TaskUpdate` tools for tracking.
+- *IMPORTANT*: You *MUST* read and sequentially and chronologically
+  execute every <task/> in a <workflow/> *EXACTLY* as the instructions
+  specify.
+
+- *IMPORTANT*: For each <task/>, and in the given chronological order
+  or **sorted by STEP <n/>**, you *MUST* use the `TaskCreate` tools
+  (with the `id="[...]"` XML attribute of the <task/>) for tracking it.
+
+- *IMPORTANT*: For each <task/> you *MUST* use the `TaskUpdate` tools
+  (with the `id="[...]"` XML attribute of the <task/>) for update its
+  status during processing.
 
 - *IMPORTANT*: For any <task/> that specifies an *agent* in its
   `agent="[...]"` XML attribute, you *MUST* use the specified
