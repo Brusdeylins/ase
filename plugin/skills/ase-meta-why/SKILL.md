@@ -21,7 +21,7 @@ on the following problem:
 
 <problem>Why $ARGUMENTS?</problem>
 
-For this, iteratively ask "why" to drill down from symptoms to the root-cause. 
+For this, iteratively ask "why" to drill down from symptoms to the root-cause.
 This helps to identify the fundamental reason behind a problem rather than just
 addressing surface-level symptoms.
 </objective>
@@ -38,21 +38,21 @@ addressing surface-level symptoms.
 2.  <step id="STEP 2: ROOT-CAUSE ANALYSIS">
     Find the root-cause of <problem/> by following the following iteration cycle.
     Start with a <question/> equal to the <problem/>.
+
     <for items="1 2 3 4 5">
         Ask <question/> and document the <answer/> with the following template:
+        Don't stop at symptoms, keep digging for systemic issues.
+        Multiple root-causes may exist -- explore different branches.
+        Consider both technical, domain-specific, process-related or organizational causes.
 
         <template>
         &#x26AA; **WHY <item/>**: <answer/>
         </template>
 
-        Then, for the next iteration lrt <question/> now be the last <answer/>.
+        Then, for the next iteration let <question/> now be the last <answer/>.
+        The magic is NOT in exactly 5 "Why" -- you can stop the iteration
+        when you already reached the root-cause.
     </for>
-
-    Hints:
-    - Don't stop at symptoms, keep digging for systemic issues.
-    - Multiple root-causes may exist -- explore different branches.
-    - Consider both technical, domain-specific, process-related or organizational causes.
-    - The magic is NOT in exactly 5 "Why" -- you can stop when you already reached the root-cause.
     </step>
 
 3.  <step id="STEP 3: SOLUTION">
