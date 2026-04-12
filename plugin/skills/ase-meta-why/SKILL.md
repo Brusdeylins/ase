@@ -4,7 +4,6 @@ argument-hint: "<fact>"
 description: "Five-Whys Root-Cause Analysis"
 user-invocable: true
 disable-model-invocation: false
-context: fork
 model: opus
 effort: medium
 ---
@@ -18,50 +17,52 @@ Your role is an *expert-level assistant*.
 
 <objective>
 Apply the *Five-Whys* *root-cause analysis* technique to investigate
-on the following question: Why $ARGUMENTS?
-</objective>
+on the following problem:
 
-Plan
-----
+<problem>Why $ARGUMENTS?</problem>
 
 For this, iteratively ask "why" to drill down from symptoms to the root-cause. 
 This helps to identify the fundamental reason behind a problem rather than just
 addressing surface-level symptoms.
+</objective>
 
-To apply the method, strictly follow the following <workflow/>:
+<flow>
+1.  <step id="STEP 1: PROBLEM">
+    State the problem statement.
 
-<workflow>
-1. Start with the problem statement.
-2. Check sources for initial hints on the problem.
-3. Perform the analysis iteration cycle:
-   a. Ask "Why did this happen?" and document the answer.
-   b. For each answer, ask "Why did this happen?" again.
-   c. Continue for at least 5 iterations or until root-cause is found.
-4. Validate the root-cause by working backwards the causality chain.
-5. Propose solutions that address and solve the root-cause.
-</workflow>
+    <template>
+    &#x1F7E0; **PROBLEM**: <problem/>
+    </template>
+    </step>
 
-Notice the following points:
+2.  <step id="STEP 2: ROOT-CAUSE ANALYSIS">
+    Find the root-cause of <problem/> by following the following iteration cycle.
+    Start with a <question/> equal to the <problem/>.
+    <for items="1 2 3 4 5">
+        Ask <question/> and document the <answer/> with the following template:
 
-- Don't stop at symptoms, keep digging for systemic issues.
-- Multiple root-causes may exist -- explore different branches.
-- Document each "Why" for future reference.
-- Consider both technical, domain-specific, process-related or organizational causes.
-- The magic is NOT in exactly 5 "Why" -- you can stop when you already reached the root-cause.
-- For the proposed solutions, optionally directly propose corresponding code changes.
+        <template>
+        &#x26AA; **WHY <item/>**: <answer/>
+        </template>
 
-Example
--------
+        Then, for the next iteration lrt <question/> now be the last <answer/>.
+    </for>
 
-<example>
-**Problem Statement**: Application crashes on startup.
-**WHY 1**: Database connection fails.
-**WHY 2**: Connection string is invalid.
-**WHY 3**: Environment variable not set.
-**WHY 4**: Deployment script missing environment setup.
-**WHY 5**: Documentation didn't specify environment requirements.
-**Root Cause**: Missing deployment documentation.
-**Validation (Working Backwards)**: [...]
-**Proposed Solution**: [...]
-</example>
+    Hints:
+    - Don't stop at symptoms, keep digging for systemic issues.
+    - Multiple root-causes may exist -- explore different branches.
+    - Consider both technical, domain-specific, process-related or organizational causes.
+    - The magic is NOT in exactly 5 "Why" -- you can stop when you already reached the root-cause.
+    </step>
+
+3.  <step id="STEP 3: SOLUTION">
+    Validate the root-cause by working backwards the causality chain.
+    Propose a solution that addresses and solves the root-cause.
+    For the proposed solution, optionally directly propose corresponding source code changes.
+
+    <template>
+    &#x1F7E0; **SOLUTION**: <solution/>
+    </template>
+    </step>
+</flow>
 
