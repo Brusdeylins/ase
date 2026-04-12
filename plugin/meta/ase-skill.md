@@ -26,19 +26,14 @@ disable-model-invocation: false
 
 - *IMPORTANT*: You *MUST* *NEVER* output any `---` lines.
 
-- Initially, once output your <command/> and <objective/> with the
-  following output <template/>:
-
+- Initially, once output your <objective/> with the following output <template/>:
   <template>
-  **COMMAND**: **<command/>**
-
   &#x26AA; **OBJECTIVE**: <objective/>
   </template>
 
 - When you have to reference a <task/>, use the following output <template/>
   (where <task-id/> correspondings to the `id="[...]"` XML attribute of
   the <task/> and <task-body/> correspondings to the XML body of the <task/>:
-
   <template>
   **<task-id/>**: <task-body/>
   </template>
