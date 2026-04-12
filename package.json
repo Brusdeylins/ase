@@ -1,0 +1,32 @@
+{
+    "name":                                 "ase",
+    "description":                          "Agentic Software Engineering (ASE)",
+    "private":                              true,
+    "keywords":                             [ "agentic", "ai", "coding", "tool", "cli", "software", "engineering" ],
+    "homepage":                             "http://github.com/rse/ase",
+    "repository":                           { "url": "git+https://github.com/rse/ase.git", "type": "git" },
+    "bugs":                                 { "url": "http://github.com/rse/ase/issues" },
+    "version":                              "0.0.0",
+    "license":                              "GPL-3.0-only",
+    "author": {
+        "name":                             "Dr. Ralf S. Engelschall",
+        "email":                            "rse@engelschall.com",
+        "url":                              "http://engelschall.com"
+    },
+    "devDependencies": {
+        "@rse/stx":                         "1.1.5",
+        "shx":                              "0.4.0",
+        "stdver":                           "0.9.16",
+        "json-asty":                        "1.2.7",
+        "tsx":                              "4.21.0"
+    },
+    "dependencies": {
+    },
+    "engines": {
+        "npm":                              ">=10.0.0",
+        "node":                             ">=20.0.0"
+    },
+    "scripts": {
+        "start":                            "stx -v4 -l warning -c etc/stx.conf"
+    }
+}
