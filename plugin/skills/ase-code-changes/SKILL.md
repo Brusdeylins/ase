@@ -21,7 +21,19 @@ Help to complete, consolidate and sort *ChangeLog* entries,
 based on underling *Git* commit messages.
 </objective>
 
-For this, strictly follow the following <workflow/>:
+For this, understand that ChangeLog entries are
+are always formatted `<prefix/>: <summary/>` where
+the <prefix/> is one of the following tags...
+
+    -   `IMPROVEMENT`
+    -   `BUGFIX`
+    -   `UPDATE`
+    -   `CLEANUP`
+    -   `REFACTOR`
+
+...and <summary/> is not longer than about 60-80 characters.
+The ChangeLog entries for a single product release version
+are also grouped and sorted according to the above <prefix/>es.
 
 <flow>
 1. <step id="STEP 1: Locate and read existing `CHANGELOG.md` file">
@@ -58,12 +70,7 @@ For this, strictly follow the following <workflow/>:
    Without immediately modifying `CHANGELOG.md` file,
    *sort* the entries in the first (most recent) section only.
    Instead of the chronological commit order, group the entries
-   by the following prefixes and their given prefix order:
-    - `IMPROVEMENT`
-    - `BUGFIX`
-    - `UPDATE`
-    - `CLEANUP`
-    - `REFACTOR`
+   by the prefixes.
    </step>
 
 6. <step id="STEP 6: Write modified *ChangeLog* entries to `CHANGELOG.md` file">
