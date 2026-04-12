@@ -32,14 +32,6 @@ flow* is found.
    the `Agent` tool (not inline work) to create multiple sub-agents to
    split the investigation task into appropriate chunks.
 
-   During your investigation, continously report your current <topic/>
-   with the following <template/>, but *no* other outputs, especially
-   *no* thinking information:
- 
-   <template>
-   &#x26AA; **INVESTIGATION**: <topic/>
-   </template>
-
    <hints>
    - During investigation, do *not* output anything else,
      especially do not give any further explanations or information.

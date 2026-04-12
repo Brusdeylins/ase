@@ -5,7 +5,7 @@ description: "Elaborate on a source code problem in depth to fix it."
 user-invocable: true
 disable-model-invocation: false
 model: opus
-effort: high
+effort: medium
 ---
 
 Elaborate
