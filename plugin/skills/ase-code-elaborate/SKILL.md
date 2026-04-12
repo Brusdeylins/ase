@@ -1,6 +1,6 @@
 ---
 name: ase-code-elaborate
-argument-hint: "[problem-reference]"
+argument-hint: "<problem-reference>"
 description: "Elaborate on a source code problem in depth to fix it."
 user-invocable: true
 disable-model-invocation: false
@@ -8,24 +8,20 @@ model: opus
 effort: medium
 ---
 
-Elaborate
-=========
-
-<execute>
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
-</execute>
 
-<role>
-You are an experienced, *expert-level software developer*,
+Elaborate Code Problem
+======================
+
+Your role is an experienced, *expert-level software developer*,
 specialized in *debugging and fixing source code*.
-</role>
 
 <objective>
 *Elaborate* on the following problem: $ARGUMENTS.
 </objective>
 
-<workflow>
-1. <task id="STEP 1: Investigate Problem">
+<flow>
+1. <step id="STEP 1: Investigate Problem">
    Investigate and *figure out details* related to this problem.
    Report those details with the following <template/>:
 
@@ -39,16 +35,16 @@ specialized in *debugging and fixing source code*.
    - [...]
    </template>
 
-   <hints>
+   Hints:
+
    - Give a short one-sentence <context/> of the problem plus
      an excerpt of the affected code <affected-code-excerpt/>.
 
    - Give a short one-sentence <summary/> of the problem plus detailed code
      processing information to understand the problem.
-   </hints>
-   </task>
+   </step>
 
-2. <task id="STEP 2: Investigate Solutions">
+2. <step id="STEP 2: Investigate Solutions">
    *Propose* corresponding *solution approach*, including optionally,
    some *alternative* solution approaches. Annotate the approach you
    prefer. Report each solution approach with the following <template/>:
@@ -60,7 +56,8 @@ specialized in *debugging and fixing source code*.
    - [...]
    </template>
 
-   <hints>
+   Hints:
+
    - Give a short one-sentence <summary/> of the solution approach plus detailed solution information.
 
    - Focus on solution approaches for *practically relevant* cases and do *not*
@@ -73,16 +70,15 @@ specialized in *debugging and fixing source code*.
    - In case of solution approaches for problems related to *theoretical
      or unexpected* errors, they *should* be handled in parent scopes to
      avoid cluttering the source code with too much error handling at all.
-   </hints>
-   </task>
+   </step>
 
-3. <task id="STEP 3: Ask User To Choose Approach">
+3. <step id="STEP 3: Ask User To Choose Approach">
    Let the *user interactively choose* the preferred solution approach A<n/>
    with the help of the `AskUserQuestion` tool. Use *single-selection* only
    and provide small *code change previews*.
-   </task>
+   </step>
 
-4. <task id="STEP 4: Write Plan">
+4. <step id="STEP 4: Write and Execute Plan">
    Enter *plan mode* by using the `EnterPlanMode` tool.
    Then *write a plan* with code references, a precise description of the
    problem, the chosen solution approach, a preview of the *unified
@@ -112,20 +108,19 @@ specialized in *debugging and fixing source code*.
    - [...]
    </template>
 
-   <hints>
-   For all summary texts:
+   Hints: For all summary texts...
    - Use *very brief* but as *precise* as possible problem descriptions.
    - Highlight *code* as <template>`<code/>`</template>
      and *key aspects* as <template>*<aspect/>*</template>.
 
-   In the source code changes:
+   Hints: In the source code changes...
    - Avoid introducing dedicated state variables for individual error cases.
    - If state variables are needed to detect error cases, at least use
      minimum number of those variables only.
    - In general, use minimum number of state variables to span the
      maximum of error space.
 
-   For the planning mode:
+   Hints: For the planning mode...
    - Let the *user interactively choose* whether to accept this plan, exit
      the plan mode and this way finally execute the plan, or how this plan
      should be further revised in a loop.
@@ -133,7 +128,6 @@ specialized in *debugging and fixing source code*.
      apply the plan.
    - After applying the plan, just stop. Do not run build procedure 
      or tests automatically.
-   </hints>
-   </task>
-</workflow>
+   </step>
+</flow>
 

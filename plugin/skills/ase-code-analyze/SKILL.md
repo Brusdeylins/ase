@@ -1,6 +1,6 @@
 ---
 name: ase-code-analyze
-argument-hint: "[source-reference]"
+argument-hint: "<source-reference>"
 description: "Analyze the source code for problems in the logic and semantics and its related control flow."
 user-invocable: true
 disable-model-invocation: false
@@ -8,17 +8,13 @@ model: opus
 effort: low
 ---
 
-Analyze
-=======
-
-<execute>
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
-</execute>
 
-<role>
-You are an experienced, *expert-level software developer*,
+Analyze Source Code
+===================
+
+Your role is an experienced, *expert-level software developer*,
 specialized in *analyzing source code*.
-</role>
 
 <objective>
 *Analyze* the source code of $ARGUMENTS, and its directly related source
@@ -26,13 +22,14 @@ code, for problems in its *logic* and *semantics* and its related *control
 flow* is found.
 </objective>
 
-<workflow>
-1. <task id="STEP 1: Investigate Code Base">
+<flow>
+1. <step id="STEP 1: Investigate Code Base">
    Investigate on the code. If the code base is large, you *MUST* use
    the `Agent` tool (not inline work) to create multiple sub-agents to
    split the investigation task into appropriate chunks.
 
-   <hints>
+   Hints:
+
    - During investigation, do *not* output anything else,
      especially do not give any further explanations or information.
 
@@ -48,10 +45,9 @@ flow* is found.
 
    - Focus on the *problem only* and do *not* investigate on any
      possible *solution*.
-   </hints>
-   </task>
+   </step>
 
-2. <task id="STEP 2: Show Results">
+2. <step id="STEP 2: Show Results">
    For every detected problem, immediately report it with the following
    output <template/>, based on concise bullet points.
 
@@ -61,7 +57,7 @@ flow* is found.
    <description/>
    </template>
 
-   <hints>
+   Hints:
    - For the final results, do *not* output anything else, especially do
      *not* give any further explanations or information.
 
@@ -82,18 +78,17 @@ flow* is found.
    - In <description/>, classify the problem with a <severity/>
      of <template>LOW</template>, <template>MEDIUM</template> or
      <template>HIGH</template>.
-   </hints>
-   </task>
+   </step>
 
-3. <task id="STEP 3: Give Final Hint">
+3. <step id="STEP 3: Give Final Hint">
    Finally, output the following <template/> to give a final hint:
 
    <template>
-   &#x26AA; **HINT**: For deeper analysis, suggestions on solution approaches and then final
-   source code changes, use `/ase-code-elaborate P<n>` in the same Claude Code session or
-   open a new Claude Code session and copy & paste one of the above problem descriptions
+   &#x26AA; **NEXT STEP**: For deeper analysis, suggestions on solution approaches and then final
+   source code changes, use `/ase-code-elaborate P<n>` in the same *Claude Code* session or
+   open a new *Claude Code* session and copy & paste one of the above problem descriptions
    as a whole with `/ase-code-elaborate <problem>`.
    </template>
-   </task>
-</workflow>
+   </step>
+</flow>
 

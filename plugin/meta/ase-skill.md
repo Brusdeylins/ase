@@ -1,59 +1,116 @@
----
-name: ase-skill
-argument-hint: "[none]"
-description: Skill Meta Information
-user-invocable: false
-disable-model-invocation: false
----
 
-- *IMPORTANT*: For each <task/> in <workflow/>, and in the given
-  *chronological order*, you *MUST* use the `TaskCreate` tool to create
-  a corresponding task. Transform each `<task id="xxx" [...]/>` into
-  `TaskCreate({ subject: "xxx", description: "xxx", activeForm: "xxx" })`.
-  In order words, use the text of the `id` attribute of <task/> for the
-  `subject`, `description`, and `activeForm` fields of `TaskCreate`.
+Skill Meta Information
+======================
 
-- *IMPORTANT*: Do *not* call `TaskCreate` tools in parallel. Instead
-  *wait* for each `TaskCreate` tool call to complete before proceeding
-  with the next.
+Skill Output
+------------
 
-- *IMPORTANT*: You *MUST* use the `TaskUpdate` tool with its `addBlockedBy`
-  parameter to ensure that all tasks are running in the given *chronological order*,
-  i.e., `TaskUpdate({ taskId: "<id-of-step2/>", addBlockedBy: [ "<id-of-step-1/>" ] })`,
-  i.e., `TaskUpdate({ taskId: "<id-of-step3/>", addBlockedBy: [ "<id-of-step-2/>" ] })`, etc.
+-   *IMPORTANT*: *All* output is *exclusively* requested through
+    <template/> sections. You *MUST* *NOT* output anything *EXCEPT* it
+    is explicitly included in such a <template/> section. Especially,
+    you *MUST* *NOT* output any explanations on your own, except
+    explicitly requested.
 
-- *IMPORTANT*: For each <task/> you *MUST* use the `TaskUpdate` tool
-  for updating its status during processing.
+-   *IMPORTANT*: You *MUST* output all <template/> sections *EXACTLY* as provided
+    (including newlines), except for removing trailing spaces and
+    replacing the placeholders `<xxx/>` and `[...]` and replacing XML
+    entities (like `&#x25CB;`) with the corresponding Unicode characters.
 
-- *IMPORTANT*: You *MUST* sequentially execute every <task/> in
-  a <workflow/> *EXACTLY* as the instructions specify.
+-   *IMPORTANT*: You *MUST* *NEVER* output any `---` lines.
 
-- *IMPORTANT*: For any <task/> that specifies an *agent* in its
-  `agent="[...]"` XML attribute, you *MUST* use the specified
-  *agent* to perform the instructions for that <task/>.
+Skill Control Flow
+------------------
 
-- *IMPORTANT*: If you need clarification on any details of your current
-  <task/>, stop and ask the user specific numbered questions, and then
-  continue once you have all of the information you need.
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <define name="<define-name/>"><define-body/></define>:
 
-- *IMPORTANT*: You *MUST* output the result of all <task/> *EXACTLY* as
-  provided, without any further text interpretations and modifications.
+    This specifies a *reusable definition* named <define-name/> and
+    an <define-body/> which can contain arbitrary information with
+    optional `<args/>` (or alternatively, individual `<arg1/>`,
+    `<arg2/>`, etc) and optional `<content/>` references from
+    subsequent <expand/> calls.
+    This construct is expanded into nothing.
+    Do not output anything.
 
-- *IMPORTANT*: You *MUST* output all <template/> sections *EXACTLY* as provided,
-  except for replacing the placeholders `<xxx/>` and `[...]` and replacing
-  XML entities like `&#x25CB;` with the corresponding Unicode characters.
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <expand name="<define-name/>" arg1="<expand-arg1/>" [arg2="<expand-arg2/>]" [...]]]><expand-content/></expand>:
 
-- *IMPORTANT*: You *MUST* *NEVER* output any `---` lines.
+    This specifies the *expansion* of previous <define/>.
+    This construct is expanded into its <define-body/> with `<args/>`
+    substituted with `<expand-arg1/> <expand-arg2/> [...]`, `<arg1/>`
+    substituted with <expand-arg1/>, and `<content/>` substituted with
+    <expand-content/>.
+    Do not output anything else.
 
-- Initially, once output your <objective/> with the following output <template/>:
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <flow><flow-body/></flow>:
+
+    This specifies a *sequential flow* of <step/>s, which have
+    to be followed/executed in exactly the given order.
+    This construct is expanded to its <flow-body/>.
+    Do not output anything else.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <step id="<id/>"><step-body/></step>:
+
+    This specifies a distinct *single step* in a <flow/>.
+    This construct is expanded to its <step-body/>.
+    Do not output anything else.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <while condition="<while-condition/>"><while-body/></while>:
+
+    This specifies a <while-body/> which is *repeated* until <while-condition/> is met.
+    This construct is expanded to the repetition of <while-body/>.
+    Do not output anything else.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <for items="<for-item/> [...]"><for-body/></for>:
+
+    This specifies a <for-body/> which is *repeated* for all <for-item/>s
+    and where `<item/>` is expanded with the current <for-item/> in <for-body/>.
+    This construct is expanded to the repetition of <for-body/>.
+    Do not output anything else.
+
+Skill Sequential Processing
+---------------------------
+
+-   *IMPORTANT*: For each <step/> in <flow/> you *MUST* use the
+    `TaskCreate` tool to create a corresponding processing step.
+
+    For this, transform each `<step id="xxx" [...]/>` into `TaskCreate({
+    subject: "xxx", description: "xxx", activeForm: "xxx" })`. In
+    other words, use the text of the `id` attribute of <step/> for the
+    `subject`, `description`, and `activeForm` fields of `TaskCreate`.
+
+    Make the `TaskCreate` tool calls *sequentially*, *not* in parallel,
+    so the user can see intermediate results.
+
+-   *IMPORTANT*: For each <step/> you *MUST* use the `TaskUpdate` tool
+    for updating its status during processing.
+
+-   *IMPORTANT*: You *MUST* sequentially execute every <step/> in
+    a <flow/> *EXACTLY* as the instructions specify.
+
+-   *IMPORTANT*: For any <step/> that specifies an *agent* in its
+    `agent="[...]"` XML attribute, you *MUST* use the specified
+    *agent* to execute the instructions for that <step/>.
+
+-   *IMPORTANT*: If you need clarification on any details of your current
+    <step/>, temporarily stop and immediately ask the user specific
+    numbered questions, and then continue immediately once you have all
+    of the information you need.
+
+-   *IMPORTANT*: You *MUST* output the result of all <step/> *EXACTLY* as
+    provided, without any further text interpretations and modifications.
+
+Skill Identification
+--------------------
+
+- *IMPORTANT*: Initially, you *MUST* once output your <objective/>
+  with the following output <template/>:
+
   <template>
   &#x26AA; **OBJECTIVE**: <objective/>
-  </template>
-
-- When you have to reference a <task/>, use the following output <template/>
-  (where <task-id/> correspondings to the `id="[...]"` XML attribute of
-  the <task/> and <task-body/> correspondings to the XML body of the <task/>:
-  <template>
-  **<task-id/>**: <task-body/>
   </template>
 

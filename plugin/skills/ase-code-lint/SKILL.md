@@ -13,27 +13,71 @@ effort: medium
 Lint Source Code
 ================
 
-You role is an experienced, *expert-level software developer*,
+Your role is an experienced, *expert-level software developer*,
 specialized in *analyzing source code*.
 
 <objective>
 *Analyze* the code of $ARGUMENTS for *potential problems*
-related to a set of linting rules.
+related to a set of code quality aspects.
 </objective>
 
-Plan
-----
+<define name="linter">
+    Your current *sub-objective* is:
+    <body/>
 
-Closely follow the following *<workflow/>* of distinct *<task/>*,
-in the given chronological order:
+    For this, first output the following <template/> to inform the user:
 
-<workflow>
-1.  <task id="PREPARATION">
-    Find and read all the corresponding source code files
-    and their related source code files.
-    </task>
+    <template>
+    **<arg1/>**: <body/>
+    </template>
 
-2.  <task id="A01 - FORMATTING">
+    Then decide whether you detected *potential problems* which
+    *requires* a *code change* and *think* about this decision to be
+    sure it is *not* a false positive. Then choose one of the following
+    cases:
+
+    -   **CASE 1**: **NEGATIVE**
+        In case of *no* necessary code changes,
+        display the following output <template/>:
+
+        <template>
+
+        &#x26AA; **RESULT**: No issues found, no code changes necessary.
+    
+        </template>
+
+        Especially, do *not* output any further explanations.
+
+    -   **CASE 2**: **POSITIVE**
+
+        In case of necessary code changes, display a *brief explanation*
+        *what* the *problem* is and *how* the proposed *solution* fixes
+        it. Emphasize important keywords in your explanation texts and
+        use the following <template/> for those outputs:
+
+        <template>
+
+        &#x1F7E0; **PROBLEM**: [...]
+
+        &#x1F535; **SOLUTION**: [...]
+
+        </template>
+
+        Especially, do *not* output any further explanations.
+
+        After this, immediately propose a corresponding *complete source
+        code change set*. For this, keep all source code changes as
+        *surgical and small* as possible.
+</define>
+
+<flow>
+1.  <step id="Preparation">
+    *Find* and *read* all the corresponding source code files
+    and all *related* source code files.
+    </step>
+
+2.  <step id="A01 - FORMATTING">
+    <expand name="linter" arg1="A01 - FORMATTING">
     Check for inconsistently formatted code and badly vertically
     aligned code on sub-sequent lines.
 
@@ -41,9 +85,11 @@ in the given chronological order:
     continuous code blocks (those without any blank lines at all),
     ensure that they always start with a blank line and a comment
     (usually just a single-line one).
-    </task>
+    </expand>
+    </step>
 
-3.  <task id="A02 - COMPREHENSION">
+3.  <step id="A02 - COMPREHENSION">
+    <expand name="linter" arg1="A02 - COMPREHENSION">
     Check for bad readability, bad maintainability, or bad
     self-documentation on identifiers.
 
@@ -53,42 +99,52 @@ in the given chronological order:
     scopes. For all indentifers, prefer camel-case. For classes and
     interfaces, prefer first letter to be upper-case. For parameters
     and variables, prefer first letter to be lower-case.
-    </task>
+    </expand>
+    </step>
 
-4.  <task id="A03 - CLEANLINESS">
+4.  <step id="A03 - CLEANLINESS">
+    <expand name="linter" arg1="A03 - CLEANLINESS">
     Check for unclean code and inconsistent code.
 
     For unclean code, especially detect out-dated code construct
     patterns. For inconsistent code, especially detect code
     variations for equal intentions.
-    </task>
+    </expand>
+    </step>
 
-5.  <task id="A04 - SPELLING">
+5.  <step id="A04 - SPELLING">
+    <expand name="linter" arg1="A04 - SPELLING">
     Check for typos, spelling errors, or incorrect grammar in
     identifiers, string literals and comments.
 
     Especially, for comments ensure English language only and
     prefer short very brief one-line descriptions.
-    </task>
+    </expand>
+    </step>
 
-6.  <task id="A05 - COMPLEXITY">
+6.  <step id="A05 - COMPLEXITY">
+    <expand name="linter" arg1="A05 - COMPLEXITY">
     Check for extremely long functions, and deeply nested code
     constructs.
 
     Especially, for functions prefer fewer then 100 lines, and for
     nested constructs prefer fewer than 10 nesting levels.
-    </task>
+    </expand>
+    </step>
 
-7.  <task id="A06 - REDUNDANCY">
+7.  <step id="A06 - REDUNDANCY">
+    <expand name="linter" arg1="A06 - REDUNDANCY">
     Check for redundancies through duplications of identical code or
     nearly identical code.
 
     For redundant code of more than 3 lines, suggest factoring it out
     into a utility function, but position it before its calls as close
     as possible.
-    </task>
+    </expand>
+    </step>
 
-8.  <task id="A07 - PATTERNS">
+8.  <step id="A07 - PATTERNS">
+    <expand name="linter" arg1="A07 - PATTERNS">
     Check for broken design patterns, broken conventions, or broken
     best practices.
 
@@ -96,165 +152,155 @@ in the given chronological order:
     For conventions, especially check for broken TypeScript/JavaScript
     conventions. For best practices, especially check for not leveraging
     ECMAScript APIs or using obsolete ECMAScript APIs.
-    </task>
+    </expand>
+    </step>
 
-9.  <task id="A08 - COMPLICATENESS">
+9.  <step id="A08 - COMPLICATENESS">
+    <expand name="linter" arg1="A08 - COMPLICATENESS">
     Check for complicated or cumbersome code constructs.
 
     Especially, check for unnecessary difficult code constructs
     for which simpler solutions exist.
-    </task>
+    </expand>
+    </step>
 
-10. <task id="A09 - CONCISENESS">
+10. <step id="A09 - CONCISENESS">
+    <expand name="linter" arg1="A09 - CONCISENESS">
     Check for non-concise and boilerplate-based code.
 
     Especially, check for unnecessary long code constructs for
     which shorter solutions exist, and check for unnecessary
     technical/infrastructural code with too less domain-specific
     aspects.
-    </task>
+    </expand>
+    </step>
 
-11. <task id="A10 - SMELLS">
+11. <step id="A10 - SMELLS">
+    <expand name="linter" arg1="A10 - SMELLS">
     Check for code smells.
 
     Especially, check for unnecessary type casts, problematic value
     coercions, surprising void() and risky eval() constructs.
-    </task>
+    </expand>
+    </step>
 
-12. <task id="A11 - TYPING">
+12. <step id="A11 - TYPING">
+    <expand name="linter" arg1="A11 - TYPING">
     Check for broken "maximum type safety with minimum type
     annotations" rule.
 
     Especially, ensure that no implicit "any" type exists and that types
     are primarily used on function parameters. For all other cases,
     ensure that a maximum type inference is used.
-    </task>
+    </expand>
+    </step>
 
-13. <task id="A12 - ERROR-HANDLING">
+13. <step id="A12 - ERROR-HANDLING">
+    <expand name="linter" arg1="A12 - ERROR-HANDLING">
     Check for missing, incorrect or inconsistent error handling or
     error preventions.
 
     Surround code blocks with try/catch-clauses only if really
     necessary to not clutter the code too much with error handling. For
     asynchronous code, prefer .catch() instead of try/catch.
-    </task>
+    </expand>
+    </step>
 
-14. <task id="A13 - MEMORY-LEAK">
+14. <step id="A13 - MEMORY-LEAK">
+    <expand name="linter" arg1="A13 - MEMORY-LEAK">
     Check for memory leaks and inconsistent resource
     allocation/deallocation pairs.
 
     Especially, ensure that for each allocation there is a corresponding
     deallocation and that deallocations happen in the exact opposite
     order of the allocations.
-    </task>
+    </expand>
+    </step>
 
-15. <task id="A14 - CONCURRENCY">
+15. <step id="A14 - CONCURRENCY">
+    <expand name="linter" arg1="A14 - CONCURRENCY">
     Check for concurrency or parallelism race conditions.
 
     Especially, check for potential problems of code which runs
     asynchronously from timeout/interval or I/O driven callbacks.
-    </task>
+    </expand>
+    </step>
 
-16. <task id="A15 - PERFORMANCE">
+16. <step id="A15 - PERFORMANCE">
+    <expand name="linter" arg1="A15 - PERFORMANCE">
     Check for bad performance and inefficiency issues.
 
     Especially, check for code constructs with a high (i.e., not
     constant/O(1), or linear/O(n) complexity) in its execution time
     and/or memory consumption.
-    </task>
+    </expand>
+    </step>
 
-17. <task id="A16 - SECURITY">
+17. <step id="A16 - SECURITY">
+    <expand name="linter" arg1="A16 - SECURITY">
     Check for potential vulnerabilities, typical security issues,
     and missing essential validations.
 
     Especially, check for edge cases in value ranges.
-    </task>
+    </expand>
+    </step>
 
-18. <task id="A17 - ARCHITECTURE">
+18. <step id="A17 - ARCHITECTURE">
+    <expand name="linter" arg1="A17 - ARCHITECTURE">
     Check for architecture, design, or modularity concerns.
 
     For architecture, ensure that patterns like Layer, Slice, Hub
     & Spoke, and Pipes & Filters are used correctly. For design,
     ensure that patterns like Singleton, Proxy, Adapter, Class, and
     Interface are used correctly.
-    </task>
+    </expand>
+    </step>
 
-19. <task id="A18 - LOGIC">
+19. <step id="A18 - LOGIC">
+    <expand name="linter" arg1="A18 - LOGIC">
     Check for wrong and inconsistent domain logic.
 
     Especially, try to detect implausible edge cases in the domain
     logic.
-    </task>
+    </expand>
+    </step>
 
-20. <task id="A19 - FLOW">
+20. <step id="A19 - FLOW">
+    <expand name="linter" arg1="A19 - FLOW">
     Check for wrong control or data flow.
 
     Especially, try to detect control flows where corner cases are not covered,
     and data flows with inconsistent value unit processing.
-    </task>
+    </expand>
+    </step>
 
-21. <task id="A20 - DEAD-CODE">
+21. <step id="A20 - DEAD-CODE">
+    <expand name="linter" arg1="A20 - DEAD-CODE">
     Check for dead or unused code.
 
     Especially, try to detect classes, functions or control flow
     branches which are effectively dead or unused.
-    </task>
+    </expand>
+    </step>
 
-22. <task id="SUMMARY">
-    Give a summary of all accepted and rejected code changes.
-    </task>
-</workflow>
+22. <step id="Summary">
+    At the end, do not give any more explanations, except for
+    a summary of all accepted and rejected code
+    changes. For this, according to the original step ordering,
+    use the following output <template/>, where
+    `&#x1F7E0; **AX - XXX**: N issues` is used for aspects
+    with N issues and `&#x26AA; **AX - XXX**: no issues`
+    for aspects without any issues:
 
-Procedure
----------
+    <template>
+    **SUMMARY**:
 
-*Analyze* the code of $ARGUMENTS for *potential problems*.
-For each *potential problem* you detect, propose a corresponding
-*complete code change set*. Keep all changes as *surgical and small* as possible.
+    &#x1F7E0; **AX - XXX**: N issues
 
-In case of no code change proposal at all for an entire <task/>,
-display this with the following output <template/>, where the
-`**AX - XXX**: Check for [...]` is a reference to the
-current <task/> you analyzed:
+    &#x26AA; **AX - XXX**: no issues
 
-<template>
-**AX - XXX**: Check for [...]
-
-&#x26AA; **RESULT**: No issues found, no changes necessary.
-
-</template>
-
-Before any code change, provide a *brief explanation*
-*what* the *problem* is and *how* the proposed *solution* fixes it.
-Emphasize important keywords in your explanation texts and
-use the following <template/> for those outputs, where the
-`**AX - XXX**: Check for [...]` is a reference to the
-current <task/> you are analyzing:
-
-<template>
-**AX - XXX**: Check for [...]
-
-&#x1F7E0; **PROBLEM**: [...]
-
-&#x1F535; **SOLUTION**: [...]
-
-</template>
-
-At the end, do not give any more explanations, except for
-a summary of all accepted and reject code
-changes. For this, according to the original <task/> ordering,
-use the following output <template/>, where
-`&#x1F7E0; **AX - XXX**: N issues` is used for <task/>
-with N issues and `&#x1F535; **AX - XXX**: no issues`
-for <task/> without any issues:
-
-<template>
-**SUMMARY**:
-
-&#x1F7E0; **AX - XXX**: N issues
-
-&#x26AA; **AX - XXX**: no issues
-
-[...]
-</template>
+    [...]
+    </template>
+    </step>
+</flow>
 
