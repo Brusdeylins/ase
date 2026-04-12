@@ -1,7 +1,10 @@
 ---
 name: ase-code-insight
 description: "Give insights into the source code."
-context: fork
+user-invocable: true
+disable-model-invocation: false
+model: opus
+effort: low
 allowed-tools:
     - "Bash(git)"
     - "Bash(sort)"
@@ -9,21 +12,20 @@ allowed-tools:
     - "Bash(head)"
 ---
 
-Insight
-=======
+@${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 
-<role>
-You are an experienced, *expert-level software developer*,
-specialized in *analyzing source code*.
-</role>
+Project Insight
+===============
+
+Your role is an experienced, *expert-level software developer*,
+specialized in *analyzing source code* and giving insights.
 
 <objective>
-Give *insights* into the source code of $ARGUMENTS.
+Give *insights* into the project through the source code of $ARGUMENTS.
 </objective>
 
-<workflow>
-1.  PROJECT ABSTRACT:
-
+<flow>
+1.  <step id="STEP 1: PROJECT ABSTRACT">
     Determine an <abstract/> summary of this project.
     For this, check a potentially existing `README.*` file
     or scan the source files and figure it out indirectly.
@@ -35,14 +37,14 @@ Give *insights* into the source code of $ARGUMENTS.
 
     <abstract/>
     </template>
+    </step>
 
-2.  PROJECT AUTHOR:
-
+2.  <step id="STEP 2: PROJECT AUTHOR">
     Determine the <author/> of this project.
     For this, run the following command...
 
     ```
-    git shortlog -sn --no-merges
+    git shortlog -sn --no-merges HEAD
     ```
 
     ...and then display the results with the following <template/>:
@@ -52,9 +54,9 @@ Give *insights* into the source code of $ARGUMENTS.
 
     <author/>
     </template>
+    </step>
 
-3.  SOURCE CHURN:
-
+3.  <step id="STEP 3: SOURCE CHURN">
     Display the source files with caused the most churn by
     figuring out which source files have the most commits.
     Display the following <template/>:
@@ -71,10 +73,10 @@ Give *insights* into the source code of $ARGUMENTS.
 
     ...and then display its result as a table with a table head and
     columns named "Commits" and "Source File". Do not display any
-    forther explanation of this result.
+    further explanation of this result.
+    </step>
 
-4.  MODULE STRUCTURE:
-
+4.  <step id="STEP 4: MODULE STRUCTURE">
     Display the following <template/>:
 
     <template>
@@ -85,5 +87,6 @@ Give *insights* into the source code of $ARGUMENTS.
     "Boxes-and-Lines" diagram with all modules as boxes and the imports
     between modules as the directed lines. Do not display any forther
     explanation except for this diagram.
-</workflow>
+    </step>
+</flow>
 
