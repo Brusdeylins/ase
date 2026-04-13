@@ -1,5 +1,5 @@
 ---
-argument-hint: "[issue]"
+argument-hint: "<issue>"
 description: "During Lint: Improve Explanation"
 ---
 

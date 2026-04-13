@@ -1,5 +1,5 @@
 ---
-argument-hint: "[question]"
+argument-hint: "<question>"
 description: "During Lint: Re-Assess Last Change"
 ---
 
