@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 model: opus
 effort: medium
+allowed-tools:
+    - "Bash(git)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
@@ -23,26 +25,33 @@ currently staged Git changes.
 
 <flow>
 1.  <step id="STEP 1: Find out staged changes">
-    Run the following command
+    Run the following command to find out details
+    of what changes are currently staged for commit:
 
+    `git diff --staged`
     </step>
 
 2.  <step id="STEP 2: Craft a consolidated commit message">
+    Craft a commit message in the following format:
+
+    `<type/>: <summary/>`
+
+    The known <type/>s are:
+    -   `FEATURE`: new functionality
+    -   `IMPROVEMENT`: improved functionality or configuration
+    -   `BUGFIX`: corrected functionality or configuration
+    -   `UPDATE`: updated functionality or configuration
+    -   `CLEANUP`: cleaned up code, fixed style, etc.
+    -   `REFACTOR`: refactored code
+
+    The rules for <summary/> are:
+    -   Maximum of 70 characters
+    -   Use imperative mood ("add" not "added")
+    -   No period at the end
+    -   Do not use any Markdown formatting
+
+    Output *only* the crafted commit message.
+    Output *no* further explanation.
     </step>
 </flow>
-
-Follow the Conventional Commits specification.
-Format: <type>(<scope>): <short description>
-
-Types: feat, fix, chore, docs, refactor, style, test, perf, ci, build, revert
-
-Rules:
-- Subject line max 72 chars
-- Use imperative mood ("add" not "added")
-- No period at the end
-- Scope is optional but recommended
-- If the change is large, add a body after a blank line
-- Body lines max 100 chars
-
-Output ONLY the commit message. No explanation. No markdown. No backticks.`,
 
