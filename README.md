@@ -222,10 +222,9 @@ See Also
 Support
 -------
 
-**ASE** is developed in the context of industrial Software Engineering
-at the [*msg group*](https://www.msg.group). **ASE** development
-is supported by *msg Research*, the organisation of *Dr. Ralf S.
-Engelschall*, CTO msg group.
+**ASE** is developed in the experience context of industrial Software
+Engineering at the [*msg group*](https://www.msg.group). **ASE**
+development is supported by *msg Research*.
 
 Copyright & License
 -------------------
