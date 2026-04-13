@@ -56,11 +56,18 @@ claude plugin uninstall ase@ase
 claude plugin marketplace remove ase
 ```
 
+Overview
+--------
+
+**ASE** consists of various building blocks:
+
+![overview](docs/building-blocks.svg)
+
 Usage
 -----
 
 Coding involves the following steps, which are assisted by corresponding
-ASE commands/skills:
+**ASE** commands/skills:
 
 ![assistance steps](docs/coding-assistance.svg)
 
