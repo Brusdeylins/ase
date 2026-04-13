@@ -15,7 +15,7 @@ tooling of *Dr. Ralf S. Engelschall* for combining the approach of
 AI Coding Tools* like *Claude Code*. **ASE** primarily consists of a
 *Claude Code* plugin and a Command-Line Interface (CLI) tool.
 
-> [!NOTICE]
+> [!NOTE]
 > The initial, primary focus of **ASE** is on the tool *Claude Code* and
 > the *TypeScript/JavaScript* technology stack, but the forthcoming,
 > secondary focus will be also the tool *Github Copilot CLI* and the
