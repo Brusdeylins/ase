@@ -72,6 +72,10 @@ claude plugin uninstall ase@ase
 claude plugin marketplace remove ase
 ```
 
+<details>
+
+<summary>Contributor Setup</summary>
+
 Contributor Setup
 -----------------
 
@@ -122,7 +126,7 @@ claude plugin uninstall ase@ase
 claude plugin install ase@ase
 ```
 
-###
+</details>
 
 Overview
 --------
