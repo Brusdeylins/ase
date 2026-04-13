@@ -142,7 +142,7 @@ Usage
 
 The following ASE commands/skills exist on the meta-level:
 
-- `/ase-meta-why <question>`:
+- `/ase-meta-why <fact>`:
   Perform a Five-Whys root-cause analysis.
 
 - `/ase-meta-search <query>`:
@@ -159,7 +159,7 @@ The following ASE commands/skills exist on the meta-level:
 
 The following ASE commands/skills exist on the code-level:
 
-- `/ase-code-craft <feature-description>`:
+- `/ase-code-craft <feature>`:
   Craft source code from scratch.
 
 - `/ase-code-changes`:
@@ -179,6 +179,12 @@ The following ASE commands/skills exist on the code-level:
 - `/ase-code-elaborate <problem-reference>`:
   Elaborate on a source code problem in depth to fix it. Usually the
   problem reference is one of the outputs of `/ase-code-analyze`.
+
+- `/ase-code-refactor <refactor-hint>`:
+  Refactor source code.
+
+- `/ase-code-commit`:
+  Determine commit message for staged Git changes.
 
 - `/ase-code-lint <source-reference>`:
   Lint the source code in an interactive review loop.
