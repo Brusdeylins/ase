@@ -2,6 +2,16 @@
 ChangeLog
 =========
 
+0.0.4 (2026-04-13)
+------------------
+
+- IMPROVEMENT: improved README with diagram, caution hint, and homepage URL
+- IMPROVEMENT: added ase-code-commit skill
+- IMPROVEMENT: added ASE logo
+- BUGFIX: added missing building-blocks SVG file
+- UPDATE: updated building-blocks and coding-assistance diagrams
+- CLEANUP: various README and plugin skill cleanups
+
 0.0.3 (2026-04-12)
 ------------------
 
