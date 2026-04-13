@@ -1,7 +1,7 @@
 ---
 name: ase-code-commit
 argument-hint: ""
-description: "Commit changes to Git"
+description: "Determine commit message for staged Git changes"
 user-invocable: true
 disable-model-invocation: false
 model: opus
@@ -32,26 +32,32 @@ currently staged Git changes.
     </step>
 
 2.  <step id="STEP 2: Craft a consolidated commit message">
-    Craft a commit message in the following format:
+    Craft a commit <message/> in the following format:
 
     `<type/>: <summary/>`
 
-    The known <type/>s are:
-    -   `FEATURE`: new functionality
+    The known <type/>s and their usual corresponding kind of change are:
+    -   `FEATURE`: new functionality or configuration
     -   `IMPROVEMENT`: improved functionality or configuration
     -   `BUGFIX`: corrected functionality or configuration
     -   `UPDATE`: updated functionality or configuration
-    -   `CLEANUP`: cleaned up code, fixed style, etc.
-    -   `REFACTOR`: refactored code
+    -   `CLEANUP`: cleaned up functionality or configuration
+    -   `REFACTOR`: refactored functionality or configuration
 
-    The rules for <summary/> are:
-    -   Maximum of 70 characters
+    The rules for generating <summary/> are:
+    -   Use a maximum of 70 characters
     -   Use imperative mood ("add" not "added")
-    -   No period at the end
-    -   Do not use any Markdown formatting
+    -   Use *no* period at the end
+    -   Use *no* Markdown formatting
 
-    Output *only* the crafted commit message.
-    Output *no* further explanation.
+    Output this crafted commit message with the following <template/>:
+
+    <template>
+    Commit Message:
+    **<message/>**
+    </template>
+
+    Do *not* output any further explanation.
     </step>
 </flow>
 
