@@ -1,6 +1,6 @@
 ---
-name: ase-meta-websearch
-description: Use the meta-websearch agent to find any and all answers to your questions!
+name: ase-meta-search
+description: Use the `ase-meta-search` agent to find answers to your questions!
 tools:
     - "mcp__perplexity__perplexity_search"
     - "mcp__brave__brave_web_search"

@@ -141,7 +141,7 @@ The following ASE commands/skills exist on the meta-level:
 - `/ase-meta-why <question>`:
   Perform a Five-Whys root-cause analysis.
 
-- `/ase-meta-websearch <query>`:
+- `/ase-meta-search <query>`:
   Search the Internet/Web with a query.
 
 - `/ase-meta-quorum <question>`:

@@ -12,6 +12,7 @@ ChangeLog
 - BUGFIX: fix references in plugin skill and agent files
 - CLEANUP: cleanup and fix "npm start publish" step
 - CLEANUP: align syntax of arguments in skill files
+- CLEANUP: rename skill and agent from ase-meta-websearch to ase-meta-search
 
 0.0.4 (2026-04-13)
 ------------------
