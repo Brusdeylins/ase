@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.0.5 (2026-04-13)
+------------------
+
+- CLEANUP: cleanup and fix "npm start publish" step
+
 0.0.4 (2026-04-13)
 ------------------
 
