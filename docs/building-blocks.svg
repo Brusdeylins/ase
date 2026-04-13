@@ -1,368 +1,103 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.1" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" viewBox="35.850395 9.383158 787.837 550.04205" width="787.837" height="550.04205">
-  <defs>
-    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 6 6" markerWidth="6" markerHeight="6" color="#71420d">
-      <g>
-        <path d="M 3.6 0 L 0 -1.35 L 0 1.35 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
-      </g>
-    </marker>
-    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_2" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 6 6" markerWidth="6" markerHeight="6" color="#494949">
-      <g>
-        <path d="M 3.6 0 L 0 -1.35 L 0 1.35 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
-      </g>
-    </marker>
-    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_3" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 6 6" markerWidth="6" markerHeight="6" color="#0c4171">
-      <g>
-        <path d="M 3.6 0 L 0 -1.35 L 0 1.35 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
-      </g>
-    </marker>
-    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_4" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-6 -3 7 6" markerWidth="7" markerHeight="6" color="#71420d">
-      <g>
-        <path d="M -4.8 0 L 0 1.8 L 0 -1.8 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
-      </g>
-    </marker>
-    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_5" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 6 6" markerWidth="6" markerHeight="6" color="#0c4171">
-      <g>
-        <path d="M 3.6 0 L 0 -1.35 L 0 1.35 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
-      </g>
-    </marker>
-    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker_6" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -3 6 6" markerWidth="6" markerHeight="6" color="#71420d">
-      <g>
-        <path d="M 3.6 0 L 0 -1.35 L 0 1.35 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
-      </g>
-    </marker>
-  </defs>
-  <g id="Canvas_1" stroke-dasharray="none" stroke-opacity="1" fill="none" fill-opacity="1" stroke="none">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xl="http://www.w3.org/1999/xlink" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="35.850395 9.383158 787.837 550.04205" width="787.837" height="550.04205">
+  <defs/>
+  <g id="Canvas_1" stroke-dasharray="none" fill-opacity="1" stroke="none" fill="none" stroke-opacity="1">
     <title>Canvas 1</title>
     <rect fill="white" x="35.850395" y="9.383158" width="787.837" height="550.04205"/>
     <g id="Canvas_1_Content">
       <title>Content</title>
-      <g id="Graphic_687">
-        <path d="M 253.44883 85.03937 L 424.0315 85.03937 C 426.24065 85.03937 428.0315 86.83023 428.0315 89.03937 L 428.0315 115.05512 C 428.0315 117.26426 426.24065 119.05512 424.0315 119.05512 L 253.44883 119.05512 C 251.2397 119.05512 249.44883 117.26426 249.44883 115.05512 L 249.44883 89.03937 C 249.44883 86.83023 251.2397 85.03937 253.44883 85.03937 Z" fill="#368ddf"/>
-      </g>
-      <g id="Graphic_688">
-        <path d="M 437.7008 85.03937 L 594.11025 85.03937 C 596.3194 85.03937 598.11025 86.83023 598.11025 89.03937 L 598.11025 115.05512 C 598.11025 117.26426 596.3194 119.05512 594.11025 119.05512 L 437.7008 119.05512 C 435.49166 119.05512 433.7008 117.26426 433.7008 115.05512 L 433.7008 89.03937 C 433.7008 86.83023 435.49166 85.03937 437.7008 85.03937 Z" fill="#929292"/>
-      </g>
-      <g id="Graphic_648">
-        <path d="M 437.7008 124.72441 L 594.11025 124.72441 C 596.3194 124.72441 598.11025 126.51527 598.11025 128.72441 L 598.11025 285.13387 C 598.11025 287.343 596.3194 289.13387 594.11025 289.13387 L 437.7008 289.13387 C 435.49166 289.13387 433.7008 287.343 433.7008 285.13387 L 433.7008 128.72441 C 433.7008 126.51527 435.49166 124.72441 437.7008 124.72441 Z" fill="#dbdbdb"/>
-      </g>
-      <g id="Graphic_647">
-        <path d="M 83.37008 124.72441 L 239.77953 124.72441 C 241.98867 124.72441 243.77953 126.51527 243.77953 128.72441 L 243.77953 285.13387 C 243.77953 287.343 241.98867 289.13387 239.77953 289.13387 L 83.37008 289.13387 C 81.16094 289.13387 79.37008 287.343 79.37008 285.13387 L 79.37008 128.72441 C 79.37008 126.51527 81.16094 124.72441 83.37008 124.72441 Z" fill="#f5dbc1"/>
-      </g>
-      <g id="Graphic_646">
-        <path d="M 253.44883 124.72441 L 424.0315 124.72441 C 426.24065 124.72441 428.0315 126.51527 428.0315 128.72441 L 428.0315 285.13387 C 428.0315 287.343 426.24065 289.13387 424.0315 289.13387 L 253.44883 289.13387 C 251.2397 289.13387 249.44883 287.343 249.44883 285.13387 L 249.44883 128.72441 C 249.44883 126.51527 251.2397 124.72441 253.44883 124.72441 Z" fill="#c0dbf5"/>
-      </g>
       <g id="Graphic_629">
-        <path d="M 284.62993 184.25197 L 395.05513 184.25197 C 397.26427 184.25197 399.05513 186.04283 399.05513 188.25197 L 399.05513 225.6063 C 399.05513 227.81544 397.26427 229.6063 395.05513 229.6063 L 284.62993 229.6063 C 282.4208 229.6063 280.62993 227.81544 280.62993 225.6063 L 280.62993 188.25197 C 280.62993 186.04283 282.4208 184.25197 284.62993 184.25197 Z" fill="#1067b2"/>
-      </g>
-      <g id="Graphic_630">
-        <path d="M 468.8819 184.25197 L 579.3071 184.25197 C 581.51624 184.25197 583.3071 186.04283 583.3071 188.25197 L 583.3071 225.6063 C 583.3071 227.81544 581.51624 229.6063 579.3071 229.6063 L 468.8819 229.6063 C 466.67276 229.6063 464.8819 227.81544 464.8819 225.6063 L 464.8819 188.25197 C 464.8819 186.04283 466.67276 184.25197 468.8819 184.25197 Z" fill="#6d6d6d"/>
+        <path d="M 123.05512 323.1496 L 233.48032 323.1496 C 235.68946 323.1496 237.48032 324.94048 237.48032 327.1496 L 237.48032 364.50395 C 237.48032 366.7131 235.68946 368.50395 233.48032 368.50395 L 123.05512 368.50395 C 120.84598 368.50395 119.05512 366.7131 119.05512 364.50395 L 119.05512 327.1496 C 119.05512 324.94048 120.84598 323.1496 123.05512 323.1496 Z" fill="#1067b2"/>
       </g>
       <g id="Graphic_631">
-        <path d="M 98.17323 184.25197 L 208.59843 184.25197 C 210.80757 184.25197 212.59843 186.04283 212.59843 188.25197 L 212.59843 225.6063 C 212.59843 227.81544 210.80757 229.6063 208.59843 229.6063 L 98.17323 229.6063 C 95.96409 229.6063 94.17323 227.81544 94.17323 225.6063 L 94.17323 188.25197 C 94.17323 186.04283 95.96409 184.25197 98.17323 184.25197 Z" fill="#b26813"/>
+        <path d="M 123.05512 374.17324 L 500.56694 374.17324 C 502.7761 374.17324 504.56694 375.9641 504.56694 378.17324 L 504.56694 415.52757 C 504.56694 417.7367 502.7761 419.52757 500.56694 419.52757 L 123.05512 419.52757 C 120.84598 419.52757 119.05512 417.7367 119.05512 415.52757 L 119.05512 378.17324 C 119.05512 375.9641 120.84598 374.17324 123.05512 374.17324 Z" fill="#b26813"/>
       </g>
       <g id="Graphic_624">
-        <text transform="translate(320.87617 200.59056)" fill="white">
-          <tspan font-family="Myriad Pro" font-weight="bold" font-size="16" fill="white" x="0" y="12" xml:space="preserve">Code</tspan>
-        </text>
-      </g>
-      <g id="Graphic_627">
-        <text transform="translate(491.78307 200.59056)" fill="white">
-          <tspan font-family="Myriad Pro" font-weight="bold" font-size="16" fill="white" x="61106675e-20" y="12" xml:space="preserve">Comment</tspan>
+        <text transform="translate(143.89764 334.70394)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="22.35" y="9" xml:space="preserve">ASE</tspan>
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="7958079e-19" y="23.400005" xml:space="preserve">Constitution</tspan>
         </text>
       </g>
       <g id="Graphic_628">
-        <text transform="translate(134.96718 200.59056)" fill="white">
-          <tspan font-family="Myriad Pro" font-weight="bold" font-size="16" fill="white" x="61106675e-20" y="12" xml:space="preserve">Prose</tspan>
+        <text transform="translate(268.62205 390.5118)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="16" fill="white" x="0" y="12" xml:space="preserve">Claude Code</tspan>
         </text>
       </g>
-      <g id="Graphic_632">
-        <text transform="translate(235.29818 181.85984)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="7105427e-19" y="9" xml:space="preserve">craft</tspan>
+      <g id="Graphic_726">
+        <path d="M 247.77953 323.1496 L 373.0079 323.1496 C 375.21702 323.1496 377.0079 324.94048 377.0079 327.1496 L 377.0079 364.50395 C 377.0079 366.7131 375.21702 368.50395 373.0079 368.50395 L 247.77953 368.50395 C 245.5704 368.50395 243.77953 366.7131 243.77953 364.50395 L 243.77953 327.1496 C 243.77953 324.94048 245.5704 323.1496 247.77953 323.1496 Z" fill="#1067b2"/>
+      </g>
+      <g id="Graphic_725">
+        <text transform="translate(255.53006 334.70394)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="20.85" y="9" xml:space="preserve">ASE Skills</tspan>
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="23.400005" xml:space="preserve">Meta Information</tspan>
         </text>
       </g>
-      <g id="Graphic_633">
-        <text transform="translate(228.39218 220.43308)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">explain</tspan>
+      <g id="Graphic_729">
+        <path d="M 389.5118 323.1496 L 499.937 323.1496 C 502.14616 323.1496 503.937 324.94048 503.937 327.1496 L 503.937 364.50395 C 503.937 366.7131 502.14616 368.50395 499.937 368.50395 L 389.5118 368.50395 C 387.3027 368.50395 385.5118 366.7131 385.5118 364.50395 L 385.5118 327.1496 C 385.5118 324.94048 387.3027 323.1496 389.5118 323.1496 Z" fill="#7db4ea"/>
+      </g>
+      <g id="Graphic_728">
+        <text transform="translate(420.70434 334.70394)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="4369838e-19" y="9" xml:space="preserve">ASE Tool</tspan>
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="10.176" y="23.400005" xml:space="preserve">MCP</tspan>
         </text>
       </g>
-      <g id="Graphic_634">
-        <text transform="translate(417.11034 181.85984)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="0" y="9" xml:space="preserve">inflate</tspan>
+      <g id="Graphic_731">
+        <path d="M 389.5118 272.126 L 499.937 272.126 C 502.14616 272.126 503.937 273.91685 503.937 276.126 L 503.937 313.48032 C 503.937 315.68946 502.14616 317.48032 499.937 317.48032 L 389.5118 317.48032 C 387.3027 317.48032 385.5118 315.68946 385.5118 313.48032 L 385.5118 276.126 C 385.5118 273.91685 387.3027 272.126 389.5118 272.126 Z" fill="#7db4ea"/>
+      </g>
+      <g id="Graphic_730">
+        <text transform="translate(420.70434 283.6803)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="4369838e-19" y="9" xml:space="preserve">ASE Tool</tspan>
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="13.95" y="23.400005" xml:space="preserve">CLI</tspan>
         </text>
       </g>
-      <g id="Graphic_635">
-        <text transform="translate(404.68505 220.43308)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="8171241e-19" y="9" xml:space="preserve">summarize</tspan>
+      <g id="Graphic_733">
+        <path d="M 243.77953 313.48032 L 243.77953 203.05512 C 243.77953 200.84598 245.5704 199.05512 247.77953 199.05512 L 270.96064 199.05512 C 273.16978 199.05512 274.96064 200.84598 274.96064 203.05512 L 274.96064 313.48032 C 274.96064 315.68946 273.16978 317.48032 270.96064 317.48032 L 247.77953 317.48032 C 245.5704 317.48032 243.77953 315.68946 243.77953 313.48032 Z" fill="#1067b2"/>
+      </g>
+      <g id="Graphic_732">
+        <text transform="translate(255.56063 282.87972) rotate(-90)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Skills</tspan>
         </text>
       </g>
-      <g id="Graphic_636">
-        <text transform="translate(291.29922 262.95276)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="0" y="9" xml:space="preserve">refactor</tspan>
+      <g id="Graphic_735">
+        <path d="M 277.79528 313.48032 L 277.79528 203.05512 C 277.79528 200.84598 279.58614 199.05512 281.7953 199.05512 L 304.9764 199.05512 C 307.18553 199.05512 308.9764 200.84598 308.9764 203.05512 L 308.9764 313.48032 C 308.9764 315.68946 307.18553 317.48032 304.9764 317.48032 L 281.7953 317.48032 C 279.58614 317.48032 277.79528 315.68946 277.79528 313.48032 Z" fill="#1067b2"/>
+      </g>
+      <g id="Graphic_734">
+        <text transform="translate(289.57638 282.87972) rotate(-90)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Skills</tspan>
         </text>
       </g>
-      <g id="Graphic_637">
-        <text transform="translate(288.46458 138.22835)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="19184654e-20" y="9" xml:space="preserve">complete</tspan>
+      <g id="Graphic_737">
+        <path d="M 311.81103 313.48032 L 311.81103 203.05512 C 311.81103 200.84598 313.6019 199.05512 315.81103 199.05512 L 338.99214 199.05512 C 341.20127 199.05512 342.99214 200.84598 342.99214 203.05512 L 342.99214 313.48032 C 342.99214 315.68946 341.20127 317.48032 338.99214 317.48032 L 315.81103 317.48032 C 313.6019 317.48032 311.81103 315.68946 311.81103 313.48032 Z" fill="#7db4ea"/>
+      </g>
+      <g id="Graphic_736">
+        <text transform="translate(323.59213 282.87972) rotate(-90)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Skills</tspan>
         </text>
       </g>
-      <g id="Line_638">
-        <line x1="212.59843" y1="201.25985" x2="270.12993" y2="201.25985" marker-end="url(#FilledArrow_Marker)" stroke="#71420d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      <g id="Graphic_739">
+        <path d="M 345.8268 313.48032 L 345.8268 203.05512 C 345.8268 200.84598 347.61764 199.05512 349.8268 199.05512 L 373.0079 199.05512 C 375.21702 199.05512 377.0079 200.84598 377.0079 203.05512 L 377.0079 313.48032 C 377.0079 315.68946 375.21702 317.48032 373.0079 317.48032 L 349.8268 317.48032 C 347.61764 317.48032 345.8268 315.68946 345.8268 313.48032 Z" fill="#7db4ea"/>
       </g>
-      <g id="Line_639">
-        <line x1="280.62993" y1="215.43308" x2="223.09843" y2="215.43308" marker-end="url(#FilledArrow_Marker)" stroke="#71420d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Line_640">
-        <line x1="464.8819" y1="200.14804" x2="407.3504" y2="200.14804" marker-end="url(#FilledArrow_Marker_2)" stroke="#494949" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Line_641">
-        <line x1="399.68505" y1="214.32127" x2="457.21655" y2="214.32127" marker-end="url(#FilledArrow_Marker_2)" stroke="#494949" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Line_644">
-        <path d="M 347.5132 184.25197 C 339.00924 172.9134 347.5132 155.90552 367.3557 155.05197 C 383.0747 154.3758 395.23587 164.20115 392.3534 175.36018" marker-end="url(#FilledArrow_Marker_3)" stroke="#0c4171" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Line_645">
-        <path d="M 334.399 228.7198 C 342.90295 240.05837 334.399 257.06625 314.5565 257.9198 C 298.8375 258.59597 286.67632 248.7706 289.5588 237.61158" marker-end="url(#FilledArrow_Marker_3)" stroke="#0c4171" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Graphic_653">
-        <text transform="translate(360.39195 138.22835)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="0" y="9" xml:space="preserve">lint</tspan>
+      <g id="Graphic_738">
+        <text transform="translate(357.6079 282.87972) rotate(-90)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Skills</tspan>
         </text>
       </g>
-      <g id="Line_654">
-        <path d="M 292.41747 184.25197 C 283.91354 172.9134 292.41747 155.90552 312.26 155.05197 C 327.979 154.3758 340.14016 164.20115 337.2577 175.36018" marker-end="url(#FilledArrow_Marker_3)" stroke="#0c4171" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      <g id="Graphic_741">
+        <path d="M 123.05512 96.37796 L 500.56694 96.37796 C 502.7761 96.37796 504.56694 98.16882 504.56694 100.37796 L 504.56694 137.73229 C 504.56694 139.94143 502.7761 141.73229 500.56694 141.73229 L 123.05512 141.73229 C 120.84598 141.73229 119.05512 139.94143 119.05512 137.73229 L 119.05512 100.37796 C 119.05512 98.16882 120.84598 96.37796 123.05512 96.37796 Z" fill="#494949"/>
       </g>
-      <g id="Graphic_657">
-        <text transform="translate(141.063 138.22835)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">refine</tspan>
+      <g id="Graphic_740">
+        <text transform="translate(248.49406 112.71654)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="16" fill="white" x="0" y="12" xml:space="preserve">Software Engineer</tspan>
         </text>
       </g>
-      <g id="Graphic_659">
-        <text transform="translate(498.22836 138.22835)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="45119464e-20" y="9" xml:space="preserve">spellcheck</tspan>
+      <g id="Graphic_743">
+        <path d="M 123.05512 147.40158 L 500.56694 147.40158 C 502.7761 147.40158 504.56694 149.19244 504.56694 151.40158 L 504.56694 188.7559 C 504.56694 190.96505 502.7761 192.7559 500.56694 192.7559 L 123.05512 192.7559 C 120.84598 192.7559 119.05512 190.96505 119.05512 188.7559 L 119.05512 151.40158 C 119.05512 149.19244 120.84598 147.40158 123.05512 147.40158 Z" fill="#7db4ea"/>
+      </g>
+      <g id="Graphic_742">
+        <text transform="translate(271.4567 163.74016)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Use Cases</tspan>
         </text>
-      </g>
-      <g id="Line_661">
-        <path d="M 133.67731 184.25197 C 125.17337 172.9134 133.67731 155.90552 153.51983 155.05197 C 169.23883 154.3758 181.4 164.20115 178.51753 175.36018" marker-end="url(#FilledArrow_Marker)" stroke="#71420d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Graphic_678">
-        <path d="M 83.37008 85.03937 L 239.77953 85.03937 C 241.98867 85.03937 243.77953 86.83023 243.77953 89.03937 L 243.77953 115.05512 C 243.77953 117.26426 241.98867 119.05512 239.77953 119.05512 L 83.37008 119.05512 C 81.16094 119.05512 79.37008 117.26426 79.37008 115.05512 L 79.37008 89.03937 C 79.37008 86.83023 81.16094 85.03937 83.37008 85.03937 Z" fill="#df8f37"/>
-      </g>
-      <g id="Graphic_679">
-        <text transform="translate(139.19435 96.82047)" fill="white">
-          <tspan font-family="Myriad Pro" font-size="12" fill="white" x="2060574e-19" y="9" xml:space="preserve">Planning</tspan>
-        </text>
-      </g>
-      <g id="Graphic_681">
-        <text transform="translate(311.14174 96.82047)" fill="white">
-          <tspan font-family="Myriad Pro" font-size="12" fill="white" x="0" y="9" xml:space="preserve">Functionality</tspan>
-        </text>
-      </g>
-      <g id="Graphic_682">
-        <text transform="translate(202.78585 262.95276)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">update</tspan>
-        </text>
-      </g>
-      <g id="Line_683">
-        <path d="M 504.65613 184.25197 C 496.1522 172.9134 504.65613 155.90552 524.49865 155.05197 C 540.21765 154.3758 552.3788 164.20115 549.49635 175.36018" marker-end="url(#FilledArrow_Marker_2)" stroke="#494949" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Graphic_684">
-        <text transform="translate(452.87403 262.95276)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="58264504e-20" y="9" xml:space="preserve">align</tspan>
-        </text>
-      </g>
-      <g id="Line_685">
-        <path d="M 162.83484 238.03612 C 183.92658 253.73725 208.7262 257.95276 223.39218 257.95276 C 240.40005 257.95276 260.7874 246.61418 280.62993 223.93701" marker-start="url(#FilledArrow_Marker_4)" stroke="#71420d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Line_686">
-        <path d="M 396.8504 229.6063 C 419.52757 255.11812 450.7087 257.95276 467.71655 257.95276 C 483.0502 257.95276 500.6879 257.95276 522.43814 237.18038" marker-end="url(#FilledArrow_Marker_2)" stroke="#494949" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Graphic_689">
-        <text transform="translate(498.22836 96.82047)" fill="white">
-          <tspan font-family="Myriad Pro" font-size="12" fill="white" x="1563194e-19" y="9" xml:space="preserve">Guidance</tspan>
-        </text>
-      </g>
-      <g id="Graphic_690">
-        <text transform="translate(84.37008 315.69923)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">refine</tspan>
-        </text>
-      </g>
-      <g id="Graphic_691">
-        <text transform="translate(158.07087 315.69923)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">step-wise refinement of a plan or a specification</tspan>
-        </text>
-      </g>
-      <g id="Graphic_692">
-        <text transform="translate(84.37008 359.81477)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">update</tspan>
-        </text>
-      </g>
-      <g id="Graphic_693">
-        <text transform="translate(158.07087 359.44417)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">update plan or specification to reflect code (again)</tspan>
-        </text>
-      </g>
-      <g id="Graphic_694">
-        <text transform="translate(84.37008 330.16443)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">craft</tspan>
-        </text>
-      </g>
-      <g id="Graphic_695">
-        <text transform="translate(84.37008 346.084)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">explain</tspan>
-        </text>
-      </g>
-      <g id="Graphic_696">
-        <text transform="translate(158.07087 329.56694)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">crafting of strokes, functions or classes</tspan>
-        </text>
-      </g>
-      <g id="Graphic_697">
-        <text transform="translate(158.07087 345.3428)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">explanation of strokes, functions or classes</tspan>
-        </text>
-      </g>
-      <g id="Graphic_698">
-        <text transform="translate(84.37008 390.5118)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="0" y="9" xml:space="preserve">complete</tspan>
-        </text>
-      </g>
-      <g id="Graphic_699">
-        <text transform="translate(158.07087 390.5118)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">generation of subsequent statement or stroke</tspan>
-        </text>
-      </g>
-      <g id="Graphic_700">
-        <text transform="translate(84.37008 435.86615)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="0" y="9" xml:space="preserve">lint</tspan>
-        </text>
-      </g>
-      <g id="Graphic_701">
-        <text transform="translate(158.07087 435.86615)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">checking of code for potential problems</tspan>
-        </text>
-      </g>
-      <g id="Graphic_703">
-        <text transform="translate(352.7588 263.39602)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="5506706e-19" y="9" xml:space="preserve">correct</tspan>
-        </text>
-      </g>
-      <g id="Line_702">
-        <path d="M 390.73215 228.7198 C 399.2361 240.05837 390.73215 257.06625 370.88963 257.9198 C 355.17064 258.59597 343.00947 248.7706 345.89193 237.61158" marker-end="url(#FilledArrow_Marker_5)" stroke="#0c4171" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-      </g>
-      <g id="Graphic_704">
-        <text transform="translate(84.37008 420.74804)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="0" y="9" xml:space="preserve">correct</tspan>
-        </text>
-      </g>
-      <g id="Graphic_705">
-        <text transform="translate(158.07087 420.74804)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">correcting of code for detected problems</tspan>
-        </text>
-      </g>
-      <g id="Graphic_706">
-        <text transform="translate(84.37008 467.04726)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="0" y="9" xml:space="preserve">inflate</tspan>
-        </text>
-      </g>
-      <g id="Graphic_707">
-        <text transform="translate(158.07087 464.2126)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">generation of strokes and functions from corresponding comments</tspan>
-        </text>
-      </g>
-      <g id="Graphic_708">
-        <text transform="translate(84.37008 483.11025)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="0" y="9" xml:space="preserve">summarize</tspan>
-        </text>
-      </g>
-      <g id="Graphic_709">
-        <text transform="translate(158.07087 481.2205)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">summarizing strokes and functions into comments</tspan>
-        </text>
-      </g>
-      <g id="Graphic_710">
-        <text transform="translate(84.37008 515.23623)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="0" y="9" xml:space="preserve">spellcheck</tspan>
-        </text>
-      </g>
-      <g id="Graphic_711">
-        <text transform="translate(158.07087 515.23623)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">checking of comments for incorrect spellings and grammar usages</tspan>
-        </text>
-      </g>
-      <g id="Graphic_712">
-        <text transform="translate(84.37008 499.17324)" fill="#6d6d6d">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#6d6d6d" x="0" y="9" xml:space="preserve">align</tspan>
-        </text>
-      </g>
-      <g id="Graphic_713">
-        <text transform="translate(158.07087 498.22836)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">aligning comments to their corresponding strokes, functions or classes</tspan>
-        </text>
-      </g>
-      <g id="Graphic_714">
-        <text transform="translate(84.37008 405.62993)" fill="#1067b2">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#1067b2" x="0" y="9" xml:space="preserve">refactor</tspan>
-        </text>
-      </g>
-      <g id="Graphic_715">
-        <text transform="translate(158.07087 405.62993)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">major structural changes on functions, classes or components</tspan>
-        </text>
-      </g>
-      <g id="Graphic_716">
-        <text transform="translate(518.0709 313.9764)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="8" xml:space="preserve">stroke</tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" y="8" xml:space="preserve">: a continuous, unnamed code block, consisting </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="21.000004" xml:space="preserve">of 1 to 50 LoC without blank lines and embedded </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="34.00001" xml:space="preserve">comments on the same nesting level, starting with a </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="47.00001" xml:space="preserve">separation blank line and an summarizing comment.</tspan>
-        </text>
-      </g>
-      <g id="Graphic_717">
-        <text transform="translate(518.0709 373.50395)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="8" xml:space="preserve">function</tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" y="8" xml:space="preserve">: a reusable, encapsulated, named code block </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="21.000004" xml:space="preserve">to perform a specific task with the help of one or more </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="34.00001" xml:space="preserve">strokes, optionally accepting input values (parameters) </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="47.00001" xml:space="preserve">and returning an output value (result).</tspan>
-        </text>
-      </g>
-      <g id="Graphic_718">
-        <text transform="translate(518.0709 433.0315)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="8" xml:space="preserve">class</tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" y="8" xml:space="preserve">: a reusable, encapsulated, named template that </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="21.000004" xml:space="preserve">defines the structure and behavior of objects, </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="34.00001" xml:space="preserve">containing properties (data) and methods (functions).</tspan>
-        </text>
-      </g>
-      <g id="Graphic_719">
-        <text transform="translate(518.0709 481.2205)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="8" xml:space="preserve">component</tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" y="8" xml:space="preserve">: an encapsulated, modular, named, </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="21.000004" xml:space="preserve">reusable piece of code that encapsulates specific </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="34.00001" xml:space="preserve">functionality and can be combined with other </tspan>
-          <tspan font-family="Myriad Pro" font-size="10" fill="black" x="0" y="47.00001" xml:space="preserve">components to build applications.</tspan>
-        </text>
-      </g>
-      <g id="Graphic_721">
-        <text transform="translate(84.37008 299.80316)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="0" y="9" xml:space="preserve">explore</tspan>
-        </text>
-      </g>
-      <g id="Graphic_720">
-        <text transform="translate(158.07087 299.80316)" fill="black">
-          <tspan font-family="Myriad Pro" font-size="12" fill="black" x="0" y="9" xml:space="preserve">explore information for an initial cut of a plan or a specification</tspan>
-        </text>
-      </g>
-      <g id="Graphic_723">
-        <text transform="translate(90.03937 138.22835)" fill="#b26813">
-          <tspan font-family="Myriad Pro" font-size="12" fill="#b26813" x="682121e-18" y="9" xml:space="preserve">explore</tspan>
-        </text>
-      </g>
-      <g id="Line_724">
-        <path d="M 105.59408 153.07087 C 94.33117 163.79491 101.32278 168.02756 108.1571 175.59211" marker-end="url(#FilledArrow_Marker_6)" stroke="#71420d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
       </g>
     </g>
   </g>
