@@ -6,12 +6,14 @@ ChangeLog
 ------------------
 
 - IMPROVEMENT: add license in full text
-- IMPROVEMENT: add hint to README on support
+- IMPROVEMENT: improve README with support hint and "see also" section
 - IMPROVEMENT: improve quorum skill
-- IMPROVEMENT: add "see also" section to README
+- IMPROVEMENT: experiment with collapsed items in skills
+- IMPROVEMENT: finalize commit skill
 - BUGFIX: fix references in plugin skill and agent files
+- BUGFIX: add missing entries to plugin configuration
 - CLEANUP: cleanup and fix "npm start publish" step
-- CLEANUP: align syntax of arguments in skill files
+- CLEANUP: align README and syntax of arguments in skill files
 - CLEANUP: rename skill and agent from ase-meta-websearch to ase-meta-search
 
 0.0.4 (2026-04-13)
