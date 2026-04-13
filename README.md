@@ -174,11 +174,11 @@ The following ASE commands/skills exist on the code-level:
 - **/ase-code-analyze** *source-reference*:<br/>
   Analyze the source code for problems in the logic and semantics and
   its related control flow. Usually, for each reported problem you want
-  to elaborate on it with `/ase-code-elaborate`.
+  to elaborate on it with **/ase-code-elaborate**.
 
 - **/ase-code-elaborate** *problem-reference*:<br/>
   Elaborate on a source code problem in depth to fix it. Usually the
-  problem reference is one of the outputs of `/ase-code-analyze`.
+  problem reference is one of the outputs of **/ase-code-analyze**.
 
 - **/ase-code-refactor** *refactor-hint*:<br/>
   Refactor source code.
