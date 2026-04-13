@@ -24,8 +24,8 @@ AI Coding Tools* like *Claude Code*. **ASE** primarily consists of a
 > [!CAUTION]
 > **ASE** is still under heavy development, still incomplete, partially
 > broken and hence not ready for production use. If you are not a
-> hard-boiled early adopter, please visit this project once we reached
-> at least version 0.9.x!
+> hard-boiled early adopter, please visit this project again, once we
+> reached at least version 0.9.x!
 
 User Setup
 ----------
