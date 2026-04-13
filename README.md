@@ -204,6 +204,11 @@ The following ASE commands/skills exist on the code-level:
       externally and ask it to re-propose its last code change against
       the latest source code.
 
+See Also
+--------
+
+- [ClaudeX](https://github.com/rse/claudex)
+
 Support
 -------
 
