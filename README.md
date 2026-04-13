@@ -4,17 +4,18 @@
 Agentic Software Engineering (ASE)
 ==================================
 
-> [!CAUTION]
-> **ASE** is still under heavy development, fully incomplete and hence
-> not ready for any production use. Visit this repository later, please!
-
 About
 -----
 
 **Agentic Software Engineering (ASE)** is the opinionated companion
-tooling of *Dr. Ralf S. Engelschall* for combining Agentic AI Coding
-with Software Engineering in tools like *Claude Code*. **ASE** consists
-of a *Claude Code* plugin and a Command-Line Interface (CLI) tool.
+tooling of *Dr. Ralf S. Engelschall* for combining the *Agentic AI
+Coding Tooling* into *Software Engineering* with tools like *Claude
+Code*. **ASE** primarily consists of a *Claude Code* plugin and a
+Command-Line Interface (CLI) tool.
+
+> [!CAUTION]
+> **ASE** is still under heavy development, fully incomplete and hence
+> not ready for any production use. Visit this repository later, please!
 
 Setup
 -----
