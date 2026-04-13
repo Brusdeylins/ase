@@ -5,7 +5,10 @@ ChangeLog
 0.0.5 (2026-04-13)
 ------------------
 
+- IMPROVEMENT: add license in full text
+- IMPROVEMENT: add hint on support
 - CLEANUP: cleanup and fix "npm start publish" step
+- CLEANUP: align syntax of arguments in skill files
 
 0.0.4 (2026-04-13)
 ------------------
