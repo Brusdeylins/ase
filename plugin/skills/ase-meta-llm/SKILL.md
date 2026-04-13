@@ -8,10 +8,10 @@ context: fork
 model: opus
 effort: low
 allowed-tools:
-    - "mcp__perplexity__perplexity_search"
-    - "mcp__brave__brave_web_search"
-    - "WebSearch"
-    - "WebFetch"
+    - "mcp__chat-openai-chatgpt",
+    - "mcp__chat-google-gemini",
+    - "mcp__chat-deepseek",
+    - "mcp__chat-xai-grok",
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
