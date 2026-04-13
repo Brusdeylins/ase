@@ -43,7 +43,7 @@ related to a set of code quality aspects.
         <template>
 
         &#x26AA; **RESULT**: No issues found, no code changes necessary.
-    
+
         </template>
 
         Especially, do *not* output any further explanations.
