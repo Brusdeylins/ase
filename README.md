@@ -1,8 +1,8 @@
 
 <img src="https://raw.githubusercontent.com/rse/ase/master/docs/ase-logo.svg" width="200" align="right" alt=""/>
 
-Agentic Software Engineering (ASE)
-==================================
+Agentic Software Engineering
+============================
 
 About
 -----
@@ -14,8 +14,10 @@ Code*. **ASE** primarily consists of a *Claude Code* plugin and a
 Command-Line Interface (CLI) tool.
 
 > [!CAUTION]
-> **ASE** is still under heavy development, fully incomplete and hence
-> not ready for any production use. Visit this repository later, please!
+> **ASE** is still under heavy development, still incomplete, partially
+> broken and hence not ready for production use. If you are not a
+> hard-boiled early adopter, please visit this project once we reached
+> at least version 0.9.x!
 
 Setup
 -----
