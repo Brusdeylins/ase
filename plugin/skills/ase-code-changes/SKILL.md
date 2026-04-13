@@ -23,20 +23,22 @@ based on underling *Git* commit messages.
 
 For this, understand that ChangeLog entries are
 are always formatted `<prefix/>: <summary/>` where
-the <prefix/> is one of the following tags...
+the <prefix/> is one of the following tags
+and their usual related changes...
 
-    -   `IMPROVEMENT`
-    -   `BUGFIX`
-    -   `UPDATE`
-    -   `CLEANUP`
-    -   `REFACTOR`
+    -   `FEATURE`: new functionality or configuration
+    -   `IMPROVEMENT`: improved functionality or configuration
+    -   `BUGFIX`: corrected functionality or configuration
+    -   `UPDATE`: updated functionality or configuration
+    -   `CLEANUP`: cleaned up functionality or configuration
+    -   `REFACTOR`: refactored functionality or configuration
 
 ...and <summary/> is not longer than about 60-80 characters.
 The ChangeLog entries for a single product release version
 are also grouped and sorted according to the above <prefix/>es.
 
 <flow>
-1. <step id="STEP 1: Locate and read existing `CHANGELOG.md` file">
+1. <step id="STEP 1: Locate and read existing ChangeLog entries">
    The *ChangeLog* file `CHANGELOG.md` contains sections
    with headers in the style `N.M.K (YYYY-MM-DD)`.
    The `CHANGELOG.md` file is located in the *current* directory
@@ -51,7 +53,7 @@ are also grouped and sorted according to the above <prefix/>es.
    between `HEAD` and this tag.
    </step>
 
-3. <step id="STEP 3: Complete *ChangeLog* entries">
+3. <step id="STEP 3: Complete ChangeLog entries">
    Without immediately modifying `CHANGELOG.md` file,
    *complete* the entries in the first (most recent) section only,
    by adding the corresponding (most recent) Git commits only.
@@ -59,21 +61,21 @@ are also grouped and sorted according to the above <prefix/>es.
    short sentence.
    </step>
 
-4. <step id="STEP 4: Consolidate *ChangeLog* entries">
+4. <step id="STEP 4: Consolidate ChangeLog entries">
    Without immediately modifying `CHANGELOG.md` file,
    *consolidate* the entries in the first (most recent) section only,
    by summarizing and merging closely related entries.
    Perform the entry consolidation per prefix group only.
    </step>
 
-5. <step id="STEP 5: Sort *ChangeLog* entries">
+5. <step id="STEP 5: Sort ChangeLog entries">
    Without immediately modifying `CHANGELOG.md` file,
    *sort* the entries in the first (most recent) section only.
    Instead of the chronological commit order, group the entries
    by the prefixes.
    </step>
 
-6. <step id="STEP 6: Write modified *ChangeLog* entries to `CHANGELOG.md` file">
+6. <step id="STEP 6: Write modified ChangeLog entries">
    Finally, *update* the `CHANGELOG.md` file with the
    completed, consolidated and sorted *ChangeLog* entries.
    Also, update the date `YYYY-MM-DD` in the `N.M.K (YYYY-MM-DD)`
