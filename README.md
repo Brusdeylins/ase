@@ -1,5 +1,5 @@
 
-<img src="https://raw.githubusercontent.com/rse/ase/master/docs/ase-logo.svg" width="200" align="right" alt=""/>
+<img src="https://raw.githubusercontent.com/rse/ase/master/docs/ase-logo.svg" width="250" align="right" alt=""/>
 
 Agentic Software Engineering
 ============================
