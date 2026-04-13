@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="119 96 386 326" width="386" height="326">
+<svg xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" version="1.1" viewBox="119 96 386 373" width="386" height="373">
   <defs>
     <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
       <g>
@@ -8,9 +8,9 @@
       </g>
     </marker>
   </defs>
-  <g id="Canvas_1" stroke-opacity="1" stroke-dasharray="none" fill="none" stroke="none" fill-opacity="1">
+  <g id="Canvas_1" fill="none" stroke="none" stroke-opacity="1" stroke-dasharray="none" fill-opacity="1">
     <title>Canvas 1</title>
-    <rect fill="white" x="119" y="96" width="386" height="326"/>
+    <rect fill="white" x="119" y="96" width="386" height="373"/>
     <g id="Canvas_1_Content">
       <title>Content</title>
       <g id="Graphic_629">
@@ -137,6 +137,33 @@
       </g>
       <g id="Line_754">
         <line x1="402.5197" y1="280.62993" x2="402.5197" y2="309.52994" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_756">
+        <path d="M 386.5535 463.8978 L 386.5535 353.4726 C 386.5535 351.26348 388.34435 349.4726 390.5535 349.4726 L 413.7346 349.4726 C 415.94373 349.4726 417.7346 351.26348 417.7346 353.4726 L 417.7346 463.8978 C 417.7346 466.10695 415.94373 467.8978 413.7346 467.8978 L 390.5535 467.8978 C 388.34435 467.8978 386.5535 466.10695 386.5535 463.8978 Z" fill="#7db4ea"/>
+      </g>
+      <g id="Graphic_755">
+        <text transform="translate(398.3346 436.6212) rotate(-90)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Plugin</tspan>
+        </text>
+      </g>
+      <g id="Graphic_758">
+        <path d="M 421.8414 464.1283 L 421.8414 353.7031 C 421.8414 351.49395 423.63224 349.7031 425.8414 349.7031 L 449.0225 349.7031 C 451.2316 349.7031 453.0225 351.49395 453.0225 353.7031 L 453.0225 464.1283 C 453.0225 466.33743 451.2316 468.1283 449.0225 468.1283 L 425.8414 468.1283 C 423.63224 468.1283 421.8414 466.33743 421.8414 464.1283 Z" fill="#7db4ea"/>
+      </g>
+      <g id="Graphic_757">
+        <text transform="translate(433.6225 436.8517) rotate(-90)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Plugin</tspan>
+        </text>
+      </g>
+      <g id="Graphic_760">
+        <path d="M 456.37797 464.8796 L 456.37797 354.4544 C 456.37797 352.24527 458.1688 350.4544 460.37797 350.4544 L 483.55907 350.4544 C 485.7682 350.4544 487.55907 352.24527 487.55907 354.4544 L 487.55907 464.8796 C 487.55907 467.08875 485.7682 468.8796 483.55907 468.8796 L 460.37797 468.8796 C 458.1688 468.8796 456.37797 467.08875 456.37797 464.8796 Z" fill="#7db4ea"/>
+      </g>
+      <g id="Graphic_759">
+        <text transform="translate(468.15906 437.603) rotate(-90)" fill="white">
+          <tspan font-family="Myriad Pro" font-weight="bold" font-size="12" fill="white" x="0" y="9" xml:space="preserve">ASE Plugin</tspan>
+        </text>
+      </g>
+      <g id="Line_761">
+        <line x1="402.5197" y1="334.4882" x2="402.5197" y2="363.3882" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
       </g>
     </g>
   </g>
