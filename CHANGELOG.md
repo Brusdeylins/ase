@@ -6,7 +6,10 @@ ChangeLog
 ------------------
 
 - IMPROVEMENT: add license in full text
-- IMPROVEMENT: add hint on support
+- IMPROVEMENT: add hint to README on support
+- IMPROVEMENT: improve quorum skill
+- IMPROVEMENT: add "see also" section to README
+- BUGFIX: fix references in plugin skill and agent files
 - CLEANUP: cleanup and fix "npm start publish" step
 - CLEANUP: align syntax of arguments in skill files
 
