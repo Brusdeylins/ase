@@ -8,6 +8,7 @@ ChangeLog
 - IMPROVEMENT: improved README with diagram, caution hint, and homepage URL
 - IMPROVEMENT: added ase-code-commit skill
 - IMPROVEMENT: added ASE logo
+- IMPROVEMENT: provide Github release information on "npm start publish"
 - BUGFIX: added missing building-blocks SVG file
 - UPDATE: updated building-blocks and coding-assistance diagrams
 - CLEANUP: various README and plugin skill cleanups
