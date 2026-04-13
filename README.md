@@ -125,11 +125,6 @@ Overview
 Usage
 -----
 
-Coding involves the following steps, which are assisted by corresponding
-**ASE** commands/skills:
-
-![assistance steps](docs/coding-assistance.svg)
-
 ### Meta Commands
 
 The following ASE commands/skills exist on the meta-level:
