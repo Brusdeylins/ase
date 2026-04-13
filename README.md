@@ -217,7 +217,7 @@ The following ASE commands/skills exist on the code-level:
 See Also
 --------
 
-- [ClaudeX](https://github.com/rse/claudex)
+- [claudeX](https://github.com/rse/claudex)
 
 Support
 -------
