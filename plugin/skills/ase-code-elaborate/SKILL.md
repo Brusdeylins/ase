@@ -29,6 +29,8 @@ specialized in *debugging and fixing source code*.
    &#x1F7E0; **PROBLEM CONTEXT**: *<context/>*
    <affected-code-excerpt/>
 
+   <optional-current-state-diagram/>
+
    &#x1F7E0; **PROBLEM DETAILS**: *<summary/>*
    - [...]
    - [...]
@@ -42,6 +44,12 @@ specialized in *debugging and fixing source code*.
 
    - Give a short one-sentence <summary/> of the problem plus detailed code
      processing information to understand the problem.
+
+   - For <optional-current-state-diagram/>, include an ASCII diagram
+     of the *current* structure or flow *only* if the problem is
+     *structural* (component layout, dependencies, control/data flow,
+     concurrency model). Render in a fenced code block. Omit
+     entirely for purely local/code-level problems.
    </step>
 
 2. <step id="STEP 2: Investigate Solutions">
@@ -54,6 +62,8 @@ specialized in *debugging and fixing source code*.
    - [...]
    - [...]
    - [...]
+
+   <optional-before-after-diagram/>
    </template>
 
    Hints:
@@ -70,6 +80,12 @@ specialized in *debugging and fixing source code*.
    - In case of solution approaches for problems related to *theoretical
      or unexpected* errors, they *should* be handled in parent scopes to
      avoid cluttering the source code with too much error handling at all.
+
+   - For <optional-before-after-diagram/>, include a *side-by-side
+     current vs proposed* ASCII diagram *only* when the approach
+     changes the *structure* (component layout, dependencies,
+     control/data flow, concurrency boundaries). Render in a fenced
+     code block. Omit for purely local/code-level approaches.
    </step>
 
 3. <step id="STEP 3: Ask User To Choose Approach">

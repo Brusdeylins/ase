@@ -18,6 +18,33 @@ Skill Output
 
 -   *IMPORTANT*: You *MUST* *NEVER* output any `---` lines.
 
+-   *IMPORTANT*: For *diagrams*, *box-and-arrow visualizations*,
+    or *aligned tables*:
+
+    -   Use monospace-safe characters. *Prefer* Unicode box-drawing
+        (`┌─┐│└┘├┤┬┴┼`) and arrows (`▶◀▼▲→←↑↓`) over ASCII
+        (`+-|<>^v`). Route *orthogonally* — avoid diagonals
+        (`/`, `\`) and double-width glyphs (emoji, CJK); both
+        break alignment.
+
+    -   *Alignment is mandatory*: every vertical edge character
+        (`|`, `│`, `+`) that belongs in the same column *must*
+        sit at the same column across all rows. Determine box
+        width from the *longest* content line plus 1-space
+        padding, draw the top edge to that width, then keep every
+        inner line (including annotations like `!`, `?`, `*`)
+        within it. Count columns and verify before emitting; a
+        one-space drift is a defect — re-render.
+
+    -   For side-by-side diagrams (current vs proposed), keep a
+        consistent gap and align each side independently.
+
+    -   *Always* render inside a *fenced code block* (triple
+        backticks). These rules apply to skill responses *and* to
+        plan files (`EnterPlanMode`); structural plan changes
+        should include a current-vs-proposed diagram where it
+        materially helps.
+
 Skill Control Flow
 ------------------
 
