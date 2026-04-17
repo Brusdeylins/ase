@@ -44,8 +44,12 @@ Commandments
 - Place spaces after opening and before closing angle brackets and braces.
 - Use *double-quotes* (`"[...]"`) instead of single-quotes (`'[...]'`) for all strings.
 - Use K&R coding style with *opening braces* at end of lines and *closing braces* at the begin of lines.
-- When working with TypeScript/JavaScript, prefer *TypeScript* syntax.
-- When generating temporary helper programs, prefer *TypeScript* syntax.
+- When a language has a *more strongly-typed variant*, prefer that
+  variant (e.g., TypeScript over JavaScript, Python with type hints
+  over untyped Python).
+- When generating temporary helper programs, prefer the *target project's
+  primary programming language* (e.g., TypeScript for TS/JS projects,
+  Python for Python projects, Go for Go projects).
 
 Tenets
 ------
