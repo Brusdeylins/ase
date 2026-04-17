@@ -4,7 +4,6 @@ argument-hint: "<fact>"
 description: "Five-Whys Root-Cause Analysis"
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: medium
 ---
 

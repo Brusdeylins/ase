@@ -5,7 +5,6 @@ description: "Query foreign LLM. Use this skill if a foreign LLM like OpenAI Cha
 user-invocable: true
 disable-model-invocation: false
 context: fork
-model: opus
 effort: low
 allowed-tools:
     - "mcp__chat-openai-chatgpt",

@@ -4,7 +4,6 @@ argument-hint: "<question>"
 description: "Query Multiple AIs for Quorum Answer"
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: medium
 ---
 
