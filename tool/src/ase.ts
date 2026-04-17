@@ -9,6 +9,7 @@ import yargs                  from "yargs"
 import { hideBin }            from "yargs/helpers"
 import configCommand          from "./ase-config.js"
 import setupCommand           from "./ase-setup.js"
+import serviceCommand         from "./ase-service.js"
 
 /*  parse CLI arguments  */
 try {
@@ -23,6 +24,7 @@ try {
         })
         .command(configCommand)
         .command(setupCommand)
+        .command(serviceCommand)
         .demandCommand(1, "You need to specify a command")
         .fail((msg, err, yargs) => {
             if (err)
