@@ -103,7 +103,7 @@ for the following stand-alone *feature*:
      points. Each bullet points is formatted as `- **<aspect/>**:
      <specification/>` where <aspect/> indicates the aspect of the
      section and <specification/> is 1-3 sentences giving a *precise*
-     but *brief* description of the aspect.
+     but *very brief* and *concise* description of the aspect.
 
    - Always try to file all feature specification aspects into the
      sections <feature-summary/>, <feature-interface/>, <feature-logic/>,
