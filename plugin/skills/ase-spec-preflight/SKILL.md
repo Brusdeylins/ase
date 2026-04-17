@@ -47,14 +47,21 @@ draft for a corresponding, *complete source code change set*.
 
    <template>
 
-   ## ≡ IMPLEMEMTATION DRAFT
+   ## ≡ IMPLEMENTATION DRAFT
 
+   ```
    <unified-diff/>
+   ```
    </template>
 
-   On modifying <feature-filename/>, set the "modified": timestamp to
-   the current timestamp in the ISO-style format `YYYY-mm-dd HH:MM`
-   which can be determined with `date "+%Y-%m-%d %H:%M"`.
+   Hints:
+
+   - If a section named `## ≡ IMPLEMENTATION DRAFT` already exists from
+     a previous run of this skill, update this existing section.
+
+   - On modifying <feature-filename/>, set the "modified": timestamp to
+     the current timestamp in the ISO-style format `YYYY-mm-dd HH:MM`
+     which can be determined with `date "+%Y-%m-%d %H:%M"`.
    </step>
 </flow>
 

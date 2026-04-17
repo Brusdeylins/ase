@@ -6,6 +6,8 @@ user-invocable: true
 disable-model-invocation: false
 effort: high
 allowed-tools:
+    - "Bash(test)"
+    - "Bash(echo)"
     - "Bash(date)"
 ---
 
@@ -31,6 +33,9 @@ for the following stand-alone *feature*:
 
    - Derive the specification file
      <feature-filename/> from `<feature-id/>.md`.
+
+   - The file <feature-filename/> existance is:
+     ! `test -f `<feature-filename/>` && echo yes || echo no`
 
    - If the <feature-filename/> already exists, read this artifact
      for the base information on the feature and try to apply the
@@ -106,6 +111,12 @@ for the following stand-alone *feature*:
      If no content exists for a section, still keep the section but
      add a single bullet point `- *(none)*` to this section only.
 
+   - Always *keep* the existing *wording*. Do *not re-formulate* the
+     sentences, except when a sentence needs a *semantical change*.
+
+   - In all sections, break the sentences with a newline character
+     after about 100 characters per line.
+
    - The <feature-interface/> section describes affected external
      systems, User Interfaces (UI) (with screens, wireframes,
      interaction details, etc), Application Programming Interfaces
@@ -126,6 +137,9 @@ for the following stand-alone *feature*:
 
    - The <feature-technology/> section describes affected technology,
      like used utilities, tools, libraries, frameworks, etc.
+
+   - If a section named `## ≡ IMPLEMENTATION DRAFT` already exists from
+     the `ase-spec-preflight` skill, silently ignore it.
 
    - After the user accepted the plan, just stop. Do not execute any
      other actions or give any further explanations, except for writing
