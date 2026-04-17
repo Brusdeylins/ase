@@ -7,26 +7,37 @@
 
 import yargs                  from "yargs"
 import { hideBin }            from "yargs/helpers"
-import initCommand            from "./ase-init.js"
 import configCommand          from "./ase-config.js"
-import agentCommand           from "./ase-agent.js"
+import setupCommand           from "./ase-setup.js"
 
 /*  parse CLI arguments  */
-yargs(hideBin(process.argv))
-    .scriptName("ase")
-    .usage("Usage: $0 <command> [options]")
-    .option("debug", {
-        alias:    "d",
-        type:     "boolean",
-        describe: "Enable debug output",
-        default:  false
-    })
-    .command(initCommand)
-    .command(configCommand)
-    .command(agentCommand)
-    .demandCommand(1, "You need to specify a command")
-    .help()
-    .version()
-    .strict()
-    .parse()
-
+try {
+    await yargs(hideBin(process.argv))
+        .scriptName("ase")
+        .usage("Usage: $0 <command> [options]")
+        .option("debug", {
+            alias:    "d",
+            type:     "boolean",
+            describe: "Enable debug output",
+            default:  false
+        })
+        .command(configCommand)
+        .command(setupCommand)
+        .demandCommand(1, "You need to specify a command")
+        .fail((msg, err, yargs) => {
+            if (err)
+                throw err
+            yargs.showHelp()
+            process.stderr.write(`\nase: ${msg}\n`)
+            process.exit(1)
+        })
+        .help()
+        .version()
+        .strict()
+        .parseAsync()
+}
+catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    process.stderr.write(`ase: ERROR: ${message}\n`)
+    process.exit(1)
+}
