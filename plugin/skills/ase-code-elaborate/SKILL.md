@@ -38,10 +38,11 @@ specialized in *debugging and fixing source code*.
    Hints:
 
    - Give a short one-sentence <context/> of the problem plus
-     an excerpt of the affected code <affected-code-excerpt/>.
+     a short excerpt of the affected code <affected-code-excerpt/>.
 
-   - Give a short one-sentence <summary/> of the problem plus detailed code
-     processing information to understand the problem.
+   - Give a short one-sentence <summary/> of the problem plus *precise*
+     but *brief* code processing information to understand the problem.
+     Try to keep the number of bullet points in the range of 1-4.
    </step>
 
 2. <step id="STEP 2: Investigate Solutions">
@@ -58,7 +59,9 @@ specialized in *debugging and fixing source code*.
 
    Hints:
 
-   - Give a short one-sentence <summary/> of the solution approach plus detailed solution information.
+   - Give a short one-sentence <summary/> of the solution approach plus
+     *precise* and *brief* solution information. Try to keep the
+     number of bullet points in the range of 1-4.
 
    - Focus on solution approaches for *practically relevant* cases and do *not*
      investigate on theoretical or fictive cases. This is especially the case
@@ -113,7 +116,8 @@ specialized in *debugging and fixing source code*.
    - Highlight *code* as <template>`<code/>`</template>
      and *key aspects* as <template>*<aspect/>*</template>.
 
-   Hints: In the source code changes...
+   Hints: In the source code *CHANGES* section...
+   - Show complete change set.
    - Avoid introducing dedicated state variables for individual error cases.
    - If state variables are needed to detect error cases, at least use
      minimum number of those variables only.
