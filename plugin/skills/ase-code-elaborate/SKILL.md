@@ -4,8 +4,7 @@ argument-hint: "<problem-reference>"
 description: "Elaborate on a source code problem in depth to fix it."
 user-invocable: true
 disable-model-invocation: false
-model: opus
-effort: medium
+effort: high
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
@@ -45,13 +44,14 @@ specialized in *debugging and fixing source code*.
      Try to keep the number of bullet points in the range of 1-4.
    </step>
 
-2. <step id="STEP 2: Investigate Solutions">
+2. <step id="STEP 2: Investigate Solution Approaches">
    *Propose* corresponding *solution approach*, including optionally,
    some *alternative* solution approaches. Annotate the approach you
-   prefer. Report each solution approach with the following <template/>:
+   recommend with an <annotation/> of ` [⚝ **RECOMMENDATION**].
+   Report each solution approach with the following <template/>:
 
    <template>
-   &#x1F535; **SOLUTION APPROACH A<n/>**: *<summary/>*
+   &#x1F535; **SOLUTION APPROACH A<n/>**<annotation/>: *<summary/>*
    - [...]
    - [...]
    - [...]
@@ -75,13 +75,14 @@ specialized in *debugging and fixing source code*.
      avoid cluttering the source code with too much error handling at all.
    </step>
 
-3. <step id="STEP 3: Ask User To Choose Approach">
+3. <step id="STEP 3: Choose Solution Approach">
    Let the *user interactively choose* the preferred solution approach A<n/>
    with the help of the `AskUserQuestion` tool. Use *single-selection* only
-   and provide small *code change previews*.
+   and provide small *code change previews*. Mark your recommended
+   solution approach with `[⚝ **RECOMMENDATION**]` here again.
    </step>
 
-4. <step id="STEP 4: Write and Execute Plan">
+4. <step id="STEP 4: Write and Execute Solution Plan">
    Enter *plan mode* by using the `EnterPlanMode` tool.
    Then *write a plan* with code references, a precise description of the
    problem, the chosen solution approach, a preview of the *unified
