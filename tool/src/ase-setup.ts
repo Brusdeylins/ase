@@ -6,23 +6,23 @@
 
 import type { CommandModule } from "yargs"
 
-interface InitArgs {
+interface SetupArgs {
     debug?: boolean
 }
 
-const initCommand: CommandModule<object, InitArgs> = {
-    command: "init",
-    describe: "Initialize ASE configuration",
+const setupCommand: CommandModule<object, SetupArgs> = {
+    command: "setup",
+    describe: "Setup ASE",
     builder: (yargs) => {
         return yargs
     },
     handler: (argv) => {
         if (argv.debug)
-            console.log("DEBUG: init command")
-        console.log("Initializing ASE configuration...")
-        /*  TODO: implement initialization logic  */
+            console.log("DEBUG: setup command")
+        console.log("Setup ASE...")
+        /*  TODO: implement setup logic  */
     }
 }
 
-export default initCommand
+export default setupCommand
 
