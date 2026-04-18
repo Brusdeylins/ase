@@ -5,6 +5,9 @@ Skill Meta Information
 Skill Output
 ------------
 
+-   *IMPORTANT*: The following rules apply both to regular skill responses
+    *and* to generated plan files (`EnterPlanMode` tool).
+
 -   *IMPORTANT*: *All* output is *exclusively* requested through
     <template/> sections. You *MUST* *NOT* output anything *EXCEPT* it
     is explicitly included in such a <template/> section. Especially,
@@ -18,14 +21,18 @@ Skill Output
 
 -   *IMPORTANT*: You *MUST* *NEVER* output any `---` lines.
 
--   *IMPORTANT*: For *diagrams*, *box-and-arrow visualizations*,
-    or *aligned tables*:
+-   *IMPORTANT*: For *Diagrams*:
 
-    -   Use monospace-safe characters. *Prefer* Unicode box-drawing
-        (`┌─┐│└┘├┤┬┴┼`) and arrows (`▶◀▼▲→←↑↓`) over ASCII
-        (`+-|<>^v`). Route *orthogonally* — avoid diagonals
-        (`/`, `\`) and double-width glyphs (emoji, CJK); both
-        break alignment.
+    -   Use monospace-safe characters only. *Prefer Unicode* box-drawing
+        (angular corners: `┌┐└┘`, rounded corners: `╭╮╰╯`, lines:
+        `│├┤─┬┴┼`) and arrows (arrowheads: `▶◀▼▲`, small arrows: `→←↑↓`)
+        over plain ASCII (`+-|<>^v`). Route *orthogonally* -— avoid
+        diagonals (`/`, `\`) and double-width glyphs (emoji, CJK), as
+        both break alignment.
+
+    -   For side-by-side diagrams (current vs. proposed), keep a
+        consistent gap, use "vs." in between, and align each side
+        independently.
 
     -   *Alignment is mandatory*: every vertical edge character
         (`|`, `│`, `+`) that belongs in the same column *must*
@@ -34,16 +41,21 @@ Skill Output
         padding, draw the top edge to that width, then keep every
         inner line (including annotations like `!`, `?`, `*`)
         within it. Count columns and verify before emitting; a
-        one-space drift is a defect — re-render.
+        one-space drift is a defect -— re-render.
 
-    -   For side-by-side diagrams (current vs proposed), keep a
-        consistent gap and align each side independently.
+    -   *Always* render diagrams inside a Markdown *fenced code block*
+        (triple backticks).
 
-    -   *Always* render inside a *fenced code block* (triple
-        backticks). These rules apply to skill responses *and* to
-        plan files (`EnterPlanMode`); structural plan changes
-        should include a current-vs-proposed diagram where it
-        materially helps.
+-   *IMPORTANT*: For Markdown *Tables*:
+
+    -   *Alignment is mandatory*: every vertical edge character
+        (`|`, `│`, `+`) that belongs in the same column *must*
+        sit at the same column across all rows. Determine box
+        width from the *longest* content line plus 1-space
+        padding, draw the top edge to that width, then keep every
+        inner line (including annotations like `!`, `?`, `*`)
+        within it. Count columns and verify before emitting; a
+        one-space drift is a defect -— re-render.
 
 Skill Control Flow
 ------------------
