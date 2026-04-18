@@ -155,6 +155,19 @@ The following ASE commands/skills exist on the meta-level:
   Query a foreign LLM like OpenAI ChatGPT, Google Gemini, DeepSeek or
   xAI Grok.
 
+### Spec Commands
+
+The following ASE commands/skills exist on the specification-level:
+
+- **/ase-spec-preflight** *feature-id*:<br/>
+  Preflight a stand-alone feature specification.
+
+- **/ase-spec-edit** *feature-id* *summary-or-change*:<br/>
+  Edit a stand-alone feature specification.
+
+- **/ase-spec-implement** *feature-id*:<br/>
+  Implement a stand-alone feature specification.
+
 ### Code Commands
 
 The following ASE commands/skills exist on the code-level:
