@@ -109,6 +109,13 @@ Skill Control Flow
     Do not output anything else.
 
 -   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <if condition="<if-condition/>"><if-body/></if>:
+
+    This specifies a simple condition which is expanded to <if-body/>
+    if <if-condition/> is met, or to empty string if <if-condition/> is
+    *not* met. Do not output anything else.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
     <while condition="<while-condition/>"><while-body/></while>:
 
     This specifies a <while-body/> which is *repeated* until <while-condition/> is met.
