@@ -102,8 +102,9 @@ for the following stand-alone *feature*:
      <feature-technology/> all are just a short list of 1-5 bullet
      points. Each bullet points is formatted as `- **<aspect/>**:
      <specification/>` where <aspect/> indicates the aspect of the
-     section and <specification/> is 1-3 sentences giving a *precise*
-     but *very brief* and *concise* description of the aspect.
+     section and <specification/> is 1-3 sentences giving a *ultra
+     precise* but also *ultra brief* and *ultra concise* description of
+     the aspect.
 
    - Always try to file all feature specification aspects into the
      sections <feature-summary/>, <feature-interface/>, <feature-logic/>,
