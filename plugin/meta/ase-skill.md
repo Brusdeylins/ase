@@ -23,16 +23,12 @@ Skill Output
 
 -   *IMPORTANT*: For *Diagrams*:
 
-    -   Use monospace-safe characters only. *Prefer Unicode* box-drawing
+    -   Use *monospace-safe characters only*. *Prefer Unicode* box-drawing
         (angular corners: `┌┐└┘`, rounded corners: `╭╮╰╯`, lines:
         `│├┤─┬┴┼`) and arrows (arrowheads: `▶◀▼▲`, small arrows: `→←↑↓`)
         over plain ASCII (`+-|<>^v`). Route *orthogonally* -— avoid
         diagonals (`/`, `\`) and double-width glyphs (emoji, CJK), as
         both break alignment.
-
-    -   For side-by-side diagrams (current vs. proposed), keep a
-        consistent gap, use "vs." in between, and align each side
-        independently.
 
     -   *Alignment is mandatory*: every vertical edge character
         (`|`, `│`, `+`) that belongs in the same column *must*
@@ -42,6 +38,22 @@ Skill Output
         inner line (including annotations like `!`, `?`, `*`)
         within it. Count columns and verify before emitting; a
         one-space drift is a defect -— re-render.
+
+    -   *Always* ensure diagrams are *concise* and *compact* by keeping
+        them below 120 characters in total width and below 80 lines in total
+        height.
+
+    -   For diagrams prefer the following diagrams types: for
+        *structure* (layout, components, dependencies, etc) use
+        Boxes'n'Lines, for *control flow* (branching, concurrency, etc)
+        use Flowchart, for *state machine* (states, transitions, etc) use
+        UML State Diagram, for *data flow* (actors, messages, etc) use UML
+        Sequence Diagram, and for *data structure* (classes, entities,
+        relationships, etc) use UML Class Diagram.
+
+    -   For side-by-side diagrams (current vs. proposed), keep a
+        consistent gap, use `vs.` in between, and align each side
+        independently.
 
     -   *Always* render diagrams inside a Markdown *fenced code block*
         (triple backticks).

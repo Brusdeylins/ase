@@ -27,8 +27,7 @@ specialized in *debugging and fixing source code*.
    <template>
    &#x1F7E0; **PROBLEM CONTEXT**: *<context/>*
    <affected-code-excerpt/>
-
-   <optional-current-state-diagram/>
+   <optional-diagram/>
 
    &#x1F7E0; **PROBLEM DETAILS**: *<summary/>*
    - [...]
@@ -45,11 +44,13 @@ specialized in *debugging and fixing source code*.
      but *brief* code processing information to understand the problem.
      Try to keep the number of bullet points in the range of 1-4.
 
-  -  For <optional-current-state-diagram/>, include an ASCII diagram
-     of the *current* structure or flow *only* if the problem is
-     *structural* (component layout, dependencies, control/data flow,
-     concurrency model). Render in a fenced code block. Omit
-     entirely for purely local/code-level problems.
+   - In case of a *complex context situation* with complex *structure*
+     (layout, components, dependencies, etc), complex *control flow*
+     (branching, concurrency, etc), complex *state machine* (states,
+     transitions, etc), complex *data flow* (actors, messages, etc), or
+     complex *data structure* (classes, entities, relationships, etc),
+     visualize it with an optional diagram <optional-diagram/>. Omit
+     <optional-diagram/> entirely for simple or purely local situation.
    </step>
 
 2. <step id="STEP 2: Investigate Solution Approaches">
@@ -63,8 +64,7 @@ specialized in *debugging and fixing source code*.
    - [...]
    - [...]
    - [...]
-
-   <optional-before-after-diagram/>
+   <optional-diagram/>
    </template>
 
    Hints:
@@ -84,11 +84,10 @@ specialized in *debugging and fixing source code*.
      or unexpected* errors, they *should* be handled in parent scopes to
      avoid cluttering the source code with too much error handling at all.
 
-   - For <optional-before-after-diagram/>, include a *side-by-side
-     current vs proposed* ASCII diagram *only* when the approach
-     changes the *structure* (component layout, dependencies,
-     control/data flow, concurrency boundaries). Render in a fenced
-     code block. Omit for purely local/code-level approaches.
+   - In case of a *complex solution situation* only, visualize it with
+     an optional diagram <optional-diagram/>, showing a *side-by-side
+     diagram (current vs. proposed)* Omit <optional-diagram/> entirely
+     for simple or purely local situation.
    </step>
 
 3. <step id="STEP 3: Choose Solution Approach">
