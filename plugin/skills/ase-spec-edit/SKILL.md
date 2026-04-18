@@ -111,6 +111,12 @@ for the following stand-alone *feature*:
      If no content exists for a section, still keep the section but
      add a single bullet point `- *(none)*` to this section only.
 
+   - In all feature specification sections <feature-summary/>,
+     <feature-interface/>, <feature-logic/>, <feature-data/>,
+     <feature-qualities/>, and <feature-technology/>, specify *only*
+     aspects which really result in a potential *change* later.
+     Especially, do *not* specify tautologies or platitudes.
+
    - Always *keep* the existing *wording*. Do *not re-formulate* the
      sentences, except when a sentence needs a *semantical change*.
 
