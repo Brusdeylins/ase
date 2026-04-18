@@ -25,11 +25,11 @@ Skill Output
 
     -   Use *monospace-safe characters only*. *Prefer Unicode* box-drawing
         (angular corners: `┌┐└┘`, rounded corners: `╭╮╰╯`, lines:
-        `│├┤─┬┴┼╌┄┈⋯`, connections: ``), arrows (arrowheads: `▷◁▽△▶◀▼▲`,
-        small arrows: `→←↑↓`), connectors (`◌○◎◉●■□◆◇`), and regions
-        (`░▒▓█`) over plain ASCII (`+-|<>^v`). Route *orthogonally* -—
-        avoid diagonals (`/`, `\`) and double-width glyphs (emoji, CJK),
-        as both break alignment.
+        `│├┤─┬┴┼╌┄┈⋯`), arrows (arrowheads: `▷◁▽△▶◀▼▲`, small arrows:
+        `→←↑↓`), connectors (`◌○◎◉●■□◆◇`), and regions (`░▒▓█`) over
+        plain ASCII (`+-|<>^v`). Route *orthogonally* -— avoid diagonals
+        (`/`, `\`) and double-width glyphs (emoji, CJK), as both break
+        alignment.
 
     -   *Alignment is mandatory*: every vertical edge character
         (`|`, `│`, `+`) that belongs in the same column *must*
