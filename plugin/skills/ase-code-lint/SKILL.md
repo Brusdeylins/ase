@@ -4,7 +4,6 @@ argument-hint: "<source-reference>"
 description: Lint Source Code
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: medium
 ---
 
@@ -74,6 +73,9 @@ related to a set of code quality aspects.
 1.  <step id="Preparation">
     *Find* and *read* all the corresponding source code files
     and all *related* source code files.
+    *Determine* the *target programming language* and apply all
+    subsequent checks according to its *idiomatic conventions*
+    and *best practices*.
     </step>
 
 2.  <step id="A01 - FORMATTING">
@@ -96,9 +98,9 @@ related to a set of code quality aspects.
     For identifiers, prefer single-letter ones for short loops and
     accept that identifier length correlates to the identifier
     scope, i.e., longer identifiers are acceptable for larger
-    scopes. For all indentifers, prefer camel-case. For classes and
-    interfaces, prefer first letter to be upper-case. For parameters
-    and variables, prefer first letter to be lower-case.
+    scopes. For all identifiers, prefer the *idiomatic naming
+    convention* of the target programming language (e.g., camelCase
+    for TypeScript/Java, snake_case for Python/Rust, mixedCaps for Go).
     </expand>
     </step>
 
@@ -149,9 +151,10 @@ related to a set of code quality aspects.
     best practices.
 
     For design patterns, especially check for broken OOP and FP aspects.
-    For conventions, especially check for broken TypeScript/JavaScript
-    conventions. For best practices, especially check for not leveraging
-    ECMAScript APIs or using obsolete ECMAScript APIs.
+    For conventions, especially check for broken *idiomatic conventions
+    of the target programming language*. For best practices, especially
+    check for not leveraging *standard library APIs* or using *obsolete
+    or deprecated APIs*.
     </expand>
     </step>
 
@@ -180,7 +183,8 @@ related to a set of code quality aspects.
     Check for code smells.
 
     Especially, check for unnecessary type casts, problematic value
-    coercions, surprising void() and risky eval() constructs.
+    coercions, and *language-specific anti-patterns* (e.g., void()/eval()
+    in JavaScript, unsafe blocks in Rust, reflect in Go).
     </expand>
     </step>
 
@@ -189,9 +193,11 @@ related to a set of code quality aspects.
     Check for broken "maximum type safety with minimum type
     annotations" rule.
 
-    Especially, ensure that no implicit "any" type exists and that types
-    are primarily used on function parameters. For all other cases,
-    ensure that a maximum type inference is used.
+    Especially, ensure that no *implicit untyped constructs* exist
+    (e.g., implicit "any" in TypeScript, untyped interface{} in Go,
+    missing type hints in Python) and that types are primarily used on
+    function parameters. For all other cases, ensure that a *maximum
+    type inference* is used.
     </expand>
     </step>
 
@@ -200,9 +206,11 @@ related to a set of code quality aspects.
     Check for missing, incorrect or inconsistent error handling or
     error preventions.
 
-    Surround code blocks with try/catch-clauses only if really
-    necessary to not clutter the code too much with error handling. For
-    asynchronous code, prefer .catch() instead of try/catch.
+    Surround code blocks with error handling constructs only if really
+    necessary to not clutter the code too much with error handling.
+    For error handling, prefer the *idiomatic error handling pattern*
+    of the target programming language (e.g., .catch() in JavaScript,
+    Result<T,E> in Rust, if err != nil in Go).
     </expand>
     </step>
 
@@ -222,7 +230,9 @@ related to a set of code quality aspects.
     Check for concurrency or parallelism race conditions.
 
     Especially, check for potential problems of code which runs
-    asynchronously from timeout/interval or I/O driven callbacks.
+    *concurrently or asynchronously* through the target language's
+    *concurrency model* (e.g., event-loop callbacks in JavaScript,
+    goroutines in Go, threads in Java/C++, async/await in Rust/Python).
     </expand>
     </step>
 

@@ -2,7 +2,6 @@
 name: ase-code-craft
 argument-hint: "<feature>"
 description: "Craft Source Code From Scratch"
-model: opus
 effort: medium
 ---
 

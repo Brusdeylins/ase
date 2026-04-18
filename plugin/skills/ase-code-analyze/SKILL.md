@@ -4,8 +4,7 @@ argument-hint: "<source-reference>"
 description: "Analyze the source code for problems in the logic and semantics and its related control flow."
 user-invocable: true
 disable-model-invocation: false
-model: opus
-effort: low
+effort: medium
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
@@ -40,11 +39,11 @@ flow* is found.
      they *should* be handled *near the origin*.
 
    - In case of problems related to *theoretical or unexpected* errors,
-     they *should* be handled in parent scopes to
-     avoid cluttering the source code with too much error handling at all.
+     they *should* be handled in parent scopes to avoid cluttering the
+     source code with too much error handling at all.
 
-   - Focus on the *problem only* and do *not* investigate on any
-     possible *solution*.
+   - In this step, still focus on the *problem only* and do *not*
+     investigate on any possible *solution*.
    </step>
 
 2. <step id="STEP 2: Show Results">

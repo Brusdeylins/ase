@@ -4,7 +4,6 @@ argument-hint: "<source-reference>"
 description: Explains code with visual diagrams and analogies. Use when explaining how code works, teaching about a codebase, or when the user asks "how does this work?"
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: medium
 ---
 

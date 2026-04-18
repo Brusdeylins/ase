@@ -5,7 +5,6 @@ description: "Refactor Source Code"
 user-invocable: true
 disable-model-invocation: false
 context: fork
-model: opus
 effort: medium
 ---
 

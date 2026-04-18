@@ -4,7 +4,6 @@ argument-hint: ""
 description: "Update changes entries in CHANGELOG.md files"
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: medium
 ---
 

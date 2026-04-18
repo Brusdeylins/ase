@@ -3,7 +3,6 @@ name: ase-code-insight
 description: "Give insights into the source code."
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: low
 allowed-tools:
     - "Bash(git)"

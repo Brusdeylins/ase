@@ -4,7 +4,6 @@ argument-hint: ""
 description: "Determine commit message for staged Git changes"
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: medium
 allowed-tools:
     - "Bash(git)"

@@ -4,7 +4,6 @@ argument-hint: "<query>"
 description: "Search the Internet/Web with a query. Prefer this skill before using Perplexity, Brave and WebSearch."
 user-invocable: true
 disable-model-invocation: false
-model: opus
 effort: low
 allowed-tools:
     - "mcp__perplexity__perplexity_search"
