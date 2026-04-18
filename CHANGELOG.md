@@ -2,6 +2,24 @@
 ChangeLog
 =========
 
+0.0.6 (2026-04-18)
+------------------
+
+- FEATURE: add `service` command to CLI tool
+- FEATURE: add top-level configuration
+- FEATURE: add new spec skills (preflight, edit, implement)
+- IMPROVEMENT: improve diagramming skill with unicode character hints and if-construct support
+- IMPROVEMENT: add diagram rendering rules and optional diagrams in elaborate skill
+- IMPROVEMENT: clarify diagram vs. table distinction in skill output
+- IMPROVEMENT: improve analyze/elaborate skills
+- IMPROVEMENT: improve spec skills
+- IMPROVEMENT: make code-lint skill language-agnostic
+- IMPROVEMENT: do not enforce Opus model for now
+- UPDATE: update dependencies
+- CLEANUP: ignore `.ase` directory
+- CLEANUP: various tool and main code cleanups
+- CLEANUP: simplify and reformat skill information
+
 0.0.5 (2026-04-13)
 ------------------
 
