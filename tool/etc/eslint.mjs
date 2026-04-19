@@ -26,7 +26,7 @@ export default [
             "import":  pluginImport,
             "promise": pluginPromise
         },
-        files: [ "src/**/*.ts" ],
+        files: [ "src/*.ts" ],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType:  "module",
@@ -55,7 +55,6 @@ export default [
             "@stylistic/brace-style":                             [ "error", "stroustrup", { allowSingleLine: true } ],
             "@stylistic/quotes":                                  [ "error", "double" ],
 
-            "@stylistic/no-multi-spaces":                         "off",
             "@stylistic/no-multi-spaces":                         "off",
             "@stylistic/no-multiple-empty-lines":                 "off",
             "@stylistic/key-spacing":                             "off",
