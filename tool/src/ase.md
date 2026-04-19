@@ -82,7 +82,7 @@ The following top-level commands exist:
 
 - `.ase/config.yaml`:
   Per-project *ASE* configuration. Read upward from the current
-  working directory. Recognized key: `project-id` (non-empty string).
+  working directory. Recognized key: `project.id` (non-empty string).
 
 - `.ase/service.yaml`:
   Per-project service state. Recognized key: `port` (integer in

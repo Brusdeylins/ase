@@ -16,7 +16,9 @@ import type { GlobalOpts }                          from "./ase.js"
 
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
-    "project-id": v.optional(v.pipe(v.string(), v.minLength(1)))
+    project: v.optional(v.strictObject({
+        id: v.optional(v.pipe(v.string(), v.minLength(1)))
+    }))
 }))
 
 /*  encapsulate read/write access to a project-local ".ase/<name>.yaml" file  */

@@ -46,7 +46,7 @@ const loadContext = (): Context => {
     svc.read()
 
     /*  determine project id  */
-    const rawId = cfg.get("project-id")
+    const rawId = cfg.get("project.id")
     const projectId = (rawId === undefined || rawId === null) ? path.basename(process.cwd()) : rawId as string
 
     /*  determine service port  */
