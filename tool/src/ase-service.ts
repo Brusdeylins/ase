@@ -9,6 +9,7 @@ import fs                     from "node:fs"
 import net                    from "node:net"
 import { fileURLToPath }      from "node:url"
 import { spawn }              from "node:child_process"
+import type { ChildProcess }  from "node:child_process"
 
 import { Command }            from "commander"
 import Hapi                   from "@hapi/hapi"
@@ -216,7 +217,7 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
 }
 
 /*  spawn the current executable detached as a background service  */
-const spawnDetached = (aseDir: string): void => {
+const spawnDetached = (aseDir: string): { child: ChildProcess, logFile: string } => {
     fs.mkdirSync(aseDir, { recursive: true })
     const logFile = path.join(aseDir, "service.log")
     const log     = fs.openSync(logFile, "a")
@@ -226,7 +227,19 @@ const spawnDetached = (aseDir: string): void => {
         env:      { ...process.env, [SERVE_ENV]: "1" },
         stdio:    [ "ignore", log, log ]
     })
-    child.unref()
+    return { child, logFile }
+}
+
+/*  read the last N non-empty lines of a log file for diagnostics  */
+const readLogTail = (logFile: string, lines: number): string => {
+    try {
+        const data = fs.readFileSync(logFile, "utf8")
+        const all  = data.split("\n").filter((l) => l.length > 0)
+        return all.slice(-lines).join("\n")
+    }
+    catch {
+        return ""
+    }
 }
 
 /*  start flow: ensure port, probe, optionally detach  */
@@ -251,16 +264,36 @@ const doStart = async (): Promise<number> => {
         port = await allocatePort()
         persistPort(ctx.svc, port)
     }
-    spawnDetached(ctx.aseDir)
-    for (let i = 0; i < 50; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        const s = await probe(port, ctx.projectId)
-        if (s === true) {
-            process.stderr.write(`ase: service: started on port ${port}\n`)
-            return 0
-        }
+    const { child, logFile } = spawnDetached(ctx.aseDir)
+    let exited   = false
+    let exitCode: number | null = null
+    const onExit = (code: number | null) => {
+        exited   = true
+        exitCode = code
     }
-    throw new Error("service failed to start within timeout")
+    child.once("exit", onExit)
+    try {
+        for (let i = 0; i < 50; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 100))
+            if (exited)
+                break
+            const s = await probe(port, ctx.projectId)
+            if (s === true) {
+                process.stderr.write(`ase: service: started on port ${port}\n`)
+                child.unref()
+                return 0
+            }
+        }
+        const tail   = readLogTail(logFile, 20)
+        const reason = exited ?
+            `service exited during startup (code ${exitCode})` :
+            "service failed to start within timeout"
+        const detail = tail.length > 0 ? `\n---- ${logFile} (tail) ----\n${tail}` : ""
+        throw new Error(`${reason}${detail}`)
+    }
+    finally {
+        child.removeListener("exit", onExit)
+    }
 }
 
 /*  stop flow: no-op if no port configured or connection refused  */
