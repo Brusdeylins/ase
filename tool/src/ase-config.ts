@@ -12,8 +12,6 @@ import { Document, parseDocument, isMap, isScalar } from "yaml"
 import { execaSync }                                from "execa"
 import * as v                                       from "valibot"
 
-import type { GlobalOpts }                          from "./ase.js"
-
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
@@ -132,45 +130,62 @@ export class Config {
     }
 }
 
+/*  register CLI command "ase config"  */
 const registerConfigCommand = (program: Command): void => {
     const configCmd = program
         .command("config")
         .description("Manage ASE configuration")
-        .argument("[key]",   "Configuration key (dotted path)")
-        .argument("[value]", "Configuration value (to set)")
-        .action((key: string | undefined, value: string | undefined, _opts, cmd: Command) => {
-            const debug = cmd.optsWithGlobals<GlobalOpts>().debug
-            if (debug)
-                console.log("DEBUG: config command", { key, value })
-
-            const cfg = new Config("config", configSchema)
-            cfg.read()
-
-            if (key === undefined) {
-                /*  list all values as flat dotted keys  */
-                const list = (node: unknown, prefix: string) => {
-                    if (isMap(node))
-                        for (const item of node.items) {
-                            const k = prefix ? `${prefix}.${item.key}` : String(item.key)
-                            if (isMap(item.value))
-                                list(item.value, k)
-                            else
-                                console.log(`${k}: ${isScalar(item.value) ? item.value.value : item.value}`)
-                        }
-                }
-                list(cfg.get(), "")
-            }
-            else if (value !== undefined) {
-                console.log(`${key}: ${value}`)
-                cfg.set(key, value)
-                cfg.write()
-            }
-            else {
-                const v = cfg.get(key)
-                console.log(v)
-            }
+        .action((_opts, cmd: Command) => {
+            cmd.help()
         })
 
+    /*  register CLI sub-command "ase config get"  */
+    configCmd
+        .command("get")
+        .description("Print the value at a dotted configuration key")
+        .argument("<key>", "Configuration key (dotted path)")
+        .action((key: string) => {
+            const cfg = new Config("config", configSchema)
+            cfg.read()
+            const v = cfg.get(key)
+            console.log(v)
+        })
+
+    /*  register CLI sub-command "ase config set"  */
+    configCmd
+        .command("set")
+        .description("Set the value at a dotted configuration key")
+        .argument("<key>",   "Configuration key (dotted path)")
+        .argument("<value>", "Configuration value")
+        .action((key: string, value: string) => {
+            const cfg = new Config("config", configSchema)
+            cfg.read()
+            console.log(`${key}: ${value}`)
+            cfg.set(key, value)
+            cfg.write()
+        })
+
+    /*  register CLI sub-command "ase config list"  */
+    configCmd
+        .command("list")
+        .description("List all configured values as flat dotted keys")
+        .action(() => {
+            const cfg = new Config("config", configSchema)
+            cfg.read()
+            const list = (node: unknown, prefix: string) => {
+                if (isMap(node))
+                    for (const item of node.items) {
+                        const k = prefix ? `${prefix}.${item.key}` : String(item.key)
+                        if (isMap(item.value))
+                            list(item.value, k)
+                        else
+                            console.log(`${k}: ${isScalar(item.value) ? item.value.value : item.value}`)
+                    }
+            }
+            list(cfg.get(), "")
+        })
+
+    /*  register CLI sub-command "ase config edit"  */
     configCmd
         .command("edit")
         .description("Edit configuration file with $EDITOR")

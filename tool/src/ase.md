@@ -36,15 +36,22 @@ The following top-level command-line options exist:
 
 The following top-level commands exist:
 
-- `ase config` \[*key* \[*value*\]\]:
+- `ase config`:
   Manage *ASE* configuration stored in `.ase/config.yaml`.
-  Without arguments, list all configured values as flat dotted keys.
-  With *key* only, print the value at that dotted key.
-  With *key* and *value*, set the value at that dotted key
-  (creating intermediate maps as needed) and persist the file.
+  Without a subcommand, prints usage information.
   The file is validated against a schema: on read, unknown or
   invalid entries are warned about and silently dropped from the
   in-memory view; on set/write, they cause a fatal error.
+
+- `ase config get` *key*:
+  Print the value at the given dotted *key*.
+
+- `ase config set` *key* *value*:
+  Set the value at the given dotted *key* (creating intermediate
+  maps as needed) and persist the file.
+
+- `ase config list`:
+  List all configured values as flat dotted keys.
 
 - `ase config edit`:
   Open `.ase/config.yaml` in the editor defined by the `$EDITOR`
