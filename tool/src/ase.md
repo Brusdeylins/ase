@@ -55,6 +55,12 @@ The following top-level commands exist:
   List all configured values as flat dotted keys, rendered as a
   two-column table of `key` and `value`.
 
+- `ase config init` *type*:
+  Initialize `.ase/config.yaml` with preset values for all recognized
+  keys. The *type* argument selects the preset: `vibe` (black-box,
+  offload-to-AI, prefab, prototype-oriented) or `pro` (white-box,
+  keep-control, stucco, product-oriented, team, code-focused).
+
 - `ase config edit`:
   Open `.ase/config.yaml` in the editor defined by the `$EDITOR`
   or `$VISUAL` environment variable (falling back to `vi`).
@@ -91,8 +97,14 @@ The following top-level commands exist:
 - `.ase/config.yaml`:
   Per-project *ASE* configuration. Read upward from the current working
   directory. Recognized keys: `project.id` (non-empty string, uniqued
-  project id) and `project.name` (non-empty string, descriptive project
-  name).
+  project id), `project.name` (non-empty string, descriptive project
+  name), `project.type.box` (`white`|`grey`|`black`),
+  `project.type.actors` (`person`|`team`), `project.type.solution`
+  (`tool`|`app`|`system`), `project.type.kind`
+  (`prototype`|`mvp`|`product`), `project.type.structure`
+  (`bare`|`libraries`|`frameworks`), `project.type.material`
+  (`stucco`|`prefab`), `project.type.focus` (`spec`|`code`|`test`),
+  and `project.type.control` (`offload`|`keep`).
 
 - `.ase/service.yaml`:
   Per-project service state. Recognized key: `port` (integer in

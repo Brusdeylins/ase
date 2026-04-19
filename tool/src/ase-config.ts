@@ -17,7 +17,17 @@ import Table                                        from "cli-table3"
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
         id:   v.optional(v.pipe(v.string(), v.minLength(1))),
-        name: v.optional(v.pipe(v.string(), v.minLength(1)))
+        name: v.optional(v.pipe(v.string(), v.minLength(1))),
+        type: v.optional(v.strictObject({
+            box:       v.optional(v.picklist([ "white", "grey", "black" ])),
+            actors:    v.optional(v.picklist([ "person", "team" ])),
+            solution:  v.optional(v.picklist([ "tool", "app", "system" ])),
+            kind:      v.optional(v.picklist([ "prototype", "mvp", "product" ])),
+            structure: v.optional(v.picklist([ "bare", "libraries", "frameworks" ])),
+            material:  v.optional(v.picklist([ "stucco", "prefab" ])),
+            focus:     v.optional(v.picklist([ "spec", "code", "test" ])),
+            control:   v.optional(v.picklist([ "offload", "keep" ]))
+        }))
     }))
 }))
 
@@ -193,6 +203,48 @@ const registerConfigCommand = (program: Command): void => {
             }
             list(cfg.get(), "")
             console.log(table.toString())
+        })
+
+    /*  register CLI sub-command "ase config init"  */
+    configCmd
+        .command("init")
+        .description("Initialize configuration with preset values (vibe|pro)")
+        .argument("<type>", "Preset type (vibe|pro)")
+        .action((type: string) => {
+            const presets: Record<string, Record<string, string>> = {
+                vibe: {
+                    "project.id":             "example",
+                    "project.name":           "Example Project",
+                    "project.type.box":       "black",
+                    "project.type.actors":    "person",
+                    "project.type.solution":  "tool",
+                    "project.type.kind":      "prototype",
+                    "project.type.structure": "libraries",
+                    "project.type.material":  "prefab",
+                    "project.type.focus":     "spec",
+                    "project.type.control":   "offload"
+                },
+                pro: {
+                    "project.id":             "example",
+                    "project.name":           "Example Project",
+                    "project.type.box":       "white",
+                    "project.type.actors":    "team",
+                    "project.type.solution":  "system",
+                    "project.type.kind":      "product",
+                    "project.type.structure": "frameworks",
+                    "project.type.material":  "stucco",
+                    "project.type.focus":     "code",
+                    "project.type.control":   "keep"
+                }
+            }
+            const preset = presets[type]
+            if (preset === undefined)
+                throw new Error(`unknown preset "${type}" (expected: vibe|pro)`)
+            const cfg = new Config("config", configSchema)
+            cfg.read()
+            for (const [ k, v ] of Object.entries(preset))
+                cfg.set(k, v)
+            cfg.write()
         })
 
     /*  register CLI sub-command "ase config edit"  */
