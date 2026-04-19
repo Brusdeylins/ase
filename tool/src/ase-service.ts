@@ -310,35 +310,6 @@ const doStart = async (): Promise<number> => {
     }
 }
 
-/*  stop flow: no-op if no port configured or connection refused  */
-const doStop = async (): Promise<number> => {
-    const ctx = loadContext()
-    if (ctx.port === null) {
-        process.stderr.write("ase: service: not running (no port configured)\n")
-        return 0
-    }
-    try {
-        const r  = await axios.request({
-            method:         "GET",
-            url:            `http://${HOST}:${ctx.port}/stop`,
-            timeout:        5000,
-            validateStatus: () => true
-        })
-        const ok = r.status >= 200 && r.status < 300
-        if (ok)
-            clearPort(ctx.svc)
-        return ok ? 0 : 1
-    }
-    catch (err: unknown) {
-        if (isConnRefused(err)) {
-            process.stderr.write(`ase: service: not running (port ${ctx.port} not responding)\n`)
-            clearPort(ctx.svc)
-            return 0
-        }
-        throw err
-    }
-}
-
 /*  status flow: report whether the service is running  */
 const doStatus = async (): Promise<number> => {
     const ctx = loadContext()
@@ -359,8 +330,8 @@ const doStatus = async (): Promise<number> => {
     return 1
 }
 
-/*  passthrough flow: POST /command with the arbitrary cmd token  */
-const doPassthrough = async (cmd: string): Promise<number> => {
+/*  send command: POST /command with the arbitrary cmd token  */
+const doSend = async (cmd: string): Promise<number> => {
     let ctx = loadContext()
     if (ctx.port === null) {
         await doStart()
@@ -390,6 +361,35 @@ const doPassthrough = async (cmd: string): Promise<number> => {
     if (!body.endsWith("\n"))
         process.stdout.write("\n")
     return r.status >= 200 && r.status < 300 ? 0 : 1
+}
+
+/*  stop flow: no-op if no port configured or connection refused  */
+const doStop = async (): Promise<number> => {
+    const ctx = loadContext()
+    if (ctx.port === null) {
+        process.stderr.write("ase: service: not running (no port configured)\n")
+        return 0
+    }
+    try {
+        const r  = await axios.request({
+            method:         "GET",
+            url:            `http://${HOST}:${ctx.port}/stop`,
+            timeout:        5000,
+            validateStatus: () => true
+        })
+        const ok = r.status >= 200 && r.status < 300
+        if (ok)
+            clearPort(ctx.svc)
+        return ok ? 0 : 1
+    }
+    catch (err: unknown) {
+        if (isConnRefused(err)) {
+            process.stderr.write(`ase: service: not running (port ${ctx.port} not responding)\n`)
+            clearPort(ctx.svc)
+            return 0
+        }
+        throw err
+    }
 }
 
 /*  register CLI command "ase service"  */
@@ -424,7 +424,7 @@ const registerServiceCommand = (program: Command): void => {
         .description("Send a command to the background service")
         .argument("<cmd>", "Command token to dispatch to the service")
         .action(async (cmd: string) => {
-            process.exit(await doPassthrough(cmd))
+            process.exit(await doSend(cmd))
         })
 
     /*  register CLI sub-command "ase service stop"  */
