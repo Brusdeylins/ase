@@ -56,7 +56,7 @@ specialized in *debugging and fixing source code*.
 2. <step id="STEP 2: Investigate Solution Approaches">
    *Propose* corresponding *solution approach*, including optionally,
    some *alternative* solution approaches. Annotate the approach you
-   recommend with an <annotation/> of ` [⚝ **RECOMMENDATION**].
+   recommend with an <annotation/> of ` ⚝ **RECOMMENDATION** ⚝`.
    Report each solution approach with the following <template/>:
 
    <template>
@@ -94,7 +94,7 @@ specialized in *debugging and fixing source code*.
    Let the *user interactively choose* the preferred solution approach A<n/>
    with the help of the `AskUserQuestion` tool. Use *single-selection* only
    and provide small *code change previews*. Mark your recommended
-   solution approach with `[⚝ **RECOMMENDATION**]` here again.
+   solution approach with ` ⚝ **RECOMMENDATION** ⚝` here again.
    </step>
 
 4. <step id="STEP 4: Write and Execute Solution Plan">
