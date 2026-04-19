@@ -119,12 +119,13 @@ export class Config {
     /*  upward-walk on filesystem for a file path relative to a start directory,
         bounded above (inclusive) by a stop directory  */
     private findUpward (start: string, stop: string, rel: string): string | null {
-        let dir = start
+        let   dir = fs.realpathSync(start)
+        const end = fs.realpathSync(stop)
         for (;;) {
             const candidate = path.join(dir, rel)
             if (fs.existsSync(candidate))
                 return candidate
-            if (dir === stop)
+            if (dir === end)
                 return null
             const parent = path.dirname(dir)
             if (parent === dir)
