@@ -11,6 +11,7 @@ import { Command }                                  from "commander"
 import { Document, parseDocument, isMap, isScalar } from "yaml"
 import { execaSync }                                from "execa"
 import * as v                                       from "valibot"
+import Table                                        from "cli-table3"
 
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
@@ -172,6 +173,7 @@ const registerConfigCommand = (program: Command): void => {
         .action(() => {
             const cfg = new Config("config", configSchema)
             cfg.read()
+            const table = new Table({ head: [ "key", "value" ] })
             const list = (node: unknown, prefix: string) => {
                 if (isMap(node))
                     for (const item of node.items) {
@@ -179,10 +181,11 @@ const registerConfigCommand = (program: Command): void => {
                         if (isMap(item.value))
                             list(item.value, k)
                         else
-                            console.log(`${k}: ${isScalar(item.value) ? item.value.value : item.value}`)
+                            table.push([ k, String(isScalar(item.value) ? item.value.value : item.value) ])
                     }
             }
             list(cfg.get(), "")
+            console.log(table.toString())
         })
 
     /*  register CLI sub-command "ase config edit"  */
