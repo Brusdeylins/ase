@@ -119,19 +119,20 @@ export class Config {
     /*  upward-walk on filesystem for a file path relative to a start directory,
         bounded above (inclusive) by a stop directory  */
     private findUpward (start: string, stop: string, rel: string): string | null {
-        let   dir = fs.realpathSync(start)
-        const end = fs.realpathSync(stop)
-        for (;;) {
+        let   dir     = fs.realpathSync(start)
+        const end     = fs.realpathSync(stop)
+        const between = path.relative(end, dir)
+        const steps   = between === "" ? 0 : between.split(path.sep).length
+        for (let i = 0; i <= steps; i++) {
             const candidate = path.join(dir, rel)
             if (fs.existsSync(candidate))
                 return candidate
-            if (dir === end)
-                return null
             const parent = path.dirname(dir)
             if (parent === dir)
                 return null
             dir = parent
         }
+        return null
     }
 
     /*  determine the Git top-level directory, if inside a Git repository  */
@@ -151,6 +152,13 @@ export class Config {
     read (mode: "strict" | "lenient" = "lenient"): void {
         const text = fs.existsSync(this.filename) ? fs.readFileSync(this.filename, "utf8") : ""
         this.doc   = parseDocument(text)
+        if (this.doc.errors.length > 0) {
+            const msg = `invalid YAML in ${this.filename}: ${this.doc.errors[0].message}`
+            if (mode === "strict")
+                throw new Error(msg)
+            this.log.write("warning", msg)
+            this.doc = new Document()
+        }
         this.validate(mode)
     }
 
@@ -185,10 +193,10 @@ export class Config {
                     this.doc.deleteIn(segs)
                     progressed = true
                 }
-                else {
-                    this.doc = new Document()
-                    progressed = true
-                }
+                else
+                    /*  root-level issue is structurally unrecoverable: do not wipe
+                        the document, let the next strict validate() surface it  */
+                    return
             }
             if (!progressed)
                 return

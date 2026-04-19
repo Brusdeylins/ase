@@ -314,9 +314,14 @@ export default class ServiceCommand {
             const { child, logFile } = spawnDetached(ctx.aseDir)
             let exited   = false
             let exitCode: number | null = null
+            let resolveExit: () => void = () => {}
+            const exitPromise = new Promise<void>((resolve) => {
+                resolveExit = resolve
+            })
             const onExit = (code: number | null) => {
                 exited   = true
                 exitCode = code
+                resolveExit()
             }
             child.once("exit", onExit)
             let foreign = false
@@ -347,8 +352,17 @@ export default class ServiceCommand {
             }
             finally {
                 child.removeListener("exit", onExit)
-                if (!exited)
+                if (!exited) {
                     child.kill("SIGTERM")
+                    await Promise.race([
+                        exitPromise,
+                        new Promise<void>((resolve) => setTimeout(resolve, 1000))
+                    ])
+                    if (!exited) {
+                        child.kill("SIGKILL")
+                        await exitPromise
+                    }
+                }
             }
         }
         clearPort(ctx.svc)
@@ -407,7 +421,7 @@ export default class ServiceCommand {
             url:               `http://${HOST}:${ctx.port}/command`,
             headers:           { "Content-Type": "application/json" },
             data:              { command: cmd },
-            timeout:           0,
+            timeout:           5000,
             validateStatus:    () => true,
             responseType:      "text",
             transformResponse: [ (x) => x ]
@@ -426,25 +440,25 @@ export default class ServiceCommand {
             this.log.write("info", "service: not running (no port configured)")
             return 0
         }
-        try {
-            const r  = await axios.request({
-                method:         "GET",
-                url:            `http://${HOST}:${ctx.port}/stop`,
-                timeout:        5000,
-                validateStatus: () => true
-            })
-            const ok = r.status >= 200 && r.status < 300
+        const match = await probe(ctx.port, ctx.projectId)
+        if (match === false) {
+            this.log.write("info", `service: not running (port ${ctx.port} in use by foreign service)`)
+            return 1
+        }
+        if (match === null) {
+            this.log.write("info", `service: not running (port ${ctx.port} not responding)`)
             clearPort(ctx.svc)
-            return ok ? 0 : 1
+            return 0
         }
-        catch (err: unknown) {
-            if (isConnRefused(err)) {
-                this.log.write("info", `service: not running (port ${ctx.port} not responding)`)
-                clearPort(ctx.svc)
-                return 0
-            }
-            throw err
-        }
+        const r  = await axios.request({
+            method:         "GET",
+            url:            `http://${HOST}:${ctx.port}/stop`,
+            timeout:        5000,
+            validateStatus: () => true
+        })
+        const ok = r.status >= 200 && r.status < 300
+        clearPort(ctx.svc)
+        return ok ? 0 : 1
     }
 
     /*  register commands  */
