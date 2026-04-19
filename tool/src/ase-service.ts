@@ -46,12 +46,12 @@ const loadContext = (): Context => {
     svc.read()
 
     /*  determine project id  */
-    const rawId = cfg.get("project.id")
-    const projectId = (rawId === undefined || rawId === null) ? path.basename(process.cwd()) : rawId as string
+    const rawId     = cfg.get("project.id") as string | null | undefined
+    const projectId = rawId ?? path.basename(process.cwd())
 
     /*  determine service port  */
-    const rawPort = svc.get("port")
-    const port: number | null = (rawPort === undefined || rawPort === null) ? null : rawPort as number
+    const rawPort = svc.get("port") as number | null | undefined
+    const port: number | null = rawPort ?? null
 
     /*  determine path to ".ase" directory  */
     const aseDir = path.dirname(svc.filename)
@@ -159,10 +159,11 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
             if (!payload || typeof payload.command !== "string")
                 return h.response({ error: "missing or invalid 'command' field" }).code(400)
             if (payload.command === "foo") {
+                /*  FIXME: placeholder response  */
                 return h.response({
                     ok:        true,
                     projectId: ctx.projectId,
-                    command:   "Hello World" // FIXME
+                    command:   "Hello World"
                 }).code(200)
             }
             else

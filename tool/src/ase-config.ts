@@ -243,7 +243,7 @@ export class Config {
 
     /*  delete a value at a dotted key  */
     delete (key: string): void {
-        this.doc.deleteIn(key.split("."))
+        this.doc.deleteIn(this.resolveKey(key).split("."))
     }
 }
 
@@ -264,10 +264,10 @@ const registerConfigCommand = (program: Command): void => {
         .action((key: string) => {
             const cfg = new Config("config", configSchema)
             cfg.read()
-            const v = cfg.get(key)
-            if (isMap(v))
+            const val = cfg.get(key)
+            if (isMap(val))
                 throw new Error(`key "${key}" is not a leaf key`)
-            console.log(isScalar(v) ? v.value : v)
+            process.stdout.write(`${isScalar(val) ? val.value : val}\n`)
         })
 
     /*  register CLI sub-command "ase config set"  */
@@ -279,7 +279,7 @@ const registerConfigCommand = (program: Command): void => {
         .action((key: string, value: string) => {
             const cfg = new Config("config", configSchema)
             cfg.read()
-            console.log(`${key}: ${value}`)
+            process.stdout.write(`${key}: ${value}\n`)
             cfg.set(key, value)
             cfg.write()
         })
@@ -307,7 +307,7 @@ const registerConfigCommand = (program: Command): void => {
                     }
             }
             list(cfg.get(), "")
-            console.log(table.toString())
+            process.stdout.write(`${table.toString()}\n`)
         })
 
     /*  register CLI sub-command "ase config init"  */
@@ -321,8 +321,8 @@ const registerConfigCommand = (program: Command): void => {
                 throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
             const cfg = new Config("config", configSchema)
             cfg.read()
-            for (const [ k, v ] of Object.entries(preset))
-                cfg.set(k, v)
+            for (const [ k, val ] of Object.entries(preset))
+                cfg.set(k, val)
             cfg.write()
         })
 
