@@ -301,20 +301,17 @@ const doPassthrough = async (cmd: string): Promise<number> => {
     }
 }
 
-/*  command-line handling  */
+/*  register CLI command "ase service"  */
 const registerServiceCommand = (program: Command): void => {
     const service = program
         .command("service")
         .description("Manage per-project background HTTP service")
-        .argument("[cmd]", "Command token to dispatch to the service")
-        .action(async (cmd: string | undefined) => {
-            if (cmd === undefined) {
-                service.outputHelp()
-                process.exit(1)
-            }
-            process.exit(await doPassthrough(cmd))
+        .action(() => {
+            service.outputHelp()
+            process.exit(1)
         })
 
+    /*  register CLI sub-command "ase service start"  */
     service
         .command("start")
         .description("Start the background service")
@@ -322,11 +319,21 @@ const registerServiceCommand = (program: Command): void => {
             process.exit(await doStart())
         })
 
+    /*  register CLI sub-command "ase service stop"  */
     service
         .command("stop")
         .description("Stop the background service")
         .action(async () => {
             process.exit(await doStop())
+        })
+
+    /*  register CLI sub-command "ase service send"  */
+    service
+        .command("send")
+        .description("Send a command to the background service")
+        .argument("<cmd>", "Command token to dispatch to the service")
+        .action(async (cmd: string) => {
+            process.exit(await doPassthrough(cmd))
         })
 }
 
