@@ -44,14 +44,16 @@ The following top-level commands exist:
   in-memory view; on set/write, they cause a fatal error.
 
 - `ase config get` *key*:
-  Print the value at the given dotted *key*.
+  Print the value at the given dotted *key*. Fails with an error
+  if *key* does not resolve to a leaf value.
 
 - `ase config set` *key* *value*:
   Set the value at the given dotted *key* (creating intermediate
   maps as needed) and persist the file.
 
 - `ase config list`:
-  List all configured values as flat dotted keys.
+  List all configured values as flat dotted keys, rendered as a
+  two-column table of `key` and `value`.
 
 - `ase config edit`:
   Open `.ase/config.yaml` in the editor defined by the `$EDITOR`
@@ -60,14 +62,11 @@ The following top-level commands exist:
   After the editor exits, the file is re-read and schema warnings
   are reported.
 
-- `ase service` \[*cmd*\]:
+- `ase service`:
   Manage the per-project background HTTP service. The service
   is bound to `127.0.0.1` on a port persisted in `.ase/service.yaml`
   and stops itself after 30 minutes of idle time. Without a
-  subcommand, the help text is shown. With a *cmd* token other
-  than `start`/`stop`, the token is dispatched as a passthrough
-  command to the running service via HTTP `POST /command`; if the
-  service is not running, it is auto-started first.
+  subcommand, the help text is shown.
 
 - `ase service start`:
   Start the background service (detached). Allocates a random
@@ -82,10 +81,12 @@ The following top-level commands exist:
   the port is not responding, prints an informational message and
   exits with status 0.
 
-## FILES
+- `ase service send` *cmd*:
+  Dispatch the *cmd* token as a passthrough command to the running
+  service via HTTP `POST /command`; if the service is not running,
+  it is auto-started first.
 
-- `~/.ase.yaml`:
-  User-level *ASE* configuration (managed via `ase config`).
+## FILES
 
 - `.ase/config.yaml`:
   Per-project *ASE* configuration. Read upward from the current
