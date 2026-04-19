@@ -101,8 +101,9 @@ export class Config {
     public  filename: string
     private doc:      Document
     private schema:   v.GenericSchema | null
+    private log:      Log
 
-    constructor (name: string, schema?: v.GenericSchema) {
+    constructor (name: string, schema: v.GenericSchema | undefined, log: Log) {
         const rel     = path.join(".ase", `${name}.yaml`)
         const cwd     = process.cwd()
         const top     = this.gitToplevel()
@@ -112,6 +113,7 @@ export class Config {
         this.filename = found ?? path.join(top ?? cwd, rel)
         this.doc      = new Document()
         this.schema   = schema ?? null
+        this.log      = log
     }
 
     /*  upward-walk on filesystem for a file path relative to a start directory,
@@ -177,7 +179,7 @@ export class Config {
             for (const i of result.issues) {
                 const segs    = (i.path ?? []).map((p) => String(p.key))
                 const dotPath = segs.join(".")
-                process.stderr.write(`ase: warning: invalid entry in ${this.filename}: ${dotPath ? `${dotPath}: ` : ""}${i.message}\n`)
+                this.log.write("warning", `invalid entry in ${this.filename}: ${dotPath ? `${dotPath}: ` : ""}${i.message}`)
                 if (segs.length > 0) {
                     this.doc.deleteIn(segs)
                     progressed = true
@@ -268,122 +270,126 @@ export class Config {
     }
 }
 
-/*  register CLI command "ase config"  */
-const registerConfigCommand = (program: Command, _log: Log): void => {
-    const configCmd = program
-        .command("config")
-        .description("Manage ASE configuration")
-        .action((_opts, cmd: Command) => {
-            cmd.outputHelp()
-            process.exit(1)
-        })
+/*  CLI command "ase config"  */
+export default class ConfigCommand {
+    constructor (private log: Log) {}
 
-    /*  register CLI sub-command "ase config init"  */
-    configCmd
-        .command("init")
-        .description("Initialize configuration with preset values (vibe|pro|industry)")
-        .argument("<type>", "Preset type (vibe|pro|industry)")
-        .action((type: string) => {
-            const preset = projectClassificationPresets[type]
-            if (preset === undefined)
-                throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
-            const cfg = new Config("config", configSchema)
-            cfg.read()
-            for (const [ k, val ] of Object.entries(preset))
-                cfg.set(k, val)
-            cfg.write()
-        })
-
-    /*  register CLI sub-command "ase config list"  */
-    configCmd
-        .command("list")
-        .description("List all configured values as flat dotted keys")
-        .action(() => {
-            const cfg = new Config("config", configSchema)
-            cfg.read()
-            const table = new Table({
-                head:  [ "KEY", "VALUE" ],
-                chars: { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
-                style: { head: [ "blue" ] }
+    /*  register commands  */
+    register (program: Command): void {
+        /*  register CLI top-level command "ase config"  */
+        const configCmd = program
+            .command("config")
+            .description("Manage ASE configuration")
+            .action((_opts, cmd: Command) => {
+                cmd.outputHelp()
+                process.exit(1)
             })
-            const list = (node: unknown, prefix: string) => {
-                if (isMap(node))
-                    for (const item of node.items) {
-                        const k = prefix ? `${prefix}.${item.key}` : String(item.key)
-                        if (isMap(item.value))
-                            list(item.value, k)
-                        else if (!isScalar(item.value))
-                            throw new Error(`key "${k}" has unsupported node type`)
-                        else
-                            table.push([ k, String(item.value.value) ])
-                    }
-            }
-            list(cfg.get(), "")
-            process.stdout.write(`${table.toString()}\n`)
-        })
 
-    /*  register CLI sub-command "ase config edit"  */
-    configCmd
-        .command("edit")
-        .description("Edit configuration file with $EDITOR")
-        .action(async () => {
-            const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
-            const cfg    = new Config("config", configSchema)
-            fs.mkdirSync(path.dirname(cfg.filename), { recursive: true })
-            if (!fs.existsSync(cfg.filename))
-                fs.writeFileSync(cfg.filename, "", "utf8")
-            const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
-            try {
-                for (;;) {
-                    execaSync(editor, [ cfg.filename ], { stdio: "inherit" })
-                    try {
-                        cfg.read("strict")
-                        break
-                    }
-                    catch (err) {
-                        const msg = err instanceof Error ? err.message : String(err)
-                        process.stderr.write(`ase: ${msg}\n`)
-                        const ans = (await rl.question("re-edit? [Y/n] ")).trim().toLowerCase()
-                        if (ans === "n" || ans === "no")
-                            throw err
+        /*  register CLI sub-command "ase config init"  */
+        configCmd
+            .command("init")
+            .description("Initialize configuration with preset values (vibe|pro|industry)")
+            .argument("<type>", "Preset type (vibe|pro|industry)")
+            .action((type: string) => {
+                const preset = projectClassificationPresets[type]
+                if (preset === undefined)
+                    throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
+                const cfg = new Config("config", configSchema, this.log)
+                cfg.read()
+                for (const [ k, val ] of Object.entries(preset))
+                    cfg.set(k, val)
+                cfg.write()
+            })
+
+        /*  register CLI sub-command "ase config list"  */
+        configCmd
+            .command("list")
+            .description("List all configured values as flat dotted keys")
+            .action(() => {
+                const cfg = new Config("config", configSchema, this.log)
+                cfg.read()
+                const table = new Table({
+                    head:  [ "KEY", "VALUE" ],
+                    chars: { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
+                    style: { head: [ "blue" ] }
+                })
+                const list = (node: unknown, prefix: string) => {
+                    if (isMap(node))
+                        for (const item of node.items) {
+                            const k = prefix ? `${prefix}.${item.key}` : String(item.key)
+                            if (isMap(item.value))
+                                list(item.value, k)
+                            else if (!isScalar(item.value))
+                                throw new Error(`key "${k}" has unsupported node type`)
+                            else
+                                table.push([ k, String(item.value.value) ])
+                        }
+                }
+                list(cfg.get(), "")
+                process.stdout.write(`${table.toString()}\n`)
+            })
+
+        /*  register CLI sub-command "ase config edit"  */
+        configCmd
+            .command("edit")
+            .description("Edit configuration file with $EDITOR")
+            .action(async () => {
+                const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
+                const cfg    = new Config("config", configSchema, this.log)
+                fs.mkdirSync(path.dirname(cfg.filename), { recursive: true })
+                if (!fs.existsSync(cfg.filename))
+                    fs.writeFileSync(cfg.filename, "", "utf8")
+                const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
+                try {
+                    for (;;) {
+                        execaSync(editor, [ cfg.filename ], { stdio: "inherit" })
+                        try {
+                            cfg.read("strict")
+                            break
+                        }
+                        catch (err) {
+                            const msg = err instanceof Error ? err.message : String(err)
+                            this.log.write("error", msg)
+                            const ans = (await rl.question("re-edit? [Y/n] ")).trim().toLowerCase()
+                            if (ans === "n" || ans === "no")
+                                throw err
+                        }
                     }
                 }
-            }
-            finally {
-                rl.close()
-            }
-        })
+                finally {
+                    rl.close()
+                }
+            })
 
-    /*  register CLI sub-command "ase config get"  */
-    configCmd
-        .command("get")
-        .description("Print the value at a dotted configuration key")
-        .argument("<key>", "Configuration key (dotted path)")
-        .action((key: string) => {
-            const cfg = new Config("config", configSchema)
-            cfg.read()
-            const val = cfg.get(key)
-            if (val === undefined)
-                throw new Error(`key "${key}" is not set`)
-            if (isMap(val))
-                throw new Error(`key "${key}" is not a leaf key`)
-            process.stdout.write(`${isScalar(val) ? val.value : val}\n`)
-        })
+        /*  register CLI sub-command "ase config get"  */
+        configCmd
+            .command("get")
+            .description("Print the value at a dotted configuration key")
+            .argument("<key>", "Configuration key (dotted path)")
+            .action((key: string) => {
+                const cfg = new Config("config", configSchema, this.log)
+                cfg.read()
+                const val = cfg.get(key)
+                if (val === undefined)
+                    throw new Error(`key "${key}" is not set`)
+                if (isMap(val))
+                    throw new Error(`key "${key}" is not a leaf key`)
+                process.stdout.write(`${isScalar(val) ? val.value : val}\n`)
+            })
 
-    /*  register CLI sub-command "ase config set"  */
-    configCmd
-        .command("set")
-        .description("Set the value at a dotted configuration key")
-        .argument("<key>",   "Configuration key (dotted path)")
-        .argument("<value>", "Configuration value")
-        .action((key: string, value: string) => {
-            const cfg = new Config("config", configSchema)
-            cfg.read()
-            process.stdout.write(`${key}: ${value}\n`)
-            cfg.set(key, value)
-            cfg.write()
-        })
+        /*  register CLI sub-command "ase config set"  */
+        configCmd
+            .command("set")
+            .description("Set the value at a dotted configuration key")
+            .argument("<key>",   "Configuration key (dotted path)")
+            .argument("<value>", "Configuration value")
+            .action((key: string, value: string) => {
+                const cfg = new Config("config", configSchema, this.log)
+                cfg.read()
+                process.stdout.write(`${key}: ${value}\n`)
+                cfg.set(key, value)
+                cfg.write()
+            })
+    }
 }
-
-export default registerConfigCommand
 

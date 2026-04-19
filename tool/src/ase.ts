@@ -8,8 +8,8 @@
 import { Command, CommanderError } from "commander"
 import Log                         from "./ase-log.js"
 import type { LogLevel }           from "./ase-log.js"
-import registerConfigCommand       from "./ase-config.js"
-import registerServiceCommand      from "./ase-service.js"
+import ConfigCommand               from "./ase-config.js"
+import ServiceCommand              from "./ase-service.js"
 
 /*  type of top-level (global) options  */
 export type GlobalOpts = {
@@ -17,6 +17,10 @@ export type GlobalOpts = {
     logLevel: LogLevel
     logFile:  string
 }
+
+/*  globally initialize logger  */
+const log = new Log("ase", "warning", "-")
+await log.init()
 
 /*  parse CLI arguments  */
 try {
@@ -32,10 +36,8 @@ try {
         .enablePositionalOptions()
         .exitOverride()
 
-    /*  establish shared logger with defaults and apply parsed global options
-        to the logger before any subcommand action  */
-    const log = new Log("warning", "-")
-    await log.init()
+    /*  establish shared logger with defaults and then apply parsed
+        global options to the logger before any subcommand action  */
     program.hook("preAction", async () => {
         const opts = program.opts<GlobalOpts>()
         log.logLevel(opts.logLevel)
@@ -43,8 +45,8 @@ try {
     })
 
     /*  register top-level commands  */
-    registerConfigCommand(program, log)
-    registerServiceCommand(program, log)
+    new ConfigCommand(log).register(program)
+    new ServiceCommand(log).register(program)
 
     /*  parse program arguments  */
     await program.parseAsync(process.argv)
@@ -60,6 +62,6 @@ catch (err: unknown) {
             process.exit(0)
     }
     const message = err instanceof Error ? err.message : String(err)
-    process.stderr.write(`ase: ERROR: ${message}\n`)
+    log.write("error", message)
     process.exit(1)
 }

@@ -22,6 +22,7 @@ export default class Log {
     private stream: fs.WriteStream | null = null
     private logLevelIdx = 0
     constructor (
+        private _program:  string,
         private _logLevel: LogLevel,
         private _logFile:  string
     ) {}
@@ -50,7 +51,7 @@ export default class Log {
         const idx = levels.findIndex((l) => l.name === level)
         if (idx <= this.logLevelIdx) {
             const timestamp = DateTime.now().toFormat("yyyy-LL-dd hh:mm:ss.SSS")
-            let line = `[${timestamp}]: `
+            let line = `${this._program}: [${timestamp}]: `
             if (this._logFile === "-" && process.stdout.isTTY)
                 line += `${levels[idx].style("[" + levels[idx].name.toUpperCase() + "]")}`
             else
