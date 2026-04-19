@@ -21,10 +21,13 @@ export type GlobalOpts = {
 
 /*  globally initialize logger  */
 const log = new Log("ase", "warning", "-")
-await log.init()
 
-/*  parse CLI arguments  */
-try {
+/*  main entry point (wrapped in a regular async function to avoid
+    top-level await, which would be reported as "unsettled" by Node in
+    the long-running daemon process spawned by "ase service start")  */
+const main = async (): Promise<void> => {
+    await log.init()
+
     /*  establish top-level program  */
     const program = new Command()
     program
@@ -56,7 +59,7 @@ try {
     /*  gracefully terminate  */
     process.exit(0)
 }
-catch (err: unknown) {
+main().catch((err: unknown) => {
     if (err instanceof CommanderError) {
         if (err.exitCode !== 0)
             process.exit(err.exitCode)
@@ -66,4 +69,4 @@ catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     log.write("error", message)
     process.exit(1)
-}
+})
