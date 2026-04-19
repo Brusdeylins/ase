@@ -128,8 +128,9 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
     const server = Hapi.server({ host: HOST, port: ctx.port })
 
     /*  track start time and last activity  */
-    const startTime = Date.now()
+    const startTime  = Date.now()
     let lastActivity = Date.now()
+    let stopping     = false
     server.ext("onRequest", (_request, h) => {
         lastActivity = Date.now()
         return h.continue
@@ -195,11 +196,20 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
     }
 
     /*  stop service after idle timeout  */
-    setInterval(() => {
+    setInterval(async () => {
+        if (stopping)
+            return
         if (Date.now() - lastActivity > IDLE_MS) {
-            server.stop({ timeout: 1000 }).then(() => {
+            stopping = true
+            try {
+                await server.stop({ timeout: 1000 })
                 process.exit(0)
-            })
+            }
+            catch (err: unknown) {
+                const e = err as Error
+                process.stderr.write(`ase: service: stop failed: ${e.message}\n`)
+                process.exit(1)
+            }
         }
     }, TICK_MS).unref()
 }
