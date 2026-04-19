@@ -36,14 +36,25 @@ Skill Output
     -   *Keep diagrams narrow* — target *≤120 chars rendered
         width*. The renderer's horizontal extent scales with
         siblings per row, node label lengths, and inter-node
-        padding. Prefer `flowchart TB` (top-to-bottom) over `LR`;
-        limit *siblings per row* to *≤4* and group further items
-        into nested `subgraph` hierarchies; keep *node labels*
-        *≤30 chars* (abbreviate long names, drop adjectives). If
-        the rendered output still exceeds the budget, restructure
-        the Mermaid source — do *not* widen the terminal and do
-        *not* raise `--pad-x`/`--pad-y` (defaults `3`/`3` are
-        already tight; lower values break junction rendering).
+        padding. *Always* use `flowchart TB` (top-to-bottom) —
+        never `LR`, `RL`, or `BT` (portrait beats landscape for
+        terminals and code review diffs). Limit *siblings per
+        row* to *≤4* and group further items into nested
+        `subgraph` hierarchies; keep *node labels* *≤30 chars*
+        (abbreviate long names, drop adjectives). If the rendered
+        output still exceeds the budget, restructure the Mermaid
+        source — do *not* widen the terminal and do *not* raise
+        `--pad-x`/`--pad-y` (defaults `3`/`3` are already tight;
+        lower values break junction rendering).
+
+    -   *Keep edges inside subgraph boundaries*. An edge that
+        crosses a `subgraph` border produces a visually ambiguous
+        `┼` glyph where the border line (`─`) and the edge line
+        (`─`) collide — the box appears to merge into the arrow.
+        If a node has edges to peers *outside* a subgraph, either
+        move the node out of the subgraph or widen the subgraph
+        to include both endpoints. Never let arrows pierce
+        `subgraph` walls.
 
     -   For diagrams prefer the following diagrams types: for
         *structure* (layout, components, dependencies, etc) use
