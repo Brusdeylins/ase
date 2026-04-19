@@ -37,8 +37,8 @@ export default class DiagramCommand {
             .description("Render Mermaid source (stdin or --input) to aligned Unicode/ASCII diagram")
             .option("-a, --ascii",        "emit plain ASCII (+-|) instead of Unicode box-drawing", false)
             .option("-i, --input <file>", "read Mermaid source from file instead of stdin")
-            .option("-x, --pad-x <n>",    "horizontal spacing between nodes", "5")
-            .option("-y, --pad-y <n>",    "vertical spacing between nodes", "5")
+            .option("-x, --pad-x <n>",    "horizontal spacing between nodes", "3")
+            .option("-y, --pad-y <n>",    "vertical spacing between nodes", "3")
             .action(async (opts: DiagramOpts) => {
                 /*  load Mermaid source  */
                 let src: string
@@ -52,8 +52,8 @@ export default class DiagramCommand {
                 }
 
                 /*  parse spacing options  */
-                const paddingX = Number.parseInt(opts.padX ?? "5", 10)
-                const paddingY = Number.parseInt(opts.padY ?? "5", 10)
+                const paddingX = Number.parseInt(opts.padX ?? "3", 10)
+                const paddingY = Number.parseInt(opts.padY ?? "3", 10)
                 if (!Number.isFinite(paddingX) || !Number.isFinite(paddingY)) {
                     this.log.write("error", "diagram: --pad-x and --pad-y must be integers")
                     process.exit(1)
