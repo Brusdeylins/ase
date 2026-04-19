@@ -238,14 +238,23 @@ export class Config {
     /*  set a value at a dotted key, creating intermediate maps as needed  */
     set (key: string, value: unknown): void {
         const segments = this.resolveKey(key).split(".")
+        const next     = this.doc.clone()
         for (let i = 1; i < segments.length; i++) {
             const prefix = segments.slice(0, i)
-            const node = this.doc.getIn(prefix, true)
+            const node = next.getIn(prefix, true)
             if (!isMap(node))
-                this.doc.setIn(prefix, this.doc.createNode({}))
+                next.setIn(prefix, next.createNode({}))
         }
-        this.doc.setIn(segments, value)
-        this.validate("strict")
+        next.setIn(segments, value)
+        const saved = this.doc
+        this.doc    = next
+        try {
+            this.validate("strict")
+        }
+        catch (err) {
+            this.doc = saved
+            throw err
+        }
     }
 
     /*  delete a value at a dotted key  */
