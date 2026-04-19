@@ -13,7 +13,7 @@ import { execaSync }                                from "execa"
 import * as v                                       from "valibot"
 import Table                                        from "cli-table3"
 
-/*  classification taxonomy for "project.{source,process,result}.*"  */
+/*  classification taxonomy  */
 export const projectClassification = {
     source: {
         ambition:  [ "artist",    "craftsman", "engineer"  ],
@@ -138,16 +138,59 @@ export class Config {
         }
     }
 
+    /*  enumerate all full dotted leaf paths from the attached valibot schema  */
+    private schemaLeafPaths (): string[][] {
+        const unwrap = (s: any): any => {
+            while (s !== undefined && s !== null && (s.type === "optional" || s.type === "nullish"
+                || s.type === "nullable" || s.type === "undefinedable"))
+                s = s.wrapped
+            return s
+        }
+        const walk = (s: any, prefix: string[]): string[][] => {
+            const u = unwrap(s)
+            if (u !== undefined && u !== null
+                && (u.type === "object" || u.type === "strict_object" || u.type === "loose_object")
+                && u.entries !== undefined) {
+                const paths: string[][] = []
+                for (const [ k, sub ] of Object.entries(u.entries))
+                    paths.push(...walk(sub, [ ...prefix, k ]))
+                return paths
+            }
+            return [ prefix ]
+        }
+        return walk(this.schema, [])
+    }
+
+    /*  resolve a (possibly trailing-segment) dotted key to its full schema path  */
+    resolveKey (key: string): string {
+        if (this.schema === null)
+            return key
+        const segs    = key.split(".")
+        const matches = this.schemaLeafPaths().filter((p) => {
+            if (p.length < segs.length)
+                return false
+            for (let i = 0; i < segs.length; i++)
+                if (p[p.length - segs.length + i] !== segs[i])
+                    return false
+            return true
+        })
+        if (matches.length === 0)
+            return key
+        if (matches.length > 1)
+            throw new Error(`ambiguous key "${key}" matches: ${matches.map((m) => m.join(".")).join(", ")}`)
+        return matches[0].join(".")
+    }
+
     /*  retrieve a value at a dotted key, or the root contents if no key given  */
     get (key?: string): unknown {
         if (key === undefined)
             return this.doc.contents
-        return this.doc.getIn(key.split("."))
+        return this.doc.getIn(this.resolveKey(key).split("."))
     }
 
     /*  set a value at a dotted key, creating intermediate maps as needed  */
     set (key: string, value: unknown): void {
-        const segments = key.split(".")
+        const segments = this.resolveKey(key).split(".")
         for (let i = 1; i < segments.length; i++) {
             const prefix = segments.slice(0, i)
             const node = this.doc.getIn(prefix, true)
