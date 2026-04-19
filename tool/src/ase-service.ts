@@ -127,7 +127,8 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
     /*  establish HAPI HTTP/REST service  */
     const server = Hapi.server({ host: HOST, port: ctx.port })
 
-    /*  track last activity  */
+    /*  track start time and last activity  */
+    const startTime = Date.now()
     let lastActivity = Date.now()
     server.ext("onRequest", (_request, h) => {
         lastActivity = Date.now()
@@ -161,16 +162,17 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
             const payload = request.payload as { command?: unknown } | null
             if (!payload || typeof payload.command !== "string")
                 return h.response({ error: "missing or invalid 'command' field" }).code(400)
-            if (payload.command === "foo") {
-                /*  FIXME: placeholder response  */
+            const cmd = payload.command
+            if (cmd === "ping")
+                return h.response({ ok: true, pong: true }).code(200)
+            if (cmd === "status")
                 return h.response({
                     ok:        true,
                     projectId: ctx.projectId,
-                    command:   "Hello World"
+                    port:      ctx.port,
+                    uptimeMs:  Date.now() - startTime
                 }).code(200)
-            }
-            else
-                return h.response({ error: "invalid 'command' field" }).code(400)
+            return h.response({ error: "unknown command", command: cmd }).code(400)
         }
     })
 
