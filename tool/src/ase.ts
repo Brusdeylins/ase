@@ -5,7 +5,7 @@
 **  Licensed under GPL 3.0 <https://spdx.org/licenses/GPL-3.0-only>
 */
 
-import { Command, CommanderError } from "commander"
+import { Command, CommanderError, Option } from "commander"
 import Log                         from "./ase-log.js"
 import type { LogLevel }           from "./ase-log.js"
 import ConfigCommand               from "./ase-config.js"
@@ -31,7 +31,8 @@ try {
         .name("ase")
         .usage("<command> [options]")
         .version(`ASE ${pkg.version}`, "-V, --version", "show version information")
-        .option("-l, --log-level <level>", "log level (error, warning, info, debug)", "warning")
+        .addOption(new Option("-l, --log-level <level>", "log level")
+            .choices([ "error", "warning", "info", "debug" ]).default("warning"))
         .option("-L, --log-file  <file>",  "log file path, or \"-\" for stdout", "-")
         .showHelpAfterError()
         .enablePositionalOptions()
