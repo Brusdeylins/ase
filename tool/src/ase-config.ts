@@ -386,7 +386,6 @@ export default class ConfigCommand {
             .action((key: string, value: string) => {
                 const cfg = new Config("config", configSchema, this.log)
                 cfg.read()
-                process.stdout.write(`${key}: ${value}\n`)
                 cfg.set(key, value)
                 cfg.write()
             })
