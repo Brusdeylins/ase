@@ -297,33 +297,28 @@ const doPassthrough = async (cmd: string): Promise<number> => {
         if (ctx.port === null)
             throw new Error("service not running (no port configured after auto-start)")
     }
-    const send = async (): Promise<number> => {
-        const r = await axios.request({
-            method:            "POST",
-            url:               `http://${HOST}:${ctx.port}/command`,
-            headers:           { "Content-Type": "application/json" },
-            data:              { command: cmd },
-            timeout:           0,
-            validateStatus:    () => true,
-            responseType:      "text",
-            transformResponse: [ (x) => x ]
-        })
-        const body = typeof r.data === "string" ? r.data : JSON.stringify(r.data)
-        process.stdout.write(body)
-        if (!body.endsWith("\n"))
-            process.stdout.write("\n")
-        return r.status >= 200 && r.status < 300 ? 0 : 1
+    const match = await probe(ctx.port, ctx.projectId)
+    if (match !== true) {
+        await doStart()
+        ctx = loadContext()
+        if (ctx.port === null)
+            throw new Error("service not running (no port configured after auto-start)")
     }
-    try {
-        return await send()
-    }
-    catch (err: unknown) {
-        if (isConnRefused(err)) {
-            await doStart()
-            return await send()
-        }
-        throw err
-    }
+    const r = await axios.request({
+        method:            "POST",
+        url:               `http://${HOST}:${ctx.port}/command`,
+        headers:           { "Content-Type": "application/json" },
+        data:              { command: cmd },
+        timeout:           0,
+        validateStatus:    () => true,
+        responseType:      "text",
+        transformResponse: [ (x) => x ]
+    })
+    const body = typeof r.data === "string" ? r.data : JSON.stringify(r.data)
+    process.stdout.write(body)
+    if (!body.endsWith("\n"))
+        process.stdout.write("\n")
+    return r.status >= 200 && r.status < 300 ? 0 : 1
 }
 
 /*  register CLI command "ase service"  */
