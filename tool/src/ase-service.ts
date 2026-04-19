@@ -7,6 +7,7 @@
 import path                   from "node:path"
 import fs                     from "node:fs"
 import net                    from "node:net"
+import { fileURLToPath }      from "node:url"
 import { spawn }              from "node:child_process"
 
 import { Command }            from "commander"
@@ -219,7 +220,8 @@ const spawnDetached = (aseDir: string): void => {
     fs.mkdirSync(aseDir, { recursive: true })
     const logFile = path.join(aseDir, "service.log")
     const log     = fs.openSync(logFile, "a")
-    const child   = spawn(process.execPath, [ process.argv[1]!, "service", "start" ], {
+    const entry   = fileURLToPath(new URL("./ase.js", import.meta.url))
+    const child   = spawn(process.execPath, [ entry, "service", "start" ], {
         detached: true,
         env:      { ...process.env, [SERVE_ENV]: "1" },
         stdio:    [ "ignore", log, log ]
