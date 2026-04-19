@@ -33,6 +33,18 @@ Skill Output
         non-trivial level (unequal widths, shifted vertical
         edges, off-center arrow tips, mixed sibling-row gaps).
 
+    -   *Keep diagrams narrow* — target *≤120 chars rendered
+        width*. The renderer's horizontal extent scales with
+        siblings per row, node label lengths, and inter-node
+        padding. Prefer `flowchart TB` (top-to-bottom) over `LR`;
+        limit *siblings per row* to *≤4* and group further items
+        into nested `subgraph` hierarchies; keep *node labels*
+        *≤30 chars* (abbreviate long names, drop adjectives). If
+        the rendered output still exceeds the budget, restructure
+        the Mermaid source — do *not* widen the terminal and do
+        *not* raise `--pad-x`/`--pad-y` (defaults `3`/`3` are
+        already tight; lower values break junction rendering).
+
     -   For diagrams prefer the following diagrams types: for
         *structure* (layout, components, dependencies, etc) use
         Boxes'n'Lines, for *control flow* (branching, concurrency, etc)
