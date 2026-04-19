@@ -9,18 +9,11 @@ import fs                     from "node:fs"
 import net                    from "node:net"
 import { spawn }              from "node:child_process"
 
-import type { CommandModule } from "yargs"
+import { Command }            from "commander"
 import { parseDocument }      from "yaml"
 import Hapi                   from "@hapi/hapi"
 import axios                  from "axios"
 import type { AxiosError }    from "axios"
-
-interface ServiceArgs {
-    debug?: boolean
-    cmd?:   string
-    _:      (string | number)[]
-    $0:     string
-}
 
 interface Context {
     projectId: string
@@ -265,8 +258,10 @@ const doStart = async (): Promise<number> => {
     for (let i = 0; i < 50; i++) {
         await new Promise((resolve) => setTimeout(resolve, 100))
         const s = await probe(port)
-        if (s !== null && s >= 200 && s < 300)
+        if (s !== null && s >= 200 && s < 300) {
+            process.stdout.write(`ase: service: started on port ${port}\n`)
             return 0
+        }
     }
     throw new Error("service failed to start within timeout")
 }
@@ -274,8 +269,10 @@ const doStart = async (): Promise<number> => {
 /*  stop flow: no-op if no port configured or connection refused  */
 const doStop = async (): Promise<number> => {
     const ctx = loadContext()
-    if (ctx.port === null)
+    if (ctx.port === null) {
+        process.stdout.write("ase: service: not running (no port configured)\n")
         return 0
+    }
     try {
         const r = await axios.request({
             method:         "GET",
@@ -286,18 +283,24 @@ const doStop = async (): Promise<number> => {
         return r.status >= 200 && r.status < 300 ? 0 : 1
     }
     catch (err: unknown) {
-        if (isConnRefused(err))
+        if (isConnRefused(err)) {
+            process.stdout.write(`ase: service: not running (port ${ctx.port} not responding)\n`)
             return 0
+        }
         throw err
     }
 }
 
 /*  passthrough flow: POST /command with the arbitrary cmd token  */
 const doPassthrough = async (cmd: string): Promise<number> => {
-    const ctx = loadContext()
-    if (ctx.port === null)
-        throw new Error("service not running (no port configured)")
-    try {
+    let ctx = loadContext()
+    if (ctx.port === null) {
+        await doStart()
+        ctx = loadContext()
+        if (ctx.port === null)
+            throw new Error("service not running (no port configured after auto-start)")
+    }
+    const send = async (): Promise<number> => {
         const r = await axios.request({
             method:            "POST",
             url:               `http://${HOST}:${ctx.port}/command`,
@@ -314,38 +317,45 @@ const doPassthrough = async (cmd: string): Promise<number> => {
             process.stdout.write("\n")
         return r.status >= 200 && r.status < 300 ? 0 : 1
     }
+    try {
+        return await send()
+    }
     catch (err: unknown) {
-        if (isConnRefused(err))
-            throw new Error("service not running (connection refused)")
+        if (isConnRefused(err)) {
+            await doStart()
+            return await send()
+        }
         throw err
     }
 }
 
 /*  command-line handling  */
-const serviceCommand: CommandModule<object, ServiceArgs> = {
-    command:  "service",
-    describe: "Manage per-project background HTTP service",
-    builder: (yargs) => {
-        return yargs
-            .command("start", "Start the background service", {}, async () => {
-                process.exit(await doStart())
-            })
-            .command("stop", "Stop the background service", {}, async () => {
-                process.exit(await doStop())
-            })
-            .command("$0 <cmd>", "Send an arbitrary command to the service", (y) => {
-                return y.positional("cmd", {
-                    type:     "string",
-                    describe: "Command token to dispatch"
-                })
-            }, async (argv) => {
-                process.exit(await doPassthrough(String(argv.cmd)))
-            })
-            .demandCommand(1, "You need to specify a service subcommand")
-    },
-    handler: () => {
-        /*  dispatched by nested subcommands  */
-    }
+const registerServiceCommand = (program: Command): void => {
+    const service = program
+        .command("service")
+        .description("Manage per-project background HTTP service")
+        .argument("[cmd]", "Command token to dispatch to the service")
+        .action(async (cmd: string | undefined) => {
+            if (cmd === undefined) {
+                service.outputHelp()
+                process.exit(1)
+            }
+            process.exit(await doPassthrough(cmd))
+        })
+
+    service
+        .command("start")
+        .description("Start the background service")
+        .action(async () => {
+            process.exit(await doStart())
+        })
+
+    service
+        .command("stop")
+        .description("Stop the background service")
+        .action(async () => {
+            process.exit(await doStop())
+        })
 }
 
-export default serviceCommand
+export default registerServiceCommand

@@ -34,11 +34,10 @@
         "remark":                           "15.0.1",
         "remark-man":                       "9.0.0",
 
-        "@types/node":                      "25.6.0",
-        "@types/yargs":                     "17.0.35"
+        "@types/node":                      "25.6.0"
     },
     "dependencies": {
-        "yargs":                            "18.0.0",
+        "commander":                        "14.0.3",
         "yaml":                             "2.8.3",
         "execa":                            "9.6.1",
         "mkdirp":                           "3.0.1",

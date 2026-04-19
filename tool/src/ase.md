@@ -6,18 +6,21 @@
 `ase`
 \[`-h`|`--help`\]
 \[`-V`|`--version`\]
+\[`-d`|`--debug`\]
 \[*command*
-\[*options* \[...\]\]\]
+\[*options* \[...\]\]
 \[*args* \[...\]\]\]
 
 ## DESCRIPTION
 
-`ase`, *Agentic Software Engineeing (ASE)*,
-is a small command-line tool...
+`ase`, *Agentic Software Engineering (ASE)*,
+is the command-line companion tool to the *ASE* Claude Code plugin.
+It provides project-level configuration management and a small
+per-project background HTTP service for dispatching commands.
 
 ## OPTIONS
 
-The following command-line options and arguments exist:
+The following top-level command-line options exist:
 
 - \[`-h`|`--help`\]:
   Show program usage information only.
@@ -25,9 +28,62 @@ The following command-line options and arguments exist:
 - \[`-V`|`--version`\]:
   Show program version information only.
 
+- \[`-d`|`--debug`\]:
+  Enable debug output. The flag is inherited by all subcommands
+  and can be inspected inside handlers via `cmd.optsWithGlobals()`.
+
+## COMMANDS
+
+The following top-level commands exist:
+
+- `ase config` \[*query*\]:
+  Manage *ASE* configuration stored in `~/.ase.yaml`.
+  Without *query*, list all configured values as flat dotted keys.
+  With *query* of the form `<key>`, print the value at that dotted key.
+  With *query* of the form `<key>=<value>`, set the value at that
+  dotted key (creating intermediate maps as needed) and persist
+  the file.
+
+- `ase service` \[*cmd*\]:
+  Manage the per-project background HTTP service. The service
+  is bound to `127.0.0.1` on a port persisted in `.ase/service.yaml`
+  and stops itself after 30 minutes of idle time. Without a
+  subcommand, the help text is shown. With a *cmd* token other
+  than `start`/`stop`, the token is dispatched as a passthrough
+  command to the running service via HTTP `POST /command`; if the
+  service is not running, it is auto-started first.
+
+- `ase service start`:
+  Start the background service (detached). Allocates a random
+  port in the range `42000`..`44000` if none is persisted yet,
+  writes it to `.ase/service.yaml`, and probes readiness. Exits
+  silently with status 0 if the service is already running; prints
+  `ase: service: started on port <port>` on a fresh start.
+
+- `ase service stop`:
+  Stop the background service via HTTP `GET /stop`. Exits silently
+  with status 0 on successful stop. If no port is configured or
+  the port is not responding, prints an informational message and
+  exits with status 0.
+
+## FILES
+
+- `~/.ase.yaml`:
+  User-level *ASE* configuration (managed via `ase config`).
+
+- `.ase/config.yaml`:
+  Per-project *ASE* configuration. Read upward from the current
+  working directory. Recognized key: `project-id`.
+
+- `.ase/service.yaml`:
+  Per-project service state. Recognized key: `port`.
+
+- `.ase/service.log`:
+  Stdout/stderr log of the detached background service.
+
 ## HISTORY
 
-`ase` was started to be developed in October 2025...
+`ase` was started to be developed in October 2025.
 
 ## AUTHOR
 

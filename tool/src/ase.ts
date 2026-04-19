@@ -5,40 +5,39 @@
 **  Licensed under GPL 3.0 <https://spdx.org/licenses/GPL-3.0-only>
 */
 
-import yargs                  from "yargs"
-import { hideBin }            from "yargs/helpers"
-import configCommand          from "./ase-config.js"
-import setupCommand           from "./ase-setup.js"
-import serviceCommand         from "./ase-service.js"
+import { Command, CommanderError } from "commander"
+import registerConfigCommand       from "./ase-config.js"
+import registerServiceCommand      from "./ase-service.js"
 
 /*  parse CLI arguments  */
 try {
-    await yargs(hideBin(process.argv))
-        .scriptName("ase")
-        .usage("Usage: $0 <command> [options]")
-        .option("debug", {
-            alias:    "d",
-            type:     "boolean",
-            describe: "Enable debug output",
-            default:  false
-        })
-        .command(configCommand)
-        .command(setupCommand)
-        .command(serviceCommand)
-        .demandCommand(1, "You need to specify a command")
-        .fail((msg, err, yargs) => {
-            if (err)
-                throw err
-            yargs.showHelp()
-            process.stderr.write(`\nase: ${msg}\n`)
-            process.exit(1)
-        })
-        .help()
-        .version()
-        .strict()
-        .parseAsync()
+    /*  establish top-level program  */
+    const program = new Command()
+    program
+        .name("ase")
+        .usage("<command> [options]")
+        .option("-d, --debug", "enable debug output", false)
+        .showHelpAfterError()
+        .enablePositionalOptions()
+        .exitOverride()
+
+    /*  register top-level commands  */
+    registerConfigCommand(program)
+    registerServiceCommand(program)
+
+    /*  parse program arguments  */
+    await program.parseAsync(process.argv)
+
+    /*  gracefully terminate  */
+    process.exit(0)
 }
 catch (err: unknown) {
+    if (err instanceof CommanderError) {
+        if (err.exitCode !== 0)
+            process.exit(err.exitCode)
+        else
+            process.exit(0)
+    }
     const message = err instanceof Error ? err.message : String(err)
     process.stderr.write(`ase: ERROR: ${message}\n`)
     process.exit(1)
