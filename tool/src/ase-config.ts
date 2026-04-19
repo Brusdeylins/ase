@@ -320,8 +320,10 @@ const registerConfigCommand = (program: Command): void => {
                         const k = prefix ? `${prefix}.${item.key}` : String(item.key)
                         if (isMap(item.value))
                             list(item.value, k)
+                        else if (!isScalar(item.value))
+                            throw new Error(`key "${k}" has unsupported node type`)
                         else
-                            table.push([ k, String(isScalar(item.value) ? item.value.value : item.value) ])
+                            table.push([ k, String(item.value.value) ])
                     }
             }
             list(cfg.get(), "")
