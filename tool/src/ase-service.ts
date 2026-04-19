@@ -123,6 +123,7 @@ const spawnDetached = (aseDir: string): { child: ChildProcess, logFile: string }
         env:      { ...process.env, [SERVE_ENV]: "1" },
         stdio:    [ "ignore", fd, fd ]
     })
+    fs.closeSync(fd)
     return { child, logFile }
 }
 
