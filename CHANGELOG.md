@@ -18,6 +18,7 @@ ChangeLog
 - IMPROVEMENT: improve table output header and rename `box` to `boxing` with classification factored out
 - IMPROVEMENT: reorder commands and code blocks for better intuitiveness
 - BUGFIX: avoid reading the entire logfile and fix logging format
+- BUGFIX: handle incorrect log levels gracefully
 - BUGFIX: resolve real paths before comparison and stop at git repository boundary
 - BUGFIX: mirror `set` pattern in `delete` operation
 - BUGFIX: close file descriptor leak
