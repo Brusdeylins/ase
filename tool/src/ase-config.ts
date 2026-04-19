@@ -176,7 +176,11 @@ const registerConfigCommand = (program: Command): void => {
         .action(() => {
             const cfg = new Config("config", configSchema)
             cfg.read()
-            const table = new Table({ head: [ "key", "value" ] })
+            const table = new Table({
+                head:  [ "KEY", "VALUE" ],
+                chars: { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
+                style: { head: [ "blue" ] }
+            })
             const list = (node: unknown, prefix: string) => {
                 if (isMap(node))
                     for (const item of node.items) {
