@@ -15,6 +15,7 @@ import { Command }            from "commander"
 import Hapi                   from "@hapi/hapi"
 import axios                  from "axios"
 import type { AxiosError }    from "axios"
+import { isMap }              from "yaml"
 import * as v                 from "valibot"
 
 import { Config, configSchema } from "./ase-config.js"
@@ -95,6 +96,19 @@ const allocatePort = async (): Promise<number> => {
 const persistPort = (svc: Config, port: number): void => {
     svc.set("port", port)
     svc.write()
+}
+
+/*  clear the persisted port and remove ".ase/service.yaml" if it is empty  */
+const clearPort = (svc: Config): void => {
+    svc.delete("port")
+    const root  = svc.get()
+    const empty = root === undefined || root === null || (isMap(root) && root.items.length === 0)
+    if (empty) {
+        if (fs.existsSync(svc.filename))
+            fs.rmSync(svc.filename)
+    }
+    else
+        svc.write()
 }
 
 /*  distinguish ECONNREFUSED from other Axios transport errors  */
@@ -304,21 +318,45 @@ const doStop = async (): Promise<number> => {
         return 0
     }
     try {
-        const r = await axios.request({
+        const r  = await axios.request({
             method:         "GET",
             url:            `http://${HOST}:${ctx.port}/stop`,
             timeout:        5000,
             validateStatus: () => true
         })
-        return r.status >= 200 && r.status < 300 ? 0 : 1
+        const ok = r.status >= 200 && r.status < 300
+        if (ok)
+            clearPort(ctx.svc)
+        return ok ? 0 : 1
     }
     catch (err: unknown) {
         if (isConnRefused(err)) {
             process.stderr.write(`ase: service: not running (port ${ctx.port} not responding)\n`)
+            clearPort(ctx.svc)
             return 0
         }
         throw err
     }
+}
+
+/*  status flow: report whether the service is running  */
+const doStatus = async (): Promise<number> => {
+    const ctx = loadContext()
+    if (ctx.port === null) {
+        process.stdout.write("ase: service: not running (no port configured)\n")
+        return 1
+    }
+    const match = await probe(ctx.port, ctx.projectId)
+    if (match === true) {
+        process.stdout.write(`ase: service: running on port ${ctx.port}\n`)
+        return 0
+    }
+    if (match === false) {
+        process.stdout.write(`ase: service: not running (port ${ctx.port} in use by foreign service)\n`)
+        return 1
+    }
+    process.stdout.write(`ase: service: not running (port ${ctx.port} not responding)\n`)
+    return 1
 }
 
 /*  passthrough flow: POST /command with the arbitrary cmd token  */
@@ -372,12 +410,12 @@ const registerServiceCommand = (program: Command): void => {
             process.exit(await doStart())
         })
 
-    /*  register CLI sub-command "ase service stop"  */
+    /*  register CLI sub-command "ase service status"  */
     service
-        .command("stop")
-        .description("Stop the background service")
+        .command("status")
+        .description("Report whether the background service is running")
         .action(async () => {
-            process.exit(await doStop())
+            process.exit(await doStatus())
         })
 
     /*  register CLI sub-command "ase service send"  */
@@ -387,6 +425,14 @@ const registerServiceCommand = (program: Command): void => {
         .argument("<cmd>", "Command token to dispatch to the service")
         .action(async (cmd: string) => {
             process.exit(await doPassthrough(cmd))
+        })
+
+    /*  register CLI sub-command "ase service stop"  */
+    service
+        .command("stop")
+        .description("Stop the background service")
+        .action(async () => {
+            process.exit(await doStop())
         })
 }
 
