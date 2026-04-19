@@ -13,8 +13,9 @@ import { Command }            from "commander"
 import Hapi                   from "@hapi/hapi"
 import axios                  from "axios"
 import type { AxiosError }    from "axios"
+import * as v                 from "valibot"
 
-import { Config }             from "./ase-config.js"
+import { Config, configSchema } from "./ase-config.js"
 
 interface Context {
     projectId: string
@@ -31,29 +32,26 @@ const PORT_MIN   = 42000
 const PORT_MAX   = 44000
 const PORT_TRIES = 20
 
+/*  schema for ".ase/service.yaml"  */
+const serviceSchema = v.nullish(v.object({
+    port: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1024), v.maxValue(65535)))
+}))
+
 /*  load optional ".ase/config.yaml" and ".ase/service.yaml" files  */
 const loadContext = (): Context => {
     /*  load files  */
-    const cfg = new Config("config")
+    const cfg = new Config("config", configSchema)
     cfg.read()
-    const svc = new Config("service")
+    const svc = new Config("service", serviceSchema)
     svc.read()
 
     /*  determine project id  */
-    let projectId: unknown = cfg.get("project-id")
-    if (projectId === undefined || projectId === null)
-        projectId = path.basename(process.cwd())
-    if (typeof projectId !== "string" || projectId.length === 0)
-        throw new Error(`invalid "project-id" in ${cfg.filename}`)
+    const rawId = cfg.get("project-id")
+    const projectId = (rawId === undefined || rawId === null) ? path.basename(process.cwd()) : rawId as string
 
     /*  determine service port  */
-    let port: number | null = null
-    const raw = svc.get("port")
-    if (raw !== undefined && raw !== null) {
-        if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 1024 || raw > 65535)
-            throw new Error(`invalid "port" in ${svc.filename} (expected integer 1024..65535)`)
-        port = raw
-    }
+    const rawPort = svc.get("port")
+    const port: number | null = (rawPort === undefined || rawPort === null) ? null : rawPort as number
 
     /*  determine path to ".ase" directory  */
     const aseDir = path.dirname(svc.filename)

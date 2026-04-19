@@ -120,7 +120,12 @@ const registerConfigCommand = (program: Command): void => {
             if (debug)
                 console.log("DEBUG: config command", { key, value })
 
-            const cfg = new Config("config")
+            /*  schema for ".ase/config.yaml"  */
+            const configSchema = v.nullish(v.object({
+                "project-id": v.optional(v.pipe(v.string(), v.minLength(1)))
+            }))
+
+            const cfg = new Config("config", configSchema)
             cfg.read()
 
             if (key === undefined) {
