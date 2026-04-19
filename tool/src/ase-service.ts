@@ -272,11 +272,13 @@ export default class ServiceCommand {
                 stopping = true
                 try {
                     await server.stop({ timeout: 1000 })
+                    clearPort(ctx.svc)
                     process.exit(0)
                 }
                 catch (err: unknown) {
                     const e = err as Error
                     this.log.write("error", `service: stop failed: ${e.message}`)
+                    clearPort(ctx.svc)
                     process.exit(1)
                 }
             }
@@ -344,6 +346,8 @@ export default class ServiceCommand {
             }
             finally {
                 child.removeListener("exit", onExit)
+                if (!exited)
+                    child.kill("SIGTERM")
             }
         }
         clearPort(ctx.svc)
