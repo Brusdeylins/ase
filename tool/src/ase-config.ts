@@ -241,8 +241,10 @@ export class Config {
         const next     = this.doc.clone()
         for (let i = 1; i < segments.length; i++) {
             const prefix = segments.slice(0, i)
-            const node = next.getIn(prefix, true)
-            if (!isMap(node))
+            const node   = next.getIn(prefix, true)
+            if (node !== undefined && !isMap(node))
+                throw new Error(`cannot set "${key}": intermediate path "${prefix.join(".")}" is not a map`)
+            if (node === undefined)
                 next.setIn(prefix, next.createNode({}))
         }
         next.setIn(segments, value)
