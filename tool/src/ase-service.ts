@@ -240,8 +240,10 @@ const doStart = async (): Promise<number> => {
         return await new Promise<number>(() => { /*  never resolves  */ })
     }
     const match = await probe(port, ctx.projectId)
-    if (match === true)
+    if (match === true) {
+        process.stderr.write(`ase: service: already running on port ${port}\n`)
         return 0
+    }
     if (match === false) {
         /*  stale port: a foreign HTTP service responds on the persisted port  */
         port = await allocatePort()
@@ -252,7 +254,7 @@ const doStart = async (): Promise<number> => {
         await new Promise((resolve) => setTimeout(resolve, 100))
         const s = await probe(port, ctx.projectId)
         if (s === true) {
-            process.stdout.write(`ase: service: started on port ${port}\n`)
+            process.stderr.write(`ase: service: started on port ${port}\n`)
             return 0
         }
     }
@@ -263,7 +265,7 @@ const doStart = async (): Promise<number> => {
 const doStop = async (): Promise<number> => {
     const ctx = loadContext()
     if (ctx.port === null) {
-        process.stdout.write("ase: service: not running (no port configured)\n")
+        process.stderr.write("ase: service: not running (no port configured)\n")
         return 0
     }
     try {
@@ -277,7 +279,7 @@ const doStop = async (): Promise<number> => {
     }
     catch (err: unknown) {
         if (isConnRefused(err)) {
-            process.stdout.write(`ase: service: not running (port ${ctx.port} not responding)\n`)
+            process.stderr.write(`ase: service: not running (port ${ctx.port} not responding)\n`)
             return 0
         }
         throw err
