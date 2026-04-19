@@ -2,6 +2,34 @@
 ChangeLog
 =========
 
+0.0.8 (2026-04-20)
+------------------
+
+- FEATURE: add `ase config init <type>` command
+- FEATURE: add `status` and `ping` subcommands to service
+- FEATURE: provide logging infrastructure with string-based log levels
+- FEATURE: support edit loop in `ase config edit`
+- FEATURE: support partial key paths in configuration access
+- IMPROVEMENT: make daemon timer, shutdown, port handling, and service probing more robust
+- IMPROVEMENT: report service uptime on `ase service status`
+- IMPROVEMENT: make configuration set operation atomic
+- IMPROVEMENT: improve send command, output style, and spawning portability
+- IMPROVEMENT: adopt more Commander-native style and restore global `-V`/`--version` option
+- IMPROVEMENT: improve table output header and rename `box` to `boxing` with classification factored out
+- IMPROVEMENT: reorder commands and code blocks for better intuitiveness
+- BUGFIX: avoid reading the entire logfile and fix logging format
+- BUGFIX: resolve real paths before comparison and stop at git repository boundary
+- BUGFIX: mirror `set` pattern in `delete` operation
+- BUGFIX: close file descriptor leak
+- BUGFIX: validate non-scalar values and intermediate node types
+- BUGFIX: make exit codes consistent across commands
+- BUGFIX: explicitly handle undefined values
+- BUGFIX: avoid unnecessary confirmation prompts
+- UPDATE: update documentation and manual pages
+- CLEANUP: cleanup code, eslint config, port handling, and terminal responses
+- CLEANUP: remove obsolete README and unused options
+- CLEANUP: define settings and add project name
+
 0.0.7 (2026-04-19)
 ------------------
 
