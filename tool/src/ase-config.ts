@@ -13,32 +13,42 @@ import { execaSync }                                from "execa"
 import * as v                                       from "valibot"
 import Table                                        from "cli-table3"
 
-/*  classification taxonomy for "project.type.*"  */
+/*  classification taxonomy for "project.{source,process,result}.*"  */
 export const projectClassification = {
-    boxing:    [ "white",     "grey",      "black"      ],
-    actors:    [ "person",                 "team"       ],
-    solution:  [ "tool",      "app",       "system"     ],
-    kind:      [ "prototype", "mvp",       "product"    ],
-    structure: [ "bare",      "libraries", "frameworks" ],
-    material:  [ "stucco",                 "prefab"     ],
-    focus:     [ "spec",      "code",      "test"       ],
-    control:   [ "offload",                "keep"       ]
+    source: {
+        ambition:  [ "artist",    "craftsman", "engineer"  ],
+        boxing:    [ "white",     "grey",      "black"     ],
+        size:      [ "small",     "medium",    "large"     ],
+        structure: [ "bare",      "library",   "framework" ]
+    },
+    process: {
+        actors:    [ "person",    "team",      "crew"      ],
+        control:   [ "human",     "hitl",      "agent"     ],
+        drive:     [ "spec",      "code",      "test"      ]
+    },
+    result: {
+        target:    [ "prototype", "mvp",       "product"   ]
+    }
 } as const
 
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
-        id:   v.optional(v.pipe(v.string(), v.minLength(1))),
-        name: v.optional(v.pipe(v.string(), v.minLength(1))),
-        type: v.optional(v.strictObject({
-            boxing:    v.optional(v.picklist(projectClassification.boxing)),
-            actors:    v.optional(v.picklist(projectClassification.actors)),
-            solution:  v.optional(v.picklist(projectClassification.solution)),
-            kind:      v.optional(v.picklist(projectClassification.kind)),
-            structure: v.optional(v.picklist(projectClassification.structure)),
-            material:  v.optional(v.picklist(projectClassification.material)),
-            focus:     v.optional(v.picklist(projectClassification.focus)),
-            control:   v.optional(v.picklist(projectClassification.control))
+        id:      v.optional(v.pipe(v.string(), v.minLength(1))),
+        name:    v.optional(v.pipe(v.string(), v.minLength(1))),
+        source:  v.optional(v.strictObject({
+            ambition:  v.optional(v.picklist(projectClassification.source.ambition)),
+            boxing:    v.optional(v.picklist(projectClassification.source.boxing)),
+            size:      v.optional(v.picklist(projectClassification.source.size)),
+            structure: v.optional(v.picklist(projectClassification.source.structure))
+        })),
+        process: v.optional(v.strictObject({
+            actors:    v.optional(v.picklist(projectClassification.process.actors)),
+            control:   v.optional(v.picklist(projectClassification.process.control)),
+            drive:     v.optional(v.picklist(projectClassification.process.drive))
+        })),
+        result:  v.optional(v.strictObject({
+            target:    v.optional(v.picklist(projectClassification.result.target))
         }))
     }))
 }))
@@ -220,38 +230,50 @@ const registerConfigCommand = (program: Command): void => {
     /*  register CLI sub-command "ase config init"  */
     configCmd
         .command("init")
-        .description("Initialize configuration with preset values (vibe|pro)")
-        .argument("<type>", "Preset type (vibe|pro)")
+        .description("Initialize configuration with preset values (vibe|pro|industry)")
+        .argument("<type>", "Preset type (vibe|pro|industry)")
         .action((type: string) => {
             const presets: Record<string, Record<string, string>> = {
                 vibe: {
-                    "project.id":             "example",
-                    "project.name":           "Example Project",
-                    "project.type.boxing":    "black",
-                    "project.type.actors":    "person",
-                    "project.type.solution":  "tool",
-                    "project.type.kind":      "prototype",
-                    "project.type.structure": "libraries",
-                    "project.type.material":  "prefab",
-                    "project.type.focus":     "spec",
-                    "project.type.control":   "offload"
+                    "project.id":                "example",
+                    "project.name":              "Example Project",
+                    "project.source.ambition":   "engineer",
+                    "project.source.boxing":     "black",
+                    "project.source.size":       "small",
+                    "project.source.structure":  "bare",
+                    "project.process.actors":    "person",
+                    "project.process.control":   "agent",
+                    "project.process.drive":     "spec",
+                    "project.result.target":     "prototype"
                 },
                 pro: {
-                    "project.id":             "example",
-                    "project.name":           "Example Project",
-                    "project.type.boxing":    "white",
-                    "project.type.actors":    "team",
-                    "project.type.solution":  "system",
-                    "project.type.kind":      "product",
-                    "project.type.structure": "frameworks",
-                    "project.type.material":  "stucco",
-                    "project.type.focus":     "code",
-                    "project.type.control":   "keep"
-                }
+                    "project.id":                "example",
+                    "project.name":              "Example Project",
+                    "project.source.ambition":   "artist",
+                    "project.source.boxing":     "white",
+                    "project.source.size":       "medium",
+                    "project.source.structure":  "framework",
+                    "project.process.actors":    "person",
+                    "project.process.control":   "human",
+                    "project.process.drive":     "code",
+                    "project.result.target":     "product"
+                },
+                industry: {
+                    "project.id":                "example",
+                    "project.name":              "Example Project",
+                    "project.source.ambition":   "craftsman",
+                    "project.source.boxing":     "grey",
+                    "project.source.size":       "large",
+                    "project.source.structure":  "framework",
+                    "project.process.actors":    "crew",
+                    "project.process.control":   "hitl",
+                    "project.process.drive":     "code",
+                    "project.result.target":     "mvp"
+                },
             }
             const preset = presets[type]
             if (preset === undefined)
-                throw new Error(`unknown preset "${type}" (expected: vibe|pro)`)
+                throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
             const cfg = new Config("config", configSchema)
             cfg.read()
             for (const [ k, v ] of Object.entries(preset))

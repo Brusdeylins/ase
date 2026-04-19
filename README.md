@@ -227,6 +227,60 @@ The following ASE commands/skills exist on the code-level:
       externally and ask it to re-propose its last code change against
       the latest source code.
 
+Project Classification
+----------------------
+
+In **ASE**, projects are classified through eight dimensions:
+
+-   **source.ambition**: the project *source code* has to meet the ambition of a...
+
+    -   `artist`:    ...artist: finest code quality, individual, love for details.
+    -   `craftsman`: ...craftsman: good code quality, individual, pragmatism.
+    -   `engineer`:  ...engineer: medium code quality, standardized, pre-fabricated.
+
+-   **source.boxing**: the project *source code* is treated as a...
+
+    -   `white`:     ...white box, i.e., the code is intentially fully transparent and understood.
+    -   `grey`:      ...grey  box, i.e., the code is intentially partially intransparent or not understood.
+    -   `black`:     ...black box, i.e., the code is intentially fully intransparent and not understood.
+
+-   **source.size**: the project *source code* is...
+
+    -   `small`:     ...for a small-size tool (smaller than 10K LoC).
+    -   `medium`:    ...for a medium-size application (larger than 10K LoC).
+    -   `large`:     ...for a large-size system (larger than 100K LoC).
+
+-   **source.structure**: the project *source code* is based on...
+
+    -   `bare`:      ...bare code (no reusable components).
+    -   `library`:   ...the use of libraries (reusable components).
+    -   `framework`: ...the use of frameworks (standard structure).
+
+-   **process.actors**: the project *process* is driven by a...
+
+    -   `person`:    ...single person is acting.
+    -   `team`:      ...team of persons (with or without their personal supporting asssitants
+                     and agents) is collaboratively acting.
+    -   `crew`:      ...mixed crew of both persons and robots/agents is collaboratively acting.
+
+-   **process.control**: the project *process* control is...
+
+    -   `human`:     ...fully under human control.
+    -   `hitl`:      ...off-loaded to agent control with human-in-the-loop (HitL).
+    -   `agent`:     ...fully off-loaded to agent control.
+
+-   **process.drive**: the project *process* progress is mainly driven by...
+
+    -   `spec`:      ...specification (spec-driven development).
+    -   `code`:      ...code (code-driven development).
+    -   `test`:      ...tests (test-driven development).
+
+-   **result.target**: the project *result* target is a...
+
+    -   `prototype`: ...prototype (not in target technology, short life-time, 5% solution).
+    -   `mvp`:       ...Minimum Viable Product (in target technology, short life-time, 10-90% solution)
+    -   `product`:   ...product (in target technology, long life-time, 100% solution)
+
 See Also
 --------
 
