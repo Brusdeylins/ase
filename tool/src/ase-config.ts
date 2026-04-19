@@ -16,7 +16,8 @@ import Table                                        from "cli-table3"
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
-        id: v.optional(v.pipe(v.string(), v.minLength(1)))
+        id:   v.optional(v.pipe(v.string(), v.minLength(1))),
+        name: v.optional(v.pipe(v.string(), v.minLength(1)))
     }))
 }))
 

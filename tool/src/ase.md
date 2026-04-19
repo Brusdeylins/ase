@@ -89,8 +89,10 @@ The following top-level commands exist:
 ## FILES
 
 - `.ase/config.yaml`:
-  Per-project *ASE* configuration. Read upward from the current
-  working directory. Recognized key: `project.id` (non-empty string).
+  Per-project *ASE* configuration. Read upward from the current working
+  directory. Recognized keys: `project.id` (non-empty string, uniqued
+  project id) and `project.name` (non-empty string, descriptive project
+  name).
 
 - `.ase/service.yaml`:
   Per-project service state. Recognized key: `port` (integer in
