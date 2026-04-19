@@ -28,13 +28,19 @@ export default class Log {
     ) {}
     async init () {
         /*  log messages  */
-        this.logLevelIdx = levels.findIndex((l) => l.name === this._logLevel)
+        const idx = levels.findIndex((l) => l.name === this._logLevel)
+        if (idx === -1)
+            throw new RangeError(`invalid log level "${this._logLevel}" (expected one of: ${levels.map((l) => l.name).join(", ")})`)
+        this.logLevelIdx = idx
         if (this._logFile !== "-")
             this.stream = fs.createWriteStream(this._logFile, { flags: "a", encoding: "utf8" })
     }
     logLevel (level: LogLevel) {
+        const idx = levels.findIndex((l) => l.name === level)
+        if (idx === -1)
+            throw new RangeError(`invalid log level "${level}" (expected one of: ${levels.map((l) => l.name).join(", ")})`)
         this._logLevel   = level
-        this.logLevelIdx = levels.findIndex((l) => l.name === level)
+        this.logLevelIdx = idx
     }
     logFile (file: string) {
         if (file === this._logFile)
