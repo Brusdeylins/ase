@@ -101,8 +101,8 @@ const isConnRefused = (err: unknown): boolean => {
     return e?.code === "ECONNREFUSED" || e?.cause?.code === "ECONNREFUSED"
 }
 
-/*  probe the service  */
-const probe = async (port: number): Promise<number | null> => {
+/*  probe the service and verify ASE identity banner  */
+const probe = async (port: number, projectId: string): Promise<boolean | null> => {
     try {
         const r = await axios.request({
             method:         "OPTIONS",
@@ -110,7 +110,10 @@ const probe = async (port: number): Promise<number | null> => {
             timeout:        2000,
             validateStatus: () => true
         })
-        return r.status
+        if (r.status < 200 || r.status >= 300)
+            return false
+        const d = r.data as { ase?: boolean, projectId?: string } | null
+        return d?.ase === true && d?.projectId === projectId
     }
     catch (err: unknown) {
         if (isConnRefused(err))
@@ -136,7 +139,7 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
         method:  "OPTIONS",
         path:    "/",
         handler: (_request, h) => {
-            return h.response().code(204)
+            return h.response({ ase: true, projectId: ctx.projectId }).code(200)
         }
     })
     server.route({
@@ -179,8 +182,8 @@ const runService = async (ctx: Context & { port: number }): Promise<void> => {
         const e = err as Error & { code?: string }
         if (e.code === "EADDRINUSE") {
             /*  race-loser re-probe: another "ase service start" won the race  */
-            const status = await probe(ctx.port).catch(() => null)
-            if (status !== null && status >= 200 && status < 300)
+            const match = await probe(ctx.port, ctx.projectId).catch(() => null)
+            if (match === true)
                 process.exit(0)
             process.stderr.write(`ase: service: port ${ctx.port} in use, but not responding!\n`)
             process.exit(1)
@@ -224,14 +227,19 @@ const doStart = async (): Promise<number> => {
         await runService({ ...ctx, port })
         return await new Promise<number>(() => { /*  never resolves  */ })
     }
-    const status = await probe(port)
-    if (status !== null && status >= 200 && status < 300)
+    const match = await probe(port, ctx.projectId)
+    if (match === true)
         return 0
+    if (match === false) {
+        /*  stale port: a foreign HTTP service responds on the persisted port  */
+        port = await allocatePort()
+        persistPort(ctx.svc, port)
+    }
     spawnDetached(ctx.aseDir)
     for (let i = 0; i < 50; i++) {
         await new Promise((resolve) => setTimeout(resolve, 100))
-        const s = await probe(port)
-        if (s !== null && s >= 200 && s < 300) {
+        const s = await probe(port, ctx.projectId)
+        if (s === true) {
             process.stdout.write(`ase: service: started on port ${port}\n`)
             return 0
         }
