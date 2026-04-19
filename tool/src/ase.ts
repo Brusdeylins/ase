@@ -9,6 +9,11 @@ import { Command, CommanderError } from "commander"
 import registerConfigCommand       from "./ase-config.js"
 import registerServiceCommand      from "./ase-service.js"
 
+/*  type of top-level (global) options  */
+export type GlobalOpts = {
+    debug: boolean
+}
+
 /*  parse CLI arguments  */
 try {
     /*  establish top-level program  */

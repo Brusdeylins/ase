@@ -11,13 +11,15 @@ import fs                     from "node:fs"
 import { Command }                        from "commander"
 import { parseDocument, isMap, isScalar } from "yaml"
 
+import type { GlobalOpts }                from "./ase.js"
+
 const registerConfigCommand = (program: Command): void => {
     program
         .command("config")
         .description("Manage ASE configuration")
         .argument("[query]", "Configuration query (none, <key>, or <key>=<value>)")
         .action((query: string | undefined, _opts, cmd: Command) => {
-            const debug = Boolean(cmd.optsWithGlobals().debug)
+            const debug = cmd.optsWithGlobals<GlobalOpts>().debug
             if (debug)
                 console.log("DEBUG: config command", { query })
 
