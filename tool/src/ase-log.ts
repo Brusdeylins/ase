@@ -19,8 +19,8 @@ const levels = [
 type LogLevel = typeof levels[number]["name"]
 
 export default class Log {
-    private stream:      fs.WriteStream | null = null
-    private logLevelIdx: number                = 0
+    private stream: fs.WriteStream | null = null
+    private logLevelIdx = 0
     constructor (
         private logLevel: LogLevel,
         private logFile:  string
