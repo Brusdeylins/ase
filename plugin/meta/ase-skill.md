@@ -23,6 +23,17 @@ Skill Output
 
 -   *IMPORTANT*: For *Diagrams*:
 
+    -   For *complex* diagrams (≥2 nesting levels, ≥4 siblings in
+        a single row, multi-edge fan-out, or any Sequence, State,
+        or Class diagram) you *MUST* emit the diagram as Mermaid
+        source and invoke the `Bash` tool with `ase diagram`
+        piping the Mermaid source on stdin, then include the
+        tool's stdout *verbatim* inside a Markdown fenced code
+        block. The tool defaults to aligned Unicode box-drawing;
+        do *not* pass `--ascii`. Do *not* hand-draw these. For
+        *simple* diagrams (≤3 boxes, linear flow, no nesting, no
+        sibling rows) the hand-drawing rules below still apply.
+
     -   Use *monospace-safe characters only*. *Prefer Unicode* box-drawing
         (angular corners: `┌┐└┘`, rounded corners: `╭╮╰╯`, lines:
         `│├┤─┬┴┼╌┄┈⋯`), arrows (arrowheads: `▷◁▽△▶◀▼▲`, small arrows:
@@ -31,18 +42,20 @@ Skill Output
         (`/`, `\`) and double-width glyphs (emoji, CJK), as both break
         alignment.
 
-    -   *Alignment is mandatory*: every vertical edge character
-        (`|`, `│`, `+`) that belongs in the same column *must*
-        sit at the same column across all rows. Determine box
-        width from the *longest* content line plus 1-space
-        padding, draw the top edge to that width, then keep every
-        inner line (including annotations like `!`, `?`, `*`)
-        within it. Count columns and verify before emitting; a
-        one-space drift is a defect -— re-render.
+    -   *Alignment is mandatory* for hand-drawn simple diagrams:
+        every vertical edge character (`|`, `│`, `+`) that belongs
+        in the same column *must* sit at the same column across
+        all rows. Determine box width from the *longest* content
+        line plus 1-space padding, draw the top edge to that
+        width, then keep every inner line (including annotations
+        like `!`, `?`, `*`) within it. Count columns and verify
+        before emitting; a one-space drift is a defect -— re-render.
 
-    -   *Always* ensure diagrams are *concise* and *compact* by keeping
-        them below 120 characters in total width and below 80 lines in total
-        height.
+    -   *Always* ensure hand-drawn diagrams are *concise* and
+        *compact* by keeping them below 120 characters in total
+        width and below 80 lines in total height. If either
+        budget would be exceeded, the diagram is *complex* and
+        must be rendered via `ase diagram` instead.
 
     -   For diagrams prefer the following diagrams types: for
         *structure* (layout, components, dependencies, etc) use
