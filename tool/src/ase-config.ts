@@ -185,6 +185,10 @@ export class Config {
                     this.doc.deleteIn(segs)
                     progressed = true
                 }
+                else {
+                    this.doc = new Document()
+                    progressed = true
+                }
             }
             if (!progressed)
                 return
