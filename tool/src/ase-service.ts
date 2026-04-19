@@ -324,6 +324,7 @@ export default class ServiceCommand {
             }
             child.once("exit", onExit)
             let foreign = false
+            let success = false
             try {
                 for (let i = 0; i < 50; i++) {
                     await new Promise((resolve) => setTimeout(resolve, 100))
@@ -333,6 +334,7 @@ export default class ServiceCommand {
                     if (s === true) {
                         this.log.write("info", `service: started on port ${port}`)
                         child.unref()
+                        success = true
                         return 0
                     }
                     if (s === false) {
@@ -351,7 +353,7 @@ export default class ServiceCommand {
             }
             finally {
                 child.removeListener("exit", onExit)
-                if (!exited) {
+                if (!success && !exited) {
                     child.kill("SIGTERM")
                     await Promise.race([
                         exitPromise,
