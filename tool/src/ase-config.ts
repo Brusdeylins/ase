@@ -272,6 +272,8 @@ const registerConfigCommand = (program: Command): void => {
             const cfg = new Config("config", configSchema)
             cfg.read()
             const val = cfg.get(key)
+            if (val === undefined)
+                throw new Error(`key "${key}" is not set`)
             if (isMap(val))
                 throw new Error(`key "${key}" is not a leaf key`)
             process.stdout.write(`${isScalar(val) ? val.value : val}\n`)
