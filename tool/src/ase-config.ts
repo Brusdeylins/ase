@@ -266,7 +266,17 @@ export class Config {
 
     /*  delete a value at a dotted key  */
     delete (key: string): void {
-        this.doc.deleteIn(this.resolveKey(key).split("."))
+        const next = this.doc.clone()
+        next.deleteIn(this.resolveKey(key).split("."))
+        const saved = this.doc
+        this.doc    = next
+        try {
+            this.validate("strict")
+        }
+        catch (err) {
+            this.doc = saved
+            throw err
+        }
     }
 }
 
