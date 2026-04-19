@@ -6,7 +6,8 @@
 `ase`
 \[`-h`|`--help`\]
 \[`-V`|`--version`\]
-\[`-d`|`--debug`\]
+\[`-l`|`--log-level` *level*\]
+\[`-L`|`--log-file` *file*\]
 \[*command*
 \[*options* \[...\]\]
 \[*args* \[...\]\]\]
@@ -28,9 +29,14 @@ The following top-level command-line options exist:
 - \[`-V`|`--version`\]:
   Show program version information only.
 
-- \[`-d`|`--debug`\]:
-  Enable debug output. The flag is inherited by all subcommands
-  and can be inspected inside handlers via `cmd.optsWithGlobals()`.
+- \[`-l`|`--log-level` *level*\]:
+  Set the logging verbosity. Supported *level* values are
+  `error`, `warning` (default), `info`, and `debug`.
+
+- \[`-L`|`--log-file` *file*\]:
+  Redirect log output to *file* (appended). Use `-` (default) to
+  write log messages to standard output. If *file* is connected
+  to a TTY, colors are used in the output.
 
 ## COMMANDS
 
