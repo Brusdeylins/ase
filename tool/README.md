@@ -1,7 +1,7 @@
 
 $ npx @rse/ase init
-$ npx @rse/ase config agent.dev.llm.type=anthropic-claude-sonnet-4.5
-$ npx @rse/ase config agent.dev.llm.key=<foo>
+$ npx @rse/ase config agent.dev.llm.type anthropic-claude-sonnet-4.5
+$ npx @rse/ase config agent.dev.llm.key <foo>
 $ npx @rse/ase agent dev start
 
 Agents

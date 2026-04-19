@@ -36,13 +36,12 @@ The following top-level command-line options exist:
 
 The following top-level commands exist:
 
-- `ase config` \[*query*\]:
+- `ase config` \[*key* \[*value*\]\]:
   Manage *ASE* configuration stored in `~/.ase.yaml`.
-  Without *query*, list all configured values as flat dotted keys.
-  With *query* of the form `<key>`, print the value at that dotted key.
-  With *query* of the form `<key>=<value>`, set the value at that
-  dotted key (creating intermediate maps as needed) and persist
-  the file.
+  Without arguments, list all configured values as flat dotted keys.
+  With *key* only, print the value at that dotted key.
+  With *key* and *value*, set the value at that dotted key
+  (creating intermediate maps as needed) and persist the file.
 
 - `ase service` \[*cmd*\]:
   Manage the per-project background HTTP service. The service
