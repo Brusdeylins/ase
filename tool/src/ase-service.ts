@@ -30,6 +30,7 @@ interface Context {
 }
 
 const SERVE_ENV  = "ASE_SERVICE_SERVE"
+const PORT_ENV   = "ASE_SERVICE_PORT"
 const HOST       = "127.0.0.1"
 const IDLE_MS    = 30 * 60 * 1000
 const TICK_MS    = 60 * 1000
@@ -113,14 +114,14 @@ const probe = async (port: number, projectId: string): Promise<boolean | null> =
 }
 
 /*  spawn the current executable detached as a background service  */
-const spawnDetached = (aseDir: string): { child: ChildProcess, logFile: string } => {
+const spawnDetached = (aseDir: string, port: number): { child: ChildProcess, logFile: string } => {
     fs.mkdirSync(aseDir, { recursive: true })
     const logFile = path.join(aseDir, "service.log")
     const fd      = fs.openSync(logFile, "a")
     const entry   = fileURLToPath(new URL("./ase.js", import.meta.url))
     const child   = spawn(process.execPath, [ entry, "service", "start" ], {
         detached: true,
-        env:      { ...process.env, [SERVE_ENV]: "1" },
+        env:      { ...process.env, [SERVE_ENV]: "1", [PORT_ENV]: String(port) },
         stdio:    [ "ignore", fd, fd ]
     })
     fs.closeSync(fd)
@@ -249,6 +250,7 @@ export default class ServiceCommand {
         /*  start service  */
         try {
             await server.start()
+            persistPort(ctx.svc, ctx.port)
         }
         catch (err: unknown) {
             const e = err as Error & { code?: string }
@@ -291,10 +293,8 @@ export default class ServiceCommand {
         const ctx = this.loadContext()
         let port = ctx.port
         if (process.env[SERVE_ENV] === "1") {
-            if (port === null) {
-                port = await allocatePort()
-                persistPort(ctx.svc, port)
-            }
+            const raw = process.env[PORT_ENV]
+            port = raw !== undefined ? Number(raw) : await allocatePort()
             await this.runService({ ...ctx, port })
             return await new Promise<number>(() => { /*  never resolves  */ })
         }
@@ -310,8 +310,7 @@ export default class ServiceCommand {
         let lastErr: Error = new Error("service failed to start within timeout")
         for (let attempt = 0; attempt < 3; attempt++) {
             port = await allocatePort()
-            persistPort(ctx.svc, port)
-            const { child, logFile } = spawnDetached(ctx.aseDir)
+            const { child, logFile } = spawnDetached(ctx.aseDir, port)
             let exited   = false
             let exitCode: number | null = null
             let resolveExit: () => void = () => {}
