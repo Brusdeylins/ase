@@ -258,6 +258,7 @@ export default class ServiceCommand {
                 if (match === true)
                     process.exit(0)
                 this.log.write("error", `service: port ${ctx.port} in use, but not responding!`)
+                clearPort(ctx.svc)
                 process.exit(1)
             }
             this.log.write("error", `service: ${e.message}`)
