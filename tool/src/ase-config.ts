@@ -149,7 +149,9 @@ const registerConfigCommand = (program: Command): void => {
             const cfg = new Config("config", configSchema)
             cfg.read()
             const v = cfg.get(key)
-            console.log(v)
+            if (isMap(v))
+                throw new Error(`key "${key}" is not a leaf key`)
+            console.log(isScalar(v) ? v.value : v)
         })
 
     /*  register CLI sub-command "ase config set"  */
