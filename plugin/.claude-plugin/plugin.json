@@ -1,7 +1,7 @@
 {
     "name": "ase",
     "description": "Agentic Software Engineering (ASE)",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "author": {
         "name": "Dr. Ralf S. Engelschall",
         "url":  "mailto:rse@engelschall.com"
