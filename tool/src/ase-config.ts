@@ -272,33 +272,19 @@ const registerConfigCommand = (program: Command): void => {
             cmd.help()
         })
 
-    /*  register CLI sub-command "ase config get"  */
+    /*  register CLI sub-command "ase config init"  */
     configCmd
-        .command("get")
-        .description("Print the value at a dotted configuration key")
-        .argument("<key>", "Configuration key (dotted path)")
-        .action((key: string) => {
+        .command("init")
+        .description("Initialize configuration with preset values (vibe|pro|industry)")
+        .argument("<type>", "Preset type (vibe|pro|industry)")
+        .action((type: string) => {
+            const preset = projectClassificationPresets[type]
+            if (preset === undefined)
+                throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
             const cfg = new Config("config", configSchema)
             cfg.read()
-            const val = cfg.get(key)
-            if (val === undefined)
-                throw new Error(`key "${key}" is not set`)
-            if (isMap(val))
-                throw new Error(`key "${key}" is not a leaf key`)
-            process.stdout.write(`${isScalar(val) ? val.value : val}\n`)
-        })
-
-    /*  register CLI sub-command "ase config set"  */
-    configCmd
-        .command("set")
-        .description("Set the value at a dotted configuration key")
-        .argument("<key>",   "Configuration key (dotted path)")
-        .argument("<value>", "Configuration value")
-        .action((key: string, value: string) => {
-            const cfg = new Config("config", configSchema)
-            cfg.read()
-            process.stdout.write(`${key}: ${value}\n`)
-            cfg.set(key, value)
+            for (const [ k, val ] of Object.entries(preset))
+                cfg.set(k, val)
             cfg.write()
         })
 
@@ -330,22 +316,6 @@ const registerConfigCommand = (program: Command): void => {
             process.stdout.write(`${table.toString()}\n`)
         })
 
-    /*  register CLI sub-command "ase config init"  */
-    configCmd
-        .command("init")
-        .description("Initialize configuration with preset values (vibe|pro|industry)")
-        .argument("<type>", "Preset type (vibe|pro|industry)")
-        .action((type: string) => {
-            const preset = projectClassificationPresets[type]
-            if (preset === undefined)
-                throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
-            const cfg = new Config("config", configSchema)
-            cfg.read()
-            for (const [ k, val ] of Object.entries(preset))
-                cfg.set(k, val)
-            cfg.write()
-        })
-
     /*  register CLI sub-command "ase config edit"  */
     configCmd
         .command("edit")
@@ -358,6 +328,36 @@ const registerConfigCommand = (program: Command): void => {
                 fs.writeFileSync(cfg.filename, "", "utf8")
             execaSync(editor, [ cfg.filename ], { stdio: "inherit" })
             cfg.read()
+        })
+
+    /*  register CLI sub-command "ase config get"  */
+    configCmd
+        .command("get")
+        .description("Print the value at a dotted configuration key")
+        .argument("<key>", "Configuration key (dotted path)")
+        .action((key: string) => {
+            const cfg = new Config("config", configSchema)
+            cfg.read()
+            const val = cfg.get(key)
+            if (val === undefined)
+                throw new Error(`key "${key}" is not set`)
+            if (isMap(val))
+                throw new Error(`key "${key}" is not a leaf key`)
+            process.stdout.write(`${isScalar(val) ? val.value : val}\n`)
+        })
+
+    /*  register CLI sub-command "ase config set"  */
+    configCmd
+        .command("set")
+        .description("Set the value at a dotted configuration key")
+        .argument("<key>",   "Configuration key (dotted path)")
+        .argument("<value>", "Configuration value")
+        .action((key: string, value: string) => {
+            const cfg = new Config("config", configSchema)
+            cfg.read()
+            process.stdout.write(`${key}: ${value}\n`)
+            cfg.set(key, value)
+            cfg.write()
         })
 }
 
