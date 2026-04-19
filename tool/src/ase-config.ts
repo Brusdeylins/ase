@@ -13,20 +13,32 @@ import { execaSync }                                from "execa"
 import * as v                                       from "valibot"
 import Table                                        from "cli-table3"
 
+/*  classification taxonomy for "project.type.*"  */
+export const projectClassification = {
+    boxing:    [ "white",     "grey",      "black"      ],
+    actors:    [ "person",                 "team"       ],
+    solution:  [ "tool",      "app",       "system"     ],
+    kind:      [ "prototype", "mvp",       "product"    ],
+    structure: [ "bare",      "libraries", "frameworks" ],
+    material:  [ "stucco",                 "prefab"     ],
+    focus:     [ "spec",      "code",      "test"       ],
+    control:   [ "offload",                "keep"       ]
+} as const
+
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
         id:   v.optional(v.pipe(v.string(), v.minLength(1))),
         name: v.optional(v.pipe(v.string(), v.minLength(1))),
         type: v.optional(v.strictObject({
-            box:       v.optional(v.picklist([ "white", "grey", "black" ])),
-            actors:    v.optional(v.picklist([ "person", "team" ])),
-            solution:  v.optional(v.picklist([ "tool", "app", "system" ])),
-            kind:      v.optional(v.picklist([ "prototype", "mvp", "product" ])),
-            structure: v.optional(v.picklist([ "bare", "libraries", "frameworks" ])),
-            material:  v.optional(v.picklist([ "stucco", "prefab" ])),
-            focus:     v.optional(v.picklist([ "spec", "code", "test" ])),
-            control:   v.optional(v.picklist([ "offload", "keep" ]))
+            boxing:    v.optional(v.picklist(projectClassification.boxing)),
+            actors:    v.optional(v.picklist(projectClassification.actors)),
+            solution:  v.optional(v.picklist(projectClassification.solution)),
+            kind:      v.optional(v.picklist(projectClassification.kind)),
+            structure: v.optional(v.picklist(projectClassification.structure)),
+            material:  v.optional(v.picklist(projectClassification.material)),
+            focus:     v.optional(v.picklist(projectClassification.focus)),
+            control:   v.optional(v.picklist(projectClassification.control))
         }))
     }))
 }))
@@ -215,7 +227,7 @@ const registerConfigCommand = (program: Command): void => {
                 vibe: {
                     "project.id":             "example",
                     "project.name":           "Example Project",
-                    "project.type.box":       "black",
+                    "project.type.boxing":    "black",
                     "project.type.actors":    "person",
                     "project.type.solution":  "tool",
                     "project.type.kind":      "prototype",
@@ -227,7 +239,7 @@ const registerConfigCommand = (program: Command): void => {
                 pro: {
                     "project.id":             "example",
                     "project.name":           "Example Project",
-                    "project.type.box":       "white",
+                    "project.type.boxing":    "white",
                     "project.type.actors":    "team",
                     "project.type.solution":  "system",
                     "project.type.kind":      "product",

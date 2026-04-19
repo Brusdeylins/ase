@@ -98,7 +98,7 @@ The following top-level commands exist:
   Per-project *ASE* configuration. Read upward from the current working
   directory. Recognized keys: `project.id` (non-empty string, uniqued
   project id), `project.name` (non-empty string, descriptive project
-  name), `project.type.box` (`white`|`grey`|`black`),
+  name), `project.type.boxing` (`white`|`grey`|`black`),
   `project.type.actors` (`person`|`team`), `project.type.solution`
   (`tool`|`app`|`system`), `project.type.kind`
   (`prototype`|`mvp`|`product`), `project.type.structure`
