@@ -50,7 +50,7 @@ export default class Log {
     write (level: LogLevel, msg: string) {
         const idx = levels.findIndex((l) => l.name === level)
         if (idx <= this.logLevelIdx) {
-            const timestamp = DateTime.now().toFormat("yyyy-LL-dd hh:mm:ss.SSS")
+            const timestamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss.SSS")
             let line = `${this._program}: [${timestamp}]: `
             if (this._logFile === "-" && process.stdout.isTTY)
                 line += `${levels[idx].style("[" + levels[idx].name.toUpperCase() + "]")}`
