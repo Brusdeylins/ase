@@ -31,6 +31,46 @@ export const projectClassification = {
     }
 } as const
 
+/*  classification presets  */
+export const projectClassificationPresets: Record<string, Record<string, string>> = {
+    vibe: {
+        "project.id":                "example",
+        "project.name":              "Example Project",
+        "project.source.ambition":   "engineer",
+        "project.source.boxing":     "black",
+        "project.source.size":       "small",
+        "project.source.structure":  "bare",
+        "project.process.actors":    "person",
+        "project.process.control":   "agent",
+        "project.process.drive":     "spec",
+        "project.result.target":     "prototype"
+    },
+    pro: {
+        "project.id":                "example",
+        "project.name":              "Example Project",
+        "project.source.ambition":   "artist",
+        "project.source.boxing":     "white",
+        "project.source.size":       "medium",
+        "project.source.structure":  "framework",
+        "project.process.actors":    "person",
+        "project.process.control":   "human",
+        "project.process.drive":     "code",
+        "project.result.target":     "product"
+    },
+    industry: {
+        "project.id":                "example",
+        "project.name":              "Example Project",
+        "project.source.ambition":   "craftsman",
+        "project.source.boxing":     "grey",
+        "project.source.size":       "large",
+        "project.source.structure":  "framework",
+        "project.process.actors":    "crew",
+        "project.process.control":   "hitl",
+        "project.process.drive":     "code",
+        "project.result.target":     "mvp"
+    }
+}
+
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
@@ -276,45 +316,7 @@ const registerConfigCommand = (program: Command): void => {
         .description("Initialize configuration with preset values (vibe|pro|industry)")
         .argument("<type>", "Preset type (vibe|pro|industry)")
         .action((type: string) => {
-            const presets: Record<string, Record<string, string>> = {
-                vibe: {
-                    "project.id":                "example",
-                    "project.name":              "Example Project",
-                    "project.source.ambition":   "engineer",
-                    "project.source.boxing":     "black",
-                    "project.source.size":       "small",
-                    "project.source.structure":  "bare",
-                    "project.process.actors":    "person",
-                    "project.process.control":   "agent",
-                    "project.process.drive":     "spec",
-                    "project.result.target":     "prototype"
-                },
-                pro: {
-                    "project.id":                "example",
-                    "project.name":              "Example Project",
-                    "project.source.ambition":   "artist",
-                    "project.source.boxing":     "white",
-                    "project.source.size":       "medium",
-                    "project.source.structure":  "framework",
-                    "project.process.actors":    "person",
-                    "project.process.control":   "human",
-                    "project.process.drive":     "code",
-                    "project.result.target":     "product"
-                },
-                industry: {
-                    "project.id":                "example",
-                    "project.name":              "Example Project",
-                    "project.source.ambition":   "craftsman",
-                    "project.source.boxing":     "grey",
-                    "project.source.size":       "large",
-                    "project.source.structure":  "framework",
-                    "project.process.actors":    "crew",
-                    "project.process.control":   "hitl",
-                    "project.process.drive":     "code",
-                    "project.result.target":     "mvp"
-                },
-            }
-            const preset = presets[type]
+            const preset = projectClassificationPresets[type]
             if (preset === undefined)
                 throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
             const cfg = new Config("config", configSchema)
