@@ -101,19 +101,26 @@ export class Config {
 
     constructor (name: string, schema?: v.GenericSchema) {
         const rel     = path.join(".ase", `${name}.yaml`)
-        const found   = this.findUpward(process.cwd(), rel)
-        this.filename = found ?? path.join(this.gitToplevel() ?? process.cwd(), rel)
+        const cwd     = process.cwd()
+        const top     = this.gitToplevel()
+        const found   = top !== null
+            ? this.findUpward(cwd, top, rel)
+            : (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
+        this.filename = found ?? path.join(top ?? cwd, rel)
         this.doc      = new Document()
         this.schema   = schema ?? null
     }
 
-    /*  upward-walk on filesystem for a file path relative to a start directory  */
-    private findUpward (start: string, rel: string): string | null {
+    /*  upward-walk on filesystem for a file path relative to a start directory,
+        bounded above (inclusive) by a stop directory  */
+    private findUpward (start: string, stop: string, rel: string): string | null {
         let dir = start
         for (;;) {
             const candidate = path.join(dir, rel)
             if (fs.existsSync(candidate))
                 return candidate
+            if (dir === stop)
+                return null
             const parent = path.dirname(dir)
             if (parent === dir)
                 return null
