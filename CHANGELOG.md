@@ -2,6 +2,18 @@
 ChangeLog
 =========
 
+0.0.7 (2026-04-19)
+------------------
+
+- FEATURE: provide `ase config edit` command and update manual page
+- FEATURE: add schema validation for configuration
+- IMPROVEMENT: render `ase config list` as a nice table
+- IMPROVEMENT: complain on non-leaf keys in configuration
+- IMPROVEMENT: improve type safety and strictness
+- REFACTOR: upgrade to Commander from Yargs and remove agent stuff for now
+- REFACTOR: switch to separate arguments
+- CLEANUP: cleanup `ase config` command and config handling
+
 0.0.6 (2026-04-18)
 ------------------
 
