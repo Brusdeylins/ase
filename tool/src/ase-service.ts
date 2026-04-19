@@ -33,7 +33,7 @@ const PORT_MAX   = 44000
 const PORT_TRIES = 20
 
 /*  schema for ".ase/service.yaml"  */
-const serviceSchema = v.nullish(v.object({
+const serviceSchema = v.nullish(v.strictObject({
     port: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1024), v.maxValue(65535)))
 }))
 

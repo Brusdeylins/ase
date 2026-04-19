@@ -14,6 +14,11 @@ import * as v                                       from "valibot"
 
 import type { GlobalOpts }                          from "./ase.js"
 
+/*  schema for ".ase/config.yaml"  */
+export const configSchema = v.nullish(v.strictObject({
+    "project-id": v.optional(v.pipe(v.string(), v.minLength(1)))
+}))
+
 /*  encapsulate read/write access to a project-local ".ase/<name>.yaml" file  */
 export class Config {
     public  filename: string
@@ -59,27 +64,43 @@ export class Config {
     read (): void {
         const text = fs.existsSync(this.filename) ? fs.readFileSync(this.filename, "utf8") : ""
         this.doc   = parseDocument(text)
-        this.validate()
+        this.validate("lenient")
     }
 
     /*  write in-memory configuration back to file  */
     write (): void {
-        this.validate()
+        this.validate("strict")
         fs.mkdirSync(path.dirname(this.filename), { recursive: true })
         fs.writeFileSync(this.filename, this.doc.toString({ indent: 4 }), "utf8")
     }
 
     /*  validate in-memory configuration against the optional schema  */
-    private validate (): void {
+    private validate (mode: "strict" | "lenient" = "strict"): void {
         if (this.schema === null)
             return
-        const result = v.safeParse(this.schema, this.doc.toJS())
-        if (!result.success) {
-            const issues = result.issues.map((i) => {
-                const dotPath = (i.path ?? []).map((p) => String(p.key)).join(".")
-                return dotPath ? `${dotPath}: ${i.message}` : i.message
-            }).join("; ")
-            throw new Error(`invalid configuration in ${this.filename}: ${issues}`)
+        for (;;) {
+            const result = v.safeParse(this.schema, this.doc.toJS())
+            if (result.success)
+                return
+            if (mode === "strict") {
+                const issues = result.issues.map((i) => {
+                    const dotPath = (i.path ?? []).map((p) => String(p.key)).join(".")
+                    return dotPath ? `${dotPath}: ${i.message}` : i.message
+                }).join("; ")
+                throw new Error(`invalid configuration in ${this.filename}: ${issues}`)
+            }
+            let progressed = false
+            for (const i of result.issues) {
+                const segs    = (i.path ?? []).map((p) => String(p.key))
+                const dotPath = segs.join(".")
+                process.stderr.write(`ase: warning: invalid entry in ${this.filename}: ${dotPath ? `${dotPath}: ` : ""}${i.message}\n`)
+                if (segs.length > 0) {
+                    this.doc.deleteIn(segs)
+                    progressed = true
+                }
+            }
+            if (!progressed)
+                return
         }
     }
 
@@ -100,7 +121,7 @@ export class Config {
                 this.doc.setIn(prefix, this.doc.createNode({}))
         }
         this.doc.setIn(segments, value)
-        this.validate()
+        this.validate("strict")
     }
 
     /*  delete a value at a dotted key  */
@@ -119,11 +140,6 @@ const registerConfigCommand = (program: Command): void => {
             const debug = cmd.optsWithGlobals<GlobalOpts>().debug
             if (debug)
                 console.log("DEBUG: config command", { key, value })
-
-            /*  schema for ".ase/config.yaml"  */
-            const configSchema = v.nullish(v.object({
-                "project-id": v.optional(v.pipe(v.string(), v.minLength(1)))
-            }))
 
             const cfg = new Config("config", configSchema)
             cfg.read()
