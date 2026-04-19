@@ -29,7 +29,6 @@ try {
     program
         .name("ase")
         .usage("<command> [options]")
-        .option("-d, --debug",             "enable debug output", false)
         .option("-l, --log-level <level>", "log level (error, warning, info, debug)", "warning")
         .option("-L, --log-file  <file>",  "log file path, or \"-\" for stdout", "-")
         .showHelpAfterError()
