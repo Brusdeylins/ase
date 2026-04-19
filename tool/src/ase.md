@@ -91,6 +91,15 @@ The following top-level commands exist:
   the port is not responding, prints an informational message and
   exits with status 0.
 
+- `ase service status`:
+  Report whether the background service is running. Probes the
+  persisted port via HTTP `GET /ping` and verifies that the
+  responding service belongs to the current project. Prints
+  `ase: service: running on port <port>` and exits with status 0
+  if a matching service is reachable; otherwise prints a
+  diagnostic message (no port configured, port not responding,
+  or port in use by a foreign service) and exits with status 1.
+
 - `ase service send` *cmd*:
   Dispatch the *cmd* token as a passthrough command to the running
   service via HTTP `POST /command`; if the service is not running,
