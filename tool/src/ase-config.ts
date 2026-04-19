@@ -14,6 +14,8 @@ import { execaSync }                                from "execa"
 import * as v                                       from "valibot"
 import Table                                        from "cli-table3"
 
+import type Log                                     from "./ase-log.js"
+
 /*  classification taxonomy  */
 export const projectClassification = {
     source: {
@@ -267,7 +269,7 @@ export class Config {
 }
 
 /*  register CLI command "ase config"  */
-const registerConfigCommand = (program: Command): void => {
+const registerConfigCommand = (program: Command, _log: Log): void => {
     const configCmd = program
         .command("config")
         .description("Manage ASE configuration")

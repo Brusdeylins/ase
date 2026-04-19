@@ -20,6 +20,7 @@ import * as v                 from "valibot"
 import prettyMs               from "pretty-ms"
 
 import { Config, configSchema } from "./ase-config.js"
+import type Log                 from "./ase-log.js"
 
 interface Context {
     projectId: string
@@ -417,7 +418,7 @@ const doStop = async (): Promise<number> => {
 }
 
 /*  register CLI command "ase service"  */
-const registerServiceCommand = (program: Command): void => {
+const registerServiceCommand = (program: Command, _log: Log): void => {
     const service = program
         .command("service")
         .description("Manage per-project background HTTP service")

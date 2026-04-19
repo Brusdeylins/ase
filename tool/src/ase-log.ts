@@ -10,37 +10,52 @@ import chalk           from "chalk"
 import { DateTime }    from "luxon"
 
 const levels = [
-    { name: "ERROR",   style: chalk.red.bold },
-    { name: "WARNING", style: chalk.yellow.bold },
-    { name: "INFO",    style: chalk.blue },
-    { name: "DEBUG",   style: chalk.green }
+    { name: "error",   style: chalk.red.bold },
+    { name: "warning", style: chalk.yellow.bold },
+    { name: "info",    style: chalk.blue },
+    { name: "debug",   style: chalk.green }
 ] as const
 
-type LogLevel = typeof levels[number]["name"]
+export type LogLevel = typeof levels[number]["name"]
 
 export default class Log {
     private stream: fs.WriteStream | null = null
     private logLevelIdx = 0
     constructor (
-        private logLevel: LogLevel,
-        private logFile:  string
+        private _logLevel: LogLevel,
+        private _logFile:  string
     ) {}
     async init () {
         /*  log messages  */
-        this.logLevelIdx = levels.findIndex((l) => l.name === this.logLevel)
-        if (this.logFile !== "-")
-            this.stream = fs.createWriteStream(this.logFile, { flags: "a", encoding: "utf8" })
+        this.logLevelIdx = levels.findIndex((l) => l.name === this._logLevel)
+        if (this._logFile !== "-")
+            this.stream = fs.createWriteStream(this._logFile, { flags: "a", encoding: "utf8" })
     }
-    log (level: number, msg: string) {
+    logLevel (level: LogLevel) {
+        this._logLevel   = level
+        this.logLevelIdx = levels.findIndex((l) => l.name === level)
+    }
+    logFile (file: string) {
+        if (file === this._logFile)
+            return
+        this._logFile = file
+        if (this.stream !== null) {
+            this.stream.end()
+            this.stream = null
+        }
+        if (file !== "-")
+            this.stream = fs.createWriteStream(file, { flags: "a", encoding: "utf8" })
+    }
+    write (level: number, msg: string) {
         if (level <= this.logLevelIdx) {
             const timestamp = DateTime.now().toFormat("yyyy-LL-dd hh:mm:ss.SSS")
             let line = `[${timestamp}]: `
-            if (this.logFile === "-" && process.stdout.isTTY)
-                line += `${levels[level].style("[" + levels[level].name + "]")}`
+            if (this._logFile === "-" && process.stdout.isTTY)
+                line += `${levels[level].style("[" + levels[level].name.toUpperCase() + "]")}`
             else
-                line += `[${levels[level].name}]`
+                line += `[${levels[level].name.toUpperCase()}]`
             line += `: ${msg}\n`
-            if (this.logFile === "-")
+            if (this._logFile === "-")
                 process.stdout.write(line)
             else if (this.stream !== null)
                 this.stream.write(line)
