@@ -326,6 +326,7 @@ export default class ServiceCommand {
                 child.removeListener("exit", onExit)
             }
         }
+        clearPort(ctx.svc)
         throw lastErr
     }
 
@@ -408,8 +409,7 @@ export default class ServiceCommand {
                 validateStatus: () => true
             })
             const ok = r.status >= 200 && r.status < 300
-            if (ok)
-                clearPort(ctx.svc)
+            clearPort(ctx.svc)
             return ok ? 0 : 1
         }
         catch (err: unknown) {
