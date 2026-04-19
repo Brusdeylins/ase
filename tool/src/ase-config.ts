@@ -103,9 +103,9 @@ export class Config {
         const rel     = path.join(".ase", `${name}.yaml`)
         const cwd     = process.cwd()
         const top     = this.gitToplevel()
-        const found   = top !== null
-            ? this.findUpward(cwd, top, rel)
-            : (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
+        const found   = top !== null ?
+            this.findUpward(cwd, top, rel) :
+            (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
         this.filename = found ?? path.join(top ?? cwd, rel)
         this.doc      = new Document()
         this.schema   = schema ?? null
