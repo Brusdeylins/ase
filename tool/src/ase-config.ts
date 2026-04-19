@@ -131,7 +131,7 @@ export class Config {
 }
 
 const registerConfigCommand = (program: Command): void => {
-    program
+    const configCmd = program
         .command("config")
         .description("Manage ASE configuration")
         .argument("[key]",   "Configuration key (dotted path)")
@@ -167,6 +167,19 @@ const registerConfigCommand = (program: Command): void => {
                 const v = cfg.get(key)
                 console.log(v)
             }
+        })
+
+    configCmd
+        .command("edit")
+        .description("Edit configuration file with $EDITOR")
+        .action(() => {
+            const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
+            const cfg    = new Config("config", configSchema)
+            fs.mkdirSync(path.dirname(cfg.filename), { recursive: true })
+            if (!fs.existsSync(cfg.filename))
+                fs.writeFileSync(cfg.filename, "", "utf8")
+            execaSync(editor, [ cfg.filename ], { stdio: "inherit" })
+            cfg.read()
         })
 }
 

@@ -37,11 +37,21 @@ The following top-level command-line options exist:
 The following top-level commands exist:
 
 - `ase config` \[*key* \[*value*\]\]:
-  Manage *ASE* configuration stored in `~/.ase.yaml`.
+  Manage *ASE* configuration stored in `.ase/config.yaml`.
   Without arguments, list all configured values as flat dotted keys.
   With *key* only, print the value at that dotted key.
   With *key* and *value*, set the value at that dotted key
   (creating intermediate maps as needed) and persist the file.
+  The file is validated against a schema: on read, unknown or
+  invalid entries are warned about and silently dropped from the
+  in-memory view; on set/write, they cause a fatal error.
+
+- `ase config edit`:
+  Open `.ase/config.yaml` in the editor defined by the `$EDITOR`
+  or `$VISUAL` environment variable (falling back to `vi`).
+  The file and its parent directory are created if missing.
+  After the editor exits, the file is re-read and schema warnings
+  are reported.
 
 - `ase service` \[*cmd*\]:
   Manage the per-project background HTTP service. The service
@@ -72,10 +82,11 @@ The following top-level commands exist:
 
 - `.ase/config.yaml`:
   Per-project *ASE* configuration. Read upward from the current
-  working directory. Recognized key: `project-id`.
+  working directory. Recognized key: `project-id` (non-empty string).
 
 - `.ase/service.yaml`:
-  Per-project service state. Recognized key: `port`.
+  Per-project service state. Recognized key: `port` (integer in
+  `1024`..`65535`).
 
 - `.ase/service.log`:
   Stdout/stderr log of the detached background service.
