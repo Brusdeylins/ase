@@ -10,15 +10,16 @@ import net                    from "node:net"
 import { spawn }              from "node:child_process"
 
 import { Command }            from "commander"
-import { parseDocument }      from "yaml"
 import Hapi                   from "@hapi/hapi"
 import axios                  from "axios"
 import type { AxiosError }    from "axios"
 
+import { Config }             from "./ase-config.js"
+
 interface Context {
     projectId: string
     port:      number | null
-    svcPath:   string
+    svc:       Config
     aseDir:    string
 }
 
@@ -30,62 +31,38 @@ const PORT_MIN   = 42000
 const PORT_MAX   = 44000
 const PORT_TRIES = 20
 
-/*  upward-walk on filesystem for a file path relative to a start directory  */
-const findUpward = (start: string, rel: string): string | null => {
-    let dir = start
-    for (;;) {
-        const candidate = path.join(dir, rel)
-        if (fs.existsSync(candidate))
-            return candidate
-        const parent = path.dirname(dir)
-        if (parent === dir)
-            return null
-        dir = parent
-    }
-}
-
 /*  load optional ".ase/config.yaml" and ".ase/service.yaml" files  */
 const loadContext = (): Context => {
-    /*  find files  */
-    const cfgPath = findUpward(process.cwd(), ".ase/config.yaml")
-    const svcPath = findUpward(process.cwd(), ".ase/service.yaml")
+    /*  load files  */
+    const cfg = new Config("config")
+    cfg.read()
+    const svc = new Config("service")
+    svc.read()
 
     /*  determine project id  */
-    let projectId: unknown
-    if (cfgPath !== null) {
-        const doc = parseDocument(fs.readFileSync(cfgPath, "utf8"))
-        projectId = doc.get("project-id")
-    }
+    let projectId: unknown = cfg.get("project-id")
     if (projectId === undefined || projectId === null)
         projectId = path.basename(process.cwd())
     if (typeof projectId !== "string" || projectId.length === 0)
-        throw new Error(`invalid "project-id" in ${cfgPath ?? "<cwd basename>"}`)
+        throw new Error(`invalid "project-id" in ${cfg.filename}`)
 
     /*  determine service port  */
     let port: number | null = null
-    if (svcPath !== null) {
-        const doc = parseDocument(fs.readFileSync(svcPath, "utf8"))
-        const raw = doc.get("port")
-        if (raw !== undefined && raw !== null) {
-            if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 1024 || raw > 65535)
-                throw new Error(`invalid "port" in ${svcPath} (expected integer 1024..65535)`)
-            port = raw
-        }
+    const raw = svc.get("port")
+    if (raw !== undefined && raw !== null) {
+        if (typeof raw !== "number" || !Number.isInteger(raw) || raw < 1024 || raw > 65535)
+            throw new Error(`invalid "port" in ${svc.filename} (expected integer 1024..65535)`)
+        port = raw
     }
 
     /*  determine path to ".ase" directory  */
-    const aseDir = cfgPath !== null ? path.dirname(cfgPath) :
-        svcPath !== null ? path.dirname(svcPath) :
-            path.join(process.cwd(), ".ase")
-
-    /*  determine path to final ".ase/service.yaml" file  */
-    const finalSvc = svcPath !== null ? svcPath : path.join(aseDir, "service.yaml")
+    const aseDir = path.dirname(svc.filename)
 
     /*  return context information  */
     return {
         projectId,
         port,
-        svcPath: finalSvc,
+        svc,
         aseDir
     }
 }
@@ -115,12 +92,9 @@ const allocatePort = async (): Promise<number> => {
 }
 
 /*  persist an allocated port into ".ase/service.yaml"  */
-const persistPort = (svcPath: string, port: number): void => {
-    fs.mkdirSync(path.dirname(svcPath), { recursive: true })
-    const text = fs.existsSync(svcPath) ? fs.readFileSync(svcPath, "utf8") : ""
-    const doc  = parseDocument(text)
-    doc.set("port", port)
-    fs.writeFileSync(svcPath, doc.toString(), "utf8")
+const persistPort = (svc: Config, port: number): void => {
+    svc.set("port", port)
+    svc.write()
 }
 
 /*  distinguish ECONNREFUSED from other Axios transport errors  */
@@ -245,7 +219,7 @@ const doStart = async (): Promise<number> => {
     let port = ctx.port
     if (port === null) {
         port = await allocatePort()
-        persistPort(ctx.svcPath, port)
+        persistPort(ctx.svc, port)
     }
     if (process.env[SERVE_ENV] === "1") {
         await runService({ ...ctx, port })
