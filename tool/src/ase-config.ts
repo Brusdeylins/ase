@@ -10,6 +10,7 @@ import fs                     from "node:fs"
 import { Command }                                  from "commander"
 import { Document, parseDocument, isMap, isScalar } from "yaml"
 import { execaSync }                                from "execa"
+import * as v                                       from "valibot"
 
 import type { GlobalOpts }                          from "./ase.js"
 
@@ -17,12 +18,14 @@ import type { GlobalOpts }                          from "./ase.js"
 export class Config {
     public  filename: string
     private doc:      Document
+    private schema:   v.GenericSchema | null
 
-    constructor (name: string) {
+    constructor (name: string, schema?: v.GenericSchema) {
         const rel     = path.join(".ase", `${name}.yaml`)
         const found   = this.findUpward(process.cwd(), rel)
         this.filename = found ?? path.join(this.gitToplevel() ?? process.cwd(), rel)
         this.doc      = new Document()
+        this.schema   = schema ?? null
     }
 
     /*  upward-walk on filesystem for a file path relative to a start directory  */
@@ -56,12 +59,28 @@ export class Config {
     read (): void {
         const text = fs.existsSync(this.filename) ? fs.readFileSync(this.filename, "utf8") : ""
         this.doc   = parseDocument(text)
+        this.validate()
     }
 
     /*  write in-memory configuration back to file  */
     write (): void {
+        this.validate()
         fs.mkdirSync(path.dirname(this.filename), { recursive: true })
         fs.writeFileSync(this.filename, this.doc.toString({ indent: 4 }), "utf8")
+    }
+
+    /*  validate in-memory configuration against the optional schema  */
+    private validate (): void {
+        if (this.schema === null)
+            return
+        const result = v.safeParse(this.schema, this.doc.toJS())
+        if (!result.success) {
+            const issues = result.issues.map((i) => {
+                const dotPath = (i.path ?? []).map((p) => String(p.key)).join(".")
+                return dotPath ? `${dotPath}: ${i.message}` : i.message
+            }).join("; ")
+            throw new Error(`invalid configuration in ${this.filename}: ${issues}`)
+        }
     }
 
     /*  retrieve a value at a dotted key, or the root contents if no key given  */
@@ -81,6 +100,7 @@ export class Config {
                 this.doc.setIn(prefix, this.doc.createNode({}))
         }
         this.doc.setIn(segments, value)
+        this.validate()
     }
 
     /*  delete a value at a dotted key  */
