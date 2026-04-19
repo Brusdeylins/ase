@@ -46,14 +46,15 @@ export default class Log {
         if (file !== "-")
             this.stream = fs.createWriteStream(file, { flags: "a", encoding: "utf8" })
     }
-    write (level: number, msg: string) {
-        if (level <= this.logLevelIdx) {
+    write (level: LogLevel, msg: string) {
+        const idx = levels.findIndex((l) => l.name === level)
+        if (idx <= this.logLevelIdx) {
             const timestamp = DateTime.now().toFormat("yyyy-LL-dd hh:mm:ss.SSS")
             let line = `[${timestamp}]: `
             if (this._logFile === "-" && process.stdout.isTTY)
-                line += `${levels[level].style("[" + levels[level].name.toUpperCase() + "]")}`
+                line += `${levels[idx].style("[" + levels[idx].name.toUpperCase() + "]")}`
             else
-                line += `[${levels[level].name.toUpperCase()}]`
+                line += `[${levels[idx].name.toUpperCase()}]`
             line += `: ${msg}\n`
             if (this._logFile === "-")
                 process.stdout.write(line)
