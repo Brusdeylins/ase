@@ -6,6 +6,7 @@
 
 import path                   from "node:path"
 import fs                     from "node:fs"
+import readline               from "node:readline/promises"
 
 import { Command }                                  from "commander"
 import { Document, parseDocument, isMap, isScalar } from "yaml"
@@ -142,10 +143,10 @@ export class Config {
     }
 
     /*  read configuration file into memory  */
-    read (): void {
+    read (mode: "strict" | "lenient" = "lenient"): void {
         const text = fs.existsSync(this.filename) ? fs.readFileSync(this.filename, "utf8") : ""
         this.doc   = parseDocument(text)
-        this.validate("lenient")
+        this.validate(mode)
     }
 
     /*  write in-memory configuration back to file  */
@@ -323,14 +324,32 @@ const registerConfigCommand = (program: Command): void => {
     configCmd
         .command("edit")
         .description("Edit configuration file with $EDITOR")
-        .action(() => {
+        .action(async () => {
             const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
             const cfg    = new Config("config", configSchema)
             fs.mkdirSync(path.dirname(cfg.filename), { recursive: true })
             if (!fs.existsSync(cfg.filename))
                 fs.writeFileSync(cfg.filename, "", "utf8")
-            execaSync(editor, [ cfg.filename ], { stdio: "inherit" })
-            cfg.read()
+            const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
+            try {
+                for (;;) {
+                    execaSync(editor, [ cfg.filename ], { stdio: "inherit" })
+                    try {
+                        cfg.read("strict")
+                        break
+                    }
+                    catch (err) {
+                        const msg = err instanceof Error ? err.message : String(err)
+                        process.stderr.write(`ase: ${msg}\n`)
+                        const ans = (await rl.question("re-edit? [Y/n] ")).trim().toLowerCase()
+                        if (ans === "n" || ans === "no")
+                            throw err
+                    }
+                }
+            }
+            finally {
+                rl.close()
+            }
         })
 
     /*  register CLI sub-command "ase config get"  */
