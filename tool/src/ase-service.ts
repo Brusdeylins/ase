@@ -155,7 +155,7 @@ const readLogTail = (logFile: string, lines: number): string => {
     }
     finally {
         if (fd !== null)
-            return fs.closeSync(fd)
+            fs.closeSync(fd)
     }
 }
 
