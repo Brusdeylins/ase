@@ -269,7 +269,8 @@ const registerConfigCommand = (program: Command): void => {
         .command("config")
         .description("Manage ASE configuration")
         .action((_opts, cmd: Command) => {
-            cmd.help()
+            cmd.outputHelp()
+            process.exit(1)
         })
 
     /*  register CLI sub-command "ase config init"  */
