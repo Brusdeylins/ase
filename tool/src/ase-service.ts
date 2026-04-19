@@ -129,13 +129,33 @@ const spawnDetached = (aseDir: string): { child: ChildProcess, logFile: string }
 
 /*  read the last N non-empty lines of a log file for diagnostics  */
 const readLogTail = (logFile: string, lines: number): string => {
+    let fd: number | null = null
     try {
-        const data = fs.readFileSync(logFile, "utf8")
-        const all  = data.split("\n").filter((l) => l.length > 0)
+        fd = fs.openSync(logFile, "r")
+        const size  = fs.fstatSync(fd).size
+        const CHUNK = 8192
+        const buf   = Buffer.alloc(CHUNK)
+        let pos     = size
+        let tail    = ""
+        let count   = 0
+        while (pos > 0 && count <= lines) {
+            const n = Math.min(CHUNK, pos)
+            pos -= n
+            fs.readSync(fd, buf, 0, n, pos)
+            tail  = buf.toString("utf8", 0, n) + tail
+            count = 0
+            for (let i = 0; i < tail.length; i++)
+                if (tail.charCodeAt(i) === 10) count++
+        }
+        const all = tail.split("\n").filter((l) => l.length > 0)
         return all.slice(-lines).join("\n")
     }
     catch {
         return ""
+    }
+    finally {
+        if (fd !== null)
+            return fs.closeSync(fd)
     }
 }
 
