@@ -10,6 +10,7 @@ import Log                         from "./ase-log.js"
 import type { LogLevel }           from "./ase-log.js"
 import ConfigCommand               from "./ase-config.js"
 import ServiceCommand              from "./ase-service.js"
+import pkg                         from "../package.json" with { type: "json" }
 
 /*  type of top-level (global) options  */
 export type GlobalOpts = {
@@ -29,6 +30,7 @@ try {
     program
         .name("ase")
         .usage("<command> [options]")
+        .version(`ASE ${pkg.version}`, "-V, --version", "show version information")
         .option("-l, --log-level <level>", "log level (error, warning, info, debug)", "warning")
         .option("-L, --log-file  <file>",  "log file path, or \"-\" for stdout", "-")
         .showHelpAfterError()
