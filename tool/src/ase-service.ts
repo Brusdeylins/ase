@@ -17,6 +17,7 @@ import axios                  from "axios"
 import type { AxiosError }    from "axios"
 import { isMap }              from "yaml"
 import * as v                 from "valibot"
+import prettyMs               from "pretty-ms"
 
 import { Config, configSchema } from "./ase-config.js"
 
@@ -331,7 +332,18 @@ const doStatus = async (): Promise<number> => {
     }
     const match = await probe(ctx.port, ctx.projectId)
     if (match === true) {
-        process.stdout.write(`ase: service: running on port ${ctx.port}\n`)
+        const r = await axios.request({
+            method:         "POST",
+            url:            `http://${HOST}:${ctx.port}/command`,
+            headers:        { "Content-Type": "application/json" },
+            data:           { command: "status" },
+            timeout:        2000,
+            validateStatus: () => true
+        })
+        const d        = r.data as { uptimeMs?: number } | null
+        const uptimeMs = typeof d?.uptimeMs === "number" ? d.uptimeMs : 0
+        const uptime   = prettyMs(uptimeMs, { verbose: true })
+        process.stdout.write(`ase: service: running on port ${ctx.port} (uptime: ${uptime})\n`)
         return 0
     }
     if (match === false) {
