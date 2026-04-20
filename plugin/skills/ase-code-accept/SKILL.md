@@ -16,13 +16,14 @@ Accept AI-Generated Changes
 Your role is an experienced, *expert-level software developer*,
 specialized in *reviewing and curating* an accumulated pile of
 uncommitted source code changes into clean, thematically-coherent,
-build-verified Git commits.
+build-verified Git commits on a dedicated work branch.
 
 <objective>
 *Review* the uncommitted changes at $ARGUMENTS (default: working
-tree + index + untracked), *group* hunks by theme, and *produce*
-a sequence of bisect-safe commits — each with a meaningful
-message and a green build.
+tree + index + untracked), *group* hunks by theme, *apply* them one
+theme at a time on a dedicated work branch, *build-verify* each
+theme before asking the user to decide, and *commit* only what the
+user accepts.
 </objective>
 
 <flow>
@@ -115,61 +116,23 @@ message and a green build.
    - Per-hunk consistency (mandatory): a hunk may appear in *at
      most one* theme. Overlap is a defect — re-investigate or
      force SPLIT.
+   - For fine-grained separation within a single file, regenerate
+     the diff with `git diff --unified=0` so adjacent edits that
+     belong to different themes are not merged into one hunk by
+     default context grouping.
+   - When a SPLIT hunk must be broken apart, re-serialize the
+     patch text into two independent hunk headers
+     (`@@ -<from>,<n> +<to>,<m> @@`) covering disjoint line
+     ranges before proceeding to STEP 4. A single git-level hunk
+     spanning two themes cannot be staged with `git apply
+     --cached` as a subset — it must be split at the text level
+     first.
    </step>
 
-4. <step id="STEP 4: Render Theme Cards">
-   For each theme, render a self-contained card that the user
-   can read without looking at the raw diff.
-
-   Emit one of the following <template/> per theme:
-
-   <template>
-   &#x1F7E0; **THEME CARD** T<n/> · <type/>(<scope/>): <one-liner/>
-
-   *Why*: <rationale/>
-   *Hunks*: <hunk-refs/>
-   *Files*: <file-list/>
-   *Flow*:
-
-   <ascii-diagram-as-fenced-code-block/>
-   </template>
-
-   Hints:
-
-   - `<rationale/>` is one or two sentences explaining *why* the
-     AI made this change — reconstruct intent from the diff.
-   - `<hunk-refs/>` is `H1, H4, H7`-style list.
-   - `<ascii-diagram-as-fenced-code-block/>` is a small Unicode
-     box-and-arrow diagram showing the theme's data or control
-     flow (how the changed pieces interact). Follow the
-     *Diagrams* rules in the skill meta (Unicode box-drawing,
-     bottom-up sizing, post-render rectangle verification).
-     Keep diagrams under 25 lines. Omit entirely if the theme
-     is purely textual (docs, comments, constants).
-   - Apply the *Findings* rules from the skill meta:
-     evidence-grounded (cite exact hunk ids), contract-
-     already-addressed (downgrade if existing contract already
-     covers the intent), performance-cost reality check.
-   </step>
-
-5. <step id="STEP 5: Confirm Themes Interactively">
-   Let the user *interactively confirm* each theme. Use the
-   `AskUserQuestion` tool with single-selection per theme.
-
-   Options per theme:
-   - *accept* — keep theme as-is.
-   - *merge* — fold into another theme; ask which.
-   - *split* — divide into two sub-themes; ask for new titles.
-   - *drop* — abandon these hunks (leave in working tree,
-     not staged).
-   - *reassign* — move specific hunks to a different theme.
-
-   Loop until all themes are in state *accept* or *drop*.
-   </step>
-
-6. <step id="STEP 6: Plan Staging Order">
-   Determine a *topological order* over the accepted themes so
-   each theme can build independently given the previous ones.
+4. <step id="STEP 4: Plan Staging Order">
+   Determine a *topological order* over the themes so each theme
+   can build independently given the previous ones. Then let the
+   user confirm or override.
 
    Emit the following <template/>:
 
@@ -186,83 +149,233 @@ message and a green build.
    - Detect renames first — always order rename-themes before
      any theme that touches the renamed file.
    - For each theme, dry-run `git apply --cached --check` on its
-     patch subset against the current index state. If the dry
-     run fails, either reorder or flag as SPLIT and return to
-     STEP 3.
+     patch subset against a simulated preceding state. If the
+     dry run fails, reorder or return to STEP 3 and mark SPLIT.
+   - After auto-sort, use `AskUserQuestion` with options:
+     *accept-order* or *reorder*. If *reorder*, ask the user for
+     the desired sequence and update the plan.
    </step>
 
-7. <step id="STEP 7: Stage, Commit, and Verify Build">
-   For *each* theme in the planned order, execute the full
-   per-theme cycle:
+5. <step id="STEP 5: Create Work Branch">
+   Create a dedicated work branch so acceptance commits do not
+   pollute the current branch until the user merges explicitly.
 
-   1. `git reset` to clear the index (first theme) or leave
-      previous commits in place (subsequent themes).
-   2. `git apply --cached <patch-subset>` — stage only the
-      hunks assigned to this theme.
-   3. Verify `git diff --staged` matches the planned hunk set.
-   4. Expand the `ase-code-commit` skill to generate the commit
-      message for the staged bucket.
-   5. `git commit`.
-   6. *Run the project build command*. Discover it from, in
-      order: `AGENTS.md`, `CLAUDE.md`, `package.json` scripts,
-      `Makefile` targets, `Cargo.toml`, `pom.xml`, `go.mod`,
-      language-idiomatic defaults. If ambiguous, use
-      `AskUserQuestion` with the top candidates plus a free-
-      text option.
-   7. If build *fails*, emit the following <template/>:
+   Run:
+   - `git rev-parse --abbrev-ref HEAD` — record the source branch.
+   - `AskUserQuestion` — propose a work branch name
+     `accept/<YYYY-MM-DD-HHMM>` and let the user override.
+   - `git checkout -b <work-branch>` — switch to the work branch.
 
-      <template>
-      &#x1F7E0; **BUILD FAIL** at T<n/> (<type/>: <one-liner/>)
+   Emit the following <template/>:
 
-      *Command*: `<build-command/>`
-      *Exit*: <exit-code/>
-      *Error*:
-      ```
-      <error-excerpt/>
-      ```
-      *Likely cause*: <diagnosis/>
-      *Suggestion*: <suggestion/>
-      </template>
-
-      Then `AskUserQuestion` with options:
-      - *amend* — add missing hunks to this commit.
-      - *squash-previous* — merge with the previous commit.
-      - *drop* — `git reset --soft HEAD~1` and abandon this
-        theme.
-      - *manual-fix* — pause, let user resolve, then continue.
-
-      Loop until the build returns exit 0.
-   8. On success, mark the commit *bisect-safe* and continue
-      with the next theme.
+   <template>
+   &#x1F33F; **WORK BRANCH** `<work-branch/>` (from `<source-branch/>`)
+   </template>
 
    Hints:
 
-   - Every intermediate commit *MUST* build green before the
-     next one is staged. Do not batch commits and verify only
-     at the end — that hides dependency defects.
-   - If `git apply --check` fails during stage-attempt, abort
-     the whole cycle and return to STEP 6 to replan ordering.
+   - Do *not* stash or reset the uncommitted changes. The work
+     branch inherits the working tree and index from the source
+     branch — hunks remain available for per-theme staging.
+   - If a branch with the proposed name already exists, ask the
+     user for a different name.
    </step>
 
-8. <step id="STEP 8: Final Summary">
+6. <step id="STEP 6: Per-Theme Review Loop">
+   Maintain a *queue* of themes in the order from STEP 4. Process
+   one theme at a time. Non-accepted themes are handled per the
+   chosen option and do not re-enter the queue unless *regroup*ed.
+
+   For each theme in the queue, execute the following sub-cycle:
+
+   6.1. *Stage*. Clear the index with `git reset` (working tree
+        preserved), then `git apply --cached <patch-subset>` to
+        stage only the hunks assigned to this theme. Verify
+        `git diff --staged` matches the planned hunk set.
+
+   6.2. *Isolate the working tree to the post-commit state*.
+        Other themes' hunks must not influence the build result.
+
+        Run:
+        - `git stash push --keep-index --include-untracked
+          --message "accept-isolate-T<n>"`
+
+        Effect: the stash captures every working-tree change
+        *not* in the index (i.e. all other themes' hunks and
+        untracked files), leaving the working tree byte-equal
+        to the index — exactly what the commit will produce.
+
+        Skip this sub-step if `git diff` against the index is
+        empty (no other themes' hunks remain). `git stash` with
+        nothing to stash fails; guard with a pre-check.
+
+   6.3. *Build-test*. Discover the project build command from,
+        in order: `AGENTS.md`, `CLAUDE.md`, `package.json`
+        scripts, `Makefile` targets, `Cargo.toml`, `pom.xml`,
+        `go.mod`, language-idiomatic defaults. If ambiguous,
+        use `AskUserQuestion` with the top candidates plus a
+        free-text option. Run the command and capture exit code
+        and output. *This exit code represents the true
+        post-commit, post-push build result* — no other themes'
+        changes interfere.
+
+   6.4. *Render the decision view*.
+
+        On build *success*, emit the following <template/>:
+
+        <template>
+        &#x1F7E2; **THEME T<n/>** · <type/>(<scope/>): <one-liner/>
+
+        *Why*: <rationale/>
+        *Hunks*: <hunk-refs/>
+        *Files*: <file-list/>
+        *Build*: `<build-command/>` — exit 0
+
+        *Flow*:
+
+        <ascii-diagram-as-fenced-code-block/>
+
+        *Diff*:
+
+        <diff-per-file/>
+        </template>
+
+        On build *failure*, emit the following <template/>:
+
+        <template>
+        &#x1F534; **BUILD FAIL** at T<n/> · <type/>(<scope/>): <one-liner/>
+
+        *Hunks*: <hunk-refs/>
+        *Files*: <file-list/>
+        *Command*: `<build-command/>`
+        *Exit*: <exit-code/>
+        *Error*:
+        ```
+        <error-excerpt/>
+        ```
+        *Likely cause*: <diagnosis/>
+
+        *Diff*:
+
+        <diff-per-file/>
+        </template>
+
+        Hints:
+
+        - `<rationale/>` is one or two sentences explaining *why*
+          the AI made this change — reconstruct intent from the
+          diff.
+        - `<ascii-diagram-as-fenced-code-block/>` follows the
+          *Diagrams* rules in the skill meta (Unicode
+          box-drawing, bottom-up sizing, post-render rectangle
+          verification). Keep under 25 lines. Omit if the theme
+          is purely textual (docs, comments, constants).
+        - `<diff-per-file/>` groups the staged diff *per file*.
+          Each file becomes one block of the form:
+          a `### <filepath>  (<hunk-refs>)` headline, followed
+          by a fenced ```diff``` block containing only that
+          file's diff lines. This lets the user navigate large
+          themes by file and back-reference each hunk to the
+          manifest. Do not abridge; show full diff content per
+          file. Use the same `<diff-per-file/>` rendering in the
+          failure template so build errors can be diagnosed
+          against the exact change set.
+        - Do *not* add quality judgements, improvement
+          suggestions, or severity-tagged findings. This skill
+          curates changes, it does not review them. Use
+          `ase-code-lint`, `ase-code-analyze`, or
+          `ase-code-audit` for that.
+
+   6.5. *Decide*. Use `AskUserQuestion` with the single-selection
+        options matching the build outcome. *Every* branch ends
+        by restoring the parked hunks via `git stash pop` (skip
+        pop only if 6.2 was skipped).
+
+        On build *success*:
+
+        - *accept* — expand the `ase-code-commit` skill to craft
+          a commit message, then `git commit`. `git stash pop`.
+          Mark the theme *bisect-safe*. Theme leaves the queue.
+        - *skip* — do *not* commit. `git stash pop`, then
+          `git reset` (index back to HEAD; popped hunks
+          reinstated as working-tree changes). Theme leaves the
+          queue.
+        - *regroup* — `git stash pop`, `git reset`. Return to
+          STEP 3 and reassign this theme's hunks. The new
+          theme(s) re-enter the queue at their topologically
+          correct position.
+        - *defer* — `git stash pop`, `git reset`. Move the theme
+          to the *end* of the queue. If on the next iteration
+          every remaining theme is in *deferred* state, stop the
+          loop and jump to STEP 7.
+        - *discard* — *destructive*. Requires a second
+          `AskUserQuestion` confirmation (*confirm-discard* vs.
+          *cancel*). If confirmed, `git stash pop`, `git reset`,
+          then `git checkout -- <files>` for tracked files and
+          `rm` for untracked files touched by this theme. Hunks
+          are lost. Theme leaves the queue.
+
+        On build *failure*:
+
+        - *retry* — re-run the build without unstashing (e.g.
+          after an external fix the user applied to the parked
+          stash manually; rare). Prefer *defer* in practice.
+        - *defer* — `git stash pop`, `git reset`. Theme to queue
+          end.
+        - *skip* — `git stash pop`, `git reset`. Hunks back in
+          working tree.
+        - *regroup* — `git stash pop`, `git reset`. Back to STEP 3.
+        - *discard* — destructive, see above.
+
+        *Stash-pop conflict handling*: if `git stash pop` reports
+        conflict (rare, only when disjoint-theme assumption
+        breaks), pause the loop, emit a diagnostic with the
+        conflicting paths, and ask the user to resolve manually
+        before resuming. Do not auto-resolve.
+
+   6.6. *Continue* with the next theme in the queue until the
+        queue is empty or all remaining themes are deferred.
+
+   Hints:
+
+   - Every committed theme *MUST* build green. Do *not* batch
+     commits and verify only at the end — that hides dependency
+     defects and breaks `git bisect`.
+   - Editing the code to fix a build failure or to change what
+     the diff looks like is *out of scope* for this skill. Use
+     *defer*, leave the skill, edit (manually or via
+     `ase-code-refactor` / `ase-code-elaborate`), then re-enter
+     the skill — it will re-manifest the working tree.
+   - Never invoke `ase-code-changes` from this skill.
+     `CHANGELOG.md` updates belong to a release step, not an
+     acceptance step.
+   </step>
+
+7. <step id="STEP 7: Final Summary">
    Emit a concise recap of what was produced.
 
    <template>
    &#x26AA; **ACCEPTANCE SUMMARY**
 
+   *Work branch*: `<work-branch/>` (from `<source-branch/>`)
+
    <commit-table/>
 
-   *Leftover*: <leftover-hunks/>
+   *Left in working tree*: <skipped-and-deferred/>
+   *Discarded*: <discarded/>
    </template>
 
    Hints:
 
    - `<commit-table/>` columns: `T#`, `SHA`, `TYPE`, `SUBJECT`,
      `FILES`, `BUILD`.
-   - `BUILD` is `✓` (green) or `✗` (failed and retried).
-   - `<leftover-hunks/>` lists any hunks dropped or left in the
-     working tree, one bullet per hunk with reason.
-   - Do *not* propose further actions; the user decides what to
-     do with leftovers.
+   - `BUILD` is `✓` (green, committed) or `✗` (failed, not
+     committed).
+   - `<skipped-and-deferred/>` lists hunks left uncommitted in
+     the working tree, one bullet per theme with reason.
+   - `<discarded/>` lists themes the user destructively removed.
+   - Do *not* propose further actions (no automatic merge into
+     the source branch, no push). The user decides what to do
+     with the work branch.
    </step>
 </flow>
