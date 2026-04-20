@@ -237,10 +237,14 @@ The following ASE commands/skills exist on the code-level:
 Classification System
 ---------------------
 
-In **ASE**, the following classification system can be configured on a
-per-user, per-project, per-task, or per-session basis (in this order
-with later scopes overriden earlier scopes).
+In **ASE**, the following classification system can be configured on
+the following scopes (and in this order, with later scopes overriding
+earlier scopes):
 
+-   user:    (id: `$USER`,           storage: `~/.ase/config.yaml`)
+-   project: (id: `$ASE_PROJECT_ID`, storage: `.ase/config.yaml`)
+-   task:    (id: `$ASE_TASK_ID`,    storage: `~/.ase/config.yaml`)
+-   session: (id: `$ASE_SESSION_ID`, storage: `~/.ase/session/<session-id>/config.yaml`)
 
 ### Project Classification
 
