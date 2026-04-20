@@ -232,50 +232,50 @@ Project Classification
 
 In **ASE**, projects are classified through eight dimensions:
 
--   **source.ambition**: the project *source code* has to meet the ambition of a...
+-   **project.source.ambition**: the project *source code* has to meet the ambition of a...
 
     -   `artist`:    ...artist: finest code quality, individual, love for details.
     -   `craftsman`: ...craftsman: good code quality, individual, pragmatism.
     -   `engineer`:  ...engineer: medium code quality, standardized, pre-fabricated.
 
--   **source.boxing**: the project *source code* is treated as a...
+-   **project.source.boxing**: the project *source code* is treated as a...
 
     -   `white`:     ...white box, i.e., the code is intentially fully transparent and understood.
     -   `grey`:      ...grey  box, i.e., the code is intentially partially intransparent or not understood.
     -   `black`:     ...black box, i.e., the code is intentially fully intransparent and not understood.
 
--   **source.size**: the project *source code* is...
+-   **project.source.size**: the project *source code* is...
 
     -   `small`:     ...for a small-size tool (smaller than 10K LoC).
     -   `medium`:    ...for a medium-size application (larger than 10K LoC).
     -   `large`:     ...for a large-size system (larger than 100K LoC).
 
--   **source.structure**: the project *source code* is based on...
+-   **project.source.structure**: the project *source code* is based on...
 
     -   `bare`:      ...bare code (no reusable components).
     -   `library`:   ...the use of libraries (reusable components).
     -   `framework`: ...the use of frameworks (standard structure).
 
--   **process.actors**: the project *process* is driven by a...
+-   **project.process.actors**: the project *process* is driven by a...
 
     -   `person`:    ...single person is acting.
     -   `team`:      ...team of persons (with or without their personal supporting asssitants
                      and agents) is collaboratively acting.
     -   `crew`:      ...mixed crew of both persons and robots/agents is collaboratively acting.
 
--   **process.control**: the project *process* control is...
+-   **project.process.control**: the project *process* control is...
 
     -   `human`:     ...fully under human control.
     -   `hitl`:      ...off-loaded to agent control with human-in-the-loop (HitL).
     -   `agent`:     ...fully off-loaded to agent control.
 
--   **process.drive**: the project *process* progress is mainly driven by...
+-   **project.process.drive**: the project *process* progress is mainly driven by...
 
     -   `spec`:      ...specification (spec-driven development).
     -   `code`:      ...code (code-driven development).
     -   `test`:      ...tests (test-driven development).
 
--   **result.target**: the project *result* target is a...
+-   **project.result.target**: the project *result* target is a...
 
     -   `prototype`: ...prototype (not in target technology, short life-time, 5% solution).
     -   `mvp`:       ...Minimum Viable Product (in target technology, short life-time, 10-90% solution)
@@ -284,20 +284,20 @@ In **ASE**, projects are classified through eight dimensions:
 AI Classification
 -----------------
 
-In **ASE**, the AI is classified by each user through three dimensions:
+In **ASE**, the Agentic AI is classified by each user through three dimensions:
 
--   **response.persona**: the AI has the persona and communication style of a...
+-   **agent.persona.style**: the Agentic AI *persona* has the communication style of a...
     -    `writer`:      ...writer: decorative, eloquent, and explaining.
     -    `technician`:  ...technician: brief, factual and accurate.
     -    `telegrapher`: ...telegrapher: very brief, factual, and abbreviating.
     -    `caveman`:     ...caveman: ultra brief, rough and stuttering.
 
--   **response.creativity**: the AI shows...
+-   **agent.persona.creativity**: the Agentic AI *persona* shows...
     -    `none`:        ...none creativity and is just fact-based.
     -    `lite`:        ...lite creativity and is combining existing facts.
     -    `full`:        ...full creativity and is discovering new facts.
 
--   **response.autonomy**: the AI is driven as...
+-   **agent.process.autonomy**: the Agentic AI *process* is characterized by the AI acting as...
     -    `assistant`:   ...an assistant: goal given, plan given, short-running, Human-in-the-Loop (HitL).
     -    `hotl`:        ...an semi-autonomous agent: goal given, plan found, short-running, Human-over-the-Loop (HotL)
     -    `agent`:       ...an autonomous agent: goal given, plan found, long-running, no human interaction
