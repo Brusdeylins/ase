@@ -284,20 +284,20 @@ In **ASE**, projects are classified through eight dimensions:
 AI Classification
 -----------------
 
-In **ASE**, the AI is classified through three dimensions:
+In **ASE**, the AI is classified by each user through three dimensions:
 
--   *response.persona**: the AI has the persona and communication style of a...
+-   **response.persona**: the AI has the persona and communication style of a...
     -    `writer`:      ...writer: decorative, eloquent, and explaining.
     -    `technician`:  ...technician: brief, factual and accurate.
     -    `telegrapher`: ...telegrapher: very brief, factual, and abbreviating.
     -    `caveman`:     ...caveman: ultra brief, rough and stuttering.
 
--   *response.creativity**: the AI shows...
+-   **response.creativity**: the AI shows...
     -    `none`:        ...none creativity and is just fact-based.
     -    `lite`:        ...lite creativity and is combining existing facts.
     -    `full`:        ...full creativity and is discovering new facts.
 
--   *response.autonomy**: the AI is driven as...
+-   **response.autonomy**: the AI is driven as...
     -    `assistant`:   ...an assistant: goal given, plan given, short-running, Human-in-the-Loop (HitL).
     -    `hotl`:        ...an semi-autonomous agent: goal given, plan found, short-running, Human-over-the-Loop (HotL)
     -    `agent`:       ...an autonomous agent: goal given, plan found, long-running, no human interaction
