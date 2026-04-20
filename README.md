@@ -227,10 +227,15 @@ The following ASE commands/skills exist on the code-level:
       externally and ask it to re-propose its last code change against
       the latest source code.
 
-Project Classification
-----------------------
+Classification System
+---------------------
 
-In **ASE**, projects are classified through eight dimensions:
+In **ASE**, the following classification system can be configured on a
+per-user, per-project, per-task, or per-session basis (in this order
+with later scopes overriden earlier scopes).
+
+
+### Project Classification
 
 -   **project.source.ambition**: the project *source code* has to meet the ambition of a...
 
@@ -281,10 +286,7 @@ In **ASE**, projects are classified through eight dimensions:
     -   `mvp`:       ...Minimum Viable Product (in target technology, short life-time, 10-90% solution)
     -   `product`:   ...product (in target technology, long life-time, 100% solution)
 
-AI Classification
------------------
-
-In **ASE**, the Agentic AI is classified by each user through three dimensions:
+### Agent Classification
 
 -   **agent.persona.style**: the Agentic AI *persona* has the communication style of a...
     -    `writer`:      ...writer: decorative, eloquent, and explaining.
