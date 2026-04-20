@@ -5,6 +5,7 @@
 */
 
 import path                   from "node:path"
+import os                     from "node:os"
 import fs                     from "node:fs"
 import readline               from "node:readline/promises"
 
@@ -74,6 +75,26 @@ export const projectClassificationPresets: Record<string, Record<string, string>
     }
 }
 
+/*  configuration scope selector  */
+type Scope =
+    | { kind: "user"                }
+    | { kind: "project"             }
+    | { kind: "task",    id: string }
+    | { kind: "session", id: string }
+
+/*  parse a raw "--scope" option value into a Scope object  */
+const parseScope = (value: string | undefined): Scope => {
+    if (value === "user")
+        return { kind: "user" }
+    else if (value === undefined || value === "project")
+        return { kind: "project" }
+    const m = /^(session|task):([A-Za-z0-9._-]+)$/.exec(value)
+    if (m !== null)
+        return { kind: m[1] as "session" | "task", id: m[2] }
+    throw new Error(`invalid --scope value "${value}" ` +
+        "(expected: \"user\", \"project\", \"task:<id>\", or \"session:<id>\")")
+}
+
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
@@ -96,24 +117,66 @@ export const configSchema = v.nullish(v.strictObject({
     }))
 }))
 
-/*  encapsulate read/write access to a project-local ".ase/<name>.yaml" file  */
+/*  encapsulate read/write access to a "<name>.yaml" configuration file  */
 export class Config {
+    /*  public state  */
     public  filename: string
+
+    /*  private state  */
     private doc:      Document
     private schema:   v.GenericSchema | null
     private log:      Log
 
-    constructor (name: string, schema: v.GenericSchema | undefined, log: Log) {
-        const rel     = path.join(".ase", `${name}.yaml`)
-        const cwd     = process.cwd()
-        const top     = this.gitToplevel()
-        const found   = top !== null ?
-            this.findUpward(cwd, top, rel) :
-            (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
-        this.filename = found ?? path.join(top ?? cwd, rel)
+    /*  creation  */
+    constructor (
+        name:   string,
+        schema: v.GenericSchema | undefined,
+        log:    Log,
+        scope:  Scope = { kind: "project" }
+    ) {
+        this.filename = this.resolveFilename(name, scope)
         this.doc      = new Document()
         this.schema   = schema ?? null
         this.log      = log
+    }
+
+    /*  resolve the per-OS user-scope base directory  */
+    private userConfigDir (): string {
+        if (process.platform === "darwin")
+            /*  macOS  */
+            return path.join(os.homedir(), "Library", "Application Support", "ase")
+        else if (process.platform === "win32")
+            /*  Windows  */
+            return path.join(process.env.APPDATA ?? os.homedir(), "ase")
+        else {
+            /*  Linux  */
+            const xdg  = process.env.XDG_CONFIG_HOME
+            const base = xdg !== undefined && xdg !== "" ? xdg : path.join(os.homedir(), ".config")
+            return path.join(base, "ase")
+        }
+    }
+
+    /*  resolve the configuration filename based on the selected scope  */
+    private resolveFilename (name: string, scope: Scope): string {
+        if (scope.kind === "user")
+            return path.join(this.userConfigDir(), `${name}.yaml`)
+        else if (scope.kind === "project") {
+            const rel   = path.join(".ase", `${name}.yaml`)
+            const cwd   = process.cwd()
+            const top   = this.gitToplevel()
+            const found = top !== null ?
+                this.findUpward(cwd, top, rel) :
+                (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
+            return found ?? path.join(top ?? cwd, rel)
+        }
+        else if (scope.kind === "session" || scope.kind === "task") {
+            const sub = scope.kind === "session" ? "sessions" : "tasks"
+            const top = this.gitToplevel()
+            if (top !== null)
+                return path.join(top, ".ase", sub, scope.id, `${name}.yaml`)
+            else
+                return path.join(this.userConfigDir(), sub, scope.id, `${name}.yaml`)
+        }
     }
 
     /*  upward-walk on filesystem for a file path relative to a start directory,
@@ -302,7 +365,10 @@ export default class ConfigCommand {
         /*  register CLI top-level command "ase config"  */
         const configCmd = program
             .command("config")
-            .description("Manage ASE configuration")
+            .option("--scope <scope>",
+                "configuration scope: \"user\", \"project\", \"task:<id>\", or \"session:<id>\"",
+                "project")
+            .description("manage ASE configuration")
             .action((_opts, cmd: Command) => {
                 cmd.outputHelp()
                 process.exit(1)
@@ -311,13 +377,14 @@ export default class ConfigCommand {
         /*  register CLI sub-command "ase config init"  */
         configCmd
             .command("init")
-            .description("Initialize configuration with preset values (vibe|pro|industry)")
+            .description("initialize configuration with preset values (vibe|pro|industry)")
             .argument("<type>", "Preset type (vibe|pro|industry)")
-            .action((type: string) => {
+            .action((type: string, _opts: unknown, cmd: Command) => {
+                const scope  = parseScope(cmd.optsWithGlobals().scope as string | undefined)
                 const preset = projectClassificationPresets[type]
                 if (preset === undefined)
                     throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
-                const cfg = new Config("config", configSchema, this.log)
+                const cfg = new Config("config", configSchema, this.log, scope)
                 cfg.read()
                 for (const [ k, val ] of Object.entries(preset))
                     cfg.set(k, val)
@@ -327,9 +394,10 @@ export default class ConfigCommand {
         /*  register CLI sub-command "ase config list"  */
         configCmd
             .command("list")
-            .description("List all configured values as flat dotted keys")
-            .action(() => {
-                const cfg = new Config("config", configSchema, this.log)
+            .description("list all configured values as flat dotted keys")
+            .action((_opts: unknown, cmd: Command) => {
+                const scope = parseScope(cmd.optsWithGlobals().scope as string | undefined)
+                const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
                 const table = new Table({
                     head:  [ "KEY", "VALUE" ],
@@ -355,10 +423,11 @@ export default class ConfigCommand {
         /*  register CLI sub-command "ase config edit"  */
         configCmd
             .command("edit")
-            .description("Edit configuration file with $EDITOR")
-            .action(async () => {
+            .description("edit configuration file with $EDITOR")
+            .action(async (_opts: unknown, cmd: Command) => {
+                const scope  = parseScope(cmd.optsWithGlobals().scope as string | undefined)
                 const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
-                const cfg    = new Config("config", configSchema, this.log)
+                const cfg    = new Config("config", configSchema, this.log, scope)
                 fs.mkdirSync(path.dirname(cfg.filename), { recursive: true })
                 if (!fs.existsSync(cfg.filename))
                     fs.writeFileSync(cfg.filename, "", "utf8")
@@ -387,10 +456,11 @@ export default class ConfigCommand {
         /*  register CLI sub-command "ase config get"  */
         configCmd
             .command("get")
-            .description("Print the value at a dotted configuration key")
-            .argument("<key>", "Configuration key (dotted path)")
-            .action((key: string) => {
-                const cfg = new Config("config", configSchema, this.log)
+            .description("print the value at a dotted configuration key")
+            .argument("<key>", "configuration key (dotted path)")
+            .action((key: string, _opts: unknown, cmd: Command) => {
+                const scope = parseScope(cmd.optsWithGlobals().scope as string | undefined)
+                const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
                 const val = cfg.get(key)
                 if (val === undefined)
@@ -403,11 +473,12 @@ export default class ConfigCommand {
         /*  register CLI sub-command "ase config set"  */
         configCmd
             .command("set")
-            .description("Set the value at a dotted configuration key")
-            .argument("<key>",   "Configuration key (dotted path)")
-            .argument("<value>", "Configuration value")
-            .action((key: string, value: string) => {
-                const cfg = new Config("config", configSchema, this.log)
+            .description("set the value at a dotted configuration key")
+            .argument("<key>",   "configuration key (dotted path)")
+            .argument("<value>", "configuration value")
+            .action((key: string, value: string, _opts: unknown, cmd: Command) => {
+                const scope = parseScope(cmd.optsWithGlobals().scope as string | undefined)
+                const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
                 cfg.set(key, value)
                 cfg.write()

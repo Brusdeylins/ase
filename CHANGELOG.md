@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.0.9 (2026-04-21)
+------------------
+
+- IMPROVEMENT: add --scope option to "ase config" command
+
 0.0.8 (2026-04-20)
 ------------------
 

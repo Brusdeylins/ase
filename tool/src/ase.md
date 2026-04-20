@@ -48,6 +48,14 @@ The following top-level commands exist for configuration handling:
   The file is validated against a schema: on read, unknown or
   invalid entries are warned about and silently dropped from the
   in-memory view; on set/write, they cause a fatal error.
+  All `ase config` subcommands accept a `--scope` *scope* option
+  (default `project`) that selects which configuration file is
+  read and written. Recognized *scope* values are `project`
+  (per-project file, found by upward search from the current
+  working directory), `user` (per-user file in the per-OS
+  user-configuration directory), `session:`*id* (per-session
+  file), and `task:`*id* (per-task file). The *id* token matches
+  `[A-Za-z0-9._-]+`. See *FILES* below for the resulting paths.
 
 - `ase config init` *type*:
   Initialize `.ase/config.yaml` with preset values for all recognized
@@ -116,16 +124,35 @@ The following top-level commands exist for service management:
 ## FILES
 
 - `.ase/config.yaml`:
-  Per-project *ASE* configuration. Read upward from the current working
-  directory. Recognized keys: `project.id` (non-empty string, uniqued
-  project id), `project.name` (non-empty string, descriptive project
-  name), `project.source.ambition` (`artist`|`craftsman`|`engineer`),
-  `project.source.boxing` (`white`|`grey`|`black`), `project.source.size`
+  Per-project *ASE* configuration (scope `project`). Read upward from
+  the current working directory. Recognized keys: `project.id` (non-empty
+  string, uniqued project id), `project.name` (non-empty string,
+  descriptive project name), `project.source.ambition`
+  (`artist`|`craftsman`|`engineer`), `project.source.boxing`
+  (`white`|`grey`|`black`), `project.source.size`
   (`small`|`medium`|`large`), `project.source.structure`
   (`bare`|`library`|`framework`), `project.process.actors`
   (`person`|`team`|`crew`), `project.process.control`
   (`human`|`hitl`|`agent`), `project.process.drive` (`spec`|`code`|`test`),
   and `project.result.target` (`prototype`|`mvp`|`product`).
+
+- `.ase/sessions/`*id*`/config.yaml`:
+  Per-session *ASE* configuration (scope `session:`*id*), located
+  relative to the Git top-level directory. Outside a Git repository,
+  the file is placed under the per-user configuration directory at
+  `sessions/`*id*`/config.yaml`.
+
+- `.ase/tasks/`*id*`/config.yaml`:
+  Per-task *ASE* configuration (scope `task:`*id*), located relative
+  to the Git top-level directory. Outside a Git repository, the file
+  is placed under the per-user configuration directory at
+  `tasks/`*id*`/config.yaml`.
+
+- *per-user configuration directory*`/config.yaml`:
+  Per-user *ASE* configuration (scope `user`). The per-user
+  configuration directory is `~/Library/Application Support/ase` on
+  macOS, `%APPDATA%\ase` on Windows, and `$XDG_CONFIG_HOME/ase`
+  (falling back to `~/.config/ase`) on Linux and other Unix systems.
 
 - `.ase/service.yaml`:
   Per-project service state. Recognized key: `port` (integer in
