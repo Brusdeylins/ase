@@ -1,7 +1,8 @@
 ---
 name: ase-spec-implement
 argument-hint: "<feature-id>"
-description: "Implement a stand-alone feature specification."
+description: >
+    Implement a stand-alone feature specification.
 user-invocable: true
 disable-model-invocation: false
 effort: xhigh

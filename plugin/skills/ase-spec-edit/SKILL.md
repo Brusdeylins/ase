@@ -1,7 +1,8 @@
 ---
 name: ase-spec-edit
 argument-hint: "<feature-id> <summary-or-change>"
-description: "Edit a stand-alone feature specification."
+description: >
+    Edit a stand-alone feature specification.
 user-invocable: true
 disable-model-invocation: false
 effort: high

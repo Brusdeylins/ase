@@ -1,7 +1,10 @@
 ---
 name: ase-meta-llm
 argument-hint: "<llm> <query>"
-description: "Query foreign LLM. Use this skill if a foreign LLM like OpenAI ChatCGPT, Google Gemini, DeepSeek or xAI Grok should be queried."
+description: >
+    Query foreign LLM.
+    Use this skill if a foreign LLM like OpenAI ChatCGPT, Google Gemini,
+    DeepSeek or xAI Grok should be queried.
 user-invocable: true
 disable-model-invocation: false
 context: fork

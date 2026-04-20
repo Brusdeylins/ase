@@ -1,7 +1,8 @@
 ---
 name: ase-code-commit
 argument-hint: ""
-description: "Determine commit message for staged Git changes"
+description: >
+    Determine commit message for staged Git changes.
 user-invocable: true
 disable-model-invocation: false
 effort: medium

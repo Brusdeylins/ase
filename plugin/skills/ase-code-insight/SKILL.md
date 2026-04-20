@@ -1,6 +1,7 @@
 ---
 name: ase-code-insight
-description: "Give insights into the source code."
+description: >
+    Give insights into the source code.
 user-invocable: true
 disable-model-invocation: false
 effort: low

@@ -1,7 +1,8 @@
 ---
 name: ase-meta-plan
 argument-hint: "<plan-id>"
-description: "XXX"
+description: >
+    FIXME
 user-invocable: false
 disable-model-invocation: false
 effort: medium

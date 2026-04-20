@@ -1,7 +1,8 @@
 ---
 name: ase-code-elaborate
 argument-hint: "<problem-reference>"
-description: "Elaborate on a source code problem in depth to fix it."
+description: >
+    Elaborate on a source code problem in depth to fix it.
 user-invocable: true
 disable-model-invocation: false
 effort: high

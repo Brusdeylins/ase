@@ -1,7 +1,8 @@
 ---
 name: ase-code-lint
 argument-hint: "<source-reference>"
-description: Lint Source Code
+description: >
+    Lint Source Code.
 user-invocable: true
 disable-model-invocation: false
 effort: medium

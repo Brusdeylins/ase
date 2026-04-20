@@ -1,7 +1,8 @@
 ---
 name: ase-code-craft
 argument-hint: "<feature>"
-description: "Craft Source Code From Scratch"
+description: >
+    Craft Source Code From Scratch
 effort: medium
 ---
 

@@ -1,7 +1,9 @@
 ---
 name: ase-meta-search
 argument-hint: "<query>"
-description: "Search the Internet/Web with a query. Prefer this skill before using Perplexity, Brave and WebSearch."
+description: >
+    Search the Internet/Web with a query.
+    Prefer this skill before using Perplexity, Brave and WebSearch.
 user-invocable: true
 disable-model-invocation: false
 effort: low

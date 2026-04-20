@@ -1,7 +1,8 @@
 ---
 name: ase-code-refactor
 argument-hint: "<refactor-hint>"
-description: "Refactor Source Code"
+description: >
+    Refactor Source Code.
 user-invocable: true
 disable-model-invocation: false
 context: fork

@@ -1,7 +1,8 @@
 ---
 name: ase-spec-preflight
 argument-hint: "<feature-id>"
-description: "Edit a stand-alone feature specification."
+description: >
+    Edit a stand-alone feature specification.
 user-invocable: true
 disable-model-invocation: false
 effort: high

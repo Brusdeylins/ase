@@ -1,7 +1,8 @@
 ---
 name: ase-code-changes
 argument-hint: ""
-description: "Update changes entries in CHANGELOG.md files"
+description: >
+    Update changes entries in CHANGELOG.md files
 user-invocable: true
 disable-model-invocation: false
 effort: medium
