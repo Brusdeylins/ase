@@ -43,9 +43,20 @@ Skill Output
         contains any of the box-drawing characters listed above
         *without* a preceding `Bash(ase diagram ...)` tool call
         in this same turn, you broke the rule — re-render via
-        the tool. The tool's stdout is included *verbatim*
-        inside a Markdown fenced code block. The tool defaults
-        to aligned Unicode box-drawing; do *not* pass `--ascii`.
+        the tool. The tool defaults to aligned Unicode box-
+        drawing; do *not* pass `--ascii`.
+
+    -   *MUST reproduce the tool stdout in the response text*.
+        After the `Bash(ase diagram ...)` call completes, the
+        skill *MUST* copy the tool's stdout *verbatim* into a
+        Markdown fenced code block placed in the response text
+        immediately after the tool call. The terminal's Bash-
+        tool display is *collapsed* by default (`+N lines
+        (ctrl+o to expand)`) — the user reads the fenced block
+        in the response, not the tool display. *Both* must
+        appear. Emitting only the tool call without the
+        reproduction is a defect: the diagram is effectively
+        invisible.
 
     -   *Keep diagrams narrow* — target *≤120 chars rendered
         width*. The renderer's horizontal extent scales with
