@@ -1,5 +1,5 @@
 ---
-name: ase-arch-analyse
+name: ase-arch-analyze
 argument-hint: "<source-reference>"
 description: Review software architecture
 user-invocable: true
