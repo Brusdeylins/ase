@@ -75,24 +75,84 @@ export const projectClassificationPresets: Record<string, Record<string, string>
     }
 }
 
-/*  configuration scope selector  */
-type Scope =
+/*  single scope term  */
+type ScopeTerm =
     | { kind: "user"                }
     | { kind: "project"             }
     | { kind: "task",    id: string }
     | { kind: "session", id: string }
 
-/*  parse a raw "--scope" option value into a Scope object  */
-const parseScope = (value: string | undefined): Scope => {
+/*  a scope chain (one or more terms, canonical order user<project<task<session)  */
+type Scope = ScopeTerm[]
+
+/*  canonical ordering rank of a scope kind  */
+const scopeRank = (kind: ScopeTerm["kind"]): number =>
+    ({ user: 0, project: 1, task: 2, session: 3 })[kind]
+
+/*  parse a single scope term  */
+const parseScopeTerm = (value: string): ScopeTerm => {
     if (value === "user")
         return { kind: "user" }
-    else if (value === undefined || value === "project")
+    else if (value === "project")
         return { kind: "project" }
     const m = /^(session|task):([A-Za-z0-9._-]+)$/.exec(value)
     if (m !== null)
         return { kind: m[1] as "session" | "task", id: m[2] }
-    throw new Error(`invalid --scope value "${value}" ` +
+    throw new Error(`invalid --scope term "${value}" ` +
         "(expected: \"user\", \"project\", \"task:<id>\", or \"session:<id>\")")
+}
+
+/*  detect whether a project context exists, i.e. either we are inside
+    a Git working tree or a ".ase" directory is present at or above cwd  */
+const hasProjectContext = (): boolean => {
+    try {
+        const result = execaSync("git", [ "rev-parse", "--show-toplevel" ], { stderr: "ignore" })
+        if (result.stdout.trim() !== "")
+            return true
+    }
+    catch {
+        /*  not inside a Git working tree  */
+    }
+    let dir = fs.realpathSync(process.cwd())
+    for (;;) {
+        if (fs.existsSync(path.join(dir, ".ase")))
+            return true
+        const parent = path.dirname(dir)
+        if (parent === dir)
+            return false
+        dir = parent
+    }
+}
+
+/*  parse a raw "--scope" option value into a canonical Scope chain;
+    accepts a comma-separated list of terms in any order. The "user"
+    term is always implicitly added at the bottom of the chain; the
+    "project" term is implicitly added only when a project context
+    exists (Git repository or ".ase" directory at or above cwd), and
+    an explicit "project" term requires that same context  */
+const parseScope = (value: string | undefined): Scope => {
+    const projectActive = hasProjectContext()
+    const input         = (value === undefined || value === "") ?
+        (projectActive ? "project" : "user") :
+        value.trim()
+    if (input === "")
+        throw new Error("invalid --scope: value must not be empty")
+    const terms: ScopeTerm[] = input.split(",").map((s) => parseScopeTerm(s.trim()))
+    const seen = new Set<string>()
+    for (const t of terms) {
+        if (seen.has(t.kind))
+            throw new Error(`invalid --scope: duplicate term of kind "${t.kind}"`)
+        seen.add(t.kind)
+    }
+    if (seen.has("project") && !projectActive)
+        throw new Error("invalid --scope: \"project\" requires a project context " +
+            "(a Git repository or a \".ase\" directory at or above the current directory)")
+    if (!seen.has("project") && projectActive)
+        terms.unshift({ kind: "project" })
+    if (!seen.has("user"))
+        terms.unshift({ kind: "user" })
+    terms.sort((a, b) => scopeRank(a.kind) - scopeRank(b.kind))
+    return terms
 }
 
 /*  schema for ".ase/config.yaml"  */
@@ -117,27 +177,48 @@ export const configSchema = v.nullish(v.strictObject({
     }))
 }))
 
-/*  encapsulate read/write access to a "<name>.yaml" configuration file  */
+/*  single layer inside the scope-inheritance stack  */
+type Layer = { scope: ScopeTerm, filename: string, doc: Document }
+
+/*  encapsulate read/write access to a stack of "<name>.yaml" configuration files,
+    each associated with a scope term; reads cascade along user < project < task < session,
+    writes are confined to the target (strongest) scope term  */
 export class Config {
     /*  public state  */
     public  filename: string
 
     /*  private state  */
-    private doc:      Document
-    private schema:   v.GenericSchema | null
-    private log:      Log
+    private name:   string
+    private scope:  Scope
+    private schema: v.GenericSchema | null
+    private log:    Log
+    private docs:   Layer[]
+    private target: number
 
     /*  creation  */
     constructor (
         name:   string,
         schema: v.GenericSchema | undefined,
         log:    Log,
-        scope:  Scope = { kind: "project" }
+        scope:  Scope = [ { kind: "project" } ]
     ) {
-        this.filename = this.resolveFilename(name, scope)
-        this.doc      = new Document()
+        if (scope.length === 0)
+            throw new Error("invalid scope: chain must not be empty")
+        this.name     = name
+        this.scope    = scope
         this.schema   = schema ?? null
         this.log      = log
+        const tgt     = scope[scope.length - 1]
+        this.filename = this.resolveFilename(name, tgt)
+        this.docs     = [ { scope: tgt, filename: this.filename, doc: new Document() } ]
+        this.target   = 0
+    }
+
+    /*  render a scope term as a short textual label  */
+    static scopeLabel (term: ScopeTerm): string {
+        if (term.kind === "user" || term.kind === "project")
+            return term.kind
+        return `${term.kind}:${term.id}`
     }
 
     /*  resolve the per-OS user-scope base directory  */
@@ -156,11 +237,11 @@ export class Config {
         }
     }
 
-    /*  resolve the configuration filename based on the selected scope  */
-    private resolveFilename (name: string, scope: Scope): string {
-        if (scope.kind === "user")
+    /*  resolve the configuration filename based on the selected scope term  */
+    private resolveFilename (name: string, term: ScopeTerm): string {
+        if (term.kind === "user")
             return path.join(this.userConfigDir(), `${name}.yaml`)
-        else if (scope.kind === "project") {
+        else if (term.kind === "project") {
             const rel   = path.join(".ase", `${name}.yaml`)
             const cwd   = process.cwd()
             const top   = this.gitToplevel()
@@ -169,13 +250,13 @@ export class Config {
                 (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
             return found ?? path.join(top ?? cwd, rel)
         }
-        else if (scope.kind === "session" || scope.kind === "task") {
-            const sub = scope.kind === "session" ? "sessions" : "tasks"
+        else {
+            const sub = term.kind === "session" ? "sessions" : "tasks"
             const top = this.gitToplevel()
             if (top !== null)
-                return path.join(top, ".ase", sub, scope.id, `${name}.yaml`)
+                return path.join(top, ".ase", sub, term.id, `${name}.yaml`)
             else
-                return path.join(this.userConfigDir(), sub, scope.id, `${name}.yaml`)
+                return path.join(this.userConfigDir(), sub, term.id, `${name}.yaml`)
         }
     }
 
@@ -211,33 +292,50 @@ export class Config {
         }
     }
 
-    /*  read configuration file into memory  */
+    /*  read the full scope chain into memory; the requested mode applies
+        to the target scope only, inherited scopes are always lenient  */
     read (mode: "strict" | "lenient" = "lenient"): void {
-        const text = fs.existsSync(this.filename) ? fs.readFileSync(this.filename, "utf8") : ""
-        this.doc   = parseDocument(text)
-        if (this.doc.errors.length > 0) {
-            const msg = `invalid YAML in ${this.filename}: ${this.doc.errors[0].message}`
-            if (mode === "strict")
-                throw new Error(msg)
-            this.log.write("warning", msg)
-            this.doc = new Document()
+        const chain = this.scope
+        const docs: Layer[] = []
+        for (let i = 0; i < chain.length; i++) {
+            const sc         = chain[i]
+            const filename   = this.resolveFilename(this.name, sc)
+            const isTarget   = (i === chain.length - 1)
+            const perDocMode: "strict" | "lenient" = isTarget ? mode : "lenient"
+            const text       = fs.existsSync(filename) ? fs.readFileSync(filename, "utf8") : ""
+            let   doc: Document = parseDocument(text)
+            if (doc.errors.length > 0) {
+                const msg = `invalid YAML in ${filename}: ${doc.errors[0].message}`
+                if (perDocMode === "strict")
+                    throw new Error(msg)
+                this.log.write("warning", msg)
+                doc = new Document()
+            }
+            docs.push({ scope: sc, filename, doc })
         }
-        this.validate(mode)
+        this.docs   = docs
+        this.target = docs.length - 1
+        for (let i = 0; i < docs.length; i++) {
+            const isTarget   = (i === this.target)
+            const perDocMode: "strict" | "lenient" = isTarget ? mode : "lenient"
+            this.validateDoc(docs[i].doc, docs[i].filename, perDocMode)
+        }
     }
 
-    /*  write in-memory configuration back to file  */
+    /*  write in-memory configuration back to the target scope's file  */
     write (): void {
-        this.validate("strict")
-        fs.mkdirSync(path.dirname(this.filename), { recursive: true })
-        fs.writeFileSync(this.filename, this.doc.toString({ indent: 4 }), "utf8")
+        const td = this.docs[this.target]
+        this.validateDoc(td.doc, td.filename, "strict")
+        fs.mkdirSync(path.dirname(td.filename), { recursive: true })
+        fs.writeFileSync(td.filename, td.doc.toString({ indent: 4 }), "utf8")
     }
 
-    /*  validate in-memory configuration against the optional schema  */
-    private validate (mode: "strict" | "lenient" = "strict"): void {
+    /*  validate a single YAML document against the optional schema  */
+    private validateDoc (doc: Document, filename: string, mode: "strict" | "lenient" = "strict"): void {
         if (this.schema === null)
             return
         for (;;) {
-            const result = v.safeParse(this.schema, this.doc.toJS())
+            const result = v.safeParse(this.schema, doc.toJS())
             if (result.success)
                 return
             if (mode === "strict") {
@@ -245,15 +343,15 @@ export class Config {
                     const dotPath = (i.path ?? []).map((p) => String(p.key)).join(".")
                     return dotPath ? `${dotPath}: ${i.message}` : i.message
                 }).join("; ")
-                throw new Error(`invalid configuration in ${this.filename}: ${issues}`)
+                throw new Error(`invalid configuration in ${filename}: ${issues}`)
             }
             let progressed = false
             for (const i of result.issues) {
                 const segs    = (i.path ?? []).map((p) => String(p.key))
                 const dotPath = segs.join(".")
-                this.log.write("warning", `invalid entry in ${this.filename}: ${dotPath ? `${dotPath}: ` : ""}${i.message}`)
+                this.log.write("warning", `invalid entry in ${filename}: ${dotPath ? `${dotPath}: ` : ""}${i.message}`)
                 if (segs.length > 0) {
-                    this.doc.deleteIn(segs)
+                    doc.deleteIn(segs)
                     progressed = true
                 }
                 else
@@ -309,17 +407,69 @@ export class Config {
         return matches[0].join(".")
     }
 
-    /*  retrieve a value at a dotted key, or the root contents if no key given  */
+    /*  retrieve the effective value at a dotted key (strongest scope wins),
+        or the target scope's root contents if no key is given  */
     get (key?: string): unknown {
         if (key === undefined)
-            return this.doc.contents
-        return this.doc.getIn(this.resolveKey(key).split("."))
+            return this.docs[this.target].doc.contents
+        const segs = this.resolveKey(key).split(".")
+        for (let i = this.docs.length - 1; i >= 0; i--) {
+            const v = this.docs[i].doc.getIn(segs)
+            if (v !== undefined)
+                return v
+        }
+        return undefined
     }
 
-    /*  set a value at a dotted key, creating intermediate maps as needed  */
+    /*  retrieve the effective value together with the scope it came from  */
+    getWithOrigin (key: string): { value: unknown, scope: ScopeTerm } | undefined {
+        const segs = this.resolveKey(key).split(".")
+        for (let i = this.docs.length - 1; i >= 0; i--) {
+            const v = this.docs[i].doc.getIn(segs)
+            if (v !== undefined)
+                return { value: v, scope: this.docs[i].scope }
+        }
+        return undefined
+    }
+
+    /*  enumerate the effective leaf entries across the full scope chain;
+        each returned entry identifies the originating scope  */
+    entries (): Array<{ key: string, value: unknown, scope: ScopeTerm }> {
+        const keys = new Set<string>()
+        const walk = (node: unknown, prefix: string[]): void => {
+            if (isMap(node))
+                for (const item of node.items) {
+                    const k = [ ...prefix, String(item.key) ]
+                    if (isMap(item.value))
+                        walk(item.value, k)
+                    else if (isScalar(item.value))
+                        keys.add(k.join("."))
+                    else
+                        throw new Error(`key "${k.join(".")}" has unsupported node type`)
+                }
+        }
+        for (const d of this.docs)
+            walk(d.doc.contents, [])
+        const result: Array<{ key: string, value: unknown, scope: ScopeTerm }> = []
+        for (const k of keys) {
+            const segs = k.split(".")
+            for (let i = this.docs.length - 1; i >= 0; i--) {
+                const v = this.docs[i].doc.getIn(segs)
+                if (v !== undefined) {
+                    result.push({ key: k, value: v, scope: this.docs[i].scope })
+                    break
+                }
+            }
+        }
+        result.sort((a, b) => a.key.localeCompare(b.key))
+        return result
+    }
+
+    /*  set a value at a dotted key in the target scope, creating intermediate maps as needed  */
     set (key: string, value: unknown): void {
         const segments = this.resolveKey(key).split(".")
-        const next     = this.doc.clone()
+        const td       = this.docs[this.target]
+        const next     = td.doc.clone()
         for (let i = 1; i < segments.length; i++) {
             const prefix = segments.slice(0, i)
             const node   = next.getIn(prefix, true)
@@ -329,28 +479,29 @@ export class Config {
                 next.setIn(prefix, next.createNode({}))
         }
         next.setIn(segments, value)
-        const saved = this.doc
-        this.doc    = next
+        const saved = td.doc
+        td.doc      = next
         try {
-            this.validate("strict")
+            this.validateDoc(td.doc, td.filename, "strict")
         }
         catch (err) {
-            this.doc = saved
+            td.doc = saved
             throw err
         }
     }
 
-    /*  delete a value at a dotted key  */
+    /*  delete a value at a dotted key from the target scope  */
     delete (key: string): void {
-        const next = this.doc.clone()
+        const td    = this.docs[this.target]
+        const next  = td.doc.clone()
         next.deleteIn(this.resolveKey(key).split("."))
-        const saved = this.doc
-        this.doc    = next
+        const saved = td.doc
+        td.doc      = next
         try {
-            this.validate("strict")
+            this.validateDoc(td.doc, td.filename, "strict")
         }
         catch (err) {
-            this.doc = saved
+            td.doc = saved
             throw err
         }
     }
@@ -366,8 +517,10 @@ export default class ConfigCommand {
         const configCmd = program
             .command("config")
             .option("--scope <scope>",
-                "configuration scope: \"user\", \"project\", \"task:<id>\", or \"session:<id>\"",
-                "project")
+                "configuration scope chain: comma-separated list of \"user\", \"project\", " +
+                "\"task:<id>\", and/or \"session:<id>\" terms (e.g. \"task:N,session:M\"); " +
+                "\"user\" is always implicitly included and \"project\" is implicitly " +
+                "included whenever a project context (Git repo or upward \".ase\" directory) exists")
             .description("manage ASE configuration")
             .action((_opts, cmd: Command) => {
                 cmd.outputHelp()
@@ -400,23 +553,14 @@ export default class ConfigCommand {
                 const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
                 const table = new Table({
-                    head:  [ "KEY", "VALUE" ],
+                    head:  [ "KEY", "VALUE", "SCOPE" ],
                     chars: { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
                     style: { head: [ "blue" ] }
                 })
-                const list = (node: unknown, prefix: string) => {
-                    if (isMap(node))
-                        for (const item of node.items) {
-                            const k = prefix ? `${prefix}.${item.key}` : String(item.key)
-                            if (isMap(item.value))
-                                list(item.value, k)
-                            else if (!isScalar(item.value))
-                                throw new Error(`key "${k}" has unsupported node type`)
-                            else
-                                table.push([ k, String(item.value.value) ])
-                        }
+                for (const e of cfg.entries()) {
+                    const v = isScalar(e.value) ? e.value.value : e.value
+                    table.push([ e.key, String(v), Config.scopeLabel(e.scope) ])
                 }
-                list(cfg.get(), "")
                 process.stdout.write(`${table.toString()}\n`)
             })
 

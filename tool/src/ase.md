@@ -49,13 +49,28 @@ The following top-level commands exist for configuration handling:
   invalid entries are warned about and silently dropped from the
   in-memory view; on set/write, they cause a fatal error.
   All `ase config` subcommands accept a `--scope` *scope* option
-  (default `project`) that selects which configuration file is
-  read and written. Recognized *scope* values are `project`
-  (per-project file, found by upward search from the current
-  working directory), `user` (per-user file in the per-OS
-  user-configuration directory), `session:`*id* (per-session
-  file), and `task:`*id* (per-task file). The *id* token matches
-  `[A-Za-z0-9._-]+`. See *FILES* below for the resulting paths.
+  that selects the scope chain. The *scope* value is a
+  comma-separated list of scope terms, in any order; each term
+  is one of `user`, `project`, `task:`*id*, or `session:`*id*
+  (where *id* matches `[A-Za-z0-9._-]+`). At most one term per
+  kind is allowed. The chain is canonicalized into the fixed
+  inheritance order `user` < `project` < `task` < `session`.
+  `user` is always implicitly added at the bottom of the chain.
+  `project` is implicitly added only when a *project context*
+  exists -- i.e. when the current working directory is inside a
+  Git repository, or a `.ase` directory is found at or above it.
+  Specifying `project` explicitly without a project context is
+  an error. Without an explicit `--scope`, the target defaults
+  to `project` when a project context exists, otherwise to
+  `user`.
+  Reads cascade from the strongest (rightmost) scope down to the
+  weakest and return the first value that is defined. Writes
+  (`set`, `delete`, `edit`, `init`) are always confined to the
+  strongest (target) scope's own file -- intermediate and weaker
+  scopes are never modified. See *FILES* below for the resulting
+  paths. Example: `--scope task:T1,session:S1` yields the chain
+  `user` -> `project` -> `task:T1` -> `session:S1`, with
+  `session:S1` as the write target.
 
 - `ase config init` *type*:
   Initialize `.ase/config.yaml` with preset values for all recognized
@@ -75,8 +90,12 @@ The following top-level commands exist for configuration handling:
   are reported.
 
 - `ase config list`:
-  List all configured values as flat dotted keys, rendered as a
-  two-column table of `key` and `value`.
+  List all effective configured values across the scope
+  inheritance chain, rendered as a three-column table of `key`,
+  `value`, and `origin`. The `origin` column identifies the
+  scope (`user`, `project`, `task:`*id*, or `session:`*id*) that
+  supplied each value. For overlapping keys only the value from
+  the strongest scope is shown.
 
 - `ase config get` *key*:
   Print the value at the given dotted *key*. Fails with an error
