@@ -68,6 +68,15 @@ user accepts.
    `ase-code-changes`: FEATURE, BUGFIX, REFACTOR, UPDATE,
    CLEANUP, IMPROVEMENT.
 
+   A theme is the *minimal build-safe commit unit*. It must
+   compile and pass tests in isolation. Internally a theme MAY
+   span multiple architectural layers (e.g., interface +
+   implementation + caller); those layers are *reviewed*
+   separately in STEP 6.5 but *committed* together as one
+   atomic commit in STEP 6.7. This decouples commit
+   granularity (topological, bisect-safe) from review
+   granularity (architectural, comprehensible).
+
    Emit the following <template/>:
 
    <template>
@@ -219,7 +228,84 @@ user accepts.
         post-commit, post-push build result* — no other themes'
         changes interfere.
 
-   6.4. *Render the decision view*.
+   6.4. *Decompose the theme into review layers*.
+
+        Partition the theme's staged hunks into an ordered list
+        of *layers* `L1, L2, …, Lk`. Layers are a *review-only*
+        concept — they are never committed separately.
+
+        Apply these heuristics in order; stop when one produces
+        a stable partition:
+
+        - *Path-prefix*: group by top-level directory
+          (e.g., `interfaces/`, `domain/`, `service/`, `api/`,
+          `ui/`).
+        - *Symbol-kind*: separate type declarations,
+          implementations, and call-sites.
+        - *Dependency direction*: within the theme, order
+          layers so later layers reference earlier ones
+          (bottom-up) or the reverse (top-down narrative),
+          whichever explains the change best.
+
+        Emit the following <template/>:
+
+        <template>
+        &#x1F9F1; **LAYERS** in T<n/>: <layer-summary/>
+        </template>
+
+        Hints:
+
+        - `<layer-summary/>` is a one-line list
+          `L1: <label>, L2: <label>, …` with concise labels
+          from the chosen heuristic (e.g.,
+          `L1: interfaces, L2: domain, L3: api`).
+        - Layer count range: 1 to 5. If exactly one layer
+          emerges, skip STEP 6.5 and render the full diff in
+          STEP 6.6. More than 5 layers means the theme is too
+          broad — recommend *regroup* in STEP 6.7.
+        - Review-order is independent from build-order
+          (STEP 4). Review-order follows architectural
+          comprehension; build-order is already fixed. The
+          theme still commits atomically in one `git commit`.
+        - Heuristic ambiguity → `AskUserQuestion` with top-two
+          partition proposals plus a free-text override.
+
+   6.5. *Walk the layers*.
+
+        Skip this sub-step if STEP 6.4 produced exactly one
+        layer.
+
+        For each layer `L<i>` emit one *layer card*. Render all
+        cards sequentially in the same response. Do *not* pause
+        with `AskUserQuestion` between layers — walkthrough is
+        a continuous read-through, the single decision for the
+        whole theme comes in STEP 6.7.
+
+        Emit the following <template/> per layer:
+
+        <template>
+        &#x1F539; **LAYER L<i/>** of T<n/> · <label/>
+
+        *Why*: <layer-rationale/>
+        *Hunks*: <hunk-refs/>
+        *Files*: <file-list/>
+
+        <diff-per-file/>
+        </template>
+
+        Hints:
+
+        - `<layer-rationale/>` explains what this layer
+          contributes to the theme's goal — not merely what
+          changed line-wise.
+        - `<diff-per-file/>` follows the same format as in
+          STEP 6.6 but scoped to this layer's hunks only.
+        - No flow diagram at layer level — the full-theme flow
+          diagram is reserved for STEP 6.6.
+        - This sub-step changes no staging, runs no build,
+          asks no questions. Pure review rendering.
+
+   6.6. *Render the decision view*.
 
         On build *success*, emit the following <template/>:
 
@@ -235,9 +321,11 @@ user accepts.
 
         <ascii-diagram-as-fenced-code-block/>
 
-        *Diff*:
+        *Diff*: if STEP 6.5 rendered layer cards, reference
+        them here with "see layer cards in STEP 6.5 above"
+        (diffs already shown per layer); otherwise —
+        single-layer theme — include full `<diff-per-file/>`.
 
-        <diff-per-file/>
         </template>
 
         On build *failure*, emit the following <template/>:
@@ -255,9 +343,11 @@ user accepts.
         ```
         *Likely cause*: <diagnosis/>
 
-        *Diff*:
+        *Diff*: if STEP 6.5 rendered layer cards, reference
+        them with "see layer cards in STEP 6.5 above";
+        otherwise — single-layer theme — include full
+        `<diff-per-file/>` here for diagnosis.
 
-        <diff-per-file/>
         </template>
 
         Hints:
@@ -274,19 +364,20 @@ user accepts.
           Each file becomes one block of the form:
           a `### <filepath>  (<hunk-refs>)` headline, followed
           by a fenced ```diff``` block containing only that
-          file's diff lines. This lets the user navigate large
-          themes by file and back-reference each hunk to the
-          manifest. Do not abridge; show full diff content per
-          file. Use the same `<diff-per-file/>` rendering in the
-          failure template so build errors can be diagnosed
-          against the exact change set.
+          file's diff lines. Do not abridge; show full diff
+          content per file. Primary rendering location is
+          STEP 6.5 layer cards (scoped per layer); this
+          decision view only includes full `<diff-per-file/>`
+          for single-layer themes where STEP 6.5 was skipped.
+          On build failure the same rule applies — diagnose
+          against the layer cards above.
         - Do *not* add quality judgements, improvement
           suggestions, or severity-tagged findings. This skill
           curates changes, it does not review them. Use
           `ase-code-lint`, `ase-code-analyze`, or
           `ase-code-audit` for that.
 
-   6.5. *Decide*. Use `AskUserQuestion` with the single-selection
+   6.7. *Decide*. Use `AskUserQuestion` with the single-selection
         options matching the build outcome. *Every* branch ends
         by restoring the parked hunks via `git stash pop` (skip
         pop only if 6.2 was skipped).
@@ -333,7 +424,7 @@ user accepts.
         conflicting paths, and ask the user to resolve manually
         before resuming. Do not auto-resolve.
 
-   6.6. *Continue* with the next theme in the queue until the
+   6.8. *Continue* with the next theme in the queue until the
         queue is empty or all remaining themes are deferred.
 
    Hints:
