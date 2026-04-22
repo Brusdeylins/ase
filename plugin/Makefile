@@ -9,7 +9,7 @@ CLAUDE = ~/.local/bin/claude
 all: reinstall
 
 install:
-	$(CLAUDE) plugin marketplace add ./
+	$(CLAUDE) plugin marketplace add ../
 	$(CLAUDE) plugin install ase@ase
 
 update:
