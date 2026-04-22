@@ -2,10 +2,17 @@
 ChangeLog
 =========
 
-0.0.9 (2026-04-21)
+0.0.9 (2026-04-22)
 ------------------
 
-- IMPROVEMENT: add --scope option to "ase config" command
+- FEATURE: add persona skill (ase-meta-persona)
+- FEATURE: provide scoped configuration with --scope option
+- FEATURE: support default values in configuration
+- FEATURE: add agent configuration variables
+- FEATURE: provide unique session id in session-start hook context
+- IMPROVEMENT: use multi-line descriptions in skill metadata
+- BUGFIX: fix Makefile path and README markup
+- UPDATE: update README documentation
 
 0.0.8 (2026-04-20)
 ------------------
