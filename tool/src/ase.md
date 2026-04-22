@@ -153,7 +153,11 @@ The following top-level commands exist for service management:
   (`bare`|`library`|`framework`), `project.process.actors`
   (`person`|`team`|`crew`), `project.process.control`
   (`human`|`hitl`|`agent`), `project.process.drive` (`spec`|`code`|`test`),
-  and `project.result.target` (`prototype`|`mvp`|`product`).
+  and `project.result.target` (`prototype`|`mvp`|`product`). Agent
+  classification keys: `agent.persona.style`
+  (`writer`|`technician`|`telegrapher`|`caveman`),
+  `agent.persona.creativity` (`none`|`lite`|`full`), and
+  `agent.process.autonomy` (`assistant`|`hotl`|`agent`).
 
 - `.ase/sessions/`*id*`/config.yaml`:
   Per-session *ASE* configuration (scope `session:`*id*), located

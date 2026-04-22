@@ -35,6 +35,17 @@ export const projectClassification = {
     }
 } as const
 
+/*  agent classification taxonomy  */
+export const agentClassification = {
+    persona: {
+        style:      [ "writer",    "technician", "telegrapher", "caveman" ],
+        creativity: [ "none",      "lite",       "full"                   ]
+    },
+    process: {
+        autonomy:   [ "assistant", "hotl",       "agent"                  ]
+    }
+} as const
+
 /*  classification presets  */
 export const projectClassificationPresets: Record<string, Record<string, string>> = {
     vibe: {
@@ -47,7 +58,10 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.process.actors":    "person",
         "project.process.control":   "agent",
         "project.process.drive":     "spec",
-        "project.result.target":     "prototype"
+        "project.result.target":     "prototype",
+        "agent.persona.style":       "writer",
+        "agent.persona.creativity":  "full",
+        "agent.process.autonomy":    "agent",
     },
     pro: {
         "project.id":                "example",
@@ -59,7 +73,10 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.process.actors":    "person",
         "project.process.control":   "human",
         "project.process.drive":     "code",
-        "project.result.target":     "product"
+        "project.result.target":     "product",
+        "agent.persona.style":       "technician",
+        "agent.persona.creativity":  "none",
+        "agent.process.autonomy":    "assitant",
     },
     industry: {
         "project.id":                "example",
@@ -71,7 +88,10 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.process.actors":    "crew",
         "project.process.control":   "hitl",
         "project.process.drive":     "code",
-        "project.result.target":     "mvp"
+        "project.result.target":     "mvp",
+        "agent.persona.style":       "technician",
+        "agent.persona.creativity":  "none",
+        "agent.process.autonomy":    "hotl",
     }
 }
 
@@ -173,6 +193,15 @@ export const configSchema = v.nullish(v.strictObject({
         })),
         result:  v.optional(v.strictObject({
             target:    v.optional(v.picklist(projectClassification.result.target))
+        }))
+    })),
+    agent: v.optional(v.strictObject({
+        persona: v.optional(v.strictObject({
+            style:      v.optional(v.picklist(agentClassification.persona.style)),
+            creativity: v.optional(v.picklist(agentClassification.persona.creativity))
+        })),
+        process: v.optional(v.strictObject({
+            autonomy:   v.optional(v.picklist(agentClassification.process.autonomy))
         }))
     }))
 }))
