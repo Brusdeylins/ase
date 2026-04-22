@@ -270,40 +270,73 @@ user accepts.
         - Heuristic ambiguity → `AskUserQuestion` with top-two
           partition proposals plus a free-text override.
 
-   6.5. *Walk the layers*.
+   6.5. *Walk the theme file by file, interactively*.
 
-        Skip this sub-step if STEP 6.4 produced exactly one
-        layer.
+        Skip this sub-step if the theme contains exactly one
+        file.
 
-        For each layer `L<i>` emit one *layer card*. Render all
-        cards sequentially in the same response. Do *not* pause
-        with `AskUserQuestion` between layers — walkthrough is
-        a continuous read-through, the single decision for the
-        whole theme comes in STEP 6.7.
+        Traverse the theme's files grouped by the layers from
+        STEP 6.4. Emit a one-line layer header when entering
+        each layer; inside a layer present one file at a time.
+        For each file execute this cycle:
 
-        Emit the following <template/> per layer:
+        (a) Emit a short *file card*:
 
-        <template>
-        &#x1F539; **LAYER L<i/>** of T<n/> · <label/>
+            <template>
+            &#x1F4C4; **File i/N** of T<n/> · `<filepath/>`
+            (<lines/>, <kind/>, L<layer-index/>: <layer-label/>)
 
-        *Why*: <layer-rationale/>
-        *Hunks*: <hunk-refs/>
-        *Files*: <file-list/>
+            <short-explanation/>
 
-        <diff-per-file/>
-        </template>
+            <editor-hint/>
+            </template>
+
+        (b) Prompt via `AskUserQuestion` with the single-select
+            options:
+
+            - *next* — advance to next file; on the last file,
+              proceed to STEP 6.6.
+            - *back* — re-render previous file (only if i > 1).
+            - *show-diff* — render `<diff-per-file/>` inline
+              scoped to current file, then re-prompt with the
+              same options.
+            - *discuss* — enter discussion mode for current
+              file.
+            - *decide-now* — abort walkthrough, jump to
+              STEP 6.6.
+
+        (c) *Discussion mode* on *discuss*:
+            - Wait for user's free-text question.
+            - Answer scoped to the *current* file only.
+            - After answering, re-prompt with the same options
+              from (b). Repeat until *next* / *back* /
+              *decide-now*.
 
         Hints:
 
-        - `<layer-rationale/>` explains what this layer
-          contributes to the theme's goal — not merely what
-          changed line-wise.
-        - `<diff-per-file/>` follows the same format as in
-          STEP 6.6 but scoped to this layer's hunks only.
-        - No flow diagram at layer level — the full-theme flow
-          diagram is reserved for STEP 6.6.
-        - This sub-step changes no staging, runs no build,
-          asks no questions. Pure review rendering.
+        - `<short-explanation/>` is 2–5 sentences describing
+          what the file/change does and its role in the
+          theme — *not* a diff. User reviews actual lines in
+          the editor (VSCode Source Control, vim-fugitive,
+          etc.).
+        - `<editor-hint/>` differs by hunk kind:
+          - *add* (new file): "Whole file is the change —
+            view directly in editor."
+          - *modify*: "File has other unstaged changes; view
+            staged subset with `git diff --staged <filepath>`."
+          - *rename*: note old and new path.
+          - *binary*: note size; no diff preview.
+          - *delete*: note file was removed.
+        - No flow diagram at file level — reserved for 6.6.
+        - *discuss* does *not* count as a commit decision. The
+          *accept/skip/regroup/defer/discard* decision comes
+          exclusively from STEP 6.7, on the whole theme.
+        - Discussion is review dialogue — no code editing. Edit
+          requests → *defer*, leave skill, edit externally,
+          re-enter skill.
+        - When the walkthrough reaches the last file and user
+          picks *next*, treat it identically to *decide-now*
+          and transition to STEP 6.6.
 
    6.6. *Render the decision view*.
 
@@ -321,11 +354,9 @@ user accepts.
 
         <ascii-diagram-as-fenced-code-block/>
 
-        *Diff*: if STEP 6.5 rendered layer cards, reference
-        them here with "see layer cards in STEP 6.5 above"
-        (diffs already shown per layer); otherwise —
-        single-layer theme — include full `<diff-per-file/>`.
+        *Diff*:
 
+        <diff-per-file/>
         </template>
 
         On build *failure*, emit the following <template/>:
@@ -343,11 +374,9 @@ user accepts.
         ```
         *Likely cause*: <diagnosis/>
 
-        *Diff*: if STEP 6.5 rendered layer cards, reference
-        them with "see layer cards in STEP 6.5 above";
-        otherwise — single-layer theme — include full
-        `<diff-per-file/>` here for diagnosis.
+        *Diff*:
 
+        <diff-per-file/>
         </template>
 
         Hints:
@@ -365,12 +394,11 @@ user accepts.
           a `### <filepath>  (<hunk-refs>)` headline, followed
           by a fenced ```diff``` block containing only that
           file's diff lines. Do not abridge; show full diff
-          content per file. Primary rendering location is
-          STEP 6.5 layer cards (scoped per layer); this
-          decision view only includes full `<diff-per-file/>`
-          for single-layer themes where STEP 6.5 was skipped.
-          On build failure the same rule applies — diagnose
-          against the layer cards above.
+          content per file. Primary rendering location is this
+          decision view, covering the complete theme. STEP 6.5
+          emits the same format on-demand via *show-diff*
+          scoped to a single file. Same rule applies on build
+          failure — render full diff here for diagnosis.
         - Do *not* add quality judgements, improvement
           suggestions, or severity-tagged findings. This skill
           curates changes, it does not review them. Use
