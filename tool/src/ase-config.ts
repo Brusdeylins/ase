@@ -76,7 +76,22 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.result.target":     "product",
         "agent.persona.style":       "technician",
         "agent.persona.creativity":  "none",
-        "agent.process.autonomy":    "assitant",
+        "agent.process.autonomy":    "assistant",
+    },
+    default: {
+        "project.id":                "example",
+        "project.name":              "Example Project",
+        "project.source.ambition":   "artist",
+        "project.source.boxing":     "white",
+        "project.source.size":       "medium",
+        "project.source.structure":  "framework",
+        "project.process.actors":    "person",
+        "project.process.control":   "human",
+        "project.process.drive":     "code",
+        "project.result.target":     "product",
+        "agent.persona.style":       "technician",
+        "agent.persona.creativity":  "none",
+        "agent.process.autonomy":    "assistant",
     },
     industry: {
         "project.id":                "example",
@@ -97,17 +112,18 @@ export const projectClassificationPresets: Record<string, Record<string, string>
 
 /*  single scope term  */
 type ScopeTerm =
+    | { kind: "default"             }
     | { kind: "user"                }
     | { kind: "project"             }
     | { kind: "task",    id: string }
     | { kind: "session", id: string }
 
-/*  a scope chain (one or more terms, canonical order user<project<task<session)  */
+/*  a scope chain (one or more terms, canonical order default<user<project<task<session)  */
 type Scope = ScopeTerm[]
 
 /*  canonical ordering rank of a scope kind  */
 const scopeRank = (kind: ScopeTerm["kind"]): number =>
-    ({ user: 0, project: 1, task: 2, session: 3 })[kind]
+    ({ default: -1, user: 0, project: 1, task: 2, session: 3 })[kind]
 
 /*  parse a single scope term  */
 const parseScopeTerm = (value: string): ScopeTerm => {
@@ -172,6 +188,7 @@ const parseScope = (value: string | undefined): Scope => {
     if (!seen.has("user"))
         terms.unshift({ kind: "user" })
     terms.sort((a, b) => scopeRank(a.kind) - scopeRank(b.kind))
+    terms.unshift({ kind: "default" })
     return terms
 }
 
@@ -234,10 +251,10 @@ export class Config {
         if (scope.length === 0)
             throw new Error("invalid scope: chain must not be empty")
         this.name     = name
-        this.scope    = scope
+        this.scope    = scope[0].kind === "default" ? scope : [ { kind: "default" }, ...scope ]
         this.schema   = schema ?? null
         this.log      = log
-        const tgt     = scope[scope.length - 1]
+        const tgt     = this.scope[this.scope.length - 1]
         this.filename = this.resolveFilename(name, tgt)
         this.docs     = [ { scope: tgt, filename: this.filename, doc: new Document() } ]
         this.target   = 0
@@ -245,7 +262,7 @@ export class Config {
 
     /*  render a scope term as a short textual label  */
     static scopeLabel (term: ScopeTerm): string {
-        if (term.kind === "user" || term.kind === "project")
+        if (term.kind === "default" || term.kind === "user" || term.kind === "project")
             return term.kind
         return `${term.kind}:${term.id}`
     }
@@ -268,6 +285,8 @@ export class Config {
 
     /*  resolve the configuration filename based on the selected scope term  */
     private resolveFilename (name: string, term: ScopeTerm): string {
+        if (term.kind === "default")
+            throw new Error("internal error: \"default\" scope has no filename")
         if (term.kind === "user")
             return path.join(this.userConfigDir(), `${name}.yaml`)
         else if (term.kind === "project") {
@@ -328,6 +347,23 @@ export class Config {
         const docs: Layer[] = []
         for (let i = 0; i < chain.length; i++) {
             const sc         = chain[i]
+            if (sc.kind === "default") {
+                const doc = new Document()
+                doc.contents = doc.createNode({})
+                const preset = projectClassificationPresets.default
+                for (const [ k, val ] of Object.entries(preset)) {
+                    const segments = k.split(".")
+                    for (let j = 1; j < segments.length; j++) {
+                        const prefix = segments.slice(0, j)
+                        const node   = doc.getIn(prefix, true)
+                        if (node === undefined)
+                            doc.setIn(prefix, doc.createNode({}))
+                    }
+                    doc.setIn(segments, doc.createNode(val))
+                }
+                docs.push({ scope: sc, filename: "", doc })
+                continue
+            }
             const filename   = this.resolveFilename(this.name, sc)
             const isTarget   = (i === chain.length - 1)
             const perDocMode: "strict" | "lenient" = isTarget ? mode : "lenient"
@@ -354,6 +390,8 @@ export class Config {
     /*  write in-memory configuration back to the target scope's file  */
     write (): void {
         const td = this.docs[this.target]
+        if (td.scope.kind === "default")
+            throw new Error("internal error: \"default\" scope is not writable")
         this.validateDoc(td.doc, td.filename, "strict")
         fs.mkdirSync(path.dirname(td.filename), { recursive: true })
         fs.writeFileSync(td.filename, td.doc.toString({ indent: 4 }), "utf8")
@@ -559,13 +597,13 @@ export default class ConfigCommand {
         /*  register CLI sub-command "ase config init"  */
         configCmd
             .command("init")
-            .description("initialize configuration with preset values (vibe|pro|industry)")
-            .argument("<type>", "Preset type (vibe|pro|industry)")
+            .description("initialize configuration with preset values (default|vibe|pro|industry)")
+            .argument("<type>", "Preset type (default|vibe|pro|industry)")
             .action((type: string, _opts: unknown, cmd: Command) => {
                 const scope  = parseScope(cmd.optsWithGlobals().scope as string | undefined)
                 const preset = projectClassificationPresets[type]
                 if (preset === undefined)
-                    throw new Error(`unknown preset "${type}" (expected: vibe|pro|industry)`)
+                    throw new Error(`unknown preset "${type}" (expected: default|vibe|pro|industry)`)
                 const cfg = new Config("config", configSchema, this.log, scope)
                 cfg.read()
                 for (const [ k, val ] of Object.entries(preset))
