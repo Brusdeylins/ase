@@ -301,7 +301,7 @@ earlier scopes):
 
 -   **agent.persona.style**: the Agentic AI *persona* has the communication style of a...
     -    `writer`:      ...writer: decorative, eloquent, and explaining.
-    -    `technician`:  ...technician: brief, factual and accurate.
+    -    `engineer`:    ...engineer: brief, factual and accurate.
     -    `telegrapher`: ...telegrapher: very brief, factual, and abbreviating.
     -    `caveman`:     ...caveman: ultra brief, rough and stuttering.
 

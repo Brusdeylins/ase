@@ -155,7 +155,7 @@ The following top-level commands exist for service management:
   (`human`|`hitl`|`agent`), `project.process.drive` (`spec`|`code`|`test`),
   and `project.result.target` (`prototype`|`mvp`|`product`). Agent
   classification keys: `agent.persona.style`
-  (`writer`|`technician`|`telegrapher`|`caveman`),
+  (`writer`|`engineer`|`telegrapher`|`caveman`),
   `agent.persona.creativity` (`none`|`lite`|`full`), and
   `agent.process.autonomy` (`assistant`|`hotl`|`agent`).
 

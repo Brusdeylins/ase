@@ -38,7 +38,7 @@ export const projectClassification = {
 /*  agent classification taxonomy  */
 export const agentClassification = {
     persona: {
-        style:      [ "writer",    "technician", "telegrapher", "caveman" ],
+        style:      [ "writer",    "engineer",   "telegrapher", "caveman" ],
         creativity: [ "none",      "lite",       "full"                   ]
     },
     process: {
@@ -74,7 +74,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.process.control":   "human",
         "project.process.drive":     "code",
         "project.result.target":     "product",
-        "agent.persona.style":       "technician",
+        "agent.persona.style":       "engineer",
         "agent.persona.creativity":  "none",
         "agent.process.autonomy":    "assistant",
     },
@@ -89,7 +89,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.process.control":   "human",
         "project.process.drive":     "code",
         "project.result.target":     "product",
-        "agent.persona.style":       "technician",
+        "agent.persona.style":       "engineer",
         "agent.persona.creativity":  "none",
         "agent.process.autonomy":    "assistant",
     },
@@ -104,7 +104,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.process.control":   "hitl",
         "project.process.drive":     "code",
         "project.result.target":     "mvp",
-        "agent.persona.style":       "technician",
+        "agent.persona.style":       "engineer",
         "agent.persona.creativity":  "none",
         "agent.process.autonomy":    "hotl",
     }
