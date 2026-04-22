@@ -228,7 +228,7 @@ user accepts.
         post-commit, post-push build result* — no other themes'
         changes interfere.
 
-   6.4. *Decompose the theme into review layers*.
+   6.4. *Decompose and visualize the theme*.
 
         Partition the theme's staged hunks into an ordered list
         of *layers* `L1, L2, …, Lk`. Layers are a *review-only*
@@ -250,15 +250,51 @@ user accepts.
         Emit the following <template/>:
 
         <template>
-        &#x1F9F1; **LAYERS** in T<n/>: <layer-summary/>
+        &#x1F5FA; **THEME OVERVIEW** T<n/> · <type/>(<scope/>): <one-liner/>
+
+        *Rationale*: <rationale/>
+
+        *Layers* (review order):
+          - L1: <label/> — <layer-purpose/>
+          - L2: <label/> — <layer-purpose/>
+          - …
+
+        *Collaboration*:
+
+        <rendered-diagram-as-fenced-code-block/>
         </template>
 
         Hints:
 
-        - `<layer-summary/>` is a one-line list
-          `L1: <label>, L2: <label>, …` with concise labels
-          from the chosen heuristic (e.g.,
-          `L1: interfaces, L2: domain, L3: api`).
+        - `<rationale/>` is 2–4 sentences reconstructing the
+          goal the theme addresses — what problem, what user
+          outcome, what design choice. *Not* a line-by-line
+          summary of the diff.
+        - `<layer-purpose/>` is *one* sentence per layer
+          explaining what that stage contributes to the
+          theme's goal. Acts as upfront orientation before
+          the file walk in STEP 6.5 — the primary cure for
+          "what are these stages actually about?".
+        - `<rendered-diagram-as-fenced-code-block/>` *MUST*
+          use `ase diagram` per the *Diagrams* rules in the
+          skill meta (Mermaid source on stdin, visible
+          `Bash(ase diagram ...)` tool call, stdout reproduced
+          *verbatim* in the response). Pick the Mermaid type
+          by theme intent:
+          - *classDiagram* — theme introduces types with
+            inheritance, implementation, or composition.
+          - *flowchart TB* — dependencies across components,
+            modules, or layers.
+          - *sequenceDiagram* — actor/message flow
+            (e.g., caller → port → adapter → impl).
+          Default to *flowchart TB* when uncertain. Show how
+          *this theme's* files collaborate — not the whole
+          system.
+        - Omit the diagram with a one-line note
+          ("*no collaboration to diagram — purely textual*")
+          for docs/constants/comments themes. For
+          single-file themes the diagram is usually
+          redundant — omit similarly.
         - Layer count range: 1 to 5. If exactly one layer
           emerges, skip STEP 6.5 and render the full diff in
           STEP 6.6. More than 5 layers means the theme is too
@@ -345,14 +381,12 @@ user accepts.
         <template>
         &#x1F7E2; **THEME T<n/>** · <type/>(<scope/>): <one-liner/>
 
-        *Why*: <rationale/>
         *Hunks*: <hunk-refs/>
         *Files*: <file-list/>
         *Build*: `<build-command/>` — exit 0
 
-        *Flow*:
-
-        <ascii-diagram-as-fenced-code-block/>
+        *Why & Flow*: see **THEME OVERVIEW** in STEP 6.4 above
+        (rationale, layer purposes, collaboration diagram).
 
         *Diff*:
 
@@ -381,14 +415,6 @@ user accepts.
 
         Hints:
 
-        - `<rationale/>` is one or two sentences explaining *why*
-          the AI made this change — reconstruct intent from the
-          diff.
-        - `<ascii-diagram-as-fenced-code-block/>` follows the
-          *Diagrams* rules in the skill meta (Unicode
-          box-drawing, bottom-up sizing, post-render rectangle
-          verification). Keep under 25 lines. Omit if the theme
-          is purely textual (docs, comments, constants).
         - `<diff-per-file/>` groups the staged diff *per file*.
           Each file becomes one block of the form:
           a `### <filepath>  (<hunk-refs>)` headline, followed
