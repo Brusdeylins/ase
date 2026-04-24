@@ -42,10 +42,11 @@ code and *explain* it in *brief* and *concise* way.
     **Draw a diagram**.
     Show the flow, structure, or relationships.
     What gives the best overall overview of the code?
-    Choose diagrams of the type UML Class Diagram, UML Sequence Diagram or Boxes'n'Lines.
-    Render the diagram via `ase diagram` by piping Mermaid source
-    through the `Bash` tool, per the *Diagrams* rules in the skill
-    meta. Do *not* hand-draw.
+    Choose the Mermaid diagram type per intent: `classDiagram` for
+    class/method structure, `sequenceDiagram` for actor/message flow,
+    or `flowchart TB` for boxes-and-lines component layouts.
+    Invoke the `ase-diagram` skill via the `Skill` tool to render the
+    diagram. Do *not* hand-draw.
     </step>
 
 4.  <step id="STEP 4: WALK-THROUGH">
