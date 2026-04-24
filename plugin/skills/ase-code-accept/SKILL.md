@@ -336,6 +336,9 @@ user accepts.
               same options.
             - *discuss* — enter discussion mode for current
               file.
+            - *split-sections* — *only offered* when the file
+              exceeds *300 lines*; enter section walkthrough
+              sub-loop for the current file.
             - *decide-now* — abort walkthrough, jump to
               STEP 6.6.
 
@@ -345,6 +348,30 @@ user accepts.
             - After answering, re-prompt with the same options
               from (b). Repeat until *next* / *back* /
               *decide-now*.
+
+        (d) *Section walkthrough* on *split-sections*:
+            Propose *3–8 semantic sections* of the current file
+            — grouped by *responsibility* (e.g., fields & class
+            header, hot-path method, helper cluster, seqlock
+            read path), *not* by raw syntactic partition. Label
+            each section with its primary concern plus a line
+            range hint (`Z.NN-MM`).
+
+            Loop:
+            - `AskUserQuestion` — numbered single-select:
+              - `1`, `2`, … `k` — one per proposed section.
+              - *whole-file* — abort section walk, return to
+                (b) and treat file as a single unit.
+              - *file-done* — exit section walk, return to
+                (b) to pick *next* / *discuss* / etc.
+            - On numbered pick: emit a *section card* with
+              2–6 sentences on *what* the section does and
+              *why* it is shaped that way (pattern, invariant,
+              trade-off). Reference concrete identifiers and
+              line numbers. No diff, no full listing.
+            - Remove the chosen section from the offered list;
+              re-prompt. When all sections consumed, treat as
+              *file-done* automatically.
 
         Hints:
 
@@ -371,6 +398,17 @@ user accepts.
         - When the walkthrough reaches the last file and user
           picks *next*, treat it identically to *decide-now*
           and transition to STEP 6.6.
+        - *Section-walk threshold*: offer *split-sections* when
+          the file's *total LOC* (not just changed lines)
+          exceeds *300*. The user reviews changes in the
+          context of the surrounding file, so the whole-file
+          size drives the decision. Below the threshold, omit
+          the option entirely — do not clutter the prompt.
+        - *Section proposal*: group by *responsibility*, not by
+          syntactic slicing. A good section captures one
+          concern (hot path, seqlock write, lazy rebuild,
+          listener dispatch). Aim for *3–8* sections;
+          mechanical splits (every-50-lines) are a defect.
 
    6.6. *Render the decision view*.
 
