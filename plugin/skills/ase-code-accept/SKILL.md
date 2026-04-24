@@ -276,11 +276,9 @@ user accepts.
           the file walk in STEP 6.5 — the primary cure for
           "what are these stages actually about?".
         - `<rendered-diagram-as-fenced-code-block/>` *MUST*
-          use `ase diagram` per the *Diagrams* rules in the
-          skill meta (Mermaid source on stdin, visible
-          `Bash(ase diagram ...)` tool call, stdout reproduced
-          *verbatim* in the response). Pick the Mermaid type
-          by theme intent:
+          be rendered by invoking the `ase-diagram` skill via
+          the `Skill` tool. Pick the Mermaid type by theme
+          intent:
           - *classDiagram* — theme introduces types with
             inheritance, implementation, or composition.
           - *flowchart TB* — dependencies across components,
