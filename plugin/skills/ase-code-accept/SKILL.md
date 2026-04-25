@@ -195,6 +195,17 @@ user accepts.
    one theme at a time. Non-accepted themes are handled per the
    chosen option and do not re-enter the queue unless *regroup*ed.
 
+   *Never prompt in free text*. Across *every* sub-step (6.1
+   through 6.8) — staging, isolation, build, layer entry, file
+   prompt, section walk, decision view, stash-pop conflict —
+   any continuation, confirmation, or decision *MUST* go through
+   `AskUserQuestion` with a defined option set. Free-text prompts
+   like "OK weiter mit 5b?", "Commit?", or "Soll ich noch was
+   klären?" are a defect: replace with the matching
+   `AskUserQuestion` prompt for that boundary. The decision view
+   in 6.6 ends with the 6.7 `AskUserQuestion`, never with a
+   free-text question.
+
    For each theme in the queue, execute the following sub-cycle:
 
    6.1. *Stage*. Clear the index with `git reset` (working tree
@@ -424,13 +435,6 @@ user accepts.
           context of the surrounding file, so the whole-file
           size drives the decision. Below the threshold, omit
           the option entirely — do not clutter the prompt.
-        - *Never prompt in free text*. Every confirmation,
-          continuation, or decision in this step *MUST* go
-          through `AskUserQuestion` with a defined option set
-          — at layer entry, file prompt, section walk, and
-          discussion mode. Free-text questions like "OK weiter
-          mit 5b?" are a defect: replace with the matching
-          `AskUserQuestion` prompt for that boundary.
         - *Section proposal*: group by *responsibility*, not by
           syntactic slicing. A good section captures one
           concern (hot path, seqlock write, lazy rebuild,
