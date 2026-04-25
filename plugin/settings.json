@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Skill(ase:ase-code-review)"
+      "Skill(ase:ase-code-review)",
+      "Bash(git diff:* | awk:* | head:*)",
+      "Bash(git diff:* | awk:* | tail:*)",
+      "Bash(git diff:* | awk:* | wc:*)",
+      "Bash(git diff:* | grep:* | head:*)",
+      "Bash(git diff:* | grep:* | wc:*)",
+      "Bash(git log:* | grep:* | head:*)",
+      "Bash(git log:* | awk:* | head:*)",
+      "Bash(cat:* | awk:* | head:*)",
+      "Bash(cat:* | grep:* | head:*)",
+      "Bash(awk '*)",
+      "Bash(awk \"*)"
     ]
   }
 }
