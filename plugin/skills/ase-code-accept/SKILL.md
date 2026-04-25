@@ -310,9 +310,29 @@ user accepts.
         file.
 
         Traverse the theme's files grouped by the layers from
-        STEP 6.4. Emit a one-line layer header when entering
-        each layer; inside a layer present one file at a time.
-        For each file execute this cycle:
+        STEP 6.4. On entering each layer, emit a *layer card*:
+
+        <template>
+        &#x1F539; **Layer L<layer-index/> — <layer-label/>** of T<n/>
+        (<file-count/> files: <file-list/>)
+
+        <one-sentence-purpose/>
+        </template>
+
+        Then prompt via `AskUserQuestion` with the single-select
+        options:
+
+        - *proceed-layer* — enter the per-file walk for this
+          layer.
+        - *skip-layer* — treat the layer as already reviewed
+          and advance to the next layer (or to STEP 6.6 if it
+          was the last).
+        - *back-layer* — return to the previous layer (only if
+          not the first).
+        - *decide-now* — abort walkthrough, jump to STEP 6.6.
+
+        Inside a layer present one file at a time. For each
+        file execute this cycle:
 
         (a) Emit a short *file card*:
 
@@ -404,6 +424,13 @@ user accepts.
           context of the surrounding file, so the whole-file
           size drives the decision. Below the threshold, omit
           the option entirely — do not clutter the prompt.
+        - *Never prompt in free text*. Every confirmation,
+          continuation, or decision in this step *MUST* go
+          through `AskUserQuestion` with a defined option set
+          — at layer entry, file prompt, section walk, and
+          discussion mode. Free-text questions like "OK weiter
+          mit 5b?" are a defect: replace with the matching
+          `AskUserQuestion` prompt for that boundary.
         - *Section proposal*: group by *responsibility*, not by
           syntactic slicing. A good section captures one
           concern (hot path, seqlock write, lazy rebuild,
