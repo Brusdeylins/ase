@@ -1,5 +1,5 @@
 ---
-name: ase-code-accept
+name: ase-code-review
 argument-hint: "[<ref>]"
 description: "Review uncommitted changes and curate them into clean, bisect-safe commits grouped by theme."
 user-invocable: true
@@ -10,7 +10,7 @@ effort: medium
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 
-Accept AI-Generated Changes
+Review AI-Generated Changes
 ===========================
 
 Your role is an experienced, *expert-level software developer*,
@@ -94,7 +94,7 @@ user accepts.
      content yet. This enforces top-down naming.
    - Prefer 3–5 themes. Fewer is fine if the surface is narrow.
      More than 5 signals the change set is too broad for one
-     acceptance session — stop and ask the user to reduce scope.
+     review session — stop and ask the user to reduce scope.
    </step>
 
 3. <step id="STEP 3: Assign Hunks to Themes">
@@ -166,13 +166,13 @@ user accepts.
    </step>
 
 5. <step id="STEP 5: Create Work Branch">
-   Create a dedicated work branch so acceptance commits do not
+   Create a dedicated work branch so review commits do not
    pollute the current branch until the user merges explicitly.
 
    Run:
    - `git rev-parse --abbrev-ref HEAD` — record the source branch.
    - `AskUserQuestion` — propose a work branch name
-     `accept/<YYYY-MM-DD-HHMM>` and let the user override.
+     `review/<YYYY-MM-DD-HHMM>` and let the user override.
    - `git checkout -b <work-branch>` — switch to the work branch.
 
    Emit the following <template/>:
@@ -218,7 +218,7 @@ user accepts.
 
         Run:
         - `git stash push --keep-index --include-untracked
-          --message "accept-isolate-T<n>"`
+          --message "review-isolate-T<n>"`
 
         Effect: the stash captures every working-tree change
         *not* in the index (i.e. all other themes' hunks and
@@ -560,7 +560,7 @@ user accepts.
      the skill — it will re-manifest the working tree.
    - Never invoke `ase-code-changes` from this skill.
      `CHANGELOG.md` updates belong to a release step, not an
-     acceptance step.
+     review step.
    </step>
 
 7. <step id="STEP 7: Final Summary">
