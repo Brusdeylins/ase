@@ -153,8 +153,12 @@ The following top-level commands exist for service management:
   (`bare`|`library`|`framework`), `project.process.actors`
   (`person`|`team`|`crew`), `project.process.control`
   (`human`|`hitl`|`agent`), `project.process.drive` (`spec`|`code`|`test`),
-  and `project.result.target` (`prototype`|`mvp`|`product`). Agent
-  classification keys: `agent.persona.style`
+  and `project.result.target` (`prototype`|`mvp`|`product`). Project
+  artifact keys (each a Minimatch glob pattern, relative to the project
+  base directory): `project.artifact.docs` (documentation files),
+  `project.artifact.code` (source code files), `project.artifact.build`
+  (build-time artifacts), `project.artifact.spec` (specification files),
+  and `project.artifact.arch` (architecture files). Agent classification keys: `agent.persona.style`
   (`writer`|`engineer`|`telegrapher`|`caveman`),
   `agent.persona.creativity` (`none`|`lite`|`full`), and
   `agent.process.autonomy` (`assistant`|`hotl`|`agent`).

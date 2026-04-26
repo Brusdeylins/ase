@@ -89,6 +89,11 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.process.control":   "human",
         "project.process.drive":     "code",
         "project.result.target":     "product",
+        "project.artifact.build":    "{etc/**,README.md,AGENTS.md,LICENSE.txt,package.json}",
+        "project.artifact.code":     "src/**/*",
+        "project.artifact.docs":     "doc/user/**/*.md",
+        "project.artifact.spec":     "doc/spec/**/*.md",
+        "project.artifact.arch":     "doc/arch/**/*.md",
         "agent.persona.style":       "engineer",
         "agent.persona.creativity":  "none",
         "agent.process.autonomy":    "assistant",
@@ -210,6 +215,13 @@ export const configSchema = v.nullish(v.strictObject({
         })),
         result:  v.optional(v.strictObject({
             target:    v.optional(v.picklist(projectClassification.result.target))
+        })),
+        artifact: v.optional(v.strictObject({
+            build:     v.optional(v.pipe(v.string(), v.minLength(1))),
+            code:      v.optional(v.pipe(v.string(), v.minLength(1))),
+            docs:      v.optional(v.pipe(v.string(), v.minLength(1))),
+            spec:      v.optional(v.pipe(v.string(), v.minLength(1))),
+            arch:      v.optional(v.pipe(v.string(), v.minLength(1)))
         }))
     })),
     agent: v.optional(v.strictObject({

@@ -297,6 +297,17 @@ earlier scopes):
     -   `mvp`:       ...Minimum Viable Product (in target technology, short life-time, 10-90% solution)
     -   `product`:   ...product (in target technology, long life-time, 100% solution)
 
+### Project Artifacts
+
+Each artifact key is a [Minimatch](https://github.com/isaacs/minimatch)
+glob pattern, evaluated relative to the project base directory:
+
+-   **project.artifact.build**: glob pattern matching the project *build-time artifact* files.
+-   **project.artifact.code**: glob pattern matching the project *source code* files.
+-   **project.artifact.docs**: glob pattern matching the project *documentation* files.
+-   **project.artifact.spec**: glob pattern matching the project *specification* files.
+-   **project.artifact.arch**: glob pattern matching the project *architecture* files.
+
 ### Agent Classification
 
 -   **agent.persona.style**: the Agentic AI *persona* has the communication style of a...
