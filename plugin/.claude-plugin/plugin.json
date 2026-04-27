@@ -1,9 +1,14 @@
 {
-    "name": "ase",
+    "name":        "ase",
+    "version":     "0.0.9",
     "description": "Agentic Software Engineering (ASE)",
-    "version": "0.0.9",
+    "keywords":    [ "agentic", "software", "engineering" ],
+    "homepage":    "https://ase.tools",
+    "repository":  "https://github.com/rse/ase",
+    "license":     "GPL-3.0",
     "author": {
-        "name": "Dr. Ralf S. Engelschall",
-        "url":  "mailto:rse@engelschall.com"
+        "name":    "Dr. Ralf S. Engelschall",
+        "email":   "rse@engelschall.com",
+        "url":     "https://engelschall.com"
     }
 }
