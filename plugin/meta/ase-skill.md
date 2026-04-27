@@ -166,8 +166,8 @@ Skill Sequential Processing
 Skill Identification
 --------------------
 
-- *IMPORTANT*: Initially, you *MUST* once output your <objective/>
-  with the following output <template/>:
+- *IMPORTANT*: Initially, in case <objective/> is not empty,
+  you *MUST* once output the following output <template/>:
 
   <template>
   &#x26AA; **OBJECTIVE**: <objective/>
