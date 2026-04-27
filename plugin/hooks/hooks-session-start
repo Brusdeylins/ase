@@ -8,15 +8,28 @@ const file_md  = path.join(process.env.CLAUDE_PLUGIN_ROOT, "meta/ase-constitutio
 
 const stdin = fs.readFileSync(0, "utf8")
 const input = stdin.trim() !== "" ? JSON.parse(stdin) : {}
-const session_id = input.session_id ?? ""
+const sessionId = input.session_id ?? ""
+
+const taskId = process.env.ASE_TASK_ID ?? "default"
 
 const pkg = fs.readFileSync(file_pkg, "utf8")
 let   md  = fs.readFileSync(file_md,  "utf8")
 
+const envFile = process.env.CLAUDE_ENV_FILE ?? ""
+if (envFile !== "") {
+    const script =
+        `export ASE_SESSION_ID="${sessionId}"\n` +
+        `export ASE_TASK_ID="${taskId}"\n`
+    fs.appendFileSync(envFile, script, "utf8")
+}
+
 const version = JSON.parse(pkg).version
 md = md.replace(/\$VERSION/g, version)
 
-md = `<ase-session-id>${ session_id }</ase-session-id>\n\n${ md }`
+md =
+    `<ase-task-id>${taskId}</ase-task-id>\n` +
+    `<ase-session-id>${sessionId}</ase-session-id>\n` +
+    "\n" + md
 
 const result = {
     "hookSpecificOutput": {
