@@ -144,6 +144,20 @@ The following top-level commands exist for service management:
   the port is not responding, prints an informational message and
   exits with status 0.
 
+The following top-level commands exist for *Claude Code* hook
+integration:
+
+- `ase hook`:
+  Entry point group for *Claude Code* hook events. Without a
+  subcommand, the help text is shown and the command exits with
+  status 1.
+
+- `ase hook session-start`:
+  Handle the *Claude Code* `SessionStart` hook event. This
+  subcommand is intended to be invoked by *Claude Code*
+  internally as a configured hook handler only, not directly
+  by end users.
+
 ## CONFIGURATION FILES
 
 - **user**: *per-user configuration directory*`/config.yaml`:
