@@ -10,6 +10,7 @@ ChangeLog
 - CLEANUP: add more fields to plugin and marketplace descriptors
 - CLEANUP: improve description of config scopes
 - CLEANUP: place task config under the project for now
+- CLEANUP: remove project.process.control variable (overlaps with agent.process.autonomy)
 - CLEANUP: rename and clean up persona skill
 
 0.0.9 (2026-04-22)
