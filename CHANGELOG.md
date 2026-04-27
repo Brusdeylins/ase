@@ -2,8 +2,11 @@
 ChangeLog
 =========
 
-0.0.11 (2026-04-28)
+0.0.11 (2026-04-27)
 -------------------
+
+- BUGFIX: fix markdown in `/ase-meta-persona` skill
+- UPDATE: document `/ase-meta-task` skill and `ase hook session-start` command
 
 0.0.10 (2026-04-27)
 -------------------
