@@ -10,6 +10,7 @@ import Log                         from "./ase-log.js"
 import type { LogLevel }           from "./ase-log.js"
 import ConfigCommand               from "./ase-config.js"
 import ServiceCommand              from "./ase-service.js"
+import HookCommand                 from "./ase-hook.js"
 import pkg                         from "../package.json" with { type: "json" }
 
 /*  type of top-level (global) options  */
@@ -52,6 +53,7 @@ const main = async (): Promise<void> => {
     /*  register top-level commands  */
     new ConfigCommand(log).register(program)
     new ServiceCommand(log).register(program)
+    new HookCommand(log).register(program)
 
     /*  parse program arguments  */
     await program.parseAsync(process.argv)

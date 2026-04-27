@@ -6,7 +6,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/hooks-session-start"
+                        "command": "ase hook session-start"
                     }
                 ]
             }
