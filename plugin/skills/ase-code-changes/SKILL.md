@@ -6,6 +6,10 @@ description: >
 user-invocable: true
 disable-model-invocation: false
 effort: medium
+allowed-tools:
+    - "Bash(git log *)"
+    - "Bash(git status *)"
+    - "Bash(git show *)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md

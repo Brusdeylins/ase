@@ -7,7 +7,7 @@ user-invocable: true
 disable-model-invocation: false
 effort: medium
 allowed-tools:
-    - "Bash(git)"
+    - "Bash(git diff *)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
