@@ -6,6 +6,7 @@ ChangeLog
 -------------------
 
 - FEATURE: add variables for locating files in skill context
+- IMPROVEMENT: allow git commands in code-changes and code-commit skills
 - BUGFIX: fix allowed-tools Bash pattern for ase commands in skills
 - CLEANUP: add more fields to plugin and marketplace descriptors
 - CLEANUP: improve description of config scopes
