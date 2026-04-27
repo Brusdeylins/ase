@@ -330,8 +330,10 @@ Support
 -------
 
 **ASE** is developed in the experience context of industrial Software
-Engineering at the [*msg group*](https://www.msg.group).<br/>
-**ASE** development is supported by *msg Research*.
+Engineering at the [*msg group*](https://www.msg.group) and in the
+educational context of the *Software Engineering Academy (SEA)*. **ASE**
+development is supported by *msg Research* and *Software Engineering
+Academy (SEA)*.
 
 Copyright & License
 -------------------
