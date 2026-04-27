@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 
+/*  built-in dependencies  */
 const path = require("node:path")
 const fs   = require("node:fs")
 
+/*  determine path to external files  */
 const file_pkg = path.join(process.env.CLAUDE_PLUGIN_ROOT, ".claude-plugin/plugin.json")
 const file_md  = path.join(process.env.CLAUDE_PLUGIN_ROOT, "meta/ase-constitution.md")
 
-const stdin = fs.readFileSync(0, "utf8")
-const input = stdin.trim() !== "" ? JSON.parse(stdin) : {}
-const sessionId = input.session_id ?? ""
-
-const taskId = process.env.ASE_TASK_ID ?? "default"
-
+/*  read external files  */
 const pkg = fs.readFileSync(file_pkg, "utf8")
 let   md  = fs.readFileSync(file_md,  "utf8")
 
+/*  read session information  */
+const stdin = fs.readFileSync(0, "utf8")
+const input = stdin.trim() !== "" ? JSON.parse(stdin) : {}
+
+/*  determine session and task id  */
+const sessionId = input.session_id ?? ""
+const taskId = process.env.ASE_TASK_ID ?? "default"
+
+/*  provide session and task id to shell commands  */
 const envFile = process.env.CLAUDE_ENV_FILE ?? ""
 if (envFile !== "") {
     const script =
@@ -23,20 +29,21 @@ if (envFile !== "") {
     fs.appendFileSync(envFile, script, "utf8")
 }
 
+/*  determine own version  */
 const version = JSON.parse(pkg).version
 md = md.replace(/\$VERSION/g, version)
 
+/*  prepend task and session id  */
 md =
     `<ase-task-id>${taskId}</ase-task-id>\n` +
     `<ase-session-id>${sessionId}</ase-session-id>\n` +
     "\n" + md
 
-const result = {
+/*  inject information into session context  */
+process.stdout.write(JSON.stringify({
     "hookSpecificOutput": {
         "hookEventName": "SessionStart",
         "additionalContext": md
     }
-}
-
-process.stdout.write(JSON.stringify(result))
+}))
 
