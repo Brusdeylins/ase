@@ -140,50 +140,31 @@ The following top-level commands exist for service management:
   the port is not responding, prints an informational message and
   exits with status 0.
 
-## FILES
+## CONFIGURATION FILES
 
-- `.ase/config.yaml`:
-  Per-project *ASE* configuration (scope `project`). Read upward from
-  the current working directory. Recognized keys: `project.id` (non-empty
-  string, uniqued project id), `project.name` (non-empty string,
-  descriptive project name), `project.source.ambition`
-  (`artist`|`craftsman`|`engineer`), `project.source.boxing`
-  (`white`|`grey`|`black`), `project.source.size`
-  (`small`|`medium`|`large`), `project.source.structure`
-  (`bare`|`library`|`framework`), `project.process.actors`
-  (`person`|`team`|`crew`), `project.process.control`
-  (`human`|`hitl`|`agent`), `project.process.drive` (`spec`|`code`|`test`),
-  and `project.result.target` (`prototype`|`mvp`|`product`). Project
-  artifact keys (each a Minimatch glob pattern, relative to the project
-  base directory): `project.artifact.docs` (documentation files),
-  `project.artifact.code` (source code files), `project.artifact.build`
-  (build-time artifacts), `project.artifact.spec` (specification files),
-  and `project.artifact.arch` (architecture files). Agent classification keys: `agent.persona.style`
-  (`writer`|`engineer`|`telegrapher`|`caveman`),
-  `agent.persona.creativity` (`none`|`lite`|`full`), and
-  `agent.process.autonomy` (`assistant`|`hotl`|`agent`).
-
-- `.ase/sessions/`*id*`/config.yaml`:
-  Per-session *ASE* configuration (scope `session:`*id*), located
-  relative to the Git top-level directory. Outside a Git repository,
-  the file is placed under the per-user configuration directory at
-  `sessions/`*id*`/config.yaml`.
-
-- `.ase/tasks/`*id*`/config.yaml`:
-  Per-task *ASE* configuration (scope `task:`*id*), located relative
-  to the Git top-level directory. Outside a Git repository, the file
-  is placed under the per-user configuration directory at
-  `tasks/`*id*`/config.yaml`.
-
-- *per-user configuration directory*`/config.yaml`:
+- **user**: *per-user configuration directory*`/config.yaml`:
   Per-user *ASE* configuration (scope `user`). The per-user
   configuration directory is `~/Library/Application Support/ase` on
   macOS, `%APPDATA%\ase` on Windows, and `$XDG_CONFIG_HOME/ase`
   (falling back to `~/.config/ase`) on Linux and other Unix systems.
 
+- **project**: `.ase/config.yaml`:
+  Per-project *ASE* configuration (scope `project`). Read upward from
+  the current working directory.
+
+- **task**: `.ase/task/`*id*`/config.yaml`:
+  Per-task *ASE* configuration (scope `task:`*id*), located relative
+  to the Git top-level directory. Outside a Git repository, the file
+  is placed relative to the current working directory.
+
+- **session**: `~/.ase/session/`*id*`/config.yaml`:
+  Per-session *ASE* configuration (scope `session:`*id*), located
+  under the user's home directory (independent of any project context).
+
+## STATE FILES
+
 - `.ase/service.yaml`:
-  Per-project service state. Recognized key: `port` (integer in
-  `1024`..`65535`).
+  Per-project service state.
 
 - `.ase/service.log`:
   Stdout/stderr log of the detached background service.

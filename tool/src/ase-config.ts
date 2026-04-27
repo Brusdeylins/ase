@@ -310,14 +310,12 @@ export class Config {
                 (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
             return found ?? path.join(top ?? cwd, rel)
         }
-        else {
-            const sub = term.kind === "session" ? "sessions" : "tasks"
-            const top = this.gitToplevel()
-            if (top !== null)
-                return path.join(top, ".ase", sub, term.id, `${name}.yaml`)
-            else
-                return path.join(this.userConfigDir(), sub, term.id, `${name}.yaml`)
+        else if (term.kind === "task") {
+            const top = this.gitToplevel() ?? process.cwd()
+            return path.join(top, ".ase", "task", term.id, `${name}.yaml`)
         }
+        else
+            return path.join(os.homedir(), ".ase", "session", term.id, `${name}.yaml`)
     }
 
     /*  upward-walk on filesystem for a file path relative to a start directory,
