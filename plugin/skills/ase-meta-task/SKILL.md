@@ -21,14 +21,14 @@ effort: low
     -   Execute: `ase config --scope="session:<ase-session-id/>" set task.id "<ase-task-id/>"`
     -   Output:
         <template>
-        ASE task id: **<ase-task-id/>** (*updated*)
+        ⚑ **ASE**: task: **<ase-task-id/>** (*updated*)
         </template>
     </if>
 
 3.  <if condition="<request/> is empty">
     -   Output:
         <template>
-        ASE task id: **<ase-task-id/>** (*not updated*)
+        ⚑ **ASE**: task: **<ase-task-id/>**
         </template>
     </if>
 
