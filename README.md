@@ -149,6 +149,11 @@ Usage
 
 The following ASE commands/skills exist on the meta-level:
 
+- **/ase-meta-task** *task-id*:<br/>
+  Get or set the unique ASE task id for the current session. Without an
+  argument, displays the current task id. With an argument, sets the
+  task id (persisted in the session-scoped configuration).
+
 - **/ase-meta-why** *fact*:<br/>
   Perform a Five-Whys root-cause analysis.
 
