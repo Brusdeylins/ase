@@ -280,12 +280,6 @@ earlier scopes):
                      and agents) is collaboratively acting.
     -   `crew`:      ...mixed crew of both persons and robots/agents is collaboratively acting.
 
--   **project.process.control**: the project *process* control is...
-
-    -   `human`:     ...fully under human control.
-    -   `hitl`:      ...off-loaded to agent control with human-in-the-loop (HitL).
-    -   `agent`:     ...fully off-loaded to agent control.
-
 -   **project.process.drive**: the project *process* progress is mainly driven by...
 
     -   `spec`:      ...specification (spec-driven development).

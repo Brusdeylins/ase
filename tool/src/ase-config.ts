@@ -27,7 +27,6 @@ export const projectClassification = {
     },
     process: {
         actors:    [ "person",    "team",      "crew"      ],
-        control:   [ "human",     "hitl",      "agent"     ],
         drive:     [ "spec",      "code",      "test"      ]
     },
     result: {
@@ -56,7 +55,6 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.source.size":       "small",
         "project.source.structure":  "bare",
         "project.process.actors":    "person",
-        "project.process.control":   "agent",
         "project.process.drive":     "spec",
         "project.result.target":     "prototype",
         "agent.persona.style":       "writer",
@@ -71,7 +69,6 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.source.size":       "medium",
         "project.source.structure":  "framework",
         "project.process.actors":    "person",
-        "project.process.control":   "human",
         "project.process.drive":     "code",
         "project.result.target":     "product",
         "agent.persona.style":       "engineer",
@@ -86,7 +83,6 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.source.size":       "medium",
         "project.source.structure":  "framework",
         "project.process.actors":    "person",
-        "project.process.control":   "human",
         "project.process.drive":     "code",
         "project.result.target":     "product",
         "project.artifact.build":    "{etc/**,README.md,AGENTS.md,LICENSE.txt,package.json}",
@@ -106,7 +102,6 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.source.size":       "large",
         "project.source.structure":  "framework",
         "project.process.actors":    "crew",
-        "project.process.control":   "hitl",
         "project.process.drive":     "code",
         "project.result.target":     "mvp",
         "agent.persona.style":       "engineer",
@@ -210,7 +205,6 @@ export const configSchema = v.nullish(v.strictObject({
         })),
         process: v.optional(v.strictObject({
             actors:    v.optional(v.picklist(projectClassification.process.actors)),
-            control:   v.optional(v.picklist(projectClassification.process.control)),
             drive:     v.optional(v.picklist(projectClassification.process.drive))
         })),
         result:  v.optional(v.strictObject({
