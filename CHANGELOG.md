@@ -13,7 +13,7 @@ ChangeLog
 - IMPROVEMENT: allow git commands in code-changes and code-commit skills
 - IMPROVEMENT: move session-start hook code into CLI as `ase hook session-start`
 - IMPROVEMENT: also run session-start hook on compaction
-- IMPROVEMENT: honor ASE_TASK_ID environment variable for task id
+- IMPROVEMENT: honor `ASE_TASK_ID` environment variable for task id
 - IMPROVEMENT: provide more startup context information
 - IMPROVEMENT: skip objective output if not given in skill
 - BUGFIX: fix allowed-tools Bash pattern for ase commands in skills
