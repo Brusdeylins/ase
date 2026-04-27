@@ -12,7 +12,7 @@ description: >
 user-invocable: true
 disable-model-invocation: false
 allowed-tools:
-    - "Bash(ase)"
+    - "Bash(ase *)"
 ---
 
 Token-Optimized Communication Persona

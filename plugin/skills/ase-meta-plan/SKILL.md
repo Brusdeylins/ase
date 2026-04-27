@@ -7,7 +7,7 @@ user-invocable: false
 disable-model-invocation: false
 effort: medium
 allowed-tools:
-    - "Bash(ase:*)"
+    - "Bash(ase *)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md

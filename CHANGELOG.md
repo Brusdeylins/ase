@@ -2,6 +2,13 @@
 ChangeLog
 =========
 
+0.0.10 (2026-04-27)
+-------------------
+
+- FEATURE: add variables for locating files in skill context
+- BUGFIX: fix allowed-tools Bash pattern for ase commands in skills
+- CLEANUP: rename and clean up persona skill
+
 0.0.9 (2026-04-22)
 ------------------
 
