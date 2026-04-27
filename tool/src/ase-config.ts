@@ -119,6 +119,17 @@ type ScopeTerm =
     | { kind: "task",    id: string }
     | { kind: "session", id: string }
 
+/*  hard-coded map: which scope kinds each variable may be SET on
+    (reads always cascade through the full chain, this restricts writes only);
+    keys absent from this map default to all non-"default" scope kinds  */
+export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"]>> = {
+    "task.id": [ "session" ]
+}
+
+/*  default set of scope kinds writable for any unrestricted key  */
+const configWritableScopesDefault: ReadonlyArray<ScopeTerm["kind"]> =
+    [ "user", "project", "task", "session" ]
+
 /*  a scope chain (one or more terms, canonical order default<user<project<task<session)  */
 type Scope = ScopeTerm[]
 
@@ -540,8 +551,28 @@ export class Config {
         return result
     }
 
+    /*  determine whether a key is writable on a given scope kind  */
+    isWritableOn (key: string, kind: ScopeTerm["kind"]): boolean {
+        if (kind === "default")
+            return false
+        const resolved = this.resolveKey(key)
+        const allowed  = configWritableScopes[resolved] ?? configWritableScopesDefault
+        return allowed.includes(kind)
+    }
+
+    /*  enforce write-scope policy for the current target scope  */
+    private assertWritable (key: string): void {
+        const td       = this.docs[this.target]
+        const resolved = this.resolveKey(key)
+        const allowed  = configWritableScopes[resolved] ?? configWritableScopesDefault
+        if (!allowed.includes(td.scope.kind))
+            throw new Error(`cannot set "${resolved}" on scope "${Config.scopeLabel(td.scope)}": ` +
+                `this key is only writable on scope(s): ${allowed.join(", ")}`)
+    }
+
     /*  set a value at a dotted key in the target scope, creating intermediate maps as needed  */
     set (key: string, value: unknown): void {
+        this.assertWritable(key)
         const segments = this.resolveKey(key).split(".")
         const td       = this.docs[this.target]
         const next     = td.doc.clone()
@@ -567,6 +598,7 @@ export class Config {
 
     /*  delete a value at a dotted key from the target scope  */
     delete (key: string): void {
+        this.assertWritable(key)
         const td    = this.docs[this.target]
         const next  = td.doc.clone()
         next.deleteIn(this.resolveKey(key).split("."))
@@ -614,8 +646,12 @@ export default class ConfigCommand {
                     throw new Error(`unknown preset "${type}" (expected: default|vibe|pro|industry)`)
                 const cfg = new Config("config", configSchema, this.log, scope)
                 cfg.read()
-                for (const [ k, val ] of Object.entries(preset))
+                const targetKind = scope[scope.length - 1].kind
+                for (const [ k, val ] of Object.entries(preset)) {
+                    if (!cfg.isWritableOn(k, targetKind))
+                        continue
                     cfg.set(k, val)
+                }
                 cfg.write()
             })
 
