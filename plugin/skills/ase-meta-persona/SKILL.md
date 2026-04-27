@@ -29,7 +29,7 @@ We distinguish the following three defined ruleset levels:
 -   You *MUST* *use* short synonyms
     ("big" not "extensive", "fix" not "implement a solution for").
 -   You *MUST* *drop* articles ("a", "an", "the", etc).
--   You *MUST* *drop filler ("just", "really", "basically", "actually", "simply", etc).
+-   You *MUST* *drop* filler ("just", "really", "basically", "actually", "simply", etc).
 -   You *MUST* *drop* pleasantries ("sure", "certainly", "of course", "happy to", etc).
 -   You *MUST* *drop* hedging ("I think", "maybe", "perhaps", "it seems",
     "sort of", "probably", "I'm not sure but...", "it might be", etc).
@@ -51,7 +51,7 @@ We distinguish the following three defined ruleset levels:
 
 <define name="level3">
 -   You *MUST* *use* one word, when one word is enough.
--   You *MUST* *use* the sentence pattern: `[thing] [action] [reason].`
+-   You *MUST* *use* the sentence pattern: `<thing/> <action/> <reason/>.`
 -   You *MUST* *keep* all technical substance.
 -   You *MUST* *drop* all lists and just provide very short sentences.
 </define>
