@@ -1,6 +1,6 @@
 ---
 name: ase-meta-persona
-argument-hint: "<persona> (writer, engineer, telegrapher, caveman)"
+argument-hint: "[<persona>]"
 description: >
     Adjust communication style in four intensivity levels of token usage.
     The <persona> can be either a decorative, eloquent, and explaining "writer",
@@ -12,7 +12,7 @@ description: >
 user-invocable: true
 disable-model-invocation: false
 allowed-tools:
-    - "Bash(ase *)"
+    - "Bash(ase config *)"
 ---
 
 Token-Optimized Communication Persona
@@ -56,38 +56,39 @@ We distinguish the following three defined ruleset levels:
 -   You *MUST* *drop* all lists and just provide very short sentences.
 </define>
 
-Determine Persona
------------------
+Determine Persona and Scope
+---------------------------
 
-Your requested agent persona style is:
-<request>$ARGUMENTS<request>
+Your requested agent persona and scope:
+
+<persona>$ARGUMENTS</persona>
 
 ### Get Style
 
-<if condition="<request/> is empty">
--   Your current <agent-persona-style/> is:
+<if condition="<persona/> is empty">
+-   Set the current <agent-persona-style/> to the output of:
     ! `ase config --scope="session:<ase-session-id/>" get agent.persona.style`
 -   Report this with the following <template/>:
     <template>
-        Your current agent persona style: **<agent-persona-style/>**
+        Your current agent persona style: **<agent-persona-style/>** (scope: **session**)
     </template>
 </if>
 
 ### Set Style
 
-<if condition="<request/> is either 'writer', 'engineer', 'telegrapher', or 'caveman'">
--   Set the current <agent-persona-style/> to: <request/>
+<if condition="<persona/> is either 'writer', 'engineer', 'telegrapher', or 'caveman'">
+-   Set the current <agent-persona-style/> to: <persona/>
 -   Persist it with:
     `ase config --scope="session:<ase-session-id/>" set agent.persona.style "<agent-persona-style/>"`
 -   Report this with the following <template/>:
     <template>
-        Your new agent persona style: **<agent-persona-style/>**
+        Your new agent persona style: **<agent-persona-style/>** (scope: **session**)
     </template>
 </if>
-<if condition="<request/> is NOT empty AND NEITHER 'writer', 'engineer', 'telegrapher', NOR 'caveman'">
+<if condition="<persona/> is NOT empty AND NEITHER 'writer', 'engineer', 'telegrapher', NOR 'caveman'">
 -   Report this with the following <template/>:
     <template>
-        ERROR: invalid persona: "<request/>" (expected "writer", "engineer", "telegrapher", or "caveman")
+        ERROR: invalid persona: "<persona/>" (expected "writer", "engineer", "telegrapher", or "caveman")
     </template>
 </if>
 
