@@ -48,6 +48,10 @@ The following top-level commands exist for configuration handling:
   The file is validated against a schema: on read, unknown or
   invalid entries are warned about and silently dropped from the
   in-memory view; on set/write, they cause a fatal error.
+  Recognized keys are grouped under three top-level sections:
+  `project.*` (project identity, classification, and artifact
+  globs), `agent.*` (agent persona and process), and `task.*`
+  (currently `task.id`, the active task identifier).
   All `ase config` subcommands accept a `--scope` *scope* option
   that selects the scope chain. The *scope* value is a
   comma-separated list of scope terms, in any order; each term

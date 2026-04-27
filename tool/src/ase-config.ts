@@ -59,7 +59,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.result.target":     "prototype",
         "agent.persona.style":       "writer",
         "agent.persona.creativity":  "full",
-        "agent.process.autonomy":    "agent",
+        "agent.process.autonomy":    "agent"
     },
     pro: {
         "project.id":                "example",
@@ -73,7 +73,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.result.target":     "product",
         "agent.persona.style":       "engineer",
         "agent.persona.creativity":  "none",
-        "agent.process.autonomy":    "assistant",
+        "agent.process.autonomy":    "assistant"
     },
     default: {
         "project.id":                "example",
@@ -93,6 +93,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "agent.persona.style":       "engineer",
         "agent.persona.creativity":  "none",
         "agent.process.autonomy":    "assistant",
+        "task.id":                   "default"
     },
     industry: {
         "project.id":                "example",
@@ -106,7 +107,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.result.target":     "mvp",
         "agent.persona.style":       "engineer",
         "agent.persona.creativity":  "none",
-        "agent.process.autonomy":    "hotl",
+        "agent.process.autonomy":    "hotl"
     }
 }
 
@@ -226,6 +227,9 @@ export const configSchema = v.nullish(v.strictObject({
         process: v.optional(v.strictObject({
             autonomy:   v.optional(v.picklist(agentClassification.process.autonomy))
         }))
+    })),
+    task: v.optional(v.strictObject({
+        id:      v.optional(v.pipe(v.string(), v.minLength(1)))
     }))
 }))
 
