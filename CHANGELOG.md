@@ -5,10 +5,17 @@ ChangeLog
 0.0.10 (2026-04-27)
 -------------------
 
+- FEATURE: add task skill (ase-meta-task) for get/set unique task id
 - FEATURE: add variables for locating files in skill context
 - IMPROVEMENT: allow git commands in code-changes and code-commit skills
+- IMPROVEMENT: move session-start hook code into CLI as `ase hook session-start`
+- IMPROVEMENT: also run session-start hook on compaction
+- IMPROVEMENT: honor ASE_TASK_ID environment variable for task id
+- IMPROVEMENT: provide more startup context information
+- IMPROVEMENT: skip objective output if not given in skill
 - BUGFIX: fix allowed-tools Bash pattern for ase commands in skills
 - CLEANUP: add more fields to plugin and marketplace descriptors
+- CLEANUP: cleanup session-start hook script
 - CLEANUP: improve description of config scopes
 - CLEANUP: place task config under the project for now
 - CLEANUP: remove project.process.control variable (overlaps with agent.process.autonomy)
