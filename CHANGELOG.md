@@ -7,6 +7,9 @@ ChangeLog
 
 - FEATURE: add variables for locating files in skill context
 - BUGFIX: fix allowed-tools Bash pattern for ase commands in skills
+- CLEANUP: add more fields to plugin and marketplace descriptors
+- CLEANUP: improve description of config scopes
+- CLEANUP: place task config under the project for now
 - CLEANUP: rename and clean up persona skill
 
 0.0.9 (2026-04-22)
