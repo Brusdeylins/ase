@@ -324,7 +324,7 @@ glob pattern, evaluated relative to the project base directory:
 See Also
 --------
 
-- [claudeX](https://github.com/rse/claudex)
+- [claudeX](https://github.com/rse/claudex) (convenience wrapper for Claude Code)
 
 Support
 -------
