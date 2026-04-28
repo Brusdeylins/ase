@@ -32,7 +32,7 @@ targets:
 
 ```
 cd tool
-npm start build         # lint + tsc (etc/tsc.json) + build man page (src/ase.md → dst/ase.1)
+npm start build         # lint + tsc (etc/tsc.json)
 npm start lint          # eslint --config etc/eslint.mjs src/*.ts
 npm start build-watch   # nodemon rebuild on src/**/*.ts
 npm start lint-watch    # nodemon relint on src/**/*.ts

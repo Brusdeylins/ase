@@ -1,7 +1,9 @@
 
-# ase(1) -- Agentic Software Engineering (ASE)
+Usage of Tool
+=============
 
-## SYNOPSIS
+SYNOPSIS
+--------
 
 `ase`
 \[`-h`|`--help`\]
@@ -12,14 +14,16 @@
 \[*options* \[...\]\]
 \[*args* \[...\]\]\]
 
-## DESCRIPTION
+DESCRIPTION
+-----------
 
 `ase`, *Agentic Software Engineering (ASE)*,
 is the command-line companion tool to the *ASE* Claude Code plugin.
 It provides project-level configuration management and a small
 per-project background HTTP service for dispatching commands.
 
-## OPTIONS
+OPTIONS
+-------
 
 The following top-level command-line options exist:
 
@@ -38,7 +42,8 @@ The following top-level command-line options exist:
   write log messages to standard output. If *file* is connected
   to a TTY, colors are used in the output.
 
-## COMMANDS
+COMMANDS
+--------
 
 The following top-level commands exist for configuration handling:
 
@@ -158,7 +163,8 @@ integration:
   internally as a configured hook handler only, not directly
   by end users.
 
-## CONFIGURATION FILES
+CONFIGURATION FILES
+-------------------
 
 - **user**: *per-user configuration directory*`/config.yaml`:
   Per-user *ASE* configuration (scope `user`). The per-user
@@ -179,7 +185,8 @@ integration:
   Per-session *ASE* configuration (scope `session:`*id*), located
   under the user's home directory (independent of any project context).
 
-## STATE FILES
+STATE FILES
+-----------
 
 - `.ase/service.yaml`:
   Per-project service state.
@@ -187,11 +194,13 @@ integration:
 - `.ase/service.log`:
   Stdout/stderr log of the detached background service.
 
-## HISTORY
+HISTORY
+-------
 
 `ase` was started to be developed in October 2025.
 
-## AUTHOR
+AUTHOR
+------
 
 Dr. Ralf S. Engelschall <rse@engelschall.com>
 
