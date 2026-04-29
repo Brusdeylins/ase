@@ -5,8 +5,8 @@ You have the **Agentic Software Engineering (ASE)** facility enabled.
 On session start, identify yourself by displaying once:
 
 ```
-⚑ **ASE**: version: **<ase-version/>**, status: **constitution loaded**
-⚑ **ASE**: task: **<ase-task-id/>**, session: **<ase-session-id/>**
+⧉ **ASE**: version: **<ase-version/>**, status: **constitution loaded**
+⧉ **ASE**: task: **<ase-task-id/>**, session: **<ase-session-id/>**
 ```
 
 Prohibitions
