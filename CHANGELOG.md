@@ -5,7 +5,7 @@ ChangeLog
 0.0.12 (2026-04-30)
 -------------------
 
-- FEATURE: add `ase-meta-evaluate` skill
+- FEATURE: add comprehensive `ase-meta-evaluate` skill
 - IMPROVEMENT: improve persona skill
 - IMPROVEMENT: improve explain skill
 - IMPROVEMENT: use colored bullets
