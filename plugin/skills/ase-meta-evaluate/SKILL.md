@@ -3,7 +3,7 @@ name: ase-meta-evaluate
 argument-hint: "<request>"
 description: >
     Evaluate alternatives through a weighted multi-criteria decision matrix.
-    Use when the user calls for the *evaluation of alteratives*.
+    Use when the user calls for the *evaluation of alternatives*.
 user-invocable: true
 disable-model-invocation: false
 effort: high
@@ -87,33 +87,33 @@ multi-*criteria* decision matrix.
         </template>
     </step>
 
-3.  <step id="STEP 3: Derive Criterias">
+3.  <step id="STEP 3: Derive Criteria">
     -   From the <request>$ARGUMENTS</request>, try to derive
-        the criterias <criteria-L/> (L=1-M) for the evaluation. Do not
+        the criteria <criteria-L/> (L=1-M) for the evaluation. Do not
         output anything.
 
     -   For each criteria <criteria-L/> (L=1-M), decide on its <weight-L/>
         from the value set { 4.00, 2.00, 1.00, 0.50, 0.25 } (from most important,
         over normal, to less important). Do not output anything.
 
-    -   Ensure the final number of criterias is always within the range
-        of minimum 8 and maximum 12: if less than 8 criterias were
+    -   Ensure the final number of criteria is always within the range
+        of minimum 8 and maximum 12: if less than 8 criteria were
         requested, use the set of alternatives to decide on additional
-        criterias which potentially allow best to triage the
+        criteria which potentially allow best to triage the
         alternatives, take the <reason/> into account, and use the
         `WebSearch` tool to find out about the potentially still
-        missing criterias and assign their <weight-L/>; if more than 12
-        criterias were requested, drop the criterias with the smallest
+        missing criteria and assign their <weight-L/>; if more than 12
+        criteria were requested, drop the criteria with the smallest
         <weight-L/> until 12 remain. Do not output anything.
 
     -   To prevent a single high-weight criterion from dominating
         the weighted sum (the weight set is geometric ×2 while the
         evaluation Likert scale is linear), assign weight 4.00 to
-        *at most two* criterias and weight 2.00 to *at most three*
-        criterias. Do not output anything.
+        *at most two* criteria and weight 2.00 to *at most three*
+        criteria. Do not output anything.
     </step>
 
-4.  <step id="STEP 4: Evaluate Alternatives against Criterias">
+4.  <step id="STEP 4: Evaluate Alternatives against Criteria">
     -   For each alternative <alternative-K/> (K=1-N) and each criteria
         <criteria-L/> (L=1-M), decide on the evaluation <eval-K-L/>,
         which means how good the alternative meets the criteria on
@@ -128,7 +128,7 @@ multi-*criteria* decision matrix.
         output anything.
 
     -   Output the resulting *Weighted Decision Matrix* as a Markdown *table*
-        with just the following <template/> and do no output anything
+        with just the following <template/> and do not output anything
         else. When emitting the table, render *one column per
         alternative* <alternative-K/> (K=1-N).
 
@@ -138,7 +138,7 @@ multi-*criteria* decision matrix.
         | ⦿ *Criteria*  | ⚖ *Weight*  | ⚑ **<alternative-1/>** | [...alternatives 2-(N-1)...] | ⚑ **<alternative-N/>** |
         | :------------ | ----------: | ---------------------: | ---------------------------: | ---------------------: |
         | <criteria-1/> | <weight-1/> | <eval-1-1/>            | [...evals 1-2..1-(N-1)...]   | <eval-1-N/>            |
-        [...criterias L=2-(M-1) for M>2...]
+        [...criteria L=2-(M-1) for M>2...]
         | <criteria-M/> | <weight-M/> | <eval-M-1/>            | [...evals M-2..M-(N-1)...]   | <eval-M-N/>            |
         | **RATING**    |             | **<rating-1/>**        | [...ratings 2-(N-1)...]      | **<rating-N/>**        |
         </template>
@@ -162,23 +162,23 @@ multi-*criteria* decision matrix.
         <alternative-X/> by calculating: <percentage/> = <distance/> / <rating-K/>.
 
     -   If <distance/> is zero, stop the flow after you output just the following
-        <template/> and do no output anything else:
+        <template/> and do not output anything else:
 
         <template>
         &#x1F7E0; **ERROR**: ✘ *MULTIPLE BEST ALTERNATIVES FOUND*,
-        Please give some hints on the criterias to ensure a single best alternative!
+        Please give some hints on the criteria to ensure a single best alternative!
         </template>
 
     -   If <distance/> is not zero and <percentage/> is less than 0.10,
         stop the flow after you output just the following <template/> and do
-        no output anything else:
+        not output anything else:
 
         <template>
         &#x1F7E0; **BEST ALTERNATIVE**: ⚑ **<alternative-K/>** ⚠ *ATTENTION: small distance to second best alternative!*
         </template>
 
     -   If <distance/> is not zero and <percentage/> is greater than or equal 0.10,
-        output just the following <template/> and do no output anything else:
+        output just the following <template/> and do not output anything else:
 
         <template>
         &#x1F7E0; **BEST ALTERNATIVE**: ⚑ **<alternative-K/>**
