@@ -41,6 +41,14 @@ multi-*criteria* decision matrix.
         or more alternatives <alternative-K/> (K=1-N) the user wants
         to be evaluated. Do not output anything.
 
+    -   If fewer than two alternatives could be derived (N<2), output
+        the following <template/> and *stop the entire flow*
+        immediately without executing any further steps:
+
+        <template>
+        &#x1F7E0; **ERROR: INSUFFICIENT ALTERNATIVES**: at least two are required for a comparison!
+        </template>
+
     -   For each alternative <alternative-K/> (K=1-N), decide whether you have
         all necessary information at hand to give it the proper, unique,
         short, and *concise name* <alternative-K/>. If you are unsure,
@@ -61,15 +69,17 @@ multi-*criteria* decision matrix.
     -   For each alternative <alternative-K/> (K=1-N), decide whether
         it is a genuine member of <class-of-alternatives/>. If any
         <alternative-K/> is *not* a member (i.e. the alternatives are
-        not mutually comparable within a single class), output the
-        following <template/> and *stop the entire flow* immediately
-        without executing any further steps:
+        not mutually comparable within a single class), let
+        <alternative-J/> (J=1-N) be the subset of non-member
+        alternatives, output the following <template/> and *stop the
+        entire flow* immediately without executing any further steps:
 
         <template>
-        &#x1F7E0; **INCOMPARABLE ALTERNATIVES**: *<class-of-alternatives/>*
+        &#x1F7E0; **ERROR: INCOMPARABLE ALTERNATIVES**: *<class-of-alternatives/>*
 
-        ⚑ **<alternative-K/>** (*member of a different class*)
-        [...]
+        <for items="<alternative-J/> [...]">
+        ⚑ **<item/>** (*member of a different class*)
+        </for>
         </template>
 
     -   Output the determined, individual alternatives as a Markdown *table*
