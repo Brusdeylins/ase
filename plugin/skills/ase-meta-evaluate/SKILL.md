@@ -52,11 +52,12 @@ multi-*criteria* decision matrix.
     -   For each alternative <alternative-K/> (K=1-N), decide whether you have
         all necessary information at hand to give it the proper, unique,
         short, and *concise name* <alternative-K/>. If you are unsure,
-        use the `WebSearch` tool (at most one invocation per alternative
-        and at most 4 invocations in total across all alternatives) to
-        find out more and adjust the name <alternative-K/>; if still
-        unsure after the budget is exhausted, pick the best-guess
-        concise name and proceed. Do not output anything.
+        use the `WebSearch` tool (at most one invocation per alternative,
+        drawing from the *skill-wide shared budget* of at most 4
+        `WebSearch` invocations in total across STEP 2 and STEP 3
+        combined) to find out more and adjust the name <alternative-K/>;
+        if still unsure after the shared budget is exhausted, pick the
+        best-guess concise name and proceed. Do not output anything.
 
     -   For each alternative <alternative-K/> (K=1-N), decide which
         *one* of *USP* (Unique Selling Point -- what makes it unique),
@@ -73,7 +74,7 @@ multi-*criteria* decision matrix.
         it is a genuine member of <class-of-alternatives/>. If any
         <alternative-K/> is *not* a member (i.e. the alternatives are
         not mutually comparable within a single class), let
-        <alternative-J/> (J=1-N) be the subset of non-member
+        <alternative-J/> (J=1-P, P<=N) be the subset of non-member
         alternatives, output the following <template/> and *stop the
         entire flow* immediately without executing any further steps:
 
@@ -114,20 +115,24 @@ multi-*criteria* decision matrix.
         requested, use the set of alternatives to decide on additional
         criteria which potentially allow best to triage the
         alternatives, take the <reason/> into account, and use the
-        `WebSearch` tool (at most 4 invocations in total) to find out
-        about the potentially still missing criteria and assign their
-        <weight-L/>; if still under 8 criteria after the budget is
-        exhausted, fill the remaining slots from existing knowledge
-        without further searches; if more than 12 criteria were
-        requested, drop the criteria with the smallest <weight-L/>
-        until 12 remain. Do not output anything.
+        `WebSearch` tool (drawing from the *skill-wide shared budget*
+        of at most 4 `WebSearch` invocations in total across STEP 2
+        and STEP 3 combined) to find out about the potentially still
+        missing criteria and assign their <weight-L/>; if still under
+        8 criteria after the shared budget is exhausted, fill the
+        remaining slots from existing knowledge without further
+        searches; if more than 12 criteria were requested, drop the
+        criteria with the smallest <weight-L/> until 12 remain. Do
+        not output anything.
 
     -   To prevent a single high-weight criterion from dominating
         the weighted sum (the weight set is geometric ×2 while the
         evaluation Likert scale is linear), assign weight 4.00 to
         *at least one* and *at most two* criteria, and weight 2.00
-        to *at least two* and *at most three* criteria. Do not
-        output anything.
+        to *at least two* and *at most three* criteria. Symmetrically,
+        to prevent a long tail of negligible-weight criteria, assign
+        weight 0.50 to *at most two* criteria, and weight 0.25 to
+        *at most one* criterion. Do not output anything.
     </step>
 
 4.  <step id="STEP 4: Evaluate Alternatives against Criteria">
@@ -172,6 +177,11 @@ multi-*criteria* decision matrix.
         alternative whose *raw, unrounded* <rating-X/> is the second
         largest rating value across all alternatives.
 
+    -   If multiple alternatives share the second-largest raw rating,
+        pick any one of them as <alternative-X/>; the resulting
+        <distance/> and <percentage/> are unaffected by the choice,
+        so the downstream output is deterministic.
+
     -   Determine rating distance <distance/> between <alternative-K/>
         and <alternative-X/> from their *raw, unrounded* ratings by
         calculating: <distance/> = <rating-K/> - <rating-X/>.
@@ -181,7 +191,13 @@ multi-*criteria* decision matrix.
         unrounded* ratings by calculating:
         <percentage/> = <distance/> / <rating-K/>.
 
-    -   If <distance/> is zero, stop the flow after you output just the following
+    -   By construction, <rating-K/> is the maximum rating across all
+        alternatives, so <distance/> >= 0 always holds; <percentage/>
+        is well-defined only when <rating-K/> is strictly positive.
+
+    -   If <rating-K/> is not strictly positive, or <percentage/> is
+        less than 0.01 (i.e. <distance/> is effectively zero relative
+        to <rating-K/>), stop the flow after you output just the following
         <template/> and do not output anything else:
 
         <template>
@@ -189,7 +205,7 @@ multi-*criteria* decision matrix.
         Please give some hints on the criteria to ensure a single best alternative!
         </template>
 
-    -   If <distance/> is not zero and <percentage/> is less than 0.10,
+    -   Otherwise, if <percentage/> is less than 0.10,
         stop the flow after you output just the following <template/> and do
         not output anything else:
 
@@ -197,7 +213,7 @@ multi-*criteria* decision matrix.
         &#x1F7E0; **BEST ALTERNATIVE**: ⚑ **<alternative-K/>** ⚠ *ATTENTION: small distance to second best alternative!*
         </template>
 
-    -   If <distance/> is not zero and <percentage/> is greater than or equal 0.10,
+    -   Otherwise (<percentage/> is greater than or equal 0.10),
         output just the following <template/> and do not output anything else:
 
         <template>
