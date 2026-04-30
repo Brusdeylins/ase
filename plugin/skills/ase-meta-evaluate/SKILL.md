@@ -23,9 +23,22 @@ multi-*criteria* decision matrix.
 </objective>
 
 <flow>
-1.  <step id="STEP 1: Decide Alternatives">
-    -   From the <request>$ARGUMENTS</request> decide what are the two
-        or more alternatives <alternative-K/> (K=1-N) the user requested
+1.  <step id="STEP 1: Determine Reason">
+    -   From the <request>$ARGUMENTS</request>, try to derive the overall
+        reason <reason/> for the evaluation. If no such reason can be
+        derived, assume <reason>generic comparison</reason>.
+
+    -   Output the determined reason with just the following
+        <template/> and do not output anything else:
+
+        <template>
+        &#x26AA; **REASON**: *<reason/>*
+        </template>
+    </step>
+
+2.  <step id="STEP 2: Determine Alternatives">
+    -   From the <request>$ARGUMENTS</request> derive the two
+        or more alternatives <alternative-K/> (K=1-N) the user wants
         to be evaluated. Do not output anything.
 
     -   For each alternative <alternative-K/> (K=1-N), decide whether you have
@@ -59,7 +72,7 @@ multi-*criteria* decision matrix.
         [...]
         </template>
 
-    -   Output the detetermined, individual alternatives with just
+    -   Output the determined, individual alternatives with just
         the following <template/> and do not output anything else:
 
         <template>
@@ -71,10 +84,10 @@ multi-*criteria* decision matrix.
         </template>
     </step>
 
-2.  <step id="STEP 2: Decide Criterias">
-    -   From the <request>$ARGUMENTS</request> decide whether and what
-        criterias <criteria-L/> (L=1-M) the user requested. Do not output
-        anything.
+3.  <step id="STEP 3: Derive Criterias">
+    -   From the <request>$ARGUMENTS</request>, try to derive
+        the criterias <criteria-L/> (L=1-M) for the evaluation. Do not
+        output anything.
 
     -   For each criteria <criteria-L/> (L=1-M), decide on its <weight-L/>
         from the value set { 4.00, 2.00, 1.00, 0.50, 0.25 } (from most important,
@@ -84,11 +97,11 @@ multi-*criteria* decision matrix.
         of minimum 8 and maximum 12: if less than 8 criterias were
         requested, use the set of alternatives to decide on additional
         criterias which potentially allow best to triage the
-        alternatives, and use the `WebSearch` tool to find out about the
-        potentially still missing criterias and assign their <weight-L/>;
-        if more than 12 criterias were requested, drop the criterias
-        with the smallest <weight-L/> until 12 remain. Do not output
-        anything.
+        alternatives, take the <reason/> into account, and use the
+        `WebSearch` tool to find out about the potentially still
+        missing criterias and assign their <weight-L/>; if more than 12
+        criterias were requested, drop the criterias with the smallest
+        <weight-L/> until 12 remain. Do not output anything.
 
     -   To prevent a single high-weight criterion from dominating
         the weighted sum (the weight set is geometric ×2 while the
@@ -97,7 +110,7 @@ multi-*criteria* decision matrix.
         criterias. Do not output anything.
     </step>
 
-3.  <step id="STEP 3: Evaluate Alternatives against Criterias">
+4.  <step id="STEP 4: Evaluate Alternatives against Criterias">
     -   For each alternative <alternative-K/> (K=1-N) and each criteria
         <criteria-L/> (L=1-M), decide on the evaluation <eval-K-L/>,
         which means how good the alternative meets the criteria on
@@ -133,7 +146,7 @@ multi-*criteria* decision matrix.
         </template>
     </step>
 
-4.  <step id="STEP 4: Report Best Alternative">
+5.  <step id="STEP 5: Report Best Alternative">
     -   The best alternative(s) <alternative-K/> (K=1-N) are *all* those
         alternatives whose <rating-K/> (rounded to 2 decimal places per
         STEP 3) equals the maximum rounded rating value across all
