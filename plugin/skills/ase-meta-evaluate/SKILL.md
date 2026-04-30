@@ -75,6 +75,12 @@ multi-*criteria* decision matrix.
         if more than 12 criterias were requested, drop the criterias
         with the smallest <weight-L/> until 12 remain. Do not output
         anything.
+
+    -   To prevent a single high-weight criterion from dominating
+        the weighted sum (the weight set is geometric ×2 while the
+        evaluation Likert scale is linear), assign weight 4.00 to
+        *at most two* criterias and weight 2.00 to *at most three*
+        criterias. Do not output anything.
     </step>
 
 3.  <step id="STEP 3: Evaluate Alternatives against Criterias">
