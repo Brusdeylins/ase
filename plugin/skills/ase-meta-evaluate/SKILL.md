@@ -134,9 +134,10 @@ multi-*criteria* decision matrix.
     -   Then, for each alternative <alternative-K/> (K=1-N), calculate a
         rating <rating-K/> (K=1-N) which is the product-sum of all
         weights <weight-L/> (L=1-M) and the evaluation <eval-K-L/>
-        (K=1-N, L=1-M). The result is always a numerical value. Round
-        <rating-K/> to 2 decimal places before emitting it. Do not
-        output anything.
+        (K=1-N, L=1-M). The result is always a numerical value.
+        Retain the *raw, unrounded* <rating-K/> for use in STEP 5,
+        but round <rating-K/> to 2 decimal places *for display only*
+        when emitting it in the table below. Do not output anything.
 
     -   Output the resulting *Weighted Decision Matrix* as a Markdown *table*
         with just the following <template/> and do not output anything
@@ -157,20 +158,22 @@ multi-*criteria* decision matrix.
 
 5.  <step id="STEP 5: Report Best Alternative">
     -   The best alternative <alternative-K/> (K=1-N) is the
-        alternative whose <rating-K/> (rounded to 2 decimal places per
-        STEP 4) is the maximum rounded rating value across all
-        alternatives.
+        alternative whose *raw, unrounded* <rating-K/> (i.e. the
+        product-sum from STEP 4, *before* the display-only rounding)
+        is the maximum rating value across all alternatives.
 
     -   The second best alternative <alternative-X/> (X=1-N, X != K) is the
-        alternative whose <rating-X/> (rounded to 2 decimal places per
-        STEP 4) is the second largest rounded rating value across all
-        alternatives.
+        alternative whose *raw, unrounded* <rating-X/> is the second
+        largest rating value across all alternatives.
 
-    -   Determine rating distance <distance/> between <alternative-K/> and
-        <alternative-X/> by calculating: <distance/> = <rating-K/> - <rating-X/>.
+    -   Determine rating distance <distance/> between <alternative-K/>
+        and <alternative-X/> from their *raw, unrounded* ratings by
+        calculating: <distance/> = <rating-K/> - <rating-X/>.
 
-    -   Determine rating distance percentage <percentage/> between <alternative-K/> and
-        <alternative-X/> by calculating: <percentage/> = <distance/> / <rating-K/>.
+    -   Determine rating distance percentage <percentage/> between
+        <alternative-K/> and <alternative-X/> from their *raw,
+        unrounded* ratings by calculating:
+        <percentage/> = <distance/> / <rating-K/>.
 
     -   If <distance/> is zero, stop the flow after you output just the following
         <template/> and do not output anything else:
