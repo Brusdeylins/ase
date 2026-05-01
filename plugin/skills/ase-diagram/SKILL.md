@@ -1,11 +1,16 @@
 ---
 name: ase-diagram
-description: "Render diagrams via the `ase diagram` CLI. Use whenever a response needs a structural, control-flow, state, sequence, class, entity-relationship, or metrics diagram. Enforces Mermaid source via stdin, no hand-drawn ASCII frames, ≤120-char rendered width, and verbatim stdout reproduction in the response."
+description: >
+    Render diagrams via the `ase diagram` CLI. Use whenever a
+    response needs a structural, control-flow, state, sequence, class,
+    entity-relationship, or metrics diagram. Enforces Mermaid source via
+    stdin, no hand-drawn ASCII frames, ≤120-char rendered width, and
+    verbatim stdout reproduction in the response.
 user-invocable: false
 disable-model-invocation: false
 effort: low
 allowed-tools:
-    - "Bash"
+    - "Bash(ase diagram *)"
 ---
 
 Render Diagrams
@@ -47,7 +52,7 @@ Rules
     proof. *Self-check before emitting*: if your response
     contains any of the box-drawing characters listed above
     *without* a preceding `Bash(ase diagram ...)` tool call
-    in this same turn, you broke the rule — re-render via
+    in this same turn, you broke the rule —- re-render via
     the tool. The tool defaults to aligned Unicode box-
     drawing; do *not* pass `--ascii`.
 
