@@ -10,5 +10,11 @@
         "name":    "Dr. Ralf S. Engelschall",
         "email":   "rse@engelschall.com",
         "url":     "https://engelschall.com"
+    },
+    "mcpServers": {
+        "ase": {
+            "command": "ase",
+            "args":    [ "mcp" ]
+        }
     }
 }

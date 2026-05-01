@@ -14,7 +14,7 @@ user-invocable: false
 disable-model-invocation: false
 effort: low
 allowed-tools:
-    - "mcp__ase__diagram"
+    - "mcp__plugin_ase_ase__diagram"
 ---
 
 Render Diagrams
