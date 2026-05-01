@@ -21,9 +21,11 @@ import prettyMs               from "pretty-ms"
 
 import { McpServer }                     from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
+import { z }                             from "zod"
 
 import { Config, configSchema } from "./ase-config.js"
 import type Log                 from "./ase-log.js"
+import { renderDiagram }        from "./ase-diagram.js"
 import pkg                      from "../package.json" with { type: "json" }
 
 interface Context {
@@ -226,6 +228,67 @@ export default class ServiceCommand {
                 }
                 return {
                     content: [ { type: "text", text: JSON.stringify(status) } ]
+                }
+            })
+            mcp.registerTool("diagram", {
+                title:       "ASE diagram render",
+                description:
+                    "Render a Mermaid diagram as Unicode/ASCII art. " +
+                    "Use for visualizing " +
+                    "structure/layout/components/dependencies as a Flowchart, " +
+                    "control-flow/branching/concurrency as a Flowchart, " +
+                    "state-machine/states/transitions as an UML State Diagram, " +
+                    "data-flow/actors/messages/protocols as an UML Sequence Diagram, " +
+                    "data-structure/classes/methods as an UML Class Diagram " +
+                    "data-model/entities/relationships as an ER Diagram, or " +
+                    "metrics/distributions/time-series as a XY-Charts. " +
+                    "Pass the Mermaid diagram specification as `diagram`. " +
+                    "Returns the rendered art as `text`.",
+                inputSchema: {
+                    diagram: z.string()
+                        .describe("Mermaid diagram specification"),
+                    ascii: z.boolean().default(false)
+                        .describe("emit plain ASCII (+-|) instead of Unicode box-drawing characters"),
+                    colorMode: z.enum([ "none", "ansi16", "ansi256" ]).default("none")
+                        .describe("color mode for ANSI escape sequences in the rendered output"),
+                    nodeMarginX: z.number().int().min(0).default(3)
+                        .describe("horizontal margin between nodes, in characters"),
+                    nodeMarginY: z.number().int().min(0).default(3)
+                        .describe("vertical margin between nodes, in lines"),
+                    nodePadding: z.number().int().min(0).default(1)
+                        .describe("inner horizontal and vertical padding within each node, in characters"),
+                    diagramClipX: z.number().int().min(0).default(0)
+                        .describe("extra horizontal clipping: subtract this many characters from `terminalWidth`"),
+                    diagramClipY: z.number().int().min(0).default(0)
+                        .describe("extra vertical clipping: subtract this many lines from `terminalHeight`"),
+                    terminalWidth: z.number().int().min(0).default(0)
+                        .describe("terminal width in characters; 0 disables horizontal clipping"),
+                    terminalHeight: z.number().int().min(0).default(0)
+                        .describe("terminal height in lines; 0 disables vertical clipping")
+                }
+            }, async (args) => {
+                try {
+                    const out = renderDiagram(args.diagram, {
+                        ascii:          args.ascii,
+                        colorMode:      args.colorMode,
+                        nodeMarginX:    args.nodeMarginX,
+                        nodeMarginY:    args.nodeMarginY,
+                        nodePadding:    args.nodePadding,
+                        diagramClipX:   args.diagramClipX,
+                        diagramClipY:   args.diagramClipY,
+                        terminalWidth:  args.terminalWidth,
+                        terminalHeight: args.terminalHeight
+                    })
+                    return {
+                        content: [ { type: "text", text: out } ]
+                    }
+                }
+                catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : String(err)
+                    return {
+                        isError: true,
+                        content: [ { type: "text", text: `diagram: render failed: ${message}` } ]
+                    }
                 }
             })
             return mcp

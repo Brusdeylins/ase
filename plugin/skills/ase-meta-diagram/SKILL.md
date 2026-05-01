@@ -14,7 +14,7 @@ user-invocable: false
 disable-model-invocation: false
 effort: low
 allowed-tools:
-    - "Bash(ase diagram *)"
+    - "mcp__ase__diagram"
 ---
 
 Render Diagrams
@@ -24,7 +24,7 @@ Your role is to render *every* diagram in the current session, with
 *deterministic* and *clean* output. For this, your objective is to
 produce a rendered diagram that the user can read directly in the
 response text, derived from a *Mermaid* diagram specification which is
-piped through the companion `ase diagram` program via the `Bash` tool.
+rendered with the `diagram` tool call of the `ase` MCP service.
 
 Rules
 -----
@@ -34,34 +34,23 @@ Rules
     `┬`, `┴`, `╭`, `╰`), ASCII surrogates (`+`, `-`, `|`), or any other
     attempt to draw a framed shape token-by-token are *forbidden* as
     diagram output -— including when prose paragraphs are placed inside
-    the frame (a tell-tale sign, since `ase diagram` cannot place free
+    the frame (a tell-tale sign, since the `ase diagram` cannot place free
     text inside a subgraph).
 
--   *MUST use `ase diagram`*. Every diagram in the output
-    *MUST* originate from a visible `Bash` tool invocation of the
-    command `ase diagram`, with Mermaid diagram specification passed on
-    stdin, made in the *same* session response turn. The visible tool
-    call is the proof. *Self-check before emitting*: if your response
-    contains any of the box-drawing characters listed above *without* a
-    preceding `Bash(ase diagram ...)` tool call in this same response
-    turn, you broke the rule —- re-render via the tool!
+-   *MUST use the `diagram` tool from the `ase` MCP service*. Every
+    diagram in the output *MUST* originate from a `diagram` MCP tool
+    call, with Mermaid diagram specification passed in the `diagram`
+    field, made in the *same* session response turn. You *MUST* use a
+    timeout of 20 seconds with the `diagram` MCP tool call.
 
--   *MUST* use the `Bash` command *starting* with *EXACTLY* the
-    string `ase diagram`. Do not use any variant of this or the
-    permission hooks will break.
-
--   *MUST* use a timeout of 20 seconds with the `Bash` command
-    for the `ase diagram` invocation.
-
--   *MUST reproduce the tool stdout in the response text*.
-    After the `Bash(ase diagram [...])` call completes, the skill *MUST*
-    copy the tool's stdout *verbatim* into a Markdown-fenced code block
-    placed in the response text immediately after the tool call. The
-    terminal's Bash- tool display is *collapsed* by default (`+N lines
-    (ctrl+o to expand)`) -— the user reads the Markdown-fenced block
-    in the response, not the tool display. Emitting only the tool call
-    without the reproduction of the output is a defect: the diagram is
-    then effectively invisible.
+-   *MUST reproduce the `text` output of the `diagram` tool call in the response text*.
+    In other words, after the MCP tool call completes, the skill *MUST*
+    copy the tool's `text` result *verbatim* into a Markdown-fenced
+    code block placed in the response text immediately after the tool
+    call -— the user reads the Markdown-fenced block in the response,
+    not the tool call display. Emitting only the tool call without
+    the reproduction of the output is a defect: the diagram is then
+    effectively invisible.
 
 -   *Keep diagrams narrow*.
     The renderer's horizontal extent scales with siblings

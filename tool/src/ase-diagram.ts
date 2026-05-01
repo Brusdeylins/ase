@@ -25,6 +25,19 @@ interface DiagramOpts {
     terminalHeight: number
 }
 
+/*  options accepted by the pure rendering helper  */
+export interface DiagramRenderOpts {
+    ascii:          boolean
+    colorMode:      "none" | "ansi16" | "ansi256"
+    nodeMarginX:    number
+    nodeMarginY:    number
+    nodePadding:    number
+    diagramClipX:   number
+    diagramClipY:   number
+    terminalWidth:  number
+    terminalHeight: number
+}
+
 /*  custom argument parser for Commander: non-negative integer  */
 const parseInteger = (name: string) => (value: string): number => {
     const n = Number.parseInt(value, 10)
@@ -144,6 +157,51 @@ const truncateAnsiLine = (line: string, budget: number): string => {
     return out
 }
 
+/*  pure rendering helper: turn a Mermaid source string plus options into
+    a rendered Unicode/ASCII diagram string. Throws on render failure.  */
+export const renderDiagram = (src: string, opts: DiagramRenderOpts): string => {
+    /*  create diagram rendering  */
+    let out = renderMermaidASCII(src, {
+        useAscii:         opts.ascii,
+        paddingX:         opts.nodeMarginX,
+        paddingY:         opts.nodeMarginY,
+        boxBorderPadding: opts.nodePadding,
+        colorMode:        opts.colorMode,
+        theme: opts.colorMode !== "none" ? {
+            fg:       "#000000",
+            border:   "#a0a0a0",
+            junction: "#a0a0a0",
+            arrow:    "#404040",
+            line:     "#707070",
+            corner:   "#707070"
+        } : {
+            fg:       "#000000",
+            border:   "#000000",
+            junction: "#000000",
+            arrow:    "#000000",
+            line:     "#000000",
+            corner:   "#000000"
+        }
+    })
+
+    /*  optionally clip diagram rendering  */
+    const termWidth  = opts.terminalWidth
+    const termHeight = opts.terminalHeight
+    if (termWidth > 0 || termHeight > 0) {
+        const maxWidth   = termWidth  > 0 ? termWidth  - opts.diagramClipX : 0
+        const maxHeight  = termHeight > 0 ? termHeight - opts.diagramClipY : 0
+        const trailingNL = out.endsWith("\n")
+        let lines = (trailingNL ? out.slice(0, -1) : out).split("\n")
+        if (maxWidth > 0)
+            lines = lines.map((l) => truncateAnsiLine(l, maxWidth))
+        if (maxHeight > 0 && lines.length > maxHeight)
+            lines = lines.slice(0, maxHeight)
+        out = lines.join("\n") + (trailingNL ? "\n" : "")
+    }
+
+    return out
+}
+
 /*  read stdin into a single string  */
 const readStdin = async (): Promise<string> => {
     const chunks: Buffer[] = []
@@ -205,48 +263,22 @@ export default class DiagramCommand {
                 /*  create diagram rendering  */
                 let out: string
                 try {
-                    out = renderMermaidASCII(src, {
-                        useAscii:         opts.ascii ?? false,
-                        paddingX:         opts.nodeMarginX,
-                        paddingY:         opts.nodeMarginY,
-                        boxBorderPadding: opts.nodePadding,
-                        colorMode:        opts.colorMode,
-                        theme: opts.colorMode !== "none" ? {
-                            fg:       "#000000",
-                            border:   "#a0a0a0",
-                            junction: "#a0a0a0",
-                            arrow:    "#404040",
-                            line:     "#707070",
-                            corner:   "#707070"
-                        } : {
-                            fg:       "#000000",
-                            border:   "#000000",
-                            junction: "#000000",
-                            arrow:    "#000000",
-                            line:     "#000000",
-                            corner:   "#000000"
-                        }
+                    out = renderDiagram(src, {
+                        ascii:          opts.ascii ?? false,
+                        colorMode:      opts.colorMode,
+                        nodeMarginX:    opts.nodeMarginX,
+                        nodeMarginY:    opts.nodeMarginY,
+                        nodePadding:    opts.nodePadding,
+                        diagramClipX:   opts.diagramClipX,
+                        diagramClipY:   opts.diagramClipY,
+                        terminalWidth:  opts.terminalWidth,
+                        terminalHeight: opts.terminalHeight
                     })
                 }
                 catch (err: unknown) {
                     const message = err instanceof Error ? err.message : String(err)
                     this.log.write("error", `diagram: render failed: ${message}`)
                     process.exit(1)
-                }
-
-                /*  optionally clip diagram rendering  */
-                const termWidth  = opts.terminalWidth
-                const termHeight = opts.terminalHeight
-                if (termWidth > 0 || termHeight > 0) {
-                    const maxWidth   = termWidth  > 0 ? termWidth  - opts.diagramClipX : 0
-                    const maxHeight  = termHeight > 0 ? termHeight - opts.diagramClipY : 0
-                    const trailingNL = out.endsWith("\n")
-                    let lines = (trailingNL ? out.slice(0, -1) : out).split("\n")
-                    if (maxWidth > 0)
-                        lines = lines.map((l) => truncateAnsiLine(l, maxWidth))
-                    if (maxHeight > 0 && lines.length > maxHeight)
-                        lines = lines.slice(0, maxHeight)
-                    out = lines.join("\n") + (trailingNL ? "\n" : "")
                 }
 
                 /*  output diagram rendering  */
