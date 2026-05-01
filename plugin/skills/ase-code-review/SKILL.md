@@ -287,7 +287,7 @@ user accepts.
           the file walk in STEP 6.5 — the primary cure for
           "what are these stages actually about?".
         - `<rendered-diagram-as-fenced-code-block/>` *MUST*
-          be rendered by invoking the `ase-diagram` skill via
+          be rendered by invoking the `ase-meta-diagram` skill via
           the `Skill` tool. Pick the Mermaid type by theme
           intent:
           - *classDiagram* — theme introduces types with
