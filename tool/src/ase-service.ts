@@ -19,8 +19,12 @@ import { isMap }              from "yaml"
 import * as v                 from "valibot"
 import prettyMs               from "pretty-ms"
 
+import { McpServer }                     from "@modelcontextprotocol/sdk/server/mcp.js"
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
+
 import { Config, configSchema } from "./ase-config.js"
 import type Log                 from "./ase-log.js"
+import pkg                      from "../package.json" with { type: "json" }
 
 interface Context {
     projectId: string
@@ -206,6 +210,27 @@ export default class ServiceCommand {
             return h.continue
         })
 
+        /*  build a fresh MCP server instance with the demo "ping" tool  */
+        const buildMcpServer = (): McpServer => {
+            const mcp = new McpServer({ name: "ase", version: pkg.version })
+            mcp.registerTool("ping", {
+                title:       "ASE service ping",
+                description: "Return ASE service identity, port, and uptime.",
+                inputSchema: {}
+            }, async () => {
+                const status = {
+                    ok:        true,
+                    projectId: ctx.projectId,
+                    port:      ctx.port,
+                    uptimeMs:  Date.now() - startTime
+                }
+                return {
+                    content: [ { type: "text", text: JSON.stringify(status) } ]
+                }
+            })
+            return mcp
+        }
+
         /*  listen to HTTP/REST endpoints  */
         server.route({
             method:  "OPTIONS",
@@ -224,6 +249,38 @@ export default class ServiceCommand {
                 })
                 return h.response({ ok: true }).code(200)
             }
+        })
+        const mcpHandler = async (request: Hapi.Request, h: Hapi.ResponseToolkit, body?: unknown) => {
+            const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
+            const mcp       = buildMcpServer()
+            request.raw.res.on("close", () => {
+                transport.close().catch(() => {})
+                mcp.close().catch(() => {})
+            })
+            try {
+                await mcp.connect(transport)
+                await transport.handleRequest(request.raw.req, request.raw.res, body)
+            }
+            catch (_err: unknown) {
+                const err = _err instanceof Error ? _err : new Error(String(_err))
+                this.log.write("error", `mcp: ${err.message}`)
+                if (!request.raw.res.headersSent) {
+                    request.raw.res.statusCode = 500
+                    request.raw.res.end()
+                }
+            }
+            return h.abandon
+        }
+        server.route({
+            method:  "POST",
+            path:    "/mcp",
+            options: { payload: { parse: true, allow: "application/json" } },
+            handler: (request, h) => mcpHandler(request, h, request.payload)
+        })
+        server.route({
+            method:  [ "GET", "DELETE" ],
+            path:    "/mcp",
+            handler: (request, h) => mcpHandler(request, h)
         })
         server.route({
             method:  "POST",

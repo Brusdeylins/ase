@@ -10,6 +10,7 @@ import Log                         from "./ase-log.js"
 import type { LogLevel }           from "./ase-log.js"
 import ConfigCommand               from "./ase-config.js"
 import ServiceCommand              from "./ase-service.js"
+import MCPCommand                  from "./ase-mcp.js"
 import HookCommand                 from "./ase-hook.js"
 import DiagramCommand              from "./ase-diagram.js"
 import pkg                         from "../package.json" with { type: "json" }
@@ -54,6 +55,7 @@ const main = async (): Promise<void> => {
     /*  register top-level commands  */
     new ConfigCommand(log).register(program)
     new ServiceCommand(log).register(program)
+    new MCPCommand(log).register(program)
     new HookCommand(log).register(program)
     new DiagramCommand(log).register(program)
 

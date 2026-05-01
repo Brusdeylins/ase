@@ -24,7 +24,7 @@
         "eslint-plugin-promise":            "7.3.0",
         "eslint-plugin-import":             "2.32.0",
         "neostandard":                      "0.13.0",
-        "globals":                          "17.5.0",
+        "globals":                          "17.6.0",
         "typescript":                       "6.0.3",
 
         "@rse/stx":                         "1.1.5",
@@ -46,7 +46,8 @@
         "cli-table3":                       "0.6.5",
         "chalk":                            "5.6.2",
         "pretty-ms":                        "9.3.0",
-        "luxon":                            "3.7.2"
+        "luxon":                            "3.7.2",
+        "@modelcontextprotocol/sdk":        "1.29.0"
     },
     "engines": {
         "npm":                              ">=10.0.0",
