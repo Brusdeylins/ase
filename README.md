@@ -106,6 +106,7 @@ Documenation
 - [Architecture: Building Blocks](docs/building-blocks.md)
 - [Usage: Plugin Skills](docs/usage-plugin.md)
 - [Usage: Plugin Tool](docs/usage-tool.md)
+- [Workflow](docs/workflow.md)
 
 See Also
 --------
