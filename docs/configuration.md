@@ -14,17 +14,17 @@ earlier scopes):
 
 ### Project Classification
 
--   **project.source.ambition**: the project *source code* has to meet the ambition of a...
-
-    -   `artist`:    ...artist: finest code quality, individual, love for details.
-    -   `craftsman`: ...craftsman: good code quality, individual, pragmatism.
-    -   `engineer`:  ...engineer: medium code quality, standardized, pre-fabricated.
-
 -   **project.source.boxing**: the project *source code* is treated as a...
 
     -   `white`:     ...white box, i.e., the code is intentially fully transparent and understood.
     -   `grey`:      ...grey  box, i.e., the code is intentially partially intransparent or not understood.
     -   `black`:     ...black box, i.e., the code is intentially fully intransparent and not understood.
+
+-   **project.source.ambition**: the project *source code* has to meet the ambition of a...
+
+    -   `artist`:    ...artist: finest code quality, individual, love for details.
+    -   `craftsman`: ...craftsman: good code quality, individual, pragmatism.
+    -   `engineer`:  ...engineer: medium code quality, standardized, pre-fabricated.
 
 -   **project.source.size**: the project *source code* is...
 

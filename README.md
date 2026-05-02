@@ -70,7 +70,7 @@ Installation
 ------------
 
 ```
-#   install ASE tool into system via NPM
+#   install ASE tool into PATH via NPM
 #   (non-destructive: can be reversed with "npm uninstall -g @rse/ase" at any time)
 npm install -g @rse/ase
 
