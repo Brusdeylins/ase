@@ -6,6 +6,18 @@ user-invocable: true
 disable-model-invocation: false
 model: opus
 effort: medium
+allowed-tools:
+    - "Bash(git diff:* | awk:* | head:*)"
+    - "Bash(git diff:* | awk:* | tail:*)"
+    - "Bash(git diff:* | awk:* | wc:*)"
+    - "Bash(git diff:* | grep:* | head:*)"
+    - "Bash(git diff:* | grep:* | wc:*)"
+    - "Bash(git log:* | grep:* | head:*)"
+    - "Bash(git log:* | awk:* | head:*)"
+    - "Bash(cat:* | awk:* | head:*)"
+    - "Bash(cat:* | grep:* | head:*)"
+    - "Bash(awk '*)"
+    - "Bash(awk \"*)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
