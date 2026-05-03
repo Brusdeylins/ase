@@ -205,6 +205,38 @@ uninstalling the *ASE* tool and its companion *Claude Code* plugin:
 - `ase setup uninstall` \[`-d`|`--dev`\]:
   Uninstall the *ASE Claude Code* plugin and the *ASE* tool.
 
+The following top-level commands exist for managing persisted task
+plans under `~/.ase/task/`*id*`/plan.md`:
+
+- `ase task`:
+  Entry point group for task plan management. Without a subcommand,
+  the help text is shown and the command exits with status 1.
+
+- `ase task list`:
+  List all persisted task ids in lexicographic order, one per line.
+
+- `ase task load` *id*:
+  Load the task plan with the given *id* and write it to standard
+  output. Prints nothing if the task does not exist.
+
+- `ase task edit` *id*:
+  Open the task plan with the given *id* in the editor defined by
+  `$EDITOR` or `$VISUAL` (falling back to `vi`). The file and its
+  parent directory are created if missing.
+
+- `ase task save` *id*:
+  Save the task plan with the given *id*, reading its contents from
+  standard input.
+
+- `ase task delete` *id*:
+  Delete the task plan with the given *id* (removing the entire
+  `~/.ase/task/`*id*`/` directory). Exits with status 1 if no such
+  task existed.
+
+- `ase task purge` \[*days*\]:
+  Remove all persisted tasks whose modification time is older than
+  *days* (default: 31).
+
 The following top-level commands exist for *Claude Code* hook
 integration:
 
@@ -255,6 +287,11 @@ STATE FILES
 
 - `.ase/service.log`:
   Stdout/stderr log of the detached background service.
+
+- `~/.ase/task/`*id*`/plan.md`:
+  Persisted task plan, managed by the `ase task` subcommands. The
+  per-task directory is owned by *ASE* in full and removed by
+  `ase task delete` and `ase task purge`.
 
 HISTORY
 -------

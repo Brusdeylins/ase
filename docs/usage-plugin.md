@@ -37,6 +37,16 @@ The following ASE commands/skills exist on the meta-level:
   argument, displays the current task id. With an argument, sets the
   task id (persisted in the session-scoped configuration).
 
+- **/ase-meta-diagram** *description*:<br/>
+  Render diagrams via the `diagram` tool of the `ase` MCP service.
+  Use to visualize structure/layout/components/dependencies as a
+  Flowchart, control-flow/branching/concurrency as a Flowchart,
+  state-machine/states/transitions as an UML State Diagram,
+  data-flow/actors/messages/protocols as an UML Sequence Diagram,
+  data-structure/classes/methods as an UML Class Diagram,
+  data-model/entities/relationships as an ER Diagram,
+  or metrics/distributions/time-series as XY-Charts.
+
 ### Architecture Commands
 
 The following ASE commands/skills exist on the architecture-level:
@@ -45,18 +55,22 @@ The following ASE commands/skills exist on the architecture-level:
   Discover additional, third-party components (libraries/frameworks)
   for the technology stack to provide needed functionality.
 
+- **/ase-arch-analyze** *source-reference*:<br/>
+  Review the software architecture.
+
 ### Spec Commands
 
 The following ASE commands/skills exist on the specification-level:
 
-- **/ase-spec-preflight** *feature-id*:<br/>
-  Preflight a stand-alone feature specification.
+- **/ase-spec-preflight**:<br/>
+  Preflight the implementation of the current task plan.
 
-- **/ase-spec-edit** *feature-id* *summary-or-change*:<br/>
-  Edit a stand-alone feature specification.
+- **/ase-spec-edit** \[*content* ...\]:<br/>
+  Load and save a named plan for a task and apply Claude Code *Plan
+  Mode* on it.
 
-- **/ase-spec-implement** *feature-id*:<br/>
-  Implement a stand-alone feature specification.
+- **/ase-spec-implement**:<br/>
+  Implement the current task plan.
 
 ### Code Commands
 
@@ -77,10 +91,10 @@ The following ASE commands/skills exist on the code-level:
 - **/ase-code-analyze** *source-reference*:<br/>
   Analyze the source code for problems in the logic and semantics and
   its related control flow. Usually, for each reported problem you want
-  to elaborate on it with **/ase-code-elaborate**.
+  to resolve it with **/ase-code-resolve**.
 
-- **/ase-code-elaborate** *problem-reference*:<br/>
-  Elaborate on a source code problem in depth to fix it. Usually the
+- **/ase-code-resolve** *problem*:<br/>
+  Resolve a problem in depth in order to fix it. Usually the
   problem reference is one of the outputs of **/ase-code-analyze**.
 
 - **/ase-code-refactor** *refactor-hint*:<br/>

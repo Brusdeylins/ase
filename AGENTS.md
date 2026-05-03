@@ -10,11 +10,17 @@ of a *Claude Code* plugin and a Command-Line Interface (CLI) tool.
 
 **ASE (Agentic Software Engineering)** ships two deliverables from one repo:
 
-- `tool/` — the `@rse/ase` npm CLI (TypeScript, ESM, yargs-based).
-  Entry point `tool/src/ase.ts` wires three top-level commands:
-  `init`, `config`, and `agent`. The `agent` command dispatches to
-  sub-agents PRJ/PRD/BIZ/ARC/DEV/OPS (`ase-agent-*.ts`), all extending
-  `ase-agent-base.ts`. Agent roles are documented in `tool/README.md`.
+- `tool/` — the `@rse/ase` npm CLI (TypeScript, ESM, commander-based).
+  Entry point `tool/src/ase.ts` wires the top-level commands `config`,
+  `service`, `mcp`, `hook`, `diagram`, `setup`, and `task`, each
+  registered by a corresponding `ase-<name>.ts` module. `ase config`
+  manages layered YAML configuration across `user`/`project`/`task`/
+  `session` scopes; `ase service` runs a per-project background HTTP
+  service bridged to *Claude Code* via `ase mcp`; `ase hook` handles
+  *Claude Code* hook events; `ase setup` installs/updates/uninstalls
+  the tool and its companion plugin; `ase task` manages persisted task
+  plans under `~/.ase/task/<id>/plan.md`; `ase diagram` renders Mermaid
+  diagrams as Unicode/ASCII art.
 
 - `plugin/` — the Claude Code plugin published via the marketplace
   defined at `.claude-plugin/marketplace.json`. Plugin metadata
