@@ -2,7 +2,7 @@
 name: ase-meta-task
 argument-hint: "[<id>]"
 description: >
-    Get or set unique ASE task id <id>.
+    Get or set unique task id <id>.
     Use when user requests to work on a certain task or
     wants to know what the current task is.
 user-invocable: true

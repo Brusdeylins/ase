@@ -7,8 +7,7 @@ description: >
     a brief, factual, and accurate "engineer" (default),
     a very brief, factual, and abbreviating "telegrapher",
     or an ultra brief, rough and stuttering "caveman".
-    Use when user says "persona <persona>", "talk like persona <persona>",
-    "use persona <persona>", or invokes "/ase-meta-persona <persona>".
+    Use when user says "persona <persona>" or "be <persona>".
 user-invocable: true
 disable-model-invocation: false
 ---
