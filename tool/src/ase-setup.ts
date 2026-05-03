@@ -62,6 +62,10 @@ export default class SetupCommand {
         await this.ensureTool("npm")
         await this.ensureTool("claude")
 
+        /*  best-effort stop of background service  */
+        this.log.write("info", `setup: update${dev ? "[dev]" : ""}: $ ase service stop`)
+        await execa("ase", [ "service", "stop" ], { stdio: "ignore", reject: false })
+
         if (dev) {
             /*  update ASE CLI Tool  */
             this.log.write("info", "setup: update[dev]: re-build ASE CLI tool (origin: local)")
@@ -101,6 +105,10 @@ export default class SetupCommand {
     private async doUninstall (dev: boolean): Promise<number> {
         await this.ensureTool("npm")
         await this.ensureTool("claude")
+
+        /*  best-effort stop of background service  */
+        this.log.write("info", `setup: update${dev ? "[dev]" : ""}: $ ase service stop`)
+        await execa("ase", [ "service", "stop" ], { stdio: "ignore", reject: false })
 
         /*  uninstall ASE Claude Code plugin  */
         this.log.write("info", `setup: uninstall${dev ? "[dev]" : ""}: ` +
