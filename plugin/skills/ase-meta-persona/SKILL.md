@@ -43,7 +43,7 @@ Persona Configuration
 
     -   Output:
         <template>
-        ⧉ **ASE**: ☯ persona: **<ase-persona-style/>**
+        ⧉ **ASE**: ☯ persona: **<ase-persona-style/>** (*updated*)
         </template>
     </if>
 
