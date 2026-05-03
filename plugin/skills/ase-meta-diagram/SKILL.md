@@ -77,6 +77,22 @@ Rules
     the reproduction of the `text` output is a defect: the diagram is
     then effectively invisible.
 
+-   IF USER REPORTS THEY CANNOT SEE THE DIAGRAM:
+    You *MUST* *NEVER* hand-draw a replacement diagram, even when
+    the user says they "cannot see the diagram" or that "the UI
+    collapsed the tool output"!
+
+    In Claude Code, the MCP tool call appears in the UI as a
+    collapsed widget such as `Called plugin:ase:ase (ctrl+o to
+    expand)`; the user *cannot* see the rendered diagram from
+    that widget alone. The verbatim Markdown-fenced reproduction
+    in your response text is the *only* way the user sees the
+    diagram. If the user reports the diagram is invisible, *repeat*
+    the verbatim reproduction in a fresh Markdown-fenced code
+    block — do *NOT* fall back to drawing box-drawing characters
+    or ASCII frames inline. Hand-drawing remains forbidden
+    regardless of any perceived UI state.
+
 -   NOTICE 1:
     You *MUST* *NEVER* emit the plain Mermaid diagram specification, as
     it is just an intermediate format for driving the rendering process!
