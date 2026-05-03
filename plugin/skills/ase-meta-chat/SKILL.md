@@ -1,10 +1,10 @@
 ---
-name: ase-meta-llm
+name: ase-meta-chat
 argument-hint: "<llm> <query>"
 description: >
-    Query foreign LLM.
+    Query foreign LLM for Chat.
     Use this skill if a foreign LLM like OpenAI ChatCGPT, Google Gemini,
-    DeepSeek or xAI Grok should be queried.
+    DeepSeek or xAI Grok should be queried with a single chat message.
 user-invocable: true
 disable-model-invocation: false
 context: fork
@@ -18,13 +18,13 @@ allowed-tools:
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 
-Query Foreign LLMs
-==================
+Query Foreign LLMs for Chat
+===========================
 
-Your role is to act as a proxy to query a foreign LLM.
+Your role is to act as a proxy to query a foreign LLM for a single chat message.
 
 <objective>
-Query foreign LLMs for: <query>$ARGUMENTS</query>
+Query foreign LLM for: <query>$ARGUMENTS</query>
 </objective>
 
 <flow>
@@ -39,13 +39,13 @@ Query foreign LLMs for: <query>$ARGUMENTS</query>
     </step>
 
 2.  <step id="STEP 2: ">
-    Spawn a *sub-task* with the `ase-meta-llm` *agent* for the selected foreign LLMs,
+    Spawn a *sub-task* with the `ase-meta-chat` *agent* for the selected foreign LLMs,
     and pass the *second and all remaining* words of the following <query/>
     as the query for the selected LLM.
     </step>
 
 3.  <step id="STEP 3: ">
-    Return the *plain response* of the `ase-meta-llm` agent 1:1 and *without any
+    Return the *plain response* of the `ase-meta-chat` agent 1:1 and *without any
     modifications*. Especially, do *NOT* add or remove any text from the agent
     response on your own and do not interpret the result in any way.
     </step>

@@ -6,27 +6,22 @@ Usage of Plugin
 
 The following ASE commands/skills exist on the meta-level:
 
-- **/ase-meta-task** *task-id*:<br/>
-  Get or set the unique ASE task id for the current session. Without an
-  argument, displays the current task id. With an argument, sets the
-  task id (persisted in the session-scoped configuration).
-
-- **/ase-meta-why** *fact*:<br/>
-  Perform a Five-Whys root-cause analysis.
-
 - **/ase-meta-search** *query*:<br/>
   Search the Internet/Web with a query.
+
+- **/ase-meta-chat** *llm* *query*:<br/>
+  Query a foreign LLM like OpenAI ChatGPT, Google Gemini, DeepSeek or
+  xAI Grok.
 
 - **/ase-meta-quorum** *question*:<br/>
   Query multiple AIs for a quorum answer.
 
+- **/ase-meta-why** *fact*:<br/>
+  Perform a Five-Whys root-cause analysis.
+
 - **/ase-meta-evaluate** *alternatives*:<br/>
   Evaluate alternatives through an ad-hoc weighted multi-criteria
   decision matrix.
-
-- **/ase-meta-llm** *llm* *query*:<br/>
-  Query a foreign LLM like OpenAI ChatGPT, Google Gemini, DeepSeek or
-  xAI Grok.
 
 - **/ase-meta-persona** \[*persona*\]:<br/>
   Adjust communication style in four intensity levels of token usage.
@@ -34,6 +29,11 @@ The following ASE commands/skills exist on the meta-level:
   `writer`, a brief, factual, and accurate `engineer` (default), a
   very brief, factual, and abbreviating `telegrapher`, or an ultra
   brief, rough and stuttering `caveman`.
+
+- **/ase-meta-task** *task-id*:<br/>
+  Get or set the unique ASE task id for the current session. Without an
+  argument, displays the current task id. With an argument, sets the
+  task id (persisted in the session-scoped configuration).
 
 ### Architecture Commands
 

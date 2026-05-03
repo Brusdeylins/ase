@@ -5,6 +5,7 @@ ChangeLog
 0.0.17 (2026-05-02)
 -------------------
 
+- CLEANUP: rename ase-meta-llm to ase-meta-chat to better fit to ase-meta-search
 - IMPROVEMENT: activate persona on startup and provide user and project information initially, too
 - IMPROVEMENT: ensure tools like "npm" and "claude" are found in $PATH
 - IMPROVEMENT: show current and latest version on startup, with hint on available updates

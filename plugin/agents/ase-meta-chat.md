@@ -1,6 +1,6 @@
 ---
-name: ase-meta-llm
-description: "Query Foreign LLM"
+name: ase-meta-chat
+description: "Query Foreign LLM for Chat"
 model: haiku
 ---
 
