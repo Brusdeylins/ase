@@ -6,7 +6,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "ase hook session-start"
+                        "command": "ase hook session-start",
+                        "statusMessage": "Loading ASE..."
                     }
                 ]
             }
@@ -17,7 +18,8 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "ase hook pre-tool-use"
+                        "command": "ase hook pre-tool-use",
+                        "statusMessage": "Approve ASE..."
                     }
                 ]
             }
