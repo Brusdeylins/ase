@@ -5,6 +5,7 @@
 */
 
 import fs                                   from "node:fs"
+import os                                   from "node:os"
 import path                                 from "node:path"
 import { execFileSync }                     from "node:child_process"
 
@@ -28,12 +29,52 @@ const COLORS: ReadonlySet<string> = new Set<ForegroundColorName | "default">([
 
 /*  shape of the JSON payload Claude Code passes on stdin  */
 interface StatuslineInput {
-    workspace?:      { current_dir?:     string  }
-    model?:          { display_name?:    string  }
-    context_window?: { used_percentage?: number  }
-    effort?:         { level?:           string  }
-    thinking?:       { enabled?:         boolean }
-    session_id?:     string
+    workspace?: {
+        current_dir?: string
+    }
+    model?: {
+        display_name?: string
+    }
+    context_window?:  {
+        used_percentage?:     number
+        total_input_tokens?:  number
+        total_output_tokens?: number
+        current_usage?: {
+            input_tokens?:                number
+            cache_creation_input_tokens?: number
+            cache_read_input_tokens?:     number
+        }
+    }
+    effort?: {
+        level?: string
+    }
+    thinking?: {
+        enabled?: boolean
+    }
+    session_id?:      string
+    session_name?:    string
+    transcript_path?: string
+    version?:         string
+    output_style?: {
+        name?: string
+    }
+    cost?: {
+        total_cost_usd?:        number
+        total_duration_ms?:     number
+        total_api_duration_ms?: number
+        total_lines_added?:     number
+        total_lines_removed?:   number
+    }
+    rate_limits?: {
+        five_hour?: {
+            used_percentage?: number,
+            resets_at?: string
+        }
+        seven_day?: {
+            used_percentage?: number,
+            resets_at?: string
+        }
+    }
 }
 
 /*  internal command options type  */
@@ -75,6 +116,109 @@ const detectTermWidth = (): number => {
     return width
 }
 
+/*  format a token count as a compact human-readable string (e.g. 334k, 104.9M)  */
+const formatTokens = (n: number): string => {
+    if (!Number.isFinite(n) || n < 0)
+        return "0"
+    if (n >= 1_000_000_000)
+        return `${(n / 1_000_000_000).toFixed(1)}G`
+    if (n >= 1_000_000)
+        return `${(n / 1_000_000).toFixed(1)}M`
+    if (n >= 1_000)
+        return `${Math.round(n / 1_000)}k`
+    return `${n}`
+}
+
+/*  format a millisecond duration as a compact human-readable string (e.g. 6d 12hr 7m, 4hr 27m, 12m 30s)  */
+const formatDurationMs = (ms: number): string => {
+    if (!Number.isFinite(ms) || ms < 0)
+        return "0s"
+    const totalSec = Math.floor(ms / 1000)
+    const days     = Math.floor(totalSec / 86400)
+    const hours    = Math.floor((totalSec % 86400) / 3600)
+    const mins     = Math.floor((totalSec % 3600)  / 60)
+    const secs     = totalSec % 60
+    if (days > 0)
+        return `${days}d ${hours}hr ${mins}m`
+    if (hours > 0)
+        return `${hours}hr ${mins}m`
+    if (mins > 0)
+        return `${mins}m ${secs}s`
+    return `${secs}s`
+}
+
+/*  format a wall-clock duration as elapsed hours+minutes (e.g. 92hr 40m), without day rollover  */
+const formatHoursMinutes = (ms: number): string => {
+    if (!Number.isFinite(ms) || ms < 0)
+        return "0hr 0m"
+    const totalMin = Math.floor(ms / 60000)
+    const hours    = Math.floor(totalMin / 60)
+    const mins     = totalMin % 60
+    return `${hours}hr ${mins}m`
+}
+
+/*  format an ISO timestamp as a remaining-time relative to now (e.g. 4hr 27m, 6d 12hr 7m)  */
+const formatTimeUntil = (iso: string): string => {
+    const target = Date.parse(iso)
+    if (!Number.isFinite(target))
+        return ""
+    const delta = target - Date.now()
+    if (delta <= 0)
+        return "0m"
+    return formatDurationMs(delta)
+}
+
+/*  format a USD cost as a dollar string with 2 decimals (e.g. $54.44)  */
+const formatCostUsd = (n: number): string => {
+    if (!Number.isFinite(n) || n < 0)
+        return "$0.00"
+    return `$${n.toFixed(2)}`
+}
+
+/*  format a byte count as a compact human-readable string (e.g. 33.2G, 512M)  */
+const formatBytes = (n: number): string => {
+    if (!Number.isFinite(n) || n < 0)
+        return "0"
+    if (n >= 1024 ** 3)
+        return `${(n / 1024 ** 3).toFixed(1)}G`
+    if (n >= 1024 ** 2)
+        return `${(n / 1024 ** 2).toFixed(1)}M`
+    if (n >= 1024)
+        return `${(n / 1024).toFixed(1)}k`
+    return `${n}`
+}
+
+/*  probe local git status for the given working directory  */
+const probeGit = (cwd: string): { branch: string, dirty: boolean, untracked: number } => {
+    try {
+        const branch = execFileSync("git", [ "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD" ],
+            { stdio: [ "ignore", "pipe", "ignore" ], timeout: 1000 })
+            .toString("utf8").trim()
+        const porc = execFileSync("git", [ "-C", cwd, "status", "--porcelain" ],
+            { stdio: [ "ignore", "pipe", "ignore" ], timeout: 1000 })
+            .toString("utf8")
+        const lines     = porc.split("\n").filter((l) => l.length > 0)
+        const untracked = lines.filter((l) => l.startsWith("??")).length
+        const dirty     = lines.length > 0
+        return { branch, dirty, untracked }
+    }
+    catch (_e) {
+        return { branch: "", dirty: false, untracked: 0 }
+    }
+}
+
+/*  probe local memory usage in bytes (used/total) using OS-portable helpers  */
+const probeMemory = (): { used: number, total: number } => {
+    try {
+        const total = os.totalmem()
+        const free  = os.freemem()
+        return { used: total - free, total }
+    }
+    catch (_e) {
+        return { used: 0, total: 0 }
+    }
+}
+
 /*  command-line handling  */
 export default class StatuslineCommand {
     constructor (private log: Log) {}
@@ -95,9 +239,10 @@ export default class StatuslineCommand {
             .option("--no-labels",
                 "disable labels in front of bold values")
             .argument("[lines...]",
-                "one or more template lines with %u %p %T %s %m %e %t %P %c placeholders " +
-                "and <color>...</color> markup (color: black, red, green, yellow, blue, " +
-                "magenta, cyan, white, default) (default: single line \"%m %e %t\")")
+                "one or more template lines with %u %p %T %s %m %e %t %P %c %C %L %N %a %r " +
+                "%S %D %W %Q %H %X %b %g %G %d %M %V %o placeholders and <color>...</color> markup " +
+                "(color: black, red, green, yellow, blue, magenta, cyan, white, default) " +
+                "(default: single line \"%m %e %t\")")
             .action(async (lines: string[], opts: StatuslineOpts) => {
                 /*  read all of stdin  */
                 const input = await readStdin()
@@ -114,13 +259,31 @@ export default class StatuslineCommand {
                 }
 
                 /*  fetch information from data  */
-                const user      = process.env.USER ?? process.env.LOGNAME ?? "unknown"
-                const dir       = path.basename(data.workspace?.current_dir ?? "")
-                const model     = data.model?.display_name ?? ""
-                const pct       = Math.floor(data.context_window?.used_percentage ?? 0)
-                const effort    = data.effort?.level ?? "unknown"
-                const thinking  = (data.thinking?.enabled ?? false) === true ? "yes" : "no"
-                const sessionId = data.session_id ?? "unknown"
+                const user         = process.env.USER ?? process.env.LOGNAME ?? "unknown"
+                const cwd          = data.workspace?.current_dir ?? ""
+                const dir          = path.basename(cwd)
+                const model        = data.model?.display_name ?? ""
+                const pct          = Math.floor(data.context_window?.used_percentage ?? 0)
+                const effort       = data.effort?.level ?? "unknown"
+                const thinking     = (data.thinking?.enabled ?? false) === true ? "yes" : "no"
+                const sessionId    = data.session_name ?? data.session_id ?? "unknown"
+                const ctxIn        = data.context_window?.current_usage?.input_tokens                ?? 0
+                const ctxCcIn      = data.context_window?.current_usage?.cache_creation_input_tokens ?? 0
+                const ctxCrIn      = data.context_window?.current_usage?.cache_read_input_tokens     ?? 0
+                const tokensCur    = ctxIn + ctxCcIn + ctxCrIn
+                const tokensLim    = pct > 0 && tokensCur > 0 ? Math.round(tokensCur * 100 / pct) : 0
+                const tokensCum    = (data.context_window?.total_input_tokens  ?? 0) +
+                                     (data.context_window?.total_output_tokens ?? 0)
+                const pct5h        = data.rate_limits?.five_hour?.used_percentage
+                const until5h      = data.rate_limits?.five_hour?.resets_at ?? ""
+                const pctWk        = data.rate_limits?.seven_day?.used_percentage
+                const untilWk      = data.rate_limits?.seven_day?.resets_at ?? ""
+                const sessDurMs    = data.cost?.total_duration_ms ?? 0
+                const sessCost     = data.cost?.total_cost_usd
+                const ccVersion    = data.version ?? ""
+                const styleName    = data.output_style?.name ?? ""
+                const linesAdded   = data.cost?.total_lines_added ?? 0
+                const linesRemoved = data.cost?.total_lines_removed ?? 0
 
                 /*  optionally determine ASE task id and persona style via in-process Config  */
                 let taskId  = process.env.ASE_TASK_ID       ?? ""
@@ -182,7 +345,30 @@ export default class StatuslineCommand {
                     return `${i}${l}`
                 }
 
-                /*  identifier -> renderer map  */
+                /*  determine effective template lines  */
+                const tmpl = lines.length > 0 ? lines : [ "%m %e %t" ]
+
+                /*  lazy probes: only invoke git/memory subprocesses when their tokens
+                    actually appear in the template, and memoize the result for this run  */
+                const all = tmpl.join("")
+                let gitCache: ReturnType<typeof probeGit> | null = null
+                const getGit = (): ReturnType<typeof probeGit> => {
+                    if (gitCache === null)
+                        gitCache = probeGit(cwd)
+                    return gitCache
+                }
+                let memCache: ReturnType<typeof probeMemory> | null = null
+                const getMem = (): ReturnType<typeof probeMemory> => {
+                    if (memCache === null)
+                        memCache = probeMemory()
+                    return memCache
+                }
+                if (/%[bgG]/.test(all))
+                    getGit()
+                if (all.includes("%M"))
+                    getMem()
+
+                /*  identifier to renderer map  */
                 const renderers: Record<string, () => void> = {
                     u: () => emit(`${prefix("※", "user")}${c.bold(user)}`),
                     p: () => emit(`${prefix("⚑", "project")}${c.bold(dir)}`),
@@ -198,11 +384,80 @@ export default class StatuslineCommand {
                         if (persona !== "")
                             emit(`${prefix("☯", "persona")}${c.bold(persona)}`)
                     },
-                    c: () => emit(`${prefix("◔", "context")}${bar} ${pct}%`)
+                    c: () => emit(`${prefix("◔", "context")}${bar} ${pct}%`),
+                    a: () => emit(`${prefix("⊕", "added")}${c.bold(linesAdded)}`),
+                    r: () => emit(`${prefix("⊖", "removed")}${c.bold(linesRemoved)}`),
+                    C: () => {
+                        if (tokensCur > 0)
+                            emit(`${prefix("◇", "tokens")}${c.bold(formatTokens(tokensCur))}`)
+                    },
+                    L: () => {
+                        if (tokensLim > 0)
+                            emit(`${prefix("◆", "limit")}${c.bold(formatTokens(tokensLim))}`)
+                    },
+                    N: () => {
+                        if (tokensCum > 0)
+                            emit(`${prefix("Σ", "total")}${c.bold(formatTokens(tokensCum))}`)
+                    },
+                    S: () => {
+                        if (pct5h !== undefined)
+                            emit(`${prefix("⏲", "session")}${c.bold(`${pct5h.toFixed(1)}%`)}`)
+                    },
+                    D: () => {
+                        const s = formatTimeUntil(until5h)
+                        if (s !== "")
+                            emit(`${prefix("⏱", "session-resets")}${c.bold(s)}`)
+                    },
+                    W: () => {
+                        if (pctWk !== undefined)
+                            emit(`${prefix("⏲", "weekly")}${c.bold(`${pctWk.toFixed(1)}%`)}`)
+                    },
+                    Q: () => {
+                        const s = formatTimeUntil(untilWk)
+                        if (s !== "")
+                            emit(`${prefix("⏱", "weekly-resets")}${c.bold(s)}`)
+                    },
+                    H: () => {
+                        if (sessDurMs > 0)
+                            emit(`${prefix("⏱", "elapsed")}${c.bold(formatHoursMinutes(sessDurMs))}`)
+                    },
+                    X: () => {
+                        if (sessCost !== undefined)
+                            emit(`${prefix("$", "cost")}${c.bold(formatCostUsd(sessCost))}`)
+                    },
+                    b: () => {
+                        const g = getGit()
+                        const label = g.branch !== "" ? g.branch : "no git"
+                        emit(`${prefix("⎇", "branch")}${c.bold(label)}`)
+                    },
+                    g: () => {
+                        const g = getGit()
+                        if (g.branch !== "")
+                            emit(`${prefix("±", "status")}${c.bold(g.dirty ? "dirty" : "clean")}`)
+                    },
+                    G: () => {
+                        const g = getGit()
+                        if (g.branch !== "")
+                            emit(`${prefix("⁈", "untracked")}${c.bold(String(g.untracked))}`)
+                    },
+                    d: () => {
+                        if (cwd !== "")
+                            emit(`${prefix("▶", "cwd")}${c.bold(cwd)}`)
+                    },
+                    M: () => {
+                        const m = getMem()
+                        if (m.total > 0)
+                            emit(`${prefix("⛁", "mem")}${c.bold(`${formatBytes(m.used)}/${formatBytes(m.total)}`)}`)
+                    },
+                    V: () => {
+                        if (ccVersion !== "")
+                            emit(`${prefix("⎈", "version")}${c.bold(ccVersion)}`)
+                    },
+                    o: () => {
+                        if (styleName !== "")
+                            emit(`${prefix("≡", "style")}${c.bold(styleName)}`)
+                    }
                 }
-
-                /*  determine effective template lines  */
-                const tmpl = lines.length > 0 ? lines : [ "%m %e %t" ]
 
                 /*  walk each template line and render  */
                 for (const line of tmpl) {

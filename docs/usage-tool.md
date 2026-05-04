@@ -172,15 +172,38 @@ statusline:
   users. The input JSON is the standard *Claude Code* statusline
   payload (with `workspace.current_dir`, `model.display_name`,
   `context_window.used_percentage`, `effort.level`, `thinking.enabled`,
-  and `session_id`). The output is an ANSI-colored rendering composed
-  from one or more template *line* arguments. Each *line* may contain
-  literal characters and the following `%`-prefixed placeholders:
-  `%u` (user), `%p` (project), `%T` (task, suppressed if empty),
-  `%s` (session), `%m` (model), `%e` (effort), `%t` (thinking),
-  `%P` (persona, suppressed if empty), and `%c` (context-usage
-  progress bar with a 20-cell bar and percentage). The context bar
-  color shifts from default to blue, yellow, and red as context usage
-  crosses 40%, 60%, and 80%. In addition, each *line* may contain
+  `session_id`, and -- on *Claude Code* `2.1.90+` -- additionally
+  `transcript_path`, `version`, `output_style.name`, raw token counts
+  in `context_window.current_usage.*` and `context_window.total_*_tokens`,
+  `cost.total_cost_usd` / `cost.total_duration_ms`, and the
+  `rate_limits.five_hour` / `rate_limits.seven_day` window
+  percentages and reset timestamps). The output is an ANSI-colored
+  rendering composed from one or more template *line* arguments.
+  Each *line* may contain literal characters and the following
+  `%`-prefixed placeholders: `%u` (user), `%p` (project), `%T` (task,
+  suppressed if empty), `%s` (session name, falling back to session
+  id), `%m` (model), `%e` (effort), `%t` (thinking), `%P` (persona,
+  suppressed if empty), `%c` (context-usage progress bar with a
+  20-cell bar and percentage),
+  `%C` (current context tokens, e.g. `334k`), `%L` (context-window
+  token limit, e.g. `1.0M`), `%N` (cumulative session tokens, e.g.
+  `104.9M`), `%a` (lines of code added in this session), `%r`
+  (lines of code removed in this session), `%S` (5-hour rate-limit
+  window used percentage), `%D` (5-hour window time-until-reset,
+  e.g. `4hr 27m`), `%W` (7-day rate-limit window used percentage),
+  `%Q` (7-day window time-until-reset), `%H` (session wall-clock
+  duration, e.g. `92hr 40m`), `%X` (session cost in USD, e.g.
+  `$54.44`), `%b` (git branch, or `no git`), `%g` (git status:
+  `clean` or `dirty`), `%G` (git untracked file count), `%d` (full
+  current working directory path), `%M` (memory used/total, e.g.
+  `33.2G/64.0G`), `%V` (*Claude Code* version), and `%o`
+  (output-style name). All `%`-tokens whose source field is missing
+  in the input JSON (or, for `%b`/`%g`/`%G`, when the *cwd* is not a
+  git working tree) are *suppressed silently*, so older *Claude Code*
+  versions and synthetic test inputs do not produce empty
+  placeholders. The context bar color shifts from default to blue,
+  yellow, and red as context usage crosses 40%, 60%, and 80%. In
+  addition, each *line* may contain
   `<`*color*`>`...`</`*color*`>` markup to colorize literal text,
   where *color* is one of `black`, `red`, `green`, `yellow`, `blue`,
   `magenta`, `cyan`, `white`, or `default`. A closing tag resets the
