@@ -52,7 +52,7 @@ Features
   on the configured parameters. This allows to control the *general*
   agent behavior.
 
-- [**Task Skills**](plugin/skills/) (30% done):
+- [**Task Skills**](plugin/skills/) (80% done):
   Recurring tasks are supported with dedicated skills, based on the
   configured parameters. This allows to control the *specific* agent
   behavior.
