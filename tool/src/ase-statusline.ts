@@ -189,7 +189,7 @@ const formatBytes = (n: number): string => {
 }
 
 /*  probe local git status for the given working directory  */
-const probeGit = (cwd: string): { branch: string, dirty: boolean, untracked: number } => {
+const probeGit = (cwd: string): { branch: string, dirty: boolean, untracked: number, added: number, removed: number } => {
     try {
         const branch = execFileSync("git", [ "-C", cwd, "rev-parse", "--abbrev-ref", "HEAD" ],
             { stdio: [ "ignore", "pipe", "ignore" ], timeout: 1000 })
@@ -200,10 +200,24 @@ const probeGit = (cwd: string): { branch: string, dirty: boolean, untracked: num
         const lines     = porc.split("\n").filter((l) => l.length > 0)
         const untracked = lines.filter((l) => l.startsWith("??")).length
         const dirty     = lines.length > 0
-        return { branch, dirty, untracked }
+        let added   = 0
+        let removed = 0
+        try {
+            const shortstat = execFileSync("git", [ "-C", cwd, "diff", "--shortstat", "HEAD" ],
+                { stdio: [ "ignore", "pipe", "ignore" ], timeout: 1000 })
+                .toString("utf8")
+            const mAdd = shortstat.match(/(\d+)\s+insertion/)
+            const mDel = shortstat.match(/(\d+)\s+deletion/)
+            if (mAdd !== null) added   = Number.parseInt(mAdd[1]!, 10)
+            if (mDel !== null) removed = Number.parseInt(mDel[1]!, 10)
+        }
+        catch (_e) {
+            /*  no HEAD yet or git failure; leave counts at 0  */
+        }
+        return { branch, dirty, untracked, added, removed }
     }
     catch (_e) {
-        return { branch: "", dirty: false, untracked: 0 }
+        return { branch: "", dirty: false, untracked: 0, added: 0, removed: 0 }
     }
 }
 
@@ -456,7 +470,7 @@ export default class StatuslineCommand {
                     g: () => {
                         const g = getGit()
                         if (g.branch !== "")
-                            emit(`${prefix("±", "status")}${c.bold(g.dirty ? "dirty" : "clean")}`)
+                            emit(`${prefix("±", "changed")}${c.bold(`+${g.added}/-${g.removed}`)}`)
                     },
                     G: () => {
                         const g = getGit()
