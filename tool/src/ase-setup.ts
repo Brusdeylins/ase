@@ -26,8 +26,8 @@ export default class SetupCommand {
     }
 
     /*  run a sub-process, suppressing output on success and emitting it on failure  */
-    private async run (cmd: string, args: string[], opts: { cwd?: string, quiet?: boolean, retries?: number } = {}): Promise<void> {
-        const { cwd, quiet = false, retries = 1 } = opts
+    private async run (cmd: string, args: string[], opts: { cwd?: string, quiet?: boolean, retries?: number, ignoreError?: string } = {}): Promise<void> {
+        const { cwd, quiet = false, retries = 1, ignoreError } = opts
         this.log.write("info", `setup: $ ${cmd} ${args.join(" ")}` +
             (cwd !== undefined ? ` (cwd: ${cwd})` : ""))
         for (let i = 0; i < retries; i++) {
@@ -53,6 +53,10 @@ export default class SetupCommand {
                         `setup: attempt ${i + 1}/${retries} failed for "${cmd} ${args.join(" ")}": retrying...`)
                     await new Promise((resolve) => setTimeout(resolve, 1000))
                     continue
+                }
+                if (ignoreError !== undefined) {
+                    this.log.write("info", `setup: ${ignoreError} (skipped)`)
+                    return
                 }
                 const exitCode = typeof err?.exitCode === "number" ? err.exitCode : -1
                 this.log.write("error", `setup: command failed: exit code: ${exitCode}`)
@@ -103,7 +107,8 @@ export default class SetupCommand {
                 but there is no version change in the plugin manifest,
                 so just re-install the plugin to let Claude Code update its copy  */
             this.log.write("info", "setup: update[dev]: re-install ASE Claude Code plugin (origin: local)")
-            await this.run("claude", [ "plugin", "uninstall", "ase@ase" ])
+            await this.run("claude", [ "plugin", "uninstall", "ase@ase" ],
+                { ignoreError: "ASE Claude Code plugin not installed" })
             await this.run("claude", [ "plugin", "install",   "ase@ase" ], { retries: 3 })
         }
         else {
@@ -140,8 +145,10 @@ export default class SetupCommand {
         /*  uninstall ASE Claude Code plugin  */
         this.log.write("info", `setup: uninstall${dev ? "[dev]" : ""}: ` +
             `uninstalling ASE Claude Code plugin (origin: ${dev ? "local" : "remote"})`)
-        await this.run("claude", [ "plugin", "uninstall", "ase@ase" ])
-        await this.run("claude", [ "plugin", "marketplace", "remove", "ase" ])
+        await this.run("claude", [ "plugin", "uninstall", "ase@ase" ],
+            { ignoreError: "ASE Claude Code plugin not installed" })
+        await this.run("claude", [ "plugin", "marketplace", "remove", "ase" ],
+            { ignoreError: "ASE Claude Code plugin marketplace not registered" })
 
         /*  uninstall ASE CLI tool (non-development only)  */
         if (!dev) {
