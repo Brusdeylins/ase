@@ -143,10 +143,10 @@ Skill Control Flow
 Skill Sequential Processing
 ---------------------------
 
--   *IMPORTANT*: For each <step/> in <flow/> you *MUST* use the
-    `TaskCreate` tool to create a corresponding processing step.
+-   *IMPORTANT*: For each <flow/> you *MUST* use the
+    `TaskCreate` tool to create a corresponding set of processing steps.
 
-    For this, transform each `<step id="xxx" [...]/>` into `TaskCreate({
+    Each `<step id="xxx" [...]/>` corresponds to a `TaskCreate({
     subject: "xxx", description: "xxx", activeForm: "xxx" })`. In
     other words, use the text of the `id` attribute of <step/> for the
     `subject`, `description`, and `activeForm` fields of `TaskCreate`.
