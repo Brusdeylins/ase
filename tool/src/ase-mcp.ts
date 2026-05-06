@@ -102,60 +102,113 @@ export default class MCPCommand {
     /*  bridge stdio to a Streamable HTTP MCP endpoint on the local service  */
     private async runBridge (): Promise<number> {
         /*  ensure the service is running  */
-        const { port } = await this.ensureService()
+        let { port } = await this.ensureService()
 
-        /*  create MCP HTTP client  */
-        const url    = new URL(`http://${HOST}:${port}/mcp`)
-        const client = new StreamableHTTPClientTransport(url)
-
-        /*  create MCP STDIO server  */
+        /*  create MCP STDIO server (lives for the entire bridge lifetime)  */
         const server = new StdioServerTransport()
 
-        /*  handle shutdown  */
-        let closed = false
+        /*  track active client and bridge-level closed state  */
+        let client:      StreamableHTTPClientTransport | null = null
+        let closedByUs = false  /* set when we initiated the client close */
+        let bridgeDone = false  /* set when stdio side closes             */
+
+        /*  cleanly shut down the whole bridge  */
         const shutdown = async () => {
-            if (closed)
+            if (bridgeDone)
                 return
-            closed = true
+            bridgeDone = true
+            closedByUs = true
             await Promise.allSettled([
                 server.close(),
-                client.close()
+                client?.close()
             ])
         }
 
-        /*  connect server to client (forward transport)  */
+        /*  (re-)connect the HTTP client to the service  */
+        const connectClient = async () => {
+            const url    = new URL(`http://${HOST}:${port}/mcp`)
+            const next   = new StreamableHTTPClientTransport(url)
+            client = next
+
+            next.onmessage = (msg: JSONRPCMessage) => {
+                server.send(msg).catch((_err: unknown) => {
+                    const err = _err instanceof Error ? _err : new Error(String(_err))
+                    this.log.write("error", `mcp: stdout send: ${err.message}`)
+                })
+            }
+            next.onerror = (err: Error) => {
+                this.log.write("error", `mcp: http: ${err.message}`)
+            }
+
+            /*  service closed the connection — try to recover  */
+            next.onclose = () => {
+                if (closedByUs || bridgeDone)
+                    return
+                this.log.write("warning", "mcp: http connection lost — reconnecting")
+                reconnect().catch(() => {})
+            }
+
+            await next.start()
+        }
+
+        /*  reconnect loop: restart service if needed, then reconnect client  */
+        const reconnect = async (attempt = 0) => {
+            const delay = Math.min(500 * 2 ** attempt, 10000)
+            await new Promise<void>((resolve) => setTimeout(resolve, delay))
+            if (bridgeDone)
+                return
+            try {
+                const ctx = await this.ensureService()
+                port = ctx.port
+                closedByUs = true
+                await client?.close()
+                closedByUs = false
+                await connectClient()
+                this.log.write("info", "mcp: reconnected to service")
+            }
+            catch (_err: unknown) {
+                const err = _err instanceof Error ? _err : new Error(String(_err))
+                this.log.write("error", `mcp: reconnect failed: ${err.message}`)
+                reconnect(attempt + 1).catch(() => {})
+            }
+        }
+
+        /*  wire stdio server  */
         server.onmessage = (msg: JSONRPCMessage) => {
-            client.send(msg).catch((_err: unknown) => {
+            client?.send(msg).catch((_err: unknown) => {
                 const err = _err instanceof Error ? _err : new Error(String(_err))
                 this.log.write("error", `mcp: http send: ${err.message}`)
             })
         }
-        server.onerror = (_err: Error) => {
-            const err = _err instanceof Error ? _err : new Error(String(_err))
+        server.onerror = (err: Error) => {
             this.log.write("error", `mcp: stdio: ${err.message}`)
         }
         server.onclose = () => {
             shutdown().catch(() => {})
         }
 
-        /*  connect client to server (backward transport)  */
-        client.onmessage = (msg: JSONRPCMessage) => {
-            server.send(msg).catch((_err: unknown) => {
-                const err = _err instanceof Error ? _err : new Error(String(_err))
-                this.log.write("error", `mcp: stdout send: ${err.message}`)
-            })
-        }
-        client.onerror = (_err: Error) => {
-            const err = _err instanceof Error ? _err : new Error(String(_err))
-            this.log.write("error", `mcp: http: ${err.message}`)
-        }
-        client.onclose = () => {
-            shutdown().catch(() => {})
-        }
-
-        /*  start server and client  */
+        /*  start server and initial client  */
         await server.start()
-        await client.start()
+        await connectClient()
+
+        /*  periodically probe the service; trigger reconnect if it is gone  */
+        const HEALTH_INTERVAL_MS = 30_000
+        let reconnecting = false
+        const healthTimer = setInterval(async () => {
+            if (bridgeDone || reconnecting)
+                return
+            try {
+                const { projectId } = this.loadContext()
+                const match = await probe(port, projectId)
+                if (match !== true) {
+                    reconnecting = true
+                    this.log.write("warning", "mcp: health check failed — reconnecting")
+                    reconnect().catch(() => {}).finally(() => { reconnecting = false })
+                }
+            }
+            catch { /* ignore probe errors */ }
+        }, HEALTH_INTERVAL_MS)
+        healthTimer.unref()
 
         /*  await stdio to be closed  */
         await new Promise<void>((resolve) => {
@@ -165,6 +218,7 @@ export default class MCPCommand {
         })
 
         /*  shutdown services  */
+        clearInterval(healthTimer)
         await shutdown()
         return 0
     }

@@ -360,7 +360,7 @@ export default class ServiceCommand {
                     const message = err instanceof Error ? err.message : String(err)
                     return {
                         isError: true,
-                        content: [ { type: "text", text: `task_save: FAILED: ${message}` } ]
+                        content: [ { type: "text", text: `task_save: ERROR: ${message}` } ]
                     }
                 }
             })
@@ -430,7 +430,7 @@ export default class ServiceCommand {
                     const val = cfg.get("agent.persona")
                     if (val === undefined)
                         return {
-                            content: [ { type: "text", text: "" } ]
+                            content: [ { type: "text", text: "engineer" } ]
                         }
                     const text = String(isScalar(val) ? val.value : val)
                     return {
@@ -449,7 +449,7 @@ export default class ServiceCommand {
                 title:       "ASE task id get/set",
                 description:
                     "Get or set the active ASE task `id` for a given `session`. " +
-                    "If `id` is provided, it set the task id in the given `session`, " +
+                    "If `id` is provided, it sets the task id in the given `session`, " +
                     "otherwise it returns the current task `id` of the `session`.",
                 inputSchema: {
                     id: z.string().optional()
@@ -505,6 +505,7 @@ export default class ServiceCommand {
             method:  "GET",
             path:    "/stop",
             handler: (_request, h) => {
+                this.log.write("info", "service: stop requested")
                 setImmediate(async () => {
                     await server.stop({ timeout: 1000 })
                     process.exit(0)
@@ -513,6 +514,21 @@ export default class ServiceCommand {
             }
         })
         const mcpHandler = async (request: Hapi.Request, h: Hapi.ResponseToolkit, body?: unknown) => {
+            const b       = body as Record<string, unknown> | null | undefined
+            const bParams = b?.params as Record<string, unknown> | null | undefined
+            const bMethod = typeof b?.method    === "string" ? b.method         : null
+            const bName   = typeof bParams?.name === "string" ? bParams.name    : null
+            const bArgs   = bParams?.arguments  !== undefined ? bParams.arguments : null
+            let bodyInfo  = ""
+            if (bMethod !== null) {
+                bodyInfo = ` [${bMethod}]`
+                if (bName !== null) {
+                    bodyInfo += ` ${bName}`
+                    if (bArgs !== null)
+                        bodyInfo += ` ${JSON.stringify(bArgs)}`
+                }
+            }
+            this.log.write("info", `mcp: ${request.method.toUpperCase()} ${request.path}${bodyInfo}`)
             const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
             const mcp       = buildMcpServer()
             request.raw.res.on("close", () => {
@@ -570,6 +586,7 @@ export default class ServiceCommand {
         try {
             await server.start()
             persistPort(ctx.svc, ctx.port)
+            this.log.write("info", `service: listening on port ${ctx.port}`)
         }
         catch (err: unknown) {
             const e = err as Error & { code?: string }
@@ -592,6 +609,7 @@ export default class ServiceCommand {
                 return
             if (Date.now() - lastActivity > IDLE_MS) {
                 stopping = true
+                this.log.write("info", "service: idle timeout reached, stopping")
                 try {
                     await server.stop({ timeout: 1000 })
                     clearPort(ctx.svc)
