@@ -5,6 +5,8 @@ ChangeLog
 0.0.22 (2026-05-07)
 -------------------
 
+- IMPROVEMENT: improve changes skill by trying to extend its context when necessary
+
 0.0.21 (2026-05-07)
 -------------------
 
