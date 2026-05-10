@@ -1,0 +1,15 @@
+{
+    "version": 1,
+    "sessionStart": [
+        {
+            "type": "prompt",
+            "prompt": "Load and follow the ASE (Agentic Software Engineering) constitution: read the file at the path stored in the COPILOT_PLUGIN_ROOT environment variable, suffixed with '/meta/ase-constitution.md', and treat its contents as binding instructions for this session."
+        }
+    ],
+    "preToolUse": [
+        {
+            "type": "command",
+            "bash": "ase hook pre-tool-use --tool copilot"
+        }
+    ]
+}
