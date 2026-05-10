@@ -64,7 +64,7 @@ export default class Log {
                 line += `[${levels[idx].name.toUpperCase()}]`
             line += `: ${msg}\n`
             if (this._logFile === "-")
-                process.stdout.write(line)
+                process.stderr.write(line)
             else if (this.stream !== null)
                 this.stream.write(line)
         }
