@@ -14,6 +14,20 @@ import which             from "which"
 import type Log          from "./ase-log.js"
 import Version           from "./ase-version.js"
 
+/*  type of supported tool (host) systems  */
+type Tool = "claude" | "copilot"
+
+/*  per-tool dispatch table for the parts that actually differ between
+    Claude Code and GitHub Copilot CLI plugin marketplace integrations  */
+type ToolSpec = {
+    cli:   string
+    label: string
+}
+const toolSpecs: Record<Tool, ToolSpec> = {
+    "claude":  { cli: "claude",  label: "Claude Code" },
+    "copilot": { cli: "copilot", label: "Copilot CLI" }
+}
+
 /*  CLI command "ase setup"  */
 export default class SetupCommand {
     constructor (private log: Log) {}
@@ -73,23 +87,25 @@ export default class SetupCommand {
         }
     }
 
-    /*  handler for "ase setup install"  */
-    private async doInstall (dev: boolean): Promise<number> {
+    /*  handler for "ase setup install" (both tools)  */
+    private async doInstall (tool: Tool, dev: boolean): Promise<number> {
+        const spec = toolSpecs[tool]
         await this.ensureTool("npm")
-        await this.ensureTool("claude")
+        await this.ensureTool(spec.cli)
 
         this.log.write("info", `setup: install${dev ? "[dev]" : ""}: ` +
-            `installing ASE Claude Code plugin (origin: ${dev ? "local" : "remote"})`)
+            `installing ASE ${spec.label} plugin (origin: ${dev ? "local" : "remote"})`)
         const source = dev ? process.cwd() : "rse/ase"
-        await this.run("claude", [ "plugin", "marketplace", "add", source ])
-        await this.run("claude", [ "plugin", "install", "ase@ase" ], { retries: 3 })
+        await this.run(spec.cli, [ "plugin", "marketplace", "add", source ])
+        await this.run(spec.cli, [ "plugin", "install", "ase@ase" ], { retries: 3 })
         return 0
     }
 
-    /*  handler for "ase setup update"  */
-    private async doUpdate (force: boolean, dev: boolean): Promise<number> {
+    /*  handler for "ase setup update" (both tools)  */
+    private async doUpdate (tool: Tool, force: boolean, dev: boolean): Promise<number> {
+        const spec = toolSpecs[tool]
         await this.ensureTool("npm")
-        await this.ensureTool("claude")
+        await this.ensureTool(spec.cli)
 
         /*  best-effort stop of background service  */
         this.log.write("info", `setup: update${dev ? "[dev]" : ""}: ` +
@@ -105,11 +121,11 @@ export default class SetupCommand {
 
             /*  in development mode the local plugin files are already current
                 but there is no version change in the plugin manifest,
-                so just re-install the plugin to let Claude Code update its copy  */
-            this.log.write("info", "setup: update[dev]: re-install ASE Claude Code plugin (origin: local)")
-            await this.run("claude", [ "plugin", "uninstall", "ase@ase" ],
-                { ignoreError: "ASE Claude Code plugin not installed" })
-            await this.run("claude", [ "plugin", "install",   "ase@ase" ], { retries: 3 })
+                so just re-install the plugin to let the tool update its copy  */
+            this.log.write("info", `setup: update[dev]: re-install ASE ${spec.label} plugin (origin: local)`)
+            await this.run(spec.cli, [ "plugin", "uninstall", "ase@ase" ],
+                { ignoreError: `ASE ${spec.label} plugin not installed` })
+            await this.run(spec.cli, [ "plugin", "install",   "ase@ase" ], { retries: 3 })
         }
         else {
             /*  perform NPM version check  */
@@ -124,31 +140,32 @@ export default class SetupCommand {
             this.log.write("info", `setup: update: updating ASE CLI tool: ${current} -> ${latest}`)
             await this.run("npm", [ "update", "-g", "@rse/ase" ])
 
-            /*  update ASE Claude Code plugin  */
-            this.log.write("info", "setup: update: updating ASE Claude Code plugin")
-            await this.run("claude", [ "plugin", "marketplace", "update", "ase" ])
-            await this.run("claude", [ "plugin", "update", "ase@ase" ])
+            /*  update ASE plugin  */
+            this.log.write("info", `setup: update: updating ASE ${spec.label} plugin`)
+            await this.run(spec.cli, [ "plugin", "marketplace", "update", "ase" ])
+            await this.run(spec.cli, [ "plugin", "update", "ase@ase" ])
         }
         return 0
     }
 
-    /*  handler for "ase setup uninstall"  */
-    private async doUninstall (dev: boolean): Promise<number> {
+    /*  handler for "ase setup uninstall" (both tools)  */
+    private async doUninstall (tool: Tool, dev: boolean): Promise<number> {
+        const spec = toolSpecs[tool]
         await this.ensureTool("npm")
-        await this.ensureTool("claude")
+        await this.ensureTool(spec.cli)
 
         /*  best-effort stop of background service  */
         this.log.write("info", `setup: uninstall${dev ? "[dev]" : ""}: ` +
             "stopping potentially running ASE service")
         await this.run("ase", [ "service", "stop" ], { quiet: true })
 
-        /*  uninstall ASE Claude Code plugin  */
+        /*  uninstall ASE plugin  */
         this.log.write("info", `setup: uninstall${dev ? "[dev]" : ""}: ` +
-            `uninstalling ASE Claude Code plugin (origin: ${dev ? "local" : "remote"})`)
-        await this.run("claude", [ "plugin", "uninstall", "ase@ase" ],
-            { ignoreError: "ASE Claude Code plugin not installed" })
-        await this.run("claude", [ "plugin", "marketplace", "remove", "ase" ],
-            { ignoreError: "ASE Claude Code plugin marketplace not registered" })
+            `uninstalling ASE ${spec.label} plugin (origin: ${dev ? "local" : "remote"})`)
+        await this.run(spec.cli, [ "plugin", "uninstall", "ase@ase" ],
+            { ignoreError: `ASE ${spec.label} plugin not installed` })
+        await this.run(spec.cli, [ "plugin", "marketplace", "remove", "ase" ],
+            { ignoreError: `ASE ${spec.label} plugin marketplace not registered` })
 
         /*  uninstall ASE CLI tool (non-development only)  */
         if (!dev) {
@@ -158,11 +175,22 @@ export default class SetupCommand {
         return 0
     }
 
+    /*  parse and validate the --tool option  */
+    private parseTool (value: string): Tool {
+        if (value !== "claude" && value !== "copilot")
+            throw new Error(`invalid --tool value: "${value}" (expected "claude" or "copilot")`)
+        return value
+    }
+
     /*  register commands  */
     register (program: Command): void {
         /*  default for --dev derived from ASE_SETUP_DEV environment variable  */
         const envDev  = process.env.ASE_SETUP_DEV ?? ""
         const devDflt = envDev !== "" && envDev !== "0" && envDev.toLowerCase() !== "false"
+
+        /*  default for --tool derived from ASE_TOOL environment variable  */
+        const envTool  = process.env.ASE_TOOL ?? ""
+        const toolDflt = envTool !== "" ? envTool : "claude"
 
         /*  register CLI top-level command "ase setup"  */
         const setupCmd = program
@@ -176,29 +204,32 @@ export default class SetupCommand {
         /*  register CLI sub-command "ase setup install"  */
         setupCmd
             .command("install")
-            .description("install the ASE Claude Code plugin")
-            .option("-d, --dev", "use local working copy instead of remote repository", devDflt)
-            .action(async (opts: { dev: boolean }) => {
-                process.exit(await this.doInstall(opts.dev))
+            .description("install the ASE plugin for a tool")
+            .option("-t, --tool <tool>", "target tool (\"claude\" or \"copilot\")", toolDflt)
+            .option("-d, --dev",         "use local working copy instead of remote repository", devDflt)
+            .action(async (opts: { tool: string, dev: boolean }) => {
+                process.exit(await this.doInstall(this.parseTool(opts.tool), opts.dev))
             })
 
         /*  register CLI sub-command "ase setup update"  */
         setupCmd
             .command("update")
-            .description("update the ASE tool and the ASE Claude Code plugin")
-            .option("-f, --force", "always perform the update, even if already at latest version", false)
-            .option("-d, --dev",   "use local working copy instead of remote repository", devDflt)
-            .action(async (opts: { force: boolean, dev: boolean }) => {
-                process.exit(await this.doUpdate(opts.force, opts.dev))
+            .description("update the ASE tool and the ASE plugin for a tool")
+            .option("-t, --tool <tool>", "target tool (\"claude\" or \"copilot\")", toolDflt)
+            .option("-f, --force",       "always perform the update, even if already at latest version", false)
+            .option("-d, --dev",         "use local working copy instead of remote repository", devDflt)
+            .action(async (opts: { tool: string, force: boolean, dev: boolean }) => {
+                process.exit(await this.doUpdate(this.parseTool(opts.tool), opts.force, opts.dev))
             })
 
         /*  register CLI sub-command "ase setup uninstall"  */
         setupCmd
             .command("uninstall")
-            .description("uninstall the ASE Claude Code plugin and the ASE tool")
-            .option("-d, --dev", "use local working copy instead of remote repository", devDflt)
-            .action(async (opts: { dev: boolean }) => {
-                process.exit(await this.doUninstall(opts.dev))
+            .description("uninstall the ASE plugin for a tool and the ASE tool")
+            .option("-t, --tool <tool>", "target tool (\"claude\" or \"copilot\")", toolDflt)
+            .option("-d, --dev",         "use local working copy instead of remote repository", devDflt)
+            .action(async (opts: { tool: string, dev: boolean }) => {
+                process.exit(await this.doUninstall(this.parseTool(opts.tool), opts.dev))
             })
     }
 }

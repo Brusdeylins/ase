@@ -7,6 +7,7 @@ ChangeLog
 
 - IMPROVEMENT: improve changes skill by trying to extend its context when necessary
 - IMPROVEMENT: add initial Github Copilot JSON config files for marketplace and plugin
+- IMPROVEMENT: add initial Github Copilot support to "ase setup" commands
 
 0.0.21 (2026-05-07)
 -------------------
