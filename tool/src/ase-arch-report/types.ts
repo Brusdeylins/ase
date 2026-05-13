@@ -17,7 +17,7 @@ export type SymbolKind =
 export type Modifier =
     "public" | "protected" | "private" | "internal" | "sealed" | "abstract" | "final"
 
-export interface Member {
+export interface ArchMember {
     name:      string
     kind:      SymbolKind
     signature: string
@@ -25,7 +25,7 @@ export interface Member {
     line:      number
 }
 
-export interface Symbol {
+export interface ArchSymbol {
     fqn:        string
     name:       string
     kind:       SymbolKind
@@ -35,7 +35,7 @@ export interface Symbol {
     file:       string
     line:       number
     doc:        string | null
-    members:    Member[]
+    members:    ArchMember[]
 }
 
 export interface Edge {
@@ -44,18 +44,29 @@ export interface Edge {
     count: number
 }
 
+export interface DocDebtEntry {
+    fqn:  string
+    file: string
+    line: number
+}
+
+export interface UnresolvedRef {
+    ref:  string
+    from: string
+}
+
 export interface Cluster {
     name:     string
     language: Language
-    symbols:  Symbol[]
+    symbols:  ArchSymbol[]
 }
 
 export interface ArchReportOpts {
-    pathOrGlob: string
-    lang:       Language | "auto"
-    output:     string
-    format:     "md" | "html" | "both"
-    config?:    string
+    pathOrGlob:  string
+    lang:        Language | "auto"
+    output:      string
+    format:      "md" | "html" | "both"
+    config?:     string
     queriesDir?: string
 }
 
@@ -65,6 +76,6 @@ export interface ApiJson {
     languages:   Language[]
     clusters:    Cluster[]
     edges:       Edge[]
-    docDebt:     { fqn: string, file: string, line: number }[]
-    unresolved:  { ref: string, from: string }[]
+    docDebt:     DocDebtEntry[]
+    unresolved:  UnresolvedRef[]
 }
