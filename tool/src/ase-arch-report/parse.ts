@@ -12,12 +12,11 @@ import path                from "node:path"
 import * as wts            from "web-tree-sitter"
 import type { Language }   from "./types.js"
 
-let inited = false
-const initOnce = async (): Promise<void> => {
-    if (inited)
-        return
-    await wts.Parser.init()
-    inited = true
+let initPromise: Promise<void> | null = null
+const initOnce = (): Promise<void> => {
+    if (initPromise === null)
+        initPromise = wts.Parser.init()
+    return initPromise
 }
 
 export class Parser {
