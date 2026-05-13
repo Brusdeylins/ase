@@ -53,7 +53,7 @@ Command line:
 ```
 ase arch-report <path-or-glob>
                 [--lang=auto|java|ts|js|python|go|rust|kotlin|csharp|c|cpp]
-                [--output=doc/report/<basename>-YYYY-MM-DD/]
+                [--output=docs/reports/<basename>-YYYY-MM-DD/]
                 [--format=md|html|both]
                 [--config=<file>]
 ```
@@ -67,11 +67,11 @@ Arguments:
 
 - `path-or-glob` — required, source scope
 - `--lang` — optional, defaults to `auto` (detection by file extension)
-- `--output` — optional, defaults to `doc/report/<basename>-YYYY-MM-DD/`
+- `--output` — optional, defaults to `docs/reports/<basename>-YYYY-MM-DD/`
   relative to the current working directory, where `<basename>` is the
   longest directory component of `<path-or-glob>` before any glob
   metacharacter (`*`, `?`, `[`). Example: `tool/src/**/*.ts` →
-  `doc/report/src-2026-05-13/`
+  `docs/reports/src-2026-05-13/`
 - `--format` — optional, defaults to `both`
 - `--config` — optional, YAML or JSON; the `yaml` library parses both
 
@@ -83,7 +83,7 @@ ase CLI binary
         │
         ├─ uses → renderArchReport(opts) pure helper
         │
-        └─ writes → doc/report/<basename>-YYYY-MM-DD/
+        └─ writes → docs/reports/<basename>-YYYY-MM-DD/
                     ├── index.md          TOC, L1 cluster-flowchart, doc-debt
                     ├── index.html        same content, Mermaid SVG, themed
                     ├── 01-<cluster>.md   classDiagram + API tables
@@ -193,7 +193,7 @@ the *truth* of the codebase rather than smoothed-over approximations:
 | Inter-cluster edge display         | Show every edge with at least one reference      |
 | Missing doc comment policy         | Leave description blank; list under Doc Debt     |
 | Output format                      | Both Markdown and HTML                           |
-| Output directory                   | `doc/report/<basename(path)>-YYYY-MM-DD/`        |
+| Output directory                   | `docs/reports/<basename(path)>-YYYY-MM-DD/`        |
 | Language detection                 | Auto by file extension                           |
 | Diagram width budget               | None — wide diagrams scroll in viewer or browser |
 
@@ -302,7 +302,7 @@ Trigger phrases (in description body):
 - "code structure overview", "Übersicht der Klassen"
 - "public API listing", "API-Übersicht"
 - explicit slash command `/ase-arch-report` or `/ase:arch-report`
-- references to `doc/report/` as an output target
+- references to `docs/reports/` as an output target
 
 Workflow steps in `SKILL.md`:
 
