@@ -345,9 +345,15 @@ identical `api.json` and identical Markdown files.
 
 Items the implementer is empowered to decide unless flagged here:
 
-- Native tree-sitter bindings (`tree-sitter` + `tree-sitter-<lang>` packages)
-  are used, per user choice. `npm install` must succeed on macOS for all nine
-  grammars; the implementer verifies and pins versions accordingly.
+- WASM tree-sitter via `web-tree-sitter` is used. Native bindings (`tree-sitter`
+  + `tree-sitter-<lang>` packages) were attempted first but fail to build on
+  Node 24.x: `tree-sitter@0.25.0`'s `binding.gyp` does not request C++20 while
+  V8 in Node 24 requires it (`v8config.h: error: "C++20 or later required."`).
+  WASM avoids the native toolchain entirely and is portable. Per-grammar
+  `.wasm` files are committed to the repo under
+  `plugin/skills/ase-arch-report/wasm/<lang>.wasm` (pre-built from each
+  grammar's GitHub release or via `tree-sitter build --wasm` in a separate
+  setup pass). The `parse` module loads them on demand from that directory.
 - Doc-comment heuristic when none exists: leave blank, do not auto-generate
   from method name.
 - Cache directory `<output>/.arch-report-cache/` is gitignored by the tool

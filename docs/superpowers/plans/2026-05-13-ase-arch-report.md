@@ -4,9 +4,9 @@
 
 **Goal:** Build the `ase-arch-report` ASE skill plus matching `ase arch-report` CLI subcommand and `arch_report` MCP tool that generates a deterministic architecture report (Markdown and/or HTML) for a user-supplied code scope, language-agnostic via tree-sitter.
 
-**Architecture:** A pure `renderArchReport(opts)` helper lives in `tool/src/ase-arch-report/` and is wrapped by both a Commander CLI subcommand (registered in `ase.ts`) and an MCP tool registration (added to `ase-service.ts`). Pipeline: discover → parse → extract → cluster → resolve → render → write. Symbol extraction uses native `tree-sitter` bindings plus per-language `tree-sitter-<lang>` grammars driven by S-expression queries shipped with the skill under `plugin/skills/ase-arch-report/queries/<lang>.scm`. Output renders to `docs/reports/<basename>-YYYY-MM-DD/` with sibling Markdown and HTML files plus a `_meta/api.json` for diffing.
+**Architecture:** A pure `renderArchReport(opts)` helper lives in `tool/src/ase-arch-report/` and is wrapped by both a Commander CLI subcommand (registered in `ase.ts`) and an MCP tool registration (added to `ase-service.ts`). Pipeline: discover → parse → extract → cluster → resolve → render → write. Symbol extraction uses `web-tree-sitter` (the WASM runtime) plus per-language `.wasm` grammar files committed under `plugin/skills/ase-arch-report/wasm/<lang>.wasm`, driven by S-expression queries shipped with the skill under `plugin/skills/ase-arch-report/queries/<lang>.scm`. Output renders to `docs/reports/<basename>-YYYY-MM-DD/` with sibling Markdown and HTML files plus a `_meta/api.json` for diffing.
 
-**Tech Stack:** TypeScript (ESM), Commander, `tree-sitter` + `tree-sitter-{java,typescript,javascript,python,go,rust,kotlin,c-sharp,c,cpp}`, `glob`, `yaml`, `beautiful-mermaid` (already in the repo via `ase diagram`), Mermaid JS (CDN-loaded for HTML), `node:test` + `node:assert` for tests.
+**Tech Stack:** TypeScript (ESM), Commander, `web-tree-sitter` (WASM runtime — native `tree-sitter` was attempted first but fails to build on Node 24 because V8 now requires C++20 while the upstream `binding.gyp` does not request it; WASM avoids the entire native-build toolchain), per-grammar `.wasm` files committed under `plugin/skills/ase-arch-report/wasm/<lang>.wasm`, `glob`, `yaml`, `beautiful-mermaid` (already in the repo via `ase diagram`), Mermaid JS (CDN-loaded for HTML), `node:test` + `node:assert` for tests.
 
 **Spec:** `docs/superpowers/specs/2026-05-13-ase-arch-report-design.md`
 
@@ -23,7 +23,7 @@ tool/src/ase-arch-report/
 ├── index.ts          Commander subcommand + exported renderArchReport(opts) helper
 ├── types.ts          shared types (Symbol, Cluster, Edge, ArchReportOpts, ApiJson)
 ├── discover.ts       glob expansion, file grouping by extension, basename resolution
-├── parse.ts          tree-sitter parser pool, file-content sha256 cache
+├── parse.ts          web-tree-sitter WASM parser pool, file-content sha256 cache
 ├── extract.ts        AST-to-symbol extraction via per-language .scm queries
 ├── cluster.ts        directory-based clustering (full path depth) + config overrides
 ├── resolve.ts        inheritance + inter-cluster reference resolution
@@ -65,7 +65,7 @@ Files to be modified:
 ```
 tool/src/ase.ts          register ArchReportCommand (top-level command wiring)
 tool/src/ase-service.ts  register MCP tool "arch_report"
-tool/package.json        add runtime deps (tree-sitter + 10 grammars, glob, yaml)
+tool/package.json        add runtime deps (web-tree-sitter, glob, yaml)
 tool/etc/tsc.json        ensure tool/test/ is excluded from prod build
 tool/.gitignore          add docs/reports/.arch-report-cache/ pattern (if present)
 CHANGELOG.md             add 0.0.27 entry describing ase-arch-report
@@ -82,36 +82,25 @@ CHANGELOG.md             add 0.0.27 entry describing ase-arch-report
 
 - [ ] **Step 1: Pin runtime dependencies in `tool/package.json`**
 
-Add the following entries under `"dependencies"` (alphabetically sorted within the existing block, matching the existing two-column key alignment style used throughout the file):
+Add the following entries under `"dependencies"` (alphabetically sorted within the existing block, matching the existing two-column key alignment style used throughout the file). If a newer stable pin is current at install time, prefer that.
 
 ```json
 "glob":                              "11.0.3",
-"tree-sitter":                       "0.25.0",
-"tree-sitter-c":                     "0.24.1",
-"tree-sitter-c-sharp":               "0.23.1",
-"tree-sitter-cpp":                   "0.23.4",
-"tree-sitter-go":                    "0.25.0",
-"tree-sitter-java":                  "0.23.5",
-"tree-sitter-javascript":            "0.25.0",
-"tree-sitter-kotlin":                "1.1.0",
-"tree-sitter-python":                "0.25.0",
-"tree-sitter-rust":                  "0.24.0",
-"tree-sitter-typescript":            "0.23.2",
-"yaml":                              "2.8.1"
+"web-tree-sitter":                   "0.25.10",
+"yaml":                              "2.9.0"
 ```
 
-If any newer pin is current at install time, prefer the latest stable release of each grammar.
+Note: the original plan used native `tree-sitter` + per-grammar packages, but on Node 24 the native `binding.gyp` fails compilation because V8 now requires C++20 (`v8config.h: error: "C++20 or later required."`). `web-tree-sitter` is the WASM-based alternative from the same upstream and avoids the native toolchain entirely. Per-grammar `.wasm` files are not npm packages; they are committed to the repo under `plugin/skills/ase-arch-report/wasm/` and downloaded/built in later tasks (Task 3 for TypeScript, Task 13 for the rest).
 
-- [ ] **Step 2: Run `npm install` and verify all native bindings build**
+- [ ] **Step 2: Run `npm install` and verify `web-tree-sitter` loads**
 
 ```bash
-cd tool
+cd /Users/matthias/Documents/Projects/Programming/git/ase-project/ase/tool
 npm install
-node -e "const p = new (require('tree-sitter'))(); p.setLanguage(require('tree-sitter-java')); console.log('java ok')"
-node -e "const p = new (require('tree-sitter'))(); p.setLanguage(require('tree-sitter-typescript').typescript); console.log('ts ok')"
+node -e "import('web-tree-sitter').then(async (m) => { await m.Parser.init(); console.log('web-tree-sitter ok') })"
 ```
 
-Expected: both lines print `ok`. If any grammar fails to build on this machine, stop and report the exact compiler error before continuing — native build failures are a known macOS/Apple-Silicon risk and warrant an upstream issue rather than a workaround.
+Expected: `web-tree-sitter ok`. If the install fails with a peer-dep or runtime error, stop and report exact output.
 
 - [ ] **Step 3: Define shared types**
 
@@ -366,13 +355,31 @@ git commit -m "discover: glob expansion + basename resolution for ase-arch-repor
 
 ---
 
-## Task 3: Parse Module
+## Task 3: Parse Module (WASM)
 
 **Files:**
 - Create: `tool/src/ase-arch-report/parse.ts`
 - Create: `tool/test/ase-arch-report/parse.test.ts`
+- Create (binary): `plugin/skills/ase-arch-report/wasm/typescript.wasm`
 
-- [ ] **Step 1: Write failing test**
+- [ ] **Step 1: Acquire the TypeScript grammar WASM**
+
+The grammar `.wasm` files are not shipped via the npm package `web-tree-sitter`; they must be obtained separately. Use whichever of these paths works on the implementation machine, in this order of preference:
+
+1. **Pre-built bundle:** if the npm package `tree-sitter-wasms` (maintainer `joeguilfoyle`, ships ~50 pre-built grammar WASMs) is installable and includes `tree-sitter-typescript.wasm`, add it as a `devDependency` and copy `node_modules/tree-sitter-wasms/out/tree-sitter-typescript.wasm` to `plugin/skills/ase-arch-report/wasm/typescript.wasm`.
+
+2. **Build via `tree-sitter-cli` + Emscripten:** if path 1 is unavailable, install `tree-sitter-cli` as a `devDependency` and `tree-sitter-typescript` (source-only) as a `devDependency`, install Emscripten locally (`brew install emscripten` on macOS), then run:
+
+    ```bash
+    cd node_modules/tree-sitter-typescript/typescript
+    npx tree-sitter build --wasm -o ../../../plugin/skills/ase-arch-report/wasm/typescript.wasm
+    ```
+
+3. **Manual download:** if a grammar's GitHub release page publishes a pre-built `.wasm`, download and commit it.
+
+Commit the resulting `typescript.wasm` to the repo. It is a binary asset (~1–2 MB). Document the acquisition path used in `plugin/skills/ase-arch-report/wasm/README.md`.
+
+- [ ] **Step 2: Write failing test**
 
 Create `tool/test/ase-arch-report/parse.test.ts`:
 
@@ -383,76 +390,79 @@ import path from "node:path"
 import { Parser } from "../../src/ase-arch-report/parse.js"
 
 const FIX = path.join(import.meta.dirname, "fixtures", "ts-mini", "src", "Foo.ts")
+const WASM_DIR = path.join(import.meta.dirname, "..", "..", "..", "plugin", "skills", "ase-arch-report", "wasm")
 
 test("Parser parses a TypeScript file and returns a non-empty AST", async () => {
-    const parser = new Parser()
+    const parser = new Parser(WASM_DIR)
     const tree = await parser.parse(FIX, "typescript")
-    assert.ok(tree.rootNode !== undefined)
+    assert.ok(tree.rootNode !== null)
     assert.equal(tree.rootNode.type, "program")
-    assert.ok(tree.rootNode.children.length > 0)
+    assert.ok(tree.rootNode.childCount > 0)
 })
 
 test("Parser caches by content hash within a single Parser instance", async () => {
-    const parser = new Parser()
+    const parser = new Parser(WASM_DIR)
     const t1 = await parser.parse(FIX, "typescript")
     const t2 = await parser.parse(FIX, "typescript")
     assert.equal(t1, t2)
 })
 ```
 
-- [ ] **Step 2: Run test, expect failure**
+- [ ] **Step 3: Run test, expect failure**
 
 ```bash
+cd /Users/matthias/Documents/Projects/Programming/git/ase-project/ase/tool
 node --test --import tsx test/ase-arch-report/parse.test.ts
 ```
 
 Expected: failure (module missing).
 
-- [ ] **Step 3: Implement `parse.ts`**
+- [ ] **Step 4: Implement `parse.ts`**
 
 ```typescript
 import fs                          from "node:fs/promises"
 import crypto                      from "node:crypto"
-import TS                          from "tree-sitter"
-import type { Language as TSLang } from "tree-sitter"
+import path                        from "node:path"
+import * as wts                    from "web-tree-sitter"
 import type { Language }           from "./types.js"
 
-/*  lazy-loaded grammars: importing all ten upfront makes startup slow and
-    pulls in every native binding even when only one language is in scope  */
-const GRAMMAR_LOADERS: Record<Language, () => Promise<TSLang>> = {
-    java:       async () => (await import("tree-sitter-java")).default,
-    typescript: async () => (await import("tree-sitter-typescript")).default.typescript,
-    javascript: async () => (await import("tree-sitter-javascript")).default,
-    python:     async () => (await import("tree-sitter-python")).default,
-    go:         async () => (await import("tree-sitter-go")).default,
-    rust:       async () => (await import("tree-sitter-rust")).default,
-    kotlin:     async () => (await import("tree-sitter-kotlin")).default,
-    csharp:     async () => (await import("tree-sitter-c-sharp")).default,
-    c:          async () => (await import("tree-sitter-c")).default,
-    cpp:        async () => (await import("tree-sitter-cpp")).default
+let inited = false
+const initOnce = async (): Promise<void> => {
+    if (inited)
+        return
+    await wts.Parser.init()
+    inited = true
 }
 
 export class Parser {
-    private readonly cache    = new Map<string, TS.Tree>()
-    private readonly grammars = new Map<Language, TSLang>()
+    private readonly cache    = new Map<string, wts.Tree>()
+    private readonly grammars = new Map<Language, wts.Language>()
+    private readonly wasmDir:   string
 
-    async getGrammar(lang: Language): Promise<TSLang> {
+    constructor(wasmDir: string) {
+        this.wasmDir = wasmDir
+    }
+
+    async getGrammar(lang: Language): Promise<wts.Language> {
+        await initOnce()
         let g = this.grammars.get(lang)
         if (g === undefined) {
-            g = await GRAMMAR_LOADERS[lang]()
+            const file = path.join(this.wasmDir, `${lang}.wasm`)
+            g = await wts.Language.load(file)
             this.grammars.set(lang, g)
         }
         return g
     }
 
-    async parse(file: string, lang: Language): Promise<TS.Tree> {
+    async parse(file: string, lang: Language): Promise<wts.Tree> {
+        await initOnce()
         const src = await fs.readFile(file, "utf8")
         const hash = crypto.createHash("sha256").update(src).digest("hex")
         const key = `${lang}:${hash}`
         let tree = this.cache.get(key)
         if (tree !== undefined)
             return tree
-        const parser = new TS()
+        const parser = new wts.Parser()
         parser.setLanguage(await this.getGrammar(lang))
         tree = parser.parse(src)
         this.cache.set(key, tree)
@@ -461,7 +471,7 @@ export class Parser {
 }
 ```
 
-- [ ] **Step 4: Run test, expect pass**
+- [ ] **Step 5: Run test, expect pass**
 
 ```bash
 node --test --import tsx test/ase-arch-report/parse.test.ts
@@ -469,11 +479,14 @@ node --test --import tsx test/ase-arch-report/parse.test.ts
 
 Expected: 2 tests pass.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit (separate the binary asset from the source code)**
 
 ```bash
-git add tool/src/ase-arch-report/parse.ts tool/test/ase-arch-report/parse.test.ts
-git commit -m "parse: tree-sitter parser pool with content-hash cache"
+cd /Users/matthias/Documents/Projects/Programming/git/ase-project/ase
+git add plugin/skills/ase-arch-report/wasm/typescript.wasm plugin/skills/ase-arch-report/wasm/README.md
+git commit -m "wasm: add tree-sitter typescript.wasm grammar"
+git add tool/src/ase-arch-report/parse.ts tool/test/ase-arch-report/parse.test.ts tool/package.json tool/package-lock.json
+git commit -m "parse: web-tree-sitter parser with WASM grammar loader and content-hash cache"
 ```
 
 ---
@@ -518,11 +531,13 @@ import path from "node:path"
 import { Parser } from "../../src/ase-arch-report/parse.js"
 import { extractSymbols } from "../../src/ase-arch-report/extract.js"
 
-const FIX_DIR = path.join(import.meta.dirname, "fixtures", "ts-mini", "src")
-const QUERIES = path.join(import.meta.dirname, "..", "..", "..", "plugin", "skills", "ase-arch-report", "queries")
+const FIX_DIR  = path.join(import.meta.dirname, "fixtures", "ts-mini", "src")
+const PLUGIN   = path.join(import.meta.dirname, "..", "..", "..", "plugin", "skills", "ase-arch-report")
+const QUERIES  = path.join(PLUGIN, "queries")
+const WASM_DIR = path.join(PLUGIN, "wasm")
 
 test("extract: pulls exported class with doc comment and one method", async () => {
-    const parser = new Parser()
+    const parser = new Parser(WASM_DIR)
     const tree = await parser.parse(path.join(FIX_DIR, "Foo.ts"), "typescript")
     const grammar = await parser.getGrammar("typescript")
     const symbols = await extractSymbols(tree, grammar, "typescript", path.join(FIX_DIR, "Foo.ts"), QUERIES)
@@ -536,7 +551,7 @@ test("extract: pulls exported class with doc comment and one method", async () =
 })
 
 test("extract: pulls exported interface with one method signature", async () => {
-    const parser = new Parser()
+    const parser = new Parser(WASM_DIR)
     const tree = await parser.parse(path.join(FIX_DIR, "IFoo.ts"), "typescript")
     const grammar = await parser.getGrammar("typescript")
     const symbols = await extractSymbols(tree, grammar, "typescript", path.join(FIX_DIR, "IFoo.ts"), QUERIES)
@@ -561,7 +576,7 @@ Expected: failure (module missing).
 ```typescript
 import fs                              from "node:fs/promises"
 import path                            from "node:path"
-import TS                              from "tree-sitter"
+import * as wts                        from "web-tree-sitter"
 import type { Language, Symbol, Member, Modifier, SymbolKind } from "./types.js"
 
 /*  load and cache .scm query text per (language, queriesDir)  */
@@ -593,7 +608,7 @@ const firstSentence = (raw: string): string | null => {
     return (m !== null ? m[1] : stripped).trim()
 }
 
-const docFor = (node: TS.SyntaxNode): string | null => {
+const docFor = (node: wts.Node): string | null => {
     const prev = node.previousNamedSibling
     if (prev === null)
         return null
@@ -602,9 +617,11 @@ const docFor = (node: TS.SyntaxNode): string | null => {
     return null
 }
 
-const modifiersOf = (node: TS.SyntaxNode): Modifier[] => {
+const modifiersOf = (node: wts.Node): Modifier[] => {
     const out: Modifier[] = []
     for (const c of node.children) {
+        if (c === null)
+            continue
         if (c.type === "public" || c.type === "private" || c.type === "protected")
             out.push(c.type as Modifier)
         if (c.text === "abstract" || c.text === "sealed" || c.text === "final")
@@ -624,18 +641,18 @@ const memberKind = (nodeType: string): SymbolKind => {
 }
 
 export const extractSymbols = async (
-    tree: TS.Tree, grammar: TS.Language, lang: Language, file: string, queriesDir: string
+    tree: wts.Tree, grammar: wts.Language, lang: Language, file: string, queriesDir: string
 ): Promise<Symbol[]> => {
     const qSrc = await loadQuery(lang, queriesDir)
-    const query = new TS.Query(grammar, qSrc)
+    const query = grammar.query(qSrc)
     const matches = query.matches(tree.rootNode)
 
     /*  group captures: every match has a class/interface def + members.
         For TS the class/interface defs come as their own matches; method
         defs come as separate matches inside the body.  We collect class
         nodes first, then attach methods by parent containment.  */
-    const types: TS.SyntaxNode[] = []
-    const methods: TS.SyntaxNode[] = []
+    const types: wts.Node[] = []
+    const methods: wts.Node[] = []
     for (const m of matches) {
         for (const c of m.captures) {
             if (c.name === "class.def" || c.name === "interface.def")
@@ -653,7 +670,7 @@ export const extractSymbols = async (
         const members: Member[] = []
         for (const m of methods) {
             /*  attach method to type if it is nested inside the type's body  */
-            let ancestor: TS.SyntaxNode | null = m.parent
+            let ancestor: wts.Node | null = m.parent
             while (ancestor !== null && ancestor !== t)
                 ancestor = ancestor.parent
             if (ancestor !== t)
