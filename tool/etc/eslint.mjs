@@ -24,7 +24,7 @@ export default [
             "import":  pluginImport,
             "promise": pluginPromise
         },
-        files: [ "src/*.ts" ],
+        files: [ "src/**/*.ts" ],
         languageOptions: {
             ecmaVersion: 2022,
             sourceType:  "module",
