@@ -21,7 +21,7 @@ Files to be created:
 ```
 tool/src/ase-arch-report/
 ├── index.ts          Commander subcommand + exported renderArchReport(opts) helper
-├── types.ts          shared types (Symbol, Cluster, Edge, ArchReportOpts, ApiJson)
+├── types.ts          shared types (ArchSymbol, Cluster, Edge, ArchReportOpts, ApiJson)
 ├── discover.ts       glob expansion, file grouping by extension, basename resolution
 ├── parse.ts          web-tree-sitter WASM parser pool, file-content sha256 cache
 ├── extract.ts        AST-to-symbol extraction via per-language .scm queries
@@ -119,7 +119,7 @@ export type SymbolKind =
 
 export type Modifier = "public" | "protected" | "private" | "internal" | "sealed" | "abstract" | "final"
 
-export interface Member {
+export interface ArchMember {
     name:      string
     kind:      SymbolKind
     signature: string
@@ -127,7 +127,7 @@ export interface Member {
     line:      number
 }
 
-export interface Symbol {
+export interface ArchSymbol {
     fqn:        string
     name:       string
     kind:       SymbolKind
@@ -137,7 +137,7 @@ export interface Symbol {
     file:       string
     line:       number
     doc:        string | null
-    members:    Member[]
+    members:    ArchMember[]
 }
 
 export interface Edge {
@@ -149,7 +149,7 @@ export interface Edge {
 export interface Cluster {
     name:     string
     language: Language
-    symbols:  Symbol[]
+    symbols:  ArchSymbol[]
 }
 
 export interface ArchReportOpts {
@@ -577,7 +577,7 @@ Expected: failure (module missing).
 import fs                              from "node:fs/promises"
 import path                            from "node:path"
 import * as wts                        from "web-tree-sitter"
-import type { Language, Symbol, Member, Modifier, SymbolKind } from "./types.js"
+import type { Language, ArchSymbol, ArchMember, Modifier, SymbolKind } from "./types.js"
 
 /*  load and cache .scm query text per (language, queriesDir)  */
 const QUERY_CACHE = new Map<string, string>()
@@ -642,7 +642,7 @@ const memberKind = (nodeType: string): SymbolKind => {
 
 export const extractSymbols = async (
     tree: wts.Tree, grammar: wts.Language, lang: Language, file: string, queriesDir: string
-): Promise<Symbol[]> => {
+): Promise<ArchSymbol[]> => {
     const qSrc = await loadQuery(lang, queriesDir)
     const query = grammar.query(qSrc)
     const matches = query.matches(tree.rootNode)
@@ -662,12 +662,12 @@ export const extractSymbols = async (
         }
     }
 
-    const symbols: Symbol[] = []
+    const symbols: ArchSymbol[] = []
     for (const t of types) {
         const nameNode = t.childForFieldName("name")
         const name = nameNode?.text ?? "<anon>"
         const kind: SymbolKind = t.type === "interface_declaration" ? "interface" : "class"
-        const members: Member[] = []
+        const members: ArchMember[] = []
         for (const m of methods) {
             /*  attach method to type if it is nested inside the type's body  */
             let ancestor: wts.Node | null = m.parent
@@ -730,9 +730,9 @@ git commit -m "extract: tree-sitter query-driven symbol extraction (TypeScript)"
 import { test } from "node:test"
 import { strict as assert } from "node:assert"
 import { clusterize } from "../../src/ase-arch-report/cluster.js"
-import type { Symbol } from "../../src/ase-arch-report/types.js"
+import type { ArchSymbol } from "../../src/ase-arch-report/types.js"
 
-const mk = (file: string, name: string): Symbol => ({
+const mk = (file: string, name: string): ArchSymbol => ({
     fqn: name, name, kind: "class", modifiers: ["public"],
     extends: [], implements: [], file,
     line: 1, doc: null, members: []
@@ -768,10 +768,10 @@ node --test --import tsx test/ase-arch-report/cluster.test.ts
 
 ```typescript
 import path                              from "node:path"
-import type { Symbol, Cluster, Language } from "./types.js"
+import type { ArchSymbol, Cluster, Language } from "./types.js"
 
-export const clusterize = (symbols: Symbol[], scopeRoot: string, lang: Language): Cluster[] => {
-    const groups = new Map<string, Symbol[]>()
+export const clusterize = (symbols: ArchSymbol[], scopeRoot: string, lang: Language): Cluster[] => {
+    const groups = new Map<string, ArchSymbol[]>()
     for (const s of symbols) {
         const rel = path.relative(scopeRoot, path.dirname(s.file))
         const key = rel === "" ? "." : rel
@@ -816,9 +816,9 @@ git commit -m "cluster: full-depth sub-directory grouping"
 import { test } from "node:test"
 import { strict as assert } from "node:assert"
 import { resolveEdges } from "../../src/ase-arch-report/resolve.js"
-import type { Cluster, Symbol } from "../../src/ase-arch-report/types.js"
+import type { Cluster, ArchSymbol } from "../../src/ase-arch-report/types.js"
 
-const sym = (name: string, file: string, impls: string[] = []): Symbol => ({
+const sym = (name: string, file: string, impls: string[] = []): ArchSymbol => ({
     fqn: name, name, kind: "class", modifiers: ["public"],
     extends: [], implements: impls, file,
     line: 1, doc: null, members: []
@@ -1048,7 +1048,7 @@ test("renderIndexMd: includes TOC, cluster flowchart, doc-debt sections", () => 
 - [ ] **Step 3: Implement `render-md.ts`**
 
 ```typescript
-import type { ApiJson, Cluster, Symbol } from "./types.js"
+import type { ApiJson, Cluster, ArchSymbol } from "./types.js"
 
 const safeId = (s: string): string => s.replace(/[^A-Za-z0-9_]/g, "_")
 
@@ -1071,7 +1071,7 @@ const mermaidClassDiagram = (cluster: Cluster): string => {
     return lines.join("\n")
 }
 
-const apiTable = (s: Symbol): string => {
+const apiTable = (s: ArchSymbol): string => {
     const head = `### \`${s.name}\` (${s.kind})\n\n${s.doc ?? "_(no description)_"}\n\n`
     if (s.members.length === 0)
         return head + "_no public members_\n"
@@ -1175,7 +1175,7 @@ test("renderIndexHtml: contains <!doctype html> and cluster flowchart container"
 - [ ] **Step 3: Implement `render-html.ts`**
 
 ```typescript
-import type { ApiJson, Cluster, Symbol } from "./types.js"
+import type { ApiJson, Cluster, ArchSymbol } from "./types.js"
 import { THEME, MERMAID_THEME_VARIABLES } from "./theme.js"
 
 const css = `
@@ -1243,7 +1243,7 @@ const flowchartSrc = (api: ApiJson): string => {
     return lines.join("\n")
 }
 
-const symTable = (s: Symbol): string => {
+const symTable = (s: ArchSymbol): string => {
     if (s.members.length === 0)
         return `<h3><code>${s.name}</code> (${s.kind})</h3><p>${s.doc ?? "<em>no description</em>"}</p><p><em>no public members</em></p>`
     const rows = s.members.map((m) =>
@@ -1313,7 +1313,7 @@ import { resolveEdges }                from "./resolve.js"
 import { renderJson }                  from "./render-json.js"
 import { renderClusterMd, renderIndexMd }     from "./render-md.js"
 import { renderClusterHtml, renderIndexHtml } from "./render-html.js"
-import type { ArchReportOpts, Language, Symbol } from "./types.js"
+import type { ArchReportOpts, Language, ArchSymbol } from "./types.js"
 
 const safeFile = (s: string): string => s.replace(/[^A-Za-z0-9_-]/g, "_")
 
@@ -1336,7 +1336,7 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
 
     const { files } = await discover(opts.pathOrGlob, opts.lang)
     const parser    = new Parser()
-    const allSyms: { lang: Language; syms: Symbol[] }[] = []
+    const allSyms: { lang: Language; syms: ArchSymbol[] }[] = []
     for (const lang of Object.keys(files) as Language[]) {
         const grammar = await parser.getGrammar(lang)
         const fileList = files[lang] ?? []
@@ -1348,7 +1348,7 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     }
 
     const scopeRoot = path.resolve(resolveScopeRoot(opts.pathOrGlob))
-    const byLang = new Map<Language, Symbol[]>()
+    const byLang = new Map<Language, ArchSymbol[]>()
     for (const { lang, syms } of allSyms) {
         const arr = byLang.get(lang) ?? []
         arr.push(...syms)
