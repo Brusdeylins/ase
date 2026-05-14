@@ -45,6 +45,12 @@ test("renderIndexHtml: cluster flowchart sits inside diagram-frame", () => {
     assert.match(html, /<div class="diagram-frame">[\s\S]*flowchart LR/)
 })
 
+test("renderClusterHtml: bootstrap raises mermaid maxTextSize and maxEdges", () => {
+    const html = renderClusterHtml(apiFixture.clusters[0], apiFixture)
+    assert.match(html, /maxTextSize:\s*\d{6,}/)
+    assert.match(html, /maxEdges:\s*\d{4,}/)
+})
+
 test("renderClusterHtml: panzoom import is dynamic and try/catch-isolated from mermaid render", () => {
     const html = renderClusterHtml(apiFixture.clusters[0], apiFixture)
     /*  mermaid.run() must come BEFORE the panzoom import, so the diagram

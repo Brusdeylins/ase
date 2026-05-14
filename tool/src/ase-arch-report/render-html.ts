@@ -60,7 +60,7 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 const mermaidBootstrap = `
 <script type="module" id="mermaid-bootstrap">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"
-    mermaid.initialize({ startOnLoad: false, theme: "base", themeVariables: ${JSON.stringify(MERMAID_THEME_VARIABLES)} })
+    mermaid.initialize({ startOnLoad: false, theme: "base", themeVariables: ${JSON.stringify(MERMAID_THEME_VARIABLES)}, maxTextSize: 5000000, maxEdges: 10000 })
     await mermaid.run({ querySelector: ".mermaid" })
     try {
         const panzoomMod = await import("https://esm.sh/panzoom@9.4.3")
