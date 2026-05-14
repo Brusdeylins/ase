@@ -51,13 +51,15 @@ test("renderClusterHtml: bootstrap raises mermaid maxTextSize and maxEdges", () 
     assert.match(html, /maxEdges:\s*\d{4,}/)
 })
 
-test("renderClusterHtml: panzoom import is dynamic and try/catch-isolated from mermaid render", () => {
+test("renderClusterHtml: loads panzoom UMD before module script, registers non-passive wheel listener", () => {
     const html = renderClusterHtml(apiFixture.clusters[0], apiFixture)
-    /*  mermaid.run() must come BEFORE the panzoom import, so the diagram
-        always renders even if the panzoom CDN fails  */
-    const runIdx    = html.indexOf("mermaid.run")
-    const importIdx = html.indexOf("import(\"https://esm.sh/panzoom")
-    assert.ok(runIdx > 0, "mermaid.run call missing")
-    assert.ok(importIdx > runIdx, "panzoom dynamic import must come after mermaid.run")
-    assert.match(html, /try\s*\{[\s\S]*panzoom[\s\S]*\}[\s\S]*catch/)
+    /*  UMD script tag exists  */
+    assert.match(html, /<script src="https:\/\/unpkg\.com\/panzoom@9\.4\.3\/dist\/panzoom\.min\.js"><\/script>/)
+    /*  UMD <script> precedes the module <script>  */
+    const umdIdx = html.indexOf("panzoom.min.js")
+    const modIdx = html.indexOf("type=\"module\"")
+    assert.ok(umdIdx > 0 && modIdx > umdIdx, "UMD must come before the module script")
+    /*  module uses window.panzoom and non-passive wheel listener  */
+    assert.match(html, /window\.panzoom/)
+    assert.match(html, /\{\s*passive:\s*false\s*\}/)
 })

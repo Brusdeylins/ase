@@ -58,18 +58,25 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 `
 
 const mermaidBootstrap = `
+<script src="https://unpkg.com/panzoom@9.4.3/dist/panzoom.min.js"></script>
 <script type="module" id="mermaid-bootstrap">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"
     mermaid.initialize({ startOnLoad: false, theme: "base", themeVariables: ${JSON.stringify(MERMAID_THEME_VARIABLES)}, maxTextSize: 5000000, maxEdges: 10000 })
     await mermaid.run({ querySelector: ".mermaid" })
-    try {
-        const panzoomMod = await import("https://esm.sh/panzoom@9.4.3")
-        const panzoom = panzoomMod.default ?? panzoomMod
-        for (const svg of document.querySelectorAll(".diagram-frame svg"))
-            panzoom(svg, { maxZoom: 8, minZoom: 0.25, bounds: true, boundsPadding: 0.1 })
+    if (typeof window.panzoom === "function") {
+        for (const svg of document.querySelectorAll(".diagram-frame svg")) {
+            window.panzoom(svg, { maxZoom: 8, minZoom: 0.25, bounds: true, boundsPadding: 0.1, smoothScroll: false })
+            /*  prevent the page from scrolling on wheel-over-SVG by
+                capturing wheel events on the diagram-frame container
+                with a non-passive listener (Chrome's default passive
+                wheel listeners block preventDefault inside panzoom)  */
+            const frame = svg.closest(".diagram-frame")
+            if (frame !== null)
+                frame.addEventListener("wheel", (e) => e.preventDefault(), { passive: false })
+        }
     }
-    catch (err) {
-        console.warn("ase-arch-report: pan/zoom disabled —", err)
+    else {
+        console.warn("ase-arch-report: panzoom global not available — pan/zoom disabled")
     }
 </script>
 `
