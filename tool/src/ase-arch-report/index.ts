@@ -164,10 +164,10 @@ export default class ArchReportCommand {
                         format: flags.format,
                         config: flags.config
                     })
-                    const indexFile = flags.format === "html" ?
-                        path.join(result.outputDir, "index.html") :
-                        path.join(result.outputDir, "index.md")
-                    process.stdout.write(`Report: ${indexFile}\n`)
+                    if (flags.format === "md" || flags.format === "both")
+                        process.stdout.write(`Report: ${path.join(result.outputDir, "index.md")}\n`)
+                    if (flags.format === "html" || flags.format === "both")
+                        process.stdout.write(`Report: ${path.join(result.outputDir, "index.html")}\n`)
                 }
                 catch (err: unknown) {
                     const message = err instanceof Error ? err.message : String(err)

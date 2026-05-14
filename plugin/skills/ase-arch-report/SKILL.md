@@ -99,11 +99,13 @@ debt* section listing symbols without doc comments.
     </step>
 
 4.  <step id="STEP 4: Report Output Path">
-    -   The last stdout line of `ase arch-report` is of the form
-        `Report: <abs-path/>/index.md` (or `index.html` for HTML-only).
+    -   `ase arch-report` emits one or two `Report: <abs-path/>` lines
+        on stdout depending on the chosen <format/>: `index.md` for
+        `--format=md`, `index.html` for `--format=html`, or both lines
+        for `--format=both`.
 
-    -   Output that line *verbatim* to the user with just the following
-        <template/>, *without* any further commentary:
+    -   Echo each such line *verbatim* to the user with just the
+        following <template/>, *without* any further commentary:
 
         <template>
         &#x1F4D1; **REPORT**: <abs-path/>/<index-file/>
