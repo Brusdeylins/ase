@@ -8,6 +8,7 @@
 import { Command, CommanderError, Option } from "commander"
 import Log                         from "./ase-log.js"
 import type { LogLevel }           from "./ase-log.js"
+import ArchReportCommand           from "./ase-arch-report/index.js"
 import ConfigCommand               from "./ase-config.js"
 import ServiceCommand              from "./ase-service.js"
 import MCPCommand                  from "./ase-mcp.js"
@@ -56,6 +57,7 @@ const main = async (): Promise<void> => {
     })
 
     /*  register top-level commands  */
+    new ArchReportCommand(log).register(program)
     new ConfigCommand(log).register(program)
     new ServiceCommand(log).register(program)
     new MCPCommand(log).register(program)
