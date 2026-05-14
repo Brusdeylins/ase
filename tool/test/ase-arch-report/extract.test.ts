@@ -40,3 +40,28 @@ test("extract: pulls exported interface with one method signature", async () => 
     assert.equal(iface!.members.length, 1)
     assert.equal(iface!.members[0].name, "bar")
 })
+
+test("extract: class without a doc comment yields doc:null", async () => {
+    const tmpFile = path.join(import.meta.dirname, "fixtures", "ts-nodoc", "Bare.ts")
+    const parser  = new Parser(WASM_DIR)
+    const tree    = await parser.parse(tmpFile, "typescript")
+    const grammar = await parser.getGrammar("typescript")
+    const symbols = await extractSymbols(tree, grammar, "typescript", tmpFile, QUERIES)
+    const cls = symbols.find((s) => s.name === "Bare")
+    assert.ok(cls !== undefined)
+    assert.equal(cls!.doc, null)
+})
+
+test("extract: abstract class with public/protected/private methods captures modifiers and kind", async () => {
+    const tmpFile = path.join(import.meta.dirname, "fixtures", "ts-abstract", "Service.ts")
+    const parser  = new Parser(WASM_DIR)
+    const tree    = await parser.parse(tmpFile, "typescript")
+    const grammar = await parser.getGrammar("typescript")
+    const symbols = await extractSymbols(tree, grammar, "typescript", tmpFile, QUERIES)
+    const cls = symbols.find((s) => s.name === "Service")
+    assert.ok(cls !== undefined, "abstract class must be captured")
+    assert.equal(cls!.kind, "class")
+    assert.ok(cls!.modifiers.includes("abstract"), `expected 'abstract' in ${cls!.modifiers}`)
+    const run = cls!.members.find((m) => m.name === "run")
+    assert.ok(run !== undefined && run.kind === "method", "run method missing")
+})

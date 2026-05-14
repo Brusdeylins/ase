@@ -11,15 +11,19 @@ import path         from "node:path"
 import * as wts     from "web-tree-sitter"
 import type { Language, ArchSymbol, ArchMember, Modifier, SymbolKind } from "./types.js"
 
-/*  load and cache .scm query text per (language, queriesDir)  */
-const QUERY_CACHE = new Map<string, string>()
-const loadQuery = async (lang: Language, queriesDir: string): Promise<string> => {
+/*  cache compiled tree-sitter Query objects per (queriesDir, lang).  Building
+    a Query is expensive (WASM-backed) and Query objects allocate native heap
+    that must be reclaimed via `.delete()` — so we keep them for process
+    lifetime and reuse across files.  */
+const COMPILED_QUERY_CACHE = new Map<string, wts.Query>()
+const compileQuery = async (lang: Language, queriesDir: string, grammar: wts.Language): Promise<wts.Query> => {
     const key = `${queriesDir}::${lang}`
-    let q = QUERY_CACHE.get(key)
+    let q = COMPILED_QUERY_CACHE.get(key)
     if (q === undefined) {
         const file = path.join(queriesDir, `${lang}.scm`)
-        q = await fs.readFile(file, "utf8")
-        QUERY_CACHE.set(key, q)
+        const src  = await fs.readFile(file, "utf8")
+        q = new wts.Query(grammar, src)
+        COMPILED_QUERY_CACHE.set(key, q)
     }
     return q
 }
@@ -31,7 +35,7 @@ const firstSentence = (raw: string): string | null => {
         .replace(/^\/\*\*?/, "")
         .replace(/\*\/$/, "")
         .split("\n")
-        .map((l) => l.replace(/^\s*\*\s?/, "").trimEnd())
+        .map((l) => l.replace(/^\s*(\*|\/\/)\s?/, "").trimEnd())
         .join(" ")
         .trim()
     if (stripped.length === 0)
@@ -62,12 +66,57 @@ const modifiersOf = (node: wts.Node): Modifier[] => {
     for (const c of node.children) {
         if (c === null)
             continue
-        if (c.type === "public" || c.type === "private" || c.type === "protected")
-            out.push(c.type as Modifier)
-        if (c.text === "abstract" || c.text === "sealed" || c.text === "final")
+        if (c.type === "accessibility_modifier") {
+            const t = c.text
+            if (t === "public" || t === "private" || t === "protected")
+                out.push(t as Modifier)
+        }
+        if (c.type === "abstract" || c.text === "abstract")
+            out.push("abstract")
+        if (c.text === "sealed" || c.text === "final")
             out.push(c.text as Modifier)
     }
+    if (node.type === "abstract_class_declaration")
+        out.push("abstract")
     return out
+}
+
+const collectHeritage = (typeNode: wts.Node): { extends: string[]; implements: string[] } => {
+    const ext: string[] = []
+    const imp: string[] = []
+    const scan = (n: wts.Node): void => {
+        for (const c of n.children) {
+            if (c === null)
+                continue
+            if (c.type === "extends_clause") {
+                /*  class extends X[, Y]  */
+                for (const id of c.children)
+                    if (id !== null && (id.type === "identifier" || id.type === "type_identifier"))
+                        ext.push(id.text)
+                /*  TS also nests names under generic_type/type_arguments  */
+                for (const id of c.descendantsOfType("type_identifier"))
+                    if (id !== null && !ext.includes(id.text))
+                        ext.push(id.text)
+            }
+            else if (c.type === "implements_clause") {
+                for (const id of c.descendantsOfType("type_identifier"))
+                    if (id !== null && !imp.includes(id.text))
+                        imp.push(id.text)
+            }
+            else if (c.type === "extends_type_clause") {
+                /*  interface extends X, Y  */
+                for (const id of c.descendantsOfType("type_identifier"))
+                    if (id !== null && !ext.includes(id.text))
+                        ext.push(id.text)
+            }
+            else if (c.type === "class_heritage" || c.type === "class_body" || c.type === "interface_body")
+                scan(c)
+        }
+    }
+    scan(typeNode)
+    /*  return tuple as separate lists, types-namespace separator chosen ;
+        TS interfaces only use 'extends'.  */
+    return { extends: ext, implements: imp }
 }
 
 const memberKind = (nodeType: string): SymbolKind => {
@@ -83,8 +132,7 @@ const memberKind = (nodeType: string): SymbolKind => {
 export const extractSymbols = async (
     tree: wts.Tree, grammar: wts.Language, lang: Language, file: string, queriesDir: string
 ): Promise<ArchSymbol[]> => {
-    const qSrc    = await loadQuery(lang, queriesDir)
-    const query   = new wts.Query(grammar, qSrc)
+    const query   = await compileQuery(lang, queriesDir, grammar)
     const matches = query.matches(tree.rootNode)
 
     /*  collect type definitions and method/signature definitions from query
@@ -124,13 +172,14 @@ export const extractSymbols = async (
                 line:      m.startPosition.row + 1
             })
         }
+        const heritage = collectHeritage(t)
         symbols.push({
             fqn:        name,
             name,
             kind,
             modifiers:  modifiersOf(t),
-            extends:    [],
-            implements: [],
+            extends:    heritage.extends,
+            implements: heritage.implements,
             file,
             line:       t.startPosition.row + 1,
             doc:        docFor(t),
