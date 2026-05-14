@@ -65,3 +65,17 @@ test("extract: abstract class with public/protected/private methods captures mod
     const run = cls!.members.find((m) => m.name === "run")
     assert.ok(run !== undefined && run.kind === "method", "run method missing")
 })
+
+test("extract: Java class with javadoc and method", async () => {
+    const javaFix = path.join(import.meta.dirname, "fixtures", "java-mini", "Foo.java")
+    const parser  = new Parser(WASM_DIR)
+    const tree    = await parser.parse(javaFix, "java")
+    const grammar = await parser.getGrammar("java")
+    const symbols = await extractSymbols(tree, grammar, "java", javaFix, QUERIES)
+    const cls = symbols.find((s) => s.name === "Foo")
+    assert.ok(cls !== undefined, "Java class Foo must be captured")
+    assert.equal(cls!.kind, "class")
+    assert.equal(cls!.doc, "A foo.")
+    const bar = cls!.members.find((m) => m.name === "bar")
+    assert.ok(bar !== undefined, "method bar must be captured")
+})
