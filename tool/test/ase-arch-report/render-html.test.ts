@@ -44,3 +44,14 @@ test("renderIndexHtml: cluster flowchart sits inside diagram-frame", () => {
     const html = renderIndexHtml(apiFixture)
     assert.match(html, /<div class="diagram-frame">[\s\S]*flowchart LR/)
 })
+
+test("renderClusterHtml: panzoom import is dynamic and try/catch-isolated from mermaid render", () => {
+    const html = renderClusterHtml(apiFixture.clusters[0], apiFixture)
+    /*  mermaid.run() must come BEFORE the panzoom import, so the diagram
+        always renders even if the panzoom CDN fails  */
+    const runIdx    = html.indexOf("mermaid.run")
+    const importIdx = html.indexOf("import(\"https://esm.sh/panzoom")
+    assert.ok(runIdx > 0, "mermaid.run call missing")
+    assert.ok(importIdx > runIdx, "panzoom dynamic import must come after mermaid.run")
+    assert.match(html, /try\s*\{[\s\S]*panzoom[\s\S]*\}[\s\S]*catch/)
+})
