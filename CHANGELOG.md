@@ -2,9 +2,21 @@
 ChangeLog
 =========
 
-0.0.27 (2026-05-13)
+0.0.27 (unreleased)
 -------------------
 
+- NEW FEATURE: `ase-arch-report` skill plus `ase arch-report` CLI
+  subcommand and `arch_report` MCP tool. Generates a deterministic
+  architecture report (Markdown and/or HTML) for a user-supplied code
+  scope. Language-agnostic via `web-tree-sitter` (WASM). Clusters are
+  derived from the sub-directory tree at full path depth; every
+  inter-cluster reference is shown; symbols without doc comments are
+  surfaced under a Documentation Debt section. MVP language coverage:
+  TypeScript and Java fully extract symbols+docs+methods; JavaScript,
+  Python, Go, Rust, Kotlin, C#, C, C++ grammars are bundled with
+  baseline queries (further per-language polish required for Kotlin,
+  C, C++ where the extractor's name resolution currently produces
+  anonymous symbols).
 - IMPROVEMENT: render the "ase-task-list" output as a Markdown table with mtime information
 - REFACTORING: split "task list" functionality into own "ase-task-list" skill
 
