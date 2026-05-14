@@ -322,6 +322,54 @@ export default class ServiceCommand {
                     }
                 }
             })
+            mcp.registerTool("arch_report", {
+                title:       "ASE arch report",
+                description:
+                    "Generate a deterministic architecture report (Markdown and/or HTML) " +
+                    "for a code scope. Pass `pathOrGlob`, optional `lang`, `output`, " +
+                    "`format` ('md' | 'html' | 'both'), and `config`. " +
+                    "Returns the absolute output directory, the list of written files, " +
+                    "and basic stats. The report uses cluster boundaries derived from " +
+                    "the sub-directory tree at full path depth, surfaces every " +
+                    "inter-cluster reference, and lists symbols without doc comments " +
+                    "under a Documentation Debt section.",
+                inputSchema: {
+                    pathOrGlob: z.string()
+                        .describe("source scope: directory or glob pattern"),
+                    lang: z.enum([
+                        "auto", "java", "typescript", "javascript", "python",
+                        "go", "rust", "kotlin", "csharp", "c", "cpp"
+                    ]).default("auto")
+                        .describe("language filter; 'auto' detects by file extension"),
+                    output: z.string().default("")
+                        .describe("output directory; empty string applies the default docs/reports/<basename>-<date>/"),
+                    format: z.enum([ "md", "html", "both" ]).default("both")
+                        .describe("which renderers to run"),
+                    config: z.string().optional()
+                        .describe("path to a YAML or JSON file with cluster overrides")
+                }
+            }, async (args) => {
+                try {
+                    const { renderArchReport } = await import("./ase-arch-report/index.js")
+                    const result = await renderArchReport({
+                        pathOrGlob: args.pathOrGlob,
+                        lang:       args.lang,
+                        output:     args.output,
+                        format:     args.format,
+                        config:     args.config
+                    })
+                    return {
+                        content: [ { type: "text", text: JSON.stringify(result, null, 2) } ]
+                    }
+                }
+                catch (err: unknown) {
+                    const message = err instanceof Error ? err.message : String(err)
+                    return {
+                        isError: true,
+                        content: [ { type: "text", text: `arch_report: FAILED: ${message}` } ]
+                    }
+                }
+            })
             mcp.registerTool("task_list", {
                 title:       "ASE task list",
                 description:
