@@ -149,6 +149,7 @@ export const renderIndexHtml = (api: ApiJson): string => {
 <p>Scope: <code>${api.scope}</code><br>
 Generated: ${api.generatedAt}<br>
 Languages: ${api.languages.join(", ")}</p>
+<p><em>Coverage: public and protected API only. Private and package-private members are intentionally excluded.</em></p>
 <h2>Clusters</h2>
 ${frame(flowchartSrc(api))}
 <h2>Per-cluster pages</h2>

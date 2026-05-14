@@ -55,6 +55,7 @@ export const renderIndexMd = (api: ApiJson): string => {
     lines.push(`Scope: \`${api.scope}\`  `)
     lines.push(`Generated: ${api.generatedAt}  `)
     lines.push(`Languages: ${api.languages.join(", ")}\n`)
+    lines.push("> Coverage: public and protected API only. Private and package-private members are intentionally excluded.\n")
     lines.push("## Clusters\n")
     lines.push("```mermaid")
     lines.push("flowchart LR")

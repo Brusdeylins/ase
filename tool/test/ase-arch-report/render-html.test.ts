@@ -63,3 +63,8 @@ test("renderClusterHtml: loads panzoom UMD before module script, registers non-p
     assert.match(html, /window\.panzoom/)
     assert.match(html, /\{\s*passive:\s*false\s*\}/)
 })
+
+test("renderIndexHtml: states public/protected coverage in the header", () => {
+    const html = renderIndexHtml(apiFixture)
+    assert.match(html, /Coverage: public and protected/)
+})

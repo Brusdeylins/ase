@@ -38,6 +38,11 @@ test("renderIndexMd: includes TOC, cluster flowchart, doc-debt sections", () => 
     assert.match(md, /## Documentation debt/)
 })
 
+test("renderIndexMd: states public/protected coverage in the header", () => {
+    const md = renderIndexMd(apiFixture)
+    assert.match(md, /Coverage: public and protected/)
+})
+
 test("mermaidSafeSignature strips visibility, generics, and trailing semicolon", () => {
     assert.equal(mermaidSafeSignature("public ArrayList<String> foo();"), "ArrayList~String~ foo()")
     assert.equal(mermaidSafeSignature("private static final String x;"), "String x")

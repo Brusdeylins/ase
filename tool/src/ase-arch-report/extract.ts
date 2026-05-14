@@ -91,19 +91,33 @@ const docFor = (node: wts.Node): string | null => {
 
 const modifiersOf = (node: wts.Node): Modifier[] => {
     const out: Modifier[] = []
-    for (const c of node.children) {
-        if (c === null)
-            continue
-        if (c.type === "accessibility_modifier") {
-            const t = c.text
-            if (t === "public" || t === "private" || t === "protected")
-                out.push(t as Modifier)
+    /*  scan a node for modifier tokens.  Both flat layouts (TypeScript:
+        modifier tokens appear as direct children of the declaration) and
+        nested layouts (Java/Kotlin: modifiers live under a `modifiers`
+        wrapper child) are handled by recursing into a `modifiers`
+        wrapper exactly one level deep.  */
+    const scan = (n: wts.Node): void => {
+        for (const c of n.children) {
+            if (c === null)
+                continue
+            if (c.type === "modifiers") {
+                scan(c)
+                continue
+            }
+            if (c.type === "accessibility_modifier") {
+                const t = c.text
+                if (t === "public" || t === "private" || t === "protected")
+                    out.push(t as Modifier)
+            }
+            if (c.type === "public" || c.type === "private" || c.type === "protected")
+                out.push(c.type as Modifier)
+            if (c.type === "abstract" || c.text === "abstract")
+                out.push("abstract")
+            if (c.text === "sealed" || c.text === "final")
+                out.push(c.text as Modifier)
         }
-        if (c.type === "abstract" || c.text === "abstract")
-            out.push("abstract")
-        if (c.text === "sealed" || c.text === "final")
-            out.push(c.text as Modifier)
     }
+    scan(node)
     if (node.type === "abstract_class_declaration")
         out.push("abstract")
     return out
@@ -173,6 +187,43 @@ const sanitizeMemberText = (raw: string): string => {
     return s
 }
 
+/*  languages that have a package-private (default) visibility level
+    where members lacking an explicit access modifier are NOT part of
+    the public API.  In TypeScript/JavaScript/Python a method without
+    a modifier is conceptually public, so the absence of a modifier
+    must NOT hide the member there.  */
+const HAS_PACKAGE_PRIVATE_DEFAULT: Record<Language, boolean> = {
+    java:       true,
+    kotlin:     true,
+    csharp:     true,
+    go:         false,
+    rust:       false,
+    c:          false,
+    cpp:        false,
+    typescript: false,
+    javascript: false,
+    python:     false
+}
+
+/*  determine whether a member (method/field) should appear in the
+    architecture report.  Policy: show only the *public* and *protected*
+    API.  Members with `private` are always hidden.  Members lacking an
+    explicit visibility modifier are kept on interfaces unconditionally
+    (interface methods are implicitly public in all supported languages)
+    and on classes only if the language has no package-private default
+    (TypeScript/JavaScript/Python class methods are public by default;
+    Java/Kotlin/C# class members default to package-private and are
+    therefore hidden).  */
+const memberIsVisible = (typeKind: SymbolKind, lang: Language, modifiers: Modifier[]): boolean => {
+    if (modifiers.includes("private"))
+        return false
+    if (modifiers.includes("public") || modifiers.includes("protected"))
+        return true
+    if (typeKind === "interface")
+        return true
+    return !HAS_PACKAGE_PRIVATE_DEFAULT[lang]
+}
+
 const memberKind = (nodeType: string): SymbolKind => {
     if (nodeType.startsWith("method"))
         return "method"
@@ -206,6 +257,10 @@ export const extractSymbols = async (
 
     const symbols: ArchSymbol[] = []
     for (const t of types) {
+        const tModifiers = modifiersOf(t)
+        /*  drop nested private types entirely  */
+        if (tModifiers.includes("private"))
+            continue
         const nameNode = t.childForFieldName("name")
         const name = nameNode?.text ?? "<anon>"
         const kind: SymbolKind = t.type === "interface_declaration" ? "interface" : "class"
@@ -216,6 +271,9 @@ export const extractSymbols = async (
             while (ancestor !== null && !ancestor.equals(t))
                 ancestor = ancestor.parent
             if (ancestor === null)
+                continue
+            const mModifiers = modifiersOf(m)
+            if (!memberIsVisible(kind, lang, mModifiers))
                 continue
             const mName = m.childForFieldName("name")?.text ?? "<anon>"
             members.push({
@@ -231,7 +289,7 @@ export const extractSymbols = async (
             fqn:        name,
             name,
             kind,
-            modifiers:  modifiersOf(t),
+            modifiers:  tModifiers,
             extends:    heritage.extends,
             implements: heritage.implements,
             file,

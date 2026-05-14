@@ -33,7 +33,9 @@ given code scope.
 for the code scope $ARGUMENTS. The report covers a *cluster overview*
 (sub-directory tree at full depth), per-cluster *classDiagrams* plus
 *method tables*, *inter-cluster reference edges*, and a *documentation
-debt* section listing symbols without doc comments.
+debt* section listing symbols without doc comments. The report shows
+the *public and protected API*. Private and package-private members are
+intentionally excluded.
 </objective>
 
 <flow>
