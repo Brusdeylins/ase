@@ -32,3 +32,15 @@ test("renderIndexHtml: contains <!doctype html> and cluster flowchart container"
     assert.match(html, /^<!doctype html>/i)
     assert.match(html, /flowchart LR/)
 })
+
+test("renderClusterHtml: wraps mermaid in pan/zoom frame", () => {
+    const html = renderClusterHtml(apiFixture.clusters[0], apiFixture)
+    assert.match(html, /<div class="diagram-frame">/)
+    assert.match(html, /class="diagram-hint"/)
+    assert.match(html, /panzoom/)
+})
+
+test("renderIndexHtml: cluster flowchart sits inside diagram-frame", () => {
+    const html = renderIndexHtml(apiFixture)
+    assert.match(html, /<div class="diagram-frame">[\s\S]*flowchart LR/)
+})

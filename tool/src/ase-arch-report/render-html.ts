@@ -28,15 +28,50 @@ th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: le
 th { background: var(--subtle); font-weight: 600; }
 code { background: var(--subtle); padding: 0.1rem 0.3rem; border-radius: 3px; }
 h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
-.mermaid { margin: 1.5rem 0; }
+.diagram-frame {
+    margin: 1.5rem 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: auto;
+    max-height: 80vh;
+    background: var(--bg);
+    position: relative;
+}
+.diagram-frame .mermaid {
+    margin: 0;
+    padding: 0.5rem;
+    min-width: max-content;
+}
+.diagram-hint {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    background: var(--bg);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    pointer-events: none;
+    user-select: none;
+}
 `
 
 const mermaidBootstrap = `
 <script type="module" id="mermaid-bootstrap">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"
-    mermaid.initialize({ startOnLoad: true, theme: "base", themeVariables: ${JSON.stringify(MERMAID_THEME_VARIABLES)} })
+    import panzoom from "https://cdn.jsdelivr.net/npm/panzoom@9.4.3/dist/panzoom.module.js"
+    mermaid.initialize({ startOnLoad: false, theme: "base", themeVariables: ${JSON.stringify(MERMAID_THEME_VARIABLES)} })
+    await mermaid.run({ querySelector: ".mermaid" })
+    for (const svg of document.querySelectorAll(".diagram-frame svg"))
+        panzoom(svg, { maxZoom: 8, minZoom: 0.25, bounds: true, boundsPadding: 0.1 })
 </script>
 `
+
+const frame = (src: string): string => `<div class="diagram-frame">
+<span class="diagram-hint">drag to pan · wheel to zoom</span>
+<div class="mermaid">${src}</div>
+</div>`
 
 const wrap = (title: string, body: string): string =>
     `<!doctype html>
@@ -90,7 +125,7 @@ ${rows}
 
 export const renderClusterHtml = (cluster: Cluster, _api: ApiJson): string => {
     const body = `<h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
-<div class="mermaid">${classDiagramSrc(cluster)}</div>
+${frame(classDiagramSrc(cluster))}
 <h2>Symbols</h2>
 ${cluster.symbols.map(symTable).join("\n")}`
     return wrap(`arch-report — ${cluster.name}`, body)
@@ -102,7 +137,7 @@ export const renderIndexHtml = (api: ApiJson): string => {
 Generated: ${api.generatedAt}<br>
 Languages: ${api.languages.join(", ")}</p>
 <h2>Clusters</h2>
-<div class="mermaid">${flowchartSrc(api)}</div>
+${frame(flowchartSrc(api))}
 <h2>Per-cluster pages</h2>
 <ul>
 ${api.clusters.map((c) => `<li><a href="./${safeId(c.name)}.html"><code>${c.name}</code></a> — ${c.symbols.length} symbols</li>`).join("\n")}
