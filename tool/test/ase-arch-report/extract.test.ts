@@ -79,3 +79,33 @@ test("extract: Java class with javadoc and method", async () => {
     const bar = cls!.members.find((m) => m.name === "bar")
     assert.ok(bar !== undefined, "method bar must be captured")
 })
+
+test("extract: multi-line Java method signature collapses to one line", async () => {
+    const tmpDir = path.join(import.meta.dirname, "fixtures", "java-multiline")
+    /*  static fixture — see file in same dir  */
+    const file = path.join(tmpDir, "Svc.java")
+    const parser = new Parser(WASM_DIR)
+    const tree = await parser.parse(file, "java")
+    const grammar = await parser.getGrammar("java")
+    const symbols = await extractSymbols(tree, grammar, "java", file, QUERIES)
+    const cls = symbols.find((s) => s.name === "Svc")
+    assert.ok(cls !== undefined)
+    const m = cls!.members.find((mm) => mm.name === "accountSummary")
+    assert.ok(m !== undefined, "accountSummary method missing")
+    assert.doesNotMatch(m!.signature, /\n/, "signature must be single-line")
+    assert.match(m!.signature, /accountSummary\(int reqId, String account, String tag\)/)
+})
+
+test("extract: @Override-annotated method drops the annotation from signature", async () => {
+    const tmpDir = path.join(import.meta.dirname, "fixtures", "java-multiline")
+    const file = path.join(tmpDir, "Svc.java")
+    const parser = new Parser(WASM_DIR)
+    const tree = await parser.parse(file, "java")
+    const grammar = await parser.getGrammar("java")
+    const symbols = await extractSymbols(tree, grammar, "java", file, QUERIES)
+    const cls = symbols.find((s) => s.name === "Svc")
+    const m = cls!.members.find((mm) => mm.name === "clear")
+    assert.ok(m !== undefined, "clear method missing")
+    assert.doesNotMatch(m!.signature, /@Override/)
+    assert.match(m!.signature, /^public void clear\(\)$/)
+})

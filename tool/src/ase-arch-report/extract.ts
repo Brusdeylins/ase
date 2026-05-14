@@ -119,6 +119,32 @@ const collectHeritage = (typeNode: wts.Node): { extends: string[]; implements: s
     return { extends: ext, implements: imp }
 }
 
+const sanitizeMemberText = (raw: string): string => {
+    let s = raw
+    /*  strip leading annotation(s) FIRST so annotation arguments like
+        @SuppressWarnings({"unchecked"}) don't fool the body-trimming '{'
+        heuristic below.  Supports @Foo, @Foo(args) — including '{' and '}'
+        inside the args — repeated for Java, Kotlin, Python decorators,
+        and TS legacy decorators.  */
+    while (true) {
+        const next = s.replace(/^\s*@[A-Za-z_][\w.]*(\([^)]*\))?\s*/s, "")
+        if (next === s)
+            break
+        s = next
+    }
+    /*  drop method body (Java/TS/Kotlin etc.): everything from the first '{'
+        at top level onward — interface methods end with ';' instead.  */
+    const brace = s.indexOf("{")
+    if (brace >= 0)
+        s = s.slice(0, brace)
+    /*  drop everything from a trailing ';' onward  */
+    s = s.replace(/;\s*$/, "")
+    /*  collapse all whitespace (including embedded newlines from multi-line
+        parameter lists) into single spaces  */
+    s = s.replace(/\s+/g, " ").trim()
+    return s
+}
+
 const memberKind = (nodeType: string): SymbolKind => {
     if (nodeType.startsWith("method"))
         return "method"
@@ -167,7 +193,7 @@ export const extractSymbols = async (
             members.push({
                 name:      mName,
                 kind:      memberKind(m.type),
-                signature: m.text.split("\n")[0],
+                signature: sanitizeMemberText(m.text),
                 doc:       docFor(m),
                 line:      m.startPosition.row + 1
             })
