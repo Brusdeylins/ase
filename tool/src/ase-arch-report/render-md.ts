@@ -7,6 +7,7 @@
 /*  Markdown rendering for the arch-report pipeline  */
 
 import type { ApiJson, Cluster, ArchSymbol } from "./types.js"
+import { mermaidSafeSignature } from "./mermaid.js"
 
 const safeId = (s: string): string => s.replace(/[^A-Za-z0-9_]/g, "_")
 
@@ -18,7 +19,7 @@ const mermaidClassDiagram = (cluster: Cluster): string => {
         if (kindTag !== "")
             lines.push(`        ${kindTag}`)
         for (const m of s.members)
-            lines.push(`        ${m.signature}`)
+            lines.push(`        ${mermaidSafeSignature(m.signature)}`)
         lines.push("    }")
         for (const parent of s.extends)
             lines.push(`    ${safeId(parent)} <|-- ${safeId(s.name)}`)
