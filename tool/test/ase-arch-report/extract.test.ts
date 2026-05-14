@@ -96,6 +96,31 @@ test("extract: multi-line Java method signature collapses to one line", async ()
     assert.match(m!.signature, /accountSummary\(int reqId, String account, String tag\)/)
 })
 
+test("extract: Java method with multi-line Javadoc separated by blank line yields description", async () => {
+    const file = path.join(import.meta.dirname, "fixtures", "java-docfind", "Book.java")
+    const parser = new Parser(WASM_DIR)
+    const tree = await parser.parse(file, "java")
+    const grammar = await parser.getGrammar("java")
+    const symbols = await extractSymbols(tree, grammar, "java", file, QUERIES)
+    const cls = symbols.find((s) => s.name === "Book")
+    assert.ok(cls !== undefined)
+    const clear = cls!.members.find((m) => m.name === "clear")
+    assert.ok(clear !== undefined, "clear method missing")
+    assert.equal(clear!.doc, "Clears all levels.")
+})
+
+test("extract: Java method WITHOUT a doc comment yields doc=null", async () => {
+    const file = path.join(import.meta.dirname, "fixtures", "java-docfind", "Book.java")
+    const parser = new Parser(WASM_DIR)
+    const tree = await parser.parse(file, "java")
+    const grammar = await parser.getGrammar("java")
+    const symbols = await extractSymbols(tree, grammar, "java", file, QUERIES)
+    const cls = symbols.find((s) => s.name === "Book")
+    const tostring = cls!.members.find((m) => m.name === "toString")
+    /*  `toString` has @Override but no Javadoc — doc must stay null  */
+    assert.equal(tostring!.doc, null)
+})
+
 test("extract: @Override-annotated method drops the annotation from signature", async () => {
     const tmpDir = path.join(import.meta.dirname, "fixtures", "java-multiline")
     const file = path.join(tmpDir, "Svc.java")

@@ -44,15 +44,43 @@ const firstSentence = (raw: string): string | null => {
     return (m !== null ? m[1] : stripped).trim()
 }
 
+/*  a comment counts as a doc-comment only if it is a block_comment
+    (`/* ... *\/` or `/** ... *\/`) or the TS `comment` super-type.  Line
+    comments (`//`) are deliberately excluded because in C-family
+    grammars they are routinely used as section delimiters
+    (`// ==== METADATA ====`) directly above an unrelated symbol, which
+    would otherwise be mistaken for documentation.  */
+const isDocCommentNode = (n: wts.Node): boolean =>
+    n.type === "comment" || n.type === "block_comment"
+
+/*  walk backwards from a node through anonymous tokens (punctuation,
+    whitespace placeholders) and stop at the first comment OR the first
+    other named node.  Using `previousSibling` instead of
+    `previousNamedSibling` makes the lookup robust against grammars
+    where doc comments are emitted as anonymous "extras" tokens rather
+    than named siblings.  */
+const findLeadingComment = (node: wts.Node): wts.Node | null => {
+    let cur: wts.Node | null = node.previousSibling
+    while (cur !== null) {
+        if (isDocCommentNode(cur))
+            return cur
+        /*  any other named node breaks the doc-comment chain  */
+        if (cur.isNamed)
+            return null
+        cur = cur.previousSibling
+    }
+    return null
+}
+
 const docFor = (node: wts.Node): string | null => {
     /*  look for the doc comment on the node itself, then on an enclosing
         export_statement (TS) since `export class Foo` nests the class inside
         an export_statement whose previous sibling is the comment  */
     let target: wts.Node | null = node
     while (target !== null) {
-        const prev = target.previousNamedSibling
-        if (prev !== null && (prev.type === "comment" || prev.type === "block_comment"))
-            return firstSentence(prev.text)
+        const c = findLeadingComment(target)
+        if (c !== null)
+            return firstSentence(c.text)
         if (target.parent !== null && target.parent.type === "export_statement")
             target = target.parent
         else
