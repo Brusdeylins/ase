@@ -116,6 +116,14 @@ const safeId = (s: string): string => s.replace(/[^A-Za-z0-9_]/g, "_")
 const classDiagramSrc = (cluster: Cluster): string => {
     const lines: string[] = [ "classDiagram" ]
     for (const s of cluster.symbols) {
+        /*  Mermaid's classDiagram parser rejects an empty `{}` body,
+            so emit a body-less `class Foo` declaration whenever the
+            symbol has no members and is not an interface (interfaces
+            still need braces to host the `<<interface>>` stereotype)  */
+        if (s.members.length === 0 && s.kind !== "interface") {
+            lines.push(`    class ${safeId(s.name)}`)
+            continue
+        }
         lines.push(`    class ${safeId(s.name)} {`)
         if (s.kind === "interface")
             lines.push("        <<interface>>")
