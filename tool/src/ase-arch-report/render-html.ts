@@ -9,7 +9,7 @@
 
 import type { ApiJson, Cluster, ArchSymbol } from "./types.js"
 import { THEME, MERMAID_THEME_VARIABLES } from "./theme.js"
-import { mermaidSafeSignature } from "./mermaid.js"
+import { mermaidSafeSignature, mermaidVisibilityPrefix } from "./mermaid.js"
 
 const css = `
 :root {
@@ -109,7 +109,7 @@ const classDiagramSrc = (cluster: Cluster): string => {
         if (s.kind === "interface")
             lines.push("        <<interface>>")
         for (const m of s.members)
-            lines.push(`        ${mermaidSafeSignature(m.signature)}`)
+            lines.push(`        ${mermaidVisibilityPrefix(m.modifiers)}${mermaidSafeSignature(m.signature)}`)
         lines.push("    }")
     }
     return lines.join("\n")

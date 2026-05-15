@@ -279,11 +279,13 @@ export const extractSymbols = async (
             members.push({
                 name:      mName,
                 kind:      memberKind(m.type),
+                modifiers: mModifiers,
                 signature: sanitizeMemberText(m.text),
                 doc:       docFor(m),
                 line:      m.startPosition.row + 1
             })
         }
+        members.sort((a, b) => a.name.localeCompare(b.name))
         const heritage = collectHeritage(t)
         symbols.push({
             fqn:        name,

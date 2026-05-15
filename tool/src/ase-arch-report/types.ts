@@ -20,6 +20,7 @@ export type Modifier =
 export interface ArchMember {
     name:      string
     kind:      SymbolKind
+    modifiers: Modifier[]
     signature: string
     doc:       string | null
     line:      number

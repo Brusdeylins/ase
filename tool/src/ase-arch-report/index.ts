@@ -17,6 +17,7 @@ import { Parser }                             from "./parse.js"
 import { extractSymbols }                     from "./extract.js"
 import { clusterize }                         from "./cluster.js"
 import { resolveEdges }                       from "./resolve.js"
+import { resolveInheritDocs }                 from "./inherit-doc.js"
 import { renderJson }                         from "./render-json.js"
 import { renderClusterMd, renderIndexMd }     from "./render-md.js"
 import { renderClusterHtml, renderIndexHtml } from "./render-html.js"
@@ -79,6 +80,10 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     const clusters = [ ...byLang ]
         .flatMap(([ lang, syms ]) => clusterize(syms, scopeRoot, lang))
         .sort((a, b) => a.name.localeCompare(b.name))
+
+    /*  resolve `{@inheritDoc}` placeholders across the full symbol set
+        before downstream consumers (edges, doc-debt, renderers) read docs  */
+    resolveInheritDocs(clusters)
 
     /*  resolve edges + assemble doc-debt list  */
     const { edges, unresolved } = resolveEdges(clusters)
