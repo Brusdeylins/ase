@@ -40,6 +40,12 @@ const firstSentence = (raw: string): string | null => {
         .trim()
     if (stripped.length === 0)
         return null
+    /*  reject section dividers: comments dominated by `=`/`-`/`*` runs
+        like `/* ============ Contract Details ============ *\/` are
+        commonly used as visual section markers above unrelated symbols
+        and must not be mistaken for doc comments  */
+    if (/={4,}|-{4,}|\*{4,}/.test(stripped))
+        return null
     const m = stripped.match(/^(.+?[.!?])(\s|$)/)
     return (m !== null ? m[1] : stripped).trim()
 }

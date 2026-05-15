@@ -81,9 +81,20 @@ const mermaidBootstrap = `
 </script>
 `
 
+/*  HTML-escape Mermaid diagram source before embedding into the page:
+    raw `<<interface>>` tokens, generics with `<` / `>`, and bare `&`
+    would otherwise be parsed by the browser as malformed HTML and the
+    Mermaid runtime — which reads `.textContent` after browser parsing —
+    would receive a corrupted diagram source and fail with a "Parse
+    error" pointing at the resulting orphan tag fragment  */
+const escapeHtml = (s: string): string => s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+
 const frame = (src: string): string => `<div class="diagram-frame">
 <span class="diagram-hint">drag to pan · wheel to zoom</span>
-<div class="mermaid">${src}</div>
+<div class="mermaid">${escapeHtml(src)}</div>
 </div>`
 
 const wrap = (title: string, body: string): string =>
@@ -126,11 +137,11 @@ const flowchartSrc = (api: ApiJson): string => {
 
 const symTable = (s: ArchSymbol): string => {
     if (s.members.length === 0)
-        return `<h3><code>${s.name}</code> (${s.kind})</h3><p>${s.doc ?? "<em>no description</em>"}</p><p><em>no public members</em></p>`
+        return `<h3><code>${escapeHtml(s.name)}</code> (${s.kind})</h3><p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p><p><em>no public members</em></p>`
     const rows = s.members.map((m) =>
-        `<tr><td><code>${m.name}</code></td><td><code>${m.signature}</code></td><td>${m.doc ?? "<em>no description</em>"}</td></tr>`).join("\n")
-    return `<h3><code>${s.name}</code> (${s.kind})</h3>
-<p>${s.doc ?? "<em>no description</em>"}</p>
+        `<tr><td><code>${escapeHtml(m.name)}</code></td><td><code>${escapeHtml(m.signature)}</code></td><td>${m.doc !== null ? escapeHtml(m.doc) : "<em>no description</em>"}</td></tr>`).join("\n")
+    return `<h3><code>${escapeHtml(s.name)}</code> (${s.kind})</h3>
+<p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p>
 <table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
 ${rows}
 </tbody></table>`
