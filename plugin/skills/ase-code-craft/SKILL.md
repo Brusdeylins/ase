@@ -198,7 +198,7 @@ From scratch *craft* the following feature:
     and do not output anything else in this step:
 
     <template>
-    ✔ **RESULT**: Artifact Refactoring Plan Created.
+    ✔ **RESULT**: Feature Crafting Plan Created.
     ▶ **NEXT**: `ase-task-edit`, `ase-task-preflight`, or `ase-task-implement`.
     </template>
     </step>

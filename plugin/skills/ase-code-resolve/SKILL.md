@@ -252,7 +252,7 @@ Your role is an experienced, *expert-level software developer*.
     and do not output anything else in this step:
 
     <template>
-    ✔ **RESULT**: Artifact Refactoring Plan Created.
+    ✔ **RESULT**: Problem Resolving Plan Created.
     ▶ **NEXT**: `ase-task-edit`, `ase-task-preflight`, or `ase-task-implement`.
     </template>
     </step>
