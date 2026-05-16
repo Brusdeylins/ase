@@ -66,7 +66,8 @@ export const renderClusterMd = (cluster: Cluster, api: ApiJson): string => {
         parts.push(apiTable(s))
     parts.push("\n## Documentation debt\n")
     const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
-    const clusterDebt = api.docDebt.filter((d) => clusterFqns.has(d.fqn))
+    const clusterDebt = api.docDebt.filter((d) =>
+        clusterFqns.has(d.fqn.split("#")[0]))
     if (clusterDebt.length === 0)
         parts.push("_none — every public symbol in this cluster carries a doc comment_")
     else

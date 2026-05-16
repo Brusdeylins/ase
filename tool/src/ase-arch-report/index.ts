@@ -85,11 +85,20 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         before downstream consumers (edges, doc-debt, renderers) read docs  */
     resolveInheritDocs(clusters)
 
-    /*  resolve edges + assemble doc-debt list  */
+    /*  resolve edges + assemble doc-debt list (covers both symbol-level
+        and member-level missing docs; member entries use the
+        `Symbol#member` FQN form so cluster pages can match them by
+        splitting on `#` and looking up the symbol part)  */
     const { edges, unresolved } = resolveEdges(clusters)
-    const docDebt = clusters.flatMap((c) => c.symbols
-        .filter((s) => s.doc === null)
-        .map((s) => ({ fqn: s.fqn, file: s.file, line: s.line })))
+    const docDebt = clusters.flatMap((c) => c.symbols.flatMap((s) => {
+        const entries: { fqn: string; file: string; line: number }[] = []
+        if (s.doc === null)
+            entries.push({ fqn: s.fqn, file: s.file, line: s.line })
+        for (const m of s.members)
+            if (m.doc === null)
+                entries.push({ fqn: `${s.fqn}#${m.name}`, file: s.file, line: m.line })
+        return entries
+    }))
 
     /*  build the canonical api.json shape  */
     const api = renderJson({
