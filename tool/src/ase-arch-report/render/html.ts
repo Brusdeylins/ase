@@ -9,7 +9,14 @@
     with client-side Mermaid SVG and the B/W + #a01441 accent palette  */
 
 import type { ApiJson, Cluster, ArchSymbol } from "../types.js"
-import { THEME, MERMAID_THEME_VARIABLES } from "../theme.js"
+import { THEME, MERMAID_THEME_VARIABLES }    from "../theme.js"
+import { escapeHtml, safeId }                from "./util.js"
+import type { RenderContext }                from "./context.js"
+import { topClusterHubs }                    from "../metrics/hubs.js"
+import { indexStatsPanelHtml, clusterStatsPanelHtml } from "./stats-panel.js"
+import { dsmHtml }                           from "./dsm.js"
+import { cyclesHtml, cyclesTouchingCluster } from "./cycles.js"
+import { mainSequenceMermaid }               from "./main-sequence.js"
 
 const css = `
 :root {
@@ -41,32 +48,30 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
     background: var(--bg);
     cursor: grab;
 }
-.diagram-frame:active {
-    cursor: grabbing;
-}
-.diagram-frame .mermaid {
-    margin: 0;
-    padding: 0.5rem;
-    min-width: max-content;
-}
-.diagram-hint {
-    text-align: right;
-    font-size: 0.75rem;
-    color: var(--fg-muted);
-    margin: 0 0 1rem 0;
-    user-select: none;
-}
-footer {
-    margin-top: 2.5rem;
-    padding-top: 0.75rem;
-    border-top: 2px solid var(--accent);
-    font-size: 0.85rem;
-    color: var(--fg-muted);
-    text-align: center;
-}
+.diagram-frame:active { cursor: grabbing; }
+.diagram-frame .mermaid { margin: 0; padding: 0.5rem; min-width: max-content; }
+.diagram-hint { text-align: right; font-size: 0.75rem; color: var(--fg-muted); margin: 0 0 1rem 0; user-select: none; }
+footer { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 2px solid var(--accent); font-size: 0.85rem; color: var(--fg-muted); text-align: center; }
 .doc-debt { font-size: 0.8rem; }
 .doc-debt code { font-size: 0.85em; }
 .back-link { font-size: 0.85rem; margin: 0 0 0.5rem 0; }
+.stats-panel { background: var(--subtle); border: 1px solid var(--border); border-radius: 4px; padding: 0.75rem 1rem; margin: 1rem 0; font-size: 0.9rem; }
+.stats-panel dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0; }
+.stats-panel dt { font-weight: 600; color: var(--fg-muted); }
+.stats-panel dd { margin: 0; }
+.sev-green  { color: #1b7f3b; font-weight: 600; }
+.sev-yellow { color: #b27d00; font-weight: 600; }
+.sev-red    { color: var(--accent); font-weight: 600; }
+.dsm-wrap { overflow: auto; margin: 1rem 0; }
+table.dsm { table-layout: auto; width: auto; font-size: 0.75rem; border-collapse: collapse; }
+table.dsm th, table.dsm td { border: 1px solid var(--border); padding: 0.2rem 0.35rem; text-align: center; vertical-align: middle; word-break: normal; overflow-wrap: normal; white-space: nowrap; }
+table.dsm th.dsm-col { writing-mode: vertical-rl; transform: rotate(180deg); max-height: 10rem; background: var(--subtle); font-weight: 500; }
+table.dsm th.dsm-row { text-align: right; background: var(--subtle); font-weight: 500; }
+table.dsm th.dsm-corner { background: transparent; border: none; }
+table.dsm td.dsm-diag  { background: var(--border); }
+table.dsm td.dsm-cycle { background: rgba(160, 20, 65, 0.18); font-weight: 600; }
+.cycles ol { padding-left: 1.5rem; }
+.cycle-list code { background: transparent; padding: 0; }
 `
 
 const mermaidBootstrap = `
@@ -93,17 +98,6 @@ const mermaidBootstrap = `
 </script>
 `
 
-/*  HTML-escape Mermaid diagram source before embedding into the page:
-    raw `<<interface>>` tokens, generics with `<` / `>`, and bare `&`
-    would otherwise be parsed by the browser as malformed HTML and the
-    Mermaid runtime — which reads `.textContent` after browser parsing —
-    would receive a corrupted diagram source and fail with a "Parse
-    error" pointing at the resulting orphan tag fragment  */
-const escapeHtml = (s: string): string => s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-
 const frame = (src: string): string => `<div class="diagram-frame">
 <div class="mermaid">${escapeHtml(src)}</div>
 </div>
@@ -125,8 +119,6 @@ ${body}
 ${mermaidBootstrap}
 </body>
 </html>`
-
-const safeId = (s: string): string => s.replace(/[^A-Za-z0-9_]/g, "_")
 
 const classDiagramSrc = (cluster: Cluster): string => {
     /*  The class diagram complements — not duplicates — the per-symbol
@@ -175,18 +167,19 @@ const flowchartSrc = (api: ApiJson): string => {
 }
 
 const symTable = (s: ArchSymbol): string => {
+    const header = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)</h3>`
     if (s.members.length === 0)
-        return `<h3><code>${escapeHtml(s.name)}</code> (${s.kind})</h3><p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p><p><em>no public members</em></p>`
+        return `${header}<p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p><p><em>no public members</em></p>`
     const rows = s.members.map((m) =>
         `<tr><td><code>${escapeHtml(m.name)}</code></td><td><code>${escapeHtml(m.signature)}</code></td><td>${m.doc !== null ? escapeHtml(m.doc) : "<em>no description</em>"}</td></tr>`).join("\n")
-    return `<h3><code>${escapeHtml(s.name)}</code> (${s.kind})</h3>
+    return `${header}
 <p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p>
 <table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
 ${rows}
 </tbody></table>`
 }
 
-export const renderClusterHtml = (cluster: Cluster, api: ApiJson): string => {
+export const renderClusterHtml = (cluster: Cluster, api: ApiJson, ctx: RenderContext): string => {
     const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
     const clusterDebt = api.docDebt.filter((d) =>
         clusterFqns.has(d.fqn.split("#")[0]))
@@ -194,8 +187,17 @@ export const renderClusterHtml = (cluster: Cluster, api: ApiJson): string => {
 ${clusterDebt.length === 0 ?
     "<p><em>none — every public symbol in this cluster carries a doc comment</em></p>" :
     `<ul>${clusterDebt.map((d) => `<li><code>${escapeHtml(d.fqn)}</code> (${escapeHtml(d.file)}:${d.line})</li>`).join("")}</ul>`}</section>`
+    const stats = clusterStatsPanelHtml({
+        cluster,
+        coupling:       ctx.coupling.get(cluster.name) ?? { ca: 0, ce: 0 },
+        martin:         ctx.martin.get(cluster.name)!,
+        docCoverage:    ctx.docCovPerCluster.get(cluster.name)!,
+        cyclesTouching: cyclesTouchingCluster(ctx.cycleReport, cluster)
+    })
     const body = `<p class="back-link"><a href="./index.html">← back to index</a></p>
 <h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
+${stats}
+<h2>Class relationships</h2>
 ${frame(classDiagramSrc(cluster))}
 <h2>Symbols</h2>
 ${cluster.symbols.map(symTable).join("\n")}
@@ -203,14 +205,30 @@ ${debtSection}`
     return wrap(`arch-report — ${cluster.name}`, body, api.generatedAt)
 }
 
-export const renderIndexHtml = (api: ApiJson): string => {
+export const renderIndexHtml = (api: ApiJson, ctx: RenderContext): string => {
+    const mainSeq = mainSequenceMermaid(api.clusters, ctx.martin)
+    const mainSeqSection = mainSeq === "" ? "" :
+        `<h2>Martin Main Sequence</h2>\n${frame(mainSeq)}`
+    const stats = indexStatsPanelHtml({
+        api,
+        cycleCount:  ctx.cycleReport.cycles.length,
+        docCoverage: ctx.docCovAggregate,
+        topFanIn:    topClusterHubs(ctx.coupling, 3, "ca"),
+        topFanOut:   topClusterHubs(ctx.coupling, 3, "ce"),
+        totalLoc:    ctx.totalLoc
+    })
     const body = `<h1>Architecture Report</h1>
-<p>Scope: <code>${api.scope}</code><br>
+<p>Scope: <code>${escapeHtml(api.scope)}</code><br>
 Generated: ${api.generatedAt}<br>
 Languages: ${api.languages.join(", ")}</p>
 <p><em>Coverage: public and protected API only. Private and package-private members are intentionally excluded.</em></p>
-<h2>Clusters</h2>
+${stats}
+<h2>Cluster dependencies</h2>
 ${frame(flowchartSrc(api))}
+${cyclesHtml(ctx.cycleReport)}
+<h2>Dependency Structure Matrix</h2>
+${dsmHtml(api, ctx.sortedClusterNames)}
+${mainSeqSection}
 <h2>Per-cluster pages</h2>
 <ul>
 ${api.clusters.map((c) => `<li><a href="./${safeId(c.name)}.html"><code>${c.name}</code></a> — ${c.symbols.length} symbols</li>`).join("\n")}

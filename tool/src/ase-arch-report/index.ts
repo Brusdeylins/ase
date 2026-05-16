@@ -22,6 +22,12 @@ import { resolveInheritDocs }                 from "./inherit-doc.js"
 import { renderJson }                         from "./render-json.js"
 import { renderClusterMd, renderIndexMd }     from "./render/md.js"
 import { renderClusterHtml, renderIndexHtml } from "./render/html.js"
+import type { RenderContext }                 from "./render/context.js"
+import { computeCoupling }                    from "./metrics/coupling.js"
+import { computeAllMartin }                   from "./metrics/martin.js"
+import { computeDocCoverage, computeAggregateDocCoverage } from "./metrics/doc-coverage.js"
+import { tarjanSCC, feedbackArcSet, layerAssignment }      from "./graph/index.js"
+import type { CycleReport }                   from "./render/cycles.js"
 import type { ArchReportOpts, Language, ArchSymbol, ArchFile } from "./types.js"
 
 /*  filename sanitizer for cluster slugs  */
@@ -143,24 +149,63 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
             unresolved.map((u) => `- \`${u.ref}\` referenced from \`${u.from}\``).join("\n") + "\n")
     written.push(path.join(outputDir, "_meta", "unresolved.md"))
 
+    /*  build the per-report RenderContext that every renderer call
+        consumes — pure aggregation of the metrics/graph modules so
+        each renderer stays declarative.  */
+    const coupling     = computeCoupling(clusters, archFiles)
+    const martin       = computeAllMartin(clusters, coupling)
+    const docCovPerCluster = new Map<string, ReturnType<typeof computeDocCoverage>>()
+    for (const c of clusters)
+        docCovPerCluster.set(c.name, computeDocCoverage(c))
+    const docCovAggregate  = computeAggregateDocCoverage(clusters)
+    const totalLoc         = clusters.reduce((n, c) =>
+        n + c.symbols.reduce((m, s) => m + s.loc, 0), 0)
+    /*  cluster-level graph for cycle + layering computations  */
+    const clusterNodes = clusters.map((c) => c.name)
+    const clusterEdges = edges.map((e) => ({ from: e.from, to: e.to }))
+    const sccs   = tarjanSCC(clusterNodes, clusterEdges)
+    const layers = layerAssignment(clusterNodes, clusterEdges)
+    const sortedClusterNames = [ ...layers.sccOrder ]
+        .flatMap((sccIdx) => [ ...layers.sccs[sccIdx] ].sort())
+    /*  cycles: keep SCCs with >= 2 members, compute FAS per group  */
+    const cycleReport: CycleReport = {
+        cycles: sccs
+            .filter((scc) => scc.length >= 2)
+            .map((members) => {
+                const inGroup = new Set(members)
+                const subEdges = clusterEdges.filter((e) =>
+                    inGroup.has(e.from) && inGroup.has(e.to))
+                return { members: [ ...members ].sort(), cut: feedbackArcSet(members, subEdges) }
+            })
+    }
+    const ctx: RenderContext = {
+        coupling,
+        martin,
+        docCovPerCluster,
+        docCovAggregate,
+        cycleReport,
+        sortedClusterNames,
+        totalLoc
+    }
+
     /*  emit per-format rendered files  */
     const wantMd   = opts.format === "md"   || opts.format === "both"
     const wantHtml = opts.format === "html" || opts.format === "both"
     if (wantMd) {
-        await fs.writeFile(path.join(tmpDir, "index.md"), renderIndexMd(api))
+        await fs.writeFile(path.join(tmpDir, "index.md"), renderIndexMd(api, ctx))
         written.push(path.join(outputDir, "index.md"))
         for (const c of clusters) {
             const file = `${safeFile(c.name)}.md`
-            await fs.writeFile(path.join(tmpDir, file), renderClusterMd(c, api))
+            await fs.writeFile(path.join(tmpDir, file), renderClusterMd(c, api, ctx))
             written.push(path.join(outputDir, file))
         }
     }
     if (wantHtml) {
-        await fs.writeFile(path.join(tmpDir, "index.html"), renderIndexHtml(api))
+        await fs.writeFile(path.join(tmpDir, "index.html"), renderIndexHtml(api, ctx))
         written.push(path.join(outputDir, "index.html"))
         for (const c of clusters) {
             const file = `${safeFile(c.name)}.html`
-            await fs.writeFile(path.join(tmpDir, file), renderClusterHtml(c, api))
+            await fs.writeFile(path.join(tmpDir, file), renderClusterHtml(c, api, ctx))
             written.push(path.join(outputDir, file))
         }
     }
