@@ -6,7 +6,7 @@
 
 /*  Markdown rendering for the arch-report pipeline  */
 
-import type { ApiJson, Cluster, ArchSymbol } from "./types.js"
+import type { ApiJson, Cluster, ArchSymbol } from "../types.js"
 
 const safeId = (s: string): string => s.replace(/[^A-Za-z0-9_]/g, "_")
 

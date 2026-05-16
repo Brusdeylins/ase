@@ -7,8 +7,8 @@
 /*  themed HTML rendering for the arch-report pipeline,
     with client-side Mermaid SVG and the B/W + #a01441 accent palette  */
 
-import type { ApiJson, Cluster, ArchSymbol } from "./types.js"
-import { THEME, MERMAID_THEME_VARIABLES } from "./theme.js"
+import type { ApiJson, Cluster, ArchSymbol } from "../types.js"
+import { THEME, MERMAID_THEME_VARIABLES } from "../theme.js"
 
 const css = `
 :root {

@@ -19,8 +19,8 @@ import { clusterize }                         from "./cluster.js"
 import { resolveEdges }                       from "./resolve.js"
 import { resolveInheritDocs }                 from "./inherit-doc.js"
 import { renderJson }                         from "./render-json.js"
-import { renderClusterMd, renderIndexMd }     from "./render-md.js"
-import { renderClusterHtml, renderIndexHtml } from "./render-html.js"
+import { renderClusterMd, renderIndexMd }     from "./render/md.js"
+import { renderClusterHtml, renderIndexHtml } from "./render/html.js"
 import type { ArchReportOpts, Language, ArchSymbol } from "./types.js"
 
 /*  filename sanitizer for cluster slugs  */
