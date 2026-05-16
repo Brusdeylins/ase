@@ -243,6 +243,29 @@ const memberKind = (nodeType: string): SymbolKind => {
     return "method"
 }
 
+/*  Resolve a symbol's display name.  The preferred path is
+    `childForFieldName("name")` (works for Java/TS/Python/Go/Rust),
+    but several grammars do not expose a `name` field on the
+    declaration node — Kotlin returns null for every declaration,
+    and C nests the function name inside a `function_declarator`.
+    Fall back to the first descendant whose type is one of the
+    common identifier kinds so those languages render real names
+    instead of the historical `<anon>` placeholder.  */
+const IDENTIFIER_KINDS = new Set([
+    "identifier", "type_identifier", "field_identifier",
+    "simple_identifier", "property_identifier"
+])
+const nameOf = (node: wts.Node): string => {
+    const fieldName = node.childForFieldName("name")
+    if (fieldName !== null)
+        return fieldName.text
+    for (const kind of IDENTIFIER_KINDS)
+        for (const d of node.descendantsOfType(kind))
+            if (d !== null)
+                return d.text
+    return "<anon>"
+}
+
 export const extractSymbols = async (
     tree: wts.Tree, grammar: wts.Language, lang: Language, file: string, queriesDir: string
 ): Promise<ArchSymbol[]> => {
@@ -270,8 +293,7 @@ export const extractSymbols = async (
         /*  drop nested private types entirely  */
         if (tModifiers.includes("private"))
             continue
-        const nameNode = t.childForFieldName("name")
-        const name = nameNode?.text ?? "<anon>"
+        const name = nameOf(t)
         const kind: SymbolKind = t.type === "interface_declaration" ? "interface" : "class"
         const members: ArchMember[] = []
         /*  collect type_identifier references that appear anywhere
@@ -291,7 +313,7 @@ export const extractSymbols = async (
             const mModifiers = modifiersOf(m)
             if (!memberIsVisible(kind, lang, mModifiers))
                 continue
-            const mName = m.childForFieldName("name")?.text ?? "<anon>"
+            const mName = nameOf(m)
             members.push({
                 name:      mName,
                 kind:      memberKind(m.type),
