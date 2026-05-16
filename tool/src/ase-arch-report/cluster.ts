@@ -13,7 +13,16 @@ export const clusterize = (symbols: ArchSymbol[], scopeRoot: string, lang: Langu
     const groups = new Map<string, ArchSymbol[]>()
     for (const s of symbols) {
         const rel = path.relative(scopeRoot, path.dirname(s.file))
-        const key = rel === "" ? "." : rel
+        /*  Strip leading `../` segments so files that sit outside the
+            declared scope root (symlinks, too-narrow `--scope` arg)
+            still produce a sensible cluster name like `ibTws/foo`
+            rather than `../../../ibTws/foo` that the safe-id renderer
+            would mangle into a long underscore run.  Warn once per
+            offending file so the user can tighten the scope.  */
+        const stripped = rel.split(path.sep).filter((seg) => seg !== "..").join(path.sep)
+        if (stripped !== rel)
+            process.stderr.write(`arch-report: warning: ${s.file} lies outside scope root — clustered as "${stripped}"\n`)
+        const key = stripped === "" ? "." : stripped
         const arr = groups.get(key) ?? []
         arr.push(s)
         groups.set(key, arr)

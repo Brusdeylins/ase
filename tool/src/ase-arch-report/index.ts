@@ -69,18 +69,14 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         }
     }
 
-    /*  cluster per language against the scope root  */
+    /*  cluster per language against the scope root.  Cluster names are
+        derived from the *absolute* `s.file` paths so `path.relative()`
+        inside `clusterize()` has a well-defined absolute second argument;
+        only AFTER clustering do we rewrite `s.file` to a path relative
+        to the scope root for portable api.json / rendered pages  */
     const scopeRoot = path.resolve(resolveScopeRoot(opts.pathOrGlob))
     const byLang    = new Map<Language, ArchSymbol[]>()
     for (const { lang, syms } of allSyms) {
-        /*  rewrite each symbol's `file` field from the absolute path
-            produced by glob into a path relative to the scope root, so
-            api.json and the rendered pages stay portable across machines
-            (no `/Users/<somebody>/...` leaking into the report)  */
-        for (const s of syms) {
-            const rel = path.relative(scopeRoot, s.file)
-            s.file = rel === "" ? path.basename(s.file) : rel
-        }
         const arr = byLang.get(lang) ?? []
         arr.push(...syms)
         byLang.set(lang, arr)
@@ -88,6 +84,15 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     const clusters = [ ...byLang ]
         .flatMap(([ lang, syms ]) => clusterize(syms, scopeRoot, lang))
         .sort((a, b) => a.name.localeCompare(b.name))
+    /*  rewrite each symbol's `file` field from the absolute path
+        produced by glob into a path relative to the scope root, so
+        api.json and the rendered pages stay portable across machines
+        (no `/Users/<somebody>/...` leaking into the report)  */
+    for (const c of clusters)
+        for (const s of c.symbols) {
+            const rel = path.relative(scopeRoot, s.file)
+            s.file = rel === "" ? path.basename(s.file) : rel
+        }
 
     /*  resolve `{@inheritDoc}` placeholders across the full symbol set
         before downstream consumers (edges, doc-debt, renderers) read docs  */
