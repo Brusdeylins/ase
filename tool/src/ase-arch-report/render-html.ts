@@ -32,6 +32,7 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
     border: 1px solid var(--border);
     border-radius: 4px;
     overflow: auto;
+    min-height: 250px;
     max-height: 80vh;
     background: var(--bg);
     position: relative;
