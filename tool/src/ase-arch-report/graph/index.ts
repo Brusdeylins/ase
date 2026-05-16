@@ -1,6 +1,7 @@
 /*
 **  Agentic Software Engineering (ASE)
 **  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Copyright (c) 2025-2026 Matthias Brusdeylins <matthias@brusdeylins.info>
 **  Licensed under GPL 3.0 <https://spdx.org/licenses/GPL-3.0-only>
 */
 
