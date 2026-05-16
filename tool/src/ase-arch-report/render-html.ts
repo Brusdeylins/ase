@@ -52,6 +52,14 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
     margin: 0 0 1rem 0;
     user-select: none;
 }
+footer {
+    margin-top: 2.5rem;
+    padding-top: 0.75rem;
+    border-top: 2px solid var(--accent);
+    font-size: 0.85rem;
+    color: var(--fg-muted);
+    text-align: center;
+}
 `
 
 const mermaidBootstrap = `
@@ -94,7 +102,7 @@ const frame = (src: string): string => `<div class="diagram-frame">
 </div>
 <div class="diagram-hint">drag to pan · wheel to zoom</div>`
 
-const wrap = (title: string, body: string): string =>
+const wrap = (title: string, body: string, generatedAt: string): string =>
     `<!doctype html>
 <html lang="en">
 <head>
@@ -104,6 +112,7 @@ const wrap = (title: string, body: string): string =>
 </head>
 <body>
 ${body}
+<footer>created with <a href="https://github.com/rse/ase">ASE Skill</a> at ${generatedAt.slice(0, 10)}</footer>
 ${mermaidBootstrap}
 </body>
 </html>`
@@ -181,7 +190,7 @@ ${frame(classDiagramSrc(cluster))}
 <h2>Symbols</h2>
 ${cluster.symbols.map(symTable).join("\n")}
 ${debtSection}`
-    return wrap(`arch-report — ${cluster.name}`, body)
+    return wrap(`arch-report — ${cluster.name}`, body, api.generatedAt)
 }
 
 export const renderIndexHtml = (api: ApiJson): string => {
@@ -200,5 +209,5 @@ ${api.clusters.map((c) => `<li><a href="./${safeId(c.name)}.html"><code>${c.name
 ${api.docDebt.length === 0 ?
     "<p><em>none — every public symbol carries a doc comment</em></p>" :
     `<ul>${api.docDebt.map((d) => `<li><code>${d.fqn}</code> (${d.file}:${d.line})</li>`).join("")}</ul>`}`
-    return wrap("arch-report — index", body)
+    return wrap("arch-report — index", body, api.generatedAt)
 }
