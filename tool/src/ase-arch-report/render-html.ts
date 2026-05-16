@@ -25,10 +25,10 @@ main { max-width: 1024px; margin: 2rem auto; padding: 0 1rem; box-sizing: border
 main > * { box-sizing: border-box; max-width: 100%; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
-table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
+th, td { border: 1px solid var(--border); padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
 th { background: var(--subtle); font-weight: 600; }
-code { background: var(--subtle); padding: 0.1rem 0.3rem; border-radius: 3px; }
+code { background: var(--subtle); padding: 0.1rem 0.3rem; border-radius: 3px; word-break: break-word; overflow-wrap: anywhere; white-space: normal; }
 h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 .diagram-frame {
     margin: 1.5rem 0 0.25rem 0;
