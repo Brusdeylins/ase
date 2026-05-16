@@ -1,6 +1,6 @@
 ---
 name: ase-arch-report
-argument-hint: "<path-or-glob>"
+argument-hint: "<path-glob-or-topical-hint>"
 description: >
     Generate a deterministic architecture report (Markdown and/or HTML)
     for a code scope. Trigger when the user asks for an "architecture
@@ -16,6 +16,8 @@ allowed-tools:
     - "Bash(ase arch-report:*)"
     - "Bash(ls:*)"
     - "Bash(realpath:*)"
+    - "Bash(find:*)"
+    - "Bash(wc:*)"
     - "AskUserQuestion"
 ---
 
@@ -40,11 +42,33 @@ intentionally excluded.
 
 <flow>
 1.  <step id="STEP 1: Resolve Source Scope">
-    -   If the user provided a *path or glob* in <request>$ARGUMENTS</request>,
-        use it as <scope/> directly.
+    -   *Validate* <request>$ARGUMENTS</request> as a *path or glob*:
+        if it resolves to an *existing directory or file*, or matches
+        *≥ 1 file* via `ls` glob expansion, use it as <scope/> directly.
 
-    -   Else, you *MUST* ask the user *exactly once* with the
-        `AskUserQuestion` tool:
+    -   Else treat <request>$ARGUMENTS</request> as a *topical hint*
+        (e.g. `tws plugin`, `core auth`) and run *repo discovery*.
+        Tokenize the hint, then for each token run:
+
+        ```
+        find . -type d \( -iname "*<token>*" -o -name src -o -name main \) \
+            -not -path "*/node_modules/*" -not -path "*/.git/*" \
+            -not -path "*/build/*" -not -path "*/target/*" \
+            -not -path "*/dst/*" -maxdepth 6
+        ```
+
+        For each candidate count source files inside (`*.java`,
+        `*.ts`, `*.tsx`, `*.js`, `*.kt`, `*.go`, `*.rs`, `*.py`,
+        `*.cs`, `*.cpp`, `*.c`) via `find ... | wc -l`. *Score*
+        candidates by *name-match weight × file count* and present
+        the *top 3-5* via `AskUserQuestion` so the user picks one.
+        If exactly *one* candidate has *≥ 10* source files and the
+        others have *0*, you *MAY* skip the question and use that
+        candidate directly.
+
+    -   If <request>$ARGUMENTS</request> is empty or no candidate
+        has any source files, ask the user *exactly once* via
+        `AskUserQuestion`:
 
         > "Welcher Code-Bereich soll analysiert werden? (Pfad oder Glob)"
 
