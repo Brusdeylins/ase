@@ -243,6 +243,24 @@ const memberKind = (nodeType: string): SymbolKind => {
     return "method"
 }
 
+/*  Map the tree-sitter node type of a type-declaration capture to
+    its SymbolKind.  `interface_declaration` (Java/TS/C#) and
+    `trait_item` (Rust) are interfaces; `enum_declaration` (Java/TS/
+    C#), `enum_item` (Rust), and `enum_specifier` (C/C++) are enums;
+    `record_declaration` (Java/C#) keeps `class` since records behave
+    structurally like classes for the API surface; `struct_*` is
+    flagged as `class` in this version (per types.ts current usage
+    set), and a dedicated `struct` kind is introduced in a later
+    commit when consumers can distinguish.  Anything else falls back
+    to `class`, the most generic OO container.  */
+const symbolKindOf = (node: wts.Node): SymbolKind => {
+    if (node.type === "interface_declaration" || node.type === "trait_item")
+        return "interface"
+    if (node.type === "enum_declaration" || node.type === "enum_item" || node.type === "enum_specifier")
+        return "enum"
+    return "class"
+}
+
 /*  Resolve a symbol's display name.  The preferred path is
     `childForFieldName("name")` (works for Java/TS/Python/Go/Rust),
     but several grammars do not expose a `name` field on the
@@ -280,7 +298,7 @@ export const extractSymbols = async (
     const methods: wts.Node[] = []
     for (const m of matches) {
         for (const c of m.captures) {
-            if (c.name === "class.def" || c.name === "interface.def")
+            if (c.name === "class.def" || c.name === "interface.def" || c.name === "enum.def")
                 types.push(c.node)
             else if (c.name === "method.def" || c.name === "method.sig.def")
                 methods.push(c.node)
@@ -294,7 +312,7 @@ export const extractSymbols = async (
         if (tModifiers.includes("private"))
             continue
         const name = nameOf(t)
-        const kind: SymbolKind = t.type === "interface_declaration" ? "interface" : "class"
+        const kind: SymbolKind = symbolKindOf(t)
         const members: ArchMember[] = []
         /*  collect type_identifier references that appear anywhere
             inside the type's body — method parameter types, return
@@ -349,5 +367,34 @@ export const extractSymbols = async (
             members
         })
     }
-    return symbols
+    /*  Per-file dedupe by symbol name.  Rust pairs `struct_item` (the
+        type definition, no members) with one or more `impl_item`
+        blocks (with the same name, carrying the methods) — each gets
+        captured as its own class.def, producing duplicate ArchSymbols.
+        Merge same-name siblings within a file so the report shows one
+        symbol with the union of members and the earliest definition
+        line; preserves the struct's heritage info from the type-def,
+        absorbs the methods from the impl-blocks.  */
+    const byName = new Map<string, ArchSymbol>()
+    for (const s of symbols) {
+        const existing = byName.get(s.name)
+        if (existing === undefined)
+            byName.set(s.name, s)
+        else {
+            const seenNames = new Set(existing.members.map((m) => m.name))
+            for (const m of s.members)
+                if (!seenNames.has(m.name)) {
+                    existing.members.push(m)
+                    seenNames.add(m.name)
+                }
+            existing.members.sort((a, b) => a.name.localeCompare(b.name))
+            for (const r of s.references)
+                if (!existing.references.includes(r))
+                    existing.references.push(r)
+            existing.references.sort()
+            if (existing.line > s.line)
+                existing.line = s.line
+        }
+    }
+    return [ ...byName.values() ]
 }

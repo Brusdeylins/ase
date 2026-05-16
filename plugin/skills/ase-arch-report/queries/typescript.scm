@@ -10,6 +10,9 @@
 (interface_declaration
     name: (type_identifier) @interface.name) @interface.def
 
+(enum_declaration
+    name: (identifier) @enum.name) @enum.def
+
 (method_definition
     name: (property_identifier) @method.name) @method.def
 

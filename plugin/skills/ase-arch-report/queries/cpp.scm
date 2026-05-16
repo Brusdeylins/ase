@@ -1,10 +1,13 @@
-;  C++: capture classes, structs, and function/method definitions.
+;  C++: capture classes, structs, enums, and function/method definitions.
 
 (class_specifier
     name: (type_identifier) @class.name) @class.def
 
 (struct_specifier
     name: (type_identifier) @class.name) @class.def
+
+(enum_specifier
+    name: (type_identifier) @enum.name) @enum.def
 
 (function_definition
     declarator: (function_declarator
