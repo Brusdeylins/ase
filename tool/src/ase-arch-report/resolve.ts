@@ -36,7 +36,7 @@ export const resolveEdges = (clusters: Cluster[]): ResolveResult => {
 
     for (const c of clusters)
         for (const s of c.symbols)
-            for (const ref of [ ...s.extends, ...s.implements ]) {
+            for (const ref of [ ...s.extends, ...s.implements, ...s.references ]) {
                 const target = symbolCluster.get(ref)
                 if (target === undefined)
                     unresolved.push({ ref, from: `${c.name}/${s.name}` })

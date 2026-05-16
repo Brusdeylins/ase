@@ -57,14 +57,22 @@ const apiTable = (s: ArchSymbol): string => {
     return head + "| Method | Signature | Description |\n|---|---|---|\n" + rows + "\n"
 }
 
-export const renderClusterMd = (cluster: Cluster, _api: ApiJson): string => {
+export const renderClusterMd = (cluster: Cluster, api: ApiJson): string => {
     const parts: string[] = []
     parts.push(`# Cluster: \`${cluster.name}\` (${cluster.language})\n`)
     parts.push(mermaidClassDiagram(cluster))
     parts.push("\n## Symbols\n")
     for (const s of cluster.symbols)
         parts.push(apiTable(s))
-    return parts.join("\n")
+    parts.push("\n## Documentation debt\n")
+    const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
+    const clusterDebt = api.docDebt.filter((d) => clusterFqns.has(d.fqn))
+    if (clusterDebt.length === 0)
+        parts.push("_none — every public symbol in this cluster carries a doc comment_")
+    else
+        for (const d of clusterDebt)
+            parts.push(`- \`${d.fqn}\` (${d.file}:${d.line})`)
+    return parts.join("\n") + "\n"
 }
 
 export const renderIndexMd = (api: ApiJson): string => {

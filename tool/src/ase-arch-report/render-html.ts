@@ -28,14 +28,17 @@ th { background: var(--subtle); font-weight: 600; }
 code { background: var(--subtle); padding: 0.1rem 0.3rem; border-radius: 3px; }
 h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 .diagram-frame {
-    margin: 1.5rem 0;
+    margin: 1.5rem 0 0.25rem 0;
     border: 1px solid var(--border);
     border-radius: 4px;
     overflow: auto;
-    min-height: 250px;
+    min-height: 400px;
     max-height: 80vh;
     background: var(--bg);
-    position: relative;
+    cursor: grab;
+}
+.diagram-frame:active {
+    cursor: grabbing;
 }
 .diagram-frame .mermaid {
     margin: 0;
@@ -43,16 +46,10 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
     min-width: max-content;
 }
 .diagram-hint {
-    position: absolute;
-    top: 0.25rem;
-    right: 0.5rem;
+    text-align: right;
     font-size: 0.75rem;
     color: var(--fg-muted);
-    background: var(--bg);
-    padding: 0.1rem 0.4rem;
-    border-radius: 3px;
-    border: 1px solid var(--border);
-    pointer-events: none;
+    margin: 0 0 1rem 0;
     user-select: none;
 }
 `
@@ -93,9 +90,9 @@ const escapeHtml = (s: string): string => s
     .replace(/>/g, "&gt;")
 
 const frame = (src: string): string => `<div class="diagram-frame">
-<span class="diagram-hint">drag to pan · wheel to zoom</span>
 <div class="mermaid">${escapeHtml(src)}</div>
-</div>`
+</div>
+<div class="diagram-hint">drag to pan · wheel to zoom</div>`
 
 const wrap = (title: string, body: string): string =>
     `<!doctype html>
@@ -171,11 +168,18 @@ ${rows}
 </tbody></table>`
 }
 
-export const renderClusterHtml = (cluster: Cluster, _api: ApiJson): string => {
+export const renderClusterHtml = (cluster: Cluster, api: ApiJson): string => {
+    const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
+    const clusterDebt = api.docDebt.filter((d) => clusterFqns.has(d.fqn))
+    const debtSection = `<h2>Documentation debt</h2>
+${clusterDebt.length === 0 ?
+    "<p><em>none — every public symbol in this cluster carries a doc comment</em></p>" :
+    `<ul>${clusterDebt.map((d) => `<li><code>${escapeHtml(d.fqn)}</code> (${escapeHtml(d.file)}:${d.line})</li>`).join("")}</ul>`}`
     const body = `<h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
 ${frame(classDiagramSrc(cluster))}
 <h2>Symbols</h2>
-${cluster.symbols.map(symTable).join("\n")}`
+${cluster.symbols.map(symTable).join("\n")}
+${debtSection}`
     return wrap(`arch-report — ${cluster.name}`, body)
 }
 
