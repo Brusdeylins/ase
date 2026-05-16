@@ -19,7 +19,10 @@ const css = `
     --subtle:   ${THEME.subtle};
     --accent:   ${THEME.accent};
 }
-body { background: var(--bg); color: var(--fg); font-family: system-ui, sans-serif; max-width: 1024px; margin: 2rem auto; padding: 0 1rem; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); }
+body { font-family: system-ui, sans-serif; }
+main { max-width: 1024px; margin: 2rem auto; padding: 0 1rem; box-sizing: border-box; }
+main > * { box-sizing: border-box; max-width: 100%; }
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
@@ -111,8 +114,10 @@ const wrap = (title: string, body: string, generatedAt: string): string =>
 <style>${css}</style>
 </head>
 <body>
+<main>
 ${body}
 <footer>created with <a href="https://github.com/rse/ase">ASE Skill</a> at ${generatedAt.slice(0, 10)}</footer>
+</main>
 ${mermaidBootstrap}
 </body>
 </html>`
