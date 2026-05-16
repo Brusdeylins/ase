@@ -243,6 +243,61 @@ const memberKind = (nodeType: string): SymbolKind => {
     return "method"
 }
 
+/*  Python: detect whether a `class_definition` derives from an
+    Abstract Base Class (`ABC`, `ABCMeta` via metaclass argument) or
+    declares itself as a `Protocol` from `typing`.  Approximate but
+    covers the three idiomatic forms architects use to express
+    intentional abstractness in Python.  */
+const PYTHON_ABSTRACT_BASES = new Set([ "ABC", "ABCMeta", "Protocol" ])
+const pythonIsAbstractClass = (node: wts.Node): boolean => {
+    for (const id of node.descendantsOfType("identifier"))
+        if (id !== null && PYTHON_ABSTRACT_BASES.has(id.text))
+            return true
+    return false
+}
+
+/*  C++: a class is abstract when at least one of its member
+    function declarations is *pure-virtual* — syntactically the
+    declarator is followed by `= 0` (optionally separated by `override`
+    or `final` annotations).  The tree-sitter cpp grammar exposes the
+    pure marker as a `(number_literal)` child immediately after the
+    `function_declarator`; an alternative spelling captures it via
+    the text suffix `= 0` of the declaration node.  We check both.  */
+const cppIsAbstractClass = (node: wts.Node): boolean => {
+    for (const decl of node.descendantsOfType("function_definition"))
+        if (decl !== null && /=\s*0\s*;?\s*$/.test(decl.text))
+            return true
+    for (const decl of node.descendantsOfType("field_declaration"))
+        if (decl !== null && /=\s*0\s*;?\s*$/.test(decl.text))
+            return true
+    return false
+}
+
+/*  Reduce per-language flavours of "abstract" to a single boolean.
+    Interfaces (Java/TS/C#) and traits (Rust) are abstract by
+    definition; an `abstract` or `sealed` modifier on a class node
+    flags the class as abstract too (Kotlin `sealed` is treated as
+    abstract because it cannot be instantiated directly).  Python
+    relies on ABC/Protocol base-class detection, C++ on pure-virtual
+    method presence.  Languages without a native abstract concept
+    (JavaScript, C) always return false so the downstream Martin
+    Abstractness metric reports an honest zero rather than guessing.  */
+const computeIsAbstract = (
+    node: wts.Node, kind: SymbolKind, lang: Language, modifiers: Modifier[]
+): boolean => {
+    if (kind === "interface")
+        return true
+    if (modifiers.includes("abstract"))
+        return true
+    if (lang === "kotlin" && modifiers.includes("sealed"))
+        return true
+    if (lang === "python" && pythonIsAbstractClass(node))
+        return true
+    if (lang === "cpp" && cppIsAbstractClass(node))
+        return true
+    return false
+}
+
 /*  Map the tree-sitter node type of a type-declaration capture to
     its SymbolKind.  `interface_declaration` (Java/TS/C#) and
     `trait_item` (Rust) are interfaces; `enum_declaration` (Java/TS/
@@ -358,11 +413,13 @@ export const extractSymbols = async (
             name,
             kind,
             modifiers:  tModifiers,
+            isAbstract: computeIsAbstract(t, kind, lang, tModifiers),
             extends:    heritage.extends,
             implements: heritage.implements,
             references: [ ...referencesSet ].sort(),
             file,
             line:       t.startPosition.row + 1,
+            loc:        t.endPosition.row - t.startPosition.row + 1,
             doc:        docFor(t),
             members
         })

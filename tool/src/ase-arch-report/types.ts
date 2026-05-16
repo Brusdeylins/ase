@@ -31,11 +31,13 @@ export interface ArchSymbol {
     name:       string
     kind:       SymbolKind
     modifiers:  Modifier[]
+    isAbstract: boolean
     extends:    string[]
     implements: string[]
     references: string[]
     file:       string
     line:       number
+    loc:        number
     doc:        string | null
     members:    ArchMember[]
 }
