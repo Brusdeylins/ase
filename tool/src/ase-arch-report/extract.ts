@@ -136,8 +136,9 @@ const collectHeritage = (typeNode: wts.Node): { extends: string[]; implements: s
         for (const c of n.children) {
             if (c === null)
                 continue
-            if (c.type === "extends_clause") {
-                /*  class extends X[, Y]  */
+            if (c.type === "extends_clause" || c.type === "superclass") {
+                /*  TS/Kotlin: `extends_clause` (`extends X[, Y]`)
+                    Java:      `superclass`     (`extends X`, single)  */
                 for (const id of c.children)
                     if (id !== null && (id.type === "identifier" || id.type === "type_identifier"))
                         ext.push(id.text)
@@ -146,7 +147,9 @@ const collectHeritage = (typeNode: wts.Node): { extends: string[]; implements: s
                     if (id !== null && !ext.includes(id.text))
                         ext.push(id.text)
             }
-            else if (c.type === "implements_clause") {
+            else if (c.type === "implements_clause" || c.type === "super_interfaces") {
+                /*  TS: `implements_clause`; Java: `super_interfaces` wrapping
+                    an `interface_type_list` of `type_identifier` children.  */
                 for (const id of c.descendantsOfType("type_identifier"))
                     if (id !== null && !imp.includes(id.text))
                         imp.push(id.text)
