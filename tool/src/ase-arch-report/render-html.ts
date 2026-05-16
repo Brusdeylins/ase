@@ -117,9 +117,12 @@ const classDiagramSrc = (cluster: Cluster): string => {
     /*  The class diagram complements — not duplicates — the per-symbol
         method tables rendered below the diagram.  Emit each class as a
         body-less declaration (or as the bare `<<interface>>` stereotype
-        for interfaces) plus the inheritance edges between them, so the
-        diagram conveys the *relationships* between classes instead of
-        re-listing methods that already appear in the tabular section.  */
+        for interfaces) plus the inheritance and call-reference edges
+        between them, so the diagram conveys the *relationships* between
+        classes instead of re-listing methods that already appear in
+        the tabular section.  Reference edges are limited to in-cluster
+        targets to keep each per-cluster page focussed.  */
+    const clusterIds = new Set(cluster.symbols.map((s) => safeId(s.name)))
     const lines: string[] = [ "classDiagram" ]
     for (const s of cluster.symbols) {
         if (s.kind === "interface") {
@@ -129,10 +132,20 @@ const classDiagramSrc = (cluster: Cluster): string => {
         }
         else
             lines.push(`    class ${safeId(s.name)}`)
+        const heritageIds = new Set([
+            ...s.extends.map((e) => safeId(e)),
+            ...s.implements.map((i) => safeId(i))
+        ])
         for (const parent of s.extends)
             lines.push(`    ${safeId(parent)} <|-- ${safeId(s.name)}`)
         for (const iface of s.implements)
             lines.push(`    ${safeId(iface)} <|.. ${safeId(s.name)}`)
+        const fromId = safeId(s.name)
+        for (const r of s.references) {
+            const refId = safeId(r)
+            if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
+                lines.push(`    ${fromId} ..> ${refId}`)
+        }
     }
     return lines.join("\n")
 }

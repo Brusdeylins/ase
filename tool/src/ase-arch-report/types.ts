@@ -33,6 +33,7 @@ export interface ArchSymbol {
     modifiers:  Modifier[]
     extends:    string[]
     implements: string[]
+    references: string[]
     file:       string
     line:       number
     doc:        string | null

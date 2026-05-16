@@ -274,6 +274,13 @@ export const extractSymbols = async (
         const name = nameNode?.text ?? "<anon>"
         const kind: SymbolKind = t.type === "interface_declaration" ? "interface" : "class"
         const members: ArchMember[] = []
+        /*  collect type_identifier references that appear anywhere
+            inside the type's body — method parameter types, return
+            types, field types, generic type arguments, etc.  These
+            become the *candidate* references list per symbol; the
+            renderer filters them down to in-cluster, non-self,
+            non-heritage targets when emitting `..>` edges.  */
+        const referencesSet = new Set<string>()
         for (const m of methods) {
             /*  attach method to type if it is nested inside the type's body  */
             let ancestor: wts.Node | null = m.parent
@@ -293,7 +300,17 @@ export const extractSymbols = async (
                 doc:       docFor(m),
                 line:      m.startPosition.row + 1
             })
+            for (const ref of m.descendantsOfType("type_identifier"))
+                if (ref !== null && ref.text !== name)
+                    referencesSet.add(ref.text)
         }
+        /*  also pick up field-level type_identifiers from anywhere
+            in the type body that did not come through the method
+            scan above (covers Java field declarations and TS class
+            properties that the query did not capture as methods)  */
+        for (const ref of t.descendantsOfType("type_identifier"))
+            if (ref !== null && ref.text !== name)
+                referencesSet.add(ref.text)
         members.sort((a, b) => a.name.localeCompare(b.name))
         const heritage = collectHeritage(t)
         symbols.push({
@@ -303,6 +320,7 @@ export const extractSymbols = async (
             modifiers:  tModifiers,
             extends:    heritage.extends,
             implements: heritage.implements,
+            references: [ ...referencesSet ].sort(),
             file,
             line:       t.startPosition.row + 1,
             doc:        docFor(t),
