@@ -185,6 +185,7 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         docCovAggregate,
         cycleReport,
         sortedClusterNames,
+        layerOfCluster: layers.layerOfNode,
         totalLoc
     }
 

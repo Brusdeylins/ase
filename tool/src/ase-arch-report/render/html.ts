@@ -17,6 +17,7 @@ import { indexStatsPanelHtml, clusterStatsPanelHtml } from "./stats-panel.js"
 import { dsmHtml }                           from "./dsm.js"
 import { cyclesHtml, cyclesTouchingCluster } from "./cycles.js"
 import { mainSequenceMermaid }               from "./main-sequence.js"
+import { classFanInIntraCluster }            from "../metrics/hubs.js"
 
 const css = `
 :root {
@@ -120,6 +121,8 @@ ${mermaidBootstrap}
 </body>
 </html>`
 
+const HUB_FAN_IN_THRESHOLD = 3
+
 const classDiagramSrc = (cluster: Cluster): string => {
     /*  The class diagram complements — not duplicates — the per-symbol
         method tables rendered below the diagram.  Emit each class as a
@@ -128,8 +131,11 @@ const classDiagramSrc = (cluster: Cluster): string => {
         between them, so the diagram conveys the *relationships* between
         classes instead of re-listing methods that already appear in
         the tabular section.  Reference edges are limited to in-cluster
-        targets to keep each per-cluster page focussed.  */
+        targets to keep each per-cluster page focussed.  Classes whose
+        intra-cluster fan-in reaches the hub threshold get the accent
+        `hub` style so the load-bearing component pops out.  */
     const clusterIds = new Set(cluster.symbols.map((s) => safeId(s.name)))
+    const fanIn      = classFanInIntraCluster(cluster)
     const lines: string[] = [ "classDiagram" ]
     for (const s of cluster.symbols) {
         if (s.kind === "interface") {
@@ -154,13 +160,38 @@ const classDiagramSrc = (cluster: Cluster): string => {
                 lines.push(`    ${fromId} ..> ${refId}`)
         }
     }
+    const hubs = [ ...cluster.symbols ]
+        .filter((s) => (fanIn.get(s.name) ?? 0) >= HUB_FAN_IN_THRESHOLD)
+        .map((s) => safeId(s.name))
+    if (hubs.length > 0) {
+        lines.push("    classDef hub stroke:#a01441,stroke-width:3px,fill:#fbe6ec")
+        lines.push(`    class ${hubs.join(",")} hub`)
+    }
     return lines.join("\n")
 }
 
-const flowchartSrc = (api: ApiJson): string => {
-    const lines: string[] = [ "flowchart LR" ]
-    for (const c of api.clusters)
-        lines.push(`    ${safeId(c.name)}["${c.name}<br/>${c.symbols.length} symbols"]`)
+const flowchartSrc = (api: ApiJson, layerOfCluster: Map<string, number>): string => {
+    /*  Layered top-down flowchart: cluster nodes are grouped into
+        `subgraph` blocks per topological layer, sources on top,
+        leaves on the bottom.  This makes the dependency direction
+        readable at a glance and gives cycle groups (equal-rank
+        layer) a clear visual cluster.  */
+    const lines: string[] = [ "flowchart TD" ]
+    const byLayer = new Map<number, string[]>()
+    for (const c of api.clusters) {
+        const layer = layerOfCluster.get(c.name) ?? 0
+        const arr = byLayer.get(layer) ?? []
+        arr.push(c.name)
+        byLayer.set(layer, arr)
+    }
+    const sortedLayers = [ ...byLayer.keys() ].sort((a, b) => a - b)
+    const symCount = new Map(api.clusters.map((c) => [ c.name, c.symbols.length ]))
+    for (const layer of sortedLayers) {
+        lines.push(`    subgraph layer${layer}["Layer ${layer}"]`)
+        for (const name of byLayer.get(layer)!.sort())
+            lines.push(`        ${safeId(name)}["${name}<br/>${symCount.get(name) ?? 0} symbols"]`)
+        lines.push("    end")
+    }
     for (const e of api.edges)
         lines.push(`    ${safeId(e.from)} -->|${e.count}| ${safeId(e.to)}`)
     return lines.join("\n")
@@ -224,7 +255,7 @@ Languages: ${api.languages.join(", ")}</p>
 <p><em>Coverage: public and protected API only. Private and package-private members are intentionally excluded.</em></p>
 ${stats}
 <h2>Cluster dependencies</h2>
-${frame(flowchartSrc(api))}
+${frame(flowchartSrc(api, ctx.layerOfCluster))}
 ${cyclesHtml(ctx.cycleReport)}
 <h2>Dependency Structure Matrix</h2>
 ${dsmHtml(api, ctx.sortedClusterNames)}

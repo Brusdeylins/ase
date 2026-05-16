@@ -23,5 +23,9 @@ export interface RenderContext {
     docCovAggregate:    DocCoverage
     cycleReport:        CycleReport
     sortedClusterNames: string[]
+    /*  layer index per cluster (0 = entrypoint / no inbound deps,
+        larger = deeper); drives the layered TD flowchart on the
+        Index page  */
+    layerOfCluster:     Map<string, number>
     totalLoc:           number
 }

@@ -10,22 +10,21 @@
 import type { ApiJson, Cluster, ArchSymbol }   from "../types.js"
 import { safeId }                              from "./util.js"
 import type { RenderContext }                  from "./context.js"
-import { topClusterHubs }                      from "../metrics/hubs.js"
+import { topClusterHubs, classFanInIntraCluster } from "../metrics/hubs.js"
+
+const HUB_FAN_IN_THRESHOLD = 3
 import { indexStatsPanelMd, clusterStatsPanelMd } from "./stats-panel.js"
 import { dsmMd }                               from "./dsm.js"
 import { cyclesMd, cyclesTouchingCluster }     from "./cycles.js"
 import { mainSequenceMermaid }                 from "./main-sequence.js"
 
 const mermaidClassDiagram = (cluster: Cluster): string => {
-    /*  The class diagram complements — not duplicates — the per-symbol
-        method tables rendered below the diagram.  Emit each class as a
-        body-less declaration (or as the bare `<<interface>>` stereotype
-        for interfaces) plus the inheritance and call-reference edges
-        between them, so the diagram conveys the *relationships* between
-        classes instead of re-listing methods that already appear in
-        the tabular section.  Reference edges are limited to in-cluster
-        targets to keep each per-cluster page focussed.  */
+    /*  same shape as the HTML class diagram: body-less class
+        declarations, inheritance + call-reference edges (intra-cluster
+        only), and a `hub` style applied to classes whose intra-cluster
+        fan-in reaches the hub threshold  */
     const clusterIds = new Set(cluster.symbols.map((s) => safeId(s.name)))
+    const fanIn      = classFanInIntraCluster(cluster)
     const lines: string[] = [ "```mermaid", "classDiagram" ]
     for (const s of cluster.symbols) {
         if (s.kind === "interface") {
@@ -49,6 +48,13 @@ const mermaidClassDiagram = (cluster: Cluster): string => {
             if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
                 lines.push(`    ${fromId} ..> ${refId}`)
         }
+    }
+    const hubs = [ ...cluster.symbols ]
+        .filter((s) => (fanIn.get(s.name) ?? 0) >= HUB_FAN_IN_THRESHOLD)
+        .map((s) => safeId(s.name))
+    if (hubs.length > 0) {
+        lines.push("    classDef hub stroke:#a01441,stroke-width:3px,fill:#fbe6ec")
+        lines.push(`    class ${hubs.join(",")} hub`)
     }
     lines.push("```")
     return lines.join("\n")
@@ -109,9 +115,22 @@ export const renderIndexMd = (api: ApiJson, ctx: RenderContext): string => {
     }))
     lines.push("## Cluster dependencies\n")
     lines.push("```mermaid")
-    lines.push("flowchart LR")
-    for (const c of api.clusters)
-        lines.push(`    ${safeId(c.name)}["${c.name}<br/>${c.symbols.length} symbols"]`)
+    lines.push("flowchart TD")
+    const byLayer = new Map<number, string[]>()
+    for (const c of api.clusters) {
+        const layer = ctx.layerOfCluster.get(c.name) ?? 0
+        const arr = byLayer.get(layer) ?? []
+        arr.push(c.name)
+        byLayer.set(layer, arr)
+    }
+    const sortedLayers = [ ...byLayer.keys() ].sort((a, b) => a - b)
+    const symCount = new Map(api.clusters.map((c) => [ c.name, c.symbols.length ]))
+    for (const layer of sortedLayers) {
+        lines.push(`    subgraph layer${layer}["Layer ${layer}"]`)
+        for (const name of byLayer.get(layer)!.sort())
+            lines.push(`        ${safeId(name)}["${name}<br/>${symCount.get(name) ?? 0} symbols"]`)
+        lines.push("    end")
+    }
     for (const e of api.edges)
         lines.push(`    ${safeId(e.from)} -->|${e.count}| ${safeId(e.to)}`)
     lines.push("```\n")
