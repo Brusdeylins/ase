@@ -9,7 +9,6 @@
 
 import type { ApiJson, Cluster, ArchSymbol } from "./types.js"
 import { THEME, MERMAID_THEME_VARIABLES } from "./theme.js"
-import { mermaidSafeSignature, mermaidVisibilityPrefix } from "./mermaid.js"
 
 const css = `
 :root {
@@ -114,22 +113,25 @@ ${mermaidBootstrap}
 const safeId = (s: string): string => s.replace(/[^A-Za-z0-9_]/g, "_")
 
 const classDiagramSrc = (cluster: Cluster): string => {
+    /*  The class diagram complements — not duplicates — the per-symbol
+        method tables rendered below the diagram.  Emit each class as a
+        body-less declaration (or as the bare `<<interface>>` stereotype
+        for interfaces) plus the inheritance edges between them, so the
+        diagram conveys the *relationships* between classes instead of
+        re-listing methods that already appear in the tabular section.  */
     const lines: string[] = [ "classDiagram" ]
     for (const s of cluster.symbols) {
-        /*  Mermaid's classDiagram parser rejects an empty `{}` body,
-            so emit a body-less `class Foo` declaration whenever the
-            symbol has no members and is not an interface (interfaces
-            still need braces to host the `<<interface>>` stereotype)  */
-        if (s.members.length === 0 && s.kind !== "interface") {
-            lines.push(`    class ${safeId(s.name)}`)
-            continue
-        }
-        lines.push(`    class ${safeId(s.name)} {`)
-        if (s.kind === "interface")
+        if (s.kind === "interface") {
+            lines.push(`    class ${safeId(s.name)} {`)
             lines.push("        <<interface>>")
-        for (const m of s.members)
-            lines.push(`        ${mermaidVisibilityPrefix(m.modifiers)}${mermaidSafeSignature(m.signature)}`)
-        lines.push("    }")
+            lines.push("    }")
+        }
+        else
+            lines.push(`    class ${safeId(s.name)}`)
+        for (const parent of s.extends)
+            lines.push(`    ${safeId(parent)} <|-- ${safeId(s.name)}`)
+        for (const iface of s.implements)
+            lines.push(`    ${safeId(iface)} <|.. ${safeId(s.name)}`)
     }
     return lines.join("\n")
 }
