@@ -398,3 +398,61 @@ export const extractSymbols = async (
     }
     return [ ...byName.values() ]
 }
+
+/*  per-language tree-sitter node types that represent an import-like
+    construct: Java `import com.foo.Bar;`, TS/JS `import … from "…"`,
+    Python `import …` / `from … import …`, Go `import "…"`, Rust
+    `use …`, Kotlin `import …`, C# `using …`, C/C++ `#include "…"`.
+    Empty array for languages where no import construct exists or is
+    not yet wired through (none currently).  */
+const IMPORT_NODE_TYPES: Record<Language, string[]> = {
+    java:       [ "import_declaration" ],
+    kotlin:     [ "import_header" ],
+    typescript: [ "import_statement" ],
+    javascript: [ "import_statement" ],
+    python:     [ "import_statement", "import_from_statement" ],
+    go:         [ "import_spec" ],
+    rust:       [ "use_declaration" ],
+    csharp:     [ "using_directive" ],
+    c:          [ "preproc_include" ],
+    cpp:        [ "preproc_include" ]
+}
+
+/*  Pick the most-informative descendant text for an import node:
+    the longest matching path-shaped child (scoped_identifier,
+    dotted_name, qualified_name, scoped_use_list, identifier).  For
+    string-based imports (TS/JS/Go/C/C++) fall back to the string
+    literal stripped of its surrounding quotes / angle brackets.  */
+const IMPORT_PATH_NODE_TYPES = [
+    "scoped_identifier", "dotted_name", "qualified_name",
+    "scoped_use_list",   "string_literal",
+    "interpreted_string_literal",
+    "system_lib_string", "string"
+]
+const stripStringDelims = (s: string): string =>
+    s.replace(/^[`"'<]/, "").replace(/[`"'>]$/, "")
+
+const extractImportPath = (node: wts.Node): string | null => {
+    for (const kind of IMPORT_PATH_NODE_TYPES)
+        for (const d of node.descendantsOfType(kind))
+            if (d !== null && d.text.length > 0)
+                return stripStringDelims(d.text)
+    /*  identifier fallback (e.g. Kotlin `import_header` whose child
+        is plain `identifier` chain)  */
+    for (const d of node.descendantsOfType("identifier"))
+        if (d !== null)
+            return d.text
+    return null
+}
+
+export const extractImports = (tree: wts.Tree, lang: Language): string[] => {
+    const result = new Set<string>()
+    for (const nodeType of IMPORT_NODE_TYPES[lang] ?? [])
+        for (const node of tree.rootNode.descendantsOfType(nodeType))
+            if (node !== null) {
+                const p = extractImportPath(node)
+                if (p !== null && p.length > 0)
+                    result.add(p)
+            }
+    return [ ...result ].sort()
+}

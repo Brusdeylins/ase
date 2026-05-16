@@ -14,14 +14,14 @@ import { Command }                            from "commander"
 import type Log                               from "../ase-log.js"
 import { discover, resolveBasename }          from "./discover.js"
 import { Parser }                             from "./parse.js"
-import { extractSymbols }                     from "./extract.js"
+import { extractSymbols, extractImports }     from "./extract.js"
 import { clusterize }                         from "./cluster.js"
 import { resolveEdges }                       from "./resolve.js"
 import { resolveInheritDocs }                 from "./inherit-doc.js"
 import { renderJson }                         from "./render-json.js"
 import { renderClusterMd, renderIndexMd }     from "./render/md.js"
 import { renderClusterHtml, renderIndexHtml } from "./render/html.js"
-import type { ArchReportOpts, Language, ArchSymbol } from "./types.js"
+import type { ArchReportOpts, Language, ArchSymbol, ArchFile } from "./types.js"
 
 /*  filename sanitizer for cluster slugs  */
 const safeFile = (s: string): string => s.replace(/[^A-Za-z0-9_-]/g, "_")
@@ -58,14 +58,17 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     /*  discover + parse + extract per (lang, file)  */
     const { files } = await discover(opts.pathOrGlob, opts.lang)
     const parser    = new Parser(wasmDir)
-    const allSyms: { lang: Language; syms: ArchSymbol[] }[] = []
+    const allSyms:  { lang: Language; syms: ArchSymbol[] }[] = []
+    const archFiles: ArchFile[] = []
     for (const lang of Object.keys(files) as Language[]) {
         const grammar  = await parser.getGrammar(lang)
         const fileList = files[lang] ?? []
         for (const f of fileList) {
             const tree = await parser.parse(f, lang)
             const syms = await extractSymbols(tree, grammar, lang, f, queriesDir)
+            const imports = extractImports(tree, lang)
             allSyms.push({ lang, syms })
+            archFiles.push({ path: f, language: lang, imports })
         }
     }
 
@@ -93,6 +96,10 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
             const rel = path.relative(scopeRoot, s.file)
             s.file = rel === "" ? path.basename(s.file) : rel
         }
+    for (const af of archFiles) {
+        const rel = path.relative(scopeRoot, af.path)
+        af.path = rel === "" ? path.basename(af.path) : rel
+    }
 
     /*  resolve `{@inheritDoc}` placeholders across the full symbol set
         before downstream consumers (edges, doc-debt, renderers) read docs  */
@@ -114,10 +121,12 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     }))
 
     /*  build the canonical api.json shape  */
+    archFiles.sort((a, b) => a.path.localeCompare(b.path))
     const api = renderJson({
         scope:     opts.pathOrGlob,
         languages: [ ...byLang.keys() ].sort(),
         clusters,
+        archFiles,
         edges,
         docDebt,
         unresolved

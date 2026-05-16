@@ -6,12 +6,13 @@
 
 /*  ApiJson assembly with deterministic ordering for the arch-report pipeline  */
 
-import type { ApiJson, Cluster, Edge, Language, DocDebtEntry, UnresolvedRef } from "./types.js"
+import type { ApiJson, Cluster, ArchFile, Edge, Language, DocDebtEntry, UnresolvedRef } from "./types.js"
 
 export interface RenderJsonInput {
     scope:      string
     languages:  Language[]
     clusters:   Cluster[]
+    archFiles:  ArchFile[]
     edges:      Edge[]
     docDebt:    DocDebtEntry[]
     unresolved: UnresolvedRef[]
@@ -24,6 +25,7 @@ export const renderJson = (input: RenderJsonInput): ApiJson => ({
     generatedAt: isoNow(),
     languages:   [ ...input.languages ].sort(),
     clusters:    [ ...input.clusters ].sort((a, b) => a.name.localeCompare(b.name)),
+    files:       input.archFiles,
     edges:       input.edges,
     docDebt:     input.docDebt,
     unresolved:  input.unresolved

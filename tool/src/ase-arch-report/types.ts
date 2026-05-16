@@ -63,6 +63,12 @@ export interface Cluster {
     symbols:  ArchSymbol[]
 }
 
+export interface ArchFile {
+    path:     string
+    language: Language
+    imports:  string[]
+}
+
 export interface ArchReportOpts {
     pathOrGlob:  string
     lang:        Language | "auto"
@@ -77,6 +83,7 @@ export interface ApiJson {
     generatedAt: string
     languages:   Language[]
     clusters:    Cluster[]
+    files:       ArchFile[]
     edges:       Edge[]
     docDebt:     DocDebtEntry[]
     unresolved:  UnresolvedRef[]
