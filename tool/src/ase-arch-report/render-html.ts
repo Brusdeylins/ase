@@ -63,6 +63,9 @@ footer {
     color: var(--fg-muted);
     text-align: center;
 }
+.doc-debt { font-size: 0.8rem; }
+.doc-debt code { font-size: 0.85em; }
+.back-link { font-size: 0.85rem; margin: 0 0 0.5rem 0; }
 `
 
 const mermaidBootstrap = `
@@ -186,11 +189,12 @@ export const renderClusterHtml = (cluster: Cluster, api: ApiJson): string => {
     const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
     const clusterDebt = api.docDebt.filter((d) =>
         clusterFqns.has(d.fqn.split("#")[0]))
-    const debtSection = `<h2>Documentation debt</h2>
+    const debtSection = `<section class="doc-debt"><h2>Documentation debt</h2>
 ${clusterDebt.length === 0 ?
     "<p><em>none — every public symbol in this cluster carries a doc comment</em></p>" :
-    `<ul>${clusterDebt.map((d) => `<li><code>${escapeHtml(d.fqn)}</code> (${escapeHtml(d.file)}:${d.line})</li>`).join("")}</ul>`}`
-    const body = `<h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
+    `<ul>${clusterDebt.map((d) => `<li><code>${escapeHtml(d.fqn)}</code> (${escapeHtml(d.file)}:${d.line})</li>`).join("")}</ul>`}</section>`
+    const body = `<p class="back-link"><a href="./index.html">← back to index</a></p>
+<h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
 ${frame(classDiagramSrc(cluster))}
 <h2>Symbols</h2>
 ${cluster.symbols.map(symTable).join("\n")}
@@ -210,9 +214,9 @@ ${frame(flowchartSrc(api))}
 <ul>
 ${api.clusters.map((c) => `<li><a href="./${safeId(c.name)}.html"><code>${c.name}</code></a> — ${c.symbols.length} symbols</li>`).join("\n")}
 </ul>
-<h2>Documentation debt</h2>
+<section class="doc-debt"><h2>Documentation debt</h2>
 ${api.docDebt.length === 0 ?
     "<p><em>none — every public symbol carries a doc comment</em></p>" :
-    `<ul>${api.docDebt.map((d) => `<li><code>${d.fqn}</code> (${d.file}:${d.line})</li>`).join("")}</ul>`}`
+    `<ul>${api.docDebt.map((d) => `<li><code>${escapeHtml(d.fqn)}</code> (${escapeHtml(d.file)}:${d.line})</li>`).join("")}</ul>`}</section>`
     return wrap("arch-report — index", body, api.generatedAt)
 }

@@ -73,6 +73,14 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     const scopeRoot = path.resolve(resolveScopeRoot(opts.pathOrGlob))
     const byLang    = new Map<Language, ArchSymbol[]>()
     for (const { lang, syms } of allSyms) {
+        /*  rewrite each symbol's `file` field from the absolute path
+            produced by glob into a path relative to the scope root, so
+            api.json and the rendered pages stay portable across machines
+            (no `/Users/<somebody>/...` leaking into the report)  */
+        for (const s of syms) {
+            const rel = path.relative(scopeRoot, s.file)
+            s.file = rel === "" ? path.basename(s.file) : rel
+        }
         const arr = byLang.get(lang) ?? []
         arr.push(...syms)
         byLang.set(lang, arr)

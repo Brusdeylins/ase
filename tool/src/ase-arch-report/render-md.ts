@@ -59,6 +59,7 @@ const apiTable = (s: ArchSymbol): string => {
 
 export const renderClusterMd = (cluster: Cluster, api: ApiJson): string => {
     const parts: string[] = []
+    parts.push("[← back to index](./index.md)\n")
     parts.push(`# Cluster: \`${cluster.name}\` (${cluster.language})\n`)
     parts.push(mermaidClassDiagram(cluster))
     parts.push("\n## Symbols\n")
