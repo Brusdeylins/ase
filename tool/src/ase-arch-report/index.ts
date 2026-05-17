@@ -146,7 +146,7 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     await fs.writeFile(path.join(tmpDir, "_meta", "unresolved.md"),
         unresolved.length === 0 ?
             "_no unresolved external references_\n" :
-            unresolved.map((u) => `- \`${u.ref}\` referenced from \`${u.from}\``).join("\n") + "\n")
+            unresolved.map((u) => `- [${u.kind}] \`${u.ref}\` referenced from \`${u.from}\``).join("\n") + "\n")
     written.push(path.join(outputDir, "_meta", "unresolved.md"))
 
     /*  build the per-report RenderContext that every renderer call

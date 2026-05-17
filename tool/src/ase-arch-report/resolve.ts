@@ -47,16 +47,25 @@ export const resolveEdges = (clusters: Cluster[]): ResolveResult => {
             e.count++
     }
 
+    type Tagged = { ref: string; kind: UnresolvedRef["kind"] }
+    const tagged = (refs: string[], kind: UnresolvedRef["kind"]): Tagged[] =>
+        refs.map((ref) => ({ ref, kind }))
     for (const c of clusters)
-        for (const s of c.symbols)
-            for (const ref of [ ...s.extends, ...s.implements, ...s.references ]) {
+        for (const s of c.symbols) {
+            const all: Tagged[] = [
+                ...tagged(s.extends,    "extends"),
+                ...tagged(s.implements, "implements"),
+                ...tagged(s.references, "references")
+            ]
+            for (const { ref, kind } of all) {
                 const targets = symbolCluster.get(ref)
                 if (targets === undefined)
-                    unresolved.push({ ref, from: `${c.name}/${s.name}` })
+                    unresolved.push({ ref, from: `${c.name}/${s.name}`, kind })
                 else for (const t of targets)
                     if (t !== c.name)
                         bump(c.name, t)
             }
+        }
 
     const edges = [ ...edgeMap.values() ].sort((a, b) =>
         a.from.localeCompare(b.from) || a.to.localeCompare(b.to))

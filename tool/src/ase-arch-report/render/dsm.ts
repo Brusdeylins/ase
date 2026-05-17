@@ -22,21 +22,30 @@
     than the same data spread across a flowchart.  */
 
 import type { ApiJson } from "../types.js"
-import { escapeHtml, safeId } from "./util.js"
+import { escapeHtml, safeId, edgeCellKey } from "./util.js"
+
+/*  Build the position lookup + cell map from the edge list — shared
+    by both the HTML and Markdown renderers so cell-key format and
+    edge-count aggregation cannot drift between the two paths.  */
+const buildPosAndCells = (
+    api: ApiJson, sortedClusterNames: string[]
+): { pos: Map<string, number>; cell: Map<string, number> } => {
+    const pos = new Map<string, number>()
+    for (let i = 0; i < sortedClusterNames.length; i++)
+        pos.set(sortedClusterNames[i], i)
+    const cell = new Map<string, number>()
+    for (const e of api.edges)
+        if (pos.has(e.from) && pos.has(e.to)) {
+            const k = edgeCellKey(e.from, e.to)
+            cell.set(k, (cell.get(k) ?? 0) + e.count)
+        }
+    return { pos, cell }
+}
 
 export const dsmHtml = (api: ApiJson, sortedClusterNames: string[]): string => {
     if (sortedClusterNames.length === 0)
         return "<p><em>no clusters to plot</em></p>"
-    const pos = new Map<string, number>()
-    for (let i = 0; i < sortedClusterNames.length; i++)
-        pos.set(sortedClusterNames[i], i)
-    /*  build cell map [from][to] -> count  */
-    const cell = new Map<string, number>()
-    const cellKey = (from: string, to: string): string => `${from}->${to}`
-    for (const e of api.edges) {
-        if (pos.has(e.from) && pos.has(e.to))
-            cell.set(cellKey(e.from, e.to), (cell.get(cellKey(e.from, e.to)) ?? 0) + e.count)
-    }
+    const { pos, cell } = buildPosAndCells(api, sortedClusterNames)
     const rows: string[] = []
     /*  header row  */
     rows.push(`<tr><th class="dsm-corner"></th>${sortedClusterNames.map((name) =>
@@ -45,7 +54,7 @@ export const dsmHtml = (api: ApiJson, sortedClusterNames: string[]): string => {
     for (const from of sortedClusterNames) {
         const cells: string[] = []
         for (const to of sortedClusterNames) {
-            const c = cell.get(cellKey(from, to)) ?? 0
+            const c = cell.get(edgeCellKey(from, to)) ?? 0
             const isDiagonal = from === to
             const isAboveDiagonal = pos.get(to)! < pos.get(from)!
             const classes = [ "dsm-cell" ]
@@ -68,13 +77,7 @@ ${rows.join("\n")}
 export const dsmMd = (api: ApiJson, sortedClusterNames: string[]): string => {
     if (sortedClusterNames.length === 0)
         return "_no clusters to plot_\n"
-    const pos = new Map<string, number>()
-    for (let i = 0; i < sortedClusterNames.length; i++)
-        pos.set(sortedClusterNames[i], i)
-    const cell = new Map<string, number>()
-    for (const e of api.edges)
-        if (pos.has(e.from) && pos.has(e.to))
-            cell.set(`${e.from}->${e.to}`, (cell.get(`${e.from}->${e.to}`) ?? 0) + e.count)
+    const { pos, cell } = buildPosAndCells(api, sortedClusterNames)
     const lines: string[] = []
     /*  abbreviate cluster name for compact column header  */
     const abbr = (n: string): string => n.length > 12 ? n.slice(0, 11) + "…" : n
@@ -82,7 +85,7 @@ export const dsmMd = (api: ApiJson, sortedClusterNames: string[]): string => {
     lines.push("|" + "---|".repeat(sortedClusterNames.length + 1))
     for (const from of sortedClusterNames) {
         const cells = sortedClusterNames.map((to) => {
-            const c = cell.get(`${from}->${to}`) ?? 0
+            const c = cell.get(edgeCellKey(from, to)) ?? 0
             if (from === to)
                 return "·"
             if (c === 0)

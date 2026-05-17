@@ -10,7 +10,7 @@
 
 import type { ApiJson, Cluster, ArchSymbol } from "../types.js"
 import { THEME, MERMAID_THEME_VARIABLES }    from "../theme.js"
-import { escapeHtml, safeId }                from "./util.js"
+import { escapeHtml, safeId, filterClusterDocDebt } from "./util.js"
 import type { RenderContext }                from "./context.js"
 import { topClusterHubs }                    from "../metrics/hubs.js"
 import { indexStatsPanelHtml, clusterStatsPanelHtml } from "./stats-panel.js"
@@ -141,9 +141,7 @@ ${rows}
 }
 
 export const renderClusterHtml = (cluster: Cluster, api: ApiJson, ctx: RenderContext): string => {
-    const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
-    const clusterDebt = api.docDebt.filter((d) =>
-        clusterFqns.has(d.fqn.split("#")[0]))
+    const clusterDebt = filterClusterDocDebt(api, cluster)
     const debtSection = `<section class="doc-debt"><h2>Documentation debt</h2>
 ${clusterDebt.length === 0 ?
     "<p><em>none — every public symbol in this cluster carries a doc comment</em></p>" :

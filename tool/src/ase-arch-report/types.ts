@@ -58,6 +58,11 @@ export interface DocDebtEntry {
 export interface UnresolvedRef {
     ref:  string
     from: string
+    /*  what kind of relationship the unresolved reference would have
+        formed if its target had been in scope — lets downstream
+        consumers distinguish "missing supertype" from "missing
+        dependency" instead of treating the three as a single bucket  */
+    kind: "extends" | "implements" | "references"
 }
 
 export interface Cluster {

@@ -8,7 +8,7 @@
 /*  Markdown rendering for the arch-report pipeline  */
 
 import type { ApiJson, Cluster, ArchSymbol }       from "../types.js"
-import { safeId }                                  from "./util.js"
+import { safeId, filterClusterDocDebt }            from "./util.js"
 import type { RenderContext }                      from "./context.js"
 import { topClusterHubs }                          from "../metrics/hubs.js"
 import { indexStatsPanelMd, clusterStatsPanelMd }  from "./stats-panel.js"
@@ -46,9 +46,7 @@ export const renderClusterMd = (cluster: Cluster, api: ApiJson, ctx: RenderConte
     for (const s of cluster.symbols)
         parts.push(apiTable(s))
     parts.push("\n## Documentation debt\n")
-    const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
-    const clusterDebt = api.docDebt.filter((d) =>
-        clusterFqns.has(d.fqn.split("#")[0]))
+    const clusterDebt = filterClusterDocDebt(api, cluster)
     if (clusterDebt.length === 0)
         parts.push("_none — every public symbol in this cluster carries a doc comment_")
     else
