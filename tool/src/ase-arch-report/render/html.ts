@@ -231,7 +231,7 @@ Languages: ${api.languages.join(", ")}</p>
 <p><em>Coverage: top-level types show only their public and protected members. Nested (inner) types appear regardless of visibility and expose their <strong>full</strong> member list — private helpers included — because a nested type's entire purpose is to be internal to the enclosing scope, and filtering its members would leave the reader with an empty shell. Private and package-private members of top-level types remain excluded.</em></p>
 ${stats}
 <h2>Cluster dependencies</h2>
-${frame(buildLayeredFlowchart(api, ctx.layerOfCluster))}
+${frame(buildLayeredFlowchart(api, ctx.layerOfCluster, ctx.cycleReport))}
 ${cyclesHtml(ctx.cycleReport)}
 <h2>Dependency Structure Matrix</h2>
 ${dsmHtml(api, ctx.sortedClusterNames)}

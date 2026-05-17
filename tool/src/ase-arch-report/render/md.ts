@@ -111,7 +111,7 @@ export const renderIndexMd = (api: ApiJson, ctx: RenderContext): string => {
         totalLoc:    ctx.totalLoc
     }))
     lines.push("## Cluster dependencies\n")
-    lines.push(fenced(buildLayeredFlowchart(api, ctx.layerOfCluster)))
+    lines.push(fenced(buildLayeredFlowchart(api, ctx.layerOfCluster, ctx.cycleReport)))
     lines.push(cyclesMd(ctx.cycleReport))
     lines.push("\n## Dependency Structure Matrix\n")
     lines.push(dsmMd(api, ctx.sortedClusterNames))
