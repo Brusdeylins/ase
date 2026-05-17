@@ -59,3 +59,68 @@ export const filterClusterDocDebt = (api: ApiJson, cluster: Cluster): DocDebtEnt
     const clusterFqns = new Set(cluster.symbols.map((s) => s.fqn))
     return api.docDebt.filter((d) => clusterFqns.has(d.fqn.split("#")[0]))
 }
+
+/*  Render a GFM table whose source is column-aligned with space
+    padding so the raw .md file stays human-readable.  GFM parsers
+    accept arbitrary dash-count separator rows, so widening the
+    `---` segments to match the column width is a no-op for the
+    rendered output but a major win for diffs and code review.
+
+    All cell content is taken verbatim — callers must already
+    embed any inline emphasis (`code`, _italic_) before handing
+    rows in.  The helper does not know about display width vs.
+    character width; for ASCII code identifiers (the only kind of
+    content the arch-report emits in tables) the two coincide.
+
+    Optional `align` array carries GFM's per-column alignment
+    markers (`"left" | "right" | "center" | null`); the separator
+    row encodes them via the colon-placement convention.  */
+export type MdAlign = "left" | "right" | "center" | null
+export const renderMdTable = (
+    headers: string[], rows: string[][], align?: MdAlign[]
+): string => {
+    const cols = headers.length
+    const widths = headers.map((h) => h.length)
+    for (const row of rows)
+        for (let i = 0; i < cols; i++) {
+            const cell = i < row.length ? row[i] : ""
+            if (cell.length > widths[i])
+                widths[i] = cell.length
+        }
+    /*  GFM requires at least 3 dashes per separator cell;
+        widen up to widths[i] to keep the source aligned.  */
+    const sepWidth = (i: number): number => Math.max(3, widths[i])
+    const pad = (s: string, w: number, a: MdAlign): string => {
+        const gap = w - s.length
+        if (gap <= 0)
+            return s
+        if (a === "right")
+            return " ".repeat(gap) + s
+        if (a === "center") {
+            const left  = Math.floor(gap / 2)
+            const right = gap - left
+            return " ".repeat(left) + s + " ".repeat(right)
+        }
+        return s + " ".repeat(gap)
+    }
+    const sepCell = (i: number): string => {
+        const w = sepWidth(i)
+        const a = align?.[i] ?? null
+        if (a === "left")   return ":" + "-".repeat(w - 1)
+        if (a === "right")  return "-".repeat(w - 1) + ":"
+        if (a === "center") return ":" + "-".repeat(w - 2) + ":"
+        return "-".repeat(w)
+    }
+    const lines: string[] = []
+    lines.push("| " + headers.map((h, i) => pad(h, widths[i], align?.[i] ?? null)).join(" | ") + " |")
+    lines.push("| " + headers.map((_, i) => sepCell(i)).join(" | ") + " |")
+    for (const row of rows) {
+        const cells: string[] = []
+        for (let i = 0; i < cols; i++) {
+            const v = i < row.length ? row[i] : ""
+            cells.push(pad(v, widths[i], align?.[i] ?? null))
+        }
+        lines.push("| " + cells.join(" | ") + " |")
+    }
+    return lines.join("\n")
+}

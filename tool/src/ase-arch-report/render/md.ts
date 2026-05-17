@@ -8,7 +8,7 @@
 /*  Markdown rendering for the arch-report pipeline  */
 
 import type { ApiJson, Cluster, ArchSymbol }       from "../types.js"
-import { safeId, filterClusterDocDebt }            from "./util.js"
+import { safeId, filterClusterDocDebt, renderMdTable } from "./util.js"
 import type { RenderContext }                      from "./context.js"
 import { topClusterHubs }                          from "../metrics/hubs.js"
 import { indexStatsPanelMd, clusterStatsPanelMd }  from "./stats-panel.js"
@@ -33,9 +33,12 @@ const apiTable = (s: ArchSymbol): string => {
         const empty = s.enclosingFqn !== null ? "_no members_" : "_no public members_"
         return head + empty + "\n"
     }
-    const rows = s.members.map((m) =>
-        `| \`${m.name}\` | \`${m.signature}\` | ${m.doc ?? "_(no description)_"} |`).join("\n")
-    return head + "| Method | Signature | Description |\n|---|---|---|\n" + rows + "\n"
+    const rows = s.members.map((m) => [
+        `\`${m.name}\``,
+        `\`${m.signature}\``,
+        m.doc ?? "_(no description)_"
+    ])
+    return head + renderMdTable([ "Method", "Signature", "Description" ], rows) + "\n"
 }
 
 /*  Sort cluster symbols so each top-level type is immediately

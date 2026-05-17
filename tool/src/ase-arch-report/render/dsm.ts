@@ -22,7 +22,7 @@
     than the same data spread across a flowchart.  */
 
 import type { ApiJson } from "../types.js"
-import { escapeHtml, safeId, edgeCellKey } from "./util.js"
+import { escapeHtml, safeId, edgeCellKey, renderMdTable } from "./util.js"
 
 /*  Build the position lookup + cell map from the edge list — shared
     by both the HTML and Markdown renderers so cell-key format and
@@ -78,13 +78,12 @@ export const dsmMd = (api: ApiJson, sortedClusterNames: string[]): string => {
     if (sortedClusterNames.length === 0)
         return "_no clusters to plot_\n"
     const { pos, cell } = buildPosAndCells(api, sortedClusterNames)
-    const lines: string[] = []
     /*  abbreviate cluster name for compact column header  */
     const abbr = (n: string): string => n.length > 12 ? n.slice(0, 11) + "…" : n
-    lines.push("| from \\ to | " + sortedClusterNames.map(abbr).join(" | ") + " |")
-    lines.push("|" + "---|".repeat(sortedClusterNames.length + 1))
+    const headers = [ "from \\ to", ...sortedClusterNames.map(abbr) ]
+    const rows: string[][] = []
     for (const from of sortedClusterNames) {
-        const cells = sortedClusterNames.map((to) => {
+        const dataCells = sortedClusterNames.map((to) => {
             const c = cell.get(edgeCellKey(from, to)) ?? 0
             if (from === to)
                 return "·"
@@ -93,7 +92,12 @@ export const dsmMd = (api: ApiJson, sortedClusterNames: string[]): string => {
             const isAbove = pos.get(to)! < pos.get(from)!
             return isAbove ? `**${c}**` : String(c)
         })
-        lines.push(`| \`${abbr(from)}\` | ` + cells.join(" | ") + " |")
+        rows.push([ `\`${abbr(from)}\``, ...dataCells ])
     }
-    return lines.join("\n") + "\n\nAbove-diagonal cells (bold) indicate cycle-participating dependencies.\n"
+    /*  Numeric / decorative columns are visually clearer when
+        centered; the row-header column stays left-aligned.  */
+    const align: ("left" | "right" | "center" | null)[] = [ "left",
+        ...sortedClusterNames.map(() => "center" as const) ]
+    return renderMdTable(headers, rows, align) +
+        "\n\nAbove-diagonal cells (bold) indicate cycle-participating dependencies.\n"
 }
