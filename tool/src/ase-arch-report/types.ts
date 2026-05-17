@@ -28,19 +28,26 @@ export interface ArchMember {
 }
 
 export interface ArchSymbol {
-    fqn:        string
-    name:       string
-    kind:       SymbolKind
-    modifiers:  Modifier[]
-    isAbstract: boolean
-    extends:    string[]
-    implements: string[]
-    references: string[]
-    file:       string
-    line:       number
-    loc:        number
-    doc:        string | null
-    members:    ArchMember[]
+    fqn:           string
+    name:          string
+    /*  qualified name of the lexically enclosing type
+        (`null` for top-level symbols).  Nested types carry their
+        parent's `fqn` here so the renderer can group them under
+        their enclosing type and show the structural relationship
+        instead of letting them float as if they had their own
+        top-level file.  */
+    enclosingFqn:  string | null
+    kind:          SymbolKind
+    modifiers:     Modifier[]
+    isAbstract:    boolean
+    extends:       string[]
+    implements:    string[]
+    references:    string[]
+    file:          string
+    line:          number
+    loc:           number
+    doc:           string | null
+    members:       ArchMember[]
 }
 
 export interface Edge {

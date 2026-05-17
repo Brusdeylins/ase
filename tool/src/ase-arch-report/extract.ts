@@ -47,7 +47,17 @@ const firstSentence = (raw: string): string | null => {
         and must not be mistaken for doc comments  */
     if (/={4,}|-{4,}|\*{4,}/.test(stripped))
         return null
-    const m = stripped.match(/^(.+?[.!?])(\s|$)/)
+    /*  Sentence boundary requires the period/exclam/question to be
+        followed by either (a) whitespace plus a capital letter
+        starting the next sentence, or (b) optional whitespace plus
+        end of string.  This skips past common in-sentence
+        abbreviations — "e.g.", "i.e.", "etc.", "vs." — which are
+        followed by either lowercase text, punctuation, or a
+        Javadoc tag, none of which match the required uppercase
+        start.  Without this guard, a Javadoc summary like
+        `... TWS duration string (e.g. {@code "1 D"} ...).` would
+        be truncated at "e.g." instead of at the real terminator.  */
+    const m = stripped.match(/^(.+?[.!?])(\s+[A-Z]|\s*$)/)
     return (m !== null ? m[1] : stripped).trim()
 }
 
@@ -223,8 +233,21 @@ const HAS_PACKAGE_PRIVATE_DEFAULT: Record<Language, boolean> = {
     and on classes only if the language has no package-private default
     (TypeScript/JavaScript/Python class methods are public by default;
     Java/Kotlin/C# class members default to package-private and are
-    therefore hidden).  */
-const memberIsVisible = (typeKind: SymbolKind, lang: Language, modifiers: Modifier[]): boolean => {
+    therefore hidden).
+
+    Exception: members of a *nested* type are always visible.  A
+    nested class typically encapsulates internal helpers whose entire
+    point is to be private to the enclosing scope; filtering them out
+    leaves the reader staring at "0 methods" for a class that clearly
+    carries logic, providing no value.  The nested type itself only
+    appears in the report because it is structurally part of the
+    enclosing type's design, so showing its full member list is
+    consistent with that signal.  */
+const memberIsVisible = (
+    typeKind: SymbolKind, lang: Language, modifiers: Modifier[], isNested: boolean
+): boolean => {
+    if (isNested)
+        return true
     if (modifiers.includes("private"))
         return false
     if (modifiers.includes("public") || modifiers.includes("protected"))
@@ -361,13 +384,50 @@ export const extractSymbols = async (
         }
     }
 
+    /*  index type-decl nodes by their tree-sitter id so we can ask
+        "does this node sit inside another captured type?" in O(1)
+        while walking parents.  Compute each type's bare display name
+        once and cache it for the qualified-FQN builder below.  */
+    const typeNodeIds = new Set<number>()
+    const bareNames   = new Map<number, string>()
+    for (const t of types) {
+        typeNodeIds.add(t.id)
+        bareNames.set(t.id, nameOf(t))
+    }
+    /*  find the closest captured type-decl that lexically encloses
+        `node` (skipping the node itself).  Returns null when the
+        type sits at file level.  */
+    const enclosingType = (node: wts.Node): wts.Node | null => {
+        let cur: wts.Node | null = node.parent
+        while (cur !== null) {
+            if (typeNodeIds.has(cur.id) && !cur.equals(node))
+                return cur
+            cur = cur.parent
+        }
+        return null
+    }
+    /*  build the dot-qualified FQN by recursively prepending every
+        enclosing type's bare name (cached so deeper nests don't
+        re-walk the same chain).  */
+    const fqnCache = new Map<number, string>()
+    const fqnFor = (t: wts.Node): string => {
+        const cached = fqnCache.get(t.id)
+        if (cached !== undefined)
+            return cached
+        const enc  = enclosingType(t)
+        const name = bareNames.get(t.id)!
+        const fqn  = enc !== null ? `${fqnFor(enc)}.${name}` : name
+        fqnCache.set(t.id, fqn)
+        return fqn
+    }
+
     const symbols: ArchSymbol[] = []
     for (const t of types) {
         const tModifiers = modifiersOf(t)
-        /*  drop nested private types entirely  */
-        if (tModifiers.includes("private"))
-            continue
-        const name = nameOf(t)
+        const name = bareNames.get(t.id)!
+        const enc  = enclosingType(t)
+        const encFqn = enc !== null ? fqnFor(enc) : null
+        const fqn  = encFqn !== null ? `${encFqn}.${name}` : name
         const kind: SymbolKind = symbolKindOf(t)
         const members: ArchMember[] = []
         /*  collect type_identifier references that appear anywhere
@@ -385,7 +445,7 @@ export const extractSymbols = async (
             if (ancestor === null)
                 continue
             const mModifiers = modifiersOf(m)
-            if (!memberIsVisible(kind, lang, mModifiers))
+            if (!memberIsVisible(kind, lang, mModifiers, encFqn !== null))
                 continue
             const mName = nameOf(m)
             members.push({
@@ -410,34 +470,39 @@ export const extractSymbols = async (
         members.sort((a, b) => a.name.localeCompare(b.name))
         const heritage = collectHeritage(t)
         symbols.push({
-            fqn:        name,
+            fqn,
             name,
+            enclosingFqn: encFqn,
             kind,
-            modifiers:  tModifiers,
-            isAbstract: computeIsAbstract(t, kind, lang, tModifiers),
-            extends:    heritage.extends,
-            implements: heritage.implements,
-            references: [ ...referencesSet ].sort(),
+            modifiers:    tModifiers,
+            isAbstract:   computeIsAbstract(t, kind, lang, tModifiers),
+            extends:      heritage.extends,
+            implements:   heritage.implements,
+            references:   [ ...referencesSet ].sort(),
             file,
-            line:       t.startPosition.row + 1,
-            loc:        t.endPosition.row - t.startPosition.row + 1,
-            doc:        docFor(t),
+            line:         t.startPosition.row + 1,
+            loc:          t.endPosition.row - t.startPosition.row + 1,
+            doc:          docFor(t),
             members
         })
     }
-    /*  Per-file dedupe by symbol name.  Rust pairs `struct_item` (the
+    /*  Per-file dedupe by qualified FQN.  Rust pairs `struct_item` (the
         type definition, no members) with one or more `impl_item`
         blocks (with the same name, carrying the methods) — each gets
-        captured as its own class.def, producing duplicate ArchSymbols.
-        Merge same-name siblings within a file so the report shows one
-        symbol with the union of members and the earliest definition
-        line; preserves the struct's heritage info from the type-def,
-        absorbs the methods from the impl-blocks.  */
+        captured as its own class.def, producing duplicate ArchSymbols
+        with the same FQN.  Merge same-FQN siblings within a file so
+        the report shows one symbol with the union of members and the
+        earliest definition line; preserves the struct's heritage info
+        from the type-def, absorbs the methods from the impl-blocks.
+        Keying on `fqn` instead of the bare name keeps nested types
+        with a name that happens to coincide with another outer's
+        nested type (different `enclosingFqn`) from being false-merged
+        — they hash to distinct keys.  */
     const byName = new Map<string, ArchSymbol>()
     for (const s of symbols) {
-        const existing = byName.get(s.name)
+        const existing = byName.get(s.fqn)
         if (existing === undefined)
-            byName.set(s.name, s)
+            byName.set(s.fqn, s)
         else {
             const seenNames = new Set(existing.members.map((m) => m.name))
             const byMember  = new Map(existing.members.map((m) => [ m.name, m ]))

@@ -5,31 +5,25 @@
 **  Licensed under GPL 3.0 <https://spdx.org/licenses/GPL-3.0-only>
 */
 
-/*  Single source of truth for the Mermaid `classDef` directives
-    used by the per-cluster class diagrams.  All visual signals
-    (hub-highlight, external-ghost) live here so a Mermaid
-    upstream fix or a palette change is a one-line edit instead
-    of a hunt across html.ts / md.ts and every emitter location.
+/*  Constants reused by the per-cluster class-diagram renderer.
 
-    The two definitions deliberately use a *single* CSS property
-    each: Mermaid v10's classDiagram parser
-    (mermaid-js/mermaid#5498) chokes on comma-separated payloads
-    regardless of whether the values are hex codes or CSS named
-    colours, so a multi-property `classDef` produces a parse
-    error.  When upstream lands the parser fix, richer styling
-    can be restored by editing these two constants alone.  */
+    History of CSS-styling attempts (and why they all failed):
+    Mermaid v11.15's classDiagram parser tokenises both `classDef`
+    AND `style` payloads character-by-character and rejects any
+    CSS property name that contains a hyphen — `stroke-width` is
+    read as `stroke` (ALPHA) followed by an unexpected MINUS
+    token, and parsing aborts.  Earlier guidance that `style
+    ClassName stroke-width:Xpx` would parse where `classDef`
+    failed turned out to be incorrect for classDiagram (it holds
+    only for flowchart).  Rather than ship a renderer that
+    intermittently throws Parse Errors at the reader, we drop CSS
+    styling altogether and use Mermaid-native multi-stereotype
+    blocks (`<<hub>>` etc.) for every visual signal.  See render/
+    class-diagram.ts for the stereotype layering and #1884 /
+    #4021 for the upstream grammar issue.  */
 
-export const CLASSDEF_HUB      = "classDef hub stroke-width:3px"
-export const CLASSDEF_EXTERNAL = "classDef external stroke-dasharray:5 5"
-
-/*  Inline-style suffix applied directly to a class declaration
-    (`class Foo:::hub`) — Mermaid's `:::` form is parsed at
-    declaration time and avoids the second-line newline boundary
-    that breaks the post-declaration `cssClass "..." hub` form.  */
-export const HUB_SUFFIX      = ":::hub"
-export const EXTERNAL_SUFFIX = ":::external"
-
-/*  Hub-detection threshold reused by the class-diagram builder
-    and any future hub-aware renderer (e.g. a hub badge in the
-    symbol table).  */
+/*  Intra-cluster fan-in at which a class is considered a "hub"
+    (load-bearing component).  Reused by the class-diagram
+    renderer and any future hub-aware caller (e.g. a hub badge
+    in the symbol table).  */
 export const HUB_FAN_IN_THRESHOLD = 3

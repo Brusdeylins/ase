@@ -53,6 +53,9 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 .diagram-frame:active { cursor: grabbing; }
 .diagram-frame .mermaid { margin: 0; padding: 0.5rem; min-width: max-content; }
 .diagram-hint { text-align: right; font-size: 0.75rem; color: var(--fg-muted); margin: 0 0 1rem 0; user-select: none; }
+.sym.nested { margin-left: 2rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
+.sym.nested h3 { font-size: 1em; }
+.sym .nested-hint { font-size: 0.8rem; color: var(--fg-muted); font-weight: normal; }
 footer { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 2px solid var(--accent); font-size: 0.85rem; color: var(--fg-muted); text-align: center; }
 .doc-debt { font-size: 0.8rem; }
 .doc-debt code { font-size: 0.85em; }
@@ -128,16 +131,61 @@ ${mermaidBootstrap}
     quirk-workaround logic.  */
 
 const symTable = (s: ArchSymbol): string => {
-    const header = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)</h3>`
-    if (s.members.length === 0)
-        return `${header}<p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p><p><em>no public members</em></p>`
+    /*  Nested types render with a visible indent + parent hint so
+        the reader sees the structural relationship at a glance and
+        does not look for a non-existent `<Inner>.java` file.  The
+        wrapper carries the `nested` class only when applicable;
+        top-level symbols stay visually identical to before.  */
+    const wrapClass = s.enclosingFqn !== null ? "sym nested" : "sym"
+    const hint      = s.enclosingFqn !== null ?
+        ` <span class="nested-hint">(nested in <code>${escapeHtml(s.enclosingFqn)}</code>)</span>` : ""
+    const header    = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}</h3>`
+    if (s.members.length === 0) {
+        const empty = s.enclosingFqn !== null ? "no members" : "no public members"
+        return `<div class="${wrapClass}">${header}<p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p><p><em>${empty}</em></p></div>`
+    }
     const rows = s.members.map((m) =>
         `<tr><td><code>${escapeHtml(m.name)}</code></td><td><code>${escapeHtml(m.signature)}</code></td><td>${m.doc !== null ? escapeHtml(m.doc) : "<em>no description</em>"}</td></tr>`).join("\n")
-    return `${header}
+    return `<div class="${wrapClass}">${header}
 <p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p>
 <table><thead><tr><th>Method</th><th>Signature</th><th>Description</th></tr></thead><tbody>
 ${rows}
-</tbody></table>`
+</tbody></table></div>`
+}
+
+/*  Sort cluster symbols so each top-level type is immediately
+    followed by its nested children (recursively).  Children of
+    one parent stay alphabetical; siblings at every depth do too.
+    Returns a flat array — the renderer keeps emitting `symTable`
+    per entry, no extra grouping logic needed downstream.  */
+const orderSymbolsHierarchically = (symbols: ArchSymbol[]): ArchSymbol[] => {
+    const byParent = new Map<string | null, ArchSymbol[]>()
+    for (const s of symbols) {
+        const arr = byParent.get(s.enclosingFqn) ?? []
+        arr.push(s)
+        byParent.set(s.enclosingFqn, arr)
+    }
+    for (const arr of byParent.values())
+        arr.sort((a, b) => a.fqn.localeCompare(b.fqn))
+    const out: ArchSymbol[] = []
+    const visit = (parentFqn: string | null): void => {
+        for (const s of byParent.get(parentFqn) ?? []) {
+            out.push(s)
+            visit(s.fqn)
+        }
+    }
+    visit(null)
+    /*  defensive: a symbol whose enclosingFqn points outside this
+        cluster's symbol set would never be reached by the walk
+        above.  Append in original order so nothing silently
+        disappears from the per-cluster page.  */
+    if (out.length < symbols.length) {
+        const seen = new Set(out.map((s) => s.fqn))
+        for (const s of symbols)
+            if (!seen.has(s.fqn))
+                out.push(s)
+    }
+    return out
 }
 
 export const renderClusterHtml = (cluster: Cluster, api: ApiJson, ctx: RenderContext): string => {
@@ -159,7 +207,7 @@ ${stats}
 <h2>Class relationships</h2>
 ${frame(buildClassDiagram(cluster, ctx.allInScopeSymbols))}
 <h2>Symbols</h2>
-${cluster.symbols.map(symTable).join("\n")}
+${orderSymbolsHierarchically(cluster.symbols).map(symTable).join("\n")}
 ${debtSection}`
     return wrap(`arch-report — ${cluster.name}`, body, api.generatedAt)
 }
@@ -180,7 +228,7 @@ export const renderIndexHtml = (api: ApiJson, ctx: RenderContext): string => {
 <p>Scope: <code>${escapeHtml(api.scope)}</code><br>
 Generated: ${api.generatedAt}<br>
 Languages: ${api.languages.join(", ")}</p>
-<p><em>Coverage: public and protected API only. Private and package-private members are intentionally excluded.</em></p>
+<p><em>Coverage: top-level types show only their public and protected members. Nested (inner) types appear regardless of visibility and expose their <strong>full</strong> member list — private helpers included — because a nested type's entire purpose is to be internal to the enclosing scope, and filtering its members would leave the reader with an empty shell. Private and package-private members of top-level types remain excluded.</em></p>
 ${stats}
 <h2>Cluster dependencies</h2>
 ${frame(buildLayeredFlowchart(api, ctx.layerOfCluster))}
