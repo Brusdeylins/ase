@@ -67,22 +67,37 @@ export const layerAssignment = (
         }
     }
 
-    /*  Kahn topological sort over the condensed DAG  */
+    /*  Kahn topological sort over the condensed DAG.  The `ready`
+        queue is kept ascending-sorted by SCC index so the produced
+        order is deterministic regardless of Map-iteration quirks.
+        Maintenance via binary-insertion (`insertSorted`) keeps the
+        queue ordered in O(log n) lookup + O(n) shift per insert,
+        instead of the previous O(n log n) full re-sort per pop —
+        irrelevant for the architect-report scale (~100 clusters)
+        but the asymptotic profile is the cleaner default.  */
+    const insertSorted = (arr: number[], v: number): void => {
+        let lo = 0
+        let hi = arr.length
+        while (lo < hi) {
+            const mid = (lo + hi) >>> 1
+            if (arr[mid] < v) lo = mid + 1
+            else              hi = mid
+        }
+        arr.splice(lo, 0, v)
+    }
     const sccOrder: number[] = []
     const ready: number[]    = []
     for (const [scc, deg] of sccInDeg)
         if (deg === 0)
-            ready.push(scc)
-    ready.sort((a, b) => a - b)
+            insertSorted(ready, scc)
     while (ready.length > 0) {
         const s = ready.shift()!
         sccOrder.push(s)
         for (const t of sccOut.get(s)!) {
             sccInDeg.set(t, sccInDeg.get(t)! - 1)
             if (sccInDeg.get(t) === 0)
-                ready.push(t)
+                insertSorted(ready, t)
         }
-        ready.sort((a, b) => a - b)
     }
 
     /*  longest-path layer assignment in topological order — each

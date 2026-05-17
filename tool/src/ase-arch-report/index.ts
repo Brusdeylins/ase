@@ -94,14 +94,29 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     const clusters = [ ...byLang ]
         .flatMap(([ lang, syms ]) => clusterize(syms, scopeRoot, lang))
         .sort((a, b) => a.name.localeCompare(b.name))
-    /*  rewrite each symbol's `file` field from the absolute path
-        produced by glob into a path relative to the scope root, so
-        api.json and the rendered pages stay portable across machines
-        (no `/Users/<somebody>/...` leaking into the report)  */
+    /*  Single pass over every cluster/symbol that does three things
+        the pipeline used to do as three independent traversals: (a)
+        rewrite each symbol's absolute glob path to a path relative
+        to the scope root (so api.json + the rendered pages stay
+        portable across machines — no `/Users/<somebody>/...`
+        leaking out); (b) accumulate the total LOC for the index
+        stats panel; (c) assemble the doc-debt list with both
+        symbol-level and member-level missing-doc entries (member
+        entries use the `Symbol#member` FQN form so cluster pages
+        can match them by splitting on `#`).  archFiles undergo
+        the same path normalisation in the same step.  */
+    const docDebt: { fqn: string; file: string; line: number }[] = []
+    let totalLoc = 0
     for (const c of clusters)
         for (const s of c.symbols) {
             const rel = path.relative(scopeRoot, s.file)
             s.file = rel === "" ? path.basename(s.file) : rel
+            totalLoc += s.loc
+            if (s.doc === null)
+                docDebt.push({ fqn: s.fqn, file: s.file, line: s.line })
+            for (const m of s.members)
+                if (m.doc === null)
+                    docDebt.push({ fqn: `${s.fqn}#${m.name}`, file: s.file, line: m.line })
         }
     for (const af of archFiles) {
         const rel = path.relative(scopeRoot, af.path)
@@ -112,20 +127,8 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         before downstream consumers (edges, doc-debt, renderers) read docs  */
     resolveInheritDocs(clusters)
 
-    /*  resolve edges + assemble doc-debt list (covers both symbol-level
-        and member-level missing docs; member entries use the
-        `Symbol#member` FQN form so cluster pages can match them by
-        splitting on `#` and looking up the symbol part)  */
+    /*  resolve edges  */
     const { edges, unresolved } = resolveEdges(clusters)
-    const docDebt = clusters.flatMap((c) => c.symbols.flatMap((s) => {
-        const entries: { fqn: string; file: string; line: number }[] = []
-        if (s.doc === null)
-            entries.push({ fqn: s.fqn, file: s.file, line: s.line })
-        for (const m of s.members)
-            if (m.doc === null)
-                entries.push({ fqn: `${s.fqn}#${m.name}`, file: s.file, line: m.line })
-        return entries
-    }))
 
     /*  build the canonical api.json shape  */
     archFiles.sort((a, b) => a.path.localeCompare(b.path))
@@ -158,8 +161,6 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     for (const c of clusters)
         docCovPerCluster.set(c.name, computeDocCoverage(c))
     const docCovAggregate  = computeAggregateDocCoverage(clusters)
-    const totalLoc         = clusters.reduce((n, c) =>
-        n + c.symbols.reduce((m, s) => m + s.loc, 0), 0)
     /*  cluster-level graph for cycle + layering computations  */
     const clusterNodes = clusters.map((c) => c.name)
     const clusterEdges = edges.map((e) => ({ from: e.from, to: e.to }))
