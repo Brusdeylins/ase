@@ -21,19 +21,28 @@ import { mainSequenceMermaid }                 from "./main-sequence.js"
 const mermaidClassDiagram = (cluster: Cluster): string => {
     /*  same shape as the HTML class diagram: body-less class
         declarations, inheritance + call-reference edges (intra-cluster
-        only), and a `hub` style applied to classes whose intra-cluster
-        fan-in reaches the hub threshold  */
+        only), and a `hub` style applied via the inline `:::hub`
+        suffix on the class declaration so Mermaid's classDiagram
+        parser accepts the styling regardless of payload width  */
     const clusterIds = new Set(cluster.symbols.map((s) => safeId(s.name)))
     const fanIn      = classFanInIntraCluster(cluster)
+    const isHub      = (name: string): boolean =>
+        (fanIn.get(name) ?? 0) >= HUB_FAN_IN_THRESHOLD
+    const hubSuffix  = (name: string): string =>
+        isHub(name) ? ":::hub" : ""
+    const hasAnyHub  = cluster.symbols.some((s) => isHub(s.name))
     const lines: string[] = [ "```mermaid", "classDiagram" ]
+    if (hasAnyHub)
+        lines.push("    classDef hub fill:#fbe6ec,stroke:#a01441,stroke-width:3px")
     for (const s of cluster.symbols) {
+        const idWithStyle = `${safeId(s.name)}${hubSuffix(s.name)}`
         if (s.kind === "interface") {
-            lines.push(`    class ${safeId(s.name)} {`)
+            lines.push(`    class ${idWithStyle} {`)
             lines.push("        <<interface>>")
             lines.push("    }")
         }
         else
-            lines.push(`    class ${safeId(s.name)}`)
+            lines.push(`    class ${idWithStyle}`)
         const heritageIds = new Set([
             ...s.extends.map((e) => safeId(e)),
             ...s.implements.map((i) => safeId(i))
@@ -48,13 +57,6 @@ const mermaidClassDiagram = (cluster: Cluster): string => {
             if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
                 lines.push(`    ${fromId} ..> ${refId}`)
         }
-    }
-    const hubs = [ ...cluster.symbols ]
-        .filter((s) => (fanIn.get(s.name) ?? 0) >= HUB_FAN_IN_THRESHOLD)
-        .map((s) => safeId(s.name))
-    if (hubs.length > 0) {
-        lines.push("    classDef hub stroke:#a01441,stroke-width:3px,fill:#fbe6ec")
-        lines.push(`    cssClass "${hubs.join(",")}" hub`)
     }
     lines.push("```")
     return lines.join("\n")

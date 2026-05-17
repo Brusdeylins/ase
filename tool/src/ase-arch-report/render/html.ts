@@ -133,18 +133,29 @@ const classDiagramSrc = (cluster: Cluster): string => {
         the tabular section.  Reference edges are limited to in-cluster
         targets to keep each per-cluster page focussed.  Classes whose
         intra-cluster fan-in reaches the hub threshold get the accent
-        `hub` style so the load-bearing component pops out.  */
+        `hub` style applied via the well-supported `:::hub` inline
+        syntax (the standalone `classDef` + `cssClass` form breaks
+        Mermaid v10's classDiagram parser when the style payload
+        contains comma-separated CSS properties).  */
     const clusterIds = new Set(cluster.symbols.map((s) => safeId(s.name)))
     const fanIn      = classFanInIntraCluster(cluster)
+    const isHub      = (name: string): boolean =>
+        (fanIn.get(name) ?? 0) >= HUB_FAN_IN_THRESHOLD
+    const hubSuffix  = (name: string): string =>
+        isHub(name) ? ":::hub" : ""
+    const hasAnyHub  = cluster.symbols.some((s) => isHub(s.name))
     const lines: string[] = [ "classDiagram" ]
+    if (hasAnyHub)
+        lines.push("    classDef hub fill:#fbe6ec,stroke:#a01441,stroke-width:3px")
     for (const s of cluster.symbols) {
+        const idWithStyle = `${safeId(s.name)}${hubSuffix(s.name)}`
         if (s.kind === "interface") {
-            lines.push(`    class ${safeId(s.name)} {`)
+            lines.push(`    class ${idWithStyle} {`)
             lines.push("        <<interface>>")
             lines.push("    }")
         }
         else
-            lines.push(`    class ${safeId(s.name)}`)
+            lines.push(`    class ${idWithStyle}`)
         const heritageIds = new Set([
             ...s.extends.map((e) => safeId(e)),
             ...s.implements.map((i) => safeId(i))
@@ -159,13 +170,6 @@ const classDiagramSrc = (cluster: Cluster): string => {
             if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
                 lines.push(`    ${fromId} ..> ${refId}`)
         }
-    }
-    const hubs = [ ...cluster.symbols ]
-        .filter((s) => (fanIn.get(s.name) ?? 0) >= HUB_FAN_IN_THRESHOLD)
-        .map((s) => safeId(s.name))
-    if (hubs.length > 0) {
-        lines.push("    classDef hub stroke:#a01441,stroke-width:3px,fill:#fbe6ec")
-        lines.push(`    cssClass "${hubs.join(",")}" hub`)
     }
     return lines.join("\n")
 }
