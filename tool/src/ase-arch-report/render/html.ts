@@ -79,7 +79,7 @@ table.dsm td.dsm-cycle { background: rgba(160, 20, 65, 0.18); font-weight: 600; 
 const mermaidBootstrap = `
 <script src="https://unpkg.com/panzoom@9.4.3/dist/panzoom.min.js"></script>
 <script type="module" id="mermaid-bootstrap">
-    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs"
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.esm.min.mjs"
     mermaid.initialize({ startOnLoad: false, theme: "base", themeVariables: ${JSON.stringify(MERMAID_THEME_VARIABLES)}, maxTextSize: 5000000, maxEdges: 10000 })
     await mermaid.run({ querySelector: ".mermaid" })
     if (typeof window.panzoom === "function") {
