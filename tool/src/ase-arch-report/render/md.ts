@@ -40,9 +40,9 @@ const mermaidClassDiagram = (cluster: Cluster, allInScopeSymbols: Set<string>): 
                 externals.add(target)
     const lines: string[] = [ "```mermaid", "classDiagram" ]
     if (hasAnyHub)
-        lines.push("    classDef hub fill:lightpink,stroke:crimson,stroke-width:3px")
+        lines.push("    classDef hub stroke-width:3px")
     if (externals.size > 0)
-        lines.push("    classDef external fill:whitesmoke,stroke:darkgray,stroke-dasharray:5 5")
+        lines.push("    classDef external stroke-dasharray:5 5")
     for (const s of cluster.symbols) {
         const idWithStyle = `${safeId(s.name)}${hubSuffix(s.name)}`
         if (s.kind === "interface") {
