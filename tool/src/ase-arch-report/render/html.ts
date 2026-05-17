@@ -123,7 +123,7 @@ ${mermaidBootstrap}
 
 const HUB_FAN_IN_THRESHOLD = 3
 
-const classDiagramSrc = (cluster: Cluster): string => {
+const classDiagramSrc = (cluster: Cluster, allInScopeSymbols: Set<string>): string => {
     /*  The class diagram complements — not duplicates — the per-symbol
         method tables rendered below the diagram.  Emit each class as a
         body-less declaration (or as the bare `<<interface>>` stereotype
@@ -137,16 +137,31 @@ const classDiagramSrc = (cluster: Cluster): string => {
         syntax (the standalone `classDef` + `cssClass` form breaks
         Mermaid v10's classDiagram parser when the style payload
         contains comma-separated CSS properties).  */
-    const clusterIds = new Set(cluster.symbols.map((s) => safeId(s.name)))
-    const fanIn      = classFanInIntraCluster(cluster)
-    const isHub      = (name: string): boolean =>
+    const clusterNames = new Set(cluster.symbols.map((s) => s.name))
+    const clusterIds   = new Set(cluster.symbols.map((s) => safeId(s.name)))
+    const fanIn        = classFanInIntraCluster(cluster)
+    const isHub        = (name: string): boolean =>
         (fanIn.get(name) ?? 0) >= HUB_FAN_IN_THRESHOLD
-    const hubSuffix  = (name: string): string =>
+    const hubSuffix    = (name: string): string =>
         isHub(name) ? ":::hub" : ""
-    const hasAnyHub  = cluster.symbols.some((s) => isHub(s.name))
+    const hasAnyHub    = cluster.symbols.some((s) => isHub(s.name))
+    /*  externals = heritage targets that live neither in this
+        cluster nor in any other in-scope cluster; rendered as
+        dashed `<<external>>` ghosts so structural relations to
+        out-of-scope packages stay visible instead of being
+        silently dropped (covers cases like a plugin implementation
+        whose base interfaces live in a sibling package outside the
+        chosen scope)  */
+    const externals = new Set<string>()
+    for (const s of cluster.symbols)
+        for (const target of [ ...s.extends, ...s.implements ])
+            if (!clusterNames.has(target) && !allInScopeSymbols.has(target))
+                externals.add(target)
     const lines: string[] = [ "classDiagram" ]
     if (hasAnyHub)
         lines.push("    classDef hub fill:#fbe6ec,stroke:#a01441,stroke-width:3px")
+    if (externals.size > 0)
+        lines.push("    classDef external fill:#f5f5f5,stroke:#999999,stroke-dasharray:5 5")
     for (const s of cluster.symbols) {
         const idWithStyle = `${safeId(s.name)}${hubSuffix(s.name)}`
         if (s.kind === "interface") {
@@ -170,6 +185,15 @@ const classDiagramSrc = (cluster: Cluster): string => {
             if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
                 lines.push(`    ${fromId} ..> ${refId}`)
         }
+    }
+    /*  emit external symbol declarations after the in-cluster
+        classes so the dashed ghost nodes are grouped at the end
+        of the source — visually they end up wherever Mermaid's
+        layout engine puts them, but the source stays scannable  */
+    for (const ext of [ ...externals ].sort()) {
+        lines.push(`    class ${safeId(ext)}:::external {`)
+        lines.push("        <<external>>")
+        lines.push("    }")
     }
     return lines.join("\n")
 }
@@ -233,7 +257,7 @@ ${clusterDebt.length === 0 ?
 <h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
 ${stats}
 <h2>Class relationships</h2>
-${frame(classDiagramSrc(cluster))}
+${frame(classDiagramSrc(cluster, ctx.allInScopeSymbols))}
 <h2>Symbols</h2>
 ${cluster.symbols.map(symTable).join("\n")}
 ${debtSection}`

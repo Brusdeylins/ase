@@ -27,5 +27,12 @@ export interface RenderContext {
         larger = deeper); drives the layered TD flowchart on the
         Index page  */
     layerOfCluster:     Map<string, number>
+    /*  every symbol simple-name that lives in *any* cluster of the
+        report — lets the class-diagram renderer distinguish a
+        heritage target that sits in another in-scope cluster (do
+        not over-draw) from one that is truly out of scope (draw
+        as a `<<external>>` ghost so the structural relationship
+        does not silently disappear when the scope is narrow)  */
+    allInScopeSymbols:  Set<string>
     totalLoc:           number
 }

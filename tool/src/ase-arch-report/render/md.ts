@@ -18,22 +18,31 @@ import { dsmMd }                               from "./dsm.js"
 import { cyclesMd, cyclesTouchingCluster }     from "./cycles.js"
 import { mainSequenceMermaid }                 from "./main-sequence.js"
 
-const mermaidClassDiagram = (cluster: Cluster): string => {
+const mermaidClassDiagram = (cluster: Cluster, allInScopeSymbols: Set<string>): string => {
     /*  same shape as the HTML class diagram: body-less class
         declarations, inheritance + call-reference edges (intra-cluster
-        only), and a `hub` style applied via the inline `:::hub`
-        suffix on the class declaration so Mermaid's classDiagram
-        parser accepts the styling regardless of payload width  */
-    const clusterIds = new Set(cluster.symbols.map((s) => safeId(s.name)))
-    const fanIn      = classFanInIntraCluster(cluster)
-    const isHub      = (name: string): boolean =>
+        only), inline `:::hub` style for high-fan-in classes, and
+        `<<external>>` ghost classes for heritage targets that live
+        outside the chosen scope (so structural relationships to
+        sibling packages stay visible).  */
+    const clusterNames = new Set(cluster.symbols.map((s) => s.name))
+    const clusterIds   = new Set(cluster.symbols.map((s) => safeId(s.name)))
+    const fanIn        = classFanInIntraCluster(cluster)
+    const isHub        = (name: string): boolean =>
         (fanIn.get(name) ?? 0) >= HUB_FAN_IN_THRESHOLD
-    const hubSuffix  = (name: string): string =>
+    const hubSuffix    = (name: string): string =>
         isHub(name) ? ":::hub" : ""
-    const hasAnyHub  = cluster.symbols.some((s) => isHub(s.name))
+    const hasAnyHub    = cluster.symbols.some((s) => isHub(s.name))
+    const externals    = new Set<string>()
+    for (const s of cluster.symbols)
+        for (const target of [ ...s.extends, ...s.implements ])
+            if (!clusterNames.has(target) && !allInScopeSymbols.has(target))
+                externals.add(target)
     const lines: string[] = [ "```mermaid", "classDiagram" ]
     if (hasAnyHub)
         lines.push("    classDef hub fill:#fbe6ec,stroke:#a01441,stroke-width:3px")
+    if (externals.size > 0)
+        lines.push("    classDef external fill:#f5f5f5,stroke:#999999,stroke-dasharray:5 5")
     for (const s of cluster.symbols) {
         const idWithStyle = `${safeId(s.name)}${hubSuffix(s.name)}`
         if (s.kind === "interface") {
@@ -57,6 +66,11 @@ const mermaidClassDiagram = (cluster: Cluster): string => {
             if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
                 lines.push(`    ${fromId} ..> ${refId}`)
         }
+    }
+    for (const ext of [ ...externals ].sort()) {
+        lines.push(`    class ${safeId(ext)}:::external {`)
+        lines.push("        <<external>>")
+        lines.push("    }")
     }
     lines.push("```")
     return lines.join("\n")
@@ -83,7 +97,7 @@ export const renderClusterMd = (cluster: Cluster, api: ApiJson, ctx: RenderConte
         cyclesTouching: cyclesTouchingCluster(ctx.cycleReport, cluster)
     }))
     parts.push("## Class relationships\n")
-    parts.push(mermaidClassDiagram(cluster))
+    parts.push(mermaidClassDiagram(cluster, ctx.allInScopeSymbols))
     parts.push("\n## Symbols\n")
     for (const s of cluster.symbols)
         parts.push(apiTable(s))

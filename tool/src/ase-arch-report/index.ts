@@ -178,6 +178,10 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
                 return { members: [ ...members ].sort(), cut: feedbackArcSet(members, subEdges) }
             })
     }
+    const allInScopeSymbols = new Set<string>()
+    for (const c of clusters)
+        for (const s of c.symbols)
+            allInScopeSymbols.add(s.name)
     const ctx: RenderContext = {
         coupling,
         martin,
@@ -186,6 +190,7 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         cycleReport,
         sortedClusterNames,
         layerOfCluster: layers.layerOfNode,
+        allInScopeSymbols,
         totalLoc
     }
 
