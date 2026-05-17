@@ -20,7 +20,10 @@
     algorithm for the topological order, then assign each super-node
     a layer = longest-path length from any source super-node (so
     every package sits below all of its dependencies).  Each
-    original node inherits the layer of its SCC.  */
+    original node inherits the layer of its SCC.
+
+    Reference: Kahn, A. B. (1962). "Topological sorting of large
+    networks". Communications of the ACM 5 (11): 558–562.  */
 
 import { tarjanSCC, type DirectedEdge } from "./scc.js"
 

@@ -72,10 +72,6 @@ export const buildClassDiagram = (
         }
         else
             lines.push(`    class ${idWithStyle}`)
-        const heritageIds = new Set([
-            ...s.extends.map((e) => safeId(e)),
-            ...s.implements.map((i) => safeId(i))
-        ])
         for (const parent of s.extends)
             lines.push(`    ${safeId(parent)} <|-- ${safeId(s.name)}`)
         for (const iface of s.implements)
@@ -83,7 +79,13 @@ export const buildClassDiagram = (
         const fromId = safeId(s.name)
         for (const r of s.references) {
             const refId = safeId(r)
-            if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
+            /*  emit a `..>` dependency edge only when the target is
+                an in-cluster sibling, not the symbol itself, and not
+                already covered by a heritage edge above  */
+            if (refId !== fromId
+                && clusterIds.has(refId)
+                && !s.extends.includes(r)
+                && !s.implements.includes(r))
                 lines.push(`    ${fromId} ..> ${refId}`)
         }
     }

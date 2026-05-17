@@ -11,7 +11,10 @@
     SCC-DAG is implied by the *reverse* order of the returned array
     (Tarjan emits SCCs in reverse topological order of the condensed
     DAG).  Single-node SCCs without a self-loop are included, so the
-    caller can scan for `.length >= 2` to identify cycle groups.  */
+    caller can scan for `.length >= 2` to identify cycle groups.
+
+    Reference: Tarjan, R. E. (1972). "Depth-first search and linear
+    graph algorithms". SIAM Journal on Computing 1 (2): 146–160.  */
 
 export interface DirectedEdge {
     from: string

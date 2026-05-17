@@ -73,6 +73,19 @@ const lookupSymbolDoc = (
     return null
 }
 
+/*  Resolve every `{@inheritDoc}` placeholder inside `doc`.
+
+    The `mem` parameter doubles as a discriminator for the resolution
+    mode:
+      - `mem !== null` → *member-level* doc: look up an overridden
+        member with the same simple name in the symbol's parent
+        chain (`lookupMemberDoc`).
+      - `mem === null` → *symbol-level* doc: look up the parent
+        symbol itself (`lookupSymbolDoc`).
+
+    Recursion through `lookupMemberDoc` / `lookupSymbolDoc` carries
+    the depth counter to guarantee termination at MAX_DEPTH even
+    when two symbols cyclically inherit each other's docs.  */
 const resolveDoc = (
     doc: string, sym: ArchSymbol, mem: ArchMember | null,
     symMap: Map<string, ArchSymbol>, depth: number

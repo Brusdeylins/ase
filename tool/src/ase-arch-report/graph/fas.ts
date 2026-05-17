@@ -17,7 +17,17 @@
     use case the goal is *actionable* output — "to break this cycle,
     cut these N edges" — and a DFS-derived set typically picks the
     edges that close the longest paths first, which is a reasonable
-    natural ranking for review.  */
+    natural ranking for review.
+
+    References:
+    - Karp, R. M. (1972). "Reducibility Among Combinatorial
+      Problems" — establishes minimum-FAS as NP-hard.
+    - Eades, P., Lin, X., Smyth, W. F. (1993). "A fast and
+      effective heuristic for the feedback arc set problem".
+      Information Processing Letters 47: 319–323 — alternative
+      sink-source-removal heuristic; the DFS back-edge variant
+      used here trades minimality for an actionable, edge-keyed
+      output.  */
 
 import type { DirectedEdge } from "./scc.js"
 
