@@ -89,16 +89,24 @@ const resolveDoc = (
 }
 
 export const resolveInheritDocs = (clusters: Cluster[]): void => {
-    /*  index every symbol both by FQN and by short name so qualified refs
-        like `{@inheritDoc Foo.bar}` resolve regardless of cluster boundary;
-        FQN takes precedence on collision  */
+    /*  Index every symbol both by FQN and by short name so qualified
+        refs like `{@inheritDoc Foo.bar}` resolve regardless of cluster
+        boundary.  FQN takes precedence on collision — implemented as
+        two passes so the precedence is enforced regardless of cluster
+        iteration order (the previous single-loop variant was
+        first-write-wins per key, which made resolution non-
+        deterministic when a short name happened to equal a different
+        symbol's FQN).  */
     const symMap = new Map<string, ArchSymbol>()
+    /*  Pass 1: every FQN — guaranteed primary key, takes precedence  */
     for (const c of clusters)
-        for (const s of c.symbols) {
+        for (const s of c.symbols)
             symMap.set(s.fqn, s)
+    /*  Pass 2: short names — only if no FQN already claims the key  */
+    for (const c of clusters)
+        for (const s of c.symbols)
             if (!symMap.has(s.name))
                 symMap.set(s.name, s)
-        }
     for (const c of clusters)
         for (const s of c.symbols) {
             if (s.doc !== null && /@inheritDoc/.test(s.doc)) {

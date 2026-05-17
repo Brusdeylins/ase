@@ -15,12 +15,24 @@ export interface ResolveResult {
 }
 
 export const resolveEdges = (clusters: Cluster[]): ResolveResult => {
-    /*  index by simple name -> cluster.name (last writer wins on duplicate
-        names across clusters; this is rare for an arch-report scope)  */
-    const symbolCluster = new Map<string, string>()
+    /*  Index by simple name -> set of owning clusters.  When the same
+        simple name exists in two clusters (e.g. two `Logger` classes
+        in different packages), every cross-cluster reference to that
+        name now bumps an edge into *each* candidate cluster instead
+        of silently picking the last-iterated one — the previous
+        "last writer wins" behaviour produced a non-deterministic
+        miscount that propagated into Ca/Ce, Martin metrics, the DSM,
+        and cycle detection.  */
+    const symbolCluster = new Map<string, Set<string>>()
     for (const c of clusters)
-        for (const s of c.symbols)
-            symbolCluster.set(s.name, c.name)
+        for (const s of c.symbols) {
+            let set = symbolCluster.get(s.name)
+            if (set === undefined) {
+                set = new Set()
+                symbolCluster.set(s.name, set)
+            }
+            set.add(c.name)
+        }
 
     const edgeMap = new Map<string, Edge>()
     const unresolved: UnresolvedRef[] = []
@@ -38,11 +50,12 @@ export const resolveEdges = (clusters: Cluster[]): ResolveResult => {
     for (const c of clusters)
         for (const s of c.symbols)
             for (const ref of [ ...s.extends, ...s.implements, ...s.references ]) {
-                const target = symbolCluster.get(ref)
-                if (target === undefined)
+                const targets = symbolCluster.get(ref)
+                if (targets === undefined)
                     unresolved.push({ ref, from: `${c.name}/${s.name}` })
-                else if (target !== c.name)
-                    bump(c.name, target)
+                else for (const t of targets)
+                    if (t !== c.name)
+                        bump(c.name, t)
             }
 
     const edges = [ ...edgeMap.values() ].sort((a, b) =>

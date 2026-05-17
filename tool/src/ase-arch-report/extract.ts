@@ -440,10 +440,25 @@ export const extractSymbols = async (
             byName.set(s.name, s)
         else {
             const seenNames = new Set(existing.members.map((m) => m.name))
+            const byMember  = new Map(existing.members.map((m) => [ m.name, m ]))
             for (const m of s.members)
                 if (!seenNames.has(m.name)) {
                     existing.members.push(m)
                     seenNames.add(m.name)
+                    byMember.set(m.name, m)
+                }
+                else {
+                    /*  Same-name member already present — typical Rust
+                        case where the struct-def lists a field and an
+                        impl-block (re)declares a method with the same
+                        name.  Enrich the kept member by absorbing
+                        non-null doc / non-empty signature from the
+                        incoming one without overwriting good data.  */
+                    const prev = byMember.get(m.name)!
+                    if (prev.doc === null && m.doc !== null)
+                        prev.doc = m.doc
+                    if (prev.signature.length === 0 && m.signature.length > 0)
+                        prev.signature = m.signature
                 }
             existing.members.sort((a, b) => a.name.localeCompare(b.name))
             for (const r of s.references)
