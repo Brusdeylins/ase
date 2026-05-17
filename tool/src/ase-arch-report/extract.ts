@@ -31,14 +31,34 @@ const compileQuery = async (lang: Language, queriesDir: string, grammar: wts.Lan
 
 /*  extract first sentence of a leading doc-comment for a node, if present  */
 const firstSentence = (raw: string): string | null => {
-    /*  strip /** ... *\/ envelope plus line-leading asterisks  */
-    const stripped = raw
+    /*  strip /** ... *\/ envelope plus line-leading asterisks.
+        Javadoc and JSDoc routinely embed HTML markup (`<p>`,
+        `<br>`, `<ul>`, `<li>`, `<code>...</code>`) and inline
+        tags (`{@link X}`, `{@code X}`, `{@literal X}`) directly
+        in the comment text.  When the renderer escapes the
+        summary for safe HTML embedding, those tokens become
+        literal text in the rendered page ("<p>", "{@link X}"),
+        which is noise rather than signal.  We normalise them
+        here once so every downstream consumer — HTML renderer,
+        Markdown renderer, doc-debt analyser — sees a clean
+        prose string.  */
+    const normalised = raw
         .replace(/^\/\*\*?/, "")
         .replace(/\*\/$/, "")
         .split("\n")
         .map((l) => l.replace(/^\s*(\*|\/\/)\s?/, "").trimEnd())
         .join(" ")
-        .trim()
+        /*  drop any HTML element tag (opening, closing, self-closing).
+            Replace with a single space so words on either side of an
+            inline tag stay separated.  */
+        .replace(/<\/?[a-z][^>]*>/gi, " ")
+        /*  inline Javadoc tags: keep the referenced name / value, drop
+            the wrapper.  Order: handle two-arg forms first
+            (`{@link X label}` → `label`), then single-arg
+            (`{@code X}` → `X`).  */
+        .replace(/\{@link(?:plain)?\s+\S+\s+([^}]+)\}/g, "$1")
+        .replace(/\{@(?:link(?:plain)?|code|literal|value)\s+([^}]+)\}/g, "$1")
+    const stripped = normalised.replace(/\s+/g, " ").trim()
     if (stripped.length === 0)
         return null
     /*  reject section dividers: comments dominated by `=`/`-`/`*` runs
