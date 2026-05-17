@@ -41,7 +41,7 @@ export interface MartinMetrics {
     a:          number
     d:          number
     zone:       MartinZone
-    confidence: "ok" | "low" | null
+    confidence: "ok" | "low" | "isolated" | null
 }
 
 /*  languages where `isAbstract` cannot be inferred from syntax
@@ -65,16 +65,27 @@ export const computeMartin = (
     const abstract = cluster.symbols.reduce((n, s) => n + (s.isAbstract ? 1 : 0), 0)
     const ca = coupling.ca
     const ce = coupling.ce
+    /*  A truly isolated cluster (Ca = Ce = 0) has no defined
+        Instability under Martin's I = Ce / (Ce + Ca) formula —
+        the ratio is 0/0.  We default I to 0 to keep arithmetic
+        downstream safe (D = |A + I − 1|), but flag the cluster
+        with confidence = "isolated" so the renderer can show
+        "N/A (isolated)" instead of misleadingly placing the
+        cluster in the Zone of Pain at (I=0, A=0).  */
     const i  = (ca + ce === 0) ? 0 : ce / (ca + ce)
     const a  = total === 0 ? 0 : abstract / total
     const d  = Math.abs(a + i - 1)
 
-    /*  honest confidence: zero when the cluster is too small or the
-        language has no abstract concept (so A is structurally zero,
-        which would falsely place the cluster in the Zone of Pain).  */
-    let confidence: "ok" | "low" | null
+    /*  honest confidence: null when the cluster's language has no
+        abstract concept (A is structurally zero), "low" when the
+        cluster is too small for the ratios to be statistically
+        meaningful, "isolated" when there are no edges at all, and
+        "ok" otherwise.  */
+    let confidence: "ok" | "low" | "isolated" | null
     if (NO_ABSTRACT_CONCEPT.has(cluster.language))
         confidence = null
+    else if (ca + ce === 0)
+        confidence = "isolated"
     else if (total < MIN_SYMBOLS_FOR_CONFIDENCE)
         confidence = "low"
     else

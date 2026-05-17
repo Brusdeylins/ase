@@ -31,11 +31,16 @@ export const topClusterHubs = (
 }
 
 /*  Per-class fan-in within a cluster — used by the cluster-page
-    class-diagram renderer (T3.4) to draw the hub-highlight border
-    around classes referenced by many siblings.  The renderer
-    supplies the threshold; this routine just returns the count
-    map.  Counts only intra-cluster references (the `..>` edges
-    drawn in the cluster diagram).  */
+    class-diagram renderer to draw the hub-highlight border around
+    classes referenced by many siblings.  Returns one count per
+    in-cluster class; the renderer supplies the threshold.
+
+    Self-references *do* count: a class that recursively calls
+    itself, registers itself, or uses its own type in its public
+    API (builder-pattern, recursive structures) is just as much a
+    structural anchor as one referenced by N siblings, and
+    excluding self-refs systematically under-reports hubs of that
+    flavour.  */
 export const classFanInIntraCluster = (cluster: Cluster): Map<string, number> => {
     const ids = new Set(cluster.symbols.map((s) => s.name))
     const fanIn = new Map<string, number>()
@@ -43,7 +48,7 @@ export const classFanInIntraCluster = (cluster: Cluster): Map<string, number> =>
         fanIn.set(s.name, 0)
     for (const s of cluster.symbols)
         for (const r of s.references)
-            if (ids.has(r) && r !== s.name)
+            if (ids.has(r))
                 fanIn.set(r, (fanIn.get(r) ?? 0) + 1)
     return fanIn
 }

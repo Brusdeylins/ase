@@ -18,8 +18,17 @@ export interface DirectedEdge {
     to:   string
 }
 
-export const tarjanSCC = (nodes: string[], edges: DirectedEdge[]): string[][] => {
-    /*  build adjacency: out-neighbours per node  */
+export const tarjanSCC = (
+    nodes: string[], edges: DirectedEdge[],
+    onSkippedEdge?: (e: DirectedEdge) => void
+): string[][] => {
+    /*  build adjacency: out-neighbours per node.  Edges whose `from`
+        or `to` is not in the supplied node-set are skipped (callers
+        that intentionally pass a sub-set of the wider graph rely on
+        this).  An optional `onSkippedEdge` callback surfaces those
+        drops so callers that did NOT mean to skip can warn the
+        user — without it, the skips are silent for backwards
+        compatibility.  */
     const out = new Map<string, string[]>()
     for (const n of nodes)
         out.set(n, [])
@@ -27,6 +36,8 @@ export const tarjanSCC = (nodes: string[], edges: DirectedEdge[]): string[][] =>
         const list = out.get(e.from)
         if (list !== undefined && out.has(e.to))
             list.push(e.to)
+        else if (onSkippedEdge !== undefined)
+            onSkippedEdge(e)
     }
 
     let nextIndex = 0

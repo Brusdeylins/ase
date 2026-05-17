@@ -82,6 +82,8 @@ export const clusterStatsPanelHtml = (input: ClusterStatsInput): string => {
         martinBadge = `<span class="sev-yellow">N/A (no abstract concept in ${c.language})</span>`
     else if (m.confidence === "low")
         martinBadge = "<span class=\"sev-yellow\">N/A (cluster too small)</span>"
+    else if (m.confidence === "isolated")
+        martinBadge = "<span class=\"sev-yellow\">N/A (cluster has no edges)</span>"
     else
         martinBadge = `I=${fmtN(m.i)}&nbsp;·&nbsp;A=${fmtN(m.a)}&nbsp;·&nbsp;D=${fmtN(m.d)}&nbsp;·&nbsp;zone:&nbsp;<strong>${m.zone}</strong>`
     return `<section class="stats-panel">
@@ -135,6 +137,8 @@ export const clusterStatsPanelMd = (input: ClusterStatsInput): string => {
         martinLine = `N/A (no abstract concept in ${c.language})`
     else if (m.confidence === "low")
         martinLine = "N/A (cluster too small)"
+    else if (m.confidence === "isolated")
+        martinLine = "N/A (cluster has no edges)"
     else
         martinLine = `I=${fmtN(m.i)} · A=${fmtN(m.a)} · D=${fmtN(m.d)} · zone: **${m.zone}**`
     const lines: string[] = []
