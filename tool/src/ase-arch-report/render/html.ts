@@ -17,7 +17,8 @@ import { indexStatsPanelHtml, clusterStatsPanelHtml } from "./stats-panel.js"
 import { dsmHtml }                           from "./dsm.js"
 import { cyclesHtml, cyclesTouchingCluster } from "./cycles.js"
 import { mainSequenceMermaid }               from "./main-sequence.js"
-import { classFanInIntraCluster }            from "../metrics/hubs.js"
+import { buildClassDiagram }                 from "./class-diagram.js"
+import { buildLayeredFlowchart }             from "./flowchart.js"
 
 const css = `
 :root {
@@ -121,109 +122,10 @@ ${mermaidBootstrap}
 </body>
 </html>`
 
-const HUB_FAN_IN_THRESHOLD = 3
-
-const classDiagramSrc = (cluster: Cluster, allInScopeSymbols: Set<string>): string => {
-    /*  The class diagram complements — not duplicates — the per-symbol
-        method tables rendered below the diagram.  Emit each class as a
-        body-less declaration (or as the bare `<<interface>>` stereotype
-        for interfaces) plus the inheritance and call-reference edges
-        between them, so the diagram conveys the *relationships* between
-        classes instead of re-listing methods that already appear in
-        the tabular section.  Reference edges are limited to in-cluster
-        targets to keep each per-cluster page focussed.  Classes whose
-        intra-cluster fan-in reaches the hub threshold get the accent
-        `hub` style applied via the well-supported `:::hub` inline
-        syntax (the standalone `classDef` + `cssClass` form breaks
-        Mermaid v10's classDiagram parser when the style payload
-        contains comma-separated CSS properties).  */
-    const clusterNames = new Set(cluster.symbols.map((s) => s.name))
-    const clusterIds   = new Set(cluster.symbols.map((s) => safeId(s.name)))
-    const fanIn        = classFanInIntraCluster(cluster)
-    const isHub        = (name: string): boolean =>
-        (fanIn.get(name) ?? 0) >= HUB_FAN_IN_THRESHOLD
-    const hubSuffix    = (name: string): string =>
-        isHub(name) ? ":::hub" : ""
-    const hasAnyHub    = cluster.symbols.some((s) => isHub(s.name))
-    /*  externals = heritage targets that live neither in this
-        cluster nor in any other in-scope cluster; rendered as
-        dashed `<<external>>` ghosts so structural relations to
-        out-of-scope packages stay visible instead of being
-        silently dropped (covers cases like a plugin implementation
-        whose base interfaces live in a sibling package outside the
-        chosen scope)  */
-    const externals = new Set<string>()
-    for (const s of cluster.symbols)
-        for (const target of [ ...s.extends, ...s.implements ])
-            if (!clusterNames.has(target) && !allInScopeSymbols.has(target))
-                externals.add(target)
-    const lines: string[] = [ "classDiagram" ]
-    if (hasAnyHub)
-        lines.push("    classDef hub stroke-width:3px")
-    if (externals.size > 0)
-        lines.push("    classDef external stroke-dasharray:5 5")
-    for (const s of cluster.symbols) {
-        const idWithStyle = `${safeId(s.name)}${hubSuffix(s.name)}`
-        if (s.kind === "interface") {
-            lines.push(`    class ${idWithStyle} {`)
-            lines.push("        <<interface>>")
-            lines.push("    }")
-        }
-        else
-            lines.push(`    class ${idWithStyle}`)
-        const heritageIds = new Set([
-            ...s.extends.map((e) => safeId(e)),
-            ...s.implements.map((i) => safeId(i))
-        ])
-        for (const parent of s.extends)
-            lines.push(`    ${safeId(parent)} <|-- ${safeId(s.name)}`)
-        for (const iface of s.implements)
-            lines.push(`    ${safeId(iface)} <|.. ${safeId(s.name)}`)
-        const fromId = safeId(s.name)
-        for (const r of s.references) {
-            const refId = safeId(r)
-            if (refId !== fromId && clusterIds.has(refId) && !heritageIds.has(refId))
-                lines.push(`    ${fromId} ..> ${refId}`)
-        }
-    }
-    /*  emit external symbol declarations after the in-cluster
-        classes so the dashed ghost nodes are grouped at the end
-        of the source — visually they end up wherever Mermaid's
-        layout engine puts them, but the source stays scannable  */
-    for (const ext of [ ...externals ].sort()) {
-        lines.push(`    class ${safeId(ext)}:::external {`)
-        lines.push("        <<external>>")
-        lines.push("    }")
-    }
-    return lines.join("\n")
-}
-
-const flowchartSrc = (api: ApiJson, layerOfCluster: Map<string, number>): string => {
-    /*  Layered top-down flowchart: cluster nodes are grouped into
-        `subgraph` blocks per topological layer, sources on top,
-        leaves on the bottom.  This makes the dependency direction
-        readable at a glance and gives cycle groups (equal-rank
-        layer) a clear visual cluster.  */
-    const lines: string[] = [ "flowchart TD" ]
-    const byLayer = new Map<number, string[]>()
-    for (const c of api.clusters) {
-        const layer = layerOfCluster.get(c.name) ?? 0
-        const arr = byLayer.get(layer) ?? []
-        arr.push(c.name)
-        byLayer.set(layer, arr)
-    }
-    const sortedLayers = [ ...byLayer.keys() ].sort((a, b) => a - b)
-    const symCount = new Map(api.clusters.map((c) => [ c.name, c.symbols.length ]))
-    for (const layer of sortedLayers) {
-        lines.push(`    subgraph layer${layer}["Layer ${layer}"]`)
-        for (const name of byLayer.get(layer)!.sort())
-            lines.push(`        ${safeId(name)}["${name}<br/>${symCount.get(name) ?? 0} symbols"]`)
-        lines.push("    end")
-    }
-    for (const e of api.edges)
-        lines.push(`    ${safeId(e.from)} -->|${e.count}| ${safeId(e.to)}`)
-    return lines.join("\n")
-}
+/*  classDiagram and flowchart Mermaid source builders moved to
+    ./class-diagram.ts and ./flowchart.ts so the Markdown
+    renderer can reuse them without duplicating the emission +
+    quirk-workaround logic.  */
 
 const symTable = (s: ArchSymbol): string => {
     const header = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)</h3>`
@@ -257,7 +159,7 @@ ${clusterDebt.length === 0 ?
 <h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
 ${stats}
 <h2>Class relationships</h2>
-${frame(classDiagramSrc(cluster, ctx.allInScopeSymbols))}
+${frame(buildClassDiagram(cluster, ctx.allInScopeSymbols))}
 <h2>Symbols</h2>
 ${cluster.symbols.map(symTable).join("\n")}
 ${debtSection}`
@@ -283,7 +185,7 @@ Languages: ${api.languages.join(", ")}</p>
 <p><em>Coverage: public and protected API only. Private and package-private members are intentionally excluded.</em></p>
 ${stats}
 <h2>Cluster dependencies</h2>
-${frame(flowchartSrc(api, ctx.layerOfCluster))}
+${frame(buildLayeredFlowchart(api, ctx.layerOfCluster))}
 ${cyclesHtml(ctx.cycleReport)}
 <h2>Dependency Structure Matrix</h2>
 ${dsmHtml(api, ctx.sortedClusterNames)}
