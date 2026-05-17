@@ -53,6 +53,19 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 .diagram-frame:active { cursor: grabbing; }
 .diagram-frame .mermaid { margin: 0; padding: 0.5rem; min-width: max-content; }
 .diagram-hint { text-align: right; font-size: 0.75rem; color: var(--fg-muted); margin: 0 0 1rem 0; user-select: none; }
+/*  Mermaid v11.15 classDiagram exposes no styling directive for
+    namespace blocks (issue 7618 still open), so we colour them
+    via CSS targeting the SVG cluster groups emitted client-side.
+    The id$ attribute-ends-with selector matches because Mermaid
+    prefixes each cluster id with a per-render unique token
+    (collision-avoidance for multiple diagrams on one page).
+    !important is required to win over Mermaid own injected
+    scoped styles.  Light grey for in-scope outer-class scopes
+    so the box recedes behind its contents; distinctly darker
+    grey for externals_scope so out-of-scope ghost classes read
+    as visually secondary at a glance.  */
+.diagram-frame .mermaid svg g.cluster > rect { fill: #f0f0f0 !important; stroke: var(--border) !important; }
+.diagram-frame .mermaid svg g.cluster[id$="externals_scope"] > rect { fill: #c8c8c8 !important; }
 .sym.nested { margin-left: 2rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
 .sym.nested h3 { font-size: 1em; }
 .sym .nested-hint { font-size: 0.8rem; color: var(--fg-muted); font-weight: normal; }
