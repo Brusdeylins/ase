@@ -54,7 +54,7 @@ const mermaidClassDiagram = (cluster: Cluster): string => {
         .map((s) => safeId(s.name))
     if (hubs.length > 0) {
         lines.push("    classDef hub stroke:#a01441,stroke-width:3px,fill:#fbe6ec")
-        lines.push(`    class ${hubs.join(",")} hub`)
+        lines.push(`    cssClass "${hubs.join(",")}" hub`)
     }
     lines.push("```")
     return lines.join("\n")
