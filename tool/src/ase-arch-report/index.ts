@@ -13,7 +13,7 @@ import path                                   from "node:path"
 import { Command }                            from "commander"
 
 import type Log                               from "../ase-log.js"
-import { discover, resolveBasename }          from "./discover.js"
+import { discover, resolveBasename, findDiscoveryRoot, findFilesByTypeNames } from "./discover.js"
 import { Parser }                             from "./parse.js"
 import { extractSymbols, extractImports }     from "./extract.js"
 import { clusterize }                         from "./cluster.js"
@@ -69,15 +69,57 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     const parser    = new Parser(wasmDir)
     const allSyms:  { lang: Language; syms: ArchSymbol[] }[] = []
     const archFiles: ArchFile[] = []
-    for (const lang of Object.keys(files) as Language[]) {
-        const grammar  = await parser.getGrammar(lang)
-        const fileList = files[lang] ?? []
-        for (const f of fileList) {
-            const tree = await parser.parse(f, lang)
-            const syms = await extractSymbols(tree, grammar, lang, f, queriesDir)
-            const imports = extractImports(tree, lang)
-            allSyms.push({ lang, syms })
-            archFiles.push({ path: f, language: lang, imports })
+    const parseFiles = async (perLang: Partial<Record<Language, string[]>>): Promise<void> => {
+        for (const lang of Object.keys(perLang) as Language[]) {
+            const grammar  = await parser.getGrammar(lang)
+            for (const f of perLang[lang] ?? []) {
+                const tree    = await parser.parse(f, lang)
+                const syms    = await extractSymbols(tree, grammar, lang, f, queriesDir)
+                const imports = extractImports(tree, lang)
+                allSyms.push({ lang, syms })
+                archFiles.push({ path: f, language: lang, imports })
+            }
+        }
+    }
+    await parseFiles(files)
+
+    /*  Auto-scope expansion: in-scope code that references types
+        living *outside* the user's scope (e.g. an `adapter/` package
+        implementing a sibling `interfaces/` API) would otherwise leave
+        those targets unresolved, deflate Martin Abstractness to zero
+        across the entire report, and put the cluster page burden on
+        the user to widen their scope manually.  Instead, after the
+        initial pass we collect every heritage target that did not
+        resolve internally and try to locate its source file in a
+        wider "discovery root" (walked upward from the scope until a
+        project marker — `pom.xml`/`build.gradle`/`package.json`/...
+        is hit).  Files we find by basename match get parsed + their
+        symbols joined to the primary set; `clusterize()` then
+        naturally places them in sibling clusters via its existing
+        `../` strip logic.  No-op when no project marker is found
+        within the ascent cap (auto-expand stays a *helpful default*,
+        never a surprise).  */
+    const scopeRoot = path.resolve(resolveScopeRoot(opts.pathOrGlob))
+    const discoveryRoot = await findDiscoveryRoot(scopeRoot)
+    if (discoveryRoot !== scopeRoot) {
+        const inScopeNames = new Set<string>()
+        for (const { syms } of allSyms)
+            for (const s of syms)
+                inScopeNames.add(s.name)
+        const unresolvedHeritage = new Set<string>()
+        for (const { syms } of allSyms)
+            for (const s of syms)
+                for (const ref of [ ...s.extends, ...s.implements ])
+                    if (!inScopeNames.has(ref))
+                        unresolvedHeritage.add(ref)
+        if (unresolvedHeritage.size > 0) {
+            const auxFiles = await findFilesByTypeNames(
+                discoveryRoot, unresolvedHeritage, scopeRoot, opts.lang)
+            const auxCount = Object.values(auxFiles).reduce(
+                (n, list) => n + (list?.length ?? 0), 0)
+            if (auxCount > 0)
+                process.stderr.write(`arch-report: auto-expanded scope: pulled ${auxCount} file${auxCount === 1 ? "" : "s"} from ${discoveryRoot} to resolve heritage targets\n`)
+            await parseFiles(auxFiles)
         }
     }
 
@@ -86,7 +128,6 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         inside `clusterize()` has a well-defined absolute second argument;
         only AFTER clustering do we rewrite `s.file` to a path relative
         to the scope root for portable api.json / rendered pages  */
-    const scopeRoot = path.resolve(resolveScopeRoot(opts.pathOrGlob))
     const byLang    = new Map<Language, ArchSymbol[]>()
     for (const { lang, syms } of allSyms) {
         const arr = byLang.get(lang) ?? []
