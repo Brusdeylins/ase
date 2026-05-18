@@ -26,6 +26,8 @@ import type { RenderContext }                 from "./render/context.js"
 import { computeCoupling }                    from "./metrics/coupling.js"
 import { computeAllMartin }                   from "./metrics/martin.js"
 import { computeDocCoverage, computeAggregateDocCoverage } from "./metrics/doc-coverage.js"
+import { computeShortlist }                   from "./metrics/shortlist.js"
+import { computeInheritance }                 from "./metrics/inheritance.js"
 import { tarjanSCC, feedbackArcSet, layerAssignment }      from "./graph/index.js"
 import type { CycleReport }                   from "./render/cycles.js"
 import type { ArchReportOpts, Language, ArchSymbol, ArchFile } from "./types.js"
@@ -183,6 +185,11 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
     for (const c of clusters)
         for (const s of c.symbols)
             allInScopeSymbols.add(s.name)
+    /*  Architectural-debt shortlist + per-class inheritance
+        metrics — pure derivations from the data above, no extra
+        AST work required.  */
+    const shortlist   = computeShortlist(clusters, coupling, martin)
+    const inheritance = computeInheritance(clusters)
     const ctx: RenderContext = {
         coupling,
         martin,
@@ -192,7 +199,9 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         sortedClusterNames,
         layerOfCluster: layers.layerOfNode,
         allInScopeSymbols,
-        totalLoc
+        totalLoc,
+        shortlist,
+        inheritance
     }
 
     /*  emit per-format rendered files  */

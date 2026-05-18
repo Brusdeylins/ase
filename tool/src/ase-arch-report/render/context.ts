@@ -11,10 +11,12 @@
     orchestrator (`../index.ts`) builds this object once per report
     and passes the same instance to every renderer call.  */
 
-import type { ClusterCoupling } from "../metrics/coupling.js"
-import type { MartinMetrics }   from "../metrics/martin.js"
-import type { DocCoverage }     from "../metrics/doc-coverage.js"
-import type { CycleReport }     from "./cycles.js"
+import type { ClusterCoupling }     from "../metrics/coupling.js"
+import type { MartinMetrics }       from "../metrics/martin.js"
+import type { DocCoverage }         from "../metrics/doc-coverage.js"
+import type { ShortlistFinding }    from "../metrics/shortlist.js"
+import type { InheritanceMetrics }  from "../metrics/inheritance.js"
+import type { CycleReport }         from "./cycles.js"
 
 export interface RenderContext {
     coupling:           Map<string, ClusterCoupling>
@@ -35,4 +37,12 @@ export interface RenderContext {
         does not silently disappear when the scope is narrow)  */
     allInScopeSymbols:  Set<string>
     totalLoc:           number
+    /*  Architectural-debt findings derived from the existing
+        coupling + Martin tables; drives the "shortlist" section
+        on the Index page.  */
+    shortlist:          ShortlistFinding[]
+    /*  Per-class inheritance metrics (DIT, NOC, WMC outliers)
+        derived from the heritage data.  Drives symbol-page
+        badges and the cluster stats panel.  */
+    inheritance:        InheritanceMetrics
 }

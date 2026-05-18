@@ -14,12 +14,13 @@
     JavaScript/C languages) render as "N/A" rather than misleading
     zeros.  */
 
-import type { ApiJson, Cluster }   from "../types.js"
-import type { ClusterCoupling }    from "../metrics/coupling.js"
-import type { MartinMetrics }      from "../metrics/martin.js"
-import type { DocCoverage }        from "../metrics/doc-coverage.js"
-import type { HubEntry }           from "../metrics/hubs.js"
-import { escapeHtml }              from "./util.js"
+import type { ApiJson, Cluster }    from "../types.js"
+import type { ClusterCoupling }     from "../metrics/coupling.js"
+import type { MartinMetrics }       from "../metrics/martin.js"
+import type { DocCoverage }         from "../metrics/doc-coverage.js"
+import type { HubEntry }            from "../metrics/hubs.js"
+import type { InheritanceMetrics, InheritanceHubEntry }  from "../metrics/inheritance.js"
+import { escapeHtml }               from "./util.js"
 
 export interface IndexStatsInput {
     api:           ApiJson
@@ -36,6 +37,34 @@ export interface ClusterStatsInput {
     martin:         MartinMetrics
     docCoverage:    DocCoverage
     cyclesTouching: number
+    /*  Cluster-local inheritance summary derived from the global
+        InheritanceMetrics map.  `topInheritance` lists the most-
+        subclassed classes in this cluster (NOC > 0), capped to a
+        small N so the panel stays glanceable; `maxDit` and
+        `wmcOutlierCount` are scalar headlines for the panel.  */
+    topInheritance:   InheritanceHubEntry[]
+    maxDit:           number
+    wmcOutlierCount:  number
+}
+
+/*  Helper available to renderer callers: derive the per-cluster
+    inheritance summary from the global map.  Centralises the
+    fold so the renderer call sites stay declarative.  */
+export const clusterInheritanceSummary = (
+    cluster: Cluster, inh: InheritanceMetrics, topN: number
+): { topInheritance: InheritanceHubEntry[]; maxDit: number; wmcOutlierCount: number } => {
+    let maxDit = 0
+    let wmcOutlierCount = 0
+    for (const s of cluster.symbols) {
+        const d = inh.dit.get(s.fqn) ?? 0
+        if (d > maxDit) maxDit = d
+        if (inh.wmcOutliers.has(s.fqn)) wmcOutlierCount++
+    }
+    const topInheritance: InheritanceHubEntry[] = cluster.symbols
+        .map((s) => ({ fqn: s.fqn, noc: inh.noc.get(s.fqn) ?? 0, dit: inh.dit.get(s.fqn) ?? 0 }))
+        .filter((e) => e.noc > 0)
+    topInheritance.sort((a, b) => b.noc - a.noc || a.fqn.localeCompare(b.fqn))
+    return { topInheritance: topInheritance.slice(0, topN), maxDit, wmcOutlierCount }
 }
 
 const sevClass = (s: "green" | "yellow" | "red"): string =>
@@ -86,6 +115,19 @@ export const clusterStatsPanelHtml = (input: ClusterStatsInput): string => {
         martinBadge = "<span class=\"sev-yellow\">N/A (cluster has no edges)</span>"
     else
         martinBadge = `I=${fmtN(m.i)}&nbsp;·&nbsp;A=${fmtN(m.a)}&nbsp;·&nbsp;D=${fmtN(m.d)}&nbsp;·&nbsp;zone:&nbsp;<strong>${m.zone}</strong>`
+    const ditSev: "green" | "yellow" | "red" =
+        input.maxDit >= 5 ? "red" :
+            input.maxDit >= 3 ? "yellow" :
+                "green"
+    const wmcSev: "green" | "yellow" | "red" =
+        input.wmcOutlierCount === 0 ? "green" :
+            input.wmcOutlierCount > 2 ? "red" :
+                "yellow"
+    const ditLine = `<dt>Max DIT</dt><dd class="${sevClass(ditSev)}">${input.maxDit}</dd>`
+    const wmcLine = `<dt>WMC outliers</dt><dd class="${sevClass(wmcSev)}">${input.wmcOutlierCount}</dd>`
+    const nocLine = input.topInheritance.length === 0 ? "" :
+        `<dt>Top by NOC</dt><dd>${input.topInheritance.map((e) =>
+            `<code>${escapeHtml(e.fqn)}</code>&nbsp;(NOC=${e.noc},&nbsp;DIT=${e.dit})`).join(", ")}</dd>`
     return `<section class="stats-panel">
 <dl>
 <dt>Language</dt><dd>${c.language}</dd>
@@ -96,6 +138,9 @@ export const clusterStatsPanelHtml = (input: ClusterStatsInput): string => {
 <dt>Coupling</dt><dd>Ca=${m.ca}&nbsp;·&nbsp;Ce=${m.ce}</dd>
 <dt>Martin</dt><dd>${martinBadge}</dd>
 <dt>Cycles touching</dt><dd class="${sevClass(cycleSev)}">${input.cyclesTouching}</dd>
+${ditLine}
+${wmcLine}
+${nocLine}
 </dl>
 </section>`
 }
@@ -150,5 +195,18 @@ export const clusterStatsPanelMd = (input: ClusterStatsInput): string => {
     lines.push(`- Coupling: Ca=${m.ca} · Ce=${m.ce}`)
     lines.push(`- Martin: ${martinLine}`)
     lines.push(`- Cycles touching: ${input.cyclesTouching}${mdSev(cycleSev)}`)
+    const ditSev: "green" | "yellow" | "red" =
+        input.maxDit >= 5 ? "red" :
+            input.maxDit >= 3 ? "yellow" :
+                "green"
+    const wmcSev: "green" | "yellow" | "red" =
+        input.wmcOutlierCount === 0 ? "green" :
+            input.wmcOutlierCount > 2 ? "red" :
+                "yellow"
+    lines.push(`- Max DIT: ${input.maxDit}${mdSev(ditSev)}`)
+    lines.push(`- WMC outliers: ${input.wmcOutlierCount}${mdSev(wmcSev)}`)
+    if (input.topInheritance.length > 0)
+        lines.push(`- Top by NOC: ${input.topInheritance.map((e) =>
+            `\`${e.fqn}\` (NOC=${e.noc}, DIT=${e.dit})`).join(", ")}`)
     return lines.join("\n") + "\n"
 }

@@ -22,3 +22,11 @@ export {
     topClusterHubs, classFanInIntraCluster,
     type HubEntry
 } from "./hubs.js"
+export {
+    computeShortlist,
+    type ShortlistFinding, type ShortlistKind, type ShortlistSeverity
+} from "./shortlist.js"
+export {
+    computeInheritance, topInheritanceHubs,
+    type InheritanceMetrics, type InheritanceHubEntry
+} from "./inheritance.js"

@@ -11,7 +11,9 @@ import type { ApiJson, Cluster, ArchSymbol }       from "../types.js"
 import { safeId, filterClusterDocDebt, renderMdTable } from "./util.js"
 import type { RenderContext }                      from "./context.js"
 import { topClusterHubs }                          from "../metrics/hubs.js"
-import { indexStatsPanelMd, clusterStatsPanelMd }  from "./stats-panel.js"
+import { indexStatsPanelMd, clusterStatsPanelMd, clusterInheritanceSummary } from "./stats-panel.js"
+import { shortlistMd }                             from "./shortlist.js"
+import type { InheritanceMetrics }                 from "../metrics/inheritance.js"
 import { dsmMd }                                   from "./dsm.js"
 import { cyclesMd, cyclesTouchingCluster }         from "./cycles.js"
 import { mainSequenceMermaid }                     from "./main-sequence.js"
@@ -20,7 +22,25 @@ import { buildLayeredFlowchart }                   from "./flowchart.js"
 
 const fenced = (src: string): string => `\`\`\`mermaid\n${src}\n\`\`\``
 
-const apiTable = (s: ArchSymbol): string => {
+/*  Inline inheritance-metric chips next to the heading.  Each
+    chip appears only when its value crosses the visibility
+    threshold (DIT ≥ 3, NOC ≥ 1, WMC outlier), so leaf classes
+    stay clean of zero-value noise.  */
+const inheritanceBadgesMd = (s: ArchSymbol, inh: InheritanceMetrics): string => {
+    const dit = inh.dit.get(s.fqn) ?? 0
+    const noc = inh.noc.get(s.fqn) ?? 0
+    const wmcOutlier = inh.wmcOutliers.has(s.fqn)
+    const chips: string[] = []
+    if (dit >= 3)
+        chips.push(`\`DIT=${dit}\``)
+    if (noc >= 1)
+        chips.push(`\`NOC=${noc}\``)
+    if (wmcOutlier)
+        chips.push(`**\`WMC=${s.members.length}\`**`)
+    return chips.length === 0 ? "" : "  " + chips.join(" ")
+}
+
+const apiTable = (s: ArchSymbol, inh: InheritanceMetrics): string => {
     /*  Nested types add a "(nested in ParentFqn)" hint to the
         heading.  Markdown has no inline-indent primitive, so a
         deeper heading level (`####` vs `###`) carries the depth
@@ -28,7 +48,8 @@ const apiTable = (s: ArchSymbol): string => {
         naturally.  */
     const level  = s.enclosingFqn !== null ? "####" : "###"
     const hint   = s.enclosingFqn !== null ? `  _(nested in \`${s.enclosingFqn}\`)_` : ""
-    const head   = `${level} \`${s.name}\` (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}\n\n${s.doc ?? "_(no description)_"}\n\n`
+    const badges = inheritanceBadgesMd(s, inh)
+    const head   = `${level} \`${s.name}\` (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}${badges}\n\n${s.doc ?? "_(no description)_"}\n\n`
     if (s.members.length === 0) {
         const empty = s.enclosingFqn !== null ? "_no members_" : "_no public members_"
         return head + empty + "\n"
@@ -75,18 +96,22 @@ export const renderClusterMd = (cluster: Cluster, api: ApiJson, ctx: RenderConte
     const parts: string[] = []
     parts.push("[← back to index](./index.md)\n")
     parts.push(`# Cluster: \`${cluster.name}\` (${cluster.language})\n`)
+    const inhSummary = clusterInheritanceSummary(cluster, ctx.inheritance, 3)
     parts.push(clusterStatsPanelMd({
         cluster,
-        coupling:       ctx.coupling.get(cluster.name) ?? { ca: 0, ce: 0 },
-        martin:         ctx.martin.get(cluster.name)!,
-        docCoverage:    ctx.docCovPerCluster.get(cluster.name)!,
-        cyclesTouching: cyclesTouchingCluster(ctx.cycleReport, cluster)
+        coupling:        ctx.coupling.get(cluster.name) ?? { ca: 0, ce: 0 },
+        martin:          ctx.martin.get(cluster.name)!,
+        docCoverage:     ctx.docCovPerCluster.get(cluster.name)!,
+        cyclesTouching:  cyclesTouchingCluster(ctx.cycleReport, cluster),
+        topInheritance:  inhSummary.topInheritance,
+        maxDit:          inhSummary.maxDit,
+        wmcOutlierCount: inhSummary.wmcOutlierCount
     }))
     parts.push("## Class relationships\n")
     parts.push(fenced(buildClassDiagram(cluster, ctx.allInScopeSymbols)))
     parts.push("\n## Symbols\n")
     for (const s of orderSymbolsHierarchically(cluster.symbols))
-        parts.push(apiTable(s))
+        parts.push(apiTable(s, ctx.inheritance))
     parts.push("\n## Documentation debt\n")
     const clusterDebt = filterClusterDocDebt(api, cluster)
     if (clusterDebt.length === 0)
@@ -113,6 +138,7 @@ export const renderIndexMd = (api: ApiJson, ctx: RenderContext): string => {
         topFanOut:   topClusterHubs(ctx.coupling, 3, "ce"),
         totalLoc:    ctx.totalLoc
     }))
+    lines.push(shortlistMd(ctx.shortlist))
     lines.push("## Cluster dependencies\n")
     lines.push(fenced(buildLayeredFlowchart(api, ctx.layerOfCluster, ctx.cycleReport)))
     lines.push(cyclesMd(ctx.cycleReport))

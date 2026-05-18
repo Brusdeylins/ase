@@ -12,8 +12,10 @@ import type { ApiJson, Cluster, ArchSymbol } from "../types.js"
 import { THEME, MERMAID_THEME_VARIABLES }    from "../theme.js"
 import { escapeHtml, safeId, filterClusterDocDebt } from "./util.js"
 import type { RenderContext }                from "./context.js"
+import type { InheritanceMetrics }           from "../metrics/inheritance.js"
 import { topClusterHubs }                    from "../metrics/hubs.js"
-import { indexStatsPanelHtml, clusterStatsPanelHtml } from "./stats-panel.js"
+import { indexStatsPanelHtml, clusterStatsPanelHtml, clusterInheritanceSummary } from "./stats-panel.js"
+import { shortlistHtml }                       from "./shortlist.js"
 import { dsmHtml }                           from "./dsm.js"
 import { cyclesHtml, cyclesTouchingCluster } from "./cycles.js"
 import { mainSequenceMermaid }               from "./main-sequence.js"
@@ -69,6 +71,13 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 .sym.nested { margin-left: 2rem; border-left: 2px solid var(--border); padding-left: 0.75rem; }
 .sym.nested h3 { font-size: 1em; }
 .sym .nested-hint { font-size: 0.8rem; color: var(--fg-muted); font-weight: normal; }
+.sym .metric-badge { display: inline-block; font-size: 0.7rem; font-weight: normal; color: var(--fg-muted); border: 1px solid var(--border); border-radius: 3px; padding: 0 0.3rem; margin-left: 0.25rem; vertical-align: middle; }
+.sym .metric-badge.outlier { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.shortlist { font-size: 0.9rem; }
+.shortlist h3 { margin-top: 1.2rem; margin-bottom: 0.4rem; font-size: 1rem; }
+.shortlist-list { padding-left: 1.2rem; }
+.shortlist-list li { margin-bottom: 0.5rem; }
+.shortlist-detail { color: var(--fg-muted); font-size: 0.85em; }
 footer { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 2px solid var(--accent); font-size: 0.85rem; color: var(--fg-muted); text-align: center; }
 .doc-debt { font-size: 0.8rem; }
 .doc-debt code { font-size: 0.85em; }
@@ -143,7 +152,26 @@ ${mermaidBootstrap}
     renderer can reuse them without duplicating the emission +
     quirk-workaround logic.  */
 
-const symTable = (s: ArchSymbol): string => {
+/*  Compose the inline inheritance-metric badges next to a symbol
+    heading.  Each metric appears as a chip only when its value
+    crosses the visibility threshold (DIT ≥ 3, NOC ≥ 1, WMC
+    flagged as outlier) — keeps cluster pages clean of zero-value
+    chips on the long tail of leaf classes.  */
+const inheritanceBadges = (s: ArchSymbol, inh: InheritanceMetrics): string => {
+    const dit = inh.dit.get(s.fqn) ?? 0
+    const noc = inh.noc.get(s.fqn) ?? 0
+    const wmcOutlier = inh.wmcOutliers.has(s.fqn)
+    const chips: string[] = []
+    if (dit >= 3)
+        chips.push(`<span class="metric-badge" title="Depth of Inheritance Tree">DIT=${dit}</span>`)
+    if (noc >= 1)
+        chips.push(`<span class="metric-badge" title="Number of direct Children">NOC=${noc}</span>`)
+    if (wmcOutlier)
+        chips.push(`<span class="metric-badge outlier" title="Weighted Method Count outlier (high member count)">WMC=${s.members.length}</span>`)
+    return chips.length === 0 ? "" : " " + chips.join("")
+}
+
+const symTable = (s: ArchSymbol, inh: InheritanceMetrics): string => {
     /*  Nested types render with a visible indent + parent hint so
         the reader sees the structural relationship at a glance and
         does not look for a non-existent `<Inner>.java` file.  The
@@ -152,7 +180,8 @@ const symTable = (s: ArchSymbol): string => {
     const wrapClass = s.enclosingFqn !== null ? "sym nested" : "sym"
     const hint      = s.enclosingFqn !== null ?
         ` <span class="nested-hint">(nested in <code>${escapeHtml(s.enclosingFqn)}</code>)</span>` : ""
-    const header    = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}</h3>`
+    const badges    = inheritanceBadges(s, inh)
+    const header    = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}${badges}</h3>`
     if (s.members.length === 0) {
         const empty = s.enclosingFqn !== null ? "no members" : "no public members"
         return `<div class="${wrapClass}">${header}<p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p><p><em>${empty}</em></p></div>`
@@ -207,12 +236,16 @@ export const renderClusterHtml = (cluster: Cluster, api: ApiJson, ctx: RenderCon
 ${clusterDebt.length === 0 ?
     "<p><em>none — every public symbol in this cluster carries a doc comment</em></p>" :
     `<ul>${clusterDebt.map((d) => `<li><code>${escapeHtml(d.fqn)}</code> (${escapeHtml(d.file)}:${d.line})</li>`).join("")}</ul>`}</section>`
+    const inhSummary = clusterInheritanceSummary(cluster, ctx.inheritance, 3)
     const stats = clusterStatsPanelHtml({
         cluster,
-        coupling:       ctx.coupling.get(cluster.name) ?? { ca: 0, ce: 0 },
-        martin:         ctx.martin.get(cluster.name)!,
-        docCoverage:    ctx.docCovPerCluster.get(cluster.name)!,
-        cyclesTouching: cyclesTouchingCluster(ctx.cycleReport, cluster)
+        coupling:        ctx.coupling.get(cluster.name) ?? { ca: 0, ce: 0 },
+        martin:          ctx.martin.get(cluster.name)!,
+        docCoverage:     ctx.docCovPerCluster.get(cluster.name)!,
+        cyclesTouching:  cyclesTouchingCluster(ctx.cycleReport, cluster),
+        topInheritance:  inhSummary.topInheritance,
+        maxDit:          inhSummary.maxDit,
+        wmcOutlierCount: inhSummary.wmcOutlierCount
     })
     const body = `<p class="back-link"><a href="./index.html">← back to index</a></p>
 <h1>Cluster: <code>${cluster.name}</code> (${cluster.language})</h1>
@@ -220,7 +253,7 @@ ${stats}
 <h2>Class relationships</h2>
 ${frame(buildClassDiagram(cluster, ctx.allInScopeSymbols))}
 <h2>Symbols</h2>
-${orderSymbolsHierarchically(cluster.symbols).map(symTable).join("\n")}
+${orderSymbolsHierarchically(cluster.symbols).map((s) => symTable(s, ctx.inheritance)).join("\n")}
 ${debtSection}`
     return wrap(`arch-report — ${cluster.name}`, body, api.generatedAt)
 }
@@ -243,6 +276,7 @@ Generated: ${api.generatedAt}<br>
 Languages: ${api.languages.join(", ")}</p>
 <p><em>Coverage: top-level types show only their public and protected members. Nested (inner) types appear regardless of visibility and expose their <strong>full</strong> member list — private helpers included — because a nested type's entire purpose is to be internal to the enclosing scope, and filtering its members would leave the reader with an empty shell. Private and package-private members of top-level types remain excluded.</em></p>
 ${stats}
+${shortlistHtml(ctx.shortlist)}
 <h2>Cluster dependencies</h2>
 ${frame(buildLayeredFlowchart(api, ctx.layerOfCluster, ctx.cycleReport))}
 ${cyclesHtml(ctx.cycleReport)}
