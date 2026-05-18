@@ -22,6 +22,19 @@ import { buildLayeredFlowchart }                   from "./flowchart.js"
 
 const fenced = (src: string): string => `\`\`\`mermaid\n${src}\n\`\`\``
 
+/*  Surface explicit non-public class-level visibility next to
+    the heading.  Same rationale as the HTML renderer: a private
+    nested class whose methods are forced `public` by an
+    interface contract reads as if it were part of the public
+    surface without this cue.  */
+const visibilityBadgeMd = (s: ArchSymbol): string => {
+    if (s.modifiers.includes("private"))
+        return "  _**private**_"
+    if (s.modifiers.includes("protected"))
+        return "  _**protected**_"
+    return ""
+}
+
 /*  Inline inheritance-metric chips next to the heading.  Each
     chip appears only when its value crosses the visibility
     threshold (DIT ≥ 3, NOC ≥ 1, WMC outlier), so leaf classes
@@ -48,8 +61,9 @@ const apiTable = (s: ArchSymbol, inh: InheritanceMetrics): string => {
         naturally.  */
     const level  = s.enclosingFqn !== null ? "####" : "###"
     const hint   = s.enclosingFqn !== null ? `  _(nested in \`${s.enclosingFqn}\`)_` : ""
+    const vis    = visibilityBadgeMd(s)
     const badges = inheritanceBadgesMd(s, inh)
-    const head   = `${level} \`${s.name}\` (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}${badges}\n\n${s.doc ?? "_(no description)_"}\n\n`
+    const head   = `${level} \`${s.name}\` (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}${vis}${badges}\n\n${s.doc ?? "_(no description)_"}\n\n`
     if (s.members.length === 0) {
         const empty = s.enclosingFqn !== null ? "_no members_" : "_no public members_"
         return head + empty + "\n"

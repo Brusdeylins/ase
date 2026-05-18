@@ -73,6 +73,9 @@ h1 { border-bottom: 2px solid var(--accent); padding-bottom: 0.3rem; }
 .sym .nested-hint { font-size: 0.8rem; color: var(--fg-muted); font-weight: normal; }
 .sym .metric-badge { display: inline-block; font-size: 0.7rem; font-weight: normal; color: var(--fg-muted); border: 1px solid var(--border); border-radius: 3px; padding: 0 0.3rem; margin-left: 0.25rem; vertical-align: middle; }
 .sym .metric-badge.outlier { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.sym .vis-badge { display: inline-block; font-size: 0.7rem; font-weight: normal; padding: 0 0.3rem; border-radius: 3px; margin-left: 0.25rem; vertical-align: middle; }
+.sym .vis-badge.vis-private { color: var(--accent); border: 1px solid var(--accent); }
+.sym .vis-badge.vis-protected { color: #b27d00; border: 1px solid #b27d00; }
 .shortlist { font-size: 0.9rem; }
 .shortlist h3 { margin-top: 1.2rem; margin-bottom: 0.4rem; font-size: 1rem; }
 .shortlist-list { padding-left: 1.2rem; }
@@ -152,6 +155,22 @@ ${mermaidBootstrap}
     renderer can reuse them without duplicating the emission +
     quirk-workaround logic.  */
 
+/*  Surface explicit non-public class-level visibility as a chip
+    next to the heading.  Without this cue a private nested
+    class whose methods are forced `public` by an interface
+    contract (Java requires it for overrides — the modifier is
+    syntactic, not API intent) reads as if the class were part
+    of the public surface, even though the enclosing scope
+    blocks external access.  Top-level classes default to public
+    and produce no chip — keeps the long tail of pages clean.  */
+const visibilityBadge = (s: ArchSymbol): string => {
+    if (s.modifiers.includes("private"))
+        return " <span class=\"vis-badge vis-private\">private</span>"
+    if (s.modifiers.includes("protected"))
+        return " <span class=\"vis-badge vis-protected\">protected</span>"
+    return ""
+}
+
 /*  Compose the inline inheritance-metric badges next to a symbol
     heading.  Each metric appears as a chip only when its value
     crosses the visibility threshold (DIT ≥ 3, NOC ≥ 1, WMC
@@ -180,8 +199,9 @@ const symTable = (s: ArchSymbol, inh: InheritanceMetrics): string => {
     const wrapClass = s.enclosingFqn !== null ? "sym nested" : "sym"
     const hint      = s.enclosingFqn !== null ?
         ` <span class="nested-hint">(nested in <code>${escapeHtml(s.enclosingFqn)}</code>)</span>` : ""
+    const vis       = visibilityBadge(s)
     const badges    = inheritanceBadges(s, inh)
-    const header    = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}${badges}</h3>`
+    const header    = `<h3><code>${escapeHtml(s.name)}</code> (${s.kind} · ${s.loc} LOC · ${s.members.length} methods)${hint}${vis}${badges}</h3>`
     if (s.members.length === 0) {
         const empty = s.enclosingFqn !== null ? "no members" : "no public members"
         return `<div class="${wrapClass}">${header}<p>${s.doc !== null ? escapeHtml(s.doc) : "<em>no description</em>"}</p><p><em>${empty}</em></p></div>`
