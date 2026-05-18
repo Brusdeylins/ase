@@ -160,6 +160,88 @@ const modifiersOf = (node: wts.Node): Modifier[] => {
     return out
 }
 
+/*  Resolve a type-reference node down to its *final* simple
+    type name.  Handles the four shapes that appear inside
+    heritage clauses across the supported grammars:
+
+      - `type_identifier` / `identifier` / `simple_identifier`
+        — bare name, return text verbatim.
+      - `scoped_type_identifier` / `scoped_identifier` /
+        `qualified_name` / `member_expression`
+        — fully-qualified path like
+        `org.brusdeylins.itws.plugin.interfaces.contract.IneligibilityReason`.
+        Java grammar tags *every* segment as `type_identifier`,
+        so a greedy descendant scan picks up the package
+        segments ("brusdeylins", "contract") as if they were
+        heritage targets.  Walk the descendants in source order
+        and keep only the LAST `type_identifier` — the actual
+        type name sits at the end of the dotted path.
+      - `generic_type` / `parameterized_type`
+        — `List<Foo>` and friends; recurse into the head type.
+
+    Returns null when the node is not a recognised type
+    reference (e.g. punctuation, modifier tokens), so callers
+    can iterate clause children and silently skip non-types.  */
+const TYPE_REF_LEAF = new Set([ "type_identifier", "identifier", "simple_identifier" ])
+const TYPE_REF_SCOPED = new Set([
+    "scoped_type_identifier", "scoped_identifier",
+    "qualified_name",         "member_expression",
+    "qualified_type_identifier"
+])
+const TYPE_REF_GENERIC = new Set([ "generic_type", "parameterized_type" ])
+const nameOfTypeRef = (n: wts.Node): string | null => {
+    if (TYPE_REF_LEAF.has(n.type))
+        return n.text
+    if (TYPE_REF_SCOPED.has(n.type)) {
+        let last: wts.Node | null = null
+        for (const id of n.descendantsOfType("type_identifier"))
+            if (id !== null)
+                last = id
+        if (last !== null)
+            return last.text
+        for (const id of n.descendantsOfType("identifier"))
+            if (id !== null)
+                last = id
+        return last?.text ?? null
+    }
+    if (TYPE_REF_GENERIC.has(n.type)) {
+        for (const c of n.children)
+            if (c !== null) {
+                const r = nameOfTypeRef(c)
+                if (r !== null)
+                    return r
+            }
+    }
+    return null
+}
+
+/*  Read the top-level type references *directly* attached to a
+    heritage clause node.  Some grammars wrap the list of types
+    in an extra node (`interface_type_list`, `type_list`); we
+    recurse one level through such wrappers so the caller does
+    not have to.  Descendants nested inside type-ref nodes
+    themselves are deliberately NOT scanned — `nameOfTypeRef`
+    already extracts the final type per top-level ref.  */
+const HERITAGE_LIST_WRAPPERS = new Set([ "interface_type_list", "type_list" ])
+const extractTopLevelTypes = (clauseNode: wts.Node): string[] => {
+    const out: string[] = []
+    const visit = (n: wts.Node): void => {
+        for (const c of n.children) {
+            if (c === null)
+                continue
+            if (HERITAGE_LIST_WRAPPERS.has(c.type)) {
+                visit(c)
+                continue
+            }
+            const name = nameOfTypeRef(c)
+            if (name !== null && !out.includes(name))
+                out.push(name)
+        }
+    }
+    visit(clauseNode)
+    return out
+}
+
 const collectHeritage = (typeNode: wts.Node): { extends: string[]; implements: string[] } => {
     const ext: string[] = []
     const imp: string[] = []
@@ -170,26 +252,22 @@ const collectHeritage = (typeNode: wts.Node): { extends: string[]; implements: s
             if (c.type === "extends_clause" || c.type === "superclass") {
                 /*  TS/Kotlin: `extends_clause` (`extends X[, Y]`)
                     Java:      `superclass`     (`extends X`, single)  */
-                for (const id of c.children)
-                    if (id !== null && (id.type === "identifier" || id.type === "type_identifier"))
-                        ext.push(id.text)
-                /*  TS also nests names under generic_type/type_arguments  */
-                for (const id of c.descendantsOfType("type_identifier"))
-                    if (id !== null && !ext.includes(id.text))
-                        ext.push(id.text)
+                for (const name of extractTopLevelTypes(c))
+                    if (!ext.includes(name))
+                        ext.push(name)
             }
             else if (c.type === "implements_clause" || c.type === "super_interfaces") {
                 /*  TS: `implements_clause`; Java: `super_interfaces` wrapping
-                    an `interface_type_list` of `type_identifier` children.  */
-                for (const id of c.descendantsOfType("type_identifier"))
-                    if (id !== null && !imp.includes(id.text))
-                        imp.push(id.text)
+                    an `interface_type_list` of type references.  */
+                for (const name of extractTopLevelTypes(c))
+                    if (!imp.includes(name))
+                        imp.push(name)
             }
             else if (c.type === "extends_type_clause") {
                 /*  interface extends X, Y  */
-                for (const id of c.descendantsOfType("type_identifier"))
-                    if (id !== null && !ext.includes(id.text))
-                        ext.push(id.text)
+                for (const name of extractTopLevelTypes(c))
+                    if (!ext.includes(name))
+                        ext.push(name)
             }
             else if (c.type === "class_heritage" || c.type === "class_body" || c.type === "interface_body")
                 scan(c)
