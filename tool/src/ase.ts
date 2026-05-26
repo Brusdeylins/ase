@@ -52,7 +52,8 @@ const commands: Record<string, Registrar> = {
     spec:       async (p) => attach(import("./ase-spec.js"), p),
     util:       async (p) => attach(import("./ase-util.js"), p),
     agent:      async (p) => attach(import("./ase-agent.js"), p),
-    man:        async (p) => attach(import("./ase-man.js"), p)
+    man:        async (p) => attach(import("./ase-man.js"), p),
+    "arch-report": async (p) => attach(import("./ase-arch-report/index.js"), p)
 }
 
 /*  registrars of those sub-commands which live in their own modules and
