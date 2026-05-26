@@ -44,6 +44,7 @@ user accepts.
    manifest*. Cover working tree, index, and untracked files.
 
    Run:
+
    - `git status --porcelain`
    - `git diff` (working tree vs. index)
    - `git diff --staged` (index vs. HEAD)
@@ -601,5 +602,6 @@ user accepts.
    - Do *not* propose further actions (no automatic merge into
      the source branch, no push). The user decides what to do
      with the work branch.
-   </step>
+
+</step>
 </flow>
