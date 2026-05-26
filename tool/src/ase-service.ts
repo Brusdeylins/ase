@@ -38,6 +38,7 @@ import { GetoptMCP }                     from "./ase-getopt.js"
 import { SkillsMCP }                     from "./ase-skills.js"
 import { WorktreeMCP }                   from "./ase-worktree.js"
 import { MintMCP }                       from "./ase-mint.js"
+import { ArchReportMCP }                 from "./ase-arch-report/index.js"
 import pkg                               from "../package.json" with { type: "json" }
 
 /*  shared service host  */
@@ -315,6 +316,7 @@ export default class ServiceCommand {
             new WorktreeMCP().register(mcp)
             new MintMCP().register(mcp)
             new ConfigMCP(this.log).register(mcp)
+            new ArchReportMCP().register(mcp)
             return mcp
         }
 

@@ -29,6 +29,8 @@
         "@rse/stx":                         "1.1.6",
         "nodemon":                          "3.1.14",
         "shx":                              "0.4.0",
+        "tsx":                              "4.21.0",
+        "tree-sitter-wasms":                "0.1.13",
 
         "@types/node":                      "26.3.0",
         "@types/luxon":                     "3.7.5",
@@ -43,6 +45,8 @@
     "dependencies": {
         "commander":                        "15.0.0",
         "@dotenvx/dotenvx":                 "2.21.0",
+        "glob":                             "11.0.3",
+        "web-tree-sitter":                  "0.25.10",
         "yaml":                             "2.9.0",
         "valibot":                          "1.4.2",
         "execa":                            "10.0.1",

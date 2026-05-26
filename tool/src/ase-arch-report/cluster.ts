@@ -1,0 +1,38 @@
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Copyright (c) 2025-2026 Matthias Brusdeylins <matthias@brusdeylins.info>
+**  Licensed under GPL 3.0 <https://spdx.org/licenses/GPL-3.0-only>
+*/
+
+/*  full-depth sub-directory clustering for the arch-report pipeline  */
+
+import path                              from "node:path"
+import type { ArchSymbol, Cluster, Language } from "./types.js"
+
+export const clusterize = (symbols: ArchSymbol[], scopeRoot: string, lang: Language): Cluster[] => {
+    const groups = new Map<string, ArchSymbol[]>()
+    for (const s of symbols) {
+        const rel = path.relative(scopeRoot, path.dirname(s.file))
+        /*  Strip leading `../` segments so files that sit outside the
+            declared scope root (symlinks, too-narrow `--scope` arg)
+            still produce a sensible cluster name like `ibTws/foo`
+            rather than `../../../ibTws/foo` that the safe-id renderer
+            would mangle into a long underscore run.  Warn once per
+            offending file so the user can tighten the scope.  */
+        const stripped = rel.split(path.sep).filter((seg) => seg !== "..").join(path.sep)
+        if (stripped !== rel)
+            process.stderr.write(`arch-report: warning: ${s.file} lies outside scope root — clustered as "${stripped}"\n`)
+        const key = stripped === "" ? "." : stripped
+        const arr = groups.get(key) ?? []
+        arr.push(s)
+        groups.set(key, arr)
+    }
+    const out: Cluster[] = []
+    for (const [name, syms] of groups) {
+        syms.sort((a, b) => a.fqn.localeCompare(b.fqn))
+        out.push({ name, language: lang, symbols: syms })
+    }
+    out.sort((a, b) => a.name.localeCompare(b.name))
+    return out
+}

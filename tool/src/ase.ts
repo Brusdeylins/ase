@@ -8,6 +8,7 @@
 import { Command, CommanderError, Option } from "commander"
 import Log                         from "./ase-log.js"
 import type { LogLevel }           from "./ase-log.js"
+import ArchReportCommand           from "./ase-arch-report/index.js"
 import SetupCommand                from "./ase-setup.js"
 import ConfigCommand               from "./ase-config.js"
 import MCPCommand                  from "./ase-mcp.js"
@@ -75,6 +76,7 @@ const main = async (): Promise<void> => {
     new DiagramCommand(log).register(program)
     new WorktreeCommand().register(program)
     new MintCommand().register(program)
+    new ArchReportCommand(log).register(program)
 
     /*  parse program arguments  */
     await program.parseAsync(process.argv)
