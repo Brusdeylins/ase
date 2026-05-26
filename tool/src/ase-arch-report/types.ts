@@ -1,0 +1,105 @@
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Copyright (c) 2025-2026 Matthias Brusdeylins <matthias@brusdeylins.info>
+**  Licensed under GPL 3.0 <https://spdx.org/licenses/GPL-3.0-only>
+*/
+
+/*  shared types for the arch-report pipeline  */
+
+export type Language =
+    "java"   | "typescript" | "javascript" | "python" | "go"
+    | "rust" | "kotlin"     | "csharp"     | "c"      | "cpp"
+
+export type SymbolKind =
+    "class"    | "interface" | "record"   | "enum" | "trait"
+    | "struct" | "method"    | "function" | "field"
+
+export type Modifier =
+    "public" | "protected" | "private" | "internal" | "sealed" | "abstract" | "final"
+
+export interface ArchMember {
+    name:      string
+    kind:      SymbolKind
+    modifiers: Modifier[]
+    signature: string
+    doc:       string | null
+    line:      number
+}
+
+export interface ArchSymbol {
+    fqn:           string
+    name:          string
+    /*  qualified name of the lexically enclosing type
+        (`null` for top-level symbols).  Nested types carry their
+        parent's `fqn` here so the renderer can group them under
+        their enclosing type and show the structural relationship
+        instead of letting them float as if they had their own
+        top-level file.  */
+    enclosingFqn:  string | null
+    kind:          SymbolKind
+    modifiers:     Modifier[]
+    isAbstract:    boolean
+    extends:       string[]
+    implements:    string[]
+    references:    string[]
+    file:          string
+    line:          number
+    loc:           number
+    doc:           string | null
+    members:       ArchMember[]
+}
+
+export interface Edge {
+    from:  string
+    to:    string
+    count: number
+}
+
+export interface DocDebtEntry {
+    fqn:  string
+    file: string
+    line: number
+}
+
+export interface UnresolvedRef {
+    ref:  string
+    from: string
+    /*  what kind of relationship the unresolved reference would have
+        formed if its target had been in scope — lets downstream
+        consumers distinguish "missing supertype" from "missing
+        dependency" instead of treating the three as a single bucket  */
+    kind: "extends" | "implements" | "references"
+}
+
+export interface Cluster {
+    name:     string
+    language: Language
+    symbols:  ArchSymbol[]
+}
+
+export interface ArchFile {
+    path:     string
+    language: Language
+    imports:  string[]
+}
+
+export interface ArchReportOpts {
+    pathOrGlob:  string
+    lang:        Language | "auto"
+    output:      string
+    format:      "md" | "html" | "both"
+    config?:     string
+    queriesDir?: string
+}
+
+export interface ApiJson {
+    scope:       string
+    generatedAt: string
+    languages:   Language[]
+    clusters:    Cluster[]
+    files:       ArchFile[]
+    edges:       Edge[]
+    docDebt:     DocDebtEntry[]
+    unresolved:  UnresolvedRef[]
+}
