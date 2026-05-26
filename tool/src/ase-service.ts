@@ -45,6 +45,7 @@ import { MintMCP }                       from "./ase-util-mint.js"
 import { MetricMCP }                     from "./ase-util-metric.js"
 import { UsageTracker }                  from "./ase-service-otel.js"
 import type { UsageRecord }              from "./ase-service-otel.js"
+import { ArchReportMCP }                 from "./ase-arch-report/index.js"
 import pkg                               from "../package.json" with { type: "json" }
 
 /*  shared service host  */
@@ -233,6 +234,7 @@ export default class ServiceCommand {
         new MetricMCP().register(mcp)
         new ConfigMCP(log).register(mcp)
         new StateMCP(log).register(mcp)
+        new ArchReportMCP().register(mcp)
         return mcp
     }
 
