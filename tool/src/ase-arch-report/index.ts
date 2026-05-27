@@ -22,8 +22,8 @@ import { clusterize }                         from "./cluster.js"
 import { resolveEdges }                       from "./resolve.js"
 import { resolveInheritDocs }                 from "./inherit-doc.js"
 import { renderJson }                         from "./render-json.js"
-import { renderClusterMd, renderIndexMd }     from "./render/md.js"
-import { renderClusterHtml, renderIndexHtml } from "./render/html.js"
+import { renderArc42 }                        from "./render/arc42/index.js"
+import { collectProjectMeta }                 from "./project-meta.js"
 import type { RenderContext }                 from "./render/context.js"
 import { computeCoupling }                    from "./metrics/coupling.js"
 import { computeAllMartin }                   from "./metrics/martin.js"
@@ -33,9 +33,6 @@ import { computeInheritance }                 from "./metrics/inheritance.js"
 import { tarjanSCC, feedbackArcSet, layerAssignment }      from "./graph/index.js"
 import type { CycleReport }                   from "./render/cycles.js"
 import type { ArchReportOpts, Language, ArchSymbol, ArchFile } from "./types.js"
-
-/*  filename sanitizer for cluster slugs  */
-const safeFile = (s: string): string => s.replace(/[^A-Za-z0-9_-]/g, "_")
 
 /*  result returned by the renderArchReport helper  */
 export interface ArchReportResult {
@@ -247,26 +244,17 @@ export const renderArchReport = async (opts: ArchReportOpts): Promise<ArchReport
         inheritance
     }
 
-    /*  emit per-format rendered files  */
-    const wantMd   = opts.format === "md"   || opts.format === "both"
-    const wantHtml = opts.format === "html" || opts.format === "both"
-    if (wantMd) {
-        await fs.writeFile(path.join(tmpDir, "index.md"), renderIndexMd(api, ctx))
-        written.push(path.join(outputDir, "index.md"))
-        for (const c of clusters) {
-            const file = `${safeFile(c.name)}.md`
-            await fs.writeFile(path.join(tmpDir, file), renderClusterMd(c, api, ctx))
-            written.push(path.join(outputDir, file))
-        }
-    }
-    if (wantHtml) {
-        await fs.writeFile(path.join(tmpDir, "index.html"), renderIndexHtml(api, ctx))
-        written.push(path.join(outputDir, "index.html"))
-        for (const c of clusters) {
-            const file = `${safeFile(c.name)}.html`
-            await fs.writeFile(path.join(tmpDir, file), renderClusterHtml(c, api, ctx))
-            written.push(path.join(outputDir, file))
-        }
+    /*  collect project metadata for arc42 auto-fill chapters
+        (1, 2, 7, 8, 9) — uses scopeRoot for upward manifest discovery  */
+    const meta = await collectProjectMeta(scopeRoot)
+
+    /*  emit the arc42 documentation as one index.md / index.html
+        with all 12 chapters inline; help text and auto-fill are
+        produced by tool/src/ase-arch-report/render/arc42/  */
+    const arc42 = await renderArc42(api, ctx, meta, opts, tmpDir)
+    for (const f of arc42.files) {
+        const rel = path.relative(tmpDir, f)
+        written.push(path.join(outputDir, rel))
     }
 
     /*  atomically swap the temp tree into place  */
@@ -290,20 +278,22 @@ export default class ArchReportCommand {
     register (program: Command): void {
         program
             .command("arch-report")
-            .description("generate a deterministic architecture report for a code scope")
+            .description("generate a deterministic arc42 architecture documentation for a code scope")
             .argument("<path-or-glob>", "source scope")
-            .option("--lang <lang>",   "language filter or \"auto\"", "auto")
-            .option("--output <dir>",  "output directory")
-            .option("--format <fmt>",  "\"md\", \"html\", or \"both\"", "both")
-            .option("--config <file>", "cluster overrides (YAML or JSON)")
-            .action(async (pathOrGlob: string, flags: { lang: Language | "auto"; output?: string; format: "md" | "html" | "both"; config?: string }) => {
+            .option("--lang <lang>",        "language filter or \"auto\"", "auto")
+            .option("--output <dir>",       "output directory")
+            .option("--format <fmt>",       "\"md\", \"html\", or \"both\"", "both")
+            .option("--report-lang <lang>", "report language: \"de\" or \"en\"", "en")
+            .option("--config <file>",      "cluster overrides (YAML or JSON)")
+            .action(async (pathOrGlob: string, flags: { lang: Language | "auto"; output?: string; format: "md" | "html" | "both"; reportLang: "de" | "en"; config?: string }) => {
                 try {
                     const result = await renderArchReport({
                         pathOrGlob,
-                        lang:   flags.lang,
-                        output: flags.output ?? "",
-                        format: flags.format,
-                        config: flags.config
+                        lang:       flags.lang,
+                        output:     flags.output ?? "",
+                        format:     flags.format,
+                        reportLang: flags.reportLang,
+                        config:     flags.config
                     })
                     if (flags.format === "md" || flags.format === "both")
                         process.stdout.write(`Report: ${path.join(result.outputDir, "index.md")}\n`)
@@ -325,14 +315,15 @@ export class ArchReportMCP {
         mcp.registerTool("arch_report", {
             title:       "ASE arch report",
             description:
-                "Generate a deterministic architecture report (Markdown and/or HTML) " +
-                "for a code scope. Pass `pathOrGlob`, optional `lang`, `output`, " +
-                "`format` ('md' | 'html' | 'both'), and `config`. " +
-                "Returns the absolute output directory, the list of written files, " +
-                "and basic stats. The report uses cluster boundaries derived from " +
-                "the sub-directory tree at full path depth, surfaces every " +
-                "inter-cluster reference, and lists symbols without doc comments " +
-                "under a Documentation Debt section.",
+                "Generate a deterministic arc42 architecture documentation (Markdown " +
+                "and/or HTML) for a code scope. Pass `pathOrGlob`, optional `lang`, " +
+                "`output`, `format` ('md' | 'html' | 'both'), `reportLang` ('de' | 'en'), " +
+                "and `config`. Returns the absolute output directory, the list of written " +
+                "files, and basic stats. The report follows the standard arc42 12-chapter " +
+                "layout with the official arc42 help texts inline; ten of twelve chapters " +
+                "are auto-filled from project-metadata detection (manifest files, git " +
+                "authors, ADR scan, deployment artefacts) and from the source-code " +
+                "analysis pipeline (cluster diagrams, class diagrams, metrics, doc debt).",
             inputSchema: {
                 pathOrGlob: z.string()
                     .describe("source scope: directory or glob pattern"),
@@ -345,6 +336,8 @@ export class ArchReportMCP {
                     .describe("output directory; empty string applies the default docs/reports/<basename>-<date>/"),
                 format: z.enum([ "md", "html", "both" ]).default("both")
                     .describe("which renderers to run"),
+                reportLang: z.enum([ "de", "en" ]).default("en")
+                    .describe("report language: \"de\" (German) or \"en\" (English)"),
                 config: z.string().optional()
                     .describe("path to a YAML or JSON file with cluster overrides")
             }
@@ -355,6 +348,7 @@ export class ArchReportMCP {
                     lang:       args.lang,
                     output:     args.output,
                     format:     args.format,
+                    reportLang: args.reportLang,
                     config:     args.config
                 })
                 return {

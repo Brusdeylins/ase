@@ -1,0 +1,28 @@
+ASE — Agentic Software Engineering
+==================================
+
+Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+Licensed under GPL 3.0 — see LICENSE.txt.
+
+
+Third-party content
+-------------------
+
+The `ase-arch-report` skill embeds verbatim help-text excerpts from
+the arc42 template (version 9.0, July 2025) as inline string literals
+in `tool/src/ase-arch-report/render/arc42/chapters.ts`.
+
+  arc42 is created, maintained and (c) by Dr. Peter Hruschka,
+  Dr. Gernot Starke and contributors — see https://arc42.org.
+
+  The arc42 templates are licensed under the Creative Commons
+  Attribution-ShareAlike 4.0 International License (CC-BY-SA 4.0).
+  See https://creativecommons.org/licenses/by-sa/4.0/ for the full
+  license text.
+
+Per CC-BY-SA 4.0 §3.b, modifications relative to the original arc42
+templates are limited to compaction (only the first help block of
+each chapter is reproduced) and the addition of auto-generated
+content under a separately marked "Derived from source code" /
+"Aus dem Quellcode abgeleitet" sub-section. The chapter ordering,
+titles and help-text wording are reproduced verbatim.
