@@ -2,12 +2,13 @@
 name: ase-arch-report
 argument-hint: "<path-glob-or-topical-hint>"
 description: >
-    Generate a deterministic architecture report (Markdown and/or HTML)
-    for a code scope. Trigger when the user asks for an "architecture
-    report", "arch report", "code structure overview", "public API
-    listing", "Übersicht der Klassen", "Architektur-Report", invokes
-    the slash command /ase-arch-report or /ase:arch-report, or
-    references docs/reports/ as an output target.
+    Generate a deterministic *arc42* architecture documentation
+    (Markdown and/or HTML, DE or EN) for a code scope. Trigger when
+    the user asks for an "architecture report", "arch report", "arc42
+    documentation", "arc42 report", "code structure overview",
+    "Übersicht der Klassen", "Architektur-Report", invokes the slash
+    command /ase-arch-report or /ase:arch-report, or references
+    docs/reports/ as an output target.
 user-invocable: true
 disable-model-invocation: false
 model: sonnet
@@ -23,19 +24,26 @@ allowed-tools:
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 
-Generate Architecture Report
-============================
+Generate arc42 Architecture Documentation
+=========================================
 
 Your role is an experienced, *expert-level software architect*,
-specialized in *generating deterministic architecture reports* for a
-given code scope.
+specialized in *generating deterministic arc42 architecture
+documentation* for a given code scope.
 
 <objective>
-*Generate* a *deterministic architecture report* (Markdown and/or HTML)
-for the code scope $ARGUMENTS. The report covers a *cluster overview*
-(sub-directory tree at full depth), per-cluster *classDiagrams* plus
-*method tables*, *inter-cluster reference edges*, and a *documentation
-debt* section listing symbols without doc comments. The report shows
+*Generate* a *deterministic arc42 architecture documentation* (Markdown
+and/or HTML, DE or EN) for the code scope $ARGUMENTS. The report follows
+the standard *arc42 12-chapter layout* (Introduction & Goals, Constraints,
+Context & Scope, Solution Strategy, Building Block View, Runtime View,
+Deployment View, Crosscutting Concepts, Architecture Decisions, Quality
+Requirements, Risks & Technical Debt, Glossary) with the official arc42
+help texts inline. Ten of twelve chapters are *auto-filled* from
+project-metadata detection (manifest files, git authors, ADR folder
+scan, deployment-artefact detection) and from the source-code analysis
+pipeline (cluster diagrams, class diagrams, metrics, documentation
+debt). Only chapters 4 (Solution Strategy) and 12 (Glossary) remain
+help-text-only — they require genuine human synthesis. The report shows
 the *public and protected API*. Private and package-private members are
 intentionally excluded.
 </objective>
@@ -81,7 +89,37 @@ intentionally excluded.
         </template>
     </step>
 
-2.  <step id="STEP 2: Ask for Output Format">
+2.  <step id="STEP 2: Ask for Report Language">
+    -   You *MUST* invoke the `AskUserQuestion` tool *exactly* as
+        follows and *MUST NOT* skip this step under any circumstances:
+
+        ```
+        AskUserQuestion({
+          questions: [{
+            question: "Berichtssprache?",
+            header:   "Sprache",
+            multiSelect: false,
+            options: [
+              { label: "Deutsch", description: "arc42-Vorlage und Auto-Fill-Texte auf Deutsch" },
+              { label: "English", description: "arc42 template and auto-fill text in English" }
+            ]
+          }]
+        })
+        ```
+
+    -   Map the user's answer to the CLI flag <report-lang/>:
+
+        -   `Deutsch` → <report-lang>--report-lang=de</report-lang>
+        -   `English` → <report-lang>--report-lang=en</report-lang>
+
+    -   Display the chosen language with just the following <template/>:
+
+        <template>
+        &#x1F535; **SPRACHE**: <report-lang/>
+        </template>
+    </step>
+
+3.  <step id="STEP 3: Ask for Output Format">
     -   You *MUST* invoke the `AskUserQuestion` tool *exactly* as
         follows and *MUST NOT* skip this step under any circumstances:
 
@@ -92,7 +130,7 @@ intentionally excluded.
             header:   "Format",
             multiSelect: false,
             options: [
-              { label: "Markdown only", description: "Markdown-Dateien mit ASCII-Diagrammen" },
+              { label: "Markdown only", description: "Markdown-Datei mit ASCII-Diagrammen" },
               { label: "HTML only",     description: "HTML mit Mermaid-SVG, B/W + Akzent #a01441" },
               { label: "Both",          description: "Beides parallel im selben Output-Verzeichnis" }
             ]
@@ -113,18 +151,18 @@ intentionally excluded.
         </template>
     </step>
 
-3.  <step id="STEP 3: Invoke CLI">
+4.  <step id="STEP 4: Invoke CLI">
     -   Run the following shell command via the `Bash` tool:
 
         ```
-        ase arch-report <scope/> <format/>
+        ase arch-report <scope/> <report-lang/> <format/>
         ```
 
     -   You *MUST* *NEVER* hand-draw the report yourself; the report is
         produced *exclusively* by the `ase arch-report` CLI.
     </step>
 
-4.  <step id="STEP 4: Report Output Path">
+5.  <step id="STEP 5: Report Output Path">
     -   `ase arch-report` emits one or two `Report: <abs-path/>` lines
         on stdout depending on the chosen <format/>: `index.md` for
         `--format=md`, `index.html` for `--format=html`, or both lines

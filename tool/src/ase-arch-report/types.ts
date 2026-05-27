@@ -89,6 +89,7 @@ export interface ArchReportOpts {
     lang:        Language | "auto"
     output:      string
     format:      "md" | "html" | "both"
+    reportLang:  "de" | "en"
     config?:     string
     queriesDir?: string
 }
