@@ -10,3 +10,4 @@ node_modules/
 .DS_Store
 .playwright-mcp
 package-lock.json
+docs/arc42-source/
