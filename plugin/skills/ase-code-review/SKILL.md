@@ -1,12 +1,14 @@
 ---
 name: ase-code-review
-argument-hint: "[<ref>]"
+argument-hint: "[--help|-h] [<ref>]"
 description: "Review uncommitted changes and curate them into clean, bisect-safe commits grouped by theme."
 user-invocable: true
 disable-model-invocation: false
 model: opus
 effort: medium
 allowed-tools:
+    - "Skill"
+    - "Agent"
     - "Bash(git diff:* | awk:* | head:*)"
     - "Bash(git diff:* | awk:* | tail:*)"
     - "Bash(git diff:* | awk:* | wc:*)"
@@ -20,588 +22,998 @@ allowed-tools:
     - "Bash(awk \"*)"
 ---
 
+@${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 
-Review AI-Generated Changes
-===========================
-
-Your role is an experienced, *expert-level software developer*,
-specialized in *reviewing and curating* an accumulated pile of
-uncommitted source code changes into clean, thematically-coherent,
-build-verified Git commits on a dedicated work branch.
+<skill name="ase-code-review">
+Review and Curate Uncommitted Changes
+</skill>
 
 <objective>
-*Review* the uncommitted changes at $ARGUMENTS (default: working
-tree + index + untracked), *group* hunks by theme, *apply* them one
-theme at a time on a dedicated work branch, *build-verify* each
-theme before asking the user to decide, and *commit* only what the
-user accepts.
+Acting as an *expert-level software developer* who *reviews and curates*,
+*review* the uncommitted changes at <ref>$ARGUMENTS</ref> (default:
+working tree + index + untracked), *group* hunks by theme, *apply* them
+one theme at a time on a dedicated work branch, *build-verify* each theme
+in isolation before asking the user to decide, and *commit* only what the
+user accepts. This skill *complements* its neighbours rather than
+duplicating them: `ase-meta-diff` narrates *what changed*, `ase-meta-review`
+renders a reviewer's *judgement*, `ase-code-lint`/`ase-code-analyze` flag
+*quality/logic* problems, and `ase-meta-commit` crafts the *message* — this
+skill *curates and commits*; it does *not* judge code quality.
 </objective>
 
 <flow>
-1. <step id="STEP 1: Ingest Surface">
-   Enumerate every uncommitted change as a flat, numbered *hunk
-   manifest*. Cover working tree, index, and untracked files.
 
-   Run:
+1.  <step id="STEP 1: Ingest Surface">
 
-   - `git status --porcelain`
-   - `git diff` (working tree vs. index)
-   - `git diff --staged` (index vs. HEAD)
-   - list untracked files (each treated as one add-hunk)
+    Enumerate every uncommitted change as a flat, numbered *hunk
+    manifest*. Cover working tree, index, and untracked files.
 
-   Emit the following <template/>:
+    Run:
 
-   <template>
-   &#x1F4CB; **HUNK MANIFEST** (<total-hunk-count/> hunks across <file-count/> files)
+    -   `git status --porcelain`
+    -   `git diff` (working tree vs. index)
+    -   `git diff --staged` (index vs. HEAD)
+    -   list untracked files (each treated as one add-hunk)
 
-   <hunk-table/>
-   </template>
+    Emit the following <template/>:
 
-   Hints:
+    <template>
+    <ase-tpl-head title="HUNK MANIFEST"/>
 
-   - `<hunk-table/>` is a Markdown table with columns:
-     `H#`, `FILE`, `LINES`, `KIND`, `PEEK`.
-   - `H#` is `H1`, `H2`, … unique across the manifest.
-   - `LINES` formatted as `+<added> -<removed>` or `@<from>-<to>`
-     for modify-in-place.
-   - `KIND` is one of `add`, `modify`, `delete`, `rename`, `binary`.
-   - `PEEK` is a one-line excerpt (≤ 60 chars) of the most
-     informative added or changed line.
-   - Detect `rename from/to` headers and mark the hunk `rename`;
-     renames MUST be assigned atomically (no hunk-level split).
-   - Binary hunks marked `binary`; assign whole-file to one theme.
-   - Do *not* output full diffs in this step.
-   </step>
+    <ase-tpl-bullet-secondary/> **HUNK MANIFEST** (<total-hunk-count/> hunks across <file-count/> files)
 
-2. <step id="STEP 2: Propose Themes (Top-Down)">
-   *Before* looking at individual hunk content, propose 3–5
-   *commit themes* that together span the full change surface.
-   Use the taxonomy shared with `ase-code-commit` and
-   `ase-code-changes`: FEATURE, BUGFIX, REFACTOR, UPDATE,
-   CLEANUP, IMPROVEMENT.
+    <hunk-table/>
 
-   A theme is the *minimal build-safe commit unit*. It must
-   compile and pass tests in isolation. Internally a theme MAY
-   span multiple architectural layers (e.g., interface +
-   implementation + caller); those layers are *reviewed*
-   separately in STEP 6.5 but *committed* together as one
-   atomic commit in STEP 6.7. This decouples commit
-   granularity (topological, bisect-safe) from review
-   granularity (architectural, comprehensible).
+    <ase-tpl-foot/>
+    </template>
 
-   Emit the following <template/>:
+    Hints:
 
-   <template>
-   &#x1F535; **PROPOSED THEMES**
+    -   `<hunk-table/>` is a Markdown table with columns:
+        `H#`, `FILE`, `LINES`, `KIND`, `PEEK`.
+    -   `H#` is `H1`, `H2`, … unique across the manifest.
+    -   `LINES` formatted as `+<added> -<removed>` or `@<from>-<to>`
+        for modify-in-place.
+    -   `KIND` is one of `add`, `modify`, `delete`, `rename`, `binary`.
+    -   `PEEK` is a one-line excerpt (≤ 60 chars) of the most
+        informative added or changed line.
+    -   Detect `rename from/to` headers and mark the hunk `rename`;
+        renames MUST be assigned atomically (no hunk-level split).
+    -   Binary hunks marked `binary`; assign whole-file to one theme.
+    -   Do *not* output full diffs in this step.
 
-   <theme-list/>
-   </template>
+    </step>
 
-   Hints:
+2.  <step id="STEP 2: Choose Curation Strategy">
 
-   - `<theme-list/>` is a numbered list `T1`, `T2`, … each entry
-     one line: `T<n>: <TYPE>(<scope>): <one-liner>`.
-   - Derive themes from *filenames*, *directory prefixes*, and
-     *diff summaries* only — do not inspect individual line
-     content yet. This enforces top-down naming.
-   - Prefer 3–5 themes. Fewer is fine if the surface is narrow.
-     More than 5 signals the change set is too broad for one
-     review session — stop and ask the user to reduce scope.
-   </step>
+    Before grouping any hunks, let the user choose *how* the changes
+    are curated. This single choice governs how themes are formed in
+    STEP 3 and whether per-commit build-verification *gates* the
+    commits in STEP 7.
 
-3. <step id="STEP 3: Assign Hunks to Themes">
-   Map every hunk `H<k>` from the manifest to exactly one theme
-   `T<n>`. Mark `ORPHAN` if no theme fits. Mark `SPLIT` if the
-   hunk bridges two themes and cannot be cleanly assigned.
+    Let the *user interactively choose*:
 
-   Emit the following <template/>:
+    <expand name="user-dialog">
+        Curation Strategy: How should the changes be curated?
+        VERTICAL: Compilable commits — every commit builds green and is bisect-safe.
+        HORIZONTAL: Theme-near reviews — group by topical proximity; build is informational.
+    </expand>
 
-   <template>
-   &#x1F4CE; **HUNK-TO-THEME ASSIGNMENT**
+    Dispatch on the tool <result/>:
 
-   <assignment-table/>
-
-   <orphan-section/>
-   <split-section/>
-   </template>
-
-   Hints:
-
-   - `<assignment-table/>` has columns: `H#`, `FILE`, `→`, `T#`.
-   - `<orphan-section/>` omitted if empty; otherwise bullet list
-     of orphan hunks with a short explanation of why no theme
-     fits.
-   - `<split-section/>` omitted if empty; otherwise each SPLIT
-     hunk named with the two competing themes and a proposed
-     split point.
-   - Per-hunk consistency (mandatory): a hunk may appear in *at
-     most one* theme. Overlap is a defect — re-investigate or
-     force SPLIT.
-   - For fine-grained separation within a single file, regenerate
-     the diff with `git diff --unified=0` so adjacent edits that
-     belong to different themes are not merged into one hunk by
-     default context grouping.
-   - When a SPLIT hunk must be broken apart, re-serialize the
-     patch text into two independent hunk headers
-     (`@@ -<from>,<n> +<to>,<m> @@`) covering disjoint line
-     ranges before proceeding to STEP 4. A single git-level hunk
-     spanning two themes cannot be staged with `git apply
-     --cached` as a subset — it must be split at the text level
-     first.
-   </step>
-
-4. <step id="STEP 4: Plan Staging Order">
-   Determine a *topological order* over the themes so each theme
-   can build independently given the previous ones. Then let the
-   user confirm or override.
-
-   Emit the following <template/>:
-
-   <template>
-   &#x1F5FA; **STAGING PLAN**
-
-   <ordered-theme-list/>
-   </template>
-
-   Hints:
-
-   - Inspect cross-theme symbol references: if theme `T2` adds a
-     call to a function defined in `T3`, order `T3` before `T2`.
-   - Detect renames first — always order rename-themes before
-     any theme that touches the renamed file.
-   - For each theme, dry-run `git apply --cached --check` on its
-     patch subset against a simulated preceding state. If the
-     dry run fails, reorder or return to STEP 3 and mark SPLIT.
-   - After auto-sort, use `AskUserQuestion` with options:
-     *accept-order* or *reorder*. If *reorder*, ask the user for
-     the desired sequence and update the plan.
-   </step>
-
-5. <step id="STEP 5: Create Work Branch">
-   Create a dedicated work branch so review commits do not
-   pollute the current branch until the user merges explicitly.
-
-   Run:
-   - `git rev-parse --abbrev-ref HEAD` — record the source branch.
-   - `AskUserQuestion` — propose a work branch name
-     `review/<YYYY-MM-DD-HHMM>` and let the user override.
-   - `git checkout -b <work-branch>` — switch to the work branch.
-
-   Emit the following <template/>:
-
-   <template>
-   &#x1F33F; **WORK BRANCH** `<work-branch/>` (from `<source-branch/>`)
-   </template>
-
-   Hints:
-
-   - Do *not* stash or reset the uncommitted changes. The work
-     branch inherits the working tree and index from the source
-     branch — hunks remain available for per-theme staging.
-   - If a branch with the proposed name already exists, ask the
-     user for a different name.
-   </step>
-
-6. <step id="STEP 6: Per-Theme Review Loop">
-   Maintain a *queue* of themes in the order from STEP 4. Process
-   one theme at a time. Non-accepted themes are handled per the
-   chosen option and do not re-enter the queue unless *regroup*ed.
-
-   *Never prompt in free text*. Across *every* sub-step (6.1
-   through 6.8) — staging, isolation, build, layer entry, file
-   prompt, section walk, decision view, stash-pop conflict —
-   any continuation, confirmation, or decision *MUST* go through
-   `AskUserQuestion` with a defined option set. Free-text prompts
-   like "OK weiter mit 5b?", "Commit?", or "Soll ich noch was
-   klären?" are a defect: replace with the matching
-   `AskUserQuestion` prompt for that boundary. The decision view
-   in 6.6 ends with the 6.7 `AskUserQuestion`, never with a
-   free-text question.
-
-   For each theme in the queue, execute the following sub-cycle:
-
-   6.1. *Stage*. Clear the index with `git reset` (working tree
-        preserved), then `git apply --cached <patch-subset>` to
-        stage only the hunks assigned to this theme. Verify
-        `git diff --staged` matches the planned hunk set.
-
-   6.2. *Isolate the working tree to the post-commit state*.
-        Other themes' hunks must not influence the build result.
-
-        Run:
-        - `git stash push --keep-index --include-untracked
-          --message "review-isolate-T<n>"`
-
-        Effect: the stash captures every working-tree change
-        *not* in the index (i.e. all other themes' hunks and
-        untracked files), leaving the working tree byte-equal
-        to the index — exactly what the commit will produce.
-
-        Skip this sub-step if `git diff` against the index is
-        empty (no other themes' hunks remain). `git stash` with
-        nothing to stash fails; guard with a pre-check.
-
-   6.3. *Build-test*. Discover the project build command from,
-        in order: `AGENTS.md`, `CLAUDE.md`, `package.json`
-        scripts, `Makefile` targets, `Cargo.toml`, `pom.xml`,
-        `go.mod`, language-idiomatic defaults. If ambiguous,
-        use `AskUserQuestion` with the top candidates plus a
-        free-text option. Run the command and capture exit code
-        and output. *This exit code represents the true
-        post-commit, post-push build result* — no other themes'
-        changes interfere.
-
-   6.4. *Decompose and visualize the theme*.
-
-        Partition the theme's staged hunks into an ordered list
-        of *layers* `L1, L2, …, Lk`. Layers are a *review-only*
-        concept — they are never committed separately.
-
-        Apply these heuristics in order; stop when one produces
-        a stable partition:
-
-        - *Path-prefix*: group by top-level directory
-          (e.g., `interfaces/`, `domain/`, `service/`, `api/`,
-          `ui/`).
-        - *Symbol-kind*: separate type declarations,
-          implementations, and call-sites.
-        - *Dependency direction*: within the theme, order
-          layers so later layers reference earlier ones
-          (bottom-up) or the reverse (top-down narrative),
-          whichever explains the change best.
-
-        Emit the following <template/>:
+    -   <if condition="<result/> is `CANCEL`">
+        Only output the following <template/> and then immediately
+        *STOP* processing the entire current skill:
 
         <template>
-        &#x1F5FA; **THEME OVERVIEW** T<n/> · <type/>(<scope/>): <one-liner/>
-
-        *Rationale*: <rationale/>
-
-        *Layers* (review order):
-          - L1: <label/> — <layer-purpose/>
-          - L2: <label/> — <layer-purpose/>
-          - …
-
-        *Collaboration*:
-
-        <rendered-diagram-as-fenced-code-block/>
+        ⧉ **ASE**: ✪ skill: **ase-code-review**, ▶ status: **review cancelled**
         </template>
+        </if>
 
-        Hints:
+    -   <if condition="<result/> is `HORIZONTAL` or starts with `OTHER:`">
+        Set <review-mode>HORIZONTAL</review-mode>.
+        </if>
 
-        - `<rationale/>` is 2–4 sentences reconstructing the
-          goal the theme addresses — what problem, what user
-          outcome, what design choice. *Not* a line-by-line
-          summary of the diff.
-        - `<layer-purpose/>` is *one* sentence per layer
-          explaining what that stage contributes to the
-          theme's goal. Acts as upfront orientation before
-          the file walk in STEP 6.5 — the primary cure for
-          "what are these stages actually about?".
-        - `<rendered-diagram-as-fenced-code-block/>` *MUST*
-          be rendered by invoking the `ase-meta-diagram` skill via
-          the `Skill` tool. Pick the Mermaid type by theme
-          intent:
-          - *classDiagram* — theme introduces types with
-            inheritance, implementation, or composition.
-          - *flowchart TB* — dependencies across components,
-            modules, or layers.
-          - *sequenceDiagram* — actor/message flow
-            (e.g., caller → port → adapter → impl).
-          Default to *flowchart TB* when uncertain. Show how
-          *this theme's* files collaborate — not the whole
-          system.
-        - Omit the diagram with a one-line note
-          ("*no collaboration to diagram — purely textual*")
-          for docs/constants/comments themes. For
-          single-file themes the diagram is usually
-          redundant — omit similarly.
-        - Layer count range: 1 to 5. If exactly one layer
-          emerges, skip STEP 6.5 and render the full diff in
-          STEP 6.6. More than 5 layers means the theme is too
-          broad — recommend *regroup* in STEP 6.7.
-        - Review-order is independent from build-order
-          (STEP 4). Review-order follows architectural
-          comprehension; build-order is already fixed. The
-          theme still commits atomically in one `git commit`.
-        - Heuristic ambiguity → `AskUserQuestion` with top-two
-          partition proposals plus a free-text override.
+    -   <if condition="<result/> is `VERTICAL`">
+        Set <review-mode>VERTICAL</review-mode>.
+        </if>
 
-   6.5. *Walk the theme file by file, interactively*.
+    Emit the following <template/>:
 
-        Skip this sub-step if the theme contains exactly one
-        file.
+    <template>
+    <ase-tpl-bullet-secondary/> **CURATION STRATEGY**: <review-mode/>
+    </template>
 
-        Traverse the theme's files grouped by the layers from
-        STEP 6.4. On entering each layer, emit a *layer card*:
+    Hints:
+
+    -   *VERTICAL* (bisect-safe history): a theme is the minimal
+        *build-safe* commit unit and may span several architectural
+        layers (interface + implementation + caller); each committed
+        theme MUST build green — STEP 7.3 *gates* the commit. Optimizes
+        for a clean, bisectable history.
+    -   *HORIZONTAL* (theme-near review): themes group hunks by *topical
+        and architectural proximity* (one concern, or one layer, at a
+        time) for the most coherent *review*, accepting that an
+        individual commit may not compile standalone. STEP 7.3 still
+        runs the build but only for *information* — it does NOT gate the
+        commit, and ACCEPT stays available on a non-green build.
+    -   The chosen <review-mode/> is carried through STEP 3 (theme
+        proposal), STEP 5 (staging order), and STEP 7 (build gating).
+
+    </step>
+
+3.  <step id="STEP 3: Propose Themes (Top-Down)">
+
+    *Before* looking at individual hunk content, propose 3–5
+    *commit themes* that together span the full change surface.
+    Use the taxonomy shared with `ase-meta-commit` and
+    `ase-meta-diff`: FEATURE, BUGFIX, REFACTOR, UPDATE, CLEANUP,
+    IMPROVEMENT.
+
+    A theme is the *minimal commit unit*. Internally a theme MAY span
+    multiple architectural layers (e.g., interface + implementation +
+    caller); those layers are *reviewed* separately in STEP 7.5 but
+    *committed* together as one atomic commit in STEP 7.7. This
+    decouples commit granularity (topological) from review
+    granularity (architectural, comprehensible).
+
+    Emit the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-normal/> **PROPOSED THEMES** (<review-mode/>)
+
+    <theme-list/>
+    </template>
+
+    Hints:
+
+    -   `<theme-list/>` is a numbered list `T1`, `T2`, … each entry
+        one line: `T<n>: <TYPE>(<scope>): <one-liner>`.
+    -   Derive themes from *filenames*, *directory prefixes*, and
+        *diff summaries* only — do not inspect individual line
+        content yet. This enforces top-down naming.
+    -   Group according to <review-mode/>: in *VERTICAL* mode each
+        theme is a *build-safe vertical slice* spanning the layers
+        needed to compile in isolation; in *HORIZONTAL* mode each
+        theme groups hunks by *topical/architectural proximity* (one
+        concern or one layer), optimizing review coherence over
+        standalone compilability.
+    -   Prefer 3–5 themes. Fewer is fine if the surface is narrow.
+        More than 5 signals the change set is too broad for one
+        review session — stop and ask the user to reduce scope.
+
+    </step>
+
+4.  <step id="STEP 4: Assign Hunks to Themes">
+
+    Map every hunk `H<k>` from the manifest to exactly one theme
+    `T<n>`. Mark `ORPHAN` if no theme fits. Mark `SPLIT` if the
+    hunk bridges two themes and cannot be cleanly assigned.
+
+    Emit the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-normal/> **HUNK-TO-THEME ASSIGNMENT**
+
+    <assignment-table/>
+    </template>
+
+    <if condition="there is at least one ORPHAN hunk">
+    Then additionally emit the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-signal/> **ORPHANS**
+
+    <orphan-section/>
+    </template>
+    </if>
+
+    <if condition="there is at least one SPLIT hunk">
+    Then additionally emit the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-signal/> **SPLITS**
+
+    <split-section/>
+    </template>
+    </if>
+
+    Hints:
+
+    -   `<assignment-table/>` has columns: `H#`, `FILE`, `→`, `T#`.
+    -   `<orphan-section/>` is a bullet list of orphan hunks with a
+        short explanation of why no theme fits.
+    -   `<split-section/>` names each SPLIT hunk with the two
+        competing themes and a proposed split point.
+    -   Per-hunk consistency (mandatory): a hunk may appear in *at
+        most one* theme. Overlap is a defect — re-investigate or
+        force SPLIT.
+    -   For fine-grained separation within a single file, regenerate
+        the diff with `git diff --unified=0` so adjacent edits that
+        belong to different themes are not merged into one hunk by
+        default context grouping.
+    -   When a SPLIT hunk must be broken apart, re-serialize the
+        patch text into two independent hunk headers
+        (`@@ -<from>,<n> +<to>,<m> @@`) covering disjoint line
+        ranges before proceeding to STEP 5. A single git-level hunk
+        spanning two themes cannot be staged with `git apply
+        --cached` as a subset — it must be split at the text level
+        first.
+
+    </step>
+
+5.  <step id="STEP 5: Plan Staging Order">
+
+    Determine an order over the themes and let the user confirm or
+    override. Record the total theme count into `<theme-total/>` for
+    the progress display.
+
+    Emit the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-normal/> **STAGING PLAN** (<theme-total/> themes, <review-mode/>)
+
+    <ordered-theme-list/>
+    </template>
+
+    Then let the *user interactively choose* whether to accept the
+    auto-sorted order:
+
+    <expand name="user-dialog">
+        Staging Order: Accept the proposed staging order or reorder it?
+        ACCEPT-ORDER: Accept the auto-sorted order.
+        REORDER: Provide a different theme sequence.
+    </expand>
+
+    Dispatch on the tool <result/>:
+
+    -   <if condition="<result/> is `CANCEL`">
+        Only output the following <template/> and then immediately
+        *STOP* processing the entire current skill:
 
         <template>
-        &#x1F539; **Layer L<layer-index/> — <layer-label/>** of T<n/>
-        (<file-count/> files: <file-list/>)
-
-        <one-sentence-purpose/>
+        ⧉ **ASE**: ✪ skill: **ase-code-review**, ▶ status: **review cancelled**
         </template>
+        </if>
 
-        Then prompt via `AskUserQuestion` with the single-select
-        options:
+    -   <if condition="<result/> is `REORDER` or starts with `OTHER:`">
+        Ask the user for the desired sequence and update
+        `<ordered-theme-list/>` accordingly, then re-emit the
+        STAGING PLAN <template/> above.
+        </if>
 
-        - *proceed-layer* — enter the per-file walk for this
-          layer.
-        - *skip-layer* — treat the layer as already reviewed
-          and advance to the next layer (or to STEP 6.6 if it
-          was the last).
-        - *back-layer* — return to the previous layer (only if
-          not the first).
-        - *decide-now* — abort walkthrough, jump to STEP 6.6.
+    -   <if condition="<result/> is `ACCEPT-ORDER`">
+        Keep the auto-sorted order.
+        </if>
 
-        Inside a layer present one file at a time. For each
-        file execute this cycle:
+    Hints:
 
-        (a) Emit a short *file card*:
+    -   In *VERTICAL* mode, choose a *topological* order so each theme
+        builds independently given the previous ones: if theme `T2`
+        adds a call to a function defined in `T3`, order `T3` before
+        `T2`.
+    -   Detect renames first — always order rename-themes before any
+        theme that touches the renamed file (both modes).
+    -   For each theme, dry-run `git apply --cached --check` on its
+        patch subset against a simulated preceding state. If the dry
+        run fails, reorder or return to STEP 4 and mark SPLIT.
+    -   In *HORIZONTAL* mode a standalone green build per theme may be
+        impossible by design; the patch-applicability dry-run still
+        applies, but build-greenness is not required for ordering —
+        keep topically related themes adjacent instead.
 
-            <template>
-            &#x1F4C4; **File i/N** of T<n/> · `<filepath/>`
-            (<lines/>, <kind/>, L<layer-index/>: <layer-label/>)
+    </step>
 
-            <short-explanation/>
+6.  <step id="STEP 6: Create Work Branch">
 
-            <editor-hint/>
-            </template>
+    Create a dedicated work branch so review commits do not pollute
+    the current branch until the user merges explicitly.
 
-        (b) Prompt via `AskUserQuestion` with the single-select
-            options:
+    Run `git rev-parse --abbrev-ref HEAD` to record the source
+    branch into `<source-branch/>`. Propose a work branch name
+    `review/<YYYY-MM-DD-HHMM>` into `<work-branch/>` and let the
+    *user interactively choose*:
 
-            - *next* — advance to next file; on the last file,
-              proceed to STEP 6.6.
-            - *back* — re-render previous file (only if i > 1).
-            - *show-diff* — render `<diff-per-file/>` inline
-              scoped to current file, then re-prompt with the
-              same options.
-            - *discuss* — enter discussion mode for current
-              file.
-            - *split-sections* — *only offered* when the file
-              exceeds *300 lines*; enter section walkthrough
-              sub-loop for the current file.
-            - *decide-now* — abort walkthrough, jump to
-              STEP 6.6.
+    <expand name="user-dialog">
+        Work Branch: Use the proposed work branch name or a custom one?
+        ACCEPT-NAME: Use the proposed `review/<YYYY-MM-DD-HHMM>` name.
+        CUSTOM-NAME: I will provide a different branch name.
+    </expand>
 
-        (c) *Discussion mode* on *discuss*:
-            - Wait for user's free-text question.
-            - Answer scoped to the *current* file only.
-            - After answering, re-prompt with the same options
-              from (b). Repeat until *next* / *back* /
-              *decide-now*.
+    Dispatch on the tool <result/>:
 
-        (d) *Section walkthrough* on *split-sections*:
-            Propose *3–8 semantic sections* of the current file
-            — grouped by *responsibility* (e.g., fields & class
-            header, hot-path method, helper cluster, seqlock
-            read path), *not* by raw syntactic partition. Label
-            each section with its primary concern plus a line
-            range hint (`Z.NN-MM`).
-
-            Loop:
-            - `AskUserQuestion` — numbered single-select:
-              - `1`, `2`, … `k` — one per proposed section.
-              - *whole-file* — abort section walk, return to
-                (b) and treat file as a single unit.
-              - *file-done* — exit section walk, return to
-                (b) to pick *next* / *discuss* / etc.
-            - On numbered pick: emit a *section card* with
-              2–6 sentences on *what* the section does and
-              *why* it is shaped that way (pattern, invariant,
-              trade-off). Reference concrete identifiers and
-              line numbers. No diff, no full listing.
-            - Remove the chosen section from the offered list;
-              re-prompt. When all sections consumed, treat as
-              *file-done* automatically.
-
-        Hints:
-
-        - `<short-explanation/>` is 2–5 sentences describing
-          what the file/change does and its role in the
-          theme — *not* a diff. User reviews actual lines in
-          the editor (VSCode Source Control, vim-fugitive,
-          etc.).
-        - `<editor-hint/>` differs by hunk kind:
-          - *add* (new file): "Whole file is the change —
-            view directly in editor."
-          - *modify*: "File has other unstaged changes; view
-            staged subset with `git diff --staged <filepath>`."
-          - *rename*: note old and new path.
-          - *binary*: note size; no diff preview.
-          - *delete*: note file was removed.
-        - No flow diagram at file level — reserved for 6.6.
-        - *discuss* does *not* count as a commit decision. The
-          *accept/skip/regroup/defer/discard* decision comes
-          exclusively from STEP 6.7, on the whole theme.
-        - Discussion is review dialogue — no code editing. Edit
-          requests → *defer*, leave skill, edit externally,
-          re-enter skill.
-        - When the walkthrough reaches the last file and user
-          picks *next*, treat it identically to *decide-now*
-          and transition to STEP 6.6.
-        - *Section-walk threshold*: offer *split-sections* when
-          the file's *total LOC* (not just changed lines)
-          exceeds *300*. The user reviews changes in the
-          context of the surrounding file, so the whole-file
-          size drives the decision. Below the threshold, omit
-          the option entirely — do not clutter the prompt.
-        - *Section proposal*: group by *responsibility*, not by
-          syntactic slicing. A good section captures one
-          concern (hot path, seqlock write, lazy rebuild,
-          listener dispatch). Aim for *3–8* sections;
-          mechanical splits (every-50-lines) are a defect.
-
-   6.6. *Render the decision view*.
-
-        On build *success*, emit the following <template/>:
+    -   <if condition="<result/> is `CANCEL`">
+        Only output the following <template/> and then immediately
+        *STOP* processing the entire current skill:
 
         <template>
-        &#x1F7E2; **THEME T<n/>** · <type/>(<scope/>): <one-liner/>
-
-        *Hunks*: <hunk-refs/>
-        *Files*: <file-list/>
-        *Build*: `<build-command/>` — exit 0
-
-        *Why & Flow*: see **THEME OVERVIEW** in STEP 6.4 above
-        (rationale, layer purposes, collaboration diagram).
-
-        *Diff*:
-
-        <diff-per-file/>
+        ⧉ **ASE**: ✪ skill: **ase-code-review**, ▶ status: **review cancelled**
         </template>
+        </if>
 
-        On build *failure*, emit the following <template/>:
+    -   <if condition="<result/> is `CUSTOM-NAME` or starts with `OTHER:`">
+        Take the user-provided name (the text after `OTHER:` when
+        present, otherwise ask for it) into `<work-branch/>`.
+        </if>
 
-        <template>
-        &#x1F534; **BUILD FAIL** at T<n/> · <type/>(<scope/>): <one-liner/>
+    Then run `git checkout -b <work-branch/>` to switch to the work
+    branch and emit the following <template/>:
 
-        *Hunks*: <hunk-refs/>
-        *Files*: <file-list/>
-        *Command*: `<build-command/>`
-        *Exit*: <exit-code/>
-        *Error*:
-        ```
-        <error-excerpt/>
-        ```
-        *Likely cause*: <diagnosis/>
+    <template>
+    <ase-tpl-bullet-normal/> **WORK BRANCH** `<work-branch/>` (from `<source-branch/>`)
+    </template>
 
-        *Diff*:
+    Hints:
 
-        <diff-per-file/>
-        </template>
+    -   Do *not* stash or reset the uncommitted changes. The work
+        branch inherits the working tree and index from the source
+        branch — hunks remain available for per-theme staging.
+    -   If a branch with the chosen name already exists, ask the
+        user for a different name.
 
-        Hints:
+    </step>
 
-        - `<diff-per-file/>` groups the staged diff *per file*.
-          Each file becomes one block of the form:
-          a `### <filepath>  (<hunk-refs>)` headline, followed
-          by a fenced ```diff``` block containing only that
-          file's diff lines. Do not abridge; show full diff
-          content per file. Primary rendering location is this
-          decision view, covering the complete theme. STEP 6.5
-          emits the same format on-demand via *show-diff*
-          scoped to a single file. Same rule applies on build
-          failure — render full diff here for diagnosis.
-        - Do *not* add quality judgements, improvement
-          suggestions, or severity-tagged findings. This skill
-          curates changes, it does not review them. Use
-          `ase-code-lint`, `ase-code-analyze`, or
-          `ase-code-audit` for that.
+7.  <step id="STEP 7: Per-Theme Review Loop">
 
-   6.7. *Decide*. Use `AskUserQuestion` with the single-selection
-        options matching the build outcome. *Every* branch ends
-        by restoring the parked hunks via `git stash pop` (skip
-        pop only if 6.2 was skipped).
+    Maintain a *queue* of themes in the order from STEP 5. Process
+    one theme at a time. Non-accepted themes are handled per the
+    chosen option and do not re-enter the queue unless *regrouped*.
 
-        On build *success*:
+    *Never prompt in free text.* Across *every* sub-step (7.1
+    through 7.8) — staging, isolation, build, layer entry, file
+    prompt, section walk, correction, decision view, stash-pop
+    conflict — any continuation, confirmation, or decision *MUST*
+    go through `<expand name="user-dialog">` with a defined option
+    set (2–4 options per dialog; use nested dialogs where more
+    choices are needed). Free-text prompts like "OK weiter?",
+    "Commit?", or "Soll ich noch was klären?" are a defect.
 
-        - *accept* — expand the `ase-code-commit` skill to craft
-          a commit message, then `git commit`. `git stash pop`.
-          Mark the theme *bisect-safe*. Theme leaves the queue.
-        - *skip* — do *not* commit. `git stash pop`, then
-          `git reset` (index back to HEAD; popped hunks
-          reinstated as working-tree changes). Theme leaves the
-          queue.
-        - *regroup* — `git stash pop`, `git reset`. Return to
-          STEP 3 and reassign this theme's hunks. The new
-          theme(s) re-enter the queue at their topologically
-          correct position.
-        - *defer* — `git stash pop`, `git reset`. Move the theme
-          to the *end* of the queue. If on the next iteration
-          every remaining theme is in *deferred* state, stop the
-          loop and jump to STEP 7.
-        - *discard* — *destructive*. Requires a second
-          `AskUserQuestion` confirmation (*confirm-discard* vs.
-          *cancel*). If confirmed, `git stash pop`, `git reset`,
-          then `git checkout -- <files>` for tracked files and
-          `rm` for untracked files touched by this theme. Hunks
-          are lost. Theme leaves the queue.
+    *Progress display (mandatory)*: every card emitted inside this
+    loop carries a `*Progress*:` breadcrumb so the user always sees
+    their position in the whole review — `Batch <theme-pos/>/<theme-total/>`
+    for the theme, then `Layer <layer-index/>/<layer-count/>` and
+    `File <file-index/>/<file-total/>` (and `Section <section-index/>/<section-count/>`)
+    as those cursors apply. `<theme-pos/>` is the 1-based staging
+    index of the current theme.
 
-        On build *failure*:
+    Process the queue with:
 
-        - *retry* — re-run the build without unstashing (e.g.
-          after an external fix the user applied to the parked
-          stash manually; rare). Prefer *defer* in practice.
-        - *defer* — `git stash pop`, `git reset`. Theme to queue
-          end.
-        - *skip* — `git stash pop`, `git reset`. Hunks back in
-          working tree.
-        - *regroup* — `git stash pop`, `git reset`. Back to STEP 3.
-        - *discard* — destructive, see above.
+    <while condition="the theme queue is not empty and not all remaining themes are deferred">
 
-        *Stash-pop conflict handling*: if `git stash pop` reports
-        conflict (rare, only when disjoint-theme assumption
-        breaks), pause the loop, emit a diagnostic with the
-        conflicting paths, and ask the user to resolve manually
-        before resuming. Do not auto-resolve.
+    Take the next theme from the queue as `<item/>`, set `<theme-pos/>`
+    to its 1-based staging index, and execute the following sub-cycle:
 
-   6.8. *Continue* with the next theme in the queue until the
-        queue is empty or all remaining themes are deferred.
+    7.1. *Announce and stage.* First emit the batch-entry banner so
+         the user sees the position before the silent staging/build:
 
-   Hints:
+         <template>
+         <ase-tpl-bullet-normal/> **BATCH <theme-pos/>/<theme-total/>** — entering theme T<n/>: <type/>(<scope/>): <one-liner/>
+         </template>
 
-   - Every committed theme *MUST* build green. Do *not* batch
-     commits and verify only at the end — that hides dependency
-     defects and breaks `git bisect`.
-   - Editing the code to fix a build failure or to change what
-     the diff looks like is *out of scope* for this skill. Use
-     *defer*, leave the skill, edit (manually or via
-     `ase-code-refactor` / `ase-code-elaborate`), then re-enter
-     the skill — it will re-manifest the working tree.
-   - Never invoke `ase-code-changes` from this skill.
-     `CHANGELOG.md` updates belong to a release step, not an
-     review step.
-   </step>
+         Then clear the index with `git reset` (working tree
+         preserved), and `git apply --cached <patch-subset>` to stage
+         only the hunks assigned to this theme. Verify
+         `git diff --staged` matches the planned hunk set.
 
-7. <step id="STEP 7: Final Summary">
-   Emit a concise recap of what was produced.
+    7.2. *Isolate the working tree to the post-commit state.* Other
+         themes' hunks must not influence the build result.
 
-   <template>
-   &#x26AA; **ACCEPTANCE SUMMARY**
+         <if condition="`git diff` against the index is NOT empty (other themes' hunks remain)">
+         Run `git stash push --keep-index --include-untracked
+         --message "review-isolate-T<n>"`. Effect: the stash
+         captures every working-tree change *not* in the index
+         (all other themes' hunks and untracked files), leaving the
+         working tree byte-equal to the index — exactly what the
+         commit will produce. Record that a stash was pushed.
+         </if>
 
-   *Work branch*: `<work-branch/>` (from `<source-branch/>`)
+         <if condition="`git diff` against the index is empty">
+         Skip the stash (`git stash` with nothing to stash fails).
+         Record that no stash was pushed.
+         </if>
 
-   <commit-table/>
+    7.3. *Build-test.* Discover the project build command from, in
+         order: `AGENTS.md`, `CLAUDE.md`, `package.json` scripts,
+         `Makefile` targets, `Cargo.toml`, `pom.xml`, `go.mod`,
+         language-idiomatic defaults.
 
-   *Left in working tree*: <skipped-and-deferred/>
-   *Discarded*: <discarded/>
-   </template>
+         <if condition="the build command is ambiguous">
+         Let the *user interactively choose* the build command:
 
-   Hints:
+         <expand name="user-dialog">
+             Build Command: Which command build-verifies this theme?
+             <build-candidate-1/>: (first discovered candidate)
+             <build-candidate-2/>: (second discovered candidate)
+             <build-candidate-3/>: (third discovered candidate)
+         </expand>
 
-   - `<commit-table/>` columns: `T#`, `SHA`, `TYPE`, `SUBJECT`,
-     `FILES`, `BUILD`.
-   - `BUILD` is `✓` (green, committed) or `✗` (failed, not
-     committed).
-   - `<skipped-and-deferred/>` lists hunks left uncommitted in
-     the working tree, one bullet per theme with reason.
-   - `<discarded/>` lists themes the user destructively removed.
-   - Do *not* propose further actions (no automatic merge into
-     the source branch, no push). The user decides what to do
-     with the work branch.
+         Take the selected (or `OTHER:`-provided) command as the
+         build command.
+         </if>
 
-</step>
+         Run the command and capture exit code and output into
+         `<exit-code/>` and `<error-excerpt/>`.
+
+         -   In *VERTICAL* mode this exit code *gates* the commit: it
+             represents the true post-commit, post-push build result,
+             since no other themes' changes interfere.
+         -   In *HORIZONTAL* mode the exit code is *informational
+             only*: a non-green standalone build is expected and does
+             NOT block the commit.
+
+    7.4. *Decompose and visualize the theme.*
+
+         Partition the theme's staged hunks into an ordered list of
+         *layers* `L1, L2, …, Lk`, and record `<layer-count/>` = k.
+         Layers are a *review-only* concept — they are never committed
+         separately. Apply these heuristics in order; stop when one
+         produces a stable partition:
+
+         -   *Path-prefix*: group by top-level directory (e.g.,
+             `interfaces/`, `domain/`, `service/`, `api/`, `ui/`).
+         -   *Symbol-kind*: separate type declarations,
+             implementations, and call-sites.
+         -   *Dependency direction*: order layers so later layers
+             reference earlier ones (bottom-up) or the reverse
+             (top-down narrative), whichever explains the change best.
+
+         Build a Mermaid specification showing how *this theme's*
+         files collaborate and dispatch its rendering to the
+         `ase-meta-diagram` sub-agent via the `Agent` tool
+         (`subagent_type: "ase:ase-meta-diagram"`), then reproduce
+         its returned fenced code block verbatim as
+         `<rendered-diagram/>`. Pick the Mermaid type by theme intent:
+
+         -   *classDiagram* — theme introduces types with
+             inheritance, implementation, or composition.
+         -   *flowchart TB* — dependencies across components,
+             modules, or layers.
+         -   *sequenceDiagram* — actor/message flow (e.g., caller →
+             port → adapter → impl).
+
+         Default to *flowchart TB* when uncertain.
+
+         Emit the following <template/>:
+
+         <template>
+         <ase-tpl-head title="THEME OVERVIEW"/>
+
+         <ase-tpl-bullet-secondary/> **THEME OVERVIEW** T<n/> · <type/>(<scope/>): <one-liner/>
+         *Progress*: Batch <theme-pos/>/<theme-total/> · Layers <layer-count/>
+
+         *Rationale*: <rationale/>
+
+         *Layers* (review order):
+         <layer-purpose-list/>
+
+         *Collaboration*:
+
+         <rendered-diagram/>
+
+         <ase-tpl-foot/>
+         </template>
+
+         Hints:
+
+         -   `<rationale/>` is 2–4 sentences reconstructing the goal
+             the theme addresses — what problem, what user outcome,
+             what design choice. *Not* a line-by-line diff summary.
+         -   `<layer-purpose-list/>` is a bullet list `- L<i>:
+             <label> — <one-sentence purpose>` per layer. Acts as
+             upfront orientation before the file walk in STEP 7.5.
+         -   Omit the diagram with a one-line note (`*no
+             collaboration to diagram — purely textual*`) for
+             docs/constants/comments themes and for single-file
+             themes (where it is usually redundant). Hand-drawn
+             ASCII frames and raw Mermaid source as a substitute for
+             a rendered block are defects.
+         -   Layer count range: 1 to 5. If exactly one layer
+             emerges, skip STEP 7.5 and render the full diff in
+             STEP 7.6. More than 5 layers means the theme is too
+             broad — recommend *regroup* in STEP 7.7.
+         -   Review-order is independent from staging-order (STEP 5);
+             the theme still commits atomically in one `git commit`.
+
+    7.5. *Walk the theme file by file, interactively.*
+
+         <if condition="the theme contains exactly one file">
+         Skip this entire sub-step 7.5 and go to STEP 7.6.
+         </if>
+
+         Traverse the theme's files grouped by the layers from
+         STEP 7.4. Maintain the explicit cursors `<layer-index/>`
+         (current layer, 1…`<layer-count/>`) and `<file-index/>`
+         (current file `i` of `<file-total/>` within the layer).
+         *Walk-position invariant (mandatory)*: side actions
+         (`show-diff`, `discuss`, `fix`, the section walk) ALWAYS
+         re-prompt the *same* `<file-index/>` — they NEVER advance the
+         cursor. The transition to STEP 7.6 happens *exclusively* via
+         `NEXT` on the last file of the last layer, or via an explicit
+         `DECIDE-NOW`. No other path may leave the walk.
+
+         Walk the layers with:
+
+         <while condition="<layer-index/> ≤ <layer-count/> and the walk was not ended by DECIDE-NOW">
+
+         On entering each layer, set `<file-total/>` to the number of
+         files in this layer and emit a *layer card*:
+
+         <template>
+         <ase-tpl-bullet-secondary/> **Layer L<layer-index/> — <layer-label/>** of T<n/>
+         (<file-total/> files: <file-list/>)
+         *Progress*: Batch <theme-pos/>/<theme-total/> · Layer <layer-index/>/<layer-count/>
+
+         <one-sentence-purpose/>
+         </template>
+
+         Then let the *user interactively choose* (offer `BACK-LAYER`
+         only when `<layer-index/>` is not the first layer):
+
+         <expand name="user-dialog">
+             Layer L<layer-index/>: How would you like to handle this layer?
+             PROCEED-LAYER: Enter the per-file walk for this layer.
+             SKIP-LAYER: Treat the layer as reviewed and advance.
+             BACK-LAYER: Return to the previous layer.
+             DECIDE-NOW: Abort the walk and jump to the decision view.
+         </expand>
+
+         Dispatch on the tool <result/>:
+
+         -   `SKIP-LAYER`/`CANCEL`: set `<layer-index/>` to
+             `<layer-index/>` + 1 (advance).
+         -   `BACK-LAYER`: set `<layer-index/>` to `<layer-index/>` − 1.
+         -   `DECIDE-NOW`: end the walk and go to STEP 7.6.
+         -   `PROCEED-LAYER`: set `<file-index/>` to 1 and enter the
+             per-file walk below; when it completes by `NEXT` on the
+             last file, set `<layer-index/>` to `<layer-index/>` + 1.
+
+         Per-file walk inside the layer:
+
+         <while condition="<file-index/> ≤ <file-total/> and the walk was not ended by DECIDE-NOW">
+
+         (a) Emit a *file card*:
+
+             <template>
+             <ase-tpl-bullet-secondary/> **File <file-index/>/<file-total/>** of T<n/> · `<filepath/>`
+             (<lines/>, <kind/>, L<layer-index/>: <layer-label/>)
+             *Progress*: Batch <theme-pos/>/<theme-total/> · Layer <layer-index/>/<layer-count/> · File <file-index/>/<file-total/>
+
+             <short-explanation/>
+
+             <editor-hint/>
+             </template>
+
+         (b) Let the *user interactively choose* the primary file
+             action (offer `BACK` only when `<file-index/>` > 1):
+
+             <expand name="user-dialog">
+                 File <file-index/>/<file-total/>: How would you like to proceed?
+                 NEXT: Advance to the next file.
+                 BACK: Re-render the previous file.
+                 ACT: Inspect, discuss, or correct this file.
+                 DECIDE-NOW: Abort the walk and jump to the decision view.
+             </expand>
+
+             Dispatch on the tool <result/>:
+
+             -   `NEXT`/`CANCEL`: set `<file-index/>` to `<file-index/>`
+                 + 1. When this was the last file of the last layer,
+                 end the walk and go to STEP 7.6.
+             -   `BACK`: set `<file-index/>` to `<file-index/>` − 1 and
+                 re-render that file.
+             -   `DECIDE-NOW`: end the walk and go to STEP 7.6.
+             -   `ACT`: open the *act* sub-dialog in (c); it always
+                 returns to the *same* `<file-index/>` afterwards.
+
+         (c) *Act* sub-dialog (offer `SECTIONS` only when the file's
+             *total LOC* exceeds *300*):
+
+             <expand name="user-dialog">
+                 Act on File <file-index/>: What would you like to do?
+                 SHOW-DIFF: Render this file's staged diff inline.
+                 DISCUSS: Ask a question about this file.
+                 FIX: Prepare or apply a correction to this file.
+                 SECTIONS: Walk this large file section by section.
+             </expand>
+
+             Dispatch on the tool <result/>, then *always* re-prompt
+             the *same* file at (b):
+
+             -   `SHOW-DIFF`: render `<diff-per-file/>` scoped to the
+                 current file (see 7.6 format), then re-prompt (b).
+             -   `DISCUSS`: enter discussion mode — wait for the
+                 user's free-text question, answer it scoped to the
+                 *current* file only, then re-prompt (b). Discussion
+                 is review dialogue — *no* code editing here.
+             -   `FIX`: enter the *correction* sub-flow in (d).
+             -   `SECTIONS`: enter the *section walk* in (e).
+             -   `CANCEL`: re-prompt (b) unchanged.
+
+         (d) *Correction* sub-flow on `FIX`. First capture the
+             correction intent for the *current* file — *what* to
+             change and *why* — into a structured entry
+             `{ file, instruction, rationale }`. Then let the *user
+             interactively choose*:
+
+             <expand name="user-dialog">
+                 Fix `<filepath/>`: How would you like to correct this file?
+                 PREPARE-TASK: Queue the correction for a sub-agent (do not edit now).
+                 FIX-NOW: Solve it now with an isolated sub-agent.
+                 CANCEL: Do not correct; return to the file.
+             </expand>
+
+             Dispatch on the tool <result/>, then *always* re-prompt
+             the *same* file at (b):
+
+             -   `PREPARE-TASK`: append the entry to the per-theme
+                 fix-queue `<fix-queue/>`. Do *not* edit now.
+             -   `FIX-NOW`: dispatch the correction to a *sub-agent*
+                 via the `Agent` tool so the editing transcript never
+                 leaks into the review context — route substantive
+                 work through `ase-code-refactor` / `ase-code-resolve`
+                 semantics. On return, *re-manifest* the touched file
+                 (regenerate its hunks, re-apply the theme's staged
+                 subset via `git apply --cached`), and record that a
+                 *re-build* is required before this theme may be
+                 committed.
+             -   `CANCEL`/`OTHER:`: discard the captured intent.
+
+         (e) *Section walk* on `SECTIONS`. Partition the current file
+             into *3–8 semantic sections* grouped by *responsibility*
+             (e.g., fields & class header, hot-path method, helper
+             cluster, seqlock read path) — *not* by raw syntactic
+             slicing. Record `<section-count/>` = k and walk them
+             sequentially with the cursor `<section-index/>` (`s` of
+             `<section-count/>`):
+
+             <while condition="<section-index/> ≤ <section-count/> and the user did not pick FILE-DONE">
+
+             Emit a *section card* with 2–6 sentences on *what* the
+             section does and *why* it is shaped that way (pattern,
+             invariant, trade-off), referencing concrete identifiers
+             and line ranges (`Z.NN-MM`). No diff, no full listing.
+
+             <template>
+             <ase-tpl-bullet-secondary/> **Section <section-index/>/<section-count/> — <section-concern/>** of `<filepath/>` (Z.<from/>-<to/>)
+             *Progress*: Batch <theme-pos/>/<theme-total/> · Layer <layer-index/>/<layer-count/> · File <file-index/>/<file-total/> · Section <section-index/>/<section-count/>
+
+             <section-explanation/>
+             </template>
+
+             Then let the *user interactively choose*:
+
+             <expand name="user-dialog">
+                 Section <section-index/>/<section-count/>: How would you like to proceed?
+                 NEXT-SECTION: Advance to the next section.
+                 DISCUSS-SECTION: Ask a question about this section.
+                 FIX: Prepare or apply a correction to this section.
+                 FILE-DONE: Exit the section walk; return to the file.
+             </expand>
+
+             Dispatch on the tool <result/>:
+
+             -   `NEXT-SECTION`/`CANCEL`: set `<section-index/>` to
+                 `<section-index/>` + 1 (auto `FILE-DONE` after the
+                 last section).
+             -   `DISCUSS-SECTION`: answer scoped to the section, then
+                 re-prompt the *same* section.
+             -   `FIX`: run the (d) correction sub-flow, then re-prompt
+                 the *same* section.
+             -   `FILE-DONE`: exit the section walk.
+
+             </while>
+
+             On exit, return to the file prompt (b) at the *same*
+             `<file-index/>`.
+
+         </while>
+
+         </while>
+
+         Hints:
+
+         -   `<short-explanation/>` is 2–5 sentences describing what
+             the file/change does and its role in the theme — *not*
+             a diff. The user reviews actual lines in the editor
+             (VSCode Source Control, vim-fugitive, etc.).
+         -   `<editor-hint/>` differs by hunk kind: *add* (new file)
+             — "Whole file is the change — view directly in editor.";
+             *modify* — "File has other unstaged changes; view staged
+             subset with `git diff --staged <filepath>`."; *rename* —
+             note old and new path; *binary* — note size, no preview;
+             *delete* — note file was removed.
+         -   `discuss` does *not* count as a commit decision. The
+             *accept/skip/regroup/defer/discard* decision comes
+             exclusively from STEP 7.7, on the whole theme.
+         -   A correction (`FIX`) changes the diff. The skill stays
+             in scope: corrections are performed by sub-agents and
+             the theme is re-manifested — the review context itself
+             never edits code inline.
+
+    7.6. *Render the decision view.*
+
+         <if condition="the build in 7.3 succeeded (<exit-code/> is 0)">
+         Emit the following <template/>:
+
+         <template>
+         <ase-tpl-head title="THEME"/>
+
+         <ase-tpl-bullet-normal/> **THEME T<n/>** · <type/>(<scope/>): <one-liner/>
+         *Progress*: Batch <theme-pos/>/<theme-total/>
+
+         *Hunks*: <hunk-refs/>
+         *Files*: <file-list/>
+         *Build*: `<build-command/>` — exit 0
+         *Queued fixes*: <fix-queue-count/>
+
+         *Why & Flow*: see **THEME OVERVIEW** in STEP 7.4 above.
+
+         *Diff*:
+
+         <diff-per-file/>
+
+         <ase-tpl-foot/>
+         </template>
+         </if>
+
+         <if condition="the build failed AND <review-mode/> is `VERTICAL`">
+         The failure *blocks* the commit. Emit the following <template/>:
+
+         <template>
+         <ase-tpl-head title="BUILD FAIL"/>
+
+         <ase-tpl-bullet-signal/> **BUILD FAIL** at T<n/> · <type/>(<scope/>): <one-liner/>
+         *Progress*: Batch <theme-pos/>/<theme-total/>
+
+         *Hunks*: <hunk-refs/>
+         *Files*: <file-list/>
+         *Command*: `<build-command/>`
+         *Exit*: <exit-code/>
+         *Error*:
+         ```
+         <error-excerpt/>
+         ```
+         *Likely cause*: <diagnosis/>
+
+         *Diff*:
+
+         <diff-per-file/>
+
+         <ase-tpl-foot/>
+         </template>
+         </if>
+
+         <if condition="the build failed AND <review-mode/> is `HORIZONTAL`">
+         The failure is *informational* and does NOT block the commit.
+         Emit the following <template/>:
+
+         <template>
+         <ase-tpl-head title="THEME"/>
+
+         <ase-tpl-bullet-normal/> **THEME T<n/>** · <type/>(<scope/>): <one-liner/>
+         *Progress*: Batch <theme-pos/>/<theme-total/>
+
+         *Hunks*: <hunk-refs/>
+         *Files*: <file-list/>
+         *Build*: `<build-command/>` — exit <exit-code/> (informational — horizontal mode, not gating)
+         *Queued fixes*: <fix-queue-count/>
+
+         *Why & Flow*: see **THEME OVERVIEW** in STEP 7.4 above.
+
+         *Diff*:
+
+         <diff-per-file/>
+
+         <ase-tpl-foot/>
+         </template>
+         </if>
+
+         Hints:
+
+         -   `<diff-per-file/>` groups the staged diff *per file*.
+             Each file becomes one block: a `### <filepath>
+             (<hunk-refs>)` headline, followed by a fenced ```diff```
+             block containing only that file's diff lines. Do not
+             abridge; show full diff content per file. This decision
+             view is the primary rendering location; STEP 7.5 emits
+             the same format on-demand via `SHOW-DIFF` scoped to a
+             single file.
+         -   Do *not* add quality judgements, improvement
+             suggestions, or severity-tagged findings. This skill
+             curates changes, it does not review them. Use
+             `ase-code-lint` or `ase-code-analyze` for that.
+
+    7.7. *Decide.* Let the *user interactively choose* with an option
+         set matching the *mode*, the *build outcome*, and the
+         *fix-queue*. A theme is *never* committed with unapplied
+         queued corrections, so `ACCEPT` is withheld whenever
+         `<fix-queue/>` is non-empty. *Every* terminal branch restores
+         the parked hunks via `git stash pop` (skip pop only when 7.2
+         pushed no stash).
+
+         <if condition="<fix-queue/> is empty AND the build succeeded">
+         <expand name="user-dialog">
+             Decide T<n/>: What should happen with this theme?
+             ACCEPT: Commit this theme on the work branch.
+             REQUEUE: Skip, regroup, or defer this theme.
+             DISCARD: Destructively drop this theme's hunks.
+         </expand>
+         </if>
+
+         <if condition="<fix-queue/> is empty AND the build failed AND <review-mode/> is `HORIZONTAL`">
+         <expand name="user-dialog">
+             Decide T<n/>: Build is non-green (informational) — what now?
+             ACCEPT: Commit this theme anyway (horizontal mode).
+             FIX: Apply a correction via a sub-agent, then re-verify.
+             REQUEUE: Skip, regroup, or defer this theme.
+             DISCARD: Destructively drop this theme's hunks.
+         </expand>
+         </if>
+
+         <if condition="<fix-queue/> is NOT empty">
+         `ACCEPT` is withheld until the queued corrections are flushed:
+
+         <expand name="user-dialog">
+             Decide T<n/>: Queued corrections pending — what now?
+             CORRECT: Apply the queued fixes via a sub-agent, then re-verify.
+             REQUEUE: Skip, regroup, or defer this theme.
+             DISCARD: Destructively drop this theme's hunks.
+         </expand>
+         </if>
+
+         <if condition="the build failed AND <review-mode/> is `VERTICAL` AND <fix-queue/> is empty">
+         The build *gates* the commit, so `ACCEPT` is unavailable:
+
+         <expand name="user-dialog">
+             Decide T<n/>: The build failed — what now?
+             FIX: Correct the failure via a sub-agent, then re-verify.
+             RETRY: Re-run the build without changes.
+             REQUEUE: Skip, regroup, or defer this theme.
+             DISCARD: Destructively drop this theme's hunks.
+         </expand>
+         </if>
+
+         Dispatch on the tool <result/>:
+
+         -   <if condition="<result/> is `ACCEPT`">
+             Invoke `Skill(skill: "ase:ase-meta-commit")` to craft a
+             commit message, then `git commit`. Restore parked hunks
+             with `git stash pop`. The theme leaves the queue. (In
+             *VERTICAL* mode the theme is thereby *bisect-safe*; in
+             *HORIZONTAL* mode the commit may be non-green by design.)
+             </if>
+
+         -   <if condition="<result/> is `CORRECT`">
+             Dispatch the entire `<fix-queue/>` to a *sub-agent* via
+             the `Agent` tool (isolated context; route through
+             `ase-code-refactor` / `ase-code-resolve` semantics).
+             Then re-manifest the theme, empty `<fix-queue/>`, return
+             to STEP 7.3 to *re-run the build-verify*, and re-enter
+             this decision view.
+             </if>
+
+         -   <if condition="<result/> is `FIX`">
+             Dispatch the build/quality correction to a *sub-agent*
+             via the `Agent` tool (isolated context). Then
+             re-manifest, return to STEP 7.3 to *re-run the
+             build-verify*, and re-enter this decision view.
+             </if>
+
+         -   <if condition="<result/> is `RETRY`">
+             Return to STEP 7.3 and re-run the build without
+             unstashing.
+             </if>
+
+         -   <if condition="<result/> is `REQUEUE`">
+             Let the *user interactively choose* how to requeue:
+
+             <expand name="user-dialog">
+                 Requeue T<n/>: How should this theme be requeued?
+                 SKIP: Do not commit; reinstate the hunks in the working tree.
+                 REGROUP: Reassign this theme's hunks (back to STEP 4).
+                 DEFER: Move the theme to the end of the queue.
+             </expand>
+
+             Then dispatch:
+
+             -   `SKIP`: `git stash pop` (if pushed), then `git reset`
+                 (index back to HEAD; popped hunks reinstated as
+                 working-tree changes). Theme leaves the queue.
+             -   `REGROUP`: `git stash pop` (if pushed), `git reset`.
+                 Return to STEP 4 and reassign this theme's hunks; the
+                 new theme(s) re-enter the queue at their topologically
+                 correct position (update `<theme-total/>`).
+             -   `DEFER`/`CANCEL`: `git stash pop` (if pushed),
+                 `git reset`. Move the theme to the *end* of the
+                 queue. If on the next iteration every remaining theme
+                 is *deferred*, stop the loop and jump to STEP 8.
+             </if>
+
+         -   <if condition="<result/> is `DISCARD`">
+             *Destructive* — require a second confirmation:
+
+             <expand name="user-dialog">
+                 Discard T<n/>: This permanently drops the hunks — confirm?
+                 CONFIRM-DISCARD: Yes, permanently drop this theme's hunks.
+                 CANCEL: No, keep the hunks; return to the decision.
+             </expand>
+
+             <if condition="<result/> is `CONFIRM-DISCARD`">
+             `git stash pop` (if pushed), `git reset`, then
+             `git checkout -- <files>` for tracked files and `rm` for
+             untracked files touched by this theme. Hunks are lost;
+             the theme leaves the queue.
+             </if>
+
+             <if condition="<result/> is NOT `CONFIRM-DISCARD`">
+             Return to the decision view for this theme.
+             </if>
+             </if>
+
+         *Stash-pop conflict handling*: if `git stash pop` reports a
+         conflict (rare, only when the disjoint-theme assumption
+         breaks), pause the loop, emit a diagnostic with the
+         conflicting paths, and ask the user to resolve manually
+         before resuming. Do *not* auto-resolve.
+
+    7.8. *Continue* with the next theme until the queue is empty or
+         all remaining themes are deferred.
+
+    </while>
+
+    Hints:
+
+    -   In *VERTICAL* mode every committed theme *MUST* build green;
+        do *not* batch commits and verify only at the end — that hides
+        dependency defects and breaks `git bisect`. In *HORIZONTAL*
+        mode commits are grouped for review coherence and may not
+        build standalone — bisect-safety is intentionally traded away.
+    -   Corrections are *in scope* via the `FIX` paths (7.5d, 7.7):
+        they run in isolated sub-agents and the theme is re-manifested
+        and re-built before any commit. Editing the review context
+        itself remains out of scope.
+    -   Never invoke `ase-meta-changelog` from this skill.
+        `CHANGELOG.md` updates belong to a release step, not a
+        review step.
+
+    </step>
+
+8.  <step id="STEP 8: Final Summary">
+
+    Emit a concise recap of what was produced:
+
+    <template>
+    <ase-tpl-head title="ACCEPTANCE SUMMARY"/>
+
+    <ase-tpl-bullet-secondary/> **ACCEPTANCE SUMMARY** (<review-mode/>)
+
+    *Work branch*: `<work-branch/>` (from `<source-branch/>`)
+
+    <commit-table/>
+
+    *Left in working tree*: <skipped-and-deferred/>
+    *Open corrections*: <open-fix-queue/>
+    *Discarded*: <discarded/>
+
+    <ase-tpl-foot/>
+    </template>
+
+    Hints:
+
+    -   `<commit-table/>` columns: `T#`, `SHA`, `TYPE`, `SUBJECT`,
+        `FILES`, `BUILD`. `BUILD` is `✓` (green), `✗` (failed), or
+        `~` (non-green, committed in horizontal mode).
+    -   `<skipped-and-deferred/>` lists hunks left uncommitted in the
+        working tree, one bullet per theme with reason.
+    -   `<open-fix-queue/>` lists any still-unapplied queued
+        corrections, omitted (`none`) if empty.
+    -   `<discarded/>` lists themes the user destructively removed.
+    -   Do *not* propose further actions (no automatic merge into the
+        source branch, no push). The user decides what to do with the
+        work branch.
+
+    </step>
+
 </flow>
