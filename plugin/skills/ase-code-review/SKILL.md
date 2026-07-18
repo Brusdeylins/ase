@@ -33,7 +33,9 @@ Review and Curate Uncommitted Changes
 <objective>
 Acting as an *expert-level software developer* who *reviews and curates*,
 *review* the uncommitted changes at <ref>$ARGUMENTS</ref> (default:
-working tree + index + untracked), *group* hunks by theme, *apply* them
+working tree + index + untracked), *group* hunks by theme, *walk* the
+user through each file group with an explanation for confirmation,
+*apply* them
 one theme at a time on a dedicated work branch, *build-verify* each theme
 in isolation before asking the user to decide, and *commit* only what the
 user accepts. This skill *complements* its neighbours rather than
@@ -91,7 +93,7 @@ skill *curates and commits*; it does *not* judge code quality.
     Before grouping any hunks, let the user choose *how* the changes
     are curated. This single choice governs how themes are formed in
     STEP 3 and whether per-commit build-verification *gates* the
-    commits in STEP 7.
+    commits in STEP 8.
 
     Let the *user interactively choose*:
 
@@ -131,16 +133,17 @@ skill *curates and commits*; it does *not* judge code quality.
     -   *VERTICAL* (bisect-safe history): a theme is the minimal
         *build-safe* commit unit and may span several architectural
         layers (interface + implementation + caller); each committed
-        theme MUST build green — STEP 7.3 *gates* the commit. Optimizes
+        theme MUST build green — STEP 8.3 *gates* the commit. Optimizes
         for a clean, bisectable history.
     -   *HORIZONTAL* (theme-near review): themes group hunks by *topical
         and architectural proximity* (one concern, or one layer, at a
         time) for the most coherent *review*, accepting that an
-        individual commit may not compile standalone. STEP 7.3 still
+        individual commit may not compile standalone. STEP 8.3 still
         runs the build but only for *information* — it does NOT gate the
         commit, and ACCEPT stays available on a non-green build.
     -   The chosen <review-mode/> is carried through STEP 3 (theme
-        proposal), STEP 5 (staging order), and STEP 7 (build gating).
+        proposal), STEP 5 (group walk), STEP 6 (staging order), and
+        STEP 8 (build gating).
 
     </step>
 
@@ -154,8 +157,8 @@ skill *curates and commits*; it does *not* judge code quality.
 
     A theme is the *minimal commit unit*. Internally a theme MAY span
     multiple architectural layers (e.g., interface + implementation +
-    caller); those layers are *reviewed* separately in STEP 7.5 but
-    *committed* together as one atomic commit in STEP 7.7. This
+    caller); those layers are *reviewed* separately in STEP 8.5 but
+    *committed* together as one atomic commit in STEP 8.7. This
     decouples commit granularity (topological) from review
     granularity (architectural, comprehensible).
 
@@ -237,14 +240,113 @@ skill *curates and commits*; it does *not* judge code quality.
     -   When a SPLIT hunk must be broken apart, re-serialize the
         patch text into two independent hunk headers
         (`@@ -<from>,<n> +<to>,<m> @@`) covering disjoint line
-        ranges before proceeding to STEP 5. A single git-level hunk
+        ranges before proceeding to STEP 6. A single git-level hunk
         spanning two themes cannot be staged with `git apply
         --cached` as a subset — it must be split at the text level
         first.
 
     </step>
 
-5.  <step id="STEP 5: Plan Staging Order">
+5.  <step id="STEP 5: Walk and Confirm Groups">
+
+    *Before* any staging, work branch, or commit, walk the *user*
+    through the proposed *file groups* (themes) one at a time — each
+    with a plain-language *explanation* and its *file list* — and let
+    the user *confirm* or *adjust* every group. This pass reviews the
+    *grouping* only: no diffs, no line content, no staging. The deep
+    per-file walk over the actual changes happens later, per theme, in
+    STEP 8.5.
+
+    Maintain a cursor `<group-index/>` over the themes `T1…Tn` in
+    proposal order and record `<group-count/>` = n. Process the groups
+    with:
+
+    <while condition="<group-index/> ≤ <group-count/> and not every group is confirmed">
+
+    Set `<group-index/>` to the current group and emit the following
+    <template/>:
+
+    <template>
+    <ase-tpl-bullet-secondary/> **GROUP <group-index/>/<group-count/>** — T<n/>: <type/>(<scope/>): <one-liner/>
+    *Progress*: Group <group-index/>/<group-count/>
+
+    *Files* (<file-count/>):
+    <group-file-list/>
+
+    *Why grouped*: <group-rationale/>
+    </template>
+
+    Then let the *user interactively choose* (offer `BACK-GROUP` only
+    when `<group-index/>` is not the first group):
+
+    <expand name="user-dialog">
+        Group <group-index/>/<group-count/>: How would you like to handle this group?
+        CONFIRM-GROUP: The grouping is right — mark it reviewed and advance.
+        ADJUST-GROUP: Reassign or split files across groups.
+        DISCUSS-GROUP: Ask a question about this group.
+        BACK-GROUP: Return to the previous group.
+    </expand>
+
+    Dispatch on the tool <result/>:
+
+    -   <if condition="<result/> is `CANCEL`">
+        Only output the following <template/> and then immediately
+        *STOP* processing the entire current skill:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-code-review**, ▶ status: **review cancelled**
+        </template>
+        </if>
+
+    -   <if condition="<result/> is `CONFIRM-GROUP`">
+        Mark the group reviewed and set `<group-index/>` to
+        `<group-index/>` + 1.
+        </if>
+
+    -   <if condition="<result/> is `ADJUST-GROUP` or starts with `OTHER:`">
+        Return to STEP 4, reassign this group's hunks (move a file to
+        another group, or force a SPLIT), then re-enter this walk with
+        the updated grouping (update `<group-count/>`).
+        </if>
+
+    -   <if condition="<result/> is `DISCUSS-GROUP`">
+        Answer scoped to *this group* only — filenames, roles, and why
+        the files belong together, with *no* line content — then
+        re-prompt the *same* group.
+        </if>
+
+    -   <if condition="<result/> is `BACK-GROUP`">
+        Set `<group-index/>` to `<group-index/>` − 1.
+        </if>
+
+    </while>
+
+    Once every group is confirmed, emit the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-normal/> **GROUPS CONFIRMED** (<group-count/> groups, <review-mode/>)
+    </template>
+
+    Hints:
+
+    -   `<group-file-list/>` is a bullet list, one entry per file:
+        `- <filepath> — <kind>, <hunk-refs> — <one-line role>`.
+        Derive the role from the filename, path, and the STEP 4
+        assignment; do *not* inspect line content here.
+    -   `<group-rationale/>` is 1–3 sentences on *why these files form
+        one group* — shared concern, layer, or feature — reconstructed
+        from names and the assignment, not from diffs.
+    -   This walk is *grouping review*, not *code review*: no diffs, no
+        quality judgement, no staging. `ADJUST-GROUP` is the only path
+        that mutates assignments and always routes back through STEP 4,
+        so the per-hunk consistency invariant is preserved.
+    -   A group confirmed here is *not* yet committed. Staging is
+        deferred to STEP 8.1 (only the current group's files) and the
+        commit decision to STEP 8.7, both per theme.
+
+    </step>
+
+6.  <step id="STEP 6: Plan Staging Order">
 
     Determine an order over the themes and let the user confirm or
     override. Record the total theme count into `<theme-total/>` for
@@ -306,7 +408,7 @@ skill *curates and commits*; it does *not* judge code quality.
 
     </step>
 
-6.  <step id="STEP 6: Create Work Branch">
+7.  <step id="STEP 7: Create Work Branch">
 
     Create a dedicated work branch so review commits do not pollute
     the current branch until the user merges explicitly.
@@ -355,14 +457,14 @@ skill *curates and commits*; it does *not* judge code quality.
 
     </step>
 
-7.  <step id="STEP 7: Per-Theme Review Loop">
+8.  <step id="STEP 8: Per-Theme Review Loop">
 
-    Maintain a *queue* of themes in the order from STEP 5. Process
+    Maintain a *queue* of themes in the order from STEP 6. Process
     one theme at a time. Non-accepted themes are handled per the
     chosen option and do not re-enter the queue unless *regrouped*.
 
-    *Never prompt in free text.* Across *every* sub-step (7.1
-    through 7.8) — staging, isolation, build, layer entry, file
+    *Never prompt in free text.* Across *every* sub-step (8.1
+    through 8.8) — staging, isolation, build, layer entry, file
     prompt, section walk, correction, decision view, stash-pop
     conflict — any continuation, confirmation, or decision *MUST*
     go through `<expand name="user-dialog">` with a defined option
@@ -385,8 +487,9 @@ skill *curates and commits*; it does *not* judge code quality.
     Take the next theme from the queue as `<item/>`, set `<theme-pos/>`
     to its 1-based staging index, and execute the following sub-cycle:
 
-    7.1. *Announce and stage.* First emit the batch-entry banner so
-         the user sees the position before the silent staging/build:
+    8.1. *Announce and stage the group — before any review walk.*
+         First emit the batch-entry banner so the user sees the
+         position before the silent staging/build:
 
          <template>
          <ase-tpl-bullet-normal/> **BATCH <theme-pos/>/<theme-total/>** — entering theme T<n/>: <type/>(<scope/>): <one-liner/>
@@ -394,10 +497,15 @@ skill *curates and commits*; it does *not* judge code quality.
 
          Then clear the index with `git reset` (working tree
          preserved), and `git apply --cached <patch-subset>` to stage
-         only the hunks assigned to this theme. Verify
-         `git diff --staged` matches the planned hunk set.
+         *only* the files of this group that await sign-off. Staging
+         *precedes* the review walk: the index MUST hold *exactly*
+         this group's files and nothing else — no other group's files
+         may be staged. Verify with `git diff --staged --name-only`
+         that the staged file set equals this group's planned file set
+         (and `git diff --staged` matches the planned hunk set); on any
+         mismatch, abort this theme and return to STEP 5.
 
-    7.2. *Isolate the working tree to the post-commit state.* Other
+    8.2. *Isolate the working tree to the post-commit state.* Other
          themes' hunks must not influence the build result.
 
          <if condition="`git diff` against the index is NOT empty (other themes' hunks remain)">
@@ -414,7 +522,7 @@ skill *curates and commits*; it does *not* judge code quality.
          Record that no stash was pushed.
          </if>
 
-    7.3. *Build-test.* Discover the project build command from, in
+    8.3. *Build-test.* Discover the project build command from, in
          order: `AGENTS.md`, `CLAUDE.md`, `package.json` scripts,
          `Makefile` targets, `Cargo.toml`, `pom.xml`, `go.mod`,
          language-idiomatic defaults.
@@ -443,7 +551,7 @@ skill *curates and commits*; it does *not* judge code quality.
              only*: a non-green standalone build is expected and does
              NOT block the commit.
 
-    7.4. *Decompose and visualize the theme.*
+    8.4. *Decompose and visualize the theme.*
 
          Partition the theme's staged hunks into an ordered list of
          *layers* `L1, L2, …, Lk`, and record `<layer-count/>` = k.
@@ -502,7 +610,7 @@ skill *curates and commits*; it does *not* judge code quality.
              what design choice. *Not* a line-by-line diff summary.
          -   `<layer-purpose-list/>` is a bullet list `- L<i>:
              <label> — <one-sentence purpose>` per layer. Acts as
-             upfront orientation before the file walk in STEP 7.5.
+             upfront orientation before the file walk in STEP 8.5.
          -   Omit the diagram with a one-line note (`*no
              collaboration to diagram — purely textual*`) for
              docs/constants/comments themes and for single-file
@@ -510,26 +618,26 @@ skill *curates and commits*; it does *not* judge code quality.
              ASCII frames and raw Mermaid source as a substitute for
              a rendered block are defects.
          -   Layer count range: 1 to 5. If exactly one layer
-             emerges, skip STEP 7.5 and render the full diff in
-             STEP 7.6. More than 5 layers means the theme is too
-             broad — recommend *regroup* in STEP 7.7.
-         -   Review-order is independent from staging-order (STEP 5);
+             emerges, skip STEP 8.5 and render the full diff in
+             STEP 8.6. More than 5 layers means the theme is too
+             broad — recommend *regroup* in STEP 8.7.
+         -   Review-order is independent from staging-order (STEP 6);
              the theme still commits atomically in one `git commit`.
 
-    7.5. *Walk the theme file by file, interactively.*
+    8.5. *Walk the theme file by file, interactively.*
 
          <if condition="the theme contains exactly one file">
-         Skip this entire sub-step 7.5 and go to STEP 7.6.
+         Skip this entire sub-step 8.5 and go to STEP 8.6.
          </if>
 
          Traverse the theme's files grouped by the layers from
-         STEP 7.4. Maintain the explicit cursors `<layer-index/>`
+         STEP 8.4. Maintain the explicit cursors `<layer-index/>`
          (current layer, 1…`<layer-count/>`) and `<file-index/>`
          (current file `i` of `<file-total/>` within the layer).
          *Walk-position invariant (mandatory)*: side actions
          (`show-diff`, `discuss`, `fix`, the section walk) ALWAYS
          re-prompt the *same* `<file-index/>` — they NEVER advance the
-         cursor. The transition to STEP 7.6 happens *exclusively* via
+         cursor. The transition to STEP 8.6 happens *exclusively* via
          `NEXT` on the last file of the last layer, or via an explicit
          `DECIDE-NOW`. No other path may leave the walk.
 
@@ -564,7 +672,7 @@ skill *curates and commits*; it does *not* judge code quality.
          -   `SKIP-LAYER`/`CANCEL`: set `<layer-index/>` to
              `<layer-index/>` + 1 (advance).
          -   `BACK-LAYER`: set `<layer-index/>` to `<layer-index/>` − 1.
-         -   `DECIDE-NOW`: end the walk and go to STEP 7.6.
+         -   `DECIDE-NOW`: end the walk and go to STEP 8.6.
          -   `PROCEED-LAYER`: set `<file-index/>` to 1 and enter the
              per-file walk below; when it completes by `NEXT` on the
              last file, set `<layer-index/>` to `<layer-index/>` + 1.
@@ -600,10 +708,10 @@ skill *curates and commits*; it does *not* judge code quality.
 
              -   `NEXT`/`CANCEL`: set `<file-index/>` to `<file-index/>`
                  + 1. When this was the last file of the last layer,
-                 end the walk and go to STEP 7.6.
+                 end the walk and go to STEP 8.6.
              -   `BACK`: set `<file-index/>` to `<file-index/>` − 1 and
                  re-render that file.
-             -   `DECIDE-NOW`: end the walk and go to STEP 7.6.
+             -   `DECIDE-NOW`: end the walk and go to STEP 8.6.
              -   `ACT`: open the *act* sub-dialog in (c); it always
                  returns to the *same* `<file-index/>` afterwards.
 
@@ -622,7 +730,7 @@ skill *curates and commits*; it does *not* judge code quality.
              the *same* file at (b):
 
              -   `SHOW-DIFF`: render `<diff-per-file/>` scoped to the
-                 current file (see 7.6 format), then re-prompt (b).
+                 current file (see 8.6 format), then re-prompt (b).
              -   `DISCUSS`: enter discussion mode — wait for the
                  user's free-text question, answer it scoped to the
                  *current* file only, then re-prompt (b). Discussion
@@ -726,15 +834,15 @@ skill *curates and commits*; it does *not* judge code quality.
              *delete* — note file was removed.
          -   `discuss` does *not* count as a commit decision. The
              *accept/skip/regroup/defer/discard* decision comes
-             exclusively from STEP 7.7, on the whole theme.
+             exclusively from STEP 8.7, on the whole theme.
          -   A correction (`FIX`) changes the diff. The skill stays
              in scope: corrections are performed by sub-agents and
              the theme is re-manifested — the review context itself
              never edits code inline.
 
-    7.6. *Render the decision view.*
+    8.6. *Render the decision view.*
 
-         <if condition="the build in 7.3 succeeded (<exit-code/> is 0)">
+         <if condition="the build in 8.3 succeeded (<exit-code/> is 0)">
          Emit the following <template/>:
 
          <template>
@@ -748,7 +856,7 @@ skill *curates and commits*; it does *not* judge code quality.
          *Build*: `<build-command/>` — exit 0
          *Queued fixes*: <fix-queue-count/>
 
-         *Why & Flow*: see **THEME OVERVIEW** in STEP 7.4 above.
+         *Why & Flow*: see **THEME OVERVIEW** in STEP 8.4 above.
 
          *Diff*:
 
@@ -800,7 +908,7 @@ skill *curates and commits*; it does *not* judge code quality.
          *Build*: `<build-command/>` — exit <exit-code/> (informational — horizontal mode, not gating)
          *Queued fixes*: <fix-queue-count/>
 
-         *Why & Flow*: see **THEME OVERVIEW** in STEP 7.4 above.
+         *Why & Flow*: see **THEME OVERVIEW** in STEP 8.4 above.
 
          *Diff*:
 
@@ -817,7 +925,7 @@ skill *curates and commits*; it does *not* judge code quality.
              (<hunk-refs>)` headline, followed by a fenced ```diff```
              block containing only that file's diff lines. Do not
              abridge; show full diff content per file. This decision
-             view is the primary rendering location; STEP 7.5 emits
+             view is the primary rendering location; STEP 8.5 emits
              the same format on-demand via `SHOW-DIFF` scoped to a
              single file.
          -   Do *not* add quality judgements, improvement
@@ -825,12 +933,12 @@ skill *curates and commits*; it does *not* judge code quality.
              curates changes, it does not review them. Use
              `ase-code-lint` or `ase-code-analyze` for that.
 
-    7.7. *Decide.* Let the *user interactively choose* with an option
+    8.7. *Decide.* Let the *user interactively choose* with an option
          set matching the *mode*, the *build outcome*, and the
          *fix-queue*. A theme is *never* committed with unapplied
          queued corrections, so `ACCEPT` is withheld whenever
          `<fix-queue/>` is non-empty. *Every* terminal branch restores
-         the parked hunks via `git stash pop` (skip pop only when 7.2
+         the parked hunks via `git stash pop` (skip pop only when 8.2
          pushed no stash).
 
          <if condition="<fix-queue/> is empty AND the build succeeded">
@@ -890,19 +998,19 @@ skill *curates and commits*; it does *not* judge code quality.
              the `Agent` tool (isolated context; route through
              `ase-code-refactor` / `ase-code-resolve` semantics).
              Then re-manifest the theme, empty `<fix-queue/>`, return
-             to STEP 7.3 to *re-run the build-verify*, and re-enter
+             to STEP 8.3 to *re-run the build-verify*, and re-enter
              this decision view.
              </if>
 
          -   <if condition="<result/> is `FIX`">
              Dispatch the build/quality correction to a *sub-agent*
              via the `Agent` tool (isolated context). Then
-             re-manifest, return to STEP 7.3 to *re-run the
+             re-manifest, return to STEP 8.3 to *re-run the
              build-verify*, and re-enter this decision view.
              </if>
 
          -   <if condition="<result/> is `RETRY`">
-             Return to STEP 7.3 and re-run the build without
+             Return to STEP 8.3 and re-run the build without
              unstashing.
              </if>
 
@@ -928,7 +1036,7 @@ skill *curates and commits*; it does *not* judge code quality.
              -   `DEFER`/`CANCEL`: `git stash pop` (if pushed),
                  `git reset`. Move the theme to the *end* of the
                  queue. If on the next iteration every remaining theme
-                 is *deferred*, stop the loop and jump to STEP 8.
+                 is *deferred*, stop the loop and jump to STEP 9.
              </if>
 
          -   <if condition="<result/> is `DISCARD`">
@@ -958,7 +1066,7 @@ skill *curates and commits*; it does *not* judge code quality.
          conflicting paths, and ask the user to resolve manually
          before resuming. Do *not* auto-resolve.
 
-    7.8. *Continue* with the next theme until the queue is empty or
+    8.8. *Continue* with the next theme until the queue is empty or
          all remaining themes are deferred.
 
     </while>
@@ -970,7 +1078,7 @@ skill *curates and commits*; it does *not* judge code quality.
         dependency defects and breaks `git bisect`. In *HORIZONTAL*
         mode commits are grouped for review coherence and may not
         build standalone — bisect-safety is intentionally traded away.
-    -   Corrections are *in scope* via the `FIX` paths (7.5d, 7.7):
+    -   Corrections are *in scope* via the `FIX` paths (8.5d, 8.7):
         they run in isolated sub-agents and the theme is re-manifested
         and re-built before any commit. Editing the review context
         itself remains out of scope.
@@ -980,7 +1088,7 @@ skill *curates and commits*; it does *not* judge code quality.
 
     </step>
 
-8.  <step id="STEP 8: Final Summary">
+9.  <step id="STEP 9: Final Summary">
 
     Emit a concise recap of what was produced:
 

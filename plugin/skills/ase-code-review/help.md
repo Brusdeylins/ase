@@ -17,7 +17,8 @@ build-verified Git commits on a *dedicated work branch*. Acting as an
 experienced reviewer, it works *top-down*: it first enumerates every
 change as a flat *hunk manifest*, then asks for a *curation strategy*,
 proposes 3–5 *commit themes* that span the full surface, assigns each hunk
-to exactly one theme, and plans a *staging order*.
+to exactly one theme, *walks the user through each file group* — with a
+plain-language explanation — for confirmation, and plans a *staging order*.
 
 Up front the skill asks how the changes should be curated:
 
@@ -34,9 +35,11 @@ Throughout the per-theme loop a `*Progress*:` breadcrumb
 (`Batch x/y · Layer l/L · File a/b · Section s/k`) always shows where the
 user stands in the overall review.
 
-Each theme is then processed one at a time on the work branch: its hunks
-are staged in isolation, the working tree is isolated to the post-commit
-state, the project's build is run to verify the theme *as it will land*,
+Each theme is then processed one at a time on the work branch: *only the
+current group's files* are staged, before any review walk, so the index
+always holds exactly the files awaiting sign-off; the working tree is
+isolated to the post-commit state, the project's build is run to verify
+the theme *as it will land*,
 its files are walked *layer by layer* and *file by file* interactively,
 and only what the user *accepts* is committed. A theme is the *minimal
 build-safe commit unit* — bisect-safe and atomic — even when it internally
