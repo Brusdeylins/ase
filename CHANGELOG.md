@@ -8,6 +8,12 @@ ChangeLog
 - FEATURE [code]: add `ase-meta-intent` skill routing a free-text intent to a generated `/ase-xxx-xxx` command
 - FEATURE [code]: add `ase-meta-proximity` skill determining a topic's parent/sibling/child proximity, optionally grounded and navigable
 - FEATURE [code]: add `ase-meta-eli5` skill explaining topics "like I'm 5", optionally Web-grounded
+- IMPROVEMENT [code]: allow `ase-code-{craft,refactor,resolve}` to accept `--next GRILL` (`SKILL.md`)
+- IMPROVEMENT [code]: warn when Web grounding yields no facts in `ase-meta-proximity` (`SKILL.md`)
+- IMPROVEMENT [code]: allow 2 to 9 answer lines in custom dialogs (`ase-dialog.md`)
+- IMPROVEMENT [docs]: update workflow diagram for latest skill additions (`workflow.svg`)
+- IMPROVEMENT [infr]: use `execa` for another install step (`etc/stx.conf`)
+- UPDATE [infr]: upgrade NPM dependencies (`pages/package.json`, `tool/package.json`)
 
 0.9.45 (2026-07-21)
 -------------------
