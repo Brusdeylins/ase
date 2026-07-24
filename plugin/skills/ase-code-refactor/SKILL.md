@@ -23,7 +23,7 @@ Refactor Source Code
 
 <expand name="getopt"
     arg1="ase-code-refactor"
-    arg2="--auto|-a --dry|-d --quick|-Q --next|-n=(none|DONE|EDIT|PREFLIGHT|IMPLEMENT)...">
+    arg2="--auto|-a --dry|-d --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
     $ARGUMENTS
 </expand>
 
@@ -303,7 +303,21 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
             to *preflight* the freshly composed plan, bypassing `ase-task-edit`.
             </elseif>
 
-        4.  <else>
+        4.  <elseif condition="<head/> is equal `GRILL`">
+            Consume the head: set <getopt-option-next/> to the remaining
+            tokens (joined back with `,`, or `none` if empty). `GRILL`
+            is this skill's own dispatch token, *not* part of
+            `ase-task-grill`'s `--next` vocabulary, so it must be
+            stripped here rather than forwarded. All remaining tokens are
+            `ase-task-grill`'s own vocabulary and are forwarded verbatim.
+            <if condition="<getopt-option-next/> is not equal `none`">
+                Set <args><args/> --next <getopt-option-next/></args>
+            </if>
+            Call the tool `Skill(skill: "ase:ase-task-grill", args: "<args/>")`
+            to *grill* the freshly composed plan, bypassing `ase-task-edit`.
+            </elseif>
+
+        5.  <else>
             Hand off to `ase-task-edit`.
             <if condition="<head/> is equal `EDIT`">
                 Consume the head: set <getopt-option-next/> to the remaining

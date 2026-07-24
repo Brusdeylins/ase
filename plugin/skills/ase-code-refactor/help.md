@@ -50,15 +50,16 @@ plan via `ase_task_save` and then hands off to `ase-task-edit`,
 `--next`|`-n` *option*[,...]:
     Automatically choose the next step after composing the plan.
     *option* is a single token or a *comma-separated chronological
-    list* of tokens; an `IMPLEMENT` or `PREFLIGHT` head token is
-    consumed by this skill (bypassing `ase-task-edit`), and any
+    list* of tokens; an `IMPLEMENT`, `PREFLIGHT`, or `GRILL` head token
+    is consumed by this skill (bypassing `ase-task-edit`), and any
     remaining tokens are *forwarded* (via `--next`) to the downstream
     skill. For all other head tokens, the *entire* list is forwarded
     to `ase-task-edit`, which consumes its head itself. This lets an
     entire pipeline be pre-scripted in one shot. Recognized tokens at
     this skill: `none` (default, hand off to `ase-task-edit`
     interactively), `DONE` (stop), `EDIT` (hand off to
-    `ase-task-edit`), `PREFLIGHT` (hand off to `ase-task-preflight`),
+    `ase-task-edit`), `GRILL` (hand off to `ase-task-grill`),
+    `PREFLIGHT` (hand off to `ase-task-preflight`),
     or `IMPLEMENT` (hand off to `ase-task-implement`). Example:
     `--next PREFLIGHT,IMPLEMENT,DONE` refactors, preflights, implements,
     and exits without further dialog.
@@ -87,4 +88,4 @@ Refactor under a named task and directly hand off to implementation:
 ##  SEE ALSO
 
 [`ase-code-craft`](../ase-code-craft/help.md), [`ase-code-resolve`](../ase-code-resolve/help.md), [`ase-task-edit`](../ase-task-edit/help.md),
-[`ase-task-preflight`](../ase-task-preflight/help.md), [`ase-task-implement`](../ase-task-implement/help.md).
+[`ase-task-grill`](../ase-task-grill/help.md), [`ase-task-preflight`](../ase-task-preflight/help.md), [`ase-task-implement`](../ase-task-implement/help.md).
