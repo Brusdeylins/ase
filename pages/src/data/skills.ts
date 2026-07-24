@@ -23,6 +23,7 @@ export const skillGroups: SkillGroup[] = [
             "ase-meta-why",
             "ase-meta-eli5",
             "ase-meta-proximity",
+            "ase-meta-intent",
             "ase-meta-evaluate",
             "ase-meta-diaboli",
             "ase-meta-steelman",

@@ -5,6 +5,7 @@ ChangeLog
 0.9.46 (2026-07-25)
 -------------------
 
+- FEATURE [code]: add `ase-meta-intent` skill routing a free-text intent to a generated `/ase-xxx-xxx` command
 - FEATURE [code]: add `ase-meta-proximity` skill determining a topic's parent/sibling/child proximity, optionally grounded and navigable
 - FEATURE [code]: add `ase-meta-eli5` skill explaining topics "like I'm 5", optionally Web-grounded
 
