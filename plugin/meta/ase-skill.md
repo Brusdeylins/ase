@@ -140,6 +140,15 @@ Skill Sequential Processing
 -   *IMPORTANT*: For each <step/> you *MUST* use the `TaskUpdate` tool
     for updating its status *during* processing, once a <step/> finished.
 
+-   *IMPORTANT*: Whenever a skill *stops early* -- because a <step/>
+    instructed you to *STOP* processing (on an error, a cancelled
+    dialog, a short-circuit branch, or any other early exit) -- you
+    *MUST*, *before* emitting the final <template/>, use the `TaskUpdate`
+    tool to set the status of *every* still `pending` or `in_progress`
+    task of the current <flow/> to `deleted`, so that no task of a
+    finished skill remains open. Steps that were *skipped* because their
+    `condition` attribute was not met *MUST* be treated the same way.
+
 -   *IMPORTANT*: You *MUST* *strictly sequentially* execute every <step/> in
     a <flow/>. You *MUST* not implicitly skip any <step/> during
     processing, except you were explicitly requested to do this or the
