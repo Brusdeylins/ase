@@ -254,6 +254,12 @@ const probeMemory = (): { used: number, total: number } => {
     }
 }
 
+/*  memoize a zero-argument function, computing its value at most once on first use  */
+const memoize = <T>(fn: () => T): (() => T) => {
+    let cache: { value: T } | null = null
+    return (): T => (cache ??= { value: fn() }).value
+}
+
 /*  command-line handling  */
 export default class StatuslineCommand {
     constructor (private log: Log) {}
@@ -369,16 +375,8 @@ export default class StatuslineCommand {
                 /*  lazy memoized probes for cross-renderer values: each is computed at most
                     once per run and only when first requested by a renderer (or by the
                     post-loop tmux publish for the Config cascade)  */
-                let sessCache: string | null = null
-                const getSession = (): string => {
-                    if (sessCache === null)
-                        sessCache = data.session_id ?? "unknown"
-                    return sessCache
-                }
-                let cfgCache: { taskId: string, persona: string } | null = null
-                const getCfg = (): { taskId: string, persona: string } => {
-                    if (cfgCache !== null)
-                        return cfgCache
+                const getSession = memoize((): string => data.session_id ?? "unknown")
+                const getCfg = memoize((): { taskId: string, persona: string } => {
                     let taskId  = process.env.ASE_TASK_ID       ?? ""
                     let persona = process.env.ASE_PERSONA_STYLE ?? ""
                     try {
@@ -395,21 +393,10 @@ export default class StatuslineCommand {
                     catch (_e) {
                         /*  cascade unavailable; keep env-var fallbacks  */
                     }
-                    cfgCache = { taskId, persona }
-                    return cfgCache
-                }
-                let gitCache: ReturnType<typeof probeGit> | null = null
-                const getGit = (): ReturnType<typeof probeGit> => {
-                    if (gitCache === null)
-                        gitCache = probeGit(data.workspace?.current_dir ?? "")
-                    return gitCache
-                }
-                let memCache: ReturnType<typeof probeMemory> | null = null
-                const getMem = (): ReturnType<typeof probeMemory> => {
-                    if (memCache === null)
-                        memCache = probeMemory()
-                    return memCache
-                }
+                    return { taskId, persona }
+                })
+                const getGit = memoize(() => probeGit(data.workspace?.current_dir ?? ""))
+                const getMem = memoize(() => probeMemory())
 
                 /*  identifier to renderer map: each callback fetches its own information
                     directly from data (or via the lazy helpers above for shared values)  */
