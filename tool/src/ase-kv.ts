@@ -7,6 +7,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { z }              from "zod"
 
+/*  the shape of a single key/value command  */
+export type KVCommand = {
+    command: "clear" | "set" | "get" | "delete"
+    key?:    string
+    val?:    unknown
+    prefix?: string
+}
+
 /*  reusable functionality: in-memory key/value store living inside the
     "ase service" process; per-project (one service per project) and
     not persisted; intended for sharing information between skills
@@ -84,6 +92,37 @@ export class KV {
         for (const [ k, v ] of snap)
             KV.store.set(k, v)
     }
+
+    /*  execute a single key/value command and return its result text  */
+    static execute (c: KVCommand): string {
+        if (c.command === "clear")
+            return `OK: removed ${KV.clear(c.prefix)} key(s)`
+        else if (c.command === "set") {
+            if (c.key === undefined)
+                throw new Error("missing `key`")
+            if (c.val === undefined)
+                throw new Error("missing `val`")
+            KV.set(c.key, c.val)
+            return `OK: stored key "${c.key}"`
+        }
+        else if (c.command === "get") {
+            if (c.key === undefined)
+                throw new Error("missing `key`")
+            if (!KV.has(c.key))
+                return ""
+            const val = KV.get(c.key)
+            return val === undefined ? "" : JSON.stringify(val)
+        }
+        else if (c.command === "delete") {
+            if (c.key === undefined)
+                throw new Error("missing `key`")
+            return KV.delete(c.key) ?
+                `OK: removed key "${c.key}"` :
+                `WARNING: no key "${c.key}" to remove`
+        }
+        else
+            throw new Error(`invalid command "${String(c.command)}"`)
+    }
 }
 
 /*  MCP registration entry point for in-memory key/value tools  */
@@ -101,10 +140,7 @@ export class KVMCP {
             }
         }, async (args) => {
             try {
-                if (!KV.has(args.key))
-                    return { content: [ { type: "text", text: "" } ] }
-                const val  = KV.get(args.key)
-                const text = val === undefined ? "" : JSON.stringify(val)
+                const text = KV.execute({ command: "get", key: args.key })
                 return { content: [ { type: "text", text } ] }
             }
             catch (err: unknown) {
@@ -128,8 +164,8 @@ export class KVMCP {
             }
         }, async (args) => {
             try {
-                KV.set(args.key, args.val)
-                return { content: [ { type: "text", text: `OK: stored key "${args.key}"` } ] }
+                const text = KV.execute({ command: "set", key: args.key, val: args.val })
+                return { content: [ { type: "text", text } ] }
             }
             catch (err: unknown) {
                 const message = err instanceof Error ? err.message : String(err)
@@ -151,8 +187,8 @@ export class KVMCP {
             }
         }, async (args) => {
             try {
-                const n = KV.clear(args.prefix)
-                return { content: [ { type: "text", text: `OK: removed ${n} key(s)` } ] }
+                const text = KV.execute({ command: "clear", prefix: args.prefix })
+                return { content: [ { type: "text", text } ] }
             }
             catch (err: unknown) {
                 const message = err instanceof Error ? err.message : String(err)
@@ -172,11 +208,8 @@ export class KVMCP {
             }
         }, async (args) => {
             try {
-                const removed = KV.delete(args.key)
-                const msg = removed ?
-                    `OK: removed key "${args.key}"` :
-                    `WARNING: no key "${args.key}" to remove`
-                return { content: [ { type: "text", text: msg } ] }
+                const text = KV.execute({ command: "delete", key: args.key })
+                return { content: [ { type: "text", text } ] }
             }
             catch (err: unknown) {
                 const message = err instanceof Error ? err.message : String(err)
@@ -221,36 +254,7 @@ export class KVMCP {
             const snapshot = tx ? KV.snapshot() : null
             for (const c of args.commands) {
                 try {
-                    if (c.command === "clear") {
-                        const n = KV.clear(c.prefix)
-                        results.push(`OK: removed ${n} key(s)`)
-                    }
-                    else if (c.command === "set") {
-                        if (c.key === undefined)
-                            throw new Error("missing `key`")
-                        if (c.val === undefined)
-                            throw new Error("missing `val`")
-                        KV.set(c.key, c.val)
-                        results.push(`OK: stored key "${c.key}"`)
-                    }
-                    else if (c.command === "get") {
-                        if (c.key === undefined)
-                            throw new Error("missing `key`")
-                        if (!KV.has(c.key))
-                            results.push("")
-                        else {
-                            const val = KV.get(c.key)
-                            results.push(val === undefined ? "" : JSON.stringify(val))
-                        }
-                    }
-                    else if (c.command === "delete") {
-                        if (c.key === undefined)
-                            throw new Error("missing `key`")
-                        const removed = KV.delete(c.key)
-                        results.push(removed ?
-                            `OK: removed key "${c.key}"` :
-                            `WARNING: no key "${c.key}" to remove`)
-                    }
+                    results.push(KV.execute(c))
                 }
                 catch (err: unknown) {
                     const message = err instanceof Error ? err.message : String(err)
