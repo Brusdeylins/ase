@@ -16,7 +16,7 @@ import type { McpServer }       from "@modelcontextprotocol/sdk/server/mcp.js"
 import type Log                 from "./ase-log.js"
 import { Config, configSchema } from "./ase-config.js"
 import { Task }                 from "./ase-task.js"
-import { writeStdout }          from "./ase-stdout.js"
+import { writeStdout }          from "./ase-stdio.js"
 
 /*  the recognized artifact kinds, in descending precedence order;
     "othr" is the implicit catch-all and is always resolved last  */

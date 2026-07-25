@@ -4,6 +4,15 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
+import getStdin from "get-stdin"
+
+/*  read the entire stdin payload as a UTF-8 string, treating an
+    interactive terminal as empty input so callers never block on a
+    user which is not going to type anything  */
+export const readStdin = (): Promise<string> => {
+    return getStdin()
+}
+
 /*  write a string to stdout, awaiting the write callback which only
     fires once the data has been flushed to the underlying pipe, so a
     subsequent "process.exit" cannot truncate the output  */

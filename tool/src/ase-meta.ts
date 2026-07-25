@@ -11,7 +11,7 @@ import { fileURLToPath }    from "node:url"
 import { Command }          from "commander"
 
 import type Log             from "./ase-log.js"
-import { writeStdout }      from "./ase-stdout.js"
+import { writeStdout }      from "./ase-stdio.js"
 
 /*  reusable functionality: resolve and read plugin "meta/" files  */
 export class Meta {

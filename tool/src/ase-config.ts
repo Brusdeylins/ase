@@ -21,7 +21,7 @@ import { LRUCache }                                 from "lru-cache"
 import type { McpServer }                           from "@modelcontextprotocol/sdk/server/mcp.js"
 
 import type Log                                     from "./ase-log.js"
-import { writeStdout }                              from "./ase-stdout.js"
+import { writeStdout }                              from "./ase-stdio.js"
 
 /*  classification taxonomy  */
 export const projectClassification = {

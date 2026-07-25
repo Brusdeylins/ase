@@ -20,7 +20,7 @@ import type { McpServer }                     from "@modelcontextprotocol/sdk/se
 import type Log                               from "./ase-log.js"
 import { Config, configSchema, parseScope }   from "./ase-config.js"
 import { Markdown }                           from "./ase-markdown.js"
-import { writeStdout }                        from "./ase-stdout.js"
+import { readStdin, writeStdout }             from "./ase-stdio.js"
 
 /*  reusable functionality: persisted task plans under
     <project>/<basedir>/TASK-<id>.md (driven by the
@@ -280,16 +280,6 @@ export class Task {
             cfg.write()
         })
     }
-}
-
-/*  read all of stdin as a UTF-8 string  */
-const readStdin = (): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const chunks: Buffer[] = []
-        process.stdin.on("data",  (chunk: Buffer) => chunks.push(chunk))
-        process.stdin.on("end",   () => resolve(Buffer.concat(chunks).toString("utf8")))
-        process.stdin.on("error", (err) => reject(err))
-    })
 }
 
 /*  CLI command "ase task"  */

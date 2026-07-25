@@ -11,13 +11,12 @@ import os                                   from "node:os"
 import { Command }                          from "commander"
 import { execaSync }                        from "execa"
 import { quote }                            from "shell-quote"
-import getStdin                             from "get-stdin"
 import * as v                               from "valibot"
 
 import type Log                             from "./ase-log.js"
 import Version                              from "./ase-version.js"
 import { Config, configSchema, parseScope } from "./ase-config.js"
-import { writeStdout }                      from "./ase-stdout.js"
+import { readStdin, writeStdout }           from "./ase-stdio.js"
 
 /*  type of supported tool (host) systems  */
 type Tool = "claude" | "copilot" | "codex"
@@ -112,15 +111,9 @@ export default class HookCommand {
         return /^[A-Za-z0-9._-]+$/.test(id)
     }
 
-    /*  read the entire stdin payload asynchronously  */
-    private readStdin (): Promise<string> {
-        /*  best-effort: treat an unreadable/closed stdin as empty  */
-        return getStdin().catch(() => "")
-    }
-
     /*  drain and discard the stdin event payload  */
     private async drainStdin (): Promise<void> {
-        await this.readStdin()
+        await readStdin().catch(() => "")
     }
 
     /*  best-effort JSON parse with valibot schema validation: returns
@@ -249,7 +242,7 @@ export default class HookCommand {
 
         /*  read session information (Anthropic Claude Code CLI uses snake_case fields,
             GitHub Copilot CLI uses camelCase fields)  */
-        const stdin = await this.readStdin()
+        const stdin = await readStdin().catch(() => "")
         const input = this.parseJSON(stdin, v.object({
             session_id: v.optional(v.string()),
             sessionId:  v.optional(v.string()),
@@ -440,7 +433,7 @@ export default class HookCommand {
 
     /*  read session id from stdin JSON payload  */
     private async readSessionIdFromStdin (): Promise<string> {
-        const stdin = await this.readStdin()
+        const stdin = await readStdin().catch(() => "")
         const input = this.parseJSON(stdin, v.object({
             session_id: v.optional(v.string()),
             sessionId:  v.optional(v.string())
@@ -532,7 +525,7 @@ export default class HookCommand {
         loosely-typed input object shared by the tool-approval handlers  */
     private async readHookInput (tool: Tool): Promise<{ spec: ToolSpec, input: Record<string, unknown> }> {
         const spec  = toolSpecs[tool]
-        const stdin = await this.readStdin()
+        const stdin = await readStdin().catch(() => "")
         const input = this.parseJSON(stdin, v.looseObject({
             session_id: v.optional(v.string()),
             sessionId:  v.optional(v.string())

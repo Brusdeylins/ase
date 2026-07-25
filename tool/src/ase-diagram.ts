@@ -12,11 +12,11 @@ import {
     renderMermaidSVG
 }                                        from "beautiful-mermaid"
 import { z }                             from "zod"
-import getStdin                          from "get-stdin"
 
 import type { McpServer }                from "@modelcontextprotocol/sdk/server/mcp.js"
 
 import type Log                          from "./ase-log.js"
+import { readStdin }                     from "./ase-stdio.js"
 
 /*  options accepted by the pure rendering helper  */
 export interface DiagramRenderOpts {
@@ -310,7 +310,7 @@ export default class DiagramCommand {
                     }
                 }
                 else
-                    src = await getStdin()
+                    src = await readStdin()
                 if (src.trim() === "") {
                     this.log.write("error", "diagram: empty Mermaid diagram specification")
                     process.exit(1)

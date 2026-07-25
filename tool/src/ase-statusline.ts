@@ -16,7 +16,7 @@ import type { ForegroundColorName }         from "chalk"
 
 import type Log                             from "./ase-log.js"
 import { Config, configSchema, parseScope } from "./ase-config.js"
-import { writeStdout }                      from "./ase-stdout.js"
+import { readStdin, writeStdout }           from "./ase-stdio.js"
 import pkg                                  from "../package.json" with { type: "json" }
 
 /*  forced-color chalk instance: stdout is a pipe under Anthropic Claude Code CLI,
@@ -111,14 +111,6 @@ const parseInteger = (name: string) => (value: string): number => {
     if (!Number.isFinite(n) || n < 0)
         throw new InvalidArgumentError(`${name} must be a non-negative integer`)
     return n
-}
-
-/*  read stdin into a single string  */
-const readStdin = async (): Promise<string> => {
-    const chunks: Buffer[] = []
-    for await (const chunk of process.stdin)
-        chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk)
-    return Buffer.concat(chunks).toString("utf8")
 }
 
 /*  detect terminal column width via /dev/tty (stdout is a pipe under Anthropic Claude Code CLI)  */
