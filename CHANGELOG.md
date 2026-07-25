@@ -2,6 +2,25 @@
 ChangeLog
 =========
 
+0.9.48 (2026-07-25)
+-------------------
+
+- IMPROVEMENT [code]: probe live-context fields for a portable and correct context window in statusline `%C` (`ase-statusline.ts`)
+- IMPROVEMENT [code]: cache the task storage specification to avoid re-parsing the layered config chain (`ase-task.ts`)
+- IMPROVEMENT [code]: cache the `git rev-parse --show-toplevel` project root lookup (`ase-config.ts`)
+- IMPROVEMENT [code]: make service probing robust against connection errors (`ase-mcp.ts`, `ase-service.ts`)
+- IMPROVEMENT [code]: reject configured basedirs with parent traversal segments (`ase-artifact.ts`, `ase-config.ts`)
+- IMPROVEMENT [code]: hoist invariant computations out of the option iterations (`ase-getopt.ts`)
+- IMPROVEMENT [code]: render the skill command proposal more compactly (`ase-help-intent/SKILL.md`)
+- BUGFIX [code]: honor `process.exitCode` on graceful termination (`ase.ts`)
+- BUGFIX [code]: shell-quote Commander-parsed arguments when reassembling them (`ase-getopt.ts`)
+- BUGFIX [code]: support SSH and scp-style GitHub repository URLs when fetching stars (`ase-skills.ts`)
+- BUGFIX [code]: clone also the return value of the KV get operation (`ase-kv.ts`)
+- BUGFIX [code]: catch errors on the log file append operation (`ase-hook.ts`)
+- BUGFIX [code]: use a regular exception handler in `main` for process termination (`ase-statusline.ts`)
+- REFACTOR [code]: move stdin/stdout handling into a common `ase-stdio.ts` module (`tool/src/*.ts`)
+- CLEANUP [code]: remove redundancies and simplify code across the `ase` CLI sources (`tool/src/*.ts`)
+
 0.9.47 (2026-07-25)
 -------------------
 
