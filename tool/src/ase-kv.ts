@@ -125,6 +125,20 @@ export class KV {
     }
 }
 
+/*  extract the message of a caught error  */
+const errorMessage = (err: unknown) =>
+    err instanceof Error ? err.message : String(err)
+
+/*  execute a single key/value command and render it as an MCP tool result  */
+const mcpToolExec = (c: KVCommand) => {
+    try {
+        return { content: [ { type: "text" as const, text: KV.execute(c) } ] }
+    }
+    catch (err: unknown) {
+        return { isError: true, content: [ { type: "text" as const, text: `ERROR: ${errorMessage(err)}` } ] }
+    }
+}
+
 /*  MCP registration entry point for in-memory key/value tools  */
 export class KVMCP {
     register (mcp: McpServer): void {
@@ -138,16 +152,7 @@ export class KVMCP {
                 key: z.string()
                     .describe("key identifier (non-empty, no whitespace-only, no control characters, up to 1024 characters)")
             }
-        }, async (args) => {
-            try {
-                const text = KV.execute({ command: "get", key: args.key })
-                return { content: [ { type: "text", text } ] }
-            }
-            catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err)
-                return { isError: true, content: [ { type: "text", text: `ERROR: ${message}` } ] }
-            }
-        })
+        }, async (args) => mcpToolExec({ command: "get", key: args.key }))
 
         /*  key/value set  */
         mcp.registerTool("ase_kv_set", {
@@ -162,16 +167,7 @@ export class KVMCP {
                 val: z.union([ z.string(), z.number(), z.boolean(), z.null(), z.array(z.unknown()), z.record(z.string(), z.unknown()) ])
                     .describe("arbitrary JSON-compatible value to store under `key`")
             }
-        }, async (args) => {
-            try {
-                const text = KV.execute({ command: "set", key: args.key, val: args.val })
-                return { content: [ { type: "text", text } ] }
-            }
-            catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err)
-                return { isError: true, content: [ { type: "text", text: `ERROR: ${message}` } ] }
-            }
-        })
+        }, async (args) => mcpToolExec({ command: "set", key: args.key, val: args.val }))
 
         /*  key/value clear  */
         mcp.registerTool("ase_kv_clear", {
@@ -185,16 +181,7 @@ export class KVMCP {
                 prefix: z.string().optional()
                     .describe("if given, only remove keys starting with this prefix (otherwise remove all keys)")
             }
-        }, async (args) => {
-            try {
-                const text = KV.execute({ command: "clear", prefix: args.prefix })
-                return { content: [ { type: "text", text } ] }
-            }
-            catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err)
-                return { isError: true, content: [ { type: "text", text: `ERROR: ${message}` } ] }
-            }
-        })
+        }, async (args) => mcpToolExec({ command: "clear", prefix: args.prefix }))
 
         /*  key/value delete  */
         mcp.registerTool("ase_kv_delete", {
@@ -206,16 +193,7 @@ export class KVMCP {
                 key: z.string()
                     .describe("key identifier (non-empty, no whitespace-only, no control characters, up to 1024 characters)")
             }
-        }, async (args) => {
-            try {
-                const text = KV.execute({ command: "delete", key: args.key })
-                return { content: [ { type: "text", text } ] }
-            }
-            catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err)
-                return { isError: true, content: [ { type: "text", text: `ERROR: ${message}` } ] }
-            }
-        })
+        }, async (args) => mcpToolExec({ command: "delete", key: args.key }))
 
         /*  key/value batch  */
         mcp.registerTool("ase_kv_batch", {
@@ -257,7 +235,7 @@ export class KVMCP {
                     results.push(KV.execute(c))
                 }
                 catch (err: unknown) {
-                    const message = err instanceof Error ? err.message : String(err)
+                    const message = errorMessage(err)
                     if (tx) {
                         if (snapshot !== null)
                             KV.restore(snapshot)
