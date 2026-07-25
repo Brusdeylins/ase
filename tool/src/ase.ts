@@ -74,12 +74,16 @@ const main = async (): Promise<void> => {
     await program.parseAsync(process.argv)
 
     /*  gracefully terminate  */
+    await log.close()
     process.exit(0)
 }
-main().catch((err: unknown) => {
-    if (err instanceof CommanderError)
+main().catch(async (err: unknown) => {
+    if (err instanceof CommanderError) {
+        await log.close()
         process.exit(err.exitCode)
+    }
     const message = err instanceof Error ? err.message : String(err)
     log.write("error", message)
+    await log.close()
     process.exit(1)
 })

@@ -72,4 +72,17 @@ export default class Log {
                 this.stream.write(line)
         }
     }
+
+    /*  close the log file stream, flushing all pending writes  */
+    async close (): Promise<void> {
+        if (this.stream === null)
+            return
+        const stream = this.stream
+        this.stream  = null
+        await new Promise<void>((resolve) => {
+            stream.end(() => {
+                resolve()
+            })
+        })
+    }
 }
