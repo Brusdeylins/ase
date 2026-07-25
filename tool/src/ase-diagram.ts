@@ -194,6 +194,9 @@ export class Diagram {
         if (opts.format === "svg")
             return renderMermaidSVG(src)
 
+        /*  determine theme colors (gray shades once colors are enabled)  */
+        const colored = opts.colorMode !== "none"
+
         /*  create diagram rendering  */
         let out = renderMermaidASCII(src, {
             useAscii:         opts.ascii,
@@ -201,20 +204,13 @@ export class Diagram {
             paddingY:         opts.nodeMarginY,
             boxBorderPadding: opts.nodePadding,
             colorMode:        opts.colorMode,
-            theme: opts.colorMode !== "none" ? {
+            theme: {
                 fg:       "#000000",
-                border:   "#a0a0a0",
-                junction: "#a0a0a0",
-                arrow:    "#404040",
-                line:     "#707070",
-                corner:   "#707070"
-            } : {
-                fg:       "#000000",
-                border:   "#000000",
-                junction: "#000000",
-                arrow:    "#000000",
-                line:     "#000000",
-                corner:   "#000000"
+                border:   colored ? "#a0a0a0" : "#000000",
+                junction: colored ? "#a0a0a0" : "#000000",
+                arrow:    colored ? "#404040" : "#000000",
+                line:     colored ? "#707070" : "#000000",
+                corner:   colored ? "#707070" : "#000000"
             }
         })
 
