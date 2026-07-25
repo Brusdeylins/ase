@@ -536,11 +536,11 @@ export default class StatuslineCommand {
 
                     /*  ==== VERSIONS ====  */
                     V: () => {
-                        const ccVersion  = data.version ?? ""
-                        const aseVersion = pkg.version  ?? ""
+                        const toolVersion = data.version ?? ""
+                        const aseVersion  = pkg.version  ?? ""
                         let version = ""
-                        if (ccVersion !== "")
-                            version += `claude/${ccVersion}`
+                        if (toolVersion !== "")
+                            version += `${tool}/${toolVersion}`
                         if (aseVersion !== "")
                             version += `${version !== "" ? " " : ""}ase/${aseVersion}`
                         emit(`${prefix("⎈", "version")}${c.bold(version)}`)
