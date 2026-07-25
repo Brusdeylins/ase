@@ -434,29 +434,13 @@ export default class SetupCommand {
                 args.push(name, transport.url)
             }
         }
-        else if (tool === "copilot") {
-            /*  GitHub Copilot CLI implies the stdio transport when the
-                command is provided after "--"; only "http"/"sse" servers
-                need an explicit "--transport" flag and take the URL as a
-                positional argument  */
-            if (transport.type === "stdio") {
-                args.push(name)
-                for (const [ key, val ] of Object.entries(env))
-                    args.push("--env", `${key}=${val}`)
-                args.push("--", ...transport.command)
-            }
-            else {
-                args.push("--transport", "http")
-                for (const [ key, val ] of Object.entries(transport.headers ?? {}))
-                    args.push("--header", `${key}: ${val}`)
-                args.push(name, transport.url)
-            }
-        }
         else {
-            /*  OpenAI Codex CLI takes the server name as the first
-                positional argument and implies the stdio transport when the
-                command is provided after "--"; "http" servers take the URL
-                via the "--url" option (with optional "--header" flags)  */
+            /*  the GitHub Copilot CLI and OpenAI Codex CLI both take the
+                server name as a positional argument and imply the stdio
+                transport when the command is provided after "--"; for "http"
+                servers the GitHub Copilot CLI needs an explicit
+                "--transport" flag and takes the URL positionally, while the
+                OpenAI Codex CLI takes it via the "--url" option  */
             if (transport.type === "stdio") {
                 args.push(name)
                 for (const [ key, val ] of Object.entries(env))
@@ -464,9 +448,14 @@ export default class SetupCommand {
                 args.push("--", ...transport.command)
             }
             else {
+                if (tool === "copilot")
+                    args.push("--transport", "http")
                 for (const [ key, val ] of Object.entries(transport.headers ?? {}))
                     args.push("--header", `${key}: ${val}`)
-                args.push(name, "--url", transport.url)
+                if (tool === "copilot")
+                    args.push(name, transport.url)
+                else
+                    args.push(name, "--url", transport.url)
             }
         }
         await this.run(toolSpecs[tool].cli, args)
