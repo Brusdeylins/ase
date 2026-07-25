@@ -20,6 +20,7 @@ import { z }                                        from "zod"
 import type { McpServer }                           from "@modelcontextprotocol/sdk/server/mcp.js"
 
 import type Log                                     from "./ase-log.js"
+import { writeStdout }                              from "./ase-stdout.js"
 
 /*  classification taxonomy  */
 export const projectClassification = {
@@ -620,7 +621,7 @@ export default class ConfigCommand {
         configCmd
             .command("list")
             .description("list all configured values as flat dotted keys")
-            .action((_opts: unknown, cmd: Command) => {
+            .action(async (_opts: unknown, cmd: Command) => {
                 const scope = parseScope(cmd.optsWithGlobals().scope as string | undefined)
                 const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
@@ -633,7 +634,7 @@ export default class ConfigCommand {
                     const val = isScalar(e.value) ? e.value.value : e.value
                     table.push([ e.key, String(val), Config.scopeLabel(e.scope) ])
                 }
-                process.stdout.write(`${table.toString()}\n`)
+                await writeStdout(`${table.toString()}\n`)
             })
 
         /*  register CLI sub-command "ase config edit"  */
@@ -674,7 +675,7 @@ export default class ConfigCommand {
             .command("get")
             .description("print the value at a dotted configuration key")
             .argument("<key>", "configuration key (dotted path)")
-            .action((key: string, _opts: unknown, cmd: Command) => {
+            .action(async (key: string, _opts: unknown, cmd: Command) => {
                 const scope = parseScope(cmd.optsWithGlobals().scope as string | undefined)
                 const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
@@ -683,7 +684,7 @@ export default class ConfigCommand {
                     throw new Error(`key "${key}" is not set`)
                 if (isMap(val))
                     throw new Error(`key "${key}" is not a leaf key`)
-                process.stdout.write(`${isScalar(val) ? val.value : val}\n`)
+                await writeStdout(`${isScalar(val) ? val.value : val}\n`)
             })
 
         /*  register CLI sub-command "ase config set"  */

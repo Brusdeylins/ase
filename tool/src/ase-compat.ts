@@ -7,6 +7,8 @@
 import { Command }          from "commander"
 import type { McpServer }   from "@modelcontextprotocol/sdk/server/mcp.js"
 
+import { writeStdout }      from "./ase-stdout.js"
+
 /*  the canonical expected values for every ase-meta-compat probe,
     keyed by "<category>/<probe-name>" as used in the skill  */
 const EXPECTED: Record<string, string> = {
@@ -54,8 +56,8 @@ export default class CompatCommand {
         program
             .command("compat")
             .description("Output expected probe values for the ase-meta-compat self-test skill")
-            .action(() => {
-                process.stdout.write(formatExpected())
+            .action(async () => {
+                await writeStdout(formatExpected())
             })
     }
 }
