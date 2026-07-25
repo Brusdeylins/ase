@@ -47,14 +47,22 @@ interface StatuslineInput {
         display_name?: string
     }
     context_window?: {
-        used_percentage?:     number
-        total_input_tokens?:  number
-        total_output_tokens?: number
+        /*  shared by both harnesses (Copilot's "total_*" are cumulative
+            session sums, Claude's reflect the live window since v2.1.132)  */
+        used_percentage?:      number | null
+        total_input_tokens?:   number
+        total_output_tokens?:  number
+        context_window_size?:  number
+        /*  GitHub Copilot CLI only: live-context view  */
+        current_context_tokens?:  number
+        displayed_context_limit?: number
+        last_call_input_tokens?:  number
         current_usage?: {
             input_tokens?:                number
+            output_tokens?:               number
             cache_creation_input_tokens?: number
             cache_read_input_tokens?:     number
-        }
+        } | null
     }
     effort?: {
         level?: string
@@ -451,11 +459,18 @@ export default class StatuslineCommand {
                         emit(`${prefix("◔", "context")}${bar} ${pct}%`)
                     },
                     C: () => {
-                        const pct     = data.context_window?.used_percentage ?? 0
-                        const tokensCur =
-                            (data.context_window?.total_input_tokens  ?? 0) +
-                            (data.context_window?.total_output_tokens ?? 0)
-                        const tokensLim = pct > 0 && tokensCur > 0 ? Math.round(tokensCur * 100 / pct) : 0
+                        /*  probe the live-context fields first and fall back to the
+                            cumulative ones, so each harness contributes its own view:
+                            GitHub Copilot CLI reports the live window separately (its
+                            "total_*" are session sums), whereas Anthropic Claude Code CLI
+                            folds it into "total_input_tokens". Output tokens stay out --
+                            "used_percentage" is input-side only.  */
+                        const cw        = data.context_window
+                        const pct       = cw?.used_percentage ?? 0
+                        const tokensCur = cw?.current_context_tokens ??
+                            cw?.last_call_input_tokens ?? cw?.total_input_tokens ?? 0
+                        const tokensLim = cw?.displayed_context_limit ?? cw?.context_window_size ??
+                            (pct > 0 && tokensCur > 0 ? Math.round(tokensCur * 100 / pct) : 0)
                         if (tokensLim > 0)
                             emit(`${prefix("◆", "tokens")}${c.bold(formatTokens(tokensCur) + "/" + formatTokens(tokensLim))}`)
                     },
