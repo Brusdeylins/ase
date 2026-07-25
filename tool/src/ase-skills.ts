@@ -82,7 +82,7 @@ export class Skills {
 
     /*  fetch GitHub stars given a repository URL (or empty string)  */
     private static async fetchStars (repository: string): Promise<number | "N.A."> {
-        const m = /^.+?\/\/github\.com\/([^/]+\/[^/#?]+?)(?:\.git)?(?:[/#?].*)?$/.exec(repository)
+        const m = /^(?:.*?:\/\/)?(?:[^@/]*@)?github\.com[:/]([^/]+\/[^/#?]+?)(?:\.git)?(?:[/#?].*)?$/.exec(repository)
         if (m === null)
             return "N.A."
         try {
