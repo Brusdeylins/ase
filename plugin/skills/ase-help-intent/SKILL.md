@@ -102,16 +102,11 @@ catalog you match <intent/> against:
         <template>
         <ase-tpl-head title="SKILL COMMAND PROPOSAL"/>
 
-        ●   **INTENT**:
-        ○   <intent/>
-
-        ●   **COMMAND**:
-        ⌘   `<command/>`
-
-        ●   **RATIONALE**:
-        ○   <rationale/>
+        ❯ `<command/>`
 
         <ase-tpl-foot title="SKILL COMMAND PROPOSAL"/>
+
+        **RATIONALE**: <rationale/>
         </template>
 
     4.  *Dispatch Command*:
