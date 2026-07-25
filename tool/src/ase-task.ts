@@ -117,8 +117,8 @@ export class Task {
 
     /*  migrate all legacy <basedir>/<id>/plan.md task files to the current
         <basedir>/TASK-<id>.md layout; an existing TASK-<id>.md is never
-        overwritten; the now-empty <id>/ directory is removed afterwards;
-        returns the list of migrated task ids in lexicographic order  */
+        overwritten; the legacy <id>/ directory is removed only if it is
+        empty afterwards; returns the migrated task ids in lexicographic order  */
     static migrateAll (log: Log): string[] {
         const dir = Task.baseDir(log)
         if (!fs.existsSync(dir))
@@ -137,7 +137,13 @@ export class Task {
                 continue
             }
             fs.renameSync(oldFile, newFile)
-            fs.rmSync(path.join(dir, id), { recursive: true, force: true })
+
+            /*  drop the legacy directory, but only if it is really empty  */
+            const legacyDir = path.dirname(oldFile)
+            if (fs.readdirSync(legacyDir).length === 0)
+                fs.rmdirSync(legacyDir)
+            else
+                log.write("warning", `task: keeping non-empty legacy directory "${legacyDir}"`)
             migrated.push(id)
         }
         migrated.sort((a, b) => a.localeCompare(b))
