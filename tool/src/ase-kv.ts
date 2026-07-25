@@ -45,10 +45,10 @@ export class KV {
         return KV.store.has(key)
     }
 
-    /*  get a value by key; returns undefined if no value is stored  */
+    /*  get a deep copy of a value by key; returns undefined if no value is stored  */
     static get (key: string): unknown {
         KV.validateKey(key)
-        return KV.store.get(key)
+        return structuredClone(KV.store.get(key))
     }
 
     /*  set a value under the given key; overwrites any existing value  */
