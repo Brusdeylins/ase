@@ -162,6 +162,8 @@ export class Artifact {
         const basedir = Artifact.configString(cfg, `project.artifact.${kind}.basedir`)
             .replace(/\\/g, "/").replace(/^\/+|\/+$/g, "")
             .replace(/^\.$/, "")
+        if (basedir.split("/").includes(".."))
+            throw new Error(`artifact: configured "basedir" "${basedir}" must not escape the project root`)
         const files   = Artifact.configString(cfg, `project.artifact.${kind}.files`)
         return { basedir, files }
     }
