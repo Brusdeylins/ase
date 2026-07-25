@@ -322,7 +322,13 @@ export default class HookCommand {
                 `export ASE_SESSION_ID=${quote([ sessionId ])}\n` +
                 `export ASE_HEADLESS=${quote([ headless ])}\n` +
                 `export ASE_AGENT_TOOL=${quote([ tool ])}\n`
-            fs.appendFileSync(envFile, script, "utf8")
+            try {
+                fs.appendFileSync(envFile, script, "utf8")
+            }
+            catch (err: unknown) {
+                const message = err instanceof Error ? err.message : String(err)
+                this.log.write("warning", `hook: failed to write environment file: ${message}`)
+            }
         }
 
         /*  prepend ASE information to constitution markdown  */
