@@ -19,12 +19,12 @@ export const skillGroups: SkillGroup[] = [
     {
         label: "Standalone Mode 1/2",
         skills: [
+            "ase-help-skill",
+            "ase-help-intent",
             "ase-meta-persona",
             "ase-meta-why",
             "ase-meta-eli5",
             "ase-meta-proximity",
-            "ase-help-intent",
-            "ase-help-skill",
             "ase-meta-evaluate",
             "ase-meta-diaboli",
             "ase-meta-steelman",
