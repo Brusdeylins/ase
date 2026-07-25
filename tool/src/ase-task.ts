@@ -68,12 +68,20 @@ export class Task {
         return root
     }
 
+    /*  cached task storage specification (TTL-bounded, mirroring the project
+        root cache, as each read parses the whole layered YAML config chain)  */
+    private static specCache = new LRUCache<string, { basedir: string, files: string }>({ max: 4, ttl: 2 * 1000 })
+
     /*  read the configured "basedir" anchor and "files" miniglob spec for
         task storage; "basedir" is project-root-relative (POSIX, defaults
         to ".ase/task") and "files" constrains the task filenames
         (defaults to "*.md")  */
     private static spec (log: Log): { basedir: string, files: string } {
-        const cfg = new Config("config", configSchema, log)
+        const root   = Task.projectRoot()
+        const cached = Task.specCache.get(root)
+        if (cached !== undefined)
+            return cached
+        const cfg    = new Config("config", configSchema, log)
         cfg.read()
         const read = (key: string): string => {
             const val = cfg.get(key)
@@ -86,7 +94,9 @@ export class Task {
         if (basedir.split("/").includes(".."))
             throw new Error(`task: configured "basedir" "${basedir}" must not escape the project root`)
         const files   = read("project.artifact.task.files") || "*.md"
-        return { basedir, files }
+        const result  = { basedir, files }
+        Task.specCache.set(root, result)
+        return result
     }
 
     /*  resolve the on-disk base directory for task storage  */
