@@ -80,4 +80,4 @@ List the entire skill catalog:
 
 ##  SEE ALSO
 
-[`ase-meta-intent`](../ase-meta-intent/help.md), [`ase-meta-proximity`](../ase-meta-proximity/help.md).
+[`ase-help-intent`](../ase-help-intent/help.md), [`ase-meta-proximity`](../ase-meta-proximity/help.md).

@@ -35,13 +35,13 @@ skill name, abbreviation of it, or description of its purpose:
 <skill-ref><getopt-arguments/></skill-ref>
 </objective>
 
-The following <catalog/> is the *build-time generated* index of all ASE
-skills -- one ``-   `<name/>`: <purpose/>`` entry per skill, built by
-`npm start build` in `plugin/` -- and is the *sole* index <skill-ref/>
-is resolved against:
+The following <catalog/> is index of all ASE skills -- one
+`⎈ **<group/>**` entry per skill group and one
+``○ `<name/>`: <purpose/>`` entry per skill -- and this is
+the *sole* index <skill-ref/> is resolved against:
 
 <catalog>
-@${CLAUDE_SKILL_DIR}/data.md
+@${CLAUDE_SKILL_DIR}/catalog.md
 </catalog>
 
 <flow>
@@ -60,8 +60,7 @@ is resolved against:
         <template>
         <ase-tpl-head title="SKILL CATALOG"/>
 
-        ○   `<name-padded/>` – <purpose/>
-        ○   [...]
+        <catalog/>
 
         <ase-tpl-foot title="SKILL CATALOG"/>
 
