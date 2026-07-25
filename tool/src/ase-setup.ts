@@ -753,17 +753,11 @@ export default class SetupCommand {
         AST, reproducing the exact whitespace tokens json-asty emits for a
         canonically 4-space-indented settings.json  */
     private statuslineBuildMember (root: AstNode, command: string): AstNode {
-        const strMember = (key: string, val: string, epilog?: string): AstNode => {
+        const member = (key: string, val: string | number, epilog?: string): AstNode => {
+            const type = typeof val === "number" ? "number"    : "string"
+            const body = typeof val === "number" ? String(val) : JSON.stringify(val)
             const k = root.create("string").set({ body: JSON.stringify(key), value: key, epilog: ": " })
-            const v = root.create("string").set({ body: JSON.stringify(val), value: val })
-            const m = root.create("member")
-            if (epilog !== undefined)
-                m.set({ epilog })
-            return m.add(k, v)
-        }
-        const numMember = (key: string, val: number, epilog?: string): AstNode => {
-            const k = root.create("string").set({ body: JSON.stringify(key), value: key, epilog: ": " })
-            const v = root.create("number").set({ body: String(val), value: val })
+            const v = root.create(type).set({ body, value: val })
             const m = root.create("member")
             if (epilog !== undefined)
                 m.set({ epilog })
@@ -771,9 +765,9 @@ export default class SetupCommand {
         }
         const obj = root.create("object").set({ prolog: "{\n        ", epilog: "\n    }\n" })
         obj.add(
-            strMember("type",    "command", ",\n        "),
-            strMember("command", command,   ",\n        "),
-            numMember("padding", 0)
+            member("type",    "command", ",\n        "),
+            member("command", command,   ",\n        "),
+            member("padding", 0)
         )
         const key = root.create("string").set({
             body:  JSON.stringify("statusLine"),
