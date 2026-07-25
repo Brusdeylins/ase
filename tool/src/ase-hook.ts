@@ -628,58 +628,22 @@ export default class HookCommand {
                 process.exit(1)
             })
 
-        /*  register CLI sub-command "ase hook session-start"  */
-        hookCmd
-            .command("session-start")
-            .description("handle SessionStart hook event")
-            .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
-            .action(async (opts: { tool: string }) => {
-                process.exitCode = await this.doSessionStart(this.parseTool(opts.tool))
-            })
-
-        /*  register CLI sub-command "ase hook session-end"  */
-        hookCmd
-            .command("session-end")
-            .description("handle SessionEnd hook event")
-            .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
-            .action(async (opts: { tool: string }) => {
-                process.exitCode = await this.doSessionEnd(this.parseTool(opts.tool))
-            })
-
-        /*  register CLI sub-command "ase hook pre-tool-use"  */
-        hookCmd
-            .command("pre-tool-use")
-            .description("handle tool PreToolUse hook event")
-            .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
-            .action(async (opts: { tool: string }) => {
-                process.exitCode = await this.doPreToolUse(this.parseTool(opts.tool))
-            })
-
-        /*  register CLI sub-command "ase hook permission-request"  */
-        hookCmd
-            .command("permission-request")
-            .description("handle tool PermissionRequest hook event (Codex CLI)")
-            .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
-            .action(async (opts: { tool: string }) => {
-                process.exitCode = await this.doPermissionRequest(this.parseTool(opts.tool))
-            })
-
-        /*  register CLI sub-command "ase hook user-prompt-submit"  */
-        hookCmd
-            .command("user-prompt-submit")
-            .description("handle UserPromptSubmit hook event (mark agent as busy)")
-            .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
-            .action(async (opts: { tool: string }) => {
-                process.exitCode = await this.doUserPromptSubmit(this.parseTool(opts.tool))
-            })
-
-        /*  register CLI sub-command "ase hook stop"  */
-        hookCmd
-            .command("stop")
-            .description("handle Stop hook event (mark agent as ready)")
-            .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
-            .action(async (opts: { tool: string }) => {
-                process.exitCode = await this.doStop(this.parseTool(opts.tool))
-            })
+        /*  register CLI sub-commands "ase hook <event>"  */
+        const subCmds: Array<{ name: string, desc: string, handler: (tool: Tool) => Promise<number> }> = [
+            { name: "session-start",      desc: "handle SessionStart hook event",           handler: (tool) => this.doSessionStart(tool)      },
+            { name: "session-end",        desc: "handle SessionEnd hook event",             handler: (tool) => this.doSessionEnd(tool)        },
+            { name: "pre-tool-use",       desc: "handle tool PreToolUse hook event",        handler: (tool) => this.doPreToolUse(tool)        },
+            { name: "permission-request", desc: "handle tool PermissionRequest hook event", handler: (tool) => this.doPermissionRequest(tool) },
+            { name: "user-prompt-submit", desc: "handle UserPromptSubmit hook event",       handler: (tool) => this.doUserPromptSubmit(tool)  },
+            { name: "stop",               desc: "handle Stop hook event",                   handler: (tool) => this.doStop(tool)              }
+        ]
+        for (const { name, desc, handler } of subCmds)
+            hookCmd
+                .command(name)
+                .description(desc)
+                .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
+                .action(async (opts: { tool: string }) => {
+                    process.exitCode = await handler(this.parseTool(opts.tool))
+                })
     }
 }
