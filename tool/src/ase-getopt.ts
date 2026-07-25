@@ -12,6 +12,72 @@ import {
     quote as shQuote
 } from "shell-quote"
 
+/*  tokenize a raw input string into [start,end) token ranges, preserving
+    the quoting so the original text can later be sliced verbatim  */
+const tokenizeRanges = (input: string): Array<{ start: number, end: number }> => {
+    const ranges: Array<{ start: number, end: number }> = []
+    let i = 0
+    while (i < input.length) {
+        while (i < input.length && /\s/.test(input[i]))
+            i++
+        if (i >= input.length)
+            break
+        const start = i
+        while (i < input.length && !/\s/.test(input[i])) {
+            const ch = input[i]
+            if (ch === "\"" || ch === "'") {
+                const quote = ch
+                i++
+                while (i < input.length && input[i] !== quote) {
+                    if (input[i] === "\\" && i + 1 < input.length)
+                        i++
+                    i++
+                }
+                if (i < input.length)
+                    i++
+            }
+            else
+                i++
+        }
+        ranges.push({ start, end: i })
+    }
+    return ranges
+}
+
+/*  strip surrounding quotes/escapes from a raw token range so it can be
+    compared against an option flag spelling  */
+const unquote = (s: string): string => {
+    let out = ""
+    let j = 0
+    while (j < s.length) {
+        const ch = s[j]
+        if (ch === "\"" || ch === "'") {
+            const quote = ch
+            j++
+            while (j < s.length && s[j] !== quote) {
+                if (s[j] === "\\" && j + 1 < s.length) {
+                    out += s[j + 1]
+                    j += 2
+                }
+                else {
+                    out += s[j]
+                    j++
+                }
+            }
+            j++
+        }
+        else if (ch === "\\" && j + 1 < s.length) {
+            out += s[j + 1]
+            j += 2
+        }
+        else {
+            out += ch
+            j++
+        }
+    }
+    return out
+}
+
 /*  MCP registration entry point for the option-parser tool  */
 export class GetoptMCP {
     register (mcp: McpServer): void {
@@ -131,66 +197,7 @@ export class GetoptMCP {
                 let argsVerbatim = ""
                 if (argsRaw !== null) {
                     /*  tokenize raw input into [start,end) ranges, preserving quotes  */
-                    const ranges: Array<{ start: number, end: number }> = []
-                    let i = 0
-                    while (i < argsRaw.length) {
-                        while (i < argsRaw.length && /\s/.test(argsRaw[i]))
-                            i++
-                        if (i >= argsRaw.length)
-                            break
-                        const start = i
-                        while (i < argsRaw.length && !/\s/.test(argsRaw[i])) {
-                            const ch = argsRaw[i]
-                            if (ch === "\"" || ch === "'") {
-                                const quote = ch
-                                i++
-                                while (i < argsRaw.length && argsRaw[i] !== quote) {
-                                    if (argsRaw[i] === "\\" && i + 1 < argsRaw.length)
-                                        i++
-                                    i++
-                                }
-                                if (i < argsRaw.length)
-                                    i++
-                            }
-                            else
-                                i++
-                        }
-                        ranges.push({ start, end: i })
-                    }
-
-                    /*  helper function: strip surrounding quotes/escapes from a raw
-                        range so it can be compared against an option flag spelling  */
-                    const unquote = (s: string) => {
-                        let out = ""
-                        let j = 0
-                        while (j < s.length) {
-                            const ch = s[j]
-                            if (ch === "\"" || ch === "'") {
-                                const quote = ch
-                                j++
-                                while (j < s.length && s[j] !== quote) {
-                                    if (s[j] === "\\" && j + 1 < s.length) {
-                                        out += s[j + 1]
-                                        j += 2
-                                    }
-                                    else {
-                                        out += s[j]
-                                        j++
-                                    }
-                                }
-                                j++
-                            }
-                            else if (ch === "\\" && j + 1 < s.length) {
-                                out += s[j + 1]
-                                j += 2
-                            }
-                            else {
-                                out += ch
-                                j++
-                            }
-                        }
-                        return out
-                    }
+                    const ranges = tokenizeRanges(argsRaw)
 
                     /*  walk the raw ranges, consuming leading option tokens (and any
                         separate value tokens they take) until the first positional
