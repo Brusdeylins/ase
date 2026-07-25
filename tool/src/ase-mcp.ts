@@ -31,7 +31,7 @@ export default class MCPCommand {
 
         /*  fast path: already running  */
         if (ctx.port !== null) {
-            const match = await probe(ctx.port, ctx.projectId)
+            const match = await probe(ctx.port, ctx.projectId).catch(() => null)
             if (match === true)
                 return { projectId: ctx.projectId, port: ctx.port }
         }

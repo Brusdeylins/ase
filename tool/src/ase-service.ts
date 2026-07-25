@@ -531,7 +531,7 @@ export default class ServiceCommand {
             process.stdout.write("service: not running (no port configured)\n")
             return 1
         }
-        const match = await probe(ctx.port, ctx.projectId)
+        const match = await probe(ctx.port, ctx.projectId).catch(() => null)
         if (match === true) {
             const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`,
                 this.commandRequest("status", 2000))
@@ -552,13 +552,13 @@ export default class ServiceCommand {
     /*  send command: POST /command with the arbitrary cmd token  */
     private async doSend (cmd: string): Promise<number> {
         let ctx = this.loadContext()
-        if (ctx.port === null || await probe(ctx.port, ctx.projectId) !== true) {
+        if (ctx.port === null || await probe(ctx.port, ctx.projectId).catch(() => null) !== true) {
             /*  auto-start the service once, then re-check  */
             await this.doStart()
             ctx = this.loadContext()
             if (ctx.port === null)
                 throw new Error("service not running (no port configured after auto-start)")
-            if (await probe(ctx.port, ctx.projectId) !== true)
+            if (await probe(ctx.port, ctx.projectId).catch(() => null) !== true)
                 throw new Error(`service not responding on port ${ctx.port} after auto-start`)
         }
         const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`,
@@ -577,7 +577,7 @@ export default class ServiceCommand {
             this.log.write("info", "service: not running (no port configured)")
             return 0
         }
-        const match = await probe(ctx.port, ctx.projectId)
+        const match = await probe(ctx.port, ctx.projectId).catch(() => null)
         if (match === false) {
             this.log.write("info", `service: not running (port ${ctx.port} in use by foreign service)`)
             return 1
