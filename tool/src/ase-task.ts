@@ -106,29 +106,13 @@ export class Task {
 
     /*  resolve the on-disk path for a given task id; as a side effect,
         eagerly migrate any legacy <basedir>/<id>/plan.md files to the
-        current <basedir>/TASK-<id>.md layout on first access (guarded by
-        a cheap check, so it is a no-op once the store is migrated)  */
+        current <basedir>/TASK-<id>.md layout ("migrateAll" is a cheap
+        no-op once the store is migrated)  */
     static path (log: Log, id: string): string {
         Task.validateId(id)
         Task.enforceFiles(log, id)
-        if (Task.needsMigration(log))
-            Task.migrateAll(log)
+        Task.migrateAll(log)
         return path.join(Task.baseDir(log), `TASK-${id}.md`)
-    }
-
-    /*  cheaply check whether any legacy <basedir>/<id>/plan.md file still
-        exists in the task base directory and thus needs migration  */
-    private static needsMigration (log: Log): boolean {
-        const dir = Task.baseDir(log)
-        if (!fs.existsSync(dir))
-            return false
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-            if (!entry.isDirectory() || !/^[A-Za-z0-9_-]+$/.test(entry.name))
-                continue
-            if (fs.existsSync(path.join(dir, entry.name, "plan.md")))
-                return true
-        }
-        return false
     }
 
     /*  migrate all legacy <basedir>/<id>/plan.md task files to the current
@@ -211,8 +195,7 @@ export class Task {
     /*  scan the task base directory (after eager migration) for
         "TASK-<id>.md" files matching the configured "files" miniglob  */
     private static scan (log: Log): { id: string, file: string, st: fs.Stats }[] {
-        if (Task.needsMigration(log))
-            Task.migrateAll(log)
+        Task.migrateAll(log)
         const { basedir, files } = Task.spec(log)
         const dir = path.join(Task.projectRoot(), basedir)
         if (!fs.existsSync(dir))
