@@ -83,6 +83,8 @@ export class Task {
         }
         const basedir = (read("project.artifact.task.basedir") || ".ase/task")
             .replace(/\\/g, "/").replace(/^\/+|\/+$/g, "")
+        if (basedir.split("/").includes(".."))
+            throw new Error(`task: configured "basedir" "${basedir}" must not escape the project root`)
         const files   = read("project.artifact.task.files") || "*.md"
         return { basedir, files }
     }
