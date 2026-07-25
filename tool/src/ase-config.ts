@@ -229,7 +229,7 @@ export class Config {
         name:   string,
         schema: v.GenericSchema | undefined,
         log:    Log,
-        scope:  Scope = [ { kind: "project" } ]
+        scope:  Scope = [ { kind: "user" }, { kind: "project" } ]
     ) {
         if (scope.length === 0)
             throw new Error("invalid scope: chain must not be empty")
