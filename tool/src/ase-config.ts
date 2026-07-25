@@ -198,6 +198,12 @@ export const parseScope = (value: string | undefined): Scope => {
     return terms
 }
 
+/*  schema for a single artifact kind's "basedir"/"files" specification  */
+const artifactSchema = v.optional(v.strictObject({
+    basedir: v.optional(v.string()),
+    files:   v.optional(v.string())
+}))
+
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
@@ -205,12 +211,12 @@ export const configSchema = v.nullish(v.strictObject({
         name:    v.optional(v.pipe(v.string(), v.minLength(1))),
         boxing:  v.optional(v.picklist(projectClassification.boxing)),
         artifact: v.optional(v.strictObject({
-            spec: v.optional(v.strictObject({ basedir: v.optional(v.string()), files: v.optional(v.string()) })),
-            arch: v.optional(v.strictObject({ basedir: v.optional(v.string()), files: v.optional(v.string()) })),
-            code: v.optional(v.strictObject({ basedir: v.optional(v.string()), files: v.optional(v.string()) })),
-            docs: v.optional(v.strictObject({ basedir: v.optional(v.string()), files: v.optional(v.string()) })),
-            infr: v.optional(v.strictObject({ basedir: v.optional(v.string()), files: v.optional(v.string()) })),
-            task: v.optional(v.strictObject({ basedir: v.optional(v.string()), files: v.optional(v.string()) }))
+            spec: artifactSchema,
+            arch: artifactSchema,
+            code: artifactSchema,
+            docs: artifactSchema,
+            infr: artifactSchema,
+            task: artifactSchema
         }))
     })),
     agent: v.optional(v.strictObject({
