@@ -7,6 +7,26 @@ ChangeLog
 
 - FEATURE [code]: add `ase-help-skill` skill showing the manual page of an ASE skill by (abbreviated) name or fuzzy purpose
 - IMPROVEMENT [code]: rename skill `ase-meta-intent` to `ase-help-intent` to align it with the `ase-help-xxx` skill family
+- IMPROVEMENT [code]: ship a hand-sorted skill catalog instead of generating it (`ase-help-skill/catalog.md`)
+- IMPROVEMENT [code]: delete still-open tasks when a skill exits early (`ase-skill.md`)
+- IMPROVEMENT [code]: keep a non-empty legacy per-task directory and warn instead of removing it (`ase-task.ts`)
+- IMPROVEMENT [code]: ensure the task base directory cannot escape the project root (`ase-task.ts`)
+- IMPROVEMENT [code]: harden hook payload validation against raw objects (`ase-hook.ts`)
+- IMPROVEMENT [code]: speed up paragraph checking in Markdown preparation (`ase-markdown.ts`)
+- IMPROVEMENT [code]: strengthen typing in the persona command (`ase-persona.ts`)
+- IMPROVEMENT [docs]: list the `ase-help-*` family in the website Design section (`Section-Design.astro`)
+- IMPROVEMENT [docs]: sort the help skills to the top of the skill group (`skills.ts`)
+- BUGFIX [code]: buffer MCP messages arriving during an HTTP reconnect instead of discarding them (`ase-mcp.ts`)
+- BUGFIX [code]: close the log stream and flush pending writes on termination (`ase-log.ts`, `ase.ts`)
+- BUGFIX [code]: render the harness name instead of a hard-coded `claude` in statusline `%V` (`ase-statusline.ts`)
+- BUGFIX [code]: add the missing user scope to the config default scope chain (`ase-config.ts`)
+- BUGFIX [code]: avoid truncated stdout writes (`ase-compat.ts`, `ase-config.ts`)
+- BUGFIX [code]: avoid line breaks within backtick spans in skill help pages (`help.md`)
+- UPDATE [docs]: mark Anthropic Claude Opus 5 as fully supported (`Section-Compat.astro`)
+- UPDATE [docs]: update the workflow diagram (`workflow.svg`, `workflow.graffle`, `workflow.pdf`)
+- UPDATE [docs]: upgrade NPM dependencies (`pages/package.json`)
+- CLEANUP [code]: remove redundancies and simplify code across the `ase` CLI sources (`tool/src/*.ts`)
+- CLEANUP [code]: memoize repeated lookups in the statusline command (`ase-statusline.ts`)
 
 0.9.46 (2026-07-25)
 -------------------
