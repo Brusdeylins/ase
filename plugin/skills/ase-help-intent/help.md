@@ -1,19 +1,19 @@
 
 ##  NAME
 
-`ase-meta-intent` - Match an Intent to an ASE Command
+`ase-help-intent` - Match an Intent to an ASE Command
 
 ##  SYNOPSIS
 
-`ase-meta-intent`
+`ase-help-intent`
     [`--help`|`-h`]
     *intent*
 
 ##  DESCRIPTION
 
-The `ase-meta-intent` skill matches a free-text *intent* against the
+The `ase-help-intent` skill matches a free-text *intent* against the
 *accumulated help* of all ASE skills -- the concatenation of every
-skill's `help.md` file into `skills/ase-meta-intent/data.md`, built by
+skill's `help.md` file into `skills/ase-help-intent/data.md`, built by
 `npm start build` in `plugin/` -- and generates the *single* best-fitting
 `/ase:ase-xxx-xxx` command that realizes the intent, complete with
 concrete option flags and positional arguments derived from the selected
@@ -42,13 +42,13 @@ entirely through the intent argument and the interactive dialog.
 Route an intent to the matching command and pick from the dialog:
 
 ```text
-❯ /ase-meta-intent lint the TypeScript sources for high-severity issues only
+❯ /ase-help-intent lint the TypeScript sources for high-severity issues only
 ```
 
 Route a planning intent to the matching command:
 
 ```text
-❯ /ase-meta-intent explain how the authentication module works
+❯ /ase-help-intent explain how the authentication module works
 ```
 
 ##  SEE ALSO

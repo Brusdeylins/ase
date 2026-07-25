@@ -6,6 +6,7 @@ ChangeLog
 -------------------
 
 - FEATURE [code]: add `ase-help-skill` skill showing the manual page of an ASE skill by (abbreviated) name or fuzzy purpose
+- IMPROVEMENT [code]: rename skill `ase-meta-intent` to `ase-help-intent` to align it with the `ase-help-xxx` skill family
 
 0.9.46 (2026-07-25)
 -------------------

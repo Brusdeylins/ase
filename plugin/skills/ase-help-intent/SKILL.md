@@ -1,5 +1,5 @@
 ---
-name: ase-meta-intent
+name: ase-help-intent
 argument-hint: "[--help|-h] <intent>"
 description: >
     Match a free-text intent against the accumulated help of all ASE
@@ -20,12 +20,12 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-intent">
+<skill name="ase-help-intent">
 Match an Intent to an ASE Command
 </skill>
 
 <expand name="getopt"
-    arg1="ase-meta-intent"
+    arg1="ase-help-intent"
     arg2="">
     $ARGUMENTS
 </expand>
@@ -54,7 +54,7 @@ catalog you match <intent/> against:
     processing the entire current skill:
 
     <template>
-    ⧉ **ASE**: ✪ skill: **ase-meta-intent**, ▶ ERROR: expected a `<intent>` argument
+    ⧉ **ASE**: ✪ skill: **ase-help-intent**, ▶ ERROR: expected a `<intent>` argument
     </template>
     </if>
 
