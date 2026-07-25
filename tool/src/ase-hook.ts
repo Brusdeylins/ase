@@ -94,6 +94,15 @@ const toolSpecs: Record<Tool, ToolSpec> = {
     }
 }
 
+/*  schema (and derived type) of the tool invocation input fields
+    inspected by the tool-approval decision logic  */
+const toolInputSchema = v.object({
+    command:   v.optional(v.string()),
+    skill:     v.optional(v.string()),
+    file_path: v.optional(v.string())
+})
+type ToolInput = v.InferOutput<typeof toolInputSchema>
+
 /*  CLI command "ase hook"  */
 export default class HookCommand {
     constructor (private log: Log) {}
@@ -484,16 +493,15 @@ export default class HookCommand {
     private decideApproval (tool: Tool, spec: ToolSpec, input: Record<string, unknown>): { approve: boolean, reason: string } {
         const toolName  = typeof input[spec.toolNameField] === "string" ?
             input[spec.toolNameField] as string : ""
-        let toolInput: { command?: string, skill?: string, file_path?: string } = {}
+        let toolInput: ToolInput = {}
         const rawInput  = input[spec.toolInputField]
         if (spec.toolInputIsString && typeof rawInput === "string")
-            toolInput = this.parseJSON(rawInput, v.object({
-                command:   v.optional(v.string()),
-                skill:     v.optional(v.string()),
-                file_path: v.optional(v.string())
-            }))
-        else if (!spec.toolInputIsString && typeof rawInput === "object" && rawInput !== null)
-            toolInput = rawInput as { command?: string, skill?: string, file_path?: string }
+            toolInput = this.parseJSON(rawInput, toolInputSchema)
+        else if (!spec.toolInputIsString && typeof rawInput === "object" && rawInput !== null) {
+            const result = v.safeParse(toolInputSchema, rawInput)
+            if (result.success)
+                toolInput = result.output
+        }
         const command = toolInput.command ?? ""
         if (toolName === spec.bashToolName && /^ase(\s|$)/.test(command)
             && !/[;&|<>`\n]|\$\(/.test(command))
