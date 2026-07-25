@@ -120,8 +120,11 @@ const parseScopeTerm = (value: string): ScopeTerm => {
     else if (value === "project")
         return { kind: "project" }
     const m = /^(session|task):([A-Za-z0-9._-]+)$/.exec(value)
-    if (m !== null)
+    if (m !== null) {
+        if (m[2] === "." || m[2] === "..")
+            throw new Error(`invalid --scope term "${value}": id must not be "." or ".."`)
         return { kind: m[1] as "session" | "task", id: m[2] }
+    }
     throw new Error(`invalid --scope term "${value}" ` +
         "(expected: \"user\", \"project\", \"task:<id>\", or \"session:<id>\")")
 }
