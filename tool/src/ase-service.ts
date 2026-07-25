@@ -513,6 +513,17 @@ export default class ServiceCommand {
         throw lastErr
     }
 
+    /*  build the "POST /command" request options for a command token  */
+    private commandRequest (cmd: string, timeoutMs: number) {
+        return {
+            method:              "POST" as const,
+            headers:             { "Content-Type": "application/json" },
+            body:                { command: cmd },
+            signal:              AbortSignal.timeout(timeoutMs),
+            ignoreResponseError: true
+        }
+    }
+
     /*  status flow: report whether the service is running  */
     private async doStatus (): Promise<number> {
         const ctx = this.loadContext()
@@ -522,13 +533,8 @@ export default class ServiceCommand {
         }
         const match = await probe(ctx.port, ctx.projectId)
         if (match === true) {
-            const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`, {
-                method:              "POST",
-                headers:             { "Content-Type": "application/json" },
-                body:                { command: "status" },
-                signal:              AbortSignal.timeout(2000),
-                ignoreResponseError: true
-            })
+            const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`,
+                this.commandRequest("status", 2000))
             const d        = r._data as { uptimeMs?: number } | null
             const uptimeMs = typeof d?.uptimeMs === "number" ? d.uptimeMs : 0
             const uptime   = prettyMs(uptimeMs, { verbose: true })
@@ -546,30 +552,17 @@ export default class ServiceCommand {
     /*  send command: POST /command with the arbitrary cmd token  */
     private async doSend (cmd: string): Promise<number> {
         let ctx = this.loadContext()
-        if (ctx.port === null) {
+        if (ctx.port === null || await probe(ctx.port, ctx.projectId) !== true) {
+            /*  auto-start the service once, then re-check  */
             await this.doStart()
             ctx = this.loadContext()
             if (ctx.port === null)
                 throw new Error("service not running (no port configured after auto-start)")
-        }
-        let match = await probe(ctx.port, ctx.projectId)
-        if (match !== true) {
-            await this.doStart()
-            ctx = this.loadContext()
-            if (ctx.port === null)
-                throw new Error("service not running (no port configured after auto-start)")
-            match = await probe(ctx.port, ctx.projectId)
-            if (match !== true)
+            if (await probe(ctx.port, ctx.projectId) !== true)
                 throw new Error(`service not responding on port ${ctx.port} after auto-start`)
         }
-        const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`, {
-            method:              "POST",
-            headers:             { "Content-Type": "application/json" },
-            body:                { command: cmd },
-            signal:              AbortSignal.timeout(5000),
-            ignoreResponseError: true,
-            responseType:        "text"
-        })
+        const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`,
+            { ...this.commandRequest(cmd, 5000), responseType: "text" })
         const body = typeof r._data === "string" ? r._data : JSON.stringify(r._data)
         process.stdout.write(body)
         if (!body.endsWith("\n"))
