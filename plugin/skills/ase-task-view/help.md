@@ -26,9 +26,9 @@ the plan in full, without any truncation or summarization.
 ##  OPTIONS
 
 `--full`|`-f`:
-    Render the plan in full, without collapsing the `IMPLEMENTATION
-    DRAFT` section. By default, that section is replaced with `[...]`
-    for plans longer than 90 lines.
+    Render the plan in full, without collapsing the
+    `IMPLEMENTATION DRAFT` section. By default, that section is
+    replaced with `[...]` for plans longer than 90 lines.
 
 ##  ARGUMENTS
 

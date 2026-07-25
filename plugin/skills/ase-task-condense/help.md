@@ -47,9 +47,9 @@ After condensing, the user is asked whether to stop or hand off to
     Recognized tokens at this skill: `none` (default, interactive
     answer required), `DONE` (stop), `EDIT` (hand off to
     `ase-task-edit`), `IMPLEMENT` (hand off to `ase-task-implement`),
-    or `PREFLIGHT` (hand off to `ase-task-preflight`). Example: `--next
-    EDIT,DONE` condenses, hands off to editing, and the editing loop will
-    exit immediately.
+    or `PREFLIGHT` (hand off to `ase-task-preflight`). Example:
+    `--next EDIT,DONE` condenses, hands off to editing, and the editing
+    loop will exit immediately.
 
 ##  ARGUMENTS
 
