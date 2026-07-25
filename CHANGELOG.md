@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.47 (2026-07-25)
+-------------------
+
+- FEATURE [code]: add `ase-help-skill` skill showing the manual page of an ASE skill by (abbreviated) name or fuzzy purpose
+
 0.9.46 (2026-07-25)
 -------------------
 
