@@ -17,6 +17,7 @@ import Table                                        from "cli-table3"
 import writeFileAtomic                              from "write-file-atomic"
 import lockfile                                     from "proper-lockfile"
 import { z }                                        from "zod"
+import { LRUCache }                                 from "lru-cache"
 import type { McpServer }                           from "@modelcontextprotocol/sdk/server/mcp.js"
 
 import type Log                                     from "./ase-log.js"
@@ -125,15 +126,25 @@ const parseScopeTerm = (value: string): ScopeTerm => {
         "(expected: \"user\", \"project\", \"task:<id>\", or \"session:<id>\")")
 }
 
-/*  determine the Git top-level directory, if inside a Git repository  */
+/*  determine the Git top-level directory, if inside a Git repository;
+    cached per working directory ("" ≡ not inside a Git working tree), as
+    each determination spawns a Git subprocess and the Git context can
+    change over the lifetime of the long-running ASE service  */
+const gitToplevelCache = new LRUCache<string, string>({ max: 4, ttl: 2 * 1000 })
 const gitToplevel = (): string | null => {
+    const cwd    = process.cwd()
+    const cached = gitToplevelCache.get(cwd)
+    if (cached !== undefined)
+        return cached === "" ? null : cached
+    let top = ""
     try {
-        const result = execaSync("git", [ "rev-parse", "--show-toplevel" ], { stderr: "ignore" })
-        return result.stdout.trim() || null
+        top = execaSync("git", [ "rev-parse", "--show-toplevel" ], { stderr: "ignore" }).stdout.trim()
     }
     catch {
-        return null
+        /*  not inside a Git working tree  */
     }
+    gitToplevelCache.set(cwd, top)
+    return top === "" ? null : top
 }
 
 /*  detect whether a project context exists, i.e. either we are inside
