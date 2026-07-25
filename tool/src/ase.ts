@@ -75,7 +75,7 @@ const main = async (): Promise<void> => {
 
     /*  gracefully terminate  */
     await log.close()
-    process.exit(0)
+    process.exit(process.exitCode ?? 0)
 }
 main().catch(async (err: unknown) => {
     if (err instanceof CommanderError) {
