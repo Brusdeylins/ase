@@ -294,17 +294,16 @@ export default class HookCommand {
         /*  determine user id  */
         const userId = process.env.USER ?? process.env.LOGNAME ?? "unknown"
 
-        /*  determine agent persona style  */
-        let persona = process.env.ASE_PERSONA_STYLE ?? "engineer"
-        const val = cfg.get("agent.persona")
-        if (typeof val === "string")
-            persona = val
+        /*  helper function: determine a setting from the configuration,
+            falling back to an environment variable and a default  */
+        const setting = (key: string, envVar: string, dflt: string): string => {
+            const val = cfg.get(key)
+            return typeof val === "string" ? val : (process.env[envVar] ?? dflt)
+        }
 
-        /*  determine project boxing transparency  */
-        let boxing = process.env.ASE_PROJECT_BOXING ?? "white"
-        const valBoxing = cfg.get("project.boxing")
-        if (typeof valBoxing === "string")
-            boxing = valBoxing
+        /*  determine agent persona style and project boxing transparency  */
+        const persona = setting("agent.persona",  "ASE_PERSONA_STYLE",  "engineer")
+        const boxing  = setting("project.boxing", "ASE_PROJECT_BOXING", "white")
 
         /*  determine headless mode  */
         const headless = (process.env.ASE_HEADLESS ?? "false") === "true" ? "true" : "false"
