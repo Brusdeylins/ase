@@ -144,26 +144,7 @@ export default class SetupCommand {
         for (let i = 0; i < retries; i++) {
             const final = (i === retries - 1)
             try {
-                if (quiet) {
-                    const result = await execa(cmd, args, { stdio: "ignore", cwd, reject: false })
-                    if (typeof result.exitCode === "number" && result.exitCode !== 0) {
-                        if (!final) {
-                            this.log.write("info",
-                                `setup: attempt ${i + 1}/${retries} failed for "${cmd} ${args.join(" ")}" ` +
-                                `(exit code: ${result.exitCode}): retrying...`)
-                            await new Promise((resolve) => setTimeout(resolve, 1000))
-                            continue
-                        }
-                        if (ignoreError !== undefined) {
-                            this.log.write("info", `setup: ${ignoreError} (skipped)`)
-                            return
-                        }
-                        this.log.write("error", `setup: command failed: exit code: ${result.exitCode}`)
-                        throw new Error(`command "${cmd} ${args.join(" ")}" failed (exit code: ${result.exitCode})`)
-                    }
-                    return
-                }
-                await execa(cmd, args, { stdio: "pipe", cwd })
+                await execa(cmd, args, { stdio: quiet ? "ignore" : "pipe", cwd })
                 return
             }
             catch (err: unknown) {
