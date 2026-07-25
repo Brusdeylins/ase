@@ -114,8 +114,11 @@ export default class MCPCommand {
                 triggerReconnect("http connection lost")
             }
 
+            /*  activate the connection and flush buffered messages  */
             await next.start()
             client = next
+            for (const msg of pending.splice(0, pending.length))
+                sendToClient(msg)
         }
 
         /*  reconnect loop: restart service if needed, then reconnect client  */
@@ -155,12 +158,28 @@ export default class MCPCommand {
             reconnect(0).catch(() => {})
         }
 
-        /*  wire stdio server  */
-        server.onmessage = (msg: JSONRPCMessage) => {
-            client?.send(msg).catch((err: unknown) => {
+        /*  bounded buffer for messages arriving while no HTTP client is connected  */
+        const MAX_PENDING = 100
+        const pending: JSONRPCMessage[] = []
+
+        /*  forward a message to the HTTP client, buffering it while the client
+            is disconnected so requests survive a reconnect window  */
+        const sendToClient = (msg: JSONRPCMessage) => {
+            if (client === null) {
+                if (pending.length >= MAX_PENDING) {
+                    this.log.write("warning", "mcp: pending queue overflow, dropping oldest message")
+                    pending.shift()
+                }
+                pending.push(msg)
+                return
+            }
+            client.send(msg).catch((err: unknown) => {
                 this.log.write("error", `mcp: http send: ${this.asError(err).message}`)
             })
         }
+
+        /*  wire stdio server  */
+        server.onmessage = sendToClient
         server.onerror = (err: Error) => {
             this.log.write("error", `mcp: stdio: ${err.message}`)
         }
