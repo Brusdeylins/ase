@@ -12,6 +12,9 @@ import type { McpServer }                                        from "@modelcon
 import type Log                                                  from "./ase-log.js"
 import { Config, configSchema, parseScope, agentClassification } from "./ase-config.js"
 
+/*  allowed persona style  */
+export type PersonaStyle = (typeof agentClassification.persona)[number]
+
 /*  reusable functionality: ASE agent persona style get/set  */
 export class Persona {
     /*  allowed persona style values  */
@@ -19,7 +22,7 @@ export class Persona {
 
     /*  get the effective persona style for an optional session;
         returns the default "engineer" if nothing is configured  */
-    static get (log: Log, session?: string): string {
+    static get (log: Log, session?: string): PersonaStyle {
         const scope = parseScope(session !== undefined ? `session:${session}` : undefined)
         const cfg   = new Config("config", configSchema, log, scope)
         cfg.read()
@@ -27,13 +30,11 @@ export class Persona {
         if (val === undefined)
             return "engineer"
         const style = String(isScalar(val) ? val.value : val)
-        if (!(Persona.styles as readonly string[]).includes(style))
-            return "engineer"
-        return style
+        return Persona.styles.find((s) => s === style) ?? "engineer"
     }
 
     /*  set the persona style on the strongest scope of an optional session  */
-    static set (log: Log, style: string, session?: string): void {
+    static set (log: Log, style: PersonaStyle, session?: string): void {
         const scope = parseScope(session !== undefined ? `session:${session}` : undefined)
         const cfg   = new Config("config", configSchema, log, scope)
         cfg.lock(() => {
