@@ -50,20 +50,22 @@ is resolved against:
 
     1.  <if condition="<skill-ref/> is empty">
         No particular skill was addressed, so render the *entire*
-        <catalog/> as a browsable two-column table with the following
-        <template/> -- one row per catalog entry, in catalog order,
-        where <name/> and <purpose/> are the two fields of the entry --
-        and then immediately *STOP* processing the entire current skill:
+        <catalog/> as a browsable list with the following <template/>
+        -- one list entry per catalog entry, in catalog order, where
+        <name/> and <purpose/> are the two fields of the entry (and
+        <name-padded/> is <name/>, padded to 22 characters with
+        spaces on the right) -- and then immediately *STOP* processing
+        the entire current skill:
 
         <template>
-        <ase-tpl-head title="SKILLS"/>
+        <ase-tpl-head title="SKILL CATALOG"/>
 
-        | ⦿ *Skill* | ✦ *Purpose* |
-        | --------- | ----------- |
-        | `<name/>` | <purpose/>  |
-        | [...]     | [...]       |
+        ○   `<name-padded/>` – <purpose/>
+        ○   [...]
 
-        <ase-tpl-foot title="SKILLS"/>
+        <ase-tpl-foot title="SKILL CATALOG"/>
+
+        ⧉ **ASE**: ✪ skill: **ase-help-skill**, ▶ hint: **run `/ase-help-skill ase-xxx-xxx` for manual page of individual skill**
         </template>
         </if>
 
@@ -192,9 +194,9 @@ is resolved against:
         the following <template/>:
 
         <template>
-        <ase-tpl-head title="HELP: <name/>"/>
+        <ase-tpl-head title="MANUAL PAGE: <name/>"/>
         <manual/>
-        <ase-tpl-foot title="HELP: <name/>"/>
+        <ase-tpl-foot title="MANUAL PAGE: <name/>"/>
         </template>
 
     </step>
