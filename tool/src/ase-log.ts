@@ -27,11 +27,7 @@ export default class Log {
         private _logFile:  string
     ) {}
     async init () {
-        /*  log messages  */
-        const idx = levels.findIndex((l) => l.name === this._logLevel)
-        if (idx === -1)
-            throw new RangeError(`invalid log level "${this._logLevel}" (expected one of: ${levels.map((l) => l.name).join(", ")})`)
-        this.logLevelIdx = idx
+        this.logLevel(this._logLevel)
         if (this._logFile !== "-")
             this.stream = this.openStream(this._logFile)
     }
