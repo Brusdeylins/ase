@@ -75,6 +75,17 @@ export class Markdown {
         return n
     }
 
+    /*  test whether the newline at offset pos starts a paragraph break,
+        i.e. whether it is followed by a blank line or the end of the text  */
+    private static isParagraphBreak (text: string, pos: number): boolean {
+        let n = pos + 1
+        while (n < text.length && (text[n] === " " || text[n] === "\t"))
+            n++
+        if (text[n] === "\r")
+            n++
+        return n >= text.length || text[n] === "\n"
+    }
+
     /*  PASS 1 of rewrite(): rewrite inline code spans that carry
         backslash-escaped backticks (`\``) into CommonMark-correct spans  */
     private static rewriteEscapedSpans (text: string): string {
@@ -126,7 +137,7 @@ export class Markdown {
                     k += runLen
                     continue
                 }
-                if (c === "\n" && /^[ \t]*\r?(?:\n|$)/.test(text.slice(k + 1)))
+                if (c === "\n" && Markdown.isParagraphBreak(text, k))
                     /*  a code span never crosses a paragraph break  */
                     break
                 inner += c
@@ -195,7 +206,7 @@ export class Markdown {
                                 closes = true
                             p += r
                         }
-                        else if (text[p] === "\n" && /^[ \t]*\r?(?:\n|$)/.test(text.slice(p + 1)))
+                        else if (text[p] === "\n" && Markdown.isParagraphBreak(text, p))
                             /*  a code span never crosses a paragraph break  */
                             break
                         else
