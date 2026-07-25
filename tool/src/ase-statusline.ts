@@ -318,8 +318,7 @@ export default class StatuslineCommand {
                 }
                 catch (err: unknown) {
                     const message = err instanceof Error ? err.message : String(err)
-                    this.log.write("error", `statusline: invalid JSON on stdin: ${message}`)
-                    process.exit(1)
+                    throw new Error(`statusline: invalid JSON on stdin: ${message}`)
                 }
 
                 /*  normalize Copilot CLI's top-level "cwd" into the
