@@ -225,7 +225,7 @@ export class GetoptMCP {
                         argsVerbatim = argsRaw.slice(ranges[idx].start)
                 }
                 else
-                    argsVerbatim = cmd.args.join(" ")
+                    argsVerbatim = shQuote(cmd.args)
 
                 /*  build markdown info rendering of parsed options  */
                 const opts = cmd.opts()
