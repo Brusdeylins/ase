@@ -99,27 +99,21 @@ export default class SetupCommand {
             path.join(prefix, "bin"),
             path.join(prefix, "lib", "node_modules")
         ]
+        const accessible = (dir: string, mode: number): Promise<boolean> =>
+            fs.access(dir, mode).then(() => true, () => false)
         for (const dir of candidates) {
-            try {
-                await fs.access(dir, fs.constants.W_OK)
-            }
-            catch {
-                /*  directory exists but not writable, or does not exist
-                    inside a non-writable parent: require sudo  */
-                try {
-                    await fs.access(dir, fs.constants.F_OK)
-                    return true
-                }
-                catch {
-                    /*  directory does not exist: check parent writability  */
-                    try {
-                        await fs.access(path.dirname(dir), fs.constants.W_OK)
-                    }
-                    catch {
-                        return true
-                    }
-                }
-            }
+            /*  a writable directory needs no elevation at all  */
+            if (await accessible(dir, fs.constants.W_OK))
+                continue
+
+            /*  the directory exists, but is not writable: require sudo  */
+            if (await accessible(dir, fs.constants.F_OK))
+                return true
+
+            /*  the directory does not exist: require sudo unless it can
+                be created inside a writable parent directory  */
+            if (!(await accessible(path.dirname(dir), fs.constants.W_OK)))
+                return true
         }
         return false
     }
