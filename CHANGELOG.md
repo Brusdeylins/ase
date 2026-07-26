@@ -9,7 +9,10 @@ ChangeLog
 - FEATURE [code]: splitted `ase-meta-proximity` skill into a skill and a reusable agent
 - FEATURE [code]: added `--include`/`-i` and `--exclude`/`-e` options to `ase-code-lint` for narrowing the checked code quality aspects
 - IMPROVEMENT [code]: report findings in descending order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED` in skills with a `--severity`/`-S` option
+- IMPROVEMENT [code]: gate redundancy findings on a 2:1 payoff ratio to avoid mere code relocation (`ase-code-lint.md`)
+- IMPROVEMENT [code]: strengthen typing in the tool approval decision (`ase-hook.ts`)
 - BUGFIX [code]: show the reasoning effort in the statusline also under GitHub Copilot CLI
+- CLEANUP [code]: simplify the plugin root lookup, banner assembly, and blank lines (`ase-hook.ts`)
 
 0.9.50 (2026-07-26)
 -------------------
