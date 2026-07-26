@@ -298,7 +298,7 @@ export default class HookCommand {
         const boxing   = setting("project.boxing", "ASE_PROJECT_BOXING", "white")
 
         /*  determine headless mode  */
-        const headless = (process.env.ASE_HEADLESS ?? "false") === "true" ? "true" : "false"
+        const headless = process.env.ASE_HEADLESS === "true" ? "true" : "false"
 
         /*  provide ASE information to Anthropic Claude Code CLI shell commands
             (Anthropic Claude Code CLI only -- GitHub Copilot CLI has no equivalent mechanism)  */
