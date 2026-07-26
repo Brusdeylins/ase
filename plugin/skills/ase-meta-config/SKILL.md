@@ -121,6 +121,20 @@ Procedure
         Set <key/> to the *first* and <value/> to the *second* token of
         <operands/>. Call the `ase_config_set(key: "<key/>", val:
         "<value/>", scope: "<scope/>")` tool from the `ase` MCP server.
+
+        Then, if <key/> is one of the three keys steering your *own*
+        behaviour, you *MUST* immediately adopt the new <value/> for
+        the remainder of the session -- *including* the output of this
+        very skill run -- by re-evaluating and internalizing the
+        corresponding rules of the constitution: for `agent.persona` set
+        <ase-persona-style><value/></ase-persona-style> and re-evaluate
+        the `Persona Communication Style` rules, for `agent.guidance` set
+        <ase-guidance-level><value/></ase-guidance-level> and re-evaluate
+        the `Guidance Hint Level` rules, and for `project.boxing` set
+        <ase-project-boxing><value/></ase-project-boxing> and re-evaluate
+        the `Artifact Boxing Transparency` rules. Do not output anything
+        for this.
+
         Then only output the following <template/>:
 
         <template>

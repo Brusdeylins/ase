@@ -35,6 +35,19 @@ Some keys are writable on selected scopes only; in particular
 and the `project.artifact.*` globs are writable on the `user` and
 `project` scopes only.
 
+The three keys steering the behaviour of the agent itself accept fixed
+value sets: `agent.persona` selects the *communication style* and is one
+of the decorative, eloquent, and explaining `writer`, the concise,
+factual, and accurate `engineer` (the default), the layered,
+pyramid-structured `journalist`, the brief, factual, and abbreviating
+`telegrapher`, or the terse, rough, and stuttering `caveman`;
+`agent.guidance` selects the amount of unsolicited hints and is one of
+`none`, `minimal`, `normal` (the default), or `verbose`; and
+`project.boxing` selects the artifact transparency and is one of `white`,
+`grey`, or `black`. Setting `agent.persona`, `agent.guidance`, or
+`project.boxing` takes effect immediately, i.e. still within the running
+session.
+
 The following *operations* exist:
 
 - `list`: List all effective configuration entries of the scope chain as
@@ -94,6 +107,12 @@ Report the effective persona style:
 ❯ /ase-meta-config get agent.persona
 ```
 
+Switch the communication style for the current session only:
+
+```text
+❯ /ase-meta-config set agent.persona telegrapher
+```
+
 Switch the project boxing for the current session only:
 
 ```text
@@ -114,4 +133,4 @@ Remove a value from the user-level configuration:
 
 ##  SEE ALSO
 
-[`ase-meta-persona`](../ase-meta-persona/help.md), [`ase-task-id`](../ase-task-id/help.md).
+[`ase-task-id`](../ase-task-id/help.md).

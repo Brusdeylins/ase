@@ -5,6 +5,7 @@ ChangeLog
 0.9.49 (2026-07-26)
 -------------------
 
+- CLEANUP [code]: removed `ase-meta-persona` skill and `ase_persona` tool, as both are subsumed by `ase-meta-config` and `agent.persona` config key
 - IMPROVEMENT [code]: append `--tool` option to generated statusline command in setup (`ase-setup.ts`)
 - FEATURE [code]: added `--padding`/`-p` option (default `0`) padding the statusline lines with N spaces on each side (`ase-statusline.ts`, `ase-setup.ts`)
 - FEATURE [code]: added `agent.guidance` config parameter with levels `none`, `minimal`, `normal` (default) and `verbose`

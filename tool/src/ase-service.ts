@@ -29,7 +29,6 @@ import { TaskMCP }                       from "./ase-task.js"
 import { MarkdownMCP }                   from "./ase-markdown.js"
 import { ArtifactMCP }                   from "./ase-artifact.js"
 import { KVMCP }                         from "./ase-kv.js"
-import PersonaMCP                        from "./ase-persona.js"
 import { TimestampMCP }                  from "./ase-timestamp.js"
 import { GetoptMCP }                     from "./ase-getopt.js"
 import { SkillsMCP }                     from "./ase-skills.js"
@@ -274,7 +273,6 @@ export default class ServiceCommand {
             new MarkdownMCP().register(mcp)
             new ArtifactMCP(this.log).register(mcp)
             new KVMCP().register(mcp)
-            new PersonaMCP(this.log).register(mcp)
             new TimestampMCP().register(mcp)
             new GetoptMCP().register(mcp)
             new SkillsMCP().register(mcp)

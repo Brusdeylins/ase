@@ -49,14 +49,6 @@ The following ASE commands/skills exist on the meta-level:
   for it, then derive a fortification. `--count` sets the number of
   supporting arguments and `--rounds` the number of fortification rounds.
 
-- **/ase-meta-persona** \[*persona*\]:<br/>
-  Adjust communication style in five intensity levels of token usage.
-  The *persona* can be either a decorative, eloquent, and explaining
-  `writer`, a brief, factual, and accurate `engineer` (default), a
-  layered, pyramid-structured `journalist`, a very brief, factual, and
-  abbreviating `telegrapher`, or an ultra brief, rough and stuttering
-  `caveman`.
-
 - **/ase-meta-config** \[`--scope`|`-s` *scope*\] *operation* \[*args*\]:<br/>
   List, get, set, or delete the values of the layered *ASE*
   configuration, mirroring the non-interactive `ase config` subcommands
@@ -64,7 +56,12 @@ The following ASE commands/skills exist on the meta-level:
   `set` *key* *value*, or `delete` *key*. `--scope` selects the scope
   chain (`user`, `project`, `task:`*id*, `session:`*id*); without it the
   current session's chain is used, so that reads see the full cascade and
-  writes land on the session layer.
+  writes land on the session layer. This especially adjusts the
+  communication style through `agent.persona`, which has five intensity
+  levels of token usage: a decorative, eloquent, and explaining `writer`,
+  a brief, factual, and accurate `engineer` (default), a layered,
+  pyramid-structured `journalist`, a very brief, factual, and abbreviating
+  `telegrapher`, or an ultra brief, rough and stuttering `caveman`.
 
 - **/ase-meta-changelog**:<br/>
   Update changes entries in `CHANGELOG.md` files from Git commit information.

@@ -74,5 +74,5 @@ Surface at least fifteen anti-theses:
 ##  SEE ALSO
 
 [`ase-meta-why`](../ase-meta-why/help.md), [`ase-meta-evaluate`](../ase-meta-evaluate/help.md), [`ase-meta-quorum`](../ase-meta-quorum/help.md),
-[`ase-meta-persona`](../ase-meta-persona/help.md).
+[`ase-meta-steelman`](../ase-meta-steelman/help.md).
 

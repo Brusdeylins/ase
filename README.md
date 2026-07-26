@@ -74,9 +74,10 @@ see whether **ASE** is right for you:
 - **Boosted Sessions**:
   You want to speed up your interactive sessions and at the same time
   reduce costs by reducing the number of produced LLM output tokens?
-  &rarr; [`/ase-meta-persona`](plugin/skills/ase-meta-persona/help.md)
-  `engineer` or even [`/ase-meta-persona`](plugin/skills/ase-meta-persona/help.md)
-  `caveman`
+  &rarr; [`/ase-meta-config`](plugin/skills/ase-meta-config/help.md)
+  `set agent.persona engineer` or even
+  [`/ase-meta-config`](plugin/skills/ase-meta-config/help.md)
+  `set agent.persona caveman`
 
 - **Alternative Approach Funnel**:
   You prefer a plan-driven approach, but the agent harness's

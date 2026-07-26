@@ -34,7 +34,7 @@ export const highlights: Highlight[] = [
                  "the layered, pyramid-structured <b>journalist</b>, " +
                  "through the brief, factual, and abbreviating <b>telegrapher</b>, " +
                  "down to the terse, rough, and stuttering <b>caveman</b>.",
-        skill:   "/ase-meta-persona engineer",
+        skill:   "/ase-meta-config set agent.persona engineer",
         video:   "ase-meta-persona"
     },
     {
