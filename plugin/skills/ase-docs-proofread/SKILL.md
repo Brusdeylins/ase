@@ -322,6 +322,16 @@ Analyze documents for spelling, punctuation, or grammar errors
         <ase-tpl-bullet-secondary/> **PROOFREAD FINISHED**
         </template>
 
+    5.  Finally, give the closing hint by expanding the following
+        (which, depending on the configured <ase-guidance-level/>, may
+        expand into nothing and hence emit no output at all):
+
+        <if condition="<getopt-option-auto/> is not equal `true`">
+        <ase-tpl-hint level="verbose">
+        Use `/ase-docs-proofread --auto` to apply all corrections unattended.
+        </ase-tpl-hint>
+        </if>
+
     </step>
 
 </flow>

@@ -196,11 +196,13 @@ problems in *performance* and *efficiency*, or problems in *security*.
         followed by one `{ command: "set", key: "ase-issue-P<n/>", val:
         "<title/>: <description/>" }` entry per reported problem.
 
-    Finally, output the following <template/> to give a final hint:
+    Finally, give a final hint by expanding the following (which,
+    depending on the configured <ase-guidance-level/>, may expand into
+    nothing and hence emit no output at all):
 
-    <template>
-    ⧉ **ASE**: ↪ hint: **For deeper analysis, suggestions on solution approaches and then final problem resolution, use `/ase-code-resolve P{n}` in the same or even a different session.**
-    </template>
+    <ase-tpl-hint level="minimal">
+    For deeper analysis, suggestions on solution approaches and then final problem resolution, use `/ase-code-resolve P{n}` in the same or even a different session.
+    </ase-tpl-hint>
 
     You *MUST* not output anything else in this STEP 3,
     especially not any further explanations.

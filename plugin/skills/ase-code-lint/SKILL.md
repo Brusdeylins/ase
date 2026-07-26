@@ -431,6 +431,22 @@ related to a set of code quality aspects.
         <ase-tpl-bullet-secondary/> **LINT FINISHED**
         </template>
 
+    5.  Finally, give the closing hints by expanding the following
+        (which, depending on the configured <ase-guidance-level/>, may
+        each expand into nothing and hence emit no output at all):
+
+        <if condition="at least one problem in <problems/> was left uncorrected">
+        <ase-tpl-hint level="normal">
+        For problems whose correction demands more than a local edit, use `/ase-code-resolve` to derive and apply a full solution approach.
+        </ase-tpl-hint>
+        </if>
+
+        <if condition="<getopt-option-auto/> is not equal `true`">
+        <ase-tpl-hint level="verbose">
+        Use `/ase-code-lint --auto` to apply all corrections unattended, and `--severity` to raise the reporting floor.
+        </ase-tpl-hint>
+        </if>
+
     </step>
 
 </flow>

@@ -465,14 +465,16 @@ interface quality, quality attributes, and architecture governance.
       "<title/>: <description/>" }` entry per reported PROBLEM and one
       `{ command: "set", key: "ase-issue-T<n/>", val: "<title/>:
       <description/>" }` entry per reported TRADEOFF.
+
+    Finally, give a final hint by expanding the following (which,
+    depending on the configured <ase-guidance-level/>, may expand into
+    nothing and hence emit no output at all):
+
+    <ase-tpl-hint level="minimal">
+    For deeper analysis, suggestions on solution approaches and then final source code changes, use `/ase-code-resolve P{n}` or `/ase-code-resolve T{n}` in the same or even a different session.
+    </ase-tpl-hint>
+
     </step>
 
-4.  <step id="STEP 4: Give Final Hint">
-    Finally, output the following <template/> to give a final hint:
-
-    <template>
-    ⧉ **ASE**: ↪ hint: **For deeper analysis, suggestions on solution approaches and then final source code changes, use `/ase-code-resolve P{n}` or `/ase-code-resolve T{n}` in the same or even a different session.**
-    </template>
-    </step>
 </flow>
 

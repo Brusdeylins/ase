@@ -71,6 +71,19 @@ currently staged Git changes.
 
     Do *not* output any further explanation.
 
+    Finally, give the closing hint by expanding the following (which,
+    depending on the configured <ase-guidance-level/>, may expand into
+    nothing and hence emit no output at all):
+
+    <if condition="
+        a `CHANGELOG.md` file exists in the project (or in any affected
+        sub-package) and is *not* itself part of the staged changes
+    ">
+    <ase-tpl-hint level="normal">
+    The staged changes do not touch `CHANGELOG.md` -- use `/ase-meta-changelog` to update its entries before committing.
+    </ase-tpl-hint>
+    </if>
+
     </step>
 
 </flow>

@@ -63,9 +63,17 @@ the *sole* index <skill-ref/> is resolved against:
         <catalog/>
 
         <ase-tpl-foot title="SKILL CATALOG"/>
-
-        ⧉ **ASE**: ✪ skill: **ase-help-skill**, ▶ hint: **run `/ase-help-skill ase-xxx-xxx` for manual page of individual skill**
         </template>
+
+        The rendered <catalog/> itself was explicitly requested and
+        hence is *always* emitted. Only the trailing pointer to the
+        per-skill manual page is a *hint*, so emit it by expanding the
+        following (which, depending on the configured
+        <ase-guidance-level/>, may expand into nothing):
+
+        <ase-tpl-hint level="normal">
+        run `/ase-help-skill ase-xxx-xxx` for manual page of individual skill
+        </ase-tpl-hint>
         </if>
 
     2.  Set <skill-ref-raw/> to <skill-ref/> with only its leading and

@@ -174,6 +174,20 @@ Procedure
 
         </if>
 
+    3.  Finally, give the closing hints by expanding the following
+        (which, depending on the configured <ase-guidance-level/>, may
+        each expand into nothing and hence emit no output at all):
+
+        <if condition="at least one export file was written">
+        <ase-tpl-hint level="normal">
+        Exports are *derived* and go stale as their source artifacts drift -- use `/ase-sync-reconcile` to align the artifacts first, then re-run this skill.
+        </ase-tpl-hint>
+        </if>
+
+        <ase-tpl-hint level="verbose">
+        Use `/ase-sync-export --source` to narrow the exported artifact kinds, and a trailing filtering hint to narrow the exports themselves.
+        </ase-tpl-hint>
+
     </step>
 
 </flow>

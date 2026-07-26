@@ -191,6 +191,16 @@ Procedure
 
         </if>
 
+    7.  Finally, give the closing hint by expanding the following (which,
+        depending on the configured <ase-guidance-level/>, may expand
+        into nothing and hence emit no output at all):
+
+        <if condition="at least one target artifact was generated or updated">
+        <ase-tpl-hint level="normal">
+        To propagate the imported information to the remaining artifact kinds, use `/ase-sync-reconcile`.
+        </ase-tpl-hint>
+        </if>
+
     </step>
 
 </flow>

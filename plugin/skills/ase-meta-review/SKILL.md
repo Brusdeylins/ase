@@ -151,7 +151,9 @@ Procedure
 
     2.  <if condition="<findings/> is empty">
         Only output the following <template/> and then *SKIP* the
-        remainder of this STEP 3:
+        remainder of this STEP 3 (an empty finding list implies the
+        `APPROVE` verdict, so the closing hint of substep 4 would expand
+        into nothing anyway):
 
         <template>
 
@@ -189,6 +191,16 @@ Procedure
 
         Keep the overall report *concise* and *brief*.
         Do *not* output any further explanation.
+        </if>
+
+    4.  Finally, give the closing hint by expanding the following
+        (which, depending on the configured <ase-guidance-level/>, may
+        expand into nothing and hence emit no output at all):
+
+        <if condition="<verdict/> starts with `REJECT`">
+        <ase-tpl-hint level="normal">
+        Use `/ase-code-resolve` to derive and apply a solution approach for the findings which demand changes.
+        </ase-tpl-hint>
         </if>
 
     </step>

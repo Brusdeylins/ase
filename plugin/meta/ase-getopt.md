@@ -76,6 +76,15 @@ set placeholders into the context as a side-effect.
     ⧉ **ASE**: ✪ skill: **<getopt-skill/>**, ▶ ERROR: option parsing failed: **<text/>**
     </template>
 
+    Directly *after* this error <template/>, and *before* stopping, give
+    the corrective hint by expanding the following (which, depending on
+    the configured <ase-guidance-level/>, may expand into nothing and
+    hence emit no output at all):
+
+    <ase-tpl-hint level="verbose">
+    Run `/<getopt-skill/> --help` for the accepted options and arguments of this skill.
+    </ase-tpl-hint>
+
 5.  **Parsing JSON Result**:
     The tool returned a single `text` content payload containing JSON.
     Parse this JSON in <text/> now into <getopt-result/> by recognizing

@@ -356,5 +356,27 @@ Procedure
 
     </step>
 
+6.  <step id="STEP 6: Give Final Hints">
+
+    Finally, give the closing hints by expanding the following (which,
+    depending on the configured <ase-guidance-level/>, may each expand
+    into nothing and hence emit no output at all):
+
+    <ase-tpl-hint level="normal">
+    For a human-reviewer-style critique of the very same staged changes, with an approve/reject verdict, use `/ase-meta-review`.
+    </ase-tpl-hint>
+
+    <if condition="
+        <getopt-option-coherence/> is not equal `true` or
+        <getopt-option-risk/> is not equal `true` or
+        <getopt-option-blast/> is not equal `true`
+    ">
+    <ase-tpl-hint level="verbose">
+    Use `/ase-meta-diff --coherence --risk --blast` to additionally scrutinize the intent coherence, the risk profile, and the blast radius of the staged changes.
+    </ase-tpl-hint>
+    </if>
+
+    </step>
+
 </flow>
 

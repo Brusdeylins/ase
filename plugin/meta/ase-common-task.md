@@ -45,6 +45,15 @@ Task Skill Common Steps
     <template>
     ⧉ **ASE**: ☻ skill: **<arg1/>**, ▶ ERROR: expected single `[<id>]` argument
     </template>
+
+    Directly *after* this error <template/>, and *before* stopping,
+    give the corrective hint by expanding the following (which,
+    depending on the configured <ase-guidance-level/>, may expand into
+    nothing and hence emit no output at all):
+
+    <ase-tpl-hint level="verbose">
+    Run `/<arg1/> --help` for the accepted arguments of this skill, or use `/ase-help-intent` to have a fitting command proposed for a free-text intent.
+    </ase-tpl-hint>
     </elseif>
 
 </define>

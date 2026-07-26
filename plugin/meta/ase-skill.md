@@ -295,6 +295,59 @@ Artifact Boxing Transparency
     deterministically skip or suppress and *win* over the implicit decisions
     above. Where no such branches exist, the decisions above apply.
 
+Guidance Hint Level
+-------------------
+
+-   *IMPORTANT*: The *guidance* of the agent (indicated by
+    <ase-guidance-level/> configuration) classifies how many
+    *unsolicited hints* -- pointers to the available *ASE* skills, to
+    their options, and to the recommended next operations, which the
+    user did *not* explicitly ask for -- you *MUST* emit in addition to
+    the requested result.
+
+-   *IMPORTANT*: Guidance modulates only the *hints*, per the four
+    levels below. It *MUST* *NOT* alter the *communication style*
+    (governed exclusively by the persona), it *MUST* *NOT* alter the
+    *work depth* or the *output visibility* (governed exclusively by the
+    boxing), and it *MUST* *NOT* suppress, reduce, or expand any
+    *requested* output. In particular, guidance *MUST* *NOT* apply to:
+
+    -   the *manual page* emitted for `-h`/`--help`, which is
+        explicitly requested,
+    -   the *skill catalog*, *manual page*, and *command proposal*
+        results of the `ase-help-skill` and `ase-help-intent` skills,
+        which are explicitly requested,
+    -   the *option affordance* lines of a user dialog (e.g. `Please
+        choose *one* option by typing ...`), which are functional parts
+        of the dialog and not hints,
+    -   any `▶ status:` progress line and any `ERROR:` line, which
+        carry state rather than pointers.
+
+-   *IMPORTANT*: Every hint carries a *level* -- `minimal`, `normal`,
+    or `verbose` -- and is emitted only if the configured
+    <ase-guidance-level/> *includes* that level:
+
+    -   If <ase-guidance-level/> is `none`:
+        -   Hints emitted: *none*
+    -   If <ase-guidance-level/> is `minimal`:
+        -   Hints emitted: `minimal` -- the *essential* pointers only,
+            i.e. those without which the just-produced result cannot be
+            consumed at all (such as the follow-up command that turns
+            persisted findings into actual changes)
+    -   If <ase-guidance-level/> is `normal`:
+        -   Hints emitted: `minimal` *and* `normal` -- additionally the
+            *canonical next step* of the finished skill
+    -   If <ase-guidance-level/> is `verbose`:
+        -   Hints emitted: `minimal`, `normal`, *and* `verbose` --
+            additionally the *unused options* of the current skill, the
+            *related* skills, and the *configuration* skills
+    -   If <ase-guidance-level/> is empty or not set:
+        -   Treat it as `normal`
+
+-   *IMPORTANT*: A hint *MUST* be emitted *exclusively* through the
+    `<ase-tpl-hint/>` template pattern below, and *never* as free-text
+    prose, so that its suppression is uniform across all skills.
+
 Template Patterns
 -----------------
 
@@ -349,6 +402,32 @@ Template Patterns
     ╰────━━━━**(** ⧉ ASE: **`<title/>`** **)**━━━━────<bar/>┈┈┈┈┈┈┈┈┈┈
 
     </template>
+
+-   When `<ase-tpl-hint level="<level/>"><content/></ase-tpl-hint>`
+    should be expanded, first determine whether the hint passes the
+    configured guidance level (see `Guidance Hint Level` above):
+
+    -   Set <emit>false</emit>.
+    -   If <ase-guidance-level/> is `minimal` and <level/> is `minimal`,
+        set <emit>true</emit>.
+    -   If <ase-guidance-level/> is `normal` and <level/> is `minimal`
+        or `normal`, set <emit>true</emit>.
+    -   If <ase-guidance-level/> is `verbose` and <level/> is `minimal`,
+        `normal`, or `verbose`, set <emit>true</emit>.
+    -   If <ase-guidance-level/> is empty or not set, treat it as
+        `normal` and apply the corresponding decision above.
+
+    Then dispatch on <emit/>:
+
+    <if condition="<emit/> is `true`">
+        <template>
+        ⧉ **ASE**: ▷ hint [<level/>]: **<content/>**
+        </template>
+    </if>
+    <else>
+        This construct is expanded into *nothing*.
+        Do not output anything.
+    </else>
 
 -   When `<ase-tpl-boxline><line/></ase-tpl-boxline>` should be expanded, use:
 

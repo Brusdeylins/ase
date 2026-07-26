@@ -93,3 +93,24 @@ Procedure
         </template>
         </if>
 
+    3.  Finally, give the closing hints by expanding the following (which,
+        depending on the configured <ase-guidance-level/>, may each
+        expand into nothing and hence emit no output at all):
+
+        <if condition="<task-content/> is not empty">
+        <ase-tpl-hint level="normal">
+        Use `/ase-task-edit` or `/ase-task-grill` to refine this plan, `/ase-task-preflight` to dry-run it, and `/ase-task-implement` to realize it.
+        </ase-tpl-hint>
+
+        <if condition="<getopt-option-full/> is not equal `true` and the `##  IMPLEMENTATION DRAFT` section was replaced with `[...]`">
+        <ase-tpl-hint level="verbose">
+        Use `/ase-task-view --full` to show the elided `IMPLEMENTATION DRAFT` section, too.
+        </ase-tpl-hint>
+        </if>
+        </if>
+        <else>
+        <ase-tpl-hint level="normal">
+        No plan exists under this task id -- use `/ase-task-list` to see the available tasks and `/ase-task-edit` to create a plan.
+        </ase-tpl-hint>
+        </else>
+

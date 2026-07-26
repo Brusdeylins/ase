@@ -72,3 +72,24 @@ Procedure
 
         </template>
 
+3.  Finally, give the closing hints by expanding the following (which,
+    depending on the configured <ase-guidance-level/>, may each expand
+    into nothing and hence emit no output at all):
+
+    <if condition="the `tasks` array is NOT empty">
+    <ase-tpl-hint level="normal">
+    Use `/ase-task-id <id>` to switch to one of the listed tasks and `/ase-task-view` to inspect its plan.
+    </ase-tpl-hint>
+    </if>
+    <else>
+    <ase-tpl-hint level="normal">
+    No task plan exists yet -- use `/ase-task-edit` to create one through a conversational loop.
+    </ase-tpl-hint>
+    </else>
+
+    <if condition="<getopt-option-verbose/> is not equal `true`">
+    <ase-tpl-hint level="verbose">
+    Use `/ase-task-list --verbose` to additionally show the last-modified timestamp of each task plan.
+    </ase-tpl-hint>
+    </if>
+

@@ -271,6 +271,14 @@ Honor the following tenets throughout the brainstorming:
         <ase-tpl-bullet-signal/> **RECOMMENDED IDEA**: <recommendation/>
         </template>
 
+    5.  Finally, give the closing hint by expanding the following (which,
+        depending on the configured <ase-guidance-level/>, may expand
+        into nothing and hence emit no output at all):
+
+        <ase-tpl-hint level="normal">
+        To turn the recommended idea into a plan, use `/ase-task-edit`; to turn it directly into code, use `/ase-code-craft`.
+        </ase-tpl-hint>
+
     </step>
 
 </flow>

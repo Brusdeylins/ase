@@ -238,6 +238,18 @@ for the technology stack to *provide* the *needed functionality*
         [...]
         | **<name-N/>** | `<package-N/>` | <version-N/> | **<downloads-N/>** | **<stars-N/>** | **<updated-N/>** | <created-N/> | <deps-N/>  |
         </template>
+
+    3.  Finally, give the closing hints by expanding the following
+        (which, depending on the configured <ase-guidance-level/>, may
+        each expand into nothing and hence emit no output at all):
+
+        <ase-tpl-hint level="normal">
+        To pick a single component from the ranking against weighted criteria, use `/ase-meta-evaluate`.
+        </ase-tpl-hint>
+
+        <ase-tpl-hint level="verbose">
+        Use `/ase-arch-discover --limit` to widen the candidate set, `--staleness` to change the aging threshold, and `--small-scope` to prefer small, focused components.
+        </ase-tpl-hint>
     </step>
 </flow>
 
