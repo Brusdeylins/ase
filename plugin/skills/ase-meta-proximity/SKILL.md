@@ -61,6 +61,10 @@ relevant *child* topics:
 
     1.  *Determine Proximity*:
 
+        Set <parent/>, <sibling-1/> to <sibling-4/>, and <child-1/> to
+        <child-4/> to empty, so that a stale proximity of a previously
+        navigated topic can never leak into the rendering below.
+
         Set <prompt><topic/></prompt>.
 
         <if condition="<getopt-option-ground/> is equal `true`">
@@ -91,7 +95,11 @@ relevant *child* topics:
         lines, and <child-1/> to <child-4/> to the values of its four
         `CHILD:` lines.
 
-        <if condition="the sub-agent returned no usable proximity">
+        <if condition="
+            the sub-agent returned no usable proximity OR
+            it did not yield a canonical topic, exactly one parent,
+            exactly four siblings, and exactly four children
+        ">
         Determine the canonical topic name, the parent, the siblings, and
         the children from model knowledge instead, and output the
         following <template/>:
@@ -158,7 +166,7 @@ relevant *child* topics:
             CHILD-4:   ↓ <child-4/>
         </expand>
 
-        Check the tool <result/> and dispatch accordingly:
+        Check the <result/> and dispatch accordingly:
 
         -   If <result/> is `CANCEL`:
             *Break* out of the *loop* and stop processing without any

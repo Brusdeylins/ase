@@ -10,17 +10,14 @@ tools:
 
 <define name="gather-facts">
 <if condition="<ground/> is equal `true`">
-Set <prompt>Search the Internet/Web and gather facts about
-<arg1/></prompt>.
-
-Then use the `ase-meta-search` skill in a sub-agent to gather facts with
+Use the `ase-meta-search` skill in a sub-agent to gather facts with
 the following tool call and store the returned facts in the placeholder
 named `<arg2/>`:
 
 `Agent(
     description: "Query Web Search Service",
     subagent_type: "ase:ase-meta-search",
-    prompt: "<prompt/>",
+    prompt: "Search the Internet/Web and gather facts about <arg1/>",
     run_in_background: false
 )`
 
@@ -100,7 +97,7 @@ store those facts in the placeholder named `<arg2/>`.
 
     -   **CHILDREN**:
 
-        The *four* most relevant *children* topics (narrower topics that
+        The *four* most relevant *child* topics (narrower topics that
         are specializations of <topic/>), stored in <child-1/> to
         <child-4/>.
 
@@ -109,12 +106,14 @@ store those facts in the placeholder named `<arg2/>`.
             arg2="facts-children"></expand>
 
         Ground the determination of the canonical names of the most
-        relevant children topics <child-1/> to <child-4/> in the facts of
+        relevant child topics <child-1/> to <child-4/> in the facts of
         <facts-children/> and do not contradict them.
 
     You *MUST* determine *exactly* one parent, *exactly* four siblings,
-    and *exactly* four children. You *MUST* *NOT* output anything related
-    to this step.
+    and *exactly* four children. All nine proximity topics *MUST* be
+    *distinct* from each other and *MUST* *NOT* be <topic/> itself or a
+    mere synonym or spelling variant of it. You *MUST* *NOT* output
+    anything related to this step.
 
 4.  Return *exclusively* the following <template/> (no prose, no
     preamble, no summary, and no Markdown formatting):
