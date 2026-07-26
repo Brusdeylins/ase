@@ -104,7 +104,7 @@ const badges = [
             </Swiper>
 
             {/* GitHub badges */}
-            <div class="relative z-40 mt-6 flex min-h-[28px] flex-wrap items-center justify-center gap-2">
+            <div class="link-plain relative z-40 mt-6 flex min-h-[28px] flex-wrap items-center justify-center gap-2">
                 {badges.map((badge) => (
                     <a href={badge.href} class="inline-flex overflow-hidden rounded-md">
                         <img src={badgeURL(badge.path)} alt={badge.alt} />

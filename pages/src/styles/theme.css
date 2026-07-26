@@ -208,6 +208,26 @@ a {
     text-decoration: none;
 }
 
+/*  flag external links (any "http"/"https" target) in prose text with a
+    trailing "↗" glyph, so off-site destinations are visually distinguishable
+    from in-page anchors. The U+FE0E variation selector forces the monochrome
+    text presentation instead of a colored emoji arrow. Uses :where() (zero
+    specificity) so the opt-out below always wins.  */
+:where(a[href^="http"])::after {
+    content: "\2197\fe0e";
+    color: var(--brand-600);
+    display: inline;
+    margin-left: 0.30em;
+    font-size: 0.75em;
+    font-weight: normal;
+    font-style: normal;
+    text-decoration: none;
+}
+:where(.link-plain) a::after,
+a.link-plain::after {
+    content: none;
+}
+
 b, strong {
     font-weight: 600;
 }

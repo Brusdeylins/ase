@@ -23,7 +23,7 @@ const { id, label } = Astro.props
 const modalId = `youtube-modal-${id}`
 ---
 <Modal id={modalId} label={label}>
-    <div class="aspect-video max-h-[90vh] w-[94vw] max-w-[calc(90vh*16/9)] overflow-hidden rounded-xl shadow-[0_25px_50px_-12px_rgb(0_0_0_/_0.6)]">
+    <div class="link-plain aspect-video max-h-[90vh] w-[94vw] max-w-[calc(90vh*16/9)] overflow-hidden rounded-xl shadow-[0_25px_50px_-12px_rgb(0_0_0_/_0.6)]">
         <YouTube id={id} title={label} params="rel=0"/>
     </div>
 </Modal>
