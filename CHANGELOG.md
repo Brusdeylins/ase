@@ -8,6 +8,8 @@ ChangeLog
 - IMPROVEMENT [code]: append `--tool` option to generated statusline command in setup (`ase-setup.ts`)
 - FEATURE [code]: added `--padding`/`-p` option (default `0`) padding the statusline lines with N spaces on each side (`ase-statusline.ts`, `ase-setup.ts`)
 - FEATURE [code]: added `agent.guidance` config parameter with levels `none`, `minimal`, `normal` (default) and `verbose`
+- FEATURE [plugin]: honor `agent.guidance` in the skills through a new `Guidance Hint Level` section and a new `<ase-tpl-hint level="..."/>` template pattern (`ase-skill.md`)
+- FEATURE [plugin]: added guidance-gated closing hints to `ase-code-lint`, `ase-docs-proofread`, `ase-meta-review`, `ase-meta-diff`, `ase-meta-commit`, `ase-meta-brainstorm`, `ase-arch-discover`, `ase-sync-import`, `ase-sync-export`, `ase-task-list`, and `ase-task-view`, and to the option-parsing and task-argument error paths (`ase-getopt.md`, `ase-common-task.md`)
 - BUGFIX [code]: emitted the model-side session banner for GitHub Copilot CLI instead of OpenAI Codex CLI, as only the latter supports the hook `systemMessage` field (`ase-constitution.md`)
 
 0.9.48 (2026-07-25)
