@@ -20,11 +20,12 @@ topic that *topic* specializes), *SIBLINGS* (the four most relevant
 topics on the same level, sharing the same parent), and *CHILDREN* (the
 four most relevant narrower topics that specialize *topic*).
 
-By default the proximity is derived from model knowledge only. With the
-`--ground`/`-g` option, the skill first searches the Internet/Web for
-facts about the topic via the `ase-meta-search` skill (dispatched in a
-sub-agent, querying all available search backends) and grounds the
-determination in the found facts.
+The determination itself is delegated to the `ase-meta-proximity` agent,
+which is shared with the `ase-meta-quotes` skill. By default the
+proximity is derived from model knowledge only. With the `--ground`/`-g`
+option, the agent first searches the Internet/Web for facts about the
+topic, about its broader topic, and about its narrower topics, and
+grounds the determination in the found facts.
 
 Without the `--loop`/`-l` option, the skill determines and prints the
 proximity of the given topic once and then stops. With the `--loop`/`-l`
@@ -33,14 +34,14 @@ interactive dialog; selecting one of them makes it the new *current
 topic* and restarts the determination from the beginning, so the user
 can *navigate* the topic taxonomy up (parent), sideways (siblings), and
 down (children). Cancelling the dialog exits the loop. When `--loop` is
-combined with `--ground`, each newly selected topic is re-grounded via
-the `ase-meta-search` sub-agent before its proximity is re-determined.
+combined with `--ground`, each newly selected topic is re-grounded by
+the `ase-meta-proximity` sub-agent before its proximity is re-determined.
 
 ##  OPTIONS
 
 `--ground`|`-g`:
-    Ground the determination in Internet/Web facts gathered via the
-    `ase-meta-search` skill before determining the proximity. Without
+    Ground the determination in Internet/Web facts gathered by the
+    `ase-meta-proximity` agent before determining the proximity. Without
     this option, the determination is derived from model knowledge only.
     When combined with `--loop`, every newly navigated-to topic is
     re-grounded.

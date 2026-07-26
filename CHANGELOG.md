@@ -5,6 +5,7 @@ ChangeLog
 0.9.51 (2026-07-26)
 -------------------
 
+- FEATURE [code]: splitted `ase-meta-proximity` skill into a skill and a reusable agent
 - BUGFIX [code]: show the reasoning effort in the statusline also under GitHub Copilot CLI
 
 0.9.50 (2026-07-26)

@@ -37,37 +37,6 @@ relevant *child* topics:
 <topic><getopt-arguments/></topic>
 </objective>
 
-<define name="gather-facts">
-<if condition="<getopt-option-ground/> is equal `true`">
-Set <prompt>Search the Internet/Web and gather facts about
-<arg1/></prompt>.
-
-Then use the `ase-meta-search` skill in a sub-agent to gather facts with
-the following tool call and store the returned facts in the placeholder
-named `<arg2/>`:
-
-`Agent(
-    description: "Query Web Search Service",
-    subagent_type: "ase:ase-meta-search",
-    prompt: "<prompt/>",
-    run_in_background: false
-)`
-
-<if condition="the placeholder named `<arg2/>` contains no usable facts">
-Set the placeholder named `<arg2/>` to empty, so the determination below
-falls back to model knowledge, and output the following <template/>:
-
-<template>
-<ase-tpl-bullet-secondary/> **WARNING**: grounding found no usable facts -- falling back to model knowledge.
-</template>
-</if>
-</if>
-<else>
-Use the model's world knowledge and determine facts about <arg1/> and
-store those facts in the placeholder named `<arg2/>`.
-</else>
-</define>
-
 <flow>
 
 1.  <step id="STEP 1: Check Topic">
@@ -88,69 +57,51 @@ store those facts in the placeholder named `<arg2/>`.
     *REPEAT* the following sub-steps in a *LOOP* until either
     <getopt-option-loop/> is *not* equal `true` (then the loop runs
     exactly *once* and stops after rendering), or the user declines/cancels
-    the dialog in sub-step 5:
+    the dialog in sub-step 4:
 
-    1.  *Determine Topic*:
+    1.  *Determine Proximity*:
 
-        Determine the canonical name of the central *topic* which is stored
-        in <topic/>.
+        Set <prompt><topic/></prompt>.
 
-        <expand name="gather-facts"
-            arg1="the following topic: <topic/>"
-            arg2="facts-topic"></expand>
+        <if condition="<getopt-option-ground/> is equal `true`">
+        Set <prompt>GROUND <topic/></prompt>, so the agent grounds its
+        determination in Internet/Web facts instead of using model
+        knowledge only.
+        </if>
 
-        Ground the determination of the canonical name of the topic
-        <topic/> in the facts of <facts-topic/> and do not contradict
-        them. Update <topic/> accordingly.
+        Determine the canonical name of the central *topic* and its
+        *conceptual proximity* along the three *dimensions* **PARENT**
+        (the single broader topic that <topic/> is a specialization of),
+        **SIBLINGS** (the four most relevant topics on the same level
+        that share the same parent), and **CHILDREN** (the four most
+        relevant narrower topics that are specializations of <topic/>) by
+        using the `ase-meta-proximity` agent in a sub-agent with the
+        following tool call:
 
-    2.  *Determine Proximity*:
+        `Agent(
+            description: "Determine Conceptual Proximity",
+            subagent_type: "ase:ase-meta-proximity",
+            prompt: "<prompt/>",
+            run_in_background: false
+        )`
 
-        Determine the *conceptual proximity* of the current <topic/>
-        along three *dimensions*:
+        Parse the returned labeled list and set <topic/> to the value of
+        its `TOPIC:` line, <parent/> to the value of its `PARENT:` line,
+        <sibling-1/> to <sibling-4/> to the values of its four `SIBLING:`
+        lines, and <child-1/> to <child-4/> to the values of its four
+        `CHILD:` lines.
 
-        -   **PARENT**:
+        <if condition="the sub-agent returned no usable proximity">
+        Determine the canonical topic name, the parent, the siblings, and
+        the children from model knowledge instead, and output the
+        following <template/>:
 
-            The single most relevant *parent* topic (the broader topic
-            that <topic/> is a specialization of), which will be stored
-            in <parent/>.
+        <template>
+        <ase-tpl-bullet-secondary/> **WARNING**: proximity agent returned no usable result -- falling back to model knowledge.
+        </template>
+        </if>
 
-            <expand name="gather-facts"
-                arg1="the PARENT topic (the broader topic that the given topic is a specialization of) of the following topic: <topic/>"
-                arg2="facts-parent"></expand>
-
-            Ground the determination of the canonical name of the parent
-            topic <parent/> in the facts of <facts-parent/> and do not
-            contradict them.
-
-        -   **SIBLINGS**:
-
-            The *four* most relevant *sibling* topics (topics on the
-            same level that share the same parent), which will be stored
-            in <sibling-1/> to <sibling-4/>.
-
-            <expand name="gather-facts"
-                arg1="the SIBLING topics (topics on the same level that share the same parent) of the following topic: <topic/>"
-                arg2="facts-siblings"></expand>
-
-            Ground the determination of the canonical names of the most
-            relevant sibling topics <sibling-1/> to <sibling-4/> in the
-            facts of <facts-siblings/> and do not contradict them.
-
-        -   **CHILDREN**:
-
-            The *four* most relevant *children* topics (narrower topics
-            that are specializations of <topic/>), stored in <child-1/>
-            to <child-4/>.
-
-            <expand name="gather-facts"
-                arg1="the CHILDREN topics (narrower topics that are specializations) of the following topic: <topic/>"
-                arg2="facts-children"></expand>
-
-            Ground the determination of the canonical names of the most
-            relevant children topics <child-1/> to <child-4/> in the
-            facts of <facts-children/> and do not contradict them.
-
-    3.  *Render Proximity*:
+    2.  *Render Proximity*:
 
         Output the result with the following <template/>, listing each
         proximity topic under its bullet-prefixed section header.
@@ -179,12 +130,12 @@ store those facts in the placeholder named `<arg2/>`.
         <ase-tpl-foot title="PROXIMITY TOPICS"/>
         </template>
 
-    4.  <if condition="<getopt-option-loop/> is not equal `true`">
+    3.  <if condition="<getopt-option-loop/> is not equal `true`">
         The loop runs only once in non-interactive mode: *break* out of
         the *loop* and stop processing without any further output.
         </if>
 
-    5.  *Navigate Proximity*:
+    4.  *Navigate Proximity*:
 
         In the following, you *MUST* *NOT* use your built-in
         <user-dialog-tool/> tool! Instead, you *MUST* just show a custom
