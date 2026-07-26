@@ -841,5 +841,48 @@ export class ConfigMCP {
                 return mcpToolError(err)
             }
         })
+
+        /*  config list  */
+        mcp.registerTool("ase_config_list", {
+            title: "ASE config list",
+            description:
+                "List all effective configuration entries of the layered configuration, " +
+                "cascading through the default/user/project/task/session chain up to and " +
+                "including the requested `scope`. Returns an `entries` array (in lexicographic " +
+                "`key` order) where each item has the dotted `key`, its effective `value`, and " +
+                "the `scope` label (\"default\", \"user\", \"project\", \"task:<id>\", or " +
+                "\"session:<id>\") that supplied it. For overlapping keys only the value of the " +
+                "strongest scope is reported.",
+            inputSchema: {
+                scope: z.string()
+                    .describe("scope chain (e.g. \"session:<id>\", \"task:<id>\", \"project\", \"user\")")
+            },
+            outputSchema: {
+                entries: z.array(z.object({
+                    key:   z.string().describe("dotted configuration key"),
+                    value: z.string().describe("effective configuration value"),
+                    scope: z.string().describe("scope label which supplied the value")
+                })).describe("all effective configuration entries in lexicographic key order")
+            }
+        }, async (args) => {
+            try {
+                const scope = parseScope(args.scope)
+                const cfg   = new Config("config", configSchema, this.log, scope)
+                cfg.read()
+                const entries = cfg.entries().map((e) => ({
+                    key:   e.key,
+                    value: String(isScalar(e.value) ? e.value.value : e.value),
+                    scope: Config.scopeLabel(e.scope)
+                }))
+                const result = { entries }
+                return {
+                    structuredContent: result,
+                    content:           [ { type: "text", text: JSON.stringify(result) } ]
+                }
+            }
+            catch (err: unknown) {
+                return mcpToolError(err)
+            }
+        })
     }
 }
