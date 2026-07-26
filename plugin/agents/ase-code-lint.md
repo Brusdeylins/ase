@@ -95,6 +95,20 @@ Workflow
         site as close as possible. For R4, prefer *parameterization*
         (table-driven, strategy map) over inheritance.
 
+        **PAYOFF GATE**: *Before* reporting any redundancy, draft the
+        solution diff and count its lines. The removed lines *MUST* be at
+        least *twice* the added lines (ratio >= 2:1, i.e. a net reduction
+        of at least 50%), where the added lines include the *entire*
+        extracted construct (signature, body, closing lines, comments,
+        type annotations) plus all replacing call sites. A break-even
+        proposal (e.g. 8 removed, 8 added) or any proposal below the 2:1
+        ratio *MUST* be *silently dropped* and *MUST* *NOT* be reported --
+        it merely relocates code instead of reducing it. Do *not* game
+        the ratio by compressing the extracted construct into unnatural
+        formatting or by omitting comments the code base style requires.
+        Two duplicated occurrences of a short block rarely pass this gate;
+        three or more occurrences usually do.
+
     -   **A07 - PATTERNS**:
         Check for broken design patterns, broken conventions, or broken
         best practices.
