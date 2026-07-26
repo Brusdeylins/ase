@@ -109,7 +109,8 @@ set placeholders into the context as a side-effect.
     whose long name starts with `int-`.
 
 7.  **Display Results**:
-    Just output the following <template/>:
+    If <ase-guidance-level/> is equal to `normal` or `verbose`,
+    output the following <template/>:
 
     <template>
     ⧉ **ASE**: ✪ skill: **<getopt-skill/>**, ▶ options: <getopt-info/>
