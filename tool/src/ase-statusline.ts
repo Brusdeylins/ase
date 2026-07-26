@@ -37,7 +37,10 @@ type Tool = "claude" | "copilot" | "codex"
     extra top-level "cwd" field and without "effort", "thinking",
     "output_style", and "rate_limits"; the "context_window.current_usage"
     sub-object is shared, and "model.display_name" plus the cost,
-    workspace, session and version fields are also shared)  */
+    workspace, session and version fields are also shared. Copilot CLI has
+    no "effort" field at all and instead embeds the reasoning effort as a
+    " · "-separated segment of "model.display_name", so the effort has
+    to be split off there again -- see splitCopilotModel below)  */
 interface StatuslineInput {
     cwd?: string
     workspace?: {
@@ -255,6 +258,25 @@ const probeMemory = (): { used: number, total: number } => {
     }
 }
 
+/*  set of reasoning effort levels GitHub Copilot CLI offers in its effort picker  */
+const EFFORTS: ReadonlySet<string> = new Set<string>([
+    "low", "medium", "high", "xhigh", "max"
+])
+
+/*  split a GitHub Copilot CLI "model.display_name" into its plain model name and its
+    reasoning effort: Copilot CLI renders the display name as the model label, followed
+    by the optional request multiplier, the optional reasoning effort and the optional
+    context tier, all separated by " · " (e.g. "gpt-5.4 (2x) · high · 1M context"), so
+    only a segment matching a known effort level is taken as the effort  */
+const splitCopilotModel = (display: string): { name: string, effort: string } => {
+    const parts  = display.split(" · ")
+    const effort = parts.filter((part) =>  EFFORTS.has(part.toLowerCase()))
+    const name   = parts.filter((part) => !EFFORTS.has(part.toLowerCase()))
+    if (effort.length === 0)
+        return { name: display, effort: "" }
+    return { name: name.join(" · "), effort: effort[0].toLowerCase() }
+}
+
 /*  memoize a zero-argument function, computing its value at most once on first use  */
 const memoize = <T>(fn: () => T): (() => T) => {
     let cache: { value: T } | null = null
@@ -404,6 +426,16 @@ export default class StatuslineCommand {
                     }
                     return { taskId, persona, guidance }
                 })
+                const getModel = memoize((): { name: string, effort: string } => {
+                    const display = data.model?.display_name ?? ""
+
+                    /*  under GitHub Copilot CLI the reasoning effort is only available as
+                        a segment of the display name, so split it off again and let the
+                        regular "effort" field of Anthropic Claude Code CLI still win  */
+                    const split = tool === "copilot" && display !== "" ?
+                        splitCopilotModel(display) : { name: display, effort: "" }
+                    return { name: split.name, effort: data.effort?.level ?? split.effort }
+                })
                 const getGit = memoize(() => probeGit(data.workspace?.current_dir ?? ""))
                 const getMem = memoize(() => probeMemory())
 
@@ -428,12 +460,12 @@ export default class StatuslineCommand {
 
                     /*  ==== MODEL ====  */
                     m: () => {
-                        const model = data.model?.display_name ?? ""
-                        emit(`${prefix("⚙", "model")}${c.bold(model)}`)
+                        const { name } = getModel()
+                        emit(`${prefix("⚙", "model")}${c.bold(name)}`)
                     },
                     e: () => {
-                        const effort = data.effort?.level ?? "unknown"
-                        emit(`${prefix("⚒", "effort")}${c.bold(effort)}`)
+                        const { effort } = getModel()
+                        emit(`${prefix("⚒", "effort")}${c.bold(effort !== "" ? effort : "unknown")}`)
                     },
                     t: () => {
                         const thinking = data.thinking?.enabled === true ? "yes" : "no"

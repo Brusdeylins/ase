@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.51 (2026-07-26)
+-------------------
+
+- BUGFIX [code]: show the reasoning effort in the statusline also under GitHub Copilot CLI
+
 0.9.50 (2026-07-26)
 -------------------
 

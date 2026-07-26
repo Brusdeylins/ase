@@ -184,8 +184,12 @@ or *GitHub Copilot CLI* statusline:
   `ASE_TOOL` environment variable if set); under `--tool copilot` the
   payload's top-level `cwd` field is mapped onto `workspace.current_dir`
   for the renderers below, and placeholders backed by Claude-Code-only
-  fields (such as `%e`, `%t`, `%O`, `%S`, `%D`, `%W`, `%Q`) are simply
-  suppressed. The input JSON is the standard *Anthropic Claude Code CLI* statusline
+  fields (such as `%t`, `%O`, `%S`, `%D`, `%W`, `%Q`) are simply
+  suppressed. As *GitHub Copilot CLI* passes no `effort` field at all and
+  instead embeds the reasoning effort as a ` · `-separated segment of
+  `model.display_name` (e.g. `gpt-5.4 (2x) · high · 1M context`), that
+  segment is split off again, so `%m` renders the plain model and `%e`
+  the effort level. The input JSON is the standard *Anthropic Claude Code CLI* statusline
   payload (with `workspace.current_dir`, `model.display_name`,
   `context_window.used_percentage`, `effort.level`, `thinking.enabled`,
   `session_id`, and -- on *Anthropic Claude Code CLI* `2.1.90+` -- additionally
