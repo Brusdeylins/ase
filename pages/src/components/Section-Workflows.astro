@@ -72,9 +72,10 @@ import Annotation  from "./Annotation.astro"
                     mode, as provided by <b>Anthropic Claude Code CLI</b> already
                     without <b>ASE</b>. The pro is its convenience and
                     possibility to interactively add detail decisions,
-                    the con is its weakness because plans cannot
-                    easily co-exist and be edited in parallel. Use for
-                    medium-complex tasks under ad-hoc planning.
+                    the con is its weakness when it comes to multiple
+                    plans: these cannot easily co-exist and be edited in
+                    parallel. Use for medium-complex tasks under ad-hoc
+                    planning.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
@@ -84,8 +85,8 @@ import Annotation  from "./Annotation.astro"
                     commands={[
                         "**/plan**",
                         "Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
-                        "(3) Change output color to blue",
-                        "(3) Use NPM package \"chalk\" for coloring",
+                        "**(3) Change output color to blue**",
+                        "**(3) Use NPM package \"chalk\" for coloring**",
                         "**(1) (Yes, and use auto mode)**"
                     ]}
                 />
@@ -114,8 +115,8 @@ import Annotation  from "./Annotation.astro"
                         "**/ase-task-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
                         "Change output color to blue",
                         "Use NPM package \"chalk\" for coloring",
-                        "**IMPLEMENT**",
-                        "**DELETE**"
+                        "**IMPLEMENT (dialog selection)**",
+                        "**DELETE (dialog selection)**"
                     ]}
                 />
             </div>
@@ -126,12 +127,13 @@ import Annotation  from "./Annotation.astro"
                 <p class="ase-eyebrow">Task Mode #2</p>
                 <h3 class="ase-h3">Professional Planning</h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
-                    The professional approach is the <b>ASE</b> Task Mode,
-                    combined with other <b>ASE</b> task skills. The
-                    pro is that the plan becomes more robust and the
-                    result more foreseeable, the con is its
-                    necessary extra steps. Use for complex tasks where
-                    extra "thinking before acting" is desired.
+                    The professional approach is the <b>ASE</b> Task
+                    Mode, based on various <b>ASE</b> task skills
+                    for grilling and preflighting the plan. The pro is that
+                    the plan becomes more robust and the result more
+                    foreseeable, the con is its necessary extra steps.
+                    Use for complex tasks where extra "thinking before
+                    acting" is desired.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
@@ -142,10 +144,10 @@ import Annotation  from "./Annotation.astro"
                         "**/ase-task-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
                         "Change output color to blue",
                         "Use NPM package \"chalk\" for coloring",
-                        "**GRILL**",
-                        "**PREFLIGHT**",
-                        "**IMPLEMENT**",
-                        "**DELETE**"
+                        "**GRILL (dialog selection)**",
+                        "**PREFLIGHT (dialog selection)**",
+                        "**IMPLEMENT (dialog selection)**",
+                        "**DELETE (dialog selection)**"
                     ]}
                 />
             </div>
@@ -171,13 +173,13 @@ import Annotation  from "./Annotation.astro"
                     prefix="Claude Code"
                     commands={[
                         "**/ase-code-craft** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
-                        "**A1**",
+                        "**A1 (dialog selection)**",
                         "Change output color to blue",
                         "Use NPM package \"chalk\" for coloring",
-                        "**GRILL**",
-                        "**PREFLIGHT**",
-                        "**IMPLEMENT**",
-                        "**DELETE**"
+                        "**GRILL (dialog selection)**",
+                        "**PREFLIGHT (dialog selection)**",
+                        "**IMPLEMENT (dialog selection)**",
+                        "**DELETE (dialog selection)**"
                     ]}
                 />
             </div>
