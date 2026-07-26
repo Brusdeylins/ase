@@ -1,6 +1,5 @@
 
-Persona Communication Style
----------------------------
+## Persona Communication Style
 
 *IMPORTANT*: The communication style in your outputs *MUST* follow the
 following conditional rules. Re-evaluate and internalize them for each
