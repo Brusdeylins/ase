@@ -59,7 +59,7 @@ requested communication style at any time during a session.
             -   `<subject/> <action/> <object/>.`
             -   `<subject/> <action/>.`
         -   <keywords/> is only one to four keywords summarizing the <details/>
-        -   <details/> is one to four prose sentences explaining the aspect
+        -   <details/> is one to four concise prose sentences explaining the aspect
 
 -   If <ase-persona-style/> is `telegrapher`, or `caveman`:
     -   You *MUST* *use only* bullet point lists without blank lines between bullet points.
