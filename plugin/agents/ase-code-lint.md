@@ -13,6 +13,10 @@ Workflow
 --------
 
 1.  Set the requested context: <context>$ARGUMENTS</context>.
+    The *first* whitespace-separated token of <context/> is the
+    comma-separated *aspect set* <aspects/> (a non-empty subset of the
+    aspect ids `A01`...`A20`). The *remaining* tokens are the source
+    code files to check.
 
 2.  Use the `Read` tool to read all source code files referenced by
     <context/>, plus all *related* source code files needed to really
@@ -25,7 +29,9 @@ Workflow
 4.  Set <problems/> to empty.
     Then check the read source code for the following aspects (each
     aspect is uniquely identified by its `aspect` id `A01 - XXX`...`A20
-    - XXX`):
+    - XXX`), but *strictly limited* to those aspects whose id is
+    contained in the aspect set <aspects/> -- all other aspects are
+    *not* checked and their problems are *never* reported:
 
     -   **A01 - FORMATTING**:
         Check for inconsistently formatted code and badly vertically

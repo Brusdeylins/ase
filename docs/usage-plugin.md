@@ -202,10 +202,13 @@ The following ASE commands/skills exist on the code-level:
   Refactor source code. The `--auto`, `--dry`, `--quick`, `--next`, and
   *task-id*`:` options behave as for **/ase-code-craft**.
 
-- **/ase-code-lint** \[`--auto`|`-a`\] \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\] *source-reference*:<br/>
+- **/ase-code-lint** \[`--auto`|`-a`\] \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\] \[`--include`|`-i` *aspect*\[,...\]\] \[`--exclude`|`-e` *aspect*\[,...\]\] *source-reference*:<br/>
   Lint the source code in an interactive review loop. With `--auto`, the
   loop runs non-interactively. `--severity` sets the minimum severity of
-  findings to report.
+  findings to report. `--include` and `--exclude` narrow the checked
+  code quality aspects (`A01`...`A20`) to an effective set: `--include`
+  alone keeps just the listed ones, `--exclude` alone keeps all others,
+  and both together keep the included ones minus the excluded ones.
 
 ### Documentation Commands
 

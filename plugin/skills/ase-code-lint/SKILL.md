@@ -1,6 +1,6 @@
 ---
 name: ase-code-lint
-argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(LOW|MEDIUM|HIGH)] <source-reference>"
+argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(LOW|MEDIUM|HIGH)] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] <source-reference>"
 description: >
     Lint source code for potential code quality problems.
     Use when the user wants to "lint" or "check" source code.
@@ -20,7 +20,7 @@ Lint Source Code
 
 <expand name="getopt"
     arg1="ase-code-lint"
-    arg2="--auto|-a --severity|-S=(LOW|MEDIUM|HIGH)">
+    arg2="--auto|-a --severity|-S=(LOW|MEDIUM|HIGH) --include|-i=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20)... --exclude|-e=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20)...">
     $ARGUMENTS
 </expand>
 
@@ -48,7 +48,31 @@ related to a set of code quality aspects.
 
     </if>
 
-    First, use the following <template/> to give a hint on this step:
+    First, determine the *effective aspect set* <aspects/>, i.e., the
+    code quality aspects which are checked at all. For this, parse
+    <getopt-option-include/> and <getopt-option-exclude/> as
+    comma-separated token lists, silently dropping the `none` sentinel
+    and any empty token. If a token <token/> is *not* one of the aspect
+    ids `A01`...`A20`, only output the following <template/> and then
+    *STOP* the entire flow (do not perform any further steps):
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-code-lint**, ▶ ERROR: invalid aspect id: **<token/>**
+    </template>
+
+    Otherwise set <aspects/> to *all* twenty aspect ids `A01`...`A20`
+    if both lists are empty, to the *include* list if only it is
+    non-empty, to all twenty *minus* the *exclude* list if only it is
+    non-empty, and to the *include* list *minus* the *exclude* list if
+    both are non-empty. If the resulting <aspects/> is *empty*, only
+    output the following <template/> and then *STOP* the entire flow
+    (do not perform any further steps):
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-code-lint**, ▶ ERROR: options `--include` and `--exclude` cancel out to an empty aspect set
+    </template>
+
+    Then, use the following <template/> to give a hint on this step:
 
     <template>
     <ase-tpl-bullet-secondary/> **LINT INVESTIGATION**
@@ -72,16 +96,17 @@ related to a set of code quality aspects.
         Agent(
             description:       "Lint Investigation (<batch-index/>/<batch-count/>)",
             subagent_type:     "ase:ase-code-lint",
-            prompt:            <batch/>,
+            prompt:            "<aspects/> <batch/>",
             run_in_background: false
         )
     ```
 
-    Here <batch/> is the space-separated list of the source code file
-    paths of the corresponding batch, <batch-index/> is the 1-based
-    index of that batch, and <batch-count/> is the total number of
-    batches, so that each parallel invocation is distinguishable in
-    the progress display.
+    Here <aspects/> is the comma-separated list of the effective aspect
+    ids (without any spaces), <batch/> is the space-separated list of
+    the source code file paths of the corresponding batch,
+    <batch-index/> is the 1-based index of that batch, and
+    <batch-count/> is the total number of batches, so that each
+    parallel invocation is distinguishable in the progress display.
 
     Parse the result message of each `Agent` tool invocation as a JSON
     array and concatenate all those arrays. Then *deduplicate* the
@@ -443,7 +468,7 @@ related to a set of code quality aspects.
 
         <if condition="<getopt-option-auto/> is not equal `true`">
         <ase-tpl-hint level="verbose">
-        Use `/ase-code-lint --auto` to apply all corrections unattended, and `--severity` to raise the reporting floor.
+        Use `/ase-code-lint --auto` to apply all corrections unattended, `--severity` to raise the reporting floor, and `--include`/`--exclude` to narrow the checked aspects.
         </ase-tpl-hint>
         </if>
 
