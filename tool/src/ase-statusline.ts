@@ -98,11 +98,12 @@ interface StatuslineInput {
 
 /*  internal command options type  */
 interface StatuslineOpts {
-    tool:   string
-    width:  number
-    margin: number
-    icons:  boolean
-    labels: boolean
+    tool:    string
+    width:   number
+    margin:  number
+    padding: number
+    icons:   boolean
+    labels:  boolean
 }
 
 /*  custom argument parser for Commander: non-negative integer  */
@@ -290,6 +291,9 @@ export default class StatuslineCommand {
             .option("-m, --margin <n>",
                 "reduce maximum used terminal width by <n> characters on each side",
                 parseInteger("--margin"), 2)
+            .option("-p, --padding <n>",
+                "pad each rendered line with <n> spaces on each side",
+                parseInteger("--padding"), 0)
             .option("--no-icons",
                 "disable icons in placeholder rendering")
             .option("--no-labels",
@@ -329,9 +333,11 @@ export default class StatuslineCommand {
                     data.workspace = { ...(data.workspace ?? {}), current_dir: data.cwd }
                 }
 
-                /*  determine effective terminal width and budget  */
+                /*  determine effective terminal width and budget
+                    (the padding spaces occupy terminal columns, too,
+                    so they have to be subtracted from the budget)  */
                 const width  = opts.width > 0 ? opts.width : detectTermWidth()
-                const budget = width > 0 ? width - 2 * opts.margin : 0
+                const budget = width > 0 ? width - 2 * (opts.margin + opts.padding) : 0
 
                 /*  shared output state and append helper with auto-wrap;
                     the helper itself strips ANSI CSI escape sequences to
@@ -586,6 +592,21 @@ export default class StatuslineCommand {
                     closeSpan()
                     out += "\n"
                     col  = 0
+                }
+
+                /*  optionally pad all non-empty lines with spaces on both sides
+                    (the trailing empty chunk after the final line break and any
+                    intentionally empty line are left untouched, so that no
+                    whitespace-only line is produced)  */
+                if (opts.padding > 0) {
+                    const pad = " ".repeat(opts.padding)
+                    out = out.split("\n").map((line) =>
+                        line !== "" ? `${pad}${line}${pad}` : line).join("\n")
+
+                    /*  for Copilot, prefix with a zero-width non-breaking space
+                        to prevent the first line to be unindented  */
+                    if (tool === "copilot")
+                        out = "\u200B" + out
                 }
 
                 /*  send output  */

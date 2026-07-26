@@ -173,7 +173,7 @@ background service as a *Anthropic Claude Code CLI* MCP server:
 The following top-level command exists for rendering the *Anthropic Claude Code CLI*
 or *GitHub Copilot CLI* statusline:
 
-- `ase statusline` \[`-t`|`--tool` `claude`|`copilot`\] \[`-w`|`--width` *n*\] \[`-m`|`--margin` *n*\] \[`--no-icons`\] \[`--no-labels`\] \[*line* \[...\]\]:
+- `ase statusline` \[`-t`|`--tool` `claude`|`copilot`\] \[`-w`|`--width` *n*\] \[`-m`|`--margin` *n*\] \[`-p`|`--padding` *n*\] \[`--no-icons`\] \[`--no-labels`\] \[*line* \[...\]\]:
   Render the *Anthropic Claude Code CLI* or *GitHub Copilot CLI* statusline from a
   JSON payload read on standard input. Intended to be configured as
   the `statusLine` command in *Anthropic Claude Code CLI* settings (or the
@@ -230,7 +230,8 @@ or *GitHub Copilot CLI* statusline:
   and `ASE_PERSONA_STYLE` environment variables. Each rendered line
   is wrapped automatically when it would exceed the available width
   budget, where the budget is derived from the controlling terminal
-  width (probed via `/dev/tty`) reduced by `2 *` *margin* characters.
+  width (probed via `/dev/tty`) reduced by `2 *` (*margin* `+`
+  *padding*) characters.
   Supports the following options:
     - \[`-w`|`--width` *n*\]:
       force terminal width to *n* characters
@@ -238,6 +239,11 @@ or *GitHub Copilot CLI* statusline:
     - \[`-m`|`--margin` *n*\]:
       reduce maximum used terminal width by *n* characters on each
       side (default: `2`).
+    - \[`-p`|`--padding` *n*\]:
+      pad each rendered line with *n* spaces on the left and right
+      side (default: `0`). In contrast to *margin*, which only
+      shrinks the width budget, the padding spaces are actually
+      emitted. Empty lines are left unpadded.
     - \[`--no-icons`\]:
       disable the leading icon glyph (e.g. `※`, `⚑`, `⚙`) in front of
       each placeholder rendering.

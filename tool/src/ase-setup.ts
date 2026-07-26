@@ -711,8 +711,9 @@ export default class SetupCommand {
 
     /*  build the "ase statusline ..." command string from the activate
         options and the effective format lines  */
-    private statuslineCommand (opts: { width: number, margin: number, icons: boolean, labels: boolean }, format: string[]): string {
-        const parts = [ "ase", "statusline", "-w", String(opts.width), "-m", String(opts.margin) ]
+    private statuslineCommand (tool: Tool, opts: { width: number, margin: number, padding: number, icons: boolean, labels: boolean }, format: string[]): string {
+        const parts = [ "ase", "statusline", "--tool", tool, "-w", String(opts.width), "-m", String(opts.margin),
+            "-p", String(opts.padding) ]
         if (!opts.icons)
             parts.push("--no-icons")
         if (!opts.labels)
@@ -811,11 +812,11 @@ export default class SetupCommand {
 
     /*  handler for "ase setup statusline activate"  */
     private async doStatuslineActivate (tool: Tool, scope: Scope,
-        opts: { width: number, margin: number, icons: boolean, labels: boolean }, format: string[]): Promise<number> {
+        opts: { width: number, margin: number, padding: number, icons: boolean, labels: boolean }, format: string[]): Promise<number> {
         this.requireStatuslineTool(tool)
         this.requireStatuslineScope(tool, scope)
         const file    = this.statuslineSettingsFile(tool, scope)
-        const command = this.statuslineCommand(opts, format)
+        const command = this.statuslineCommand(tool, opts, format)
         const root    = await this.statuslineReadAst(file)
 
         const existing = this.statuslineFindMember(root)
@@ -1065,13 +1066,15 @@ export default class SetupCommand {
                 parseNonNeg("width"), 0)
             .option("-m, --margin <n>",    "reduce maximum used terminal width by <n> characters on each side",
                 parseNonNeg("margin"), 2)
+            .option("-p, --padding <n>",   "pad each rendered line with <n> spaces on each side",
+                parseNonNeg("padding"), 0)
             .option("--no-icons",          "disable icons in placeholder rendering")
             .option("--no-labels",         "disable labels in front of bold values")
             .action(async (format: string[] | undefined,
-                opts: { tool: string, scope: string, width: number, margin: number, icons: boolean, labels: boolean }) => {
+                opts: { tool: string, scope: string, width: number, margin: number, padding: number, icons: boolean, labels: boolean }) => {
                 process.exit(await this.doStatuslineActivate(
                     this.parseTool(opts.tool), this.parseScope(opts.scope),
-                    { width: opts.width, margin: opts.margin, icons: opts.icons, labels: opts.labels },
+                    { width: opts.width, margin: opts.margin, padding: opts.padding, icons: opts.icons, labels: opts.labels },
                     format ?? []))
             })
 

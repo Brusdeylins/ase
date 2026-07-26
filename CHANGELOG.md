@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+0.9.49 (2026-07-26)
+-------------------
+
+- IMPROVEMENT [code]: append `--tool` option to generated statusline command in setup (`ase-setup.ts`)
+- FEATURE [code]: added `--padding`/`-p` option (default `0`) padding the statusline lines with N spaces on each side (`ase-statusline.ts`, `ase-setup.ts`)
+
 0.9.48 (2026-07-25)
 -------------------
 
