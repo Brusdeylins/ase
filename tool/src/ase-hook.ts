@@ -359,8 +359,7 @@ export default class HookCommand {
             (guidance === "normal" || guidance === "verbose" ?
                 "\n" +
                 "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent-description>\" for skill command proposal" +
-                "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill-name>]\" for skill catalog or skill manpage" : "") +
-            "\n"
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill-name>]\" for skill catalog or skill manpage" : "")
 
         /*  inject markdown into session context.
             Anthropic Claude Code CLI and OpenAI Codex CLI expect the context nested in
