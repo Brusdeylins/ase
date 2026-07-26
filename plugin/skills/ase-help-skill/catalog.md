@@ -55,6 +55,7 @@
 ○   `ase-task-delete`:     Delete a Task Plan
 
 ⎈   **OTHER SKILLS**
+○   `ase-meta-config`:     Configuration Management
 ○   `ase-meta-persona`:    Persona Configuration
 ○   `ase-meta-compat`:     Self-Test ASE Compatibility
 

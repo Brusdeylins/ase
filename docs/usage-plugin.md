@@ -57,6 +57,15 @@ The following ASE commands/skills exist on the meta-level:
   abbreviating `telegrapher`, or an ultra brief, rough and stuttering
   `caveman`.
 
+- **/ase-meta-config** \[`--scope`|`-s` *scope*\] *operation* \[*args*\]:<br/>
+  List, get, set, or delete the values of the layered *ASE*
+  configuration, mirroring the non-interactive `ase config` subcommands
+  through the `ase` MCP server. The *operation* is `list`, `get` *key*,
+  `set` *key* *value*, or `delete` *key*. `--scope` selects the scope
+  chain (`user`, `project`, `task:`*id*, `session:`*id*); without it the
+  current session's chain is used, so that reads see the full cascade and
+  writes land on the session layer.
+
 - **/ase-meta-changelog**:<br/>
   Update changes entries in `CHANGELOG.md` files from Git commit information.
 
