@@ -497,10 +497,10 @@ export default class HookCommand {
         tools, but the decision logic is shared by the "pre-tool-use" and
         "permission-request" handlers.  */
     private decideApproval (tool: Tool, spec: ToolSpec, input: Record<string, unknown>): { approve: boolean, reason: string } {
-        const toolName  = typeof input[spec.toolNameField] === "string" ?
-            input[spec.toolNameField] as string : ""
-        let toolInput: ToolInput = {}
+        const rawName   = input[spec.toolNameField]
         const rawInput  = input[spec.toolInputField]
+        const toolName  = typeof rawName === "string" ? rawName : ""
+        let   toolInput: ToolInput = {}
         if (spec.toolInputIsString && typeof rawInput === "string")
             toolInput = this.parseJSON(rawInput, toolInputSchema)
         else if (!spec.toolInputIsString && typeof rawInput === "object" && rawInput !== null) {
