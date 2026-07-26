@@ -350,7 +350,7 @@ export default class HookCommand {
             the trailing help hint is emitted only if the guidance level asks for it  */
         const banner =
             "\n" +
-            `\n⧉ ASE: ⎈ version: ${versionCurrentPlugin}${versionHint !== "" ? " " + versionHint.replaceAll(/\*/g, "") : ""}` +
+            `\n⧉ ASE: ⎈ version: ${versionCurrentPlugin}${versionHint !== "" ? " " + versionHint.replace(/\*/g, "") : ""}` +
             `\n⧉ ASE: ※ user: ${userId}, ⚑ project: ${projectId}` +
             `\n⧉ ASE: ◉ task: ${taskId}, ⏻ session: ${sessionId}` +
             `\n⧉ ASE: ☯ persona: ${persona}, ▶ guidance: ${guidance}, ▢ boxing: ${boxing}` +
