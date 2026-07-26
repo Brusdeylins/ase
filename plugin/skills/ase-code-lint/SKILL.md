@@ -129,6 +129,12 @@ related to a set of code quality aspects.
     *silently drop* all other problems. With the default floor `LOW`, all
     problems are kept. `ACCEPTED` problems are *never* dropped.
 
+    Finally, sort the surviving problems in <problems/> by their
+    `severity` field from highest to lowest in the fixed order `HIGH`,
+    `MEDIUM`, `LOW`, `ACCEPTED`, so the subsequent reporting starts with
+    the most severe problem. Within the same severity, keep the
+    `file`/`line` order established above.
+
     You *MUST* *NOT* output anything else in this STEP 1.
 
     </step>

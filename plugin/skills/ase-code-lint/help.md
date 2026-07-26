@@ -53,7 +53,9 @@ A05 COMPLEXITY     A10 SMELLS           A15 PERFORMANCE     A20 DEAD-CODE
     Set the *severity floor* (default `LOW`): findings below the chosen
     threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
     `HIGH`. The default `LOW` keeps all findings; `ACCEPTED` findings are
-    never suppressed.
+    never suppressed. Surviving findings are reported in *descending
+    severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`, keeping the
+    `file`/`line` order within the same severity.
 
 `--include`|`-i`=*aspect*[`,`...]:
     Restrict the checked code quality aspects to the given

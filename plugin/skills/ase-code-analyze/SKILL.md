@@ -137,9 +137,17 @@ problems in *performance* and *efficiency*, or problems in *security*.
     persisted). With the default floor `LOW`, all problems are kept.
     `ACCEPTED` problems are *never* dropped.
 
+    Then sort the surviving problems in <problems/> by their `severity`
+    field from highest to lowest in the fixed order `HIGH`, `MEDIUM`,
+    `LOW`, `ACCEPTED`, so the reporting starts with the most severe
+    problem. Within the same severity, keep the `file`/`line` order
+    established in STEP 2.
+
     Then renumber the surviving problems contiguously as `P<n/>` with
-    <n/> = 1, 2, ... in the original ordering. If *all* problems are
-    dropped, skip the per-problem report but still purge any stale
+    <n/> = 1, 2, ... in that sorted ordering, so `P1` is the most severe
+    problem and the persisted `ase-issue-P<n/>` keys follow the reported
+    sequence. If *all* problems are dropped, skip the per-problem report
+    but still purge any stale
     persisted problems with a *single* `ase_kv_batch` call to the `ase`
     MCP server with `transactional` set to `true` and a `commands`
     parameter array holding exactly one `{ command: "clear", prefix:

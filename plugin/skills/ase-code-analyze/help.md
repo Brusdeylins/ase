@@ -33,8 +33,10 @@ The `--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`) option sets a *severity
 floor* (default `LOW`): problems below the chosen threshold are silently
 suppressed (neither reported nor persisted), ordered `LOW` < `MEDIUM` <
 `HIGH`. The default `LOW` keeps all problems; `ACCEPTED` problems are
-never suppressed. Surviving problems are renumbered contiguously as
-`P<n>`.
+never suppressed. Surviving problems are reported in *descending
+severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED` - keeping the
+`file`/`line` order within the same severity - and are renumbered
+contiguously as `P<n>`, so `P1` is the most severe problem.
 
 The skill investigates the code base silently, reports each detected
 problem as a `PROBLEM` entry with severity (`LOW`, `MEDIUM`, `HIGH`) and

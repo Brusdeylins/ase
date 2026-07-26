@@ -59,9 +59,10 @@ before it is committed.
     Set the *severity floor* (default `LOW`): findings below the chosen
     threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
     `HIGH`. The default `LOW` keeps all findings; `ACCEPTED` findings are
-    never suppressed. The floor only affects the rendered findings table,
-    not the overall *verdict*, which is always derived from all findings
-    before the floor is applied.
+    never suppressed. Surviving findings are rendered in *descending
+    severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`. The floor only
+    affects the rendered findings table, not the overall *verdict*, which
+    is always derived from all findings before the floor is applied.
 
 ##  ARGUMENTS
 
