@@ -260,6 +260,12 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-meta-eli5`](plugin/skills/ase-meta-eli5/help.md)
   `Fourier transform`
 
+- **Topic Quote Finding**:
+  You want quotes on a topic, sorted into a 2x2 matrix of attributed
+  vs. anonymous and literal vs. thematic ones?
+  &rarr; [`/ase-meta-quotes`](plugin/skills/ase-meta-quotes/help.md)
+  `software architecture`
+
 - **Foreign LLM Query**:
   You want to directly query a (potentially available) foreign LLM?
   &rarr; [`/ase-meta-chat`](plugin/skills/ase-meta-chat/help.md)

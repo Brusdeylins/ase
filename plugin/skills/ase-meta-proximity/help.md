@@ -76,4 +76,4 @@ Internet/Web facts:
 
 ##  SEE ALSO
 
-[`ase-meta-eli5`](../ase-meta-eli5/help.md), [`ase-meta-search`](../ase-meta-search/help.md), [`ase-code-explain`](../ase-code-explain/help.md).
+[`ase-meta-quotes`](../ase-meta-quotes/help.md), [`ase-meta-eli5`](../ase-meta-eli5/help.md), [`ase-meta-search`](../ase-meta-search/help.md), [`ase-code-explain`](../ase-code-explain/help.md).

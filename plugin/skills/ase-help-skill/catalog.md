@@ -6,6 +6,7 @@
 ⎈   **RESEARCH**
 ○   `ase-meta-search`:     Search the Internet/Web
 ○   `ase-meta-proximity`:  Determine the Conceptual Proximity of a Topic
+○   `ase-meta-quotes`:     Find Quotes on a Topic
 ○   `ase-meta-brainstorm`: Collaboratively Brainstorm a Topic
 ○   `ase-meta-chat`:       Query Foreign LLM for Chat
 ○   `ase-meta-quorum`:     Query Multiple AIs for Quorum Answer

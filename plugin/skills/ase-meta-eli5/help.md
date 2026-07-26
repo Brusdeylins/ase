@@ -58,4 +58,4 @@ Explain a recent topic grounded in Internet/Web facts:
 
 ##  SEE ALSO
 
-[`ase-code-explain`](../ase-code-explain/help.md), [`ase-meta-search`](../ase-meta-search/help.md), [`ase-docs-distill`](../ase-docs-distill/help.md).
+[`ase-code-explain`](../ase-code-explain/help.md), [`ase-meta-search`](../ase-meta-search/help.md), [`ase-meta-quotes`](../ase-meta-quotes/help.md), [`ase-docs-distill`](../ase-docs-distill/help.md).
