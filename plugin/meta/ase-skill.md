@@ -320,8 +320,14 @@ Guidance Hint Level
     -   the *option affordance* lines of a user dialog (e.g. `Please
         choose *one* option by typing ...`), which are functional parts
         of the dialog and not hints,
-    -   any `▶ status:` progress line and any `ERROR:` line, which
-        carry state rather than pointers.
+    -   the *artifact state* lines of a skill (e.g. `plan loaded`, `plan
+        created`, `task given`) and every `ERROR:` line, which carry
+        state rather than pointers.
+
+    The *skill identification* chrome (the `skill started`, `skill
+    finished`, and `objective` lines) is the sole exception: it is
+    *decoration* rather than result, so it is gated on `normal` and
+    `verbose` directly in the `Skill Identification` section above.
 
 -   *IMPORTANT*: Every hint carries a *level* -- `minimal`, `normal`,
     or `verbose` -- and is emitted only if the configured
