@@ -294,9 +294,10 @@ export default class HookCommand {
             return typeof val === "string" ? val : (process.env[envVar] ?? dflt)
         }
 
-        /*  determine agent persona style and project boxing transparency  */
-        const persona = setting("agent.persona",  "ASE_PERSONA_STYLE",  "engineer")
-        const boxing  = setting("project.boxing", "ASE_PROJECT_BOXING", "white")
+        /*  determine agent persona style, agent guidance level, and project boxing transparency  */
+        const persona  = setting("agent.persona",  "ASE_PERSONA_STYLE",  "engineer")
+        const guidance = setting("agent.guidance", "ASE_GUIDANCE_LEVEL", "normal")
+        const boxing   = setting("project.boxing", "ASE_PROJECT_BOXING", "white")
 
         /*  determine headless mode  */
         const headless = (process.env.ASE_HEADLESS ?? "false") === "true" ? "true" : "false"
@@ -330,6 +331,7 @@ export default class HookCommand {
             `<ase-version-hint>${versionHint}</ase-version-hint>\n` +
             `<ase-plugin-root>${pluginRoot}</ase-plugin-root>\n` +
             `<ase-persona-style>${persona}</ase-persona-style>\n` +
+            `<ase-guidance-level>${guidance}</ase-guidance-level>\n` +
             `<ase-user-id>${userId}</ase-user-id>\n` +
             `<ase-project-id>${projectId}</ase-project-id>\n` +
             `<ase-project-boxing>${boxing}</ase-project-boxing>\n` +
@@ -346,12 +348,19 @@ export default class HookCommand {
             agent harness, independent of any model decision, so it is
             guaranteed to appear once in every non-headless session;
             Anthropic Claude Code CLI and OpenAI Codex CLI surface a top-level
-            "systemMessage" field for this -- GitHub Copilot CLI has no equivalent)  */
+            "systemMessage" field for this -- GitHub Copilot CLI has no equivalent);
+            the trailing help hint is emitted only if the guidance level asks for it  */
         const banner =
+            "\n" +
             `\n⧉ ASE: ⎈ version: ${versionCurrentPlugin}${versionHint !== "" ? " " + versionHint.replaceAll(/\*/g, "") : ""}` +
             `\n⧉ ASE: ※ user: ${userId}, ⚑ project: ${projectId}` +
             `\n⧉ ASE: ◉ task: ${taskId}, ⏻ session: ${sessionId}` +
-            `\n⧉ ASE: ☯ persona: ${persona}, ▢ boxing: ${boxing}`
+            `\n⧉ ASE: ☯ persona: ${persona}, ▶ guidance: ${guidance}, ▢ boxing: ${boxing}` +
+            (guidance === "normal" || guidance === "verbose" ?
+                "\n" +
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent-description>\" for skill command proposal" +
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill-name>]\" for skill catalog or skill manpage" : "") +
+            "\n"
 
         /*  inject markdown into session context.
             Anthropic Claude Code CLI and OpenAI Codex CLI expect the context nested in
@@ -368,8 +377,10 @@ export default class HookCommand {
 
         /*  attach the deterministic banner as a top-level "systemMessage"
             (only for the harnesses that support it and only when not
-            running headless -- mirroring the constitution box condition)  */
-        if ((tool === "claude" || tool === "codex") && headless !== "true")
+            running headless -- complementing the constitution box condition,
+            which covers exactly the remaining harness GitHub Copilot CLI
+            by letting the model emit the banner itself)  */
+        if ((tool === "claude" || tool === "codex") && headless !== "true" && guidance !== "none")
             payload.systemMessage = banner
 
         await writeStdout(JSON.stringify(payload))

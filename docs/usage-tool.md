@@ -60,8 +60,8 @@ The following top-level commands exist for configuration handling:
   `project.*` (project identity, classification, and artifact
   globs: `project.id`, `project.name`, `project.boxing`, and the
   `project.artifact.`*kind*`.{basedir,files}` globs) and `agent.*`
-  (`agent.persona`, `agent.task` -- the active task identifier --
-  and `agent.skill`).
+  (`agent.persona`, `agent.guidance`, `agent.task` -- the active
+  task identifier -- and `agent.skill`).
   All `ase config` subcommands accept a `--scope` *scope* option
   that selects the scope chain. The *scope* value is a
   comma-separated list of scope terms, in any order; each term
@@ -89,8 +89,9 @@ The following top-level commands exist for configuration handling:
 - `ase config init` *type*:
   Initialize `.ase/config.yaml` with preset values. The *type* argument
   selects the preset:
-  `default` (baseline: persona `engineer`, boxing `white`, plus the
-  active task `default` and the full set of `project.artifact.*` globs),
+  `default` (baseline: persona `engineer`, guidance `normal`,
+  boxing `white`, plus the active task `default` and the full set
+  of `project.artifact.*` globs),
   `vibe` (persona `writer`, boxing `black`),
   `pro` (persona `engineer`, boxing `white`),
   or `industry` (persona `engineer`, boxing `grey`).
@@ -198,7 +199,8 @@ or *GitHub Copilot CLI* statusline:
   `%`-prefixed placeholders: `%u` (user), `%p` (project), `%T` (task,
   suppressed if empty), `%s` (session id, or `unknown` if absent),
   `%m` (model), `%e` (effort), `%t` (thinking), `%P` (persona,
-  suppressed if empty), `%c` (context-usage progress bar with a
+  suppressed if empty), `%h` (guidance level, suppressed if empty),
+  `%c` (context-usage progress bar with a
   20-cell bar and percentage),
   `%C` (current/limit context tokens, e.g. `334k/1.0M`),
   `%a` (lines of code added in this session), `%r`

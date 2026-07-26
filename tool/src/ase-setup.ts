@@ -675,7 +675,7 @@ export default class SetupCommand {
     private readonly statuslineFormatDflt = [
         "<blue>%u</blue> <red>%p</red> <black>%T</black> %s",
         "%m %e %t",
-        "%P %c"
+        "%P %h %c"
     ]
 
     /*  resolve the tool settings file for a given installation scope  */

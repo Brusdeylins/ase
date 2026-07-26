@@ -64,6 +64,15 @@ The following configuration parameters control the agent:
     -    `telegrapher`: ...telegrapher: very brief, factual, and abbreviating.
     -    `caveman`:     ...caveman: ultra brief, rough and stuttering.
 
+-   **agent.guidance**: the Agentic AI gives *help hints* -- unsolicited pointers to the
+    available *ASE* skills and operations, like the hint on `/ase-help-skill` and
+    `/ase-help-intent` in the session start banner -- in the amount of...
+
+    -    `none`:    ...none: no help hints at all.
+    -    `minimal`: ...minimal: the single most essential help hint only.
+    -    `normal`:  ...normal: the essential help hints only.
+    -    `verbose`: ...verbose: all available help hints.
+
 -   **agent.task**: the Agentic AI *task* unique id
 
 -   **agent.skill**: the Agentic AI *skill* unique id of the currently active skill

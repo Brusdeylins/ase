@@ -30,7 +30,8 @@ export const projectClassification = {
 
 /*  agent classification taxonomy  */
 export const agentClassification = {
-    persona: [ "writer", "engineer", "journalist", "telegrapher", "caveman" ]
+    persona:  [ "writer", "engineer", "journalist", "telegrapher", "caveman" ],
+    guidance: [ "none", "minimal", "normal", "verbose" ]
 } as const
 
 /*  classification presets  */
@@ -50,6 +51,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
     default: {
         "agent.task":      "default",
         "agent.persona":   "engineer",
+        "agent.guidance":  "normal",
         "project.id":      "example",
         "project.name":    "Example Project",
         "project.boxing":  "white",
@@ -220,9 +222,10 @@ export const configSchema = v.nullish(v.strictObject({
         }))
     })),
     agent: v.optional(v.strictObject({
-        persona: v.optional(v.picklist(agentClassification.persona)),
-        task:    v.optional(v.pipe(v.string(), v.minLength(1))),
-        skill:   v.optional(v.pipe(v.string(), v.minLength(1)))
+        persona:  v.optional(v.picklist(agentClassification.persona)),
+        guidance: v.optional(v.picklist(agentClassification.guidance)),
+        task:     v.optional(v.pipe(v.string(), v.minLength(1))),
+        skill:    v.optional(v.pipe(v.string(), v.minLength(1)))
     }))
 }))
 

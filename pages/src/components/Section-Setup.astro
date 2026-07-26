@@ -149,7 +149,7 @@ import Annotation  from "./Annotation.astro"
                     <code>default</code>).
                     When no <code class="text-brand-400!">&lt;format&gt;</code> arguments are given, <b>ASE</b> uses
                     the following implicit positional arguments: <code>"&lt;blue&gt;%u&lt;/blue&gt; &lt;red&gt;%p&lt;/red&gt; &lt;black&gt;%T&lt;/black&gt; %s"
-                    "%m %e %t" "%P %c"</code>
+                    "%m %e %t" "%P %h %c"</code>
                 </p>
             </div>
 
@@ -196,19 +196,19 @@ import Annotation  from "./Annotation.astro"
                         </thead>
                         <tbody>
                             {[
-                                [ [ "%u", "User name" ],           [ "%S", "Session usage" ] ],
-                                [ [ "%p", "Project name" ],        [ "%D", "Session resets" ] ],
-                                [ [ "%T", "Task id" ],             [ "%W", "Weekly usage" ] ],
-                                [ [ "%s", "Session id" ],          [ "%Q", "Weekly resets" ] ],
-                                [ [ "%m", "Model name" ],          [ "%H", "Elapsed time" ] ],
-                                [ [ "%e", "Effort level" ],        [ "%X", "Session cost" ] ],
-                                [ [ "%t", "Thinking state" ],      [ "%a", "Lines added" ] ],
-                                [ [ "%O", "Output style" ],        [ "%r", "Lines removed" ] ],
-                                [ [ "%P", "Persona style" ],       [ "%b", "Git branch" ] ],
+                                [ [ "%u", "User name" ],           [ "%V", "Tool versions" ] ],
+                                [ [ "%p", "Project name" ],        [ "%S", "Session usage" ] ],
+                                [ [ "%T", "Task id" ],             [ "%D", "Session resets" ] ],
+                                [ [ "%s", "Session id" ],          [ "%W", "Weekly usage" ] ],
+                                [ [ "%m", "Model name" ],          [ "%Q", "Weekly resets" ] ],
+                                [ [ "%e", "Effort level" ],        [ "%H", "Elapsed time" ] ],
+                                [ [ "%t", "Thinking state" ],      [ "%X", "Session cost" ] ],
+                                [ [ "%O", "Output style" ],        [ "%a", "Lines added" ] ],
+                                [ [ "%P", "Persona style" ],       [ "%r", "Lines removed" ] ],
+                                [ [ "%h", "Guidance level" ],      [ "%b", "Git branch" ] ],
                                 [ [ "%c", "Context gauge" ],       [ "%g", "Git changes" ] ],
                                 [ [ "%C", "Token count" ],         [ "%G", "Untracked files" ] ],
-                                [ [ "%M", "Memory usage" ],        [ "%d", "Working directory" ] ],
-                                [ [ "%V", "Tool versions" ],       [ "", "" ] ]
+                                [ [ "%M", "Memory usage" ],        [ "%d", "Working directory" ] ]
                             ].map(([ left, right ]) => (
                                 <tr class="border-b border-border/40 last:border-0">
                                     <td class="py-0 pr-1 align-top font-bold text-accent leading-tight sm:pr-3">{left[0] !== "" && <code>{left[0]}</code>}</td>

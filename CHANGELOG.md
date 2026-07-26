@@ -7,6 +7,8 @@ ChangeLog
 
 - IMPROVEMENT [code]: append `--tool` option to generated statusline command in setup (`ase-setup.ts`)
 - FEATURE [code]: added `--padding`/`-p` option (default `0`) padding the statusline lines with N spaces on each side (`ase-statusline.ts`, `ase-setup.ts`)
+- FEATURE [code]: added `agent.guidance` config parameter with levels `none`, `minimal`, `normal` (default) and `verbose`
+- BUGFIX [code]: emitted the model-side session banner for GitHub Copilot CLI instead of OpenAI Codex CLI, as only the latter supports the hook `systemMessage` field (`ase-constitution.md`)
 
 0.9.48 (2026-07-25)
 -------------------
