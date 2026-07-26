@@ -175,12 +175,9 @@ export default class HookCommand {
             pluginRootVars = [ "PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT" ]
         else
             pluginRootVars = [ "CLAUDE_PLUGIN_ROOT" ]
-        let pluginRoot = ""
-        for (const pluginRootVar of pluginRootVars)
-            if ((process.env[pluginRootVar] ?? "") !== "") {
-                pluginRoot = process.env[pluginRootVar]!
-                break
-            }
+        const pluginRoot = pluginRootVars
+            .map((varName) => process.env[varName] ?? "")
+            .find((value) => value !== "") ?? ""
         if (pluginRoot === "")
             throw new Error(`${pluginRootVars.join("/")} environment variable is not set`)
         return pluginRoot
