@@ -2,6 +2,17 @@
 ChangeLog
 =========
 
+0.9.50 (2026-07-26)
+-------------------
+
+- FEATURE [docs]: render all external links with an attached "↗" arrow symbol and open them in a new tab (`External-Links.astro`, `theme.css`, `BaseLayout.astro`)
+- IMPROVEMENT [docs]: mark the matrix cells with "X" in the operation modes diagram (`docs/operation-modes.svg`, `docs/operation-modes.xlsx`, `pages/public/assets/operation-modes.svg`)
+- IMPROVEMENT [code]: request concise prose sentences for the `journalist` persona details (`ase-persona.md`)
+- UPDATE [docs]: fix typos and add a legend in the workflow diagram (`docs/workflow.svg`, `docs/workflow.graffle`, `pages/public/assets/workflow.svg`)
+- UPDATE [infr]: upgrade NPM dependencies (`plugin/package.json`, `tool/package.json`)
+- CLEANUP [code]: size-optimize the constitution by dropping the Copilot session banner and hint templates (`ase-constitution.md`, `ase-persona.md`)
+- CLEANUP [docs]: polish wording and markup across the website sections (`Section-Author.astro`, `Section-Compat.astro`, `Section-Workflows.astro`)
+
 0.9.49 (2026-07-26)
 -------------------
 
