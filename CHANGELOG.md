@@ -5,14 +5,17 @@ ChangeLog
 0.9.49 (2026-07-26)
 -------------------
 
-- CLEANUP [code]: removed `ase-meta-persona` skill and `ase_persona` tool, as both are subsumed by `ase-meta-config` and `agent.persona` config key
-- IMPROVEMENT [code]: append `--tool` option to generated statusline command in setup (`ase-setup.ts`)
-- FEATURE [code]: added `--padding`/`-p` option (default `0`) padding the statusline lines with N spaces on each side (`ase-statusline.ts`, `ase-setup.ts`)
 - FEATURE [code]: added `agent.guidance` config parameter with levels `none`, `minimal`, `normal` (default) and `verbose`
 - FEATURE [code]: added `ase-meta-config` skill mirroring the non-interactive `ase config` subcommands
-- FEATURE [plugin]: honor `agent.guidance` in the skills through a new `Guidance Hint Level` section and a new `<ase-tpl-hint level="..."/>` template pattern (`ase-skill.md`)
-- FEATURE [plugin]: added guidance-gated closing hints to `ase-code-lint`, `ase-docs-proofread`, `ase-meta-review`, `ase-meta-diff`, `ase-meta-commit`, `ase-meta-brainstorm`, `ase-arch-discover`, `ase-sync-import`, `ase-sync-export`, `ase-task-list`, and `ase-task-view`, and to the option-parsing and task-argument error paths (`ase-getopt.md`, `ase-common-task.md`)
+- FEATURE [code]: added `ase_config_list` MCP tool listing all effective config entries with their scope (`ase-config.ts`)
+- FEATURE [code]: added `--padding`/`-p` option (default `0`) padding the statusline lines with N spaces on each side (`ase-statusline.ts`, `ase-setup.ts`)
+- FEATURE [code]: honor `agent.guidance` in the skills through a new `Guidance Hint Level` section and a new `<ase-tpl-hint level="..."/>` template pattern (`ase-skill.md`)
+- FEATURE [code]: added guidance-gated closing hints to `ase-code-lint`, `ase-docs-proofread`, `ase-meta-review`, `ase-meta-diff`, `ase-meta-commit`, `ase-meta-brainstorm`, `ase-arch-discover`, `ase-sync-import`, `ase-sync-export`, `ase-task-list`, and `ase-task-view`, and to the option-parsing and task-argument error paths (`ase-getopt.md`, `ase-common-task.md`)
+- IMPROVEMENT [code]: gate the skill identification chrome and the parsed-options line on the higher guidance levels (`ase-skill.md`, `ase-getopt.md`)
+- IMPROVEMENT [code]: append `--tool` option to generated statusline command in setup (`ase-setup.ts`)
 - BUGFIX [code]: emitted the model-side session banner for GitHub Copilot CLI instead of OpenAI Codex CLI, as only the latter supports the hook `systemMessage` field (`ase-constitution.md`)
+- UPDATE [docs]: refreshed the workflow diagram (`docs/workflow.svg`, `pages/public/assets/workflow.svg`)
+- CLEANUP [code]: removed `ase-meta-persona` skill and `ase_persona` tool, as both are subsumed by `ase-meta-config` and `agent.persona` config key
 
 0.9.48 (2026-07-25)
 -------------------
