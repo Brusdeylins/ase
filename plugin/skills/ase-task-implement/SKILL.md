@@ -255,8 +255,36 @@ Procedure
 
 5.  **Decide Next Step:**
 
-    1.  *Determine next step*:
+    1.  *Determine proof obligation state*:
 
+        <if condition="<task-content/> contains a `##  PROOF` section heading">
+        The plan carries *proof obligations* that were fixed before this
+        implementation existed, and they are *not yet discharged* --
+        nothing here has executed a witness or falsified it. Set
+        <proof-pending>true</proof-pending> and only output the
+        following <template/>:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⚗ proof: **obligations pending**, ▶ status: **implementation unproven**
+        </template>
+        </if>
+        <else>
+        Set <proof-pending>false</proof-pending>. Do not output anything.
+        </else>
+
+    2.  *Determine next step*:
+
+        <if condition="<proof-pending/> is `true`">
+        <expand name="task-next-select"
+            arg1="ase-task-implement"
+            arg2="PROVE|DONE|DELETE">
+            Next Step: The plan has undischarged proof obligations. How would you like to proceed?
+            PROVE: Discharge the proof obligations against this implementation.
+            DONE: Stop processing and PRESERVE task plan (obligations stay undischarged).
+            DELETE: Stop processing and DELETE the task plan.
+        </expand>
+        </if>
+        <else>
         <expand name="task-next-select"
             arg1="ase-task-implement"
             arg2="DONE|DELETE">
@@ -264,8 +292,25 @@ Procedure
             DONE: Stop processing and PRESERVE task plan.
             DELETE: Stop processing and DELETE the task plan.
         </expand>
+        </else>
 
-    2.  Check the tool <result/> and dispatch accordingly:
+    3.  Check the tool <result/> and dispatch accordingly:
+
+        -   If <result/> is `PROVE`:
+            Set <args>--int-reuse-task</args>.
+            <if condition="<getopt-option-next/> is not equal `none`">
+                Set <args><args/> --next <getopt-option-next/></args>
+            </if>
+            Only output the following <template/> and then call the
+            tool `Skill(skill: "ase:ase-test-prove", args: "<args/>")`
+            to invoke the `ase:ase-test-prove` skill in order to
+            *discharge* the proof obligations against this
+            implementation. Immediately stop processing the current
+            skill once the `Skill` tool was used.
+
+            <template>
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan implemented -- hand-off to proof**
+            </template>
 
         -   If <result/> is `DONE` or `CANCEL`:
             Only output the following <template/> and then *STOP*.
@@ -273,6 +318,17 @@ Procedure
             <template>
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan implemented -- done**
             </template>
+
+            <if condition="<proof-pending/> is `true`">
+            The implementation was accepted with its obligations *never
+            discharged*, so no evidence exists that it satisfies its own
+            claims. Directly *after* the status <template/> above, give
+            the corrective hint by expanding the following:
+
+            <ase-tpl-hint level="minimal">
+            The proof obligations of this plan remain undischarged -- run `/ase-test-prove` to obtain evidence, as a green implementation is not evidence.
+            </ase-tpl-hint>
+            </if>
 
         -   If <result/> is `DELETE`:
             Set <args></args> (empty). Do *not* forward any remaining
