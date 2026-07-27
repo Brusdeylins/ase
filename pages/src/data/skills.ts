@@ -89,6 +89,14 @@ export const skillGroups: SkillGroup[] = [
         ]
     },
     {
+        label: "Proof Mode",
+        skills: [
+            "ase-test-obligate",
+            "ase-test-prove",
+            "ase-test-audit"
+        ]
+    },
+    {
         label: "Sync Mode",
         skills: [
             "ase-sync-reconcile",

@@ -53,16 +53,27 @@ carried over into it.
 After implementation, the user is asked whether to preserve or
 delete the task plan, unless `--next` pre-selects this choice.
 
+If the plan carries a `PROOF` section - proof obligations fixed by
+`ase-test-obligate` *before* this implementation existed - those
+obligations are *undischarged* at this point: implementing a plan
+executes no witness and falsifies nothing. The next-step dialog then
+additionally offers `PROVE`, which hands off to `ase-test-prove`, and
+choosing `DONE` instead emits a hint that the implementation remains
+without evidence.
+
 ##  OPTIONS
 
 -   `--next`|`-n` *option*[,...]:
     Automatically answer the user dialog for the next step. *option*
     is a single token or a *comma-separated chronological list* of
     tokens; the *first* token is consumed by this skill, and any
-    remaining tokens are intentionally *discarded*, because the
-    downstream `ase-task-delete` skill accepts no `--next` option.
-    Recognized tokens at this skill: `none` (default, interactive
-    answer required), `DONE` (preserve task plan and stop), or
+    remaining tokens are *forwarded* to `ase-test-prove` when the
+    consumed token is `PROVE`, but intentionally *discarded* otherwise,
+    because the downstream `ase-task-delete` skill accepts no `--next`
+    option. Recognized tokens at this skill: `none` (default,
+    interactive answer required), `PROVE` (hand off to
+    `ase-test-prove`; offered only when the plan carries proof
+    obligations), `DONE` (preserve task plan and stop), or
     `DELETE` (hand off to `ase-task-delete`).
 
 -   `--worktree`|`-w`:
@@ -110,5 +121,5 @@ Implement the task `hello` inside the isolated Git WorkTree
 ##  SEE ALSO
 
 [`ase-task-edit`](../ase-task-edit/help.md), [`ase-task-preflight`](../ase-task-preflight/help.md), [`ase-task-reboot`](../ase-task-reboot/help.md),
-[`ase-task-view`](../ase-task-view/help.md), [`ase-task-delete`](../ase-task-delete/help.md).
-
+[`ase-task-view`](../ase-task-view/help.md), [`ase-task-delete`](../ase-task-delete/help.md),
+[`ase-test-obligate`](../ase-test-obligate/help.md), [`ase-test-prove`](../ase-test-prove/help.md).
