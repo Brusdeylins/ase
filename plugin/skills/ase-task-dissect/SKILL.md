@@ -50,14 +50,16 @@ Procedure
     2.  React on the task id:
 
         <if condition="
-            <instruction/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+            <instruction/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*:?$`
         ">
-        The lone token is the *task id*, never a hint. Set
+        The lone token is the *task id* (with an optional and ignored
+        trailing `:`), never a hint. Set
         <ase-task-id><instruction/></ase-task-id> (set task id to
-        instruction) and <instruction></instruction> (set instruction
-        empty), call the `ase_task_id(id: "<ase-task-id/>", session:
-        "<ase-session-id/>")` tool from the `ase` MCP server to switch
-        the task, and then only output the following <template/>:
+        instruction, with any trailing `:` stripped) and
+        <instruction></instruction> (set instruction empty), call the
+        `ase_task_id(id: "<ase-task-id/>", session: "<ase-session-id/>")`
+        tool from the `ase` MCP server to switch the task, and then only
+        output the following <template/>:
 
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **task given**

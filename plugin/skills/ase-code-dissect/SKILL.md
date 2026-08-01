@@ -93,17 +93,30 @@ Procedure
         Determine them *read-only* by running the corresponding command
         (taken exactly as given):
 
-        `git -C <repo-root/> ls-files --others --exclude-standard`
+        `git -C "<repo-root/>" ls-files --others --exclude-standard`
 
-        Then, for *every* listed file, capture its creation diff by
-        running the corresponding command (taken exactly as given) and
-        *append* its output to <diff/>:
+        *Skip* every listed entry below the `.ase/` directory -- it
+        carries *ASE*'s own state and the worktrees created by this very
+        skill, and hence is never part of the user's change set.
 
-        `git -C <repo-root/> diff --no-index --binary /dev/null <file/>`
+        Then, for *every* remaining listed file, capture its creation
+        diff by running the corresponding command (taken exactly as
+        given) and *append* its output to <diff/>:
+
+        `git -C "<repo-root/>" diff --no-index --binary /dev/null "<file/>"`
 
         This command intentionally exits with a non-zero status,
         because the two compared paths differ; treat this exit status
-        as *success*, not as an error.
+        as *success*, not as an error. Judge the *outcome* by the
+        *output* instead: a run which emits *no* diff on standard output
+        but an `error:` or `fatal:` message (e.g. the entry is a *nested*
+        Git repository, which `git ls-files` reports as a directory) is a
+        *real* failure -- append nothing for that entry and only output
+        the following <template/>, then continue with the next file:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-code-dissect**, ⊘ untracked: `<file/>`, ▶ status: **not foldable into the change set**
+        </template>
         </if>
         <else>
         Untracked files are *not* folded in under `--staged`/`-s`,
@@ -132,7 +145,8 @@ Procedure
             arg3="<ase-project-id/>"
         >
         the individual hunks of the captured <diff/>, weighted by the
-        line counts of <stat/>
+        line counts of <stat/> and -- for the folded-in untracked files,
+        which carry no <stat/> entry -- by their own diff line counts
         </expand>
 
         Additionally, try to keep *all* hunks of *one* file in the
@@ -194,7 +208,7 @@ Procedure
         silently ignore the failure of an individual command when the
         corresponding worktree or branch does not exist:
 
-        `git worktree remove --force <repo-root/>/.ase/worktree/<part-id/>`
+        `git worktree remove --force "<repo-root/>/.ase/worktree/<part-id/>"`
 
         `git worktree prune`
 
@@ -241,7 +255,7 @@ Procedure
             git-ignored, so the worktree itself never shows up as a
             change:
 
-            `git worktree add <repo-root/>/.ase/worktree/<part-id/>`
+            `git worktree add "<repo-root/>/.ase/worktree/<part-id/>"`
 
             <if condition="this command fails">
             Only output the following <template/>, then *continue* with
@@ -256,7 +270,7 @@ Procedure
         4.  Apply the patch *inside* the freshly created worktree by
             running the corresponding command (taken exactly as given):
 
-            `git -C <repo-root/>/.ase/worktree/<part-id/> apply --whitespace=nowarn <tmp-dir/>/ase-dissect-<part-id/>.patch`
+            `git -C "<repo-root/>/.ase/worktree/<part-id/>" apply --whitespace=nowarn "<tmp-dir/>/ase-dissect-<part-id/>.patch"`
 
             <if condition="this command fails">
             Only output the following <template/>, then *continue* with
@@ -306,18 +320,18 @@ Procedure
 
     3.  *Clean up* the temporary patch files by running the
         corresponding command (taken exactly as given) once per
-        <part-id/> of <parts/>, and silently ignore the failure of an
-        individual command when the corresponding patch file does not
-        exist:
+        <part-id/> of the *successfully* materialized <parts/>, and
+        silently ignore the failure of an individual command when the
+        corresponding patch file does not exist:
 
-        `rm -f <tmp-dir/>/ase-dissect-<part-id/>.patch`
+        `rm -f "<tmp-dir/>/ase-dissect-<part-id/>.patch"`
 
-        The patch files are pure *intermediates*: they were already
-        consumed by `git apply`, and their content is fully preserved in
-        the worktrees, so *every* patch file is removed -- also the one
-        of a part whose worktree or patch failed -- and no
-        `ase-dissect-*.patch` residue is left behind in <tmp-dir/>. Do
-        not output anything.
+        The patch file of a *successful* part is a pure *intermediate*:
+        it was already consumed by `git apply` and its content is fully
+        preserved in the worktree, so it is removed. The patch file of a
+        part whose worktree or patch *failed* is *kept* instead, because
+        it is that part's only materialization and would otherwise be
+        lost. Do not output anything.
 
     </step>
 
