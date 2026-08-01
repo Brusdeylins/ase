@@ -33,7 +33,8 @@ export const skillGroups: SkillGroup[] = [
             "ase-meta-chat",
             "ase-meta-search",
             "ase-meta-brainstorm",
-            "ase-meta-compat"
+            "ase-meta-compat",
+            "ase-meta-workflow"
         ]
     },
     {

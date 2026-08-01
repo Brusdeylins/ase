@@ -283,6 +283,12 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-meta-evaluate`](plugin/skills/ase-meta-evaluate/help.md)
   `Vue vs. React vs. Angular, focus on TypeScript support and extensibility`
 
+- **Workflow Skill Generation**:
+  You want a recurring multi-step procedure -- sequential steps, parallel
+  actions, sub-agent and skill calls -- turned into an own reusable skill?
+  &rarr; [`/ase-meta-workflow`](plugin/skills/ase-meta-workflow/help.md)
+  `optimizer analyze the code, then resolve each finding in a parallel sub-agent`
+
 - **Convenient Foreign MCP Server Setup**:
   You have API keys for popular AI chat services and/or Web search services
   which ASE could *optionally* leverage in various skills?

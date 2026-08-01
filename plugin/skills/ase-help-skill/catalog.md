@@ -56,6 +56,7 @@
 ○   `ase-task-delete`:     Delete a Task Plan
 
 ⎈   **OTHER SKILLS**
+○   `ase-meta-workflow`:   Generate a Workflow Skill
 ○   `ase-meta-config`:     Configuration Management
 ○   `ase-meta-compat`:     Self-Test ASE Compatibility
 
