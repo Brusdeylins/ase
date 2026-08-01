@@ -86,8 +86,10 @@ Set <args>--int-reuse-task</args>.
             *and* a `ase_task_save(id: '<ase-task-id/>', ...)` tool call
             exists earlier in the current session
         ">
-            Set <text/> to the `text` argument of the most recent
-            `ase_task_save(id: '<ase-task-id/>', ...)` tool call,
+            Set <text/> to the `text` *output* field of the most recent
+            `ase_task_save(id: '<ase-task-id/>', ...)` tool call -- this
+            is the rendering-prepared plan content and *MUST NOT* be
+            confused with the `text` *argument* passed into that call --
             *without* calling `ase_task_load` again. Set <status>plan
             reused</status>. Do not output anything.
         </if>

@@ -9,6 +9,8 @@ ChangeLog
 - FEATURE [code]: added `<agent/>`, `<agent-consolidation/>`, `<skill/>` and `<parallel/>` control constructs (`ase-control.md`)
 - FEATURE [code]: added `--prefix`/`-P` option to `ase-code-analyze` and `ase-arch-analyze` for prefixing the reported `P<n>`/`T<n>` finding ids
 - IMPROVEMENT [code, infr]: renamed the skill identification construct `<skill>` to `<purpose>` to free the `<skill>` tag for the new invocation construct (`ase-skill.md`, `stx.conf`, all `SKILL.md`)
+- IMPROVEMENT [code]: forbid line breaks inside inline code spans when authoring task plans (`ase-format-task.md`)
+- BUGFIX [code]: fixed badly broken lines in reused task plans by returning the rendering-prepared content from `ase_task_save` (`ase-task.ts`, `ase-common-task.md`, `ase-task-edit`, `ase-task-grill`)
 - UPDATE [docs, infr]: upgraded NPM dependencies (`pages/package.json`, `plugin/package.json`, `tool/package.json`)
 - CLEANUP [infr]: excluded the generated `docs` SVG files from the project statistics (`etc/stx.conf`)
 

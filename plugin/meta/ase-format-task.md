@@ -70,3 +70,9 @@ You *MUST* honor the following hints on this *task* format:
     after about 100 characters per line for better subsequent
     manual editing.
 
+-   You *MUST* *NEVER* break a line *inside* an inline code span
+    <template>`<code/>`</template>, as a code span split across two
+    lines renders badly. Instead, break the line *before* its opening
+    backtick or *after* its closing backtick, even if this means
+    breaking the line noticeably earlier than after 100 characters.
+

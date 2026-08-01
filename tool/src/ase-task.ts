@@ -489,7 +489,8 @@ export class TaskMCP {
             title: "ASE task save",
             description:
                 "Persist a task as `text` under `id`. " +
-                "Overwrites any existing task for the same `id`.",
+                "Overwrites any existing task for the same `id`. " +
+                "Returns the persisted task as `text`, prepared for improved rendering.",
             inputSchema: {
                 id: z.string()
                     .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
@@ -499,8 +500,13 @@ export class TaskMCP {
         }, async (args) => {
             try {
                 Task.save(this.log, args.id, args.text)
+
+                /*  return the prepared content, so a caller reusing the
+                    just-saved plan instead of re-loading it still receives
+                    the rendering-prepared variant  */
+                const text = Markdown.prepare(args.text)
                 return {
-                    content: [ { type: "text", text: `OK: saved task "${args.id}"` } ]
+                    content: [ { type: "text", text } ]
                 }
             }
             catch (err: unknown) {
