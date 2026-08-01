@@ -20,9 +20,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-help-intent">
+<purpose name="ase-help-intent">
 Match an Intent to an ASE Command
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-help-intent"

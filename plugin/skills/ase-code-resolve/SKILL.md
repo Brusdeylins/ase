@@ -17,9 +17,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-code-resolve">
+<purpose name="ase-code-resolve">
 Resolve Problem
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-code-resolve"

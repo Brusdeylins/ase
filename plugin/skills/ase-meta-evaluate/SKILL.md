@@ -15,9 +15,9 @@ effort: high
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-evaluate">
+<purpose name="ase-meta-evaluate">
 Evaluate Alternatives
-</skill>
+</purpose>
 
 <expand name="getopt" arg1="ase-meta-evaluate">
     $ARGUMENTS

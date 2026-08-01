@@ -16,9 +16,9 @@ effort: high
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-docs-distill">
+<purpose name="ase-docs-distill">
 Distill Key Points
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-docs-distill"

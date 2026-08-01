@@ -16,9 +16,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-chat">
+<purpose name="ase-meta-chat">
 Query Foreign LLM for Chat
-</skill>
+</purpose>
 
 <expand name="getopt" arg1="ase-meta-chat">
     $ARGUMENTS

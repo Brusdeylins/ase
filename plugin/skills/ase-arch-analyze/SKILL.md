@@ -102,9 +102,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-arch-analyze">
+<purpose name="ase-arch-analyze">
 Review Software Architecture
-</skill>
+</purpose>
 
 <expand name="getopt" arg1="ase-arch-analyze">
     $ARGUMENTS

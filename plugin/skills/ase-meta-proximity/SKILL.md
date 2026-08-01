@@ -20,9 +20,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-proximity">
+<purpose name="ase-meta-proximity">
 Determine the Conceptual Proximity of a Topic
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-proximity"

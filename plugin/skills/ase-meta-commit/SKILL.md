@@ -14,9 +14,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-commit">
+<purpose name="ase-meta-commit">
 Git Commit
-</skill>
+</purpose>
 
 <expand name="getopt" arg1="ase-meta-commit">
     $ARGUMENTS

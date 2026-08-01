@@ -17,9 +17,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-sync-export">
+<purpose name="ase-sync-export">
 Export Artifact Set to Side-by-Side Files
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-sync-export"

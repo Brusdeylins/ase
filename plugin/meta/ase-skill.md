@@ -209,18 +209,18 @@ MCP Tool Calls
 Skill Identification
 --------------------
 
--   *IMPORTANT*: Set <skill></skill> (set to empty)
+-   *IMPORTANT*: Set <purpose></purpose> (set to empty)
     and <skill-name></skill-name> (set name to empty).
 
-    In case <skill/> later becomes *not* empty by defining it as <skill
-    name="<name/>"><body/></skill>, set <skill-name><name/></skill-name>
-    (set skill name to name), and then (but only if ((`$1` is *NOT* equal
-    to `-h` or `--help`) *AND* (<ase-guidance-level/> is equal to `normal`
-    or `verbose`))) you *MUST* once output the following output
-    <template/>:
+    In case <purpose/> later becomes *not* empty by defining it as
+    <purpose name="<name/>"><body/></purpose>, set
+    <skill-name><name/></skill-name> (set skill name to name), and then
+    (but only if ((`$1` is *NOT* equal to `-h` or `--help`) *AND*
+    (<ase-guidance-level/> is equal to `normal` or `verbose`))) you *MUST*
+    once output the following output <template/>:
 
     <template>
-    ⧉ **ASE**: ✪ skill: **<skill-name/>**, ✦ purpose: **<skill/>**, ▶ status: **skill started**
+    ⧉ **ASE**: ✪ skill: **<skill-name/>**, ✦ purpose: **<purpose/>**, ▶ status: **skill started**
     </template>
 
     Later (but only if ((`$1` is *NOT* equal to `-h` or `--help`) *AND*

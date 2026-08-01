@@ -17,9 +17,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-eli5">
+<purpose name="ase-meta-eli5">
 Explain a Topic Like I'm 5
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-eli5"

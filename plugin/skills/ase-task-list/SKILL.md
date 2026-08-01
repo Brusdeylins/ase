@@ -13,9 +13,9 @@ effort: high
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-task-list">
+<purpose name="ase-task-list">
 List Task Plans
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-task-list"

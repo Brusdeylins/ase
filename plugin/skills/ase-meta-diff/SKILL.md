@@ -21,9 +21,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-diff">
+<purpose name="ase-meta-diff">
 Summarize Diff
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-diff"

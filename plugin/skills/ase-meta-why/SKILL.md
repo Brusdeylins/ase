@@ -12,9 +12,9 @@ effort: high
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-why">
+<purpose name="ase-meta-why">
 Five-Whys Root-Cause Analysis
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-why"

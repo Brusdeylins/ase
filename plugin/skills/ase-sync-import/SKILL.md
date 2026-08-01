@@ -16,9 +16,9 @@ effort: xhigh
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-sync-import">
+<purpose name="ase-sync-import">
 Import Foreign Sources into Artifact Set
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-sync-import"

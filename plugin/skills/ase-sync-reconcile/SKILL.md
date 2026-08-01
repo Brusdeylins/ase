@@ -16,9 +16,9 @@ effort: xhigh
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-sync-reconcile">
+<purpose name="ase-sync-reconcile">
 Reconcile Artifact Set to Artifact Set
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-sync-reconcile"

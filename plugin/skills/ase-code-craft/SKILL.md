@@ -17,9 +17,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-code-craft">
+<purpose name="ase-code-craft">
 Craft Source Code
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-code-craft"

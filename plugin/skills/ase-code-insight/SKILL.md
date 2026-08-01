@@ -20,9 +20,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-code-insight">
+<purpose name="ase-code-insight">
 Project Insight
-</skill>
+</purpose>
 
 <expand name="getopt" arg1="ase-code-insight">
     $ARGUMENTS

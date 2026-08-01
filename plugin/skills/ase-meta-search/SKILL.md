@@ -19,9 +19,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-search">
+<purpose name="ase-meta-search">
 Search the Internet/Web
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-search"

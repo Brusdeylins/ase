@@ -15,9 +15,9 @@ effort: xhigh
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-task-preflight">
+<purpose name="ase-task-preflight">
 Preflight a Task Plan
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-task-preflight"

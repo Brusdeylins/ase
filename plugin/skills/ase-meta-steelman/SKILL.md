@@ -14,9 +14,9 @@ effort: xhigh
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-steelman">
+<purpose name="ase-meta-steelman">
 Build the "Steelman" Argument
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-steelman"

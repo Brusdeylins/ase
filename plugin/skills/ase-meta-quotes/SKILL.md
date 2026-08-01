@@ -19,9 +19,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-quotes">
+<purpose name="ase-meta-quotes">
 Find Quotes on a Topic
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-quotes"

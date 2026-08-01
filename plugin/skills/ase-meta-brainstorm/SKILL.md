@@ -17,9 +17,9 @@ effort: high
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-brainstorm">
+<purpose name="ase-meta-brainstorm">
 Collaboratively Brainstorm a Topic
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-brainstorm"

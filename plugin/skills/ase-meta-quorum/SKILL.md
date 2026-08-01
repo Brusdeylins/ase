@@ -19,9 +19,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-quorum">
+<purpose name="ase-meta-quorum">
 Query Multiple AIs for Quorum Answer
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-quorum"

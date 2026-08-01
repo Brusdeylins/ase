@@ -16,9 +16,9 @@ effort: high
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-meta-config">
+<purpose name="ase-meta-config">
 Configuration Management
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-meta-config"

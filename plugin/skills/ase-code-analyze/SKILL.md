@@ -17,9 +17,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-code-analyze">
+<purpose name="ase-code-analyze">
 Analyze Source Code
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-code-analyze"

@@ -19,9 +19,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-arch-discover">
+<purpose name="ase-arch-discover">
 Discover Components
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-arch-discover"

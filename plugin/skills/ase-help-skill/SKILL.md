@@ -19,9 +19,9 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
-<skill name="ase-help-skill">
+<purpose name="ase-help-skill">
 Show the Manual Page of an ASE Skill
-</skill>
+</purpose>
 
 <expand name="getopt"
     arg1="ase-help-skill"
