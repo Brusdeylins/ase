@@ -142,17 +142,37 @@ Set <args></args> (set args to empty).
             -   *Drop* articles ("a", "an", "the") and *replace*
                 conjunctions with short separate clauses where this
                 shortens the text without introducing ambiguity.
-            -   *Re-wrap* the shortened free-text to the ~120-character-
-                per-line convention.
+            -   *Re-wrap* the shortened free-text to the ~100-character-
+                per-line convention of the plan <format/>, but *never*
+                break a line *inside* an inline code span.
             -   *Merge* genuinely-redundant bullets (the same aspect
                 restated) and *drop* pure duplication - but *only* when
                 truly redundant; *never* lose a distinct aspect.
 
-        3.  *Persona override*: this condense ruleset *always wins* for
+        3.  *Normalize the rendering artifacts*: the loaded
+            <task-content/> is the *rendering-prepared* variant of the
+            plan, whose artifacts *MUST NOT* be persisted back. Restore
+            the *authoring form* of the plan <format/> before saving:
+
+            -   A bullet point rendered as `◯   ` is written back as
+                `-   ` -- the condensed <task-content/> *MUST NOT*
+                contain a single `◯` marker.
+
+            -   An inline code span which the rendering split across two
+                physical lines into two spans (`` `<head/>` `` at a line
+                end and `` `<tail/>` `` at the next line start) is
+                written back as the *one* original span
+                `` `<head/> <tail/>` ``, and the line is then broken
+                *before* its opening backtick.
+
+            This normalization is *not* a semantic change and hence
+            *never* violates the preserve-exactly rule 1.
+
+        4.  *Persona override*: this condense ruleset *always wins* for
             the plan content. This ruleset-based compression is applied
             *regardless* of the currently active session persona style.
 
-        4.  *Hard guardrail - semantics preserved EXACTLY*: condensing
+        5.  *Hard guardrail - semantics preserved EXACTLY*: condensing
             *only* shortens wording. It *MUST NOT* drop, merge (except
             truly-redundant bullets per sub-item 2), reorder, or alter
             *any* factual claim, requirement, file path, rule, or

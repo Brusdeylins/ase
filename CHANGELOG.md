@@ -12,6 +12,8 @@ ChangeLog
 - IMPROVEMENT [code]: forbid line breaks inside inline code spans when authoring task plans (`ase-format-task.md`)
 - BUGFIX [code]: fixed badly broken lines in reused task plans by returning the rendering-prepared content from `ase_task_save` (`ase-task.ts`, `ase-common-task.md`, `ase-task-edit`, `ase-task-grill`)
 - BUGFIX [code]: match the `**WHAT**`/`**WHY**` bullet points independent of their rendering-prepared bullet marker (`ase-task-reboot`)
+- BUGFIX [code]: normalize the rendering-prepared `◯` bullet markers and split inline code spans back into their authoring form when condensing a task plan (`ase-task-condense`)
+- BUGFIX [code]: aligned the re-wrap width with the ~100-character plan format convention and forbid breaking lines inside inline code spans (`ase-task-condense`)
 - UPDATE [docs, infr]: upgraded NPM dependencies (`pages/package.json`, `plugin/package.json`, `tool/package.json`)
 - CLEANUP [infr]: excluded the generated `docs` SVG files from the project statistics (`etc/stx.conf`)
 
