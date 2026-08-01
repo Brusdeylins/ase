@@ -103,19 +103,25 @@ Procedure
 
     1.  Start with <instruction></instruction> (set instruction to empty).
 
-    2.  <if condition="<task-content/> contains neither '-   **WHAT**:' nor '-   **WHY**:'">
+        The loaded <task-content/> is the *rendering-prepared* variant of
+        the plan, so its bullet markers can be rendered as `◯` instead
+        of the authored `-`. Set <marker>◯</marker> if the bullet points
+        of <task-content/> start with `◯`, and set <marker>-</marker>
+        otherwise. Do not output anything.
+
+    2.  <if condition="<task-content/> contains neither '<marker/>   **WHAT**:' nor '<marker/>   **WHY**:'">
         Set <instruction><task-content/></instruction> (set instruction to task content).
         </if>
 
-    3.  <if condition="<task-content/> contains '-   **WHAT**: <text/>'">
+    3.  <if condition="<task-content/> contains '<marker/>   **WHAT**: <text/>'">
         Set <instruction><text/></instruction> (set instruction to extracted text).
         </if>
 
-    4.  <if condition="<task-content/> contains '-   **WHY**: <text/>' and <instruction/> is empty">
+    4.  <if condition="<task-content/> contains '<marker/>   **WHY**: <text/>' and <instruction/> is empty">
         Set <instruction><text/></instruction> (set instruction to extracted text).
         </if>
 
-    5.  <if condition="<task-content/> contains '-   **WHY**: <text/>' and <instruction/> is NOT empty">
+    5.  <if condition="<task-content/> contains '<marker/>   **WHY**: <text/>' and <instruction/> is NOT empty">
         Set <instruction><instruction/>, BECAUSE <text/></instruction>
         (append extracted text to instruction).
         </if>
