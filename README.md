@@ -155,6 +155,13 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-task-implement`](plugin/skills/ase-task-implement/help.md)
   `hello`
 
+- **Epic Plan Dissection**:
+  You have one large task plan, but want it split domain-wise and
+  logically into cohesive parts, each materialized as its own sub-task
+  plan you can implement separately?
+  &rarr; [`/ase-task-dissect`](plugin/skills/ase-task-dissect/help.md)
+  `hello`
+
 - **Artifact Reconciliation**:
   You want one set of artifacts (e.g. CODE, DOCS) automatically aligned
   to reflect the current state of another set (e.g. SPEC, ARCH), one-way
@@ -194,6 +201,13 @@ see whether **ASE** is right for you:
   would on a pull request, with an approve/reject verdict and
   prioritized, severity-tagged, line-cited findings?
   &rarr; [`/ase-meta-review`](plugin/skills/ase-meta-review/help.md)
+
+- **Change Set Dissection**:
+  You have one large, mixed change set, but want it split into cohesive
+  parts, each landing in its own Git WorkTree so it can be reviewed and
+  committed atomically?
+  &rarr; [`/ase-code-dissect`](plugin/skills/ase-code-dissect/help.md)
+  `-m 4`
 
 - **Guided Bug Fixing**:
   You want a problem or bug resolved through a structured, plan-driven

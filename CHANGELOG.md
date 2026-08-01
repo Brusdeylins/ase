@@ -5,6 +5,8 @@ ChangeLog
 0.9.52 (2026-08-01)
 -------------------
 
+- FEATURE [code]: added `ase-task-dissect` skill for dissecting a task plan into sub-task plans
+- FEATURE [code]: added `ase-code-dissect` skill for dissecting a change set into Git WorkTrees
 - FEATURE [code]: added `ase-meta-workflow` skill for generating workflow orchestration skills
 - FEATURE [code]: added `<agent/>`, `<agent-consolidation/>`, `<skill/>` and `<parallel/>` control constructs (`ase-control.md`)
 - FEATURE [code]: added `--prefix`/`-P` option to `ase-code-analyze` and `ase-arch-analyze` for prefixing the reported `P<n>`/`T<n>` finding ids

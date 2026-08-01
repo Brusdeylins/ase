@@ -41,6 +41,7 @@
 ○   `ase-meta-commit`:     Git Commit Message
 ○   `ase-meta-diff`:       Summarize Diff
 ○   `ase-meta-review`:     Review Staged Changes
+○   `ase-code-dissect`:    Dissect a Change Set
 
 ⎈   **TASK MANAGEMENT**
 ○   `ase-task-id`:         Configure Task Id
@@ -49,6 +50,7 @@
 ○   `ase-task-edit`:       Iteratively Edit a Task Plan
 ○   `ase-task-grill`:      Iteratively Grill a Task Plan
 ○   `ase-task-condense`:   Condense a Task Plan
+○   `ase-task-dissect`:    Dissect a Task Plan
 ○   `ase-task-reboot`:     Reboot a Task Plan
 ○   `ase-task-preflight`:  Preflight a Task Plan
 ○   `ase-task-implement`:  Implement a Task Plan

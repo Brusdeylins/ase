@@ -23,6 +23,7 @@ START               -> ase-meta-changelog
 START               -> ase-meta-commit
 START               -> ase-meta-proximity
 START               -> ase-meta-workflow
+START               -> ase-code-dissect
 ase-help-skill      -> END
 ase-meta-config     -> END
 ase-meta-why        -> END
@@ -48,6 +49,7 @@ ase-meta-changelog  -> END
 ase-meta-commit     -> END
 ase-meta-proximity  -> END
 ase-meta-workflow   -> END
+ase-code-dissect    -> END
 START               -> SKETCH
 START               -> TASK
 START               -> ase-sync-import
@@ -71,6 +73,8 @@ TASK                -> ase-task-grill
 ase-task-grill      -> TASK
 TASK                -> ase-task-condense
 ase-task-condense   -> TASK
+TASK                -> ase-task-dissect
+ase-task-dissect    -> TASK
 TASK                -> ase-task-reboot
 ase-task-reboot     -> TASK
 TASK                -> ase-task-implement

@@ -49,7 +49,8 @@ export const skillGroups: SkillGroup[] = [
             "ase-meta-review",
             "ase-meta-diff",
             "ase-meta-changelog",
-            "ase-meta-commit"
+            "ase-meta-commit",
+            "ase-code-dissect"
         ]
     },
     {
@@ -65,6 +66,7 @@ export const skillGroups: SkillGroup[] = [
             "ase-task-list",
             "ase-task-rename",
             "ase-task-condense",
+            "ase-task-dissect",
             "ase-task-delete"
         ]
     },
