@@ -106,7 +106,9 @@ allowed-tools:
 Review Software Architecture
 </purpose>
 
-<expand name="getopt" arg1="ase-arch-analyze">
+<expand name="getopt"
+    arg1="ase-arch-analyze"
+    arg2="--prefix|-P=">
     $ARGUMENTS
 </expand>
 
@@ -343,6 +345,14 @@ interface quality, quality attributes, and architecture governance.
     </step>
 
 3.  <step id="STEP 3: Reconcile and Show Results">
+    Before reporting, determine the *finding id prefix* <id-prefix/>:
+    set <id-prefix><getopt-option-prefix/>-</id-prefix> if
+    <getopt-option-prefix/> is *not* empty, and set <id-prefix></id-prefix>
+    (set to empty) otherwise. Every reported `PROBLEM` and `TRADEOFF` id
+    and every persisted key below carries this <id-prefix/>, so that
+    analyses run under *distinct* prefixes occupy *distinct* id
+    namespaces and hence do not overwrite each other.
+
     Before reporting, classify every finding into one of three
     categories:
 
@@ -378,7 +388,7 @@ interface quality, quality attributes, and architecture governance.
     Report each unpaired finding with the following <template/>:
 
     <template>
-    <ase-tpl-bullet-signal/> **PROBLEM** P<n/> (Severity: <severity/>, Aspect: <aspect-id/>): **<title/>**
+    <ase-tpl-bullet-signal/> **PROBLEM** <id-prefix/>P<n/> (Severity: <severity/>, Aspect: <aspect-id/>): **<title/>**
 
     <description/>
     </template>
@@ -386,7 +396,7 @@ interface quality, quality attributes, and architecture governance.
     Report each paired or clustered finding with the following <template/>:
 
     <template>
-    <ase-tpl-bullet-normal/> **TRADEOFF** T<n/> (Severity: <severity/>): **<title/>**
+    <ase-tpl-bullet-normal/> **TRADEOFF** <id-prefix/>T<n/> (Severity: <severity/>): **<title/>**
 
     - *Focal aspect*: <focal-aspect/> - <focal-state/>
     - *In tension with*: <partner-list/>
@@ -458,12 +468,13 @@ interface quality, quality attributes, and architecture governance.
     - *Additionally*, persist all reported findings in a *single*
       `ase_kv_batch` call to the `ase` MCP server with `transactional`
       set to `true`. The `commands` parameter array of this call
-      starts with one `{ command: "clear", prefix: "ase-issue-" }`
-      entry (which removes only the previously persisted `ase-issue-*`
-      keys, leaving any unrelated keys in the shared store intact),
-      followed by one `{ command: "set", key: "ase-issue-P<n/>", val:
-      "<title/>: <description/>" }` entry per reported PROBLEM and one
-      `{ command: "set", key: "ase-issue-T<n/>", val: "<title/>:
+      starts with one `{ command: "clear", prefix: "ase-issue-<id-prefix/>" }`
+      entry (which removes only the previously persisted
+      `ase-issue-<id-prefix/>*` keys, leaving any unrelated keys in the
+      shared store intact),
+      followed by one `{ command: "set", key: "ase-issue-<id-prefix/>P<n/>",
+      val: "<title/>: <description/>" }` entry per reported PROBLEM and one
+      `{ command: "set", key: "ase-issue-<id-prefix/>T<n/>", val: "<title/>:
       <description/>" }` entry per reported TRADEOFF.
 
     Finally, give a final hint by expanding the following (which,
@@ -471,7 +482,7 @@ interface quality, quality attributes, and architecture governance.
     nothing and hence emit no output at all):
 
     <ase-tpl-hint level="minimal">
-    For deeper analysis, suggestions on solution approaches and then final source code changes, use `/ase-code-resolve P{n}` or `/ase-code-resolve T{n}` in the same or even a different session.
+    For deeper analysis, suggestions on solution approaches and then final source code changes, use `/ase-code-resolve <id-prefix/>P{n}` or `/ase-code-resolve <id-prefix/>T{n}` in the same or even a different session.
     </ase-tpl-hint>
 
     </step>

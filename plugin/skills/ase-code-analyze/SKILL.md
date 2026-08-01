@@ -23,7 +23,7 @@ Analyze Source Code
 
 <expand name="getopt"
     arg1="ase-code-analyze"
-    arg2="--performance|-p --security|-s --severity|-S=(LOW|MEDIUM|HIGH)">
+    arg2="--performance|-p --security|-s --severity|-S=(LOW|MEDIUM|HIGH) --prefix|-P=">
     $ARGUMENTS
 </expand>
 
@@ -123,6 +123,14 @@ problems in *performance* and *efficiency*, or problems in *security*.
 
 3.  <step id="STEP 3: Show Results">
 
+    Before reporting, determine the *problem id prefix* <id-prefix/>:
+    set <id-prefix><getopt-option-prefix/>-</id-prefix> if
+    <getopt-option-prefix/> is *not* empty, and set <id-prefix></id-prefix>
+    (set to empty) otherwise. Every reported problem id and every
+    persisted key below carries this <id-prefix/>, so that analyses run
+    under *distinct* prefixes occupy *distinct* id namespaces and hence
+    do not overwrite each other.
+
     Before reporting, determine the *effective severity floor* <floor/>:
     define the ordinal rank `LOW`=1, `MEDIUM`=2, `HIGH`=3, start from
     <floor><getopt-option-severity/></floor> (default `LOW`), and - if
@@ -143,15 +151,15 @@ problems in *performance* and *efficiency*, or problems in *security*.
     problem. Within the same severity, keep the `file`/`line` order
     established in STEP 2.
 
-    Then renumber the surviving problems contiguously as `P<n/>` with
-    <n/> = 1, 2, ... in that sorted ordering, so `P1` is the most severe
-    problem and the persisted `ase-issue-P<n/>` keys follow the reported
-    sequence. If *all* problems are dropped, skip the per-problem report
-    but still purge any stale
+    Then renumber the surviving problems contiguously as `<id-prefix/>P<n/>`
+    with <n/> = 1, 2, ... in that sorted ordering, so `<id-prefix/>P1` is
+    the most severe problem and the persisted `ase-issue-<id-prefix/>P<n/>`
+    keys follow the reported sequence. If *all* problems are dropped, skip
+    the per-problem report but still purge any stale
     persisted problems with a *single* `ase_kv_batch` call to the `ase`
     MCP server with `transactional` set to `true` and a `commands`
     parameter array holding exactly one `{ command: "clear", prefix:
-    "ase-issue-" }` entry,
+    "ase-issue-<id-prefix/>" }` entry,
     and still emit the final hint <template/> below.
 
     In this STEP 3, for *EVERY* surviving problem in <problems/>, set
@@ -165,7 +173,7 @@ problems in *performance* and *efficiency*, or problems in *security*.
 
     <template>
 
-    <ase-tpl-bullet-signal/> **PROBLEM** (Severity: **<severity/>**): **P<n/>**: **<title/>**
+    <ase-tpl-bullet-signal/> **PROBLEM** (Severity: **<severity/>**): **<id-prefix/>P<n/>**: **<title/>**
 
     <description/>
 
@@ -180,7 +188,7 @@ problems in *performance* and *efficiency*, or problems in *security*.
 
     <template>
 
-    <ase-tpl-bullet-signal/> **PROBLEM** (Severity: **<severity/>**): **P<n/>**: **<title/>**
+    <ase-tpl-bullet-signal/> **PROBLEM** (Severity: **<severity/>**): **<id-prefix/>P<n/>**: **<title/>**
 
     <description/>
 
@@ -193,23 +201,24 @@ problems in *performance* and *efficiency*, or problems in *security*.
     -   For the final results, do *not* output anything else, especially do
         *not* give any further explanations or information.
 
-    -   Uniquely identify the problems with `P<n/>` where <n/> is 1, 2, ...
+    -   Uniquely identify the problems with `<id-prefix/>P<n/>` where <n/> is 1, 2, ...
 
     -   *Additionally*, persist all reported problems in a *single*
         `ase_kv_batch` call to the `ase` MCP server with `transactional`
         set to `true`. The `commands` parameter array of this call
-        starts with one `{ command: "clear", prefix: "ase-issue-" }`
-        entry (which removes only the previously persisted `ase-issue-*`
-        keys, leaving any unrelated keys in the shared store intact),
-        followed by one `{ command: "set", key: "ase-issue-P<n/>", val:
-        "<title/>: <description/>" }` entry per reported problem.
+        starts with one `{ command: "clear", prefix: "ase-issue-<id-prefix/>" }`
+        entry (which removes only the previously persisted
+        `ase-issue-<id-prefix/>*` keys, leaving any unrelated keys in the
+        shared store intact),
+        followed by one `{ command: "set", key: "ase-issue-<id-prefix/>P<n/>",
+        val: "<title/>: <description/>" }` entry per reported problem.
 
     Finally, give a final hint by expanding the following (which,
     depending on the configured <ase-guidance-level/>, may expand into
     nothing and hence emit no output at all):
 
     <ase-tpl-hint level="minimal">
-    For deeper analysis, suggestions on solution approaches and then final problem resolution, use `/ase-code-resolve P{n}` in the same or even a different session.
+    For deeper analysis, suggestions on solution approaches and then final problem resolution, use `/ase-code-resolve <id-prefix/>P{n}` in the same or even a different session.
     </ase-tpl-hint>
 
     You *MUST* not output anything else in this STEP 3,

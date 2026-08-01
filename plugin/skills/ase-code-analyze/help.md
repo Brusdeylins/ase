@@ -10,6 +10,7 @@
     [`--performance`|`-p`]
     [`--security`|`-s`]
     [`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`)]
+    [`--prefix`|`-P` *prefix*]
     *source-reference*
 
 ##  DESCRIPTION
@@ -37,6 +38,14 @@ never suppressed. Surviving problems are reported in *descending
 severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED` - keeping the
 `file`/`line` order within the same severity - and are renumbered
 contiguously as `P<n>`, so `P1` is the most severe problem.
+
+The `--prefix`|`-P` *prefix* option prefixes every reported problem id
+with *prefix* and a hyphen, so `P1` becomes `<prefix>-P1` and its
+persisted key becomes `ase-issue-<prefix>-P1`. The purge of stale
+results is narrowed to the same namespace accordingly, so analyses run
+under *distinct* prefixes coexist instead of overwriting each other.
+Without the option (the default), ids stay unprefixed and the purge
+covers the *entire* `ase-issue-*` space, including any prefixed results.
 
 The skill investigates the code base silently, reports each detected
 problem as a `PROBLEM` entry with severity (`LOW`, `MEDIUM`, `HIGH`) and
@@ -81,6 +90,12 @@ Analyze a directory, reporting only `MEDIUM` and `HIGH` problems:
 
 ```text
 ❯ /ase-code-analyze -S MEDIUM src/handlers/
+```
+
+Analyze a directory under an own id namespace, yielding `auth-P1`, `auth-P2`, ...:
+
+```text
+❯ /ase-code-analyze --prefix auth src/auth/
 ```
 
 ##  SEE ALSO

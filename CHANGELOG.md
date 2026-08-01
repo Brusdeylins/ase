@@ -7,6 +7,7 @@ ChangeLog
 
 - FEATURE [code]: added `<agent/>`, `<skill/>` and `<parallel>` control constructs
 - IMPROVEMENT [code]: renamed the skill identification construct `<skill>` to `<purpose>` to free the `<skill>` tag for the new invocation construct (`ase-skill.md`, `stx.conf`, all `SKILL.md`)
+- FEATURE [code]: added `--prefix`/`-P` option to `ase-code-analyze` and `ase-arch-analyze` for prefixing the reported `P<n>`/`T<n>` finding ids
 
 0.9.51 (2026-07-26)
 -------------------

@@ -7,6 +7,7 @@
 
 `ase-arch-analyze`
     [`--help`|`-h`]
+    [`--prefix`|`-P` *prefix*]
     *source-reference*
 
 ##  DESCRIPTION
@@ -23,6 +24,15 @@ principles, interface quality, quality attributes, architecture
 governance, and package cohesion), renders a high-level architecture
 diagram, and reports findings as either `PROBLEM` or `TRADEOFF` entries
 based on a built-in tension matrix.
+
+The `--prefix`|`-P` *prefix* option prefixes every reported finding id
+with *prefix* and a hyphen, so `P1` becomes `<prefix>-P1` and `T1`
+becomes `<prefix>-T1`, with the persisted keys becoming
+`ase-issue-<prefix>-P1` and `ase-issue-<prefix>-T1` accordingly. The
+purge of stale results is narrowed to the same namespace, so analyses
+run under *distinct* prefixes coexist instead of overwriting each other.
+Without the option (the default), ids stay unprefixed and the purge
+covers the *entire* `ase-issue-*` space, including any prefixed results.
 
 ##  ARGUMENTS
 
@@ -42,6 +52,12 @@ Analyze a specific module:
 
 ```text
 ❯ /ase-arch-analyze src/core
+```
+
+Analyze a module under an own id namespace, yielding `core-P1`, `core-T1`, ...:
+
+```text
+❯ /ase-arch-analyze --prefix core src/core
 ```
 
 ##  SEE ALSO
