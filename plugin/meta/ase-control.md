@@ -112,6 +112,15 @@ Control Flow Constructs
     anything else.
 
 -   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <agent-consolidation [group=<agent-group/>]/>
+
+    This specifies the merging of all the Git WorkTrees created by the
+    <agent/> calls with either are identified with the unique group
+    <agent-group/> or all <agent/> calls in the last <parallel/> section
+    of the context. After merging a single Git WorkTree, remove the Git
+    WorkTree.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
     <skill name="<id/>" [args="<args/>"] [result="<var/>"]/>:
 
     This specifies the *invocation* of another *skill* through the
