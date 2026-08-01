@@ -3,15 +3,16 @@ name: ase-code-dissect
 argument-hint: "[--help|-h] [--max-parts|-m <count>] [--staged|-s] [--dry|-d] [--force|-f] [<dissect-hint>]"
 description: >
     Dissect the current Git change set, treated as an epic, domain-wise
-    and logically into cohesive change sets and materialize each change
-    set in its own dedicated Git WorkTree. Use when the user calls to
-    "dissect", "split", "break up", or "decompose" a large change set
-    into atomic, separately committable parts.
+    and logically into cohesive parts and materialize each part in its
+    own dedicated Git WorkTree. Use when the user calls to "dissect",
+    "split", "break up", or "decompose" a large change set into atomic,
+    separately committable parts.
 user-invocable: true
 disable-model-invocation: false
 effort: xhigh
 allowed-tools:
     - "Bash(git *)"
+    - "Bash(rm -f *)"
     - "Write"
     - "Read"
     - "Edit"
@@ -33,9 +34,9 @@ Dissect a Change Set
 
 <objective>
 *Dissect* the current Git change set, treated as an *epic*, domain-wise
-and logically into *cohesive change sets*, and materialize every change
-set in its own dedicated *Git WorkTree*, so each part can be reviewed
-and committed *atomically* and *independently*.
+and logically into *cohesive parts*, and materialize every part in its
+own dedicated *Git WorkTree*, so each part can be reviewed and
+committed *atomically* and *independently*.
 </objective>
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-dissect.md
@@ -92,13 +93,13 @@ Procedure
         Determine them *read-only* by running the corresponding command
         (taken exactly as given):
 
-        `git ls-files --others --exclude-standard`
+        `git -C <repo-root/> ls-files --others --exclude-standard`
 
         Then, for *every* listed file, capture its creation diff by
         running the corresponding command (taken exactly as given) and
         *append* its output to <diff/>:
 
-        `git diff --no-index --binary /dev/null <file/>`
+        `git -C <repo-root/> diff --no-index --binary /dev/null <file/>`
 
         This command intentionally exits with a non-zero status,
         because the two compared paths differ; treat this exit status
@@ -231,7 +232,7 @@ Procedure
             introduced into <patch/>.
 
         2.  Use the `Write` tool to write <patch/> to the patch file
-            `<tmp-dir/>/ase-dissect-<feature-slug/>.patch`.
+            `<tmp-dir/>/ase-dissect-<part-id/>.patch`.
 
         3.  Create the worktree by running the corresponding command
             (taken exactly as given), which creates the directory
@@ -242,10 +243,20 @@ Procedure
 
             `git worktree add <repo-root/>/.ase/worktree/<part-id/>`
 
+            <if condition="this command fails">
+            Only output the following <template/>, then *continue* with
+            the *next* part -- a single failing part *never* aborts the
+            remaining ones:
+
+            <template>
+            ⧉ **ASE**: ✪ skill: **ase-code-dissect**, ◉ part: **<part-id/>**, ▶ status: **worktree failed to create**
+            </template>
+            </if>
+
         4.  Apply the patch *inside* the freshly created worktree by
             running the corresponding command (taken exactly as given):
 
-            `git -C <repo-root/>/.ase/worktree/<part-id/> apply --whitespace=nowarn <tmp-dir/>/ase-dissect-<feature-slug/>.patch`
+            `git -C <repo-root/>/.ase/worktree/<part-id/> apply --whitespace=nowarn <tmp-dir/>/ase-dissect-<part-id/>.patch`
 
             <if condition="this command fails">
             Only output the following <template/>, then *continue* with
@@ -292,6 +303,21 @@ Procedure
             <template>
             ⧉ **ASE**: ✪ skill: **ase-code-dissect**, ◉ part: **<part-id/>**, ▶ status: **worktree created**
             </template>
+
+    3.  *Clean up* the temporary patch files by running the
+        corresponding command (taken exactly as given) once per
+        <part-id/> of <parts/>, and silently ignore the failure of an
+        individual command when the corresponding patch file does not
+        exist:
+
+        `rm -f <tmp-dir/>/ase-dissect-<part-id/>.patch`
+
+        The patch files are pure *intermediates*: they were already
+        consumed by `git apply`, and their content is fully preserved in
+        the worktrees, so *every* patch file is removed -- also the one
+        of a part whose worktree or patch failed -- and no
+        `ase-dissect-*.patch` residue is left behind in <tmp-dir/>. Do
+        not output anything.
 
     </step>
 

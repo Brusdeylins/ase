@@ -122,8 +122,8 @@ Procedure
         `##  VERIFICATION` sections of the loaded plan <task-content/>
         </expand>
 
-        Each `## VERIFICATION` bullet point *MUST* land in the very part
-        which carries the `## CHANGES` bullet points it verifies.
+        Each `##  VERIFICATION` bullet point *MUST* land in the very part
+        which carries the `##  CHANGES` bullet points it verifies.
 
         A *single* bullet point is *not* the smallest unit here: a bullet
         point which itself covers *multiple* domains or concerns *MAY* be
@@ -131,7 +131,7 @@ Procedure
         each of which is a complete bullet point of its own, is formed
         *exclusively* from the wording of the original bullet point, and
         is then assigned to a part like an ordinary bullet point. A split
-        `## VERIFICATION` bullet point follows the `## CHANGES` bullet
+        `##  VERIFICATION` bullet point follows the `##  CHANGES` bullet
         points its fragments verify, so its fragments *MAY* land in
         *different* parts.
 
@@ -159,8 +159,9 @@ Procedure
 
         Call the `ase_task_list(verbose: false)` tool of the `ase` MCP
         server and set <existing/> to the `id` fields of the returned
-        `tasks` array. Set <collisions/> to all <part-id/> of <parts/>
-        which are already present in <existing/>.
+        `tasks` array. Do not output anything related to this MCP tool
+        call. Set <collisions/> to all <part-id/> of <parts/> which are
+        already present in <existing/>.
 
         <if condition="<collisions/> is not empty AND <getopt-option-force/> is not equal `true`">
         Only output the following <template/> -- with <collisions/>
@@ -245,6 +246,13 @@ Procedure
             section, so you *MUST* omit this section (including its
             heading) from <part-content/>, too.
             </if>
+            <elseif condition="no `##  VERIFICATION` bullet point was assigned to this part">
+            This part carries *no* verification of its own, so you *MUST*
+            omit the `##  VERIFICATION` section (including its heading)
+            from <part-content/>, too -- an *empty* section would violate
+            the plan <format/>, and rule 5 forbids inventing a bullet
+            point.
+            </elseif>
 
         2.  Call the `ase_task_save(id: "<part-id/>", text:
             "<part-content/>")` tool of the `ase` MCP server to persist
