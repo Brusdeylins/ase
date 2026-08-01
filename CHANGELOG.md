@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-0.9.52 (2026-08-01)
+0.9.52 (2026-08-02)
 -------------------
 
 - FEATURE [code]: added `ase-task-dissect` skill for dissecting a task plan into sub-task plans
@@ -12,10 +12,11 @@ ChangeLog
 - FEATURE [code]: added `--prefix`/`-P` option to `ase-code-analyze` and `ase-arch-analyze` for prefixing the reported `P<n>`/`T<n>` finding ids
 - IMPROVEMENT [code, infr]: renamed the skill identification construct `<skill>` to `<purpose>` to free the `<skill>` tag for the new invocation construct (`ase-skill.md`, `stx.conf`, all `SKILL.md`)
 - IMPROVEMENT [code]: forbid line breaks inside inline code spans when authoring task plans (`ase-format-task.md`)
+- IMPROVEMENT [code]: anchor all Git commands at the repository root, name the patch files by part id, and remove them after use (`ase-code-dissect`)
+- IMPROVEMENT [code]: tolerate a failing worktree creation and omit an empty `VERIFICATION` section in a part (`ase-code-dissect`, `ase-task-dissect`)
 - BUGFIX [code]: fixed badly broken lines in reused task plans by returning the rendering-prepared content from `ase_task_save` (`ase-task.ts`, `ase-common-task.md`, `ase-task-edit`, `ase-task-grill`)
 - BUGFIX [code]: match the `**WHAT**`/`**WHY**` bullet points independent of their rendering-prepared bullet marker (`ase-task-reboot`)
-- BUGFIX [code]: normalize the rendering-prepared `◯` bullet markers and split inline code spans back into their authoring form when condensing a task plan (`ase-task-condense`)
-- BUGFIX [code]: aligned the re-wrap width with the ~100-character plan format convention and forbid breaking lines inside inline code spans (`ase-task-condense`)
+- BUGFIX [code]: normalize the rendering-prepared `◯` bullet markers, split inline code spans back into their authoring form, and align the re-wrap width with the ~100-character plan convention (`ase-task-condense`)
 - UPDATE [docs, infr]: upgraded NPM dependencies (`pages/package.json`, `plugin/package.json`, `tool/package.json`)
 - CLEANUP [infr]: excluded the generated `docs` SVG files from the project statistics (`etc/stx.conf`)
 
