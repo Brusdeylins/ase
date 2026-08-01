@@ -95,3 +95,47 @@ Control Flow Constructs
     is finished and no further repetitions are performed. This construct
     is expanded into nothing. Do not output anything.
 
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <agent <attr/>="<value/>" [...]><agent-body/></agent>:
+
+    This specifies the *invocation* of a *sub-agent* through the
+    `Agent` tool. Every XML attribute is passed *verbatim* as the
+    identically named parameter of the `Agent` tool (e.g. `description`,
+    `subagent_type`, `run_in_background`, `isolation`, `model`), and
+    <agent-body/> is passed as its `prompt` parameter.
+
+    The *sole exception* is the *reserved* attribute `result="<var/>"`,
+    which is *not* passed on but instead *binds* the result returned
+    by the sub-agent to the placeholder `<<var/>/>`. This construct is
+    expanded to the result returned by the sub-agent if `result` is
+    *absent*, or into nothing if `result` is *present*. Do not output
+    anything else.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <skill name="<id/>" [args="<args/>"] [result="<var/>"]/>:
+
+    This specifies the *invocation* of another *skill* through the
+    `Skill` tool, with its `skill` parameter set to <id/> and its `args`
+    parameter set to <args/> (or to the empty string if the `args`
+    attribute is absent).
+
+    The *reserved* attribute `result="<var/>"` *binds* the result
+    returned by the skill to the placeholder `<<var/>/>`, exactly
+    as for <agent/>. This construct is *always* *self-closing*: a
+    *body-bearing* `<skill>` element is *never* an invocation. This
+    construct is expanded to the result returned by the skill if
+    `result` is *absent*, or into nothing if `result` is *present*. Do
+    not output anything else.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <parallel><parallel-body/></parallel>:
+
+    This specifies a <parallel-body/> whose <agent/> and <skill/>
+    invocations are *all* dispatched *concurrently*: you *MUST* emit
+    them *in one single message* instead of one per turn, and this
+    construct is finished only once *all* of them have returned. If two
+    or more of these invocations bind the *same* `result` name, the
+    corresponding placeholder carries an *array* of their results, in
+    the order of their occurrence in <parallel-body/>. This construct is
+    expanded to its <parallel-body/>. Do not output anything else.
+

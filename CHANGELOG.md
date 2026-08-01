@@ -5,6 +5,9 @@ ChangeLog
 0.9.52 (2026-07-26)
 -------------------
 
+- FEATURE [code]: added `<agent/>`, `<skill/>` and `<parallel>` control constructs
+- IMPROVEMENT [code]: renamed the skill identification construct `<skill>` to `<purpose>` to free the `<skill>` tag for the new invocation construct (`ase-skill.md`, `stx.conf`, all `SKILL.md`)
+
 0.9.51 (2026-07-26)
 -------------------
 
