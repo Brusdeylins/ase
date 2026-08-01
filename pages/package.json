@@ -9,7 +9,7 @@
     "type":                                       "module",
     "devDependencies": {
         "@rse/stx":                               "1.1.6",
-        "@astrojs/check":                         "0.9.9",
+        "@astrojs/check":                         "0.9.10",
         "typescript":                             "6.0.3",
         "eslint":                                 "10.8.0",
         "@eslint/js":                             "10.0.1",
@@ -18,11 +18,11 @@
         "@stylistic/eslint-plugin":               "5.10.0",
         "eslint-plugin-astro":                    "3.0.1",
         "astro-eslint-parser":                    "3.0.0",
-        "globals":                                "17.7.0",
-        "playwright":                             "1.62.0"
+        "globals":                                "17.8.0",
+        "playwright":                             "1.62.1"
     },
     "dependencies": {
-        "astro":                                  "7.1.3",
+        "astro":                                  "7.1.6",
         "@astrojs/sitemap":                       "3.7.3",
         "@astro-community/astro-embed-youtube":   "0.5.10",
         "astro-robots-txt":                       "1.0.0",
