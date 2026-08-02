@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-0.9.54 (2026-08-02)
+0.9.54 (2026-08-03)
 -------------------
 
 - IMPROVEMENT [code]: factored the tenet internalization of `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` into the new shared `ase-common-code.md`
