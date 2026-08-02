@@ -11,7 +11,11 @@
     pane. At build time we read every `plugin/skills/<skill>/help.md`, render
     it to HTML via `marked`, and inline the result. Any element on the page
     carrying `data-help-id` opens the modal and jumps to the matching skill;
-    the Modal shell handles the close button and Escape.  */
+    the Modal shell handles the close button and Escape.
+
+    The shown man page is deep-linkable: the URL fragment "#help/<skill-id>"
+    is the single source of truth, every man-page hop pushes a History API
+    entry, and the copy-link button hands out the current deep link.  */
 
 import fs              from "node:fs"
 import path            from "node:path"
@@ -70,6 +74,18 @@ for (const group of skillGroups)
         if (helpDocs[id]) orderedDocs.push(helpDocs[id])
 ---
 <Modal id="help-modal" label="Skill help">
+    {/* copy-link button: hands out the deep link of the currently shown
+        man-page. It sits next to the shell's close button and reuses the
+        page-global `Clipboard-Copy` handler, which reads `data-copy` at click
+        time and briefly flips the label to "Copied"; the value itself starts
+        out empty and is kept current by the script below. */}
+    <button
+        type="button"
+        id="help-copy"
+        data-copy=""
+        class="fixed right-20 top-5 z-[101] grid h-12 cursor-pointer place-items-center rounded-full bg-accent/55 px-5 text-sm font-bold leading-none text-white shadow-lg backdrop-blur transition-colors hover:bg-accent/80"
+    >Copy link</button>
+
     <div class="grid h-[85vh] w-[94vw] max-w-6xl grid-cols-1 overflow-hidden rounded-lg border border-border-strong bg-background shadow-2xl sm:grid-cols-[16rem_1fr]">
         {/* sticky grouped skill-index sidebar, headed by the full-text search
             box. As the whole sidebar is desktop-only ("hidden sm:block"), so is
@@ -109,7 +125,7 @@ for (const group of skillGroups)
             the open/click script toggles which `#help-<id>` article is visible. */}
         <div id="help-modal-pane" class="max-h-[85vh] overflow-y-auto p-6 sm:p-8">
             {orderedDocs.map((doc) => (
-                <article id={`help-${doc.id}`} class="help-md hidden" set:html={doc.html} />
+                <article id={`help-${doc.id}`} class="help-md hidden" data-help-title={doc.title} set:html={doc.html} />
             ))}
             <p id="help-search-none" class="hidden text-center text-foreground-muted"></p>
         </div>
@@ -121,8 +137,10 @@ for (const group of skillGroups)
     the already-open modal. The search box on top of the sidebar switches the
     pane into a "searching" mode, in which the sidebar is reduced to the
     matching skills and the pane stacks all their man-pages at once, with every
-    keyword hit wrapped in a <mark>. This script is bundled (not `is:inline`),
-    so it can import the fuzzy-matching helpers from NPM. */}
+    keyword hit wrapped in a <mark>. Which man-page is shown is routed through
+    the URL fragment "#help/<skill-id>", so it survives sharing, bookmarking,
+    and the back button. This script is bundled (not `is:inline`), so it can
+    import the fuzzy-matching helpers from NPM. */}
 <script>
     import { diceCoefficient } from "dice-coefficient"
     import levenshtein         from "fast-levenshtein"
@@ -132,7 +150,8 @@ for (const group of skillGroups)
     const helpInput = document.getElementById("help-search") as HTMLInputElement | null
     const helpHint  = document.getElementById("help-search-hint")
     const helpNone  = document.getElementById("help-search-none")
-    if (helpModal && helpPane && helpInput && helpHint && helpNone) {
+    const helpCopy  = document.getElementById("help-copy")
+    if (helpModal && helpPane && helpInput && helpHint && helpNone && helpCopy) {
         /*  shortest keyword still eligible for fuzzy matching: below it the
             "levenshtein <= 2" branch degenerates and would pull in nearly
             every short word of the corpus.  */
@@ -232,9 +251,18 @@ for (const group of skillGroups)
             helpNone.classList.add("hidden")
         }
 
+        /*  reflect the shown man-page in the document title and in the
+            copy-link button, so a bookmark gets a meaningful default name and
+            the deep link can be handed out with a single click.  */
+        const reflect = (id: string, article: HTMLElement) => {
+            document.title = id + " - " + (article.getAttribute("data-help-title") ?? "")
+            helpCopy.setAttribute("data-copy", location.origin + location.pathname + "#help/" + id)
+        }
+
         const select = (id: string) => {
             const target = document.getElementById("help-" + id)
             if (!target) return
+            reflect(id, target)
             /*  within an active search a still-matching target is merely
                 scrolled to inside the stacked result list, while a target
                 filtered out of the results (e.g. a `SEE ALSO` cross-link)
@@ -256,6 +284,50 @@ for (const group of skillGroups)
             markActive(id)
             /*  reset the pane to the top of the freshly shown man-page.  */
             helpPane.scrollTop = 0
+        }
+
+        /*  the URL fragment "#help/<skill-id>" is the single source of truth
+            for the shown man-page, which makes it shareable, bookmarkable, and
+            leavable via the browser's back button. Its "/" separator keeps such
+            a route distinct from the plain section anchors ("#usage", "#setup",
+            ...), so it never scroll-jumps the page behind the modal.  */
+        const ROUTE = /^#help\/([a-z0-9_-]+)$/
+
+        const routeOf = (hash: string): string => {
+            const m = hash.match(ROUTE)
+            return m !== null ? m[1] : ""
+        }
+
+        const isOpen = (): boolean =>
+            getComputedStyle(helpModal).display !== "none"
+
+        /*  drive the modal from a URL fragment: a resolvable route shows its
+            man-page, anything else closes the modal through the shell's own
+            close button (so its scroll-unlock and "modal:close" event still
+            fire). Idempotent, as a history traversal can deliver the very same
+            change through both listeners registered below.  */
+        const apply = (hash: string) => {
+            const id = routeOf(hash)
+            if (id !== "" && document.getElementById("help-" + id) !== null) {
+                /*  a fresh open always starts from a clean, unfiltered state.  */
+                if (!isOpen()) {
+                    helpModal.style.display = "grid"
+                    helpInput.value = ""
+                    leave()
+                }
+                select(id)
+            }
+            else if (isOpen())
+                helpModal.querySelector<HTMLElement>("[data-modal-close]")?.click()
+        }
+
+        /*  navigate to a man-page: one History API entry per hop, so the back
+            button walks the visited man-pages and finally leaves the modal.  */
+        const go = (id: string) => {
+            if (id === "") return
+            if (routeOf(location.hash) !== id)
+                history.pushState(null, "", "#help/" + id)
+            apply(location.hash)
         }
 
         const escapeRE = (s: string): string =>
@@ -381,15 +453,7 @@ for (const group of skillGroups)
 
         document.querySelectorAll("[data-help-id]").forEach((trigger) => {
             trigger.addEventListener("click", () => {
-                const id     = trigger.getAttribute("data-help-id") ?? ""
-                const inside = helpModal.contains(trigger)
-                /*  a fresh open always starts from a clean, unfiltered state.  */
-                if (!inside) {
-                    helpModal.style.display = "grid"
-                    helpInput.value = ""
-                    leave()
-                }
-                select(id)
+                go(trigger.getAttribute("data-help-id") ?? "")
             })
         })
 
@@ -402,16 +466,30 @@ for (const group of skillGroups)
             input.addEventListener("keydown", (event) => {
                 if (event.key !== "Enter") return
                 event.preventDefault()
-                helpModal.style.display = "grid"
-                helpInput.value = ""
-                leave()
-                select(articles()[0]?.id.slice(5) ?? "")
+                go(articles()[0]?.id.slice(5) ?? "")
                 const query = input.value.trim()
                 if (query === "") return
                 helpInput.value = query
                 search()
             })
         })
+
+        /*  keep the modal in sync with the URL: a history traversal (back and
+            forward) and a manually edited fragment both re-apply the route,
+            while closing the modal restores the page title and strips the
+            fragment again -- via "replaceState", so a mere dismissal adds no
+            history entry (the same idiom the back-to-top button already uses
+            in `Progress.astro`). The final apply picks up a deep link (or a
+            reload) once the DOM is in place.  */
+        const pageTitle = document.title
+        window.addEventListener("popstate",   () => { apply(location.hash) })
+        window.addEventListener("hashchange", () => { apply(location.hash) })
+        helpModal.addEventListener("modal:close", () => {
+            document.title = pageTitle
+            if (routeOf(location.hash) !== "")
+                history.replaceState(null, "", location.pathname + location.search)
+        })
+        apply(location.hash)
     }
 </script>
 
