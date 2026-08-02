@@ -12,17 +12,32 @@
 
     `commands` is the list of command strings (one prompt row each); `title` is
     the title-bar label; `class` is forwarded to the outer wrapper so callers
-    set their own margin/width (e.g. "mx-auto mt-12 max-w-2xl").  */
+    set their own margin/width (e.g. "mx-auto mt-12 max-w-2xl").
 
-interface Props {
+    Alternatively to `commands`, the `tabs` prop accepts a list of labeled
+    command lists. A tab bar is then rendered below the title bar and clicking
+    a tab switches the entire content to that tab's commands (first tab active
+    initially).  */
+
+interface Tab {
+    label:    string
     commands: string[]
-    prefix?:  string
-    title?:   string
-    copy?:    boolean
-    class?:   string
 }
 
-const { commands, prefix = "Terminal", title = "", copy = false, class: className = "" } = Astro.props
+interface Props {
+    commands?: string[]
+    tabs?:     Tab[]
+    prefix?:   string
+    title?:    string
+    copy?:     boolean
+    class?:    string
+}
+
+const { commands = [], tabs, prefix = "Terminal", title = "", copy = false, class: className = "" } = Astro.props
+
+/*  normalize both content variants into a uniform panel list: either the
+    caller-supplied tabs or a single unlabeled panel from `commands`  */
+const panels = tabs ?? [ { label: "", commands } ]
 
 /*  split a command into runs, flagging any **...** span so it can be tinted in
     the accent colour while the rest stays plain. This lets callers explicitly
@@ -39,7 +54,7 @@ const tokenize = (cmd: string) =>
 const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1").replace(/\n/g, " ")
 ---
 <div class={className}>
-    <div class="overflow-hidden rounded-xl border border-border-strong bg-background-elevated/60 text-[0.7875rem] leading-snug shadow-xl sm:text-[0.9rem]">
+    <div class="overflow-hidden rounded-xl border border-border-strong bg-background-elevated/60 text-[0.7875rem] leading-snug shadow-xl sm:text-[0.9rem]" data-terminal>
         <div class="flex items-center gap-2 border-b border-border/60 px-4 py-1 bg-accent/10">
             <span class="h-3 w-3 rounded-full bg-[var(--brand-400)]"></span>
             <span class="h-3 w-3 rounded-full bg-[var(--brand-500)]"></span>
@@ -47,28 +62,69 @@ const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1").replace(/\n
             <span class="ml-2 text-foreground">{prefix}{title && ":"}</span>
             {title && <span class="text-accent">{title}</span>}
         </div>
-        <div class="flex flex-col gap-0 px-4 py-2">
-            {commands.map((cmd) => (
-                <div class="group flex items-start gap-3 font-mono tracking-[-0.03em]">
-                    <span class="select-none text-brand-300">❯</span>
-                    <code class="code-plain flex-1 text-foreground">{tokenize(cmd).map((t) => (
-                        t.text.split("\n").map((line, i) => (
-                            <>
-                                {i > 0 && <br/>}
-                                {t.meta ? <span class="text-brand-400">{line}</span> : line}
-                            </>
-                        ))
-                    ))}</code>
-                    {copy && (
-                        <button
-                            type="button"
-                            class="copy-cmd shrink-0 rounded-md border border-border px-2 py-1 text-xs text-foreground-muted transition hover:border-border-strong hover:text-foreground"
-                            data-copy={plain(cmd)}
-                            aria-label="Copy command"
-                        >Copy</button>
-                    )}
-                </div>
-            ))}
-        </div>
+        {tabs && (
+            <div class="flex items-center gap-1 border-b border-border-strong px-2" role="tablist">
+                {tabs.map((tab, i) => (
+                    <button
+                        type="button"
+                        role="tab"
+                        class="-mb-px cursor-pointer border-b-2 border-transparent px-2 py-1 text-xs text-foreground-muted transition hover:text-foreground aria-selected:border-accent aria-selected:text-accent"
+                        data-term-tab={i}
+                        aria-selected={i === 0 ? "true" : "false"}
+                    >{tab.label}</button>
+                ))}
+            </div>
+        )}
+        {panels.map((panel, i) => (
+            <div class="flex flex-col gap-0 px-4 py-2" role={tabs && "tabpanel"} data-term-panel={i} hidden={tabs !== undefined && i > 0}>
+                {panel.commands.map((cmd) => (
+                    <div class="group flex items-start gap-3 font-mono tracking-[-0.03em]">
+                        <span class="select-none text-brand-300">❯</span>
+                        <code class="code-plain flex-1 text-foreground">{tokenize(cmd).map((t) => (
+                            t.text.split("\n").map((line, i) => (
+                                <>
+                                    {i > 0 && <br/>}
+                                    {t.meta ? <span class="text-brand-400">{line}</span> : line}
+                                </>
+                            ))
+                        ))}</code>
+                        {copy && (
+                            <button
+                                type="button"
+                                class="copy-cmd shrink-0 rounded-md border border-border px-2 py-1 text-xs text-foreground-muted transition hover:border-border-strong hover:text-foreground"
+                                data-copy={plain(cmd)}
+                                aria-label="Copy command"
+                            >Copy</button>
+                        )}
+                    </div>
+                ))}
+            </div>
+        ))}
     </div>
 </div>
+
+{tabs && (
+    /*  tab switching: one document-level delegated click handler (bound once,
+        guarded by a window flag, so multiple Terminal instances share it)
+        marks the clicked tab selected and shows only its panel within the
+        surrounding [data-terminal] box.  */
+    <script is:inline>
+        (function () {
+            if (window.__aseTerminalTabs) return
+            window.__aseTerminalTabs = true
+            document.addEventListener("click", function (ev) {
+                const btn = ev.target.closest("[data-term-tab]")
+                if (!btn) return
+                const root = btn.closest("[data-terminal]")
+                if (!root) return
+                const idx = btn.getAttribute("data-term-tab")
+                root.querySelectorAll("[data-term-tab]").forEach(function (b) {
+                    b.setAttribute("aria-selected", b === btn ? "true" : "false")
+                })
+                root.querySelectorAll("[data-term-panel]").forEach(function (p) {
+                    p.hidden = p.getAttribute("data-term-panel") !== idx
+                })
+            })
+        })()
+    </script>
+)}

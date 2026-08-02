@@ -69,9 +69,23 @@ import Annotation  from "./Annotation.astro"
                     class="mx-auto mt-8 sm:mt-18 lg:mt-0 max-w-2xl"
                     copy={true}
                     title="Installation"
-                    commands={[
-                        "**npm** install -g @rse/ase",
-                        "**ase** setup install\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                    tabs={[
+                        { label: "Claude", commands: [
+                            "**npm** install -g @rse/ase",
+                            "**ase** setup install"
+                        ] },
+                        { label: "Copilot", commands: [
+                            "**npm** install -g @rse/ase",
+                            "**ase** setup install --tool copilot"
+                        ] },
+                        { label: "Codex", commands: [
+                            "**npm** install -g @rse/ase",
+                            "**ase** setup install --tool codex"
+                        ] },
+                        { label: "Generic", commands: [
+                            "**npm** install -g @rse/ase",
+                            "**ase** setup install\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                        ] }
                     ]}
                 />
             </div>
@@ -81,8 +95,19 @@ import Annotation  from "./Annotation.astro"
                     class="mx-auto mt-8 max-w-2xl"
                     copy={true}
                     title="Updating"
-                    commands={[
-                        "**ase** setup update\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                    tabs={[
+                        { label: "Claude", commands: [
+                            "**ase** setup update"
+                        ] },
+                        { label: "Copilot", commands: [
+                            "**ase** setup update --tool copilot"
+                        ] },
+                        { label: "Codex", commands: [
+                            "**ase** setup update --tool codex"
+                        ] },
+                        { label: "Generic", commands: [
+                            "**ase** setup update\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                        ] }
                     ]}
                 />
             </div>
@@ -92,8 +117,19 @@ import Annotation  from "./Annotation.astro"
                     class="mx-auto mt-8 max-w-2xl"
                     copy={true}
                     title="Uninstallation"
-                    commands={[
-                        "**ase** setup uninstall\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                    tabs={[
+                        { label: "Claude", commands: [
+                            "**ase** setup uninstall"
+                        ] },
+                        { label: "Copilot", commands: [
+                            "**ase** setup uninstall --tool copilot"
+                        ] },
+                        { label: "Codex", commands: [
+                            "**ase** setup uninstall --tool codex"
+                        ] },
+                        { label: "Generic", commands: [
+                            "**ase** setup uninstall\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                        ] }
                     ]}
                 />
             </div>
@@ -159,14 +195,25 @@ import Annotation  from "./Annotation.astro"
                         class="mx-auto mt-8 lg:mt-0 max-w-2xl"
                         copy={true}
                         title="Statusline Installation"
-                        commands={[
-                            "**ase** setup statusline activate\n" +
-                            "**[**--tool claude**|**copilot**|**codex**]**\n" +
-                            "**[**--scope user**|**project**|**local**]**\n" +
-                            "**[**--width **<n>****]** **[**--margin **<n>****]**\n" +
-                            "**[**--padding **<n>****]**\n" +
-                            "**[**--no-icons**]** **[**--no-labels**]**\n" +
-                            "**[****<format> ...****]**"
+                        tabs={[
+                            { label: "Claude", commands: [
+                                "**ase** setup statusline activate"
+                            ] },
+                            { label: "Copilot", commands: [
+                                "**ase** setup statusline activate --tool copilot"
+                            ] },
+                            { label: "Codex", commands: [
+                                "**ase** setup statusline activate --tool codex"
+                            ] },
+                            { label: "Generic", commands: [
+                                "**ase** setup statusline activate\n" +
+                                "**[**--tool claude**|**copilot**|**codex**]**\n" +
+                                "**[**--scope user**|**project**|**local**]**\n" +
+                                "**[**--width **<n>****]** **[**--margin **<n>****]**\n" +
+                                "**[**--padding **<n>****]**\n" +
+                                "**[**--no-icons**]** **[**--no-labels**]**\n" +
+                                "**[****<format> ...****]**"
+                            ] }
                         ]}
                     />
                 </div>
@@ -176,10 +223,21 @@ import Annotation  from "./Annotation.astro"
                         class="mx-auto mt-8 max-w-2xl"
                         copy={true}
                         title="Statusline Uninstallation"
-                        commands={[
-                            "**ase** setup statusline deactivate\n" +
-                            "**[**--tool claude**|**copilot**|**codex**]\n" +
-                            "[**--scope user**|**project**|**local**]**"
+                        tabs={[
+                            { label: "Claude", commands: [
+                                "**ase** setup statusline deactivate"
+                            ] },
+                            { label: "Copilot", commands: [
+                                "**ase** setup statusline deactivate --tool copilot"
+                            ] },
+                            { label: "Codex", commands: [
+                                "**ase** setup statusline deactivate --tool codex"
+                            ] },
+                            { label: "Generic", commands: [
+                                "**ase** setup statusline deactivate\n" +
+                                "**[**--tool claude**|**copilot**|**codex**]\n" +
+                                "[**--scope user**|**project**|**local**]**"
+                            ] }
                         ]}
                     />
                 </div>
@@ -272,10 +330,27 @@ import Annotation  from "./Annotation.astro"
                     class="mx-auto mt-8 lg:mt-0 max-w-2xl"
                     copy={true}
                     title="MCP Installation"
-                    commands={[
-                        "**ase** setup mcp list",
-                        "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
-                        "**ase** setup mcp activate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                    tabs={[
+                        { label: "Claude", commands: [
+                            "**ase** setup mcp list",
+                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                            "**ase** setup mcp activate"
+                        ] },
+                        { label: "Copilot", commands: [
+                            "**ase** setup mcp list",
+                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                            "**ase** setup mcp activate --tool copilot"
+                        ] },
+                        { label: "Codex", commands: [
+                            "**ase** setup mcp list",
+                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                            "**ase** setup mcp activate --tool codex"
+                        ] },
+                        { label: "Generic", commands: [
+                            "**ase** setup mcp list",
+                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                            "**ase** setup mcp activate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                        ] }
                     ]}
                 />
             </div>
@@ -285,8 +360,19 @@ import Annotation  from "./Annotation.astro"
                     class="mx-auto mt-8 max-w-2xl"
                     copy={true}
                     title="MCP Uninstallation"
-                    commands={[
-                        "**ase** setup mcp deactivate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                    tabs={[
+                        { label: "Claude", commands: [
+                            "**ase** setup mcp deactivate"
+                        ] },
+                        { label: "Copilot", commands: [
+                            "**ase** setup mcp deactivate --tool copilot"
+                        ] },
+                        { label: "Codex", commands: [
+                            "**ase** setup mcp deactivate --tool codex"
+                        ] },
+                        { label: "Generic", commands: [
+                            "**ase** setup mcp deactivate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                        ] }
                     ]}
                 />
             </div>
