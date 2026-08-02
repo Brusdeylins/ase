@@ -2,6 +2,15 @@
 ChangeLog
 =========
 
+0.9.53 (2026-08-02)
+-------------------
+
+- IMPROVEMENT [code]: support the `subtitle` attribute also for the `<ase-tpl-head/>` and `<ase-tpl-foot/>` template patterns (`ase-skill.md`)
+- IMPROVEMENT [code]: state the return values of the sub-agents more precisely (`plugin/agents/*.md`)
+- IMPROVEMENT [code]: made untracked-file listing, branch deletion, and `~` expansion more robust (`ase-code-dissect`, `ase-meta-workflow`)
+- BUGFIX [code]: correctly close the `<ase-tpl-head/>` and `<ase-tpl-foot/>` tags (`ase-common-dissect.md`)
+- CLEANUP [code]: fixed a typo and polished wording (`ase-meta-workflow`, `ase-common-dissect.md`)
+
 0.9.52 (2026-08-02)
 -------------------
 
