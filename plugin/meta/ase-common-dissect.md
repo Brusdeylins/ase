@@ -54,7 +54,7 @@ following ruleset:
 
 8.  *Honor the dissection hint*:
     <if condition="<arg2/> is not empty">
-    Set <hint><arg2/></hint>. The user explicitly told *how* the epic
+    Set <hint><arg2/></hint>. The user explicitly stated *how* the epic
     should be split -- e.g. which input elements belong together, along
     which axis to cut, or how many parts to aim at -- so you *MUST*
     follow this <hint/> as closely as possible and let it *override* the
