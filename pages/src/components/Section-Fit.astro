@@ -1,0 +1,75 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  "Fit Check" section: the blunt, two-column self-qualification panel, framed
+    like the Compatibility matrices. It sits directly below the Hero so an
+    unsuitable visitor can disqualify themselves before investing any time.  */
+
+import SectionGlow             from "./Section-Glow.astro"
+import Annotation              from "./Annotation.astro"
+import { fitFor, fitAgainst }  from "../data/fit.ts"
+---
+<section id="fit" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+    <SectionGlow variant="section" side="left"/>
+
+    {/*  the top margin keeps the heading's Annotation clear of the fixed
+         header when the section is reached through its "#fit" anchor  */}
+    <header class="mt-12 ase-section-head" data-reveal>
+        <h2 class="ase-h2 relative inline-block">
+            <Annotation flat class="right-0 translate-x-1/4">
+                Better to know now<br/>
+                than after installing!
+            </Annotation>
+            Check Your <span class="text-accent">Fit</span> First
+        </h2>
+        <p class="ase-lead ase-justify">
+            <b>ASE</b> is deliberately opinionated, so it fits some people
+            well and others not at all. Rather than letting you find that out
+            after the installation, here it is up-front — read both columns
+            and decide before you spend more time.
+        </p>
+    </header>
+
+    <div class="mt-12 grid gap-2 lg:grid-cols-2">
+        {/*  "for you" column — reveals from the left edge
+            ("right" starts off-screen left, per Scroll-Reveal's inverted naming)  */}
+        <div class="overflow-hidden rounded-xl border border-border-strong shadow-xl" data-reveal="right">
+            <h3 class="border-b border-border/60 bg-accent/10 px-4 py-2 text-lg font-semibold text-accent sm:px-6">
+                <b>ASE</b> is for YOU, if &hellip;
+            </h3>
+            <ul class="flex flex-col gap-3 p-4 text-sm sm:p-6">
+                {fitFor.map((entry) => (
+                    <li>
+                        <b class="text-accent uppercase">{entry.title}</b>
+                        <p class="text-foreground-secondary ase-justify" set:html={entry.body}/>
+                    </li>
+                ))}
+            </ul>
+        </div>
+
+        {/*  "not for you" column — reveals from the right edge
+            ("left" starts off-screen right, per Scroll-Reveal's inverted naming)  */}
+        <div class="overflow-hidden rounded-xl border border-border-strong shadow-xl" data-reveal="left">
+            <h3 class="border-b border-border/60 bg-accent/10 px-4 py-2 text-lg font-semibold text-foreground-muted sm:px-6">
+                <b>ASE</b> is <u>not</u> for YOU, if &hellip;
+            </h3>
+            <ul class="flex flex-col gap-3 p-4 text-sm sm:p-6">
+                {fitAgainst.map((entry) => (
+                    <li>
+                        <b class="text-foreground-muted uppercase">{entry.title}</b>
+                        <p class="text-foreground-secondary ase-justify" set:html={entry.body}/>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    </div>
+
+    <p class="mt-4 text-center text-xs text-foreground-muted" data-reveal>
+        Notice: The right column is a <i>consequence</i> of the <b>ASE</b> design,
+        not a defect of it &mdash; every one of those boundaries buys something in the left column.
+    </p>
+</section>
