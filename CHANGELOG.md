@@ -10,6 +10,7 @@ ChangeLog
 - FEATURE [docs]: added a blunt "ASE is for you / ASE is not for you" Fit Check panel for fast self-qualification
 - FEATURE [docs]: add a methodology provenance strip naming the classic methods baked into the skills and linking each to its manpage
 - FEATURE [docs]: added a testimonials pull-quote carousel for named practitioner endorsements
+- FEATURE [docs]: added a "Day in the Life" timeline section annotating an engineer's workday with the firing ASE skills (`Section-Day.astro`, `index.astro`)
 - FEATURE [docs]: made the skill man-pages deep-linkable via the `#help/<skill-id>` URL fragment, including History API integration, document title sync, and a copy-link button (`Modal-Help.astro`)
 - FEATURE [docs]: add a sticky install call-to-action bar to the website
 - IMPROVEMENT [docs]: place commands into tabs in Terminal components for cleaner display (`Terminal.astro`, `Section-Setup.astro`)

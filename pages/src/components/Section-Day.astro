@@ -1,0 +1,204 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  "Day in the Life" section: an engineer's workday as a vertical timeline of
+    numbered steps. Each step pairs a short narrative of the situation with the
+    ASE skills that fire at that very moment, so the abstract skill catalog
+    reads as a lived routine. The moment list is curated section-local content
+    and hence lives inline in this frontmatter, mirroring the inline matrices
+    of `Section-Compat.astro`.  */
+
+import SectionGlow from "./Section-Glow.astro"
+import Annotation  from "./Annotation.astro"
+import Terminal    from "./Terminal.astro"
+
+type Moment = {
+    eyebrow: string    /*  short, signal-colored label above the heading         */
+    title:   string    /*  the headline of the moment                            */
+    body:    string    /*  the narrative of the situation (inline markup)        */
+    skills:  string[]  /*  the ASE invocations firing here ("**...**" tinted)    */
+}
+
+const moments: Moment[] = [
+    {
+        eyebrow: "Morning Pickup",
+        title:   "Resume Where You Stopped",
+        body:    "The day starts with the plans you left behind yesterday evening. Instead of " +
+                 "re-reading a scratch note, you reconstruct your own intent from the pending working copy changes, " +
+                 "list the persisted task plans and open the one you parked mid-flight — the plan " +
+                 "survived the session, so **your context is restored in seconds**.",
+        skills: [
+            "**/ase-meta-diff** --coherence --risk --blast",
+            "**/ase-task-list** --verbose",
+            "**/ase-task-view** --full [...]"
+        ]
+    },
+    {
+        eyebrow: "Framing the Ticket",
+        title:   "Turn a Fuzzy Question Into Options",
+        body:    "The first ticket of the day is one paragraph of wishful thinking. Before writing " +
+                 "a single line, you diverge into a broad set of ideas and converge onto a ranked " +
+                 "shortlist, and where the ticket describes a *symptom* rather than a cause, you " +
+                 "drill down along the Five-Whys chain until the real root shows up.",
+        skills:  [
+            "**/ase-meta-brainstorm** --max-clarify=0 --min-ideas=20 [...]",
+            "**/ase-meta-why** --width=2 [...]"
+        ]
+    },
+    {
+        eyebrow: "Picking the Stack",
+        title:   "Choose a Library, Defensibly",
+        body:    "The chosen direction needs a third-party component. Rather than trusting the " +
+                 "first NPM hit, you let candidates be discovered and ranked by downloads, age, " +
+                 "last update, and GitHub stars, and then run the finalists through a weighted " +
+                 "multi-criteria matrix where you insist on TypeScript support.",
+        skills:  [
+            "**/ase-arch-discover** --limit=8 [...]",
+            "**/ase-meta-evaluate** [...] vs [...], TypeScript support is important"
+        ]
+    },
+    {
+        eyebrow: "Strenghten the Decisions",
+        title:   "Ensure your Decisions Hold Under Pressure",
+        body:    "The chosen library component looks great." +
+                 "But before finally picking it, you want your decision be challenged, " +
+                 "once by playing Advocatus Diaboli and once by playing Steelman.",
+        skills:  [
+            "**/ase-meta-diaboli** [...]",
+            "**/ase-meta-steelman** [...]"
+        ]
+    },
+    {
+        eyebrow: "Planning the Change",
+        title:   "Funnel Down to One Approach",
+        body:    "Now the change itself gets planned. The funnel proposes alternative approaches " +
+                 "with explicit pros and cons, you pick one, and a structured task plan is composed " +
+                 "for it. Then you let yourself be **grilled** about that plan until no essential " +
+                 "decision is left to chance during the implementation.",
+        skills:  [
+            "**/ase-code-craft** [...]: [...]",
+            "**/ase-task-grill**"
+        ]
+    },
+    {
+        eyebrow: "Realize the Change",
+        title:   "Preflight, Then Implement",
+        body:    "Before the plan touches a single file, a preflight dry-run drafts the change set " +
+                 "and surfaces what would be changed. You then decide to edit the plan for final " +
+                 "adjustments. Only then does the implementation run — optionally " +
+                 "inside its own Git WorkTree, so the change set stays isolated from whatever else " +
+                 "is currently in flight on your branch.",
+        skills:  [
+            "**/ase-task-preflight**",
+            "**/ase-task-edit** Change [...]",
+            "**/ase-task-implement** --worktree"
+        ]
+    },
+    {
+        eyebrow: "The Interrupt",
+        title:   "Fix the Defect That Cannot Wait",
+        body:    "After lunch, a production defect jumps the queue. Bug-fixing follows its own " +
+                 "tenets — no drive-by cleanups, minimum new flags, handling close to the origin — " +
+                 "and in quick mode the whole funnel collapses into a single grounded, immediately " +
+                 "implemented pass you can still revert wholesale.",
+        skills:  [
+            "**/ase-code-resolve** --quick [...]"
+        ]
+    },
+    {
+        eyebrow: "The Polishing Gate",
+        title:   "Polish Your Changes",
+        body:    "After realizing the change, you analyze the current status quo — three ways. Logic " +
+                 "and control-flow defects, code-quality smells, and finally a holistic, " +
+                 "human-reviewer-style critique of the staged diff with an approve or reject " +
+                 "verdict and **line-cited, severity-tagged findings**.",
+        skills:  [
+            "**/ase-code-lint** --severity=MEDIUM --auto",
+            "**/ase-docs-proofread** --auto",
+            "**/ase-code-analyze** --severity=MEDIUM"
+        ]
+    },
+    {
+        eyebrow: "The Quality Gate",
+        title:   "Review Your Own Diff First",
+        body:    "Before anyone else sees the branch, you review it yourself by a " +
+                 "human-reviewer-style critique of the staged diff with an approve or reject verdict.",
+        skills:  [
+            "**/ase-meta-review** --severity=MEDIUM"
+        ]
+    },
+    {
+        eyebrow: "Wrapping Up",
+        title:   "Land It and Leave It Clean Behind",
+        body:    "The last half hour is the one usually skipped: the `CHANGELOG.md` entry is " +
+                 "derived from the actual commit history, and " +
+                 "the documentation is reconciled against the code that just changed. You end the " +
+                 "day with **no paperwork debt** carried into tomorrow.",
+        skills:  [
+            "**/ase-meta-changelog**",
+            "**/ase-sync-reconcile** --source CODE --target DOCS"
+        ]
+    }
+]
+
+/*  render lightweight inline markup in the moment bodies: turn "**...**" into
+    <b>...</b>, "*...*" into <i>...</i>, and "`...`" into <code>...</code>. The
+    "**" pass runs first so the single-asterisk pass never consumes a bold
+    marker.  */
+const inline = (text: string) => text
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/\*(.+?)\*/g,     "<i>$1</i>")
+    .replace(/`(.+?)`/g,       "<code>$1</code>")
+---
+<section id="day" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
+    <SectionGlow variant="section" side="right"/>
+
+    <header class="ase-section-head" data-reveal>
+        <h2 class="ase-h2">
+            <Annotation flat class="hidden sm:block right-0 -translate-x-2/3">
+                See which skill fires<br/>
+                at which moment!
+            </Annotation>
+            A Day in the <span class="text-accent">Engineering Life</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            Features are easy to list and hard to imagine. So here is
+            an excerpt from the <b>ASE</b> feature set again &mdash;
+            this time as the working day of a single Software Engineer,
+            from the first plan of the morning to the last commit of
+            the evening. Click any command to open the man-page of its
+            skill.
+        </p>
+    </header>
+
+    <ol class="relative mt-12 flex list-none flex-col gap-10 p-0">
+        {/*  the continuous rail behind the numbered dots: shown from the "lg"
+             breakpoint upwards only, where the rail column actually exists.
+             Its "1.25rem" offset is half of the 2.5rem dot diameter, so the
+             line runs exactly through the centres of the dots.  */}
+        <span
+            class="pointer-events-none absolute inset-y-0 left-[1.25rem] hidden w-px -translate-x-1/2 bg-brand-800 lg:block"
+            aria-hidden="true"
+        ></span>
+
+        {moments.map((moment, index) => (
+            <li class="grid grid-cols-1 items-left gap-y-2 lg:grid-cols-[2.0rem_0.75fr_1.0fr] lg:gap-x-10" data-reveal>
+                <div class="self-start">
+                    <span class="relative z-10 flex h-[2.5rem] w-[2.5rem] items-center justify-center rounded-full border border-border-strong bg-brand-800 font-bold text-white">
+                        {index + 1}
+                    </span>
+                </div>
+                <div class="self-start">
+                    <p class="ase-eyebrow">{moment.eyebrow}</p>
+                    <h3 class="ase-h3">{moment.title}</h3>
+                    <p class="mt-3 text-foreground-secondary ase-justify" set:html={inline(moment.body)} />
+                </div>
+                <Terminal class="mt-4 lg:mt-28" prefix="Claude Code" commands={moment.skills} help/>
+            </li>
+        ))}
+    </ol>
+</section>
