@@ -97,14 +97,14 @@ Report the derived <parts/> with the following <template/>, emitting
 column edges of the table, and do *not* output any further explanation:
 
 <template>
-<ase-tpl-head title="DISSECTION" subtitle="<arg1/>">
+<ase-tpl-head title="DISSECTION" subtitle="<arg1/>"/>
 
 | Part            | Id           | Scope    | Rationale    |
 | --------------- | ------------ | -------- | ------------ |
 | **P<part-no/>** | `<part-id/>` | <scope/> | <rationale/> |
 | [...]           | [...]        | [...]    | [...]        |
 
-<ase-tpl-foot title="DISSECTION" subtitle="<arg1/>">
+<ase-tpl-foot title="DISSECTION" subtitle="<arg1/>"/>
 </template>
 
 </define>
