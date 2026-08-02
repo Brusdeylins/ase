@@ -40,13 +40,14 @@ const { commands = [], tabs, prefix = "Terminal", title = "", copy = false, help
     caller-supplied tabs or a single unlabeled panel from `commands`  */
 const panels = tabs ?? [ { label: "", commands } ]
 
-/*  split a command into runs, flagging any **...** span so it can be tinted in
-    the accent colour while the rest stays plain. This lets callers explicitly
-    highlight arbitrary parts of a command.  */
+/*  split a command into runs, carrying per run the tint class it is rendered
+    with (empty for the plain rest). A **...** span lets callers explicitly
+    highlight arbitrary parts of a command, while a "[...]" placeholder is
+    dimmed to grey and rendered with a real ellipsis.  */
 const tokenize = (cmd: string) =>
-    cmd.split(/(\*\*[^*]*\*\*)/).filter((part) => part !== "").map((part) => ({
-        text: /^\*\*[^*]*\*\*$/.test(part) ? part.slice(2, -2) : part,
-        meta: /^\*\*[^*]*\*\*$/.test(part)
+    cmd.split(/(\*\*[^*]*\*\*|\[\.\.\.\])/).filter((part) => part !== "").map((part) => ({
+        text: /^\*\*[^*]*\*\*$/.test(part) ? part.slice(2, -2) : part === "[...]" ? "[…]" : part,
+        tint: /^\*\*[^*]*\*\*$/.test(part) ? "text-brand-400" : part === "[...]" ? "text-foreground-muted" : ""
     }))
 
 /*  the raw command without the **...** highlight markers and with embedded
@@ -94,7 +95,7 @@ const helpId = (cmd: string) => plain(cmd).replace(/^\//, "").split(/\s+/)[0]
                             t.text.split("\n").map((line, i) => (
                                 <>
                                     {i > 0 && <br/>}
-                                    {t.meta ? <span class="text-brand-400">{line}</span> : line}
+                                    {t.tint ? <span class={t.tint}>{line}</span> : line}
                                 </>
                             ))
                         ))}</code>
