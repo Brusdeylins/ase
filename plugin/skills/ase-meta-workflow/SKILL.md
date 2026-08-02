@@ -361,13 +361,13 @@ Procedure
         <elseif condition="<ase-agent-tool/> is `codex`">
         <ase-tpl-hint level="minimal">
         Run `/skills` to check that the new skill was picked up.
-        Mention `$<new-skill-name/>` to execute the new generated workflow.
+        Mention `$<new-skill-name/>` to execute the newly generated workflow.
         </ase-tpl-hint>
         </elseif>
         <else>
         <ase-tpl-hint level="minimal">
         Run `/reload-skills` to reload all skills.
-        Run `/<new-skill-name/>` to execute the new generated workflow.
+        Run `/<new-skill-name/>` to execute the newly generated workflow.
         </ase-tpl-hint>
         </else>
 
