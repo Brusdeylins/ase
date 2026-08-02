@@ -5,6 +5,9 @@ ChangeLog
 0.9.54 (2026-08-02)
 -------------------
 
+- IMPROVEMENT [docs]: place commands into tabs in Terminal components for cleaner display (`Terminal.astro`, `Section-Setup.astro`)
+- IMPROVEMENT [docs]: mention the author's software development and engineering experience (`Section-Author.astro`)
+- IMPROVEMENT [docs]: link the footer copyright author to the internal author section (`Page-Footer.astro`)
 - UPDATE [docs, infr]: upgraded NPM dependencies (`pages/package.json`, `tool/package.json`)
 
 0.9.53 (2026-08-02)
