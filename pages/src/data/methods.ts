@@ -21,6 +21,7 @@ export const methods: Method[] = [
     { name: "YAGNI",                    note: "build for today only",      skill: "ase-code-craft"      },
     { name: "Steelman",                 note: "strengthen a thesis",       skill: "ase-meta-steelman"   },
     { name: "Devil's Advocate",         note: "challenge a thesis",        skill: "ase-meta-diaboli"    },
+    { name: "Hegelian Dialectics",      note: "synthesize the opposites",  skill: "ase-meta-diaboli"    },
     { name: "Weighted Decision Matrix", note: "compare alternatives",      skill: "ase-meta-evaluate"   },
     { name: "ELI5",                     note: "explain it simply",         skill: "ase-meta-eli5"       },
     { name: "KISS",                     note: "keep design simple",        skill: "ase-code-craft"      },
@@ -41,13 +42,12 @@ export const methods: Method[] = [
     { name: "Peer Review",              note: "judge diff before merge",   skill: "ase-meta-review"     },
     { name: "Round-Trip Engineering",   note: "keep artifacts in sync",    skill: "ase-sync-reconcile"  },
     { name: "Blast Radius",             note: "see what a change hits",    skill: "ase-meta-diff"       },
-    { name: "Build vs. Buy",            note: "reuse or roll your own",    skill: "ase-arch-discover"   },
+    { name: "Make-or-Buy",              note: "reuse or roll your own",    skill: "ase-arch-discover"   },
     { name: "Single Responsibility",    note: "one reason to change",      skill: "ase-code-craft"      },
     { name: "Code Smells",              note: "spot known bad patterns",   skill: "ase-code-lint"       },
     { name: "Big-O Analysis",           note: "cost of an algorithm",      skill: "ase-code-analyze"    },
     { name: "Code Churn",               note: "find the busiest files",    skill: "ase-code-insight"    },
-    { name: "Decision Records (ADR)",   note: "capture the why",           skill: "ase-arch-analyze"    },
-    { name: "Conventional Commits",     note: "type the commit subject",   skill: "ase-meta-commit"     },
-    { name: "Pre-Mortem",               note: "imagine it already failed", skill: "ase-meta-diaboli"    }
+    { name: "Decision Records (ADR)",   note: "capture the why",           skill: "ase-sync-reconcile"  },
+    { name: "Conventional Changes",     note: "standard commit log entry", skill: "ase-meta-changelog"  }
 ]
 
