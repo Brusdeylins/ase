@@ -374,17 +374,29 @@ Template Patterns
 
     </template>
 
--   When `<ase-tpl-head title="<title/>"/>` should be expanded, use
-    (where <raw-title/> is the visible un-styled text `⧉ ASE: <title/>`,
-    <raw-title-len/> is the number of characters in <raw-title/>, and
-    <bar/> is the `─` character repeated exactly max(0, 67 - <raw-title-len/>)
-    times -- clamped to zero so an over-long title never yields a negative
-    count -- the very same bar-width rule as `<ase-tpl-foot/>` and
-    `<ase-tpl-boxed/>`, so equal visible text yields equal total width):
+-   When `<ase-tpl-head title="<title/>"[ subtitle="<subtitle/>"]/>`
+    should be expanded use the following helper placeholders and then
+    the following <template/>:
+
+    -   <if condition="<subtitle/> is not empty">
+            Set <raw-title>⧉ ASE: <title/>: <subtitle/></raw-title>.
+            Set <render-title>⧉ ASE: **`<title/>`**: `<subtitle/>`</render-title>.
+        </if>
+        <else>
+            Set <raw-title>⧉ ASE: <title/></raw-title>.
+            Set <render-title>⧉ ASE: **`<title/>`**</render-title>.
+        </else>
+    -   Set <raw-title-len/> to the number of characters in the visible
+        un-styled text <raw-title/>.
+    -   Set <bar/> to the `─` character repeated exactly max(0, 67 - <raw-title-len/>)
+        times -- clamped to zero so an over-long title never yields a
+        negative count -- the very same bar-width rule as `<ase-tpl-foot/>`
+        and `<ase-tpl-boxed/>`, so equal visible text yields equal total
+        width.
 
     <template>
 
-    ╭────━━━━**(** ⧉ ASE: **`<title/>`** **)**━━━━────<bar/>┈┈┈┈┈┈┈┈┈┈
+    ╭────━━━━**(** <render-title/> **)**━━━━────<bar/>┈┈┈┈┈┈┈┈┈┈
 
     </template>
 
@@ -396,16 +408,27 @@ Template Patterns
 
     </template>
 
--   When `<ase-tpl-foot title="<title/>"/>` should be expanded, use
-    (where <raw-title/> is the visible un-styled text `⧉ ASE: <title/>`,
-    <raw-title-len/> is the number of characters in <raw-title/>,
-    and <bar/> is the `─` character repeated exactly max(0, 67 -
-    <raw-title-len/>) times -- clamped to zero so an over-long title
-    never yields a negative count):
+-   When `<ase-tpl-foot title="<title/>"[ subtitle="<subtitle/>"]/>`
+    should be expanded use the following helper placeholders and then
+    the following <template/>:
+
+    -   <if condition="<subtitle/> is not empty">
+            Set <raw-title>⧉ ASE: <title/>: <subtitle/></raw-title>.
+            Set <render-title>⧉ ASE: **`<title/>`**: `<subtitle/>`</render-title>.
+        </if>
+        <else>
+            Set <raw-title>⧉ ASE: <title/></raw-title>.
+            Set <render-title>⧉ ASE: **`<title/>`**</render-title>.
+        </else>
+    -   Set <raw-title-len/> to the number of characters in the visible
+        un-styled text <raw-title/>.
+    -   Set <bar/> to the `─` character repeated exactly max(0, 67 - <raw-title-len/>)
+        times -- clamped to zero so an over-long title never yields a
+        negative count.
 
     <template>
 
-    ╰────━━━━**(** ⧉ ASE: **`<title/>`** **)**━━━━────<bar/>┈┈┈┈┈┈┈┈┈┈
+    ╰────━━━━**(** <render-title/> **)**━━━━────<bar/>┈┈┈┈┈┈┈┈┈┈
 
     </template>
 
