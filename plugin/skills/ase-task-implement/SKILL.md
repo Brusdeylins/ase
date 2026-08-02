@@ -1,6 +1,6 @@
 ---
 name: ase-task-implement
-argument-hint: "[--help|-h] [--next|-n <option>[,...]] [<id>]"
+argument-hint: "[--help|-h] [--next|-n <option>[,...]] [--worktree|-w] [<id>]"
 description: >
     Implement current or given task plan.
     Use when the user calls to "implement", "realize" or "apply" the
@@ -21,7 +21,7 @@ Implement a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-implement"
-    arg2="--next|-n=(none|DONE|DELETE)... --int-reuse-task">
+    arg2="--next|-n=(none|DONE|DELETE)... --worktree|-w --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -59,7 +59,94 @@ Procedure
         or `ase-task-edit` skills first to create a task plan. Then
         immediately stop processing this skill.
 
-3.  **Create Implementation:**
+3.  **Prepare WorkTree:**
+
+    <if condition="<getopt-option-worktree/> is not equal `true`">
+    No worktree was requested, so the implementation is applied directly
+    to the *current* working copy. Set <worktree-dir></worktree-dir>
+    (empty) and *skip* all remaining sub-steps of this step. Do not
+    output anything.
+    </if>
+
+    1.  Set <worktree-name><ase-task-id/></worktree-name>. The worktree
+        is *never* named by an own option value: it always carries the
+        unique *task id*, so the worktree directory and its branch stay
+        unambiguously tied to the very task plan implemented in them.
+        The task id is a plain identifier by construction, hence it is
+        directly usable as both a directory and a branch name. Do not
+        output anything.
+
+    2.  Determine the *repository root* by running the corresponding
+        command (taken exactly as given) and capturing its output into
+        <repo-root/>:
+
+        `git rev-parse --show-toplevel`
+
+        <if condition="this command fails">
+        The current directory is no Git repository, so no worktree can be
+        created. Only output the following <template/> and then
+        immediately *STOP* processing the entire current skill, leaving
+        the working copy *untouched*:
+
+        <template>
+        ⧉ **ASE**: ☻ skill: **ase-task-implement**, ▶ ERROR: no Git repository -- cannot create worktree
+        </template>
+        </if>
+
+        Then set <worktree-dir><repo-root/>/.ase/worktree/<worktree-name/></worktree-dir>.
+
+    3.  Determine the *existing worktrees* and *existing branches* by
+        running the corresponding commands (taken exactly as given) and
+        capturing their outputs:
+
+        `git worktree list --porcelain`
+
+        `git branch --list`
+
+        <if condition="the worktree directory <worktree-dir/> or the branch <worktree-name/> already exists">
+        Only output the following <template/> and then immediately *STOP*
+        processing the entire current skill, leaving the existing
+        worktree, its branch, and the working copy *untouched*:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ ERROR: worktree or branch **<worktree-name/>** already exists
+        </template>
+
+        Directly *after* this error <template/>, and *before* stopping,
+        give the corrective hint by expanding the following (which,
+        depending on the configured <ase-guidance-level/>, may expand
+        into nothing and hence emit no output at all):
+
+        <ase-tpl-hint level="minimal">
+        Remove the existing worktree via `git worktree remove` and `git branch -d`, or rename the task via `/ase-task-rename` to implement it under a still unused worktree name.
+        </ase-tpl-hint>
+        </if>
+
+    4.  Create the worktree by running the corresponding command (taken
+        exactly as given), which creates the directory *and* -- named
+        after its last path component -- the branch <worktree-name/> from
+        `HEAD`. The `.ase` directory is usually git-ignored, so the
+        worktree itself never shows up as a change:
+
+        `git worktree add "<worktree-dir/>"`
+
+        <if condition="this command fails">
+        Only output the following <template/> and then immediately *STOP*
+        processing the entire current skill, leaving the working copy
+        *untouched*:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ ERROR: worktree **<worktree-name/>** failed to create
+        </template>
+        </if>
+
+    5.  Only output the following <template/>:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ◉ worktree: **.ase/worktree/<worktree-name/>**, ▶ status: **worktree created**
+        </template>
+
+4.  **Create Implementation:**
 
     1.  Perform a *final implementation* of the task plan
         by modifying the *artifacts* with a corresponding, complete
@@ -72,6 +159,19 @@ Procedure
         in <task-content/>. But the specification text in <task-content/> always
         overrules the implementation draft in the `IMPLEMENTATION DRAFT`
         section of <task-content/>.
+
+        <if condition="<worktree-dir/> is not empty">
+        The change set *MUST* land *exclusively inside* the worktree
+        <worktree-dir/>: resolve *every* file path of the task plan
+        relative to <worktree-dir/> instead of the original working copy,
+        and run *every* verification command (build, tests, linter,
+        type-checker, program execution) with <worktree-dir/> as its
+        working directory. You *MUST* *NEVER* modify, stage, stash,
+        revert, or commit anything *outside* of this worktree. Leave the
+        worktree *uncommitted*: do *not* run `git add` and do *not* run
+        `git commit`, so the user keeps full control over the final
+        commit.
+        </if>
 
         <if condition="<task-content/> does NOT contain a `##  VERIFICATION` section heading">
         The task plan deliberately *omits* the `##  VERIFICATION`
@@ -89,7 +189,17 @@ Procedure
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan implemented**
         </template>
 
-4.  **Decide Next Step:**
+    3.  <if condition="<worktree-dir/> is not empty">
+        Give the closing hint by expanding the following (which,
+        depending on the configured <ase-guidance-level/>, may expand
+        into nothing and hence emit no output at all):
+
+        <ase-tpl-hint level="minimal">
+        The change set is uncommitted in `.ase/worktree/<worktree-name/>` on branch `<worktree-name/>` -- review and commit it there, then remove the worktree via `git worktree remove`.
+        </ase-tpl-hint>
+        </if>
+
+5.  **Decide Next Step:**
 
     1.  *Determine next step*:
 

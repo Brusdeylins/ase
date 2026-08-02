@@ -5,6 +5,7 @@ ChangeLog
 0.9.54 (2026-08-02)
 -------------------
 
+- FEATURE [code]: added a `--worktree`/`-w` option to `ase-task-implement` for applying the change set inside a dedicated Git WorkTree
 - FEATURE [docs]: added full-text search box with AND-combined keywords, fuzzy-matching fallback, and highlighted hits to the man-page browser
 - IMPROVEMENT [docs]: place commands into tabs in Terminal components for cleaner display (`Terminal.astro`, `Section-Setup.astro`)
 - IMPROVEMENT [docs]: mention the author's software development and engineering experience (`Section-Author.astro`)
