@@ -93,7 +93,7 @@ Procedure
         Determine them *read-only* by running the corresponding command
         (taken exactly as given):
 
-        `git -C "<repo-root/>" ls-files --others --exclude-standard`
+        `git -C "<repo-root/>" -c core.quotepath=off ls-files --others --exclude-standard`
 
         *Skip* every listed entry below the `.ase/` directory -- it
         carries *ASE*'s own state and the worktrees created by this very
@@ -212,7 +212,7 @@ Procedure
 
         `git worktree prune`
 
-        `git branch -D <part-id/>`
+        `git branch -D "<part-id/>"`
         </if>
 
     </step>

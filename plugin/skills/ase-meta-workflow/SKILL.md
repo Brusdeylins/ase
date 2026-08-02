@@ -222,9 +222,9 @@ Procedure
         Set <dir><skill-dir-local/></dir>.
         </else>
 
-        Then set <target-skill><dir/>/<new-skill-name/>/SKILL.md</target-skill>.
-        Expand a leading `~` in <target-skill/> into the absolute home
+        Expand a leading `~` in <dir/> into the absolute home
         directory of the user, as the file tools accept absolute paths only.
+        Then set <target-skill><dir/>/<new-skill-name/>/SKILL.md</target-skill>.
         Do not output anything.
 
     5.  Check whether <target-skill/> already exists.
