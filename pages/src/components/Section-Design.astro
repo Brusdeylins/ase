@@ -6,10 +6,13 @@
 */
 
 /*  "Design Decisions" section: an overview paragraph plus a two-column
-    layout describing the four distinct design decisions behind ASE.  */
+    layout describing the four distinct design decisions behind ASE, closed
+    by the methodology-provenance strip which backs the "Built-In
+    Methodology" decision with the actual, named methods.  */
 
-import SectionGlow from "./Section-Glow.astro"
-import Annotation  from "./Annotation.astro"
+import SectionGlow      from "./Section-Glow.astro"
+import Annotation       from "./Annotation.astro"
+import MethodologyStrip from "./Methodology-Strip.astro"
 ---
 <section id="design" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <SectionGlow variant="section" side="left"/>
@@ -151,4 +154,16 @@ import Annotation  from "./Annotation.astro"
             </li>
         </ul>
     </div>
+
+    <header class="mt-20 ase-section-head" data-reveal>
+        <h2 class="ase-h2">
+            Trust Built-In <span class="text-accent">Methodology</span>
+        </h2>
+        <p class="ase-lead">
+            <b>ASE</b> bakes the following classic, well-known methods
+            directly into its skills &mdash; click any of them to open the
+            man-page of the skill implementing it:
+        </p>
+    </header>
+    <MethodologyStrip class="mt-6"/>
 </section>

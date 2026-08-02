@@ -1,0 +1,37 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  "Methodology Provenance" strip: a compact, centered grid of chips naming the
+    classic methods baked into the ASE skills. Each chip carries a
+    `data-help-id`, so the global trigger handler of `Modal-Help.astro` opens the
+    man-page of the implementing skill — hence no own script is needed here. The
+    outer frame and the responsive column count mirror the skill-catalog card of
+    `Section-Usage.astro`; `class` is forwarded so callers set their own margin.  */
+
+import { methods } from "../data/methods.ts"
+
+interface Props {
+    class?: string
+}
+const { class: className = "" } = Astro.props
+---
+<div class={`overflow-hidden rounded-xl border border-border-strong p-6 shadow-xl sm:p-8 ${className}`} data-reveal>
+    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        {methods.map((method) => (
+            <button
+                type="button"
+                data-help-id={method.skill}
+                aria-label={`${method.name}, implemented by ${method.skill}`}
+                class="group cursor-grab rounded-lg border border-border-strong px-3 py-2 text-center transition-colors hover:border-accent"
+            >
+                <span class="block text-sm font-bold leading-tight text-accent transition-colors group-hover:text-white">{method.name}</span>
+                <span class="mt-0.5 block text-xs leading-tight text-foreground-muted">{method.note}</span>
+            </button>
+        ))}
+    </div>
+</div>
+
