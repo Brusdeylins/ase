@@ -49,10 +49,15 @@ for (const id of fs.readdirSync(skillsDir)) {
         into in-modal `data-help-id` triggers, so they reuse the existing
         click handler and jump within the open modal instead of pointing at
         a non-existent off-site page.  */
-    const html = (marked.parse(md) as string).replace(
+    const body = (marked.parse(md) as string).replace(
         /href="\.\.\/([a-z0-9_-]+)\/help\.md"/g,
         (_m, ref) => `data-help-id="${ref}"`
     )
+
+    /*  prepend a separator heading naming the skill. It is invisible in the
+        regular one-doc-at-a-time mode and only surfaces once the pane enters
+        search mode, where it separates the stacked result documents.  */
+    const html = `<p class="help-doc-head">${id} - ${title}</p>` + body
 
     helpDocs[id] = { id, title, html }
 }
@@ -66,10 +71,23 @@ for (const group of skillGroups)
 ---
 <Modal id="help-modal" label="Skill help">
     <div class="grid h-[85vh] w-[94vw] max-w-6xl grid-cols-1 overflow-hidden rounded-lg border border-border-strong bg-background shadow-2xl sm:grid-cols-[16rem_1fr]">
-        {/* sticky grouped skill-index sidebar */}
-        <nav class="hidden self-start overflow-y-auto border-r border-border-strong bg-background-secondary p-4 sm:block sm:max-h-[85vh]" aria-label="Skill index">
+        {/* sticky grouped skill-index sidebar, headed by the full-text search
+            box. As the whole sidebar is desktop-only ("hidden sm:block"), so is
+            the search box it carries. */}
+        <nav class="hidden overflow-y-auto border-r border-border-strong bg-background-secondary p-4 sm:block sm:max-h-[85vh]" aria-label="Skill index">
+            <div class="mb-4">
+                <input
+                    type="search"
+                    id="help-search"
+                    autocomplete="off"
+                    placeholder="Search man-pages…"
+                    aria-label="Search man-pages"
+                    class="w-full rounded-md border border-border-strong bg-background px-2 py-1 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none"
+                />
+                <p id="help-search-hint" class="mt-2 hidden text-xs italic text-foreground-muted">no matches</p>
+            </div>
             {skillGroups.map((group) => (
-                <div class="mb-4">
+                <div class="mb-4" data-help-group>
                     <p class="text-xs font-bold uppercase tracking-wider text-accent">{group.label}</p>
                     <ul class="mt-2 space-y-0.5 text-sm leading-tight text-foreground-secondary">
                         {group.skills.filter((id) => helpDocs[id]).map((id) => (
@@ -93,43 +111,308 @@ for (const group of skillGroups)
             {orderedDocs.map((doc) => (
                 <article id={`help-${doc.id}`} class="help-md hidden" set:html={doc.html} />
             ))}
+            <p id="help-search-none" class="hidden text-center text-foreground-muted"></p>
         </div>
     </div>
 </Modal>
 
 {/* open on a trigger click and show only the chosen skill; the Modal shell
     handles closing. Sidebar and `SEE ALSO` links switch the shown doc within
-    the already-open modal. */}
-<script is:inline>
-    (function () {
-        const helpModal = document.getElementById("help-modal")
-        const helpPane  = document.getElementById("help-modal-pane")
-        if (!helpModal || !helpPane) return
-        function select (id) {
-            const target = document.getElementById("help-" + id)
-            if (!target) return
-            /*  show only the selected article, hide all the others.  */
-            helpPane.querySelectorAll(".help-md").forEach(function (a) {
-                a.classList.toggle("hidden", a !== target)
-            })
-            /*  highlight the matching sidebar entry as active (white + bold).  */
-            helpModal.querySelectorAll("nav [data-help-id]").forEach(function (b) {
+    the already-open modal. The search box on top of the sidebar switches the
+    pane into a "searching" mode, in which the sidebar is reduced to the
+    matching skills and the pane stacks all their man-pages at once, with every
+    keyword hit wrapped in a <mark>. This script is bundled (not `is:inline`),
+    so it can import the fuzzy-matching helpers from NPM. */}
+<script>
+    import { diceCoefficient } from "dice-coefficient"
+    import levenshtein         from "fast-levenshtein"
+
+    const helpModal = document.getElementById("help-modal")
+    const helpPane  = document.getElementById("help-modal-pane")
+    const helpInput = document.getElementById("help-search") as HTMLInputElement | null
+    const helpHint  = document.getElementById("help-search-hint")
+    const helpNone  = document.getElementById("help-search-none")
+    if (helpModal && helpPane && helpInput && helpHint && helpNone) {
+        /*  shortest keyword still eligible for fuzzy matching: below it the
+            "levenshtein <= 2" branch degenerates and would pull in nearly
+            every short word of the corpus.  */
+        const FUZZY_MIN = 4
+
+        /*  per-article caches, all filled lazily on first use: the lower-cased
+            plain text and the distinct words used for matching, plus the
+            pristine markup used to undo the injected <mark> wrappers.
+            `highlighted` tracks which articles currently carry such wrappers
+            and hence need that undo.  */
+        const docText     = new Map<string, string>()
+        const docWords    = new Map<string, Set<string>>()
+        const docHTML     = new Map<string, string>()
+        const highlighted = new Set<string>()
+
+        /*  the corpus vocabulary and, per keyword, its fuzzy-equivalent words
+            within that vocabulary -- the latter cached across keystrokes, as
+            the fuzzy comparison is by far the expensive part.  */
+        const vocab = new Set<string>()
+        const fuzzy = new Map<string, string[]>()
+
+        /*  the currently shown doc, the doc to fall back to once the running
+            search is cleared again, and the pending keystroke debounce.  */
+        let shown    = ""
+        let restore  = ""
+        let debounce = 0
+
+        const articles = (): HTMLElement[] =>
+            Array.from(helpPane.querySelectorAll<HTMLElement>(".help-md"))
+
+        /*  highlight the matching sidebar entry as active (white + bold).  */
+        const markActive = (id: string) => {
+            helpModal.querySelectorAll("nav [data-help-id]").forEach((b) => {
                 const active = b.getAttribute("data-help-id") === id
                 b.classList.toggle("text-white", active)
                 b.classList.toggle("font-bold", active)
             })
+        }
+
+        /*  restore the pristine markup of every article that was highlighted,
+            so the next query always starts over from undamaged HTML.  */
+        const unhighlight = () => {
+            highlighted.forEach((id) => {
+                const article = document.getElementById("help-" + id)
+                if (article) article.innerHTML = docHTML.get(id)!
+            })
+            highlighted.clear()
+        }
+
+        /*  wrap every keyword hit in the article's text nodes into a <mark>.
+            Walking the text nodes (instead of replacing in the raw HTML) keeps
+            tags and attributes untouched.  */
+        const highlight = (article: HTMLElement, id: string, re: RegExp) => {
+            if (!docHTML.has(id)) docHTML.set(id, article.innerHTML)
+            const walker = document.createTreeWalker(article, NodeFilter.SHOW_TEXT)
+            const nodes: Text[] = []
+            let node: Node | null
+            while ((node = walker.nextNode()) !== null)
+                nodes.push(node as Text)
+            let hit = false
+            nodes.forEach((text) => {
+                const value = text.nodeValue ?? ""
+                const frag  = document.createDocumentFragment()
+                let last = 0
+                let m: RegExpExecArray | null
+                re.lastIndex = 0
+                while ((m = re.exec(value)) !== null) {
+                    if (m.index > last)
+                        frag.appendChild(document.createTextNode(value.slice(last, m.index)))
+                    const mark = document.createElement("mark")
+                    mark.className   = "help-hit"
+                    mark.textContent = m[0]
+                    frag.appendChild(mark)
+                    last = m.index + m[0].length
+                }
+                if (last === 0) return
+                if (last < value.length)
+                    frag.appendChild(document.createTextNode(value.slice(last)))
+                text.parentNode?.replaceChild(frag, text)
+                hit = true
+            })
+            if (hit) highlighted.add(id)
+        }
+
+        /*  leave search mode: drop the highlights, un-reduce the sidebar, and
+            hide both no-match notices. Which doc is shown is left to the caller.  */
+        const leave = () => {
+            unhighlight()
+            helpPane.classList.remove("searching")
+            helpModal.querySelectorAll("nav [data-help-id]").forEach((b) => {
+                b.parentElement?.classList.remove("hidden")
+            })
+            helpModal.querySelectorAll("[data-help-group]").forEach((g) => {
+                g.classList.remove("hidden")
+            })
+            helpHint.classList.add("hidden")
+            helpNone.classList.add("hidden")
+        }
+
+        const select = (id: string) => {
+            const target = document.getElementById("help-" + id)
+            if (!target) return
+            /*  within an active search a still-matching target is merely
+                scrolled to inside the stacked result list, while a target
+                filtered out of the results (e.g. a `SEE ALSO` cross-link)
+                leaves search mode first.  */
+            if (helpPane.classList.contains("searching")) {
+                if (!target.classList.contains("hidden")) {
+                    markActive(id)
+                    target.scrollIntoView({ block: "start" })
+                    return
+                }
+                helpInput.value = ""
+                leave()
+            }
+            /*  show only the selected article, hide all the others.  */
+            shown = id
+            articles().forEach((a) => {
+                a.classList.toggle("hidden", a !== target)
+            })
+            markActive(id)
             /*  reset the pane to the top of the freshly shown man-page.  */
             helpPane.scrollTop = 0
         }
-        document.querySelectorAll("[data-help-id]").forEach(function (trigger) {
-            trigger.addEventListener("click", function () {
-                const id     = trigger.getAttribute("data-help-id") || ""
+
+        const escapeRE = (s: string): string =>
+            s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+
+        /*  fill the text/word caches of an article and feed the corpus
+            vocabulary. Words are the same `[^a-zA-Z0-9]+`-delimited segments
+            `@rse/stx` matches its task names by, so "ase-code-craft" also
+            contributes "ase", "code", and "craft".  */
+        const index = (article: HTMLElement, id: string) => {
+            if (docText.has(id)) return
+            const text  = (article.textContent ?? "").toLowerCase()
+            const words = new Set(text.split(/[^a-z0-9]+/).filter(Boolean))
+            words.forEach((w) => { vocab.add(w) })
+            docText.set(id, text)
+            docWords.set(id, words)
+        }
+
+        /*  the fuzzy-equivalent vocabulary words of a keyword, using the very
+            "fuzzy match" strategy of `@rse/stx`. Keywords shorter than
+            FUZZY_MIN are taken literally, as the edit distance alone would
+            otherwise equate them with almost anything.  */
+        const fuzzyWords = (keyword: string): string[] => {
+            if (fuzzy.has(keyword)) return fuzzy.get(keyword)!
+            const words: string[] = []
+            if (keyword.length >= FUZZY_MIN)
+                vocab.forEach((given) => {
+                    if (
+                        Math.abs(keyword.length - given.length) <= 1
+                        && (
+                            diceCoefficient(keyword, given) >= 0.50
+                            || levenshtein.get(keyword, given) <= 2
+                        )
+                    )
+                        words.push(given)
+                })
+            fuzzy.set(keyword, words)
+            return words
+        }
+
+        /*  the alternation matching everything worth highlighting in a doc:
+            the keywords themselves as plain substrings, plus that doc's own
+            fuzzy variants as whole words. Longest alternative first, so a
+            variant is never cut short by the keyword nested inside it.  */
+        const buildRE = (keywords: string[], variants: string[]): RegExp => {
+            const alts = keywords.map((k) => ({ len: k.length, src: escapeRE(k) }))
+                .concat(variants.map((w) => ({
+                    len: w.length,
+                    src: "(?<![a-z0-9])" + escapeRE(w) + "(?![a-z0-9])"
+                })))
+            alts.sort((a, b) => b.len - a.len)
+            return new RegExp(alts.map((a) => a.src).join("|"), "gi")
+        }
+
+        /*  collect the docs in which *every* keyword occurs (AND logic), along
+            with the fuzzy variants that carried them, as those have to be
+            highlighted too.  */
+        const collect = (keywords: string[], useFuzzy: boolean) => {
+            const hits: { article: HTMLElement, id: string, variants: string[] }[] = []
+            articles().forEach((article) => {
+                const id    = article.id.slice(5)
+                const text  = docText.get(id)!
+                const words = docWords.get(id)!
+                const variants: string[] = []
+                const hit = keywords.every((k) => {
+                    if (text.indexOf(k) >= 0) return true
+                    if (!useFuzzy) return false
+                    const near = fuzzyWords(k).filter((w) => words.has(w))
+                    variants.push(...near)
+                    return near.length > 0
+                })
+                if (hit) hits.push({ article, id, variants })
+            })
+            return hits
+        }
+
+        /*  apply the current query in up to two passes: literal substrings
+            first and, only if those match nothing at all, the fuzzy variants.
+            The edit-distance neighborhood of a short word is wide enough to
+            reach half the corpus, so it must stay a *fallback* for misspelled
+            queries instead of diluting a correctly spelled one.  */
+        const search = () => {
+            const query    = helpInput.value.trim()
+            const keywords = query.toLowerCase().split(/\s+/).filter(Boolean)
+            unhighlight()
+            if (keywords.length === 0) {
+                leave()
+                select(restore || shown)
+                return
+            }
+            if (!helpPane.classList.contains("searching")) restore = shown
+            helpPane.classList.add("searching")
+            /*  the vocabulary must be complete before the first keyword is
+                fuzzy-resolved against it, so index all articles up front.  */
+            articles().forEach((article) => { index(article, article.id.slice(5)) })
+            let hits = collect(keywords, false)
+            const fuzzed = hits.length === 0
+            if (fuzzed) hits = collect(keywords, true)
+            const matched = hits.map((h) => h.id)
+            articles().forEach((article) => {
+                article.classList.toggle("hidden", matched.indexOf(article.id.slice(5)) < 0)
+            })
+            hits.forEach((h) => { highlight(h.article, h.id, buildRE(keywords, h.variants)) })
+            /*  reduce the sidebar to the matching skills, dropping the group
+                headings that ran empty in the process.  */
+            helpModal.querySelectorAll("nav [data-help-id]").forEach((b) => {
+                b.parentElement?.classList.toggle("hidden", matched.indexOf(b.getAttribute("data-help-id") ?? "") < 0)
+            })
+            helpModal.querySelectorAll("[data-help-group]").forEach((g) => {
+                g.classList.toggle("hidden", g.querySelectorAll("li:not(.hidden)").length === 0)
+            })
+            helpNone.textContent = "No man-page matches all keywords of “" + query + "”."
+            helpHint.textContent = matched.length > 0 ? "fuzzy matches" : "no matches"
+            helpHint.classList.toggle("hidden", matched.length > 0 && !fuzzed)
+            helpNone.classList.toggle("hidden", matched.length > 0)
+            helpPane.scrollTop = 0
+        }
+
+        helpInput.addEventListener("input", () => {
+            window.clearTimeout(debounce)
+            debounce = window.setTimeout(search, 120)
+        })
+
+        document.querySelectorAll("[data-help-id]").forEach((trigger) => {
+            trigger.addEventListener("click", () => {
+                const id     = trigger.getAttribute("data-help-id") ?? ""
                 const inside = helpModal.contains(trigger)
-                if (!inside) helpModal.style.display = "grid"
+                /*  a fresh open always starts from a clean, unfiltered state.  */
+                if (!inside) {
+                    helpModal.style.display = "grid"
+                    helpInput.value = ""
+                    leave()
+                }
                 select(id)
             })
         })
-    })()
+
+        /*  external search triggers (the box below the on-page skill catalog):
+            Enter opens the modal, adopts the typed query, and runs the search
+            right away. The pane is first parked on the initial man-page, so
+            clearing the query inside the modal falls back onto a real doc
+            instead of an empty pane.  */
+        document.querySelectorAll<HTMLInputElement>("input[data-help-search]").forEach((input) => {
+            input.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter") return
+                event.preventDefault()
+                helpModal.style.display = "grid"
+                helpInput.value = ""
+                leave()
+                select(articles()[0]?.id.slice(5) ?? "")
+                const query = input.value.trim()
+                if (query === "") return
+                helpInput.value = query
+                search()
+            })
+        })
+    }
 </script>
 
 <style is:global>
@@ -192,5 +475,30 @@ for (const group of skillGroups)
         border: 0;
         padding: 0;
         background: transparent;
+    }
+    /*  the per-document separator heading, prepended at build time: invisible
+        in the regular one-doc-at-a-time mode and only surfacing in search mode,
+        where the pane stacks all matching man-pages.  */
+    .help-md .help-doc-head {
+        display: none;
+    }
+    #help-modal-pane.searching .help-md .help-doc-head {
+        display: block;
+        margin: 2rem 0 1rem;
+        padding: 0.4rem 0.75rem;
+        border-radius: 0.3rem;
+        background: var(--brand-800);
+        color: var(--brand-200);
+        font-family: var(--font-display);
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-align: center;
+    }
+    /*  the keyword hits wrapped by the search: blue background, white text.  */
+    .help-md mark.help-hit {
+        border-radius: 0.2rem;
+        background: var(--brand-600);
+        color: #fff;
+        padding: 0 0.1em;
     }
 </style>

@@ -120,7 +120,7 @@ import { skillGroups } from "../data/skills.ts"
             </div>
         </div>
 
-        <div class="overflow-hidden rounded-xl border border-border-strong p-6 shadow-xl sm:p-8" data-reveal>
+        <div class="relative overflow-hidden rounded-xl border border-border-strong p-6 shadow-xl sm:p-8" data-reveal>
             <div class="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-5">
                 {skillGroups.map((group) => {
                     /*  split a group label like "Standalone Mode 1/2" around
@@ -145,6 +145,31 @@ import { skillGroups } from "../data/skills.ts"
                         </div>
                     )
                 })}
+            </div>
+
+            {/* bottom-right entry points into the man-page browser: a search
+                box which opens the modal with its query already applied (see
+                the `data-help-search` handler in `Modal-Help.astro`), stacked
+                on top of the plain opener. The latter is the very same
+                `data-help-id` trigger the individual skill names use, pointed
+                at the first catalog entry, so the modal opens on a rendered
+                man-page instead of an empty pane. Both are absolutely parked
+                in the bottom-right corner of the surrounding box, into the
+                empty space the shorter catalog columns leave -- except on the
+                single-column phone layout, where no such space exists and they
+                stay in the regular flow below the catalog. */}
+            <div class="mt-6 flex flex-col items-end gap-2 sm:absolute sm:bottom-8 sm:right-8 sm:mt-0">
+                <input
+                    type="search"
+                    data-help-search
+                    autocomplete="off"
+                    placeholder="Search man-pages…"
+                    aria-label="Search man-pages"
+                    class="w-64 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none"
+                />
+                <button type="button" class="w-64 cursor-grab text-sm ase-btn" data-help-id={skillGroups[0].skills[0]}>
+                    Open Manpage Browser
+                </button>
             </div>
         </div>
 

@@ -16,6 +16,7 @@
         "@typescript-eslint/parser":              "8.65.0",
         "typescript-eslint":                      "8.65.0",
         "@stylistic/eslint-plugin":               "5.10.0",
+        "@types/fast-levenshtein":                "0.0.4",
         "eslint-plugin-astro":                    "3.0.1",
         "astro-eslint-parser":                    "3.0.0",
         "globals":                                "17.8.0",
@@ -31,6 +32,8 @@
         "@tailwindcss/vite":                      "4.3.3",
         "typopro-web":                            "4.2.8",
         "marked":                                 "18.0.7",
+        "dice-coefficient":                       "2.1.1",
+        "fast-levenshtein":                       "3.0.0",
         "plyr":                                   "3.8.4",
         "typed.js":                               "3.0.0"
     },
