@@ -43,7 +43,7 @@ Analyze and Resolve Source Code Problems
 
     1.  Call the Agent:
 
-        <agent description="Reresolve P<n/>"
+        <agent description="Resolve P<n/>"
             subagent_type="general-purpose"
             isolation="worktree"
             run_in_background=true>
