@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.54 (2026-08-02)
+-------------------
+
+- UPDATE [docs, infr]: upgraded NPM dependencies (`pages/package.json`, `tool/package.json`)
+
 0.9.53 (2026-08-02)
 -------------------
 
