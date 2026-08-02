@@ -16,10 +16,16 @@ ChangeLog
 - FEATURE [docs]: added a "Day in the Life" timeline section annotating an engineer's workday with the firing ASE skills (`Section-Day.astro`, `index.astro`)
 - FEATURE [docs]: made the skill man-pages deep-linkable via the `#help/<skill-id>` URL fragment, including History API integration, document title sync, and a copy-link button (`Modal-Help.astro`)
 - FEATURE [docs]: add a sticky install call-to-action bar to the website
+- FEATURE [docs]: added an optional `help` mode to the Terminal component, turning each command row into a `data-help-id` trigger for its skill man-page (`Terminal.astro`)
+- IMPROVEMENT [code]: forbid guessing missing tool call parameters, demand verification of dependency APIs against local sources or the web, and require cleanup of scratch files (`ase-constitution.md`)
 - IMPROVEMENT [docs]: place commands into tabs in Terminal components for cleaner display (`Terminal.astro`, `Section-Setup.astro`)
+- IMPROVEMENT [docs]: render `[...]` placeholders dimmed and with a real ellipsis in Terminal commands (`Terminal.astro`)
 - IMPROVEMENT [docs]: mention the author's software development and engineering experience (`Section-Author.astro`)
 - IMPROVEMENT [docs]: link the footer copyright author to the internal author section (`Page-Footer.astro`)
+- IMPROVEMENT [docs]: polished the header navigation spacing and made the methodology strip buttons stand out (`Page-Header.astro`, `Methodology-Strip.astro`)
+- UPDATE [docs]: updated the workflow diagram (`docs/workflow.svg`, `pages/public/assets/workflow.svg`)
 - UPDATE [docs, infr]: upgraded NPM dependencies (`pages/package.json`, `tool/package.json`)
+- REFACTOR [docs]: bundled the productivity table into the Fit Check panel and dropped the now obsolete highlights section (`Section-Fit.astro`, `Section-Highlights.astro`)
 
 0.9.53 (2026-08-02)
 -------------------
