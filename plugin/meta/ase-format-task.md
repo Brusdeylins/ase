@@ -10,6 +10,7 @@ Every *task* uses a strict and fixed format:
 
 ⎈   Created:  <timestamp-created/>
 ⚙   Modified: <timestamp-modified/>
+☯   Kind:     <task-kind/>
 
 ##  CONTEXT
 
@@ -48,6 +49,20 @@ You *MUST* honor the following hints on this *task* format:
 
 -   The <task-id/> has to be substituted with the current value of
     <ase-task-id/> in the current session context.
+
+-   The `☯   Kind:` line states the *kind of change* the task plan
+    describes, and hence which *operation-specific tenet set* of the
+    **ASE Tenets** a subsequent preflight or implementation has to
+    honor. The <task-kind/> value is *strictly* one of `CRAFTING`,
+    `REFACTORING`, or `RESOLVING`, and the line is column-aligned with
+    the `⎈   Created:` and `⚙   Modified:` lines above it.
+
+-   The `☯   Kind:` line is *optional*: a skill *authoring* or
+    *updating* a task plan *CAN* update an already present line or pass
+    it through *verbatim* and *MAY* create a missing one by *inferring*
+    the kind from the plan content (defaulting to `CRAFTING`). A
+    `--dry` run *never* drops this line, as `--dry` only omits the
+    `##  VERIFICATION` section.
 
 -   The <timestamp-created/> is the timestamp when this task plan was
     created. The <timestamp-modified/> is the timestamp when this

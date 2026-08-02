@@ -32,6 +32,8 @@ for a corresponding, *complete source code change set*.
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-task.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-common-code.md
 
 Procedure
 ---------
@@ -58,6 +60,10 @@ Procedure
         use the `ase-code-resolve`, `ase-code-refactor`, `ase-code-craft`,
         or `ase-task-edit` skills first to create a task plan. Then
         immediately stop processing this skill.
+
+    3.  Internalize the tenets stated by the plan:
+
+        <expand name="code-tenets-from-plan"></expand>
 
 3.  **Create Implementation Draft:**
 

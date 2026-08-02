@@ -19,6 +19,13 @@ a task plan by modifying the corresponding *artifacts* with a complete
 section produced by `ase-task-preflight` is used as a hint - the plain
 plan content always overrules the draft.
 
+The *kind of change* stated by the plan's `☯   Kind:` header line
+(`CRAFTING`, `REFACTORING`, or `RESOLVING`) selects which
+*operation-specific tenet set* of the **ASE Tenets** is internalized
+before any artifact is touched, in addition to the always applying
+**GENERIC TENETS**. If a plan carries no such line, the kind is
+*inferred* from the plan content, defaulting to `CRAFTING`.
+
 If the task plan deliberately *omits* the `##  VERIFICATION` section
 (as produced by `ase-code-craft`, `ase-code-refactor`,
 `ase-code-resolve`, or `ase-task-edit` when invoked with `--dry`),

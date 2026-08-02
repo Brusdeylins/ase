@@ -40,6 +40,7 @@ to `true`, <getopt-option-dry/> to `true`, and <getopt-option-next/> to
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-common-code.md
 
 Procedure
 ---------
@@ -181,11 +182,11 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
 
 3.  <step id="STEP 3: Internalize Problem Resolution Tenets">
 
-    1.  You *MUST* internalize and strictly honor the **GENERIC TENETS**,
-        and the **RESOLVING TENETS** of the **ASE Tenets** when updating
-        in the following. Do not output anything.
+    1.  <task-kind>RESOLVING</task-kind>
 
-    2.  Do not output anything in this STEP 3.
+    2.  <expand name="code-tenets" arg1="<task-kind/>"></expand>
+
+    3.  Do not output anything in this STEP 3.
 
     </step>
 
@@ -305,9 +306,9 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
     2.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the
         `ase` MCP server and use the `text` field of its response for
         <timestamp-created/> and <timestamp-modified/> information. Then
-        insert the current <ase-task-id/>, <timestamp-created/>, and
-        <timestamp-modified/> information and calculate the number of
-        words <words/> of <task-content/>.
+        insert the current <ase-task-id/>, <timestamp-created/>,
+        <timestamp-modified/>, and <task-kind/> information and calculate
+        the number of words <words/> of <task-content/>.
 
     3.  You then *MUST* *save* the resulting plan content with the
         `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`.

@@ -19,6 +19,13 @@ draft for a corresponding, complete *artifact change set* in
 an `IMPLEMENTATION DRAFT` section (replacing any previous draft).
 No source files are modified.
 
+The *kind of change* stated by the plan's `☯   Kind:` header line
+(`CRAFTING`, `REFACTORING`, or `RESOLVING`) selects which
+*operation-specific tenet set* of the **ASE Tenets** is internalized
+before the draft is produced, in addition to the always applying
+**GENERIC TENETS**. If a plan carries no such line, the kind is
+*inferred* from the plan content, defaulting to `CRAFTING`.
+
 After the preflight, the user is asked whether to stop, hand
 off to `ase-task-edit`, or hand off to `ase-task-implement`,
 unless `--next` pre-selects this choice.

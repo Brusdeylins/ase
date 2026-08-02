@@ -5,6 +5,9 @@ ChangeLog
 0.9.54 (2026-08-02)
 -------------------
 
+- IMPROVEMENT [code]: factored the tenet internalization of `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` into the new shared `ase-common-code.md`
+- FEATURE [code]: added an optional `☯   Kind:` header line to the task plan format, stating the kind of change (`CRAFTING`, `REFACTORING`, `RESOLVING`) and hence the tenet set to honor (`ase-format-task.md`)
+- FEATURE [code]: let `ase-task-preflight` and `ase-task-implement` honor the tenet set stated by the task plan, with inference fallback for plans without a `Kind` line
 - FEATURE [code]: added a `--worktree`/`-w` option to `ase-task-implement` for applying the change set inside a dedicated Git WorkTree
 - FEATURE [docs]: added full-text search box with AND-combined keywords, fuzzy-matching fallback, and highlighted hits to the man-page browser
 - FEATURE [docs]: added a blunt "ASE is for you / ASE is not for you" Fit Check panel for fast self-qualification
