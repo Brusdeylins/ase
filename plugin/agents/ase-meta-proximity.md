@@ -115,8 +115,8 @@ store those facts in the placeholder named `<arg2/>`.
     mere synonym or spelling variant of it. You *MUST* *NOT* output
     anything related to this step.
 
-4.  Return *exclusively* the following <template/> (no prose, no
-    preamble, no summary, and no Markdown formatting):
+4.  Return *exclusively* as the last message the following <template/>
+    (no prose, no preamble, no summary, and no Markdown formatting):
 
     <template>
     TOPIC:   <topic/>

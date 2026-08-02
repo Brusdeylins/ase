@@ -9,6 +9,6 @@ tools:
     - "WebSearch"
 ---
 
-Just perform the given *query* `$ARGUMENTS` and
-give back the *plain responses* without any modifications.
+Just perform the given *query* `$ARGUMENTS` and as the last message give
+back the *plain responses* without any modifications.
 

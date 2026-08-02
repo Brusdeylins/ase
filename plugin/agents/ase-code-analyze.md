@@ -248,15 +248,13 @@ Workflow
             }
         </template>
 
-5.  Return *exclusively* a single fenced JSON block (no prose,
-    no preamble, no summary) of the following shape:
+5.  You *MUST* *NOT* propose, apply, or render any code
+    changes yourself. Instead, return *exclusively* as the last message
+    a single JSON block (no markdown, no prose, no preamble, no summary)
+    of the following shape:
 
     ```json
     [
         <problems/>
     ]
     ```
-
-6.  You *MUST* *NOT* propose, apply, or render any code
-    changes yourself.
-
