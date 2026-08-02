@@ -355,7 +355,7 @@ Procedure
         <if condition="<ase-agent-tool/> is `copilot`">
         <ase-tpl-hint level="minimal">
         Run `/skills reload` to reload all skills.
-        Run `/<new-skill-name/>` to execute the new generated workflow.
+        Run `/<new-skill-name/>` to execute the newly generated workflow.
         </ase-tpl-hint>
         </if>
         <elseif condition="<ase-agent-tool/> is `codex`">
