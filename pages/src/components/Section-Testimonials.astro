@@ -1,0 +1,122 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  "Testimonials" section: named practitioner endorsements, rotated one at a
+    time as a large pull quote by the <Swiper> carousel below. The section
+    renders nothing at all while no (real, consented) endorsement exists, so an
+    empty data file never surfaces as an empty carousel.  */
+
+import SectionGlow      from "./Section-Glow.astro"
+import { testimonials } from "../data/testimonials.ts"
+import {
+    Swiper,
+    SwiperWrapper,
+    SwiperSlide,
+    SwiperButtonPrev,
+    SwiperButtonNext,
+    SwiperPagination
+}                       from "astro-swiper"
+---
+{testimonials.length > 0 && (
+<section id="testimonials" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+    <SectionGlow variant="section" side="left"/>
+
+    <header class="ase-section-head" data-reveal>
+        <h2 class="ase-h2">
+            Voices from the <span class="text-accent">Practitioners</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            Beyond the feature list: how <b>ASE</b> holds up in the daily work
+            of the <b>Software Developers</b> and <b>Software Architects</b>{" "}
+            who fold it into their own engineering practice &mdash; in their own words.
+        </p>
+    </header>
+
+    {/*  the pull-quote carousel: one testimonial at a time, auto-rotating
+        (but only while the section is actually on screen), navigable by the
+        side arrows, the keyboard, and the bullets below.  */}
+    {/*  the carousel sits in the same framed box as the other content blocks
+        of the page and is kept noticeably narrower than the section itself, so
+        the pull quotes wrap into several short lines instead of stretching
+        across the full content width.  */}
+    <div class="mx-auto mt-12 max-w-xl overflow-hidden rounded-xl border border-border-strong p-3 shadow-xl sm:p-4" data-reveal>
+        <Swiper
+            class="testimonials"
+            options={{
+                slidesPerView: 1,
+                loop:          true,
+                autoplay:      { delay: 8000, disableOnInteraction: false },
+                navigation:    { prevEl: ".testimonials-prev", nextEl: ".testimonials-next" },
+                pagination:    { el: ".testimonials-pagination", clickable: true },
+                a11y:          { enabled: true },
+                keyboard:      { enabled: true },
+                astro:         { intersectionObserver: { controlAutoplay: true } }
+            }}
+        >
+            <SwiperWrapper>
+                {testimonials.map((testimonial) => (
+                    <SwiperSlide class="px-10 sm:px-12">
+                        <blockquote class="text-center">
+                            <p class="text-xl italic leading-snug text-foreground sm:text-2xl">
+                                &ldquo;{testimonial.quote}&rdquo;
+                            </p>
+                            {testimonial.name && (
+                                <footer class="mt-2 text-sm sm:text-base">
+                                    <span class="text-foreground-secondary">&mdash; {testimonial.name}</span>
+                                </footer>
+                            )}
+                        </blockquote>
+                    </SwiperSlide>
+                ))}
+            </SwiperWrapper>
+            <SwiperButtonPrev class="testimonials-prev"/>
+            <SwiperButtonNext class="testimonials-next"/>
+        </Swiper>
+
+        {/*  the pagination lives *outside* the carousel: Swiper resolves a
+            string selector document-wide, so it must not carry the default
+            ".swiper-pagination" class (which the hero carousel also looks
+            for), and outside the container it is not clipped by its
+            "overflow: hidden" either.  */}
+        <SwiperPagination class="testimonials-pagination mt-4 flex items-center justify-center" addDefaultClass={false}/>
+    </div>
+</section>
+)}
+
+<style is:global>
+    /*  theme the testimonial carousel to the brand palette. Swiper's own
+        "--swiper-navigation-color" and "--swiper-pagination-color" defaults
+        are declared on ":root" against its default theme color, so they are
+        re-declared here rather than just overriding "--swiper-theme-color"
+        (which would already have been substituted at ":root").  */
+    .testimonials.testimonials {
+        --swiper-navigation-color:        var(--brand-600);
+        --swiper-navigation-size:         28px;
+        --swiper-navigation-sides-offset: 0px;
+    }
+
+    /*  every slide spans the full height of the carousel (which is dictated by
+        the longest quote) and centers its own quote within it, both
+        horizontally and vertically. The flex properties are declared here
+        rather than as utility classes on the slide, so they reliably beat
+        Swiper's own ".swiper-slide { display: block; height: 100% }" rule
+        independent of the stylesheet order.  */
+    .testimonials .swiper-slide {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: auto;
+    }
+
+    /*  the detached bullet row: Swiper's own horizontal bullet margins still
+        apply, so only the centering is added here.  */
+    .testimonials-pagination {
+        --swiper-pagination-color:                    var(--brand-500);
+        --swiper-pagination-bullet-inactive-color:    var(--brand-400);
+        --swiper-pagination-bullet-inactive-opacity:  0.35;
+    }
+</style>

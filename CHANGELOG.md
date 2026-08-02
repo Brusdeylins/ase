@@ -9,6 +9,7 @@ ChangeLog
 - FEATURE [docs]: added full-text search box with AND-combined keywords, fuzzy-matching fallback, and highlighted hits to the man-page browser
 - FEATURE [docs]: added a blunt "ASE is for you / ASE is not for you" Fit Check panel for fast self-qualification
 - FEATURE [docs]: add a methodology provenance strip naming the classic methods baked into the skills and linking each to its manpage
+- FEATURE [docs]: added a testimonials pull-quote carousel for named practitioner endorsements
 - IMPROVEMENT [docs]: place commands into tabs in Terminal components for cleaner display (`Terminal.astro`, `Section-Setup.astro`)
 - IMPROVEMENT [docs]: mention the author's software development and engineering experience (`Section-Author.astro`)
 - IMPROVEMENT [docs]: link the footer copyright author to the internal author section (`Page-Footer.astro`)
