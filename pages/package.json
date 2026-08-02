@@ -26,7 +26,7 @@
         "@astrojs/sitemap":                       "3.7.3",
         "@astro-community/astro-embed-youtube":   "0.5.10",
         "astro-robots-txt":                       "1.0.0",
-        "astro-swiper":                           "2.8.1",
+        "astro-swiper":                           "2.9.0",
         "tailwindcss":                            "4.3.3",
         "@tailwindcss/vite":                      "4.3.3",
         "typopro-web":                            "4.2.8",
