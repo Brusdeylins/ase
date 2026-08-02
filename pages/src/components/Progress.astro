@@ -6,19 +6,32 @@
 */
 
 /*  shared scroll-progress logic for the page, driving (when present) the
-    Progress-Bar (#scroll-progress), the Progress-Ring (#back-to-top-ring), and
-    the back-to-top button's visibility/click (#back-to-top). Each element is
-    optional — the logic no-ops for any it doesn't find — so this can sit
-    alongside either, both, or neither presentational component.
+    Progress-Bar (#scroll-progress), the Progress-Ring (#back-to-top-ring), the
+    back-to-top button's visibility/click (#back-to-top), and the Sticky-CTA
+    bar's visibility (#sticky-cta). Each element is optional — the logic no-ops
+    for any it doesn't find — so this can sit alongside either, both, or neither
+    presentational component. The Sticky-CTA visibility additionally consults
+    the #setup section and the #page-footer, standing the bar down while either
+    of them is on screen.
 
     Throttled via requestAnimationFrame; vendored/adapted from Astro Rocket.  */
 ---
 <script is:inline>
     (function () {
-        const bar  = document.getElementById("scroll-progress")
-        const btt  = document.getElementById("back-to-top")
-        const ring = document.getElementById("back-to-top-ring")
-        let ticking = false
+        const bar    = document.getElementById("scroll-progress")
+        const btt    = document.getElementById("back-to-top")
+        const ring   = document.getElementById("back-to-top-ring")
+        const cta    = document.getElementById("sticky-cta")
+        const setup  = document.getElementById("setup")
+        const footer = document.getElementById("page-footer")
+        let ticking  = false
+
+        /*  whether an element (if present at all) intersects the viewport  */
+        function onScreen(el) {
+            if (!el) return false
+            const rect = el.getBoundingClientRect()
+            return rect.top < window.innerHeight && rect.bottom > 0
+        }
         function update() {
             ticking = false
             const doc = document.documentElement
@@ -30,6 +43,16 @@
                 const show = doc.scrollTop > 400
                 btt.style.opacity = show ? "1" : "0"
                 btt.style.pointerEvents = show ? "auto" : "none"
+            }
+            if (cta) {
+                /*  the sticky install bar is shown throughout the page, but
+                    stands down while the Setup section is on screen (where the
+                    very same command is already shown in its terminal boxes)
+                    and once the footer is reached (where it would optically
+                    disrupt the page ending).  */
+                const show = !onScreen(setup) && !onScreen(footer)
+                cta.style.opacity = show ? "1" : "0"
+                cta.style.pointerEvents = show ? "auto" : "none"
             }
         }
         function onScroll() {
