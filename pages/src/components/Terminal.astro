@@ -30,10 +30,11 @@ interface Props {
     prefix?:   string
     title?:    string
     copy?:     boolean
+    help?:     boolean
     class?:    string
 }
 
-const { commands = [], tabs, prefix = "Terminal", title = "", copy = false, class: className = "" } = Astro.props
+const { commands = [], tabs, prefix = "Terminal", title = "", copy = false, help = false, class: className = "" } = Astro.props
 
 /*  normalize both content variants into a uniform panel list: either the
     caller-supplied tabs or a single unlabeled panel from `commands`  */
@@ -52,6 +53,12 @@ const tokenize = (cmd: string) =>
     "\n" wrap points folded back to spaces, so the copied text is the actual
     single-line shell command.  */
 const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1").replace(/\n/g, " ")
+
+/*  the ASE skill id addressed by a command row: strip the leading "/" and drop
+    everything from the first option or argument onwards. Used only under the
+    `help` prop, where each row becomes a trigger for that skill's man page in
+    the help modal (wired globally by the Modal-Help component).  */
+const helpId = (cmd: string) => plain(cmd).replace(/^\//, "").split(/\s+/)[0]
 ---
 <div class={className}>
     <div class="overflow-hidden rounded-xl border border-border-strong bg-background-elevated/60 text-[0.7875rem] leading-snug shadow-xl sm:text-[0.9rem]" data-terminal>
@@ -80,7 +87,10 @@ const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1").replace(/\n
                 {panel.commands.map((cmd) => (
                     <div class="group flex items-start gap-3 font-mono tracking-[-0.03em]">
                         <span class="select-none text-brand-300">❯</span>
-                        <code class="code-plain flex-1 text-foreground">{tokenize(cmd).map((t) => (
+                        <code
+                            class:list={[ "code-plain flex-1 text-foreground", help && "cursor-grab transition-colors hover:text-accent" ]}
+                            data-help-id={help ? helpId(cmd) : undefined}
+                        >{tokenize(cmd).map((t) => (
                             t.text.split("\n").map((line, i) => (
                                 <>
                                     {i > 0 && <br/>}
