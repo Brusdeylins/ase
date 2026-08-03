@@ -98,7 +98,7 @@ Set <args></args> (set args to empty).
         Set <words-before><words/></words-before> (remember the loaded
         word count for the strictly-smaller check in step 3).
 
-        <if condition="<task-content/> contains '⎈   Created:  <text/>'">
+        <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (extract the
         original creation timestamp so it can be re-inserted unchanged
         into the condensed <task-content/> in step 3).
@@ -125,10 +125,11 @@ Set <args></args> (set args to empty).
         and unchanged*. Honor the following ruleset *strictly*:
 
         1.  *Preserve-exactly (never alter)*: the plan <format/>
-            structure (the headings `#`/`##`, all three `##  CONTEXT`,
-            `##  CHANGES`, and `##  VERIFICATION` sections, the
-            `Created:`/`Modified:` lines, and
-            the `- **<aspect/>**:` bullet labels), all *code spans* and
+            structure (the frontmatter block with its `Id:`, `Created:`,
+            `Modified:`, `Status:`, `Properties:`, and `Kind:` keys,
+            the headings `#`/`##`, all
+            three `##  CONTEXT`, `##  CHANGES`, and `##  VERIFICATION`
+            sections, and the `- **<aspect/>**:` bullet labels), all *code spans* and
             code blocks, technical terms, file paths, identifiers,
             numbers, severities (`LOW`/`MEDIUM`/`HIGH`/`ACCEPTED`), and
             the `*<aspect/>*` emphasis highlighting convention.

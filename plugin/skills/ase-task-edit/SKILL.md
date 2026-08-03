@@ -322,13 +322,13 @@ Set <args></args> (set args to empty).
     `PREFLIGHT`, or declines/cancels in the dialog of step 3.4:
 
     1.  *Update timestamp*:
-        <if condition="<task-content/> contains '⚙   Modified:' AND <task-content-dirty/> is 'true'">
+        <if condition="the frontmatter of <task-content/> carries a `Modified:` key AND <task-content-dirty/> is 'true'">
         Update <timestamp-modified/> with the current time in
         ISO-style format, which has to be determined by calling the
         `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
         MCP server and use the `text` field of its response. Update
-        the `⚙   Modified: ...` line of <task-content/> with the new
-        `⚙   Modified: <timestamp-modified/>`.
+        the `Modified: ...` frontmatter key of <task-content/> with the
+        new <timestamp-modified/> value.
         Do not output anything.
         </if>
 
@@ -346,6 +346,27 @@ Set <args></args> (set args to empty).
         </if>
 
     3.  *Render plan*: Treat <task-content/> as *verbatim* Markdown.
+
+        For the *rendering only*, drop the leading *frontmatter* block --
+        both `---` delimiters and all of their keys -- and instead place
+        the following column-aligned glyph lines *before* the
+        `#   TASK: <title/>` heading, separated from it by an empty line,
+        omitting the line of every key absent from the frontmatter. The
+        glyph lines *MUST* stay *above* the heading, exactly where the
+        frontmatter block sits in the plan file, and *MUST NOT* be moved
+        below it. This keeps the `---` delimiters from rendering as a
+        horizontal rule plus a *setext heading*. This rewrite is
+        *display-only* and *MUST NOT* change <task-content/> itself:
+
+        <format>
+        ◉   **Id:**         <task-id/>
+        ⎈   **Created:**    <timestamp-created/>
+        ⚙   **Modified:**   <timestamp-modified/>
+        ◐   **Status:**     <task-status/>
+        ⚑   **Properties:** <task-properties/>
+        ☯   **Kind:**       <task-kind/>
+        </format>
+
         Only output the following <template/>, so the user
         can read the plan and react to it. If <task-content/> is longer
         than 90 lines and a `##  IMPLEMENTATION DRAFT` section (from the
@@ -355,9 +376,9 @@ Set <args></args> (set args to empty).
         Use the following <template/>:
 
         <template>
-        <ase-tpl-head title="TASK"/>
+        <ase-tpl-head title="TASK" subtitle="<task-id/>"/>
         <task-content/>
-        <ase-tpl-foot title="TASK"/>
+        <ase-tpl-foot title="TASK" subtitle="<task-id/>"/>
         </template>
 
     4.  *Determine next step*:

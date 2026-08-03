@@ -64,8 +64,8 @@ A05 COMPLEXITY     A10 SMELLS           A15 PERFORMANCE     A20 DEAD-CODE
 
 `--exclude`|`-e`=*aspect*[`,`...]:
     Remove the given comma-separated list of aspect ids from the checked
-    code quality aspects. Applied *after* `--include`, so `-i A01,A02 -e
-    A02` checks `A01` only.
+    code quality aspects. Applied *after* `--include`, so
+    `-i A01,A02 -e A02` checks `A01` only.
 
 ##  ARGUMENTS
 

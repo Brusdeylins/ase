@@ -126,7 +126,7 @@ Procedure
         (append extracted text to instruction).
         </if>
 
-    6.  <if condition="<task-content/> contains '⎈   Created:  <text/>'">
+    6.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
         timestamp-created to extracted text)
         </if>

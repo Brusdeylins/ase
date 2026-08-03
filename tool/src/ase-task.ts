@@ -22,6 +22,13 @@ import { Config, configSchema, parseScope }   from "./ase-config.js"
 import { Markdown }                           from "./ase-markdown.js"
 import { readStdin, writeStdout }             from "./ase-stdio.js"
 
+/*  the lifecycle states a task plan can be in, i.e., the accepted
+    values of the "Status:" frontmatter key of a task plan  */
+export const taskStates = [
+    "DRAFTED", "REJECTED", "APPROVED", "DEFERRED",
+    "STARTED", "BLOCKED", "COMPLETED", "CANCELLED"
+]
+
 /*  reusable functionality: persisted task plans under
     <project>/<basedir>/TASK-<id>.md (driven by the
     "project.artifact.task.{basedir,files}" configuration)  */
@@ -160,12 +167,59 @@ export class Task {
         return migrated
     }
 
-    /*  load a task; returns empty string if no task exists  */
+    /*  the legacy task plan header lines, each mapped onto the
+        frontmatter key which superseded it  */
+    private static legacy = [
+        { key: "Created",  re: /^⎈[ \t]+Created:[ \t]*(.*)$/m  },
+        { key: "Modified", re: /^⚙[ \t]+Modified:[ \t]*(.*)$/m },
+        { key: "Kind",     re: /^☯[ \t]+Kind:[ \t]*(.*)$/m     }
+    ]
+
+    /*  render a single frontmatter line with a column-aligned key  */
+    private static frontLine (key: string, value: string): string {
+        return (key + ":").padEnd(12) + value
+    }
+
+    /*  normalize a legacy task plan -- one carrying its metadata in the
+        "#   TASK <id>: <title>" heading and the "⎈"/"⚙"/"☯" glyph header
+        lines -- into the current Markdown frontmatter shape, so every
+        consumer sees a single plan shape only; a plan already carrying a
+        frontmatter block, and any content without a task heading at all,
+        is passed through verbatim -- in particular, absent optional keys
+        are never materialized, as they read as their default value  */
+    static normalize (id: string, text: string): string {
+        if (text === "" || /^---\r?\n/.test(text))
+            return text
+        const heading = /^#[ \t]+TASK(?:[ \t]+[A-Za-z0-9_-]+)?[ \t]*:[ \t]*(.*)$/m.exec(text)
+        if (heading === null)
+            return text
+
+        /*  lift the glyph header lines into their frontmatter keys, with
+            the task id taken from the authoritative filename-derived id  */
+        let body    = text.replace(heading[0], "")
+        const front = [ Task.frontLine("Id", id) ]
+        for (const legacy of Task.legacy) {
+            const m = legacy.re.exec(body)
+            if (m === null)
+                continue
+            front.push(Task.frontLine(legacy.key, m[1].trim()))
+            body = body.replace(m[0], "")
+        }
+
+        /*  re-assemble the plan from the frontmatter block, the reduced
+            heading, and the body stripped of its now leading blank lines  */
+        return `---\n${front.join("\n")}\n---\n\n` +
+            `#   TASK: ${heading[1].trim()}\n\n` +
+            body.replace(/^(?:[ \t]*\r?\n)+/, "")
+    }
+
+    /*  load a task, normalized into the current Markdown frontmatter
+        shape; returns empty string if no task exists  */
     static load (log: Log, id: string): string {
         const file = Task.path(log, id)
         if (!fs.existsSync(file))
             return ""
-        return fs.readFileSync(file, "utf8")
+        return Task.normalize(id, fs.readFileSync(file, "utf8"))
     }
 
     /*  save a task as UTF-8 text under the given id into the
@@ -189,10 +243,11 @@ export class Task {
     }
 
     /*  rename a task by moving its <project>/<basedir>/TASK-<oldId>.md file
-        to <project>/<basedir>/TASK-<newId>.md; the embedded
-        "#   TASK <id>:" heading inside the plan content is rewritten to
-        the new id; returns true on success, false if the source task does
-        not exist; throws if the target id already exists  */
+        to <project>/<basedir>/TASK-<newId>.md; the embedded "Id:"
+        frontmatter key inside the plan content is rewritten to the new id
+        (falling back to the "#   TASK <id>:" heading of a still legacy,
+        not yet normalized plan); returns true on success, false if the
+        source task does not exist; throws if the target id already exists  */
     static rename (log: Log, oldId: string, newId: string): boolean {
         const oldFile = Task.path(log, oldId)
         const newFile = Task.path(log, newId)
@@ -201,7 +256,9 @@ export class Task {
         if (fs.existsSync(newFile))
             throw new Error(`task: target id "${newId}" already exists`)
         const text    = fs.readFileSync(oldFile, "utf8")
-        const updated = text.replace(/(^#\s+TASK\s+)[A-Za-z0-9_-]+(\s*:)/m, `$1${newId}$2`)
+        const updated = /^---\r?\n/.test(text) ?
+            text.replace(/^(Id:[ \t]*)[A-Za-z0-9_-]+[ \t]*$/m, `$1${newId}`) :
+            text.replace(/(^#\s+TASK\s+)[A-Za-z0-9_-]+(\s*:)/m, `$1${newId}$2`)
         fs.mkdirSync(path.dirname(newFile), { recursive: true })
         fs.writeFileSync(newFile, updated, "utf8")
         fs.rmSync(oldFile, { force: true })
@@ -231,16 +288,56 @@ export class Task {
         return out
     }
 
-    /*  list all persisted tasks in lexicographic id order; if verbose is true,
-        each entry's `mtime` is set to the task file's modification time
-        formatted as "YYYY-MM-DD HH:MM", otherwise it is left undefined  */
-    static list (log: Log, verbose = false): { id: string, mtime: string | undefined }[] {
+    /*  read the "Status:" frontmatter key of a task plan file, falling back
+        to the "DRAFTED" default of the task plan format for a plan whose
+        frontmatter is absent or carries no such key  */
+    private static status (file: string): string {
+        const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(fs.readFileSync(file, "utf8"))
+        if (fm === null)
+            return "DRAFTED"
+        const m = /^Status:[ \t]*(\S+)[ \t]*$/m.exec(fm[1])
+        if (m === null)
+            return "DRAFTED"
+        return m[1]
+    }
+
+    /*  list all persisted tasks in lexicographic id order, each with the
+        `status` of its plan; if verbose is true, each entry's `mtime` is
+        set to the task file's modification time formatted as
+        "YYYY-MM-DD HH:MM", otherwise it is left undefined  */
+    static list (log: Log, verbose = false): { id: string, status: string, mtime: string | undefined }[] {
         const out = Task.scan(log).map((entry) => ({
-            id:    entry.id,
-            mtime: verbose ? DateTime.fromJSDate(entry.st.mtime).toFormat("yyyy-LL-dd HH:mm") : undefined
+            id:     entry.id,
+            status: Task.status(entry.file),
+            mtime:  verbose ? DateTime.fromJSDate(entry.st.mtime).toFormat("yyyy-LL-dd HH:mm") : undefined
         }))
         out.sort((a, b) => a.id.localeCompare(b.id))
         return out
+    }
+
+    /*  resolve an "include" and an "exclude" comma-separated lifecycle
+        state list into the effective state set a task plan has to be in
+        to be listed at all; the "none" sentinel and empty tokens are
+        silently dropped, an empty "include" list means all states, and
+        the "exclude" list is applied after the "include" list  */
+    static states (include: string, exclude: string): string[] {
+        const parse = (list: string) => list.split(",")
+            .map((token) => token.trim())
+            .filter((token) => token !== "" && token.toUpperCase() !== "NONE")
+            .map((token) => {
+                const state = token.toUpperCase()
+                if (!taskStates.includes(state))
+                    throw new Error(`task: invalid state "${token}" ` +
+                        `(expected one of: ${taskStates.join(", ")})`)
+                return state
+            })
+        const included = parse(include)
+        const excluded = parse(exclude)
+        const states   = (included.length > 0 ? included : taskStates)
+            .filter((state) => !excluded.includes(state))
+        if (states.length === 0)
+            throw new Error("task: options \"--include\" and \"--exclude\" cancel out to an empty state set")
+        return states
     }
 
     /*  purge tasks whose modification time is older than the given cutoff in
@@ -301,12 +398,23 @@ export default class TaskCommand {
         task
             .command("list")
             .description("List all persisted task ids, one per line")
-            .option("-v, --verbose", "also show the task file modification time as (YYYY-MM-DD HH:MM)")
-            .action(async (opts: { verbose?: boolean }) => {
-                const items = Task.list(this.log, opts.verbose ?? false)
+            .option("-v, --verbose", "also show the task plan status and the task file " +
+                "modification time as (YYYY-MM-DD HH:MM)")
+            .option("-i, --include <states>",
+                "comma-separated list of lifecycle states to list " +
+                `(${taskStates.join("|")}), or "none" for no restriction`,
+                "none")
+            .option("-e, --exclude <states>",
+                "comma-separated list of lifecycle states to not list " +
+                `(${taskStates.join("|")}), or "none" for no exclusion`,
+                "COMPLETED,CANCELLED")
+            .action(async (opts: { verbose?: boolean, include: string, exclude: string }) => {
+                const states = Task.states(opts.include, opts.exclude)
+                const items  = Task.list(this.log, opts.verbose ?? false)
+                    .filter((item) => states.includes(item.status))
                 for (const item of items) {
                     if (opts.verbose)
-                        await writeStdout(`${item.id}\t(${item.mtime})\n`)
+                        await writeStdout(`${item.id}\t${item.status}\t(${item.mtime})\n`)
                     else
                         await writeStdout(`${item.id}\n`)
                 }
@@ -429,7 +537,8 @@ export class TaskMCP {
             description:
                 "List all persisted tasks. " +
                 "Returns a `tasks` array (in lexicographic `id` order) where each item has the " +
-                "task `id`. If `verbose` is `true`, each item additionally has an `mtime` field " +
+                "task `id` and the `status` of its plan (the `Status:` frontmatter key, defaulting " +
+                "to `DRAFTED`). If `verbose` is `true`, each item additionally has an `mtime` field " +
                 "(last modification time of the task's `TASK-<id>.md` file, formatted as `YYYY-MM-DD HH:MM`). " +
                 "Returns an empty array if no tasks exist.",
             inputSchema:  {
@@ -438,8 +547,9 @@ export class TaskMCP {
             },
             outputSchema: {
                 tasks: z.array(z.object({
-                    id:    z.string().describe("task identifier"),
-                    mtime: z.string().optional()
+                    id:     z.string().describe("task identifier"),
+                    status: z.string().describe("task plan lifecycle status (`Status:` frontmatter key, default `DRAFTED`)"),
+                    mtime:  z.string().optional()
                         .describe("`TASK-<id>.md` modification time (`YYYY-MM-DD HH:MM`); only present if `verbose` is true")
                 })).describe("all persisted tasks in lexicographic id order")
             }
@@ -448,8 +558,8 @@ export class TaskMCP {
                 const verbose = args.verbose ?? false
                 const items   = Task.list(this.log, verbose)
                 const tasks   = verbose ?
-                    items.map((item) => ({ id: item.id, mtime: item.mtime ?? "" })) :
-                    items.map((item) => ({ id: item.id }))
+                    items.map((item) => ({ id: item.id, status: item.status, mtime: item.mtime ?? "" })) :
+                    items.map((item) => ({ id: item.id, status: item.status }))
                 const result  = { tasks }
                 return {
                     structuredContent: result,
@@ -466,7 +576,8 @@ export class TaskMCP {
             title: "ASE task load",
             description:
                 "Load a previously persisted task by `id`. " +
-                "Returns the task as `text`; returns an empty string if no task exists for the `id`.",
+                "Returns the task as `text`, normalized into the current Markdown frontmatter shape; " +
+                "returns an empty string if no task exists for the `id`.",
             inputSchema: {
                 id: z.string()
                     .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
@@ -544,7 +655,7 @@ export class TaskMCP {
             title: "ASE task rename",
             description:
                 "Rename a previously persisted task from `old` to `new` by moving the " +
-                "task `TASK-<id>.md` file and rewriting its embedded task heading. " +
+                "task `TASK-<id>.md` file and rewriting its embedded `Id:` frontmatter key. " +
                 "Returns a status `text` indicating whether the rename succeeded. " +
                 "Fails with an error if the target id already exists.",
             inputSchema: {

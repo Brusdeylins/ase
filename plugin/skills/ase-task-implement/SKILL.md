@@ -189,13 +189,42 @@ Procedure
         way.
         </if>
 
-    2.  Only output the following <template/>:
+    2.  Update the frontmatter of <task-content/> as follows, *creating*
+        each of the `Properties:`, `Status:`, and `Modified:` keys the
+        plan does not carry yet at its position in the key order of the
+        plan <format/>:
+
+        -   *Add* the value `implemented` to the `Properties:` key if it
+            is still absent, keeping all already present values.
+
+        -   *Add* the value `verified` to the `Properties:` key as well,
+            but *only* if the verification phase was actually performed
+            and succeeded -- hence *never* for a plan whose
+            `##  VERIFICATION` section is deliberately omitted.
+
+        -   Set the `Status:` key to `COMPLETED`, but *only* if the
+            change set was applied *completely* and *successfully* --
+            this traverses the `start` and `complete` transitions of the
+            state machine of the plan <format/> in one go. Otherwise
+            leave the `Status:` key *untouched*, as an incomplete run
+            transitioned nowhere.
+
+        -   Refresh the `Modified:` key with the current time in
+            ISO-style format, determined by calling the
+            `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
+            MCP server.
+
+        Then call the `ase_task_save(id: "<ase-task-id/>", text:
+        "<task-content/>")` tool of the `ase` MCP server to persist the
+        updated task plan. Do not output anything in this sub-step.
+
+    3.  Only output the following <template/>:
 
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan implemented**
         </template>
 
-    3.  <if condition="<worktree-dir/> is not empty">
+    4.  <if condition="<worktree-dir/> is not empty">
         Give the closing hint by expanding the following (which,
         depending on the configured <ase-guidance-level/>, may expand
         into nothing and hence emit no output at all):

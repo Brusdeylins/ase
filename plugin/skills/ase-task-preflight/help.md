@@ -16,14 +16,15 @@ The `ase-task-preflight` skill performs a *preflight* (dry-run,
 test-drive) of the *implementation* of a task plan by creating a
 draft for a corresponding, complete *artifact change set* in
 *unified diff* format. The draft is appended to the task plan as
-an `IMPLEMENTATION DRAFT` section (replacing any previous draft).
+an `IMPLEMENTATION DRAFT` section (replacing any previous draft) and
+the plan's `Properties:` frontmatter key gains the value `preflighted`.
 No source files are modified.
 
-The *kind of change* stated by the plan's `☯   Kind:` header line
+The *kind of change* stated by the plan's `Kind:` frontmatter key
 (`CRAFTING`, `REFACTORING`, or `RESOLVING`) selects which
 *operation-specific tenet set* of the **ASE Tenets** is internalized
 before the draft is produced, in addition to the always applying
-**GENERIC TENETS**. If a plan carries no such line, the kind is
+**GENERIC TENETS**. If a plan carries no such key, the kind is
 *inferred* from the plan content, defaulting to `CRAFTING`.
 
 After the preflight, the user is asked whether to stop, hand

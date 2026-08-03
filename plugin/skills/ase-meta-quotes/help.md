@@ -39,9 +39,10 @@ without any quote is rendered as `(none)`.
 
 Every quote is rendered on its own line and carries, where applicable,
 the suffixes `— <author>, <origin>` (in the two `ATTRIBUTED`
-quadrants, omitting whichever part is unknown), `[from proximity:
-<source-topic>]` (when the quote was contributed by a neighborhood topic
-under `--proximity` instead of by *topic-keywords* itself), and
+quadrants, omitting whichever part is unknown),
+`[from proximity: <source-topic>]` (when the quote was contributed by a
+neighborhood topic under `--proximity` instead of by *topic-keywords*
+itself), and
 `(unverified)` (when the exact wording or the attribution could not be
 established with confidence). The `(unverified)` marker is dropped as
 soon as the Internet/Web search under `--ground` confirms the wording and

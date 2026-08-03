@@ -2,6 +2,16 @@
 ChangeLog
 =========
 
+0.9.55 (2026-08-03)
+-------------------
+
+- FEATURE [code]: converted the `Created:`, `Modified:`, and `Kind:` meta-information of task plans into a Markdown frontmatter block
+- FEATURE [code]: moved the task id from the `#   TASK <id>:` heading into an `Id:` frontmatter key
+- FEATURE [code]: normalize legacy task plans into the Markdown frontmatter shape on load and rename them via their `Id:` frontmatter key
+- FEATURE [code]: added the task plan frontmatter keys `Status:` and `Properties:`
+- FEATURE [code]: added `--include`/`-i` and `--exclude`/`-e` options to `ase-task-list` and `ase task list` for filtering the listed task plans
+- FEATURE [docs]: documented the task plan lifecycle states and their transitions (`docs/task-states.md`)
+
 0.9.54 (2026-08-03)
 -------------------
 

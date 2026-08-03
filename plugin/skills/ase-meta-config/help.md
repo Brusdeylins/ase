@@ -67,9 +67,9 @@ The following *operations* exist:
 The `init` and `edit` subcommands of the `ase config` CLI are
 deliberately *not* mirrored: `edit` is bound to the interactive `$EDITOR`
 and therefore has no meaning inside an assistant turn, and `init` is a
-preset-bootstrapping operation that stays a shell concern next to `ase
-setup`. Both remain available as `ase config init` and `ase config edit`
-on the command line.
+preset-bootstrapping operation that stays a shell concern next to
+`ase setup`. Both remain available as `ase config init` and
+`ase config edit` on the command line.
 
 ##  OPTIONS
 

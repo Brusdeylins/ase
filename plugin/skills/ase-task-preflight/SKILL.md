@@ -88,15 +88,21 @@ Procedure
 
         </template>
 
-    3.  <if condition="<task-content/> contains '⚙   Modified:'">
+    3.  <if condition="the frontmatter of <task-content/> carries a `Modified:` key">
         Update <timestamp-modified/> with the current time in
         ISO-style format, which has to be determined by calling the
         `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
         MCP server and use the `text` field of its response. Update
-        the `⚙   Modified: ...` line of <task-content/> with the new
-        `⚙   Modified: <timestamp-modified/>`.
+        the `Modified: ...` frontmatter key of <task-content/> with the
+        new <timestamp-modified/> value.
         Do not output anything.
         </if>
+
+        Additionally *add* the value `preflighted` to the `Properties:`
+        frontmatter key of <task-content/> if it is still absent, keeping
+        all already present values and *creating* the whole key (with the
+        single value `preflighted`) if the plan carries none. Do not
+        output anything.
 
     4.  Finally, call the `ase_task_save(id: "<ase-task-id/>",
         text: "<task-content/>")` tool of the `ase` MCP server to save the updated

@@ -78,6 +78,27 @@ Procedure
 
     2.  <if condition="<task-content/> is not empty">
         Treat <task-content/> as *verbatim* Markdown.
+
+        For the *rendering only*, drop the leading *frontmatter* block --
+        both `---` delimiters and all of their keys -- and instead place
+        the following column-aligned glyph lines *before* the
+        `#   TASK: <title/>` heading, separated from it by an empty line,
+        omitting the line of every key absent from the frontmatter. The
+        glyph lines *MUST* stay *above* the heading, exactly where the
+        frontmatter block sits in the plan file, and *MUST NOT* be moved
+        below it. This keeps the `---` delimiters from rendering as a
+        horizontal rule plus a *setext heading*. This rewrite is
+        *display-only* and *MUST NOT* change <task-content/> itself:
+
+        <format>
+        ◉   **Id:**         <task-id/>
+        ⎈   **Created:**    <timestamp-created/>
+        ⚙   **Modified:**   <timestamp-modified/>
+        ◐   **Status:**     <task-status/>
+        ⚑   **Properties:** <task-properties/>
+        ☯   **Kind:**       <task-kind/>
+        </format>
+
         *Render plan*: Only output the following <template/>. If
         <getopt-option-full/> is *not* `true`, <task-content/> is longer than
         90 lines, and a `##  IMPLEMENTATION DRAFT` section (from the
@@ -87,9 +108,9 @@ Procedure
         Use the following <template/>:
 
         <template>
-        <ase-tpl-head title="TASK"/>
+        <ase-tpl-head title="TASK" subtitle="<task-id/>"/>
         <task-content/>
-        <ase-tpl-foot title="TASK"/>
+        <ase-tpl-foot title="TASK" subtitle="<task-id/>"/>
         </template>
         </if>
 

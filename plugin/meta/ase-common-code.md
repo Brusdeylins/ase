@@ -15,7 +15,7 @@ and updating of code. Do not output anything.
 Determine the *kind of change* the task plan describes and internalize
 the corresponding tenet sets:
 
--   If <task-content/> contains a `☯   Kind:     <text/>` header line
+-   If the frontmatter of <task-content/> carries a `Kind: <text/>` key
     and <text/> is one of `CRAFTING`, `REFACTORING`, or `RESOLVING`:
     Set <task-kind><text/></task-kind> (set task kind to the stated kind).
 

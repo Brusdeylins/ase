@@ -24,7 +24,8 @@ the code base and world knowledge), marks the current-plan choice, and
 lets the user pick via an interactive dialog. It honors checks for
 *fuzzy language*, *conflicting terminology*, *conflicting code*, and
 *non-concrete scenarios*. Once all aspects are resolved, the plan is
-updated and persisted, and the user is offered a hand-off to editing,
+updated and persisted, its `Properties:` frontmatter key gains the value
+`grilled`, and the user is offered a hand-off to editing,
 implementation, or preflight.
 
 ##  OPTIONS

@@ -103,11 +103,12 @@ format, which has to be determined by calling the
 `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
 MCP server and use the `text` field of its response. If
 <timestamp-created/> is still unset (because the plan content
-had no `Created:` line), set
+had no `Created:` frontmatter key), set
 <timestamp-created><timestamp-modified/></timestamp-created>
 (fall back to the modified timestamp). Re-insert the current
 <ase-task-id/>, the original <timestamp-created/>, and the
-refreshed <timestamp-modified/> into <task-content/> and calculate
+refreshed <timestamp-modified/> into the frontmatter keys `Id:`,
+`Created:`, and `Modified:` of <task-content/> and calculate
 the number of words <words/> of <task-content/>.
 
 Call the `ase_task_save(id: "<ase-task-id/>", text:

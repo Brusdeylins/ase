@@ -216,7 +216,7 @@ Set <args>--int-reuse-task</args>.
 
     2.  Finally, update the plan in <plan/> based on all answers <answer-N/>.
 
-    3.  <if condition="<plan/> contains '⎈   Created:  <text/>'">
+    3.  <if condition="the frontmatter of <plan/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
         timestamp-created to extracted text)
         </if>
@@ -225,11 +225,15 @@ Set <args>--int-reuse-task</args>.
         `ase` MCP server and use the `text` field of its response for
         <timestamp-modified/> information. If <timestamp-created/> is
         still unset (because the previous <plan/> had no `Created:`
-        line), set <timestamp-created><timestamp-modified/></timestamp-created>
+        frontmatter key), set <timestamp-created><timestamp-modified/></timestamp-created>
         (fall back to the modified timestamp). Then insert the current
         <ase-task-id/>, previous <timestamp-created/>, and refreshed
-        <timestamp-modified/> information and calculate the number of
-        words <words/> of <plan/>.
+        <timestamp-modified/> information into the frontmatter keys `Id:`,
+        `Created:`, and `Modified:` and calculate the number of
+        words <words/> of <plan/>. Additionally *add* the value `grilled`
+        to the `Properties:` frontmatter key if it is still absent,
+        keeping all already present values and *creating* the whole key
+        (with the single value `grilled`) if the plan carries none.
 
     5.  Call the `ase_task_save(id: "<ase-task-id/>",
         text: "<plan/>")` tool of the `ase` MCP server to save the updated
