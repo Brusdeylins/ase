@@ -18,6 +18,10 @@ const levels = [
 
 export type LogLevel = typeof levels[number]["name"]
 
+/*  check whether an arbitrary string is a valid log level  */
+export const isLogLevel = (level: string): level is LogLevel =>
+    levels.some((l) => l.name === level)
+
 export default class Log {
     private stream: fs.WriteStream | null = null
     private logLevelIdx = 0
@@ -38,12 +42,15 @@ export default class Log {
         })
         return stream
     }
-    logLevel (level: LogLevel) {
+    logLevel (level?: LogLevel): LogLevel {
+        if (level === undefined)
+            return this._logLevel
         const idx = levels.findIndex((l) => l.name === level)
         if (idx === -1)
             throw new RangeError(`invalid log level "${level}" (expected one of: ${levels.map((l) => l.name).join(", ")})`)
         this._logLevel   = level
         this.logLevelIdx = idx
+        return this._logLevel
     }
     logFile (file: string) {
         if (file === this._logFile)

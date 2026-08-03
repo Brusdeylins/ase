@@ -23,6 +23,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 
 import { Config, configSchema, ConfigMCP } from "./ase-config.js"
 import type Log                          from "./ase-log.js"
+import { isLogLevel }                    from "./ase-log.js"
+import type { LogLevel }                 from "./ase-log.js"
 import { CompatMCP }                     from "./ase-compat.js"
 import { DiagramMCP }                    from "./ase-diagram.js"
 import { TaskMCP }                       from "./ase-task.js"
@@ -80,11 +82,19 @@ export interface Context {
 
 const SERVE_ENV  = "ASE_SERVICE_SERVE"
 const PORT_ENV   = "ASE_SERVICE_PORT"
+const LEVEL_ENV  = "ASE_SERVICE_LOG_LEVEL"
 const IDLE_MS    = 30 * 60 * 1000
 const TICK_MS    = 60 * 1000
 const PORT_MIN   = 42000
 const PORT_MAX   = 44000
 const PORT_TRIES = 20
+
+/*  bounds for the append-only ".ase/service.log" file:
+    maximum tolerated size, number of tail lines surviving a trim,
+    and maximum length of the MCP tool call arguments logged per request  */
+const LOG_MAX_SIZE   = 1024 * 1024
+const LOG_KEEP_LINES = 2000
+const LOG_ARGS_MAX   = 200
 
 /*  load the optional "config.yaml" and "service.yaml" files and derive
     the service identity context (project id, port, service config)  */
@@ -159,15 +169,35 @@ export class Service {
         })
     }
 
+    /*  trim the log file down to its tail if it grew beyond the size limit  */
+    static trimLog (logFile: string): void {
+        try {
+            if (!fs.existsSync(logFile) || fs.statSync(logFile).size <= LOG_MAX_SIZE)
+                return
+            const tail = Service.readLogTail(logFile, LOG_KEEP_LINES)
+            fs.writeFileSync(logFile, tail.length > 0 ? `${tail}\n` : "")
+        }
+        catch {
+            /*  intentionally ignore all trimming errors, as a
+                non-trimmable log file must never block the service  */
+        }
+    }
+
     /*  spawn the current executable detached as a background service  */
-    static spawnDetached (aseDir: string, port: number): { child: ChildProcess, logFile: string } {
+    static spawnDetached (aseDir: string, port: number, logLevel: LogLevel): { child: ChildProcess, logFile: string } {
         fs.mkdirSync(aseDir, { recursive: true })
         const logFile = path.join(aseDir, "service.log")
+
+        /*  trim the log before handing it to the service, as the detached
+            service inherits the file descriptor for its entire lifetime and
+            hence cannot rotate the file itself while it is running  */
+        Service.trimLog(logFile)
+
         const fd      = fs.openSync(logFile, "a")
         const entry   = fileURLToPath(new URL("./ase.js", import.meta.url))
         const child   = spawn(process.execPath, [ entry, "service", "start" ], {
             detached: true,
-            env:      { ...process.env, [SERVE_ENV]: "1", [PORT_ENV]: String(port) },
+            env:      { ...process.env, [SERVE_ENV]: "1", [PORT_ENV]: String(port), [LEVEL_ENV]: logLevel },
             stdio:    [ "ignore", fd, fd ]
         })
         fs.closeSync(fd)
@@ -317,11 +347,21 @@ export default class ServiceCommand {
                 bodyInfo = ` [${bMethod}]`
                 if (bName !== null) {
                     bodyInfo += ` ${bName}`
-                    if (bArgs !== null)
-                        bodyInfo += ` ${JSON.stringify(bArgs)}`
+                    if (bArgs !== null) {
+                        /*  cap the arguments, as payload-carrying tool calls
+                            (task plans, key/value batches, etc) would
+                            otherwise dominate the entire log file  */
+                        const args = JSON.stringify(bArgs)
+                        bodyInfo += ` ${args.length > LOG_ARGS_MAX ? `${args.slice(0, LOG_ARGS_MAX)}…` : args}`
+                    }
                 }
             }
-            this.log.write("info", `mcp: ${request.method.toUpperCase()} ${request.path}${bodyInfo}`)
+
+            /*  log tool calls regularly, but all remaining MCP traffic
+                (session handshakes, notifications, SSE stream opens) at
+                debug level only, as it carries no diagnostic value  */
+            const level = bMethod === "tools/call" ? "info" : "debug"
+            this.log.write(level, `mcp: ${request.method.toUpperCase()} ${request.path}${bodyInfo}`)
             const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
             const mcp       = buildMcpServer()
             request.raw.res.on("close", () => {
@@ -429,6 +469,11 @@ export default class ServiceCommand {
         const ctx = this.loadContext()
         let port = ctx.port
         if (process.env[SERVE_ENV] === "1") {
+            /*  adopt the log level of the spawning process, as the
+                detached service is started without any CLI options  */
+            const level = process.env[LEVEL_ENV]
+            if (level !== undefined && isLogLevel(level))
+                this.log.logLevel(level)
             const raw = process.env[PORT_ENV]
             port = raw !== undefined ? Number(raw) : await Service.allocatePort()
             await this.runService({ ...ctx, port })
@@ -446,7 +491,7 @@ export default class ServiceCommand {
         let lastErr: Error = new Error("service failed to start within timeout")
         for (let attempt = 0; attempt < 3; attempt++) {
             port = await Service.allocatePort()
-            const { child, logFile } = Service.spawnDetached(ctx.aseDir, port)
+            const { child, logFile } = Service.spawnDetached(ctx.aseDir, port, this.log.logLevel())
             let exited   = false
             let exitCode: number | null = null
             let resolveExit: () => void = () => {}

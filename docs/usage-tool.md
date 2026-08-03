@@ -532,7 +532,14 @@ STATE FILES
   Per-project service state.
 
 - `.ase/service.log`:
-  Stdout/stderr log of the detached background service.
+  Stdout/stderr log of the detached background service. As the service
+  inherits the file descriptor for its entire lifetime, the file cannot
+  be rotated while the service runs and instead is trimmed down to its
+  last 2000 lines whenever a service is started on a file larger than
+  1 MB. Routine *MCP* traffic (session handshakes, notifications, and
+  stream opens) is logged at log level `debug` only and tool call
+  arguments are capped at 200 characters. Start the service with `ase
+  --log-level debug service start` to log the full *MCP* traffic.
 
 - `<project>/`*basedir*`/TASK-`*id*`.md`:
   Persisted task plan, managed by the `ase task` subcommands, located
