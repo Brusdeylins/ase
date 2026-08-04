@@ -106,14 +106,14 @@ Processing
     correct baseline Git tag. Take the `N.M.K` from the *first* (most
     recent) level-2 header in the *ChangeLog* file and check whether a
     corresponding Git tag already exists with the command `git tag --list
-    N.M.K`. If this command produces *no* output, the first section is
-    still in-progress/untagged, so use the `N.M.K` from the *second*
-    level-2 header as the baseline tag instead. If *no* second level-2
-    header exists (very first, still untagged release), skip the baseline
-    tag and check *all* Git commits with the command `git log HEAD
-    --numstat --pretty=format:'%h: %s'` instead. If this command *does*
-    produce output, the first section is already released/tagged, so use
-    the `N.M.K` from the *first* level-2 header as the baseline tag. Then
+    N.M.K`. If this command *does* produce output, the first section is
+    already released/tagged, so use the `N.M.K` from the *first* level-2
+    header as the baseline tag. If this command produces *no* output, the
+    first section is still in-progress/untagged, so use the `N.M.K` from
+    the *second* level-2 header as the baseline tag instead. If *no*
+    second level-2 header exists (very first, still untagged release),
+    skip the baseline tag and check *all* Git commits with the command
+    `git log HEAD --numstat --pretty=format:'%h: %s'` instead. Then
     check all Git commits between `HEAD` and this baseline tag with the
     command `git log N.M.K..HEAD --numstat --pretty=format:'%h: %s'`.
 
