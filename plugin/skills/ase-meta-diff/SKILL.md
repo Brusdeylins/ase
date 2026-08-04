@@ -52,13 +52,13 @@ Procedure
         (taken exactly as given) and capturing the full diff output into
         <diff/> for the subsequent analysis:
 
-        `git diff --cached HEAD`
+        `git diff --cached`
 
     2.  Determine the *diff statistics* by running the corresponding command
         (taken exactly as given) and capturing the full stat output into
         <stat/> for the subsequent analysis:
 
-        `git diff --cached --numstat HEAD`
+        `git diff --cached --numstat`
 
     </step>
 
