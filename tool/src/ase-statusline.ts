@@ -518,22 +518,22 @@ export default class StatuslineCommand {
                     S: () => {
                         const pct5h = data.rate_limits?.five_hour?.used_percentage
                         const s     = pct5h !== undefined ? `${pct5h.toFixed(1)}%` : "-"
-                        emit(`${prefix("⏲", "session-usage")}${c.bold(s)}`)
+                        emit(`${prefix("⏲", "5h-usage")}${c.bold(s)}`)
                     },
                     D: () => {
                         const until5h = data.rate_limits?.five_hour?.resets_at
                         const s       = formatTimeUntil(until5h)
-                        emit(`${prefix("⏱", "session-resets")}${c.bold(s !== "" ? s : "-")}`)
+                        emit(`${prefix("⏱", "5h-resets")}${c.bold(s !== "" ? s : "-")}`)
                     },
                     W: () => {
                         const pctWk = data.rate_limits?.seven_day?.used_percentage
                         const s     = pctWk !== undefined ? `${pctWk.toFixed(1)}%` : "-"
-                        emit(`${prefix("⏲", "weekly-usage")}${c.bold(s)}`)
+                        emit(`${prefix("⏲", "7d-usage")}${c.bold(s)}`)
                     },
                     Q: () => {
                         const untilWk = data.rate_limits?.seven_day?.resets_at
                         const s       = formatTimeUntil(untilWk)
-                        emit(`${prefix("⏱", "weekly-resets")}${c.bold(s !== "" ? s : "-")}`)
+                        emit(`${prefix("⏱", "7d-resets")}${c.bold(s !== "" ? s : "-")}`)
                     },
 
                     /*  ==== COSTS ====  */
