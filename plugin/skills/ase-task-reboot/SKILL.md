@@ -46,51 +46,13 @@ Procedure
 
     2.  React on task id:
 
-        1.  <if condition="
-                <instruction/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
-            ">
-            Set <ase-task-id><instruction/></ase-task-id> (set task
-            id to instruction) and <instruction></instruction> (set
-            instruction empty), call the `ase_task_id(id: "<ase-task-id/>",
-            session: "<ase-session-id/>")` tool from the `ase` MCP
-            server to switch the task, and then only output the
-            following <template/>:
-
-            <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **task given**
-            </template>
-            </if>
-
-        2.  <elseif condition="<instruction/> is NOT empty">
-            The argument is neither empty nor a valid task id. As this
-            skill only accepts an optional `[<id>]` argument and *never*
-            a free-text instruction, only output the following <template/>
-            and then immediately *STOP* processing the entire current skill:
-
-            <template>
-            ⧉ **ASE**: ☻ skill: **ase-task-reboot**, ▶ ERROR: expected single `[<id>]` argument
-            </template>
-            </elseif>
+        <expand name="task-react-id" arg1="ase-task-reboot"></expand>
 
 2.  **Determine Operation:**
 
-    1.  Call the `ase_task_load(id: "<ase-task-id/>")` tool of the `ase` MCP
-        server to load the current task plan content and set <text/> to
-        the `text` output field of the `ase_task_load` tool call.
+    1.  Determine the current task plan content:
 
-        -   If <text/> starts with `ERROR:` or `WARNING:`:
-            Set <task-content></task-content> (set task content to empty).
-            Set <words/> to "0".
-
-        -   If <text/> starts NOT with `ERROR:` and NOT with `WARNING:`:
-            Set <task-content><text/></task-content> (set task content to text).
-            Calculate the number of words <words/> of <task-content/>.
-
-        Only output the following <template/>:
-
-        <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan loaded**
-        </template>
+        <expand name="task-load-content"></expand>
 
     2.  <if condition="<task-content/> is empty">
         Complain and tell the user to use the `ase-code-resolve`,

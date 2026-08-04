@@ -21,7 +21,7 @@ Condense a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-condense"
-    arg2="--next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)...">
+    arg2="--next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -48,52 +48,21 @@ Set <args></args> (set args to empty).
 
 1.  **Determine Task:**
 
-    1.  Set <id><getopt-arguments/></id> initially.
+    1.  Set <instruction><getopt-arguments/></instruction> initially, with any
+        leading and trailing whitespace stripped.
         Inherit the always existing <ase-task-id/> from the current context.
         Inherit the always existing <ase-session-id/> from the current context.
         Do not output anything.
 
     2.  React on task id:
 
-        1.  <if condition="
-                <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
-            ">
-            Set <ase-task-id><id/></ase-task-id> (set task id) and
-            call the `ase_task_id(id: "<ase-task-id/>",
-            session: "<ase-session-id/>")` tool from the `ase` MCP
-            server to switch the task, and then only output the
-            following <template/>:
-
-            <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **task given**
-            </template>
-            </if>
-
-        2.  <elseif condition="<id/> is NOT empty">
-            The argument is neither empty nor a valid task id. As this
-            skill only accepts an optional `[<id>]` argument and *never*
-            a free-text instruction, only output the following <template/>
-            and then immediately *STOP* processing the entire current skill:
-
-            <template>
-            ⧉ **ASE**: ☻ skill: **ase-task-condense**, ▶ ERROR: expected single `[<id>]` argument
-            </template>
-            </elseif>
+        <expand name="task-react-id" arg1="ase-task-condense"></expand>
 
 2.  **Determine Operation:**
 
-    1.  Call the `ase_task_load(id: "<ase-task-id/>")` tool of the `ase` MCP
-        server to load the current task plan content and set <text/> to
-        the `text` output field of the `ase_task_load` tool call.
+    1.  Determine the current task plan content:
 
-        -   If <text/> starts with `ERROR:` or `WARNING:`:
-            Silently ignore the MCP error.
-            Set <task-content></task-content> (set task content to empty).
-            Set <words/> to "0".
-
-        -   If <text/> starts NOT with `ERROR:` and NOT with `WARNING:`:
-            Set <task-content><text/></task-content> (set task content to text).
-            Calculate the number of words <words/> of <task-content/>.
+        <expand name="task-load-content"></expand>
 
         Set <words-before><words/></words-before> (remember the loaded
         word count for the strictly-smaller check in step 3).
@@ -103,12 +72,6 @@ Set <args></args> (set args to empty).
         original creation timestamp so it can be re-inserted unchanged
         into the condensed <task-content/> in step 3).
         </if>
-
-        Only output the following <template/>:
-
-        <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan loaded**
-        </template>
 
     2.  <if condition="<task-content/> is empty">
         Complain and tell the user to use the `ase-code-resolve`,

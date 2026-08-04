@@ -32,6 +32,7 @@ task plan until reaching a shared understanding.
 </objective>
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-common-task.md
 
 Procedure
 ---------
@@ -45,78 +46,24 @@ Set <args>--int-reuse-task</args>.
 
 1.  **Determine Task:**
 
-    1.  Set <id><getopt-arguments/></id> initially.
+    1.  Set <instruction><getopt-arguments/></instruction> initially, with any
+        leading and trailing whitespace stripped.
         Inherit the always existing <ase-task-id/> from the current context.
         Inherit the always existing <ase-session-id/> from the current context.
         Do not output anything.
 
     2.  React on task id:
 
-        1.  <if condition="
-                <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
-            ">
-            Set <ase-task-id><id/></ase-task-id> (set task id) and
-            call the `ase_task_id(id: "<ase-task-id/>", session:
-            "<ase-session-id/>")` tool from the `ase` MCP server
-            to switch the task, and then only output the following
-            <template/>:
-
-            <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **task given**
-            </template>
-            </if>
-
-        2.  <elseif condition="<id/> is NOT empty">
-            The argument is neither empty nor a valid task id. As this
-            skill only accepts an optional `[<id>]` argument and *never*
-            a free-text instruction, only output the following <template/>
-            and then immediately *STOP* processing the entire current skill:
-
-            <template>
-            ⧉ **ASE**: ☻ skill: **ase-task-grill**, ▶ ERROR: expected single `[<id>]` argument
-            </template>
-            </elseif>
+        <expand name="task-react-id" arg1="ase-task-grill"></expand>
 
 2.  **Determine Task Plan:**
 
     1.  Determine the current task plan content:
 
-        <if condition="
-            <getopt-option-int-reuse-task/> is equal `true`
-            *and* a `ase_task_save(id: '<ase-task-id/>', ...)` tool call
-            exists earlier in the current session
-        ">
-            Set <text/> to the `text` *output* field of the most recent
-            `ase_task_save(id: '<ase-task-id/>', ...)` tool call -- this
-            is the rendering-prepared plan content and *MUST NOT* be
-            confused with the `text` *argument* passed into that call --
-            *without* calling `ase_task_load` again. Set <status>plan
-            reused</status>. Do not output anything.
-        </if>
-        <else>
-            Call the `ase_task_load(id: "<ase-task-id/>")` tool of the
-            `ase` MCP server to load the current task plan content and
-            set <text/> to the `text` output field of this `ase_task_load`
-            tool call. Do not output anything related to this MCP tool
-            call. Set <status>plan loaded</status>.
-        </else>
+        <expand name="task-load-content"></expand>
 
-        -   If <text/> starts with `ERROR:` or `WARNING:`:
-            Output the following <template/> and then immediately *STOP*
-            processing the entire current skill:
-
-            <template>
-            ⧉ **ASE**: ☻ skill: **ase-task-grill**, ▶ **<text/>**
-            </template>
-
-        -   If <text/> starts NOT with `ERROR:` and NOT with `WARNING:`:
-            Set <plan><text/></plan> (set plan to text).
-            Calculate the number of words <words/> of <plan/>.
-            Then output the following <template/>:
-
-            <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **<status/>**
-            </template>
+        Set <plan><task-content/></plan> (alias the loaded task content
+        for the subsequent steps). Do not output anything.
 
     2.  <if condition="<plan/> is empty">
         Complain and tell the user to use the `ase-code-resolve`,
@@ -250,39 +197,15 @@ Set <args>--int-reuse-task</args>.
 
     1.  *Determine next step*:
 
-        -   If <getopt-option-next/> is not equal to `none`:
-            Treat <getopt-option-next/> as a comma-separated chronological
-            list of pre-selected next-step tokens. *Split* it on `,`,
-            take the *first* token as <head/>, and store the remaining
-            tokens (joined back with `,`, or `none` if empty) into
-            <getopt-option-next/> so downstream skills can consume the tail.
-
-            -   If <head/> matches the regex `^(DONE|EDIT|IMPLEMENT|PREFLIGHT)$`:
-                Honor the pre-selected token.
-                Set <result><head/></result>.
-
-            -   else:
-                Only output the following <template/> and then immediately
-                *STOP* processing the entire current skill:
-
-                <template>
-                ⧉ **ASE**: ☻ skill: **ase-task-grill**, ▶ ERROR: invalid `--next` token: **<head/>**
-                </template>
-
-        -   If <getopt-option-next/> is equal to `none`:
-
-            In the following, you *MUST* *NOT* use your built-in
-            <user-dialog-tool/> tool! Instead, you *MUST* just show a
-            custom dialog according to the expanded `custom-dialog`
-            definition. You *MUST* closely follow this definition:
-
-            <expand name="custom-dialog" arg1="--no-other">
-                Next Step: How would you like to proceed with the plan?
-                DONE: Stop processing.
-                EDIT: Hand off plan to editing.
-                PREFLIGHT: Hand off plan to pre-flighting.
-                IMPLEMENT: Hand off plan to implementation.
-            </expand>
+        <expand name="task-next-select"
+            arg1="ase-task-grill"
+            arg2="DONE|EDIT|IMPLEMENT|PREFLIGHT">
+            Next Step: How would you like to proceed with the plan?
+            DONE: Stop processing.
+            EDIT: Hand off plan to editing.
+            PREFLIGHT: Hand off plan to pre-flighting.
+            IMPLEMENT: Hand off plan to implementation.
+        </expand>
 
     2.  Check the tool <result/> and dispatch accordingly:
 
