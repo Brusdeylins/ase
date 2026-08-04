@@ -276,10 +276,12 @@ related to a set of code quality aspects.
 
                     Set <old-start/> to the 1-based line number of the
                     *first* old-side hunk line: if <context-before/> is
-                    non-empty, that is its line (one before <line/>);
-                    otherwise it is <line/> itself (the first line of
-                    <old-text/>). For a hunk that *only inserts* new lines
-                    (empty <old-text/> *and* empty context), set it to the
+                    non-empty, that is the line of its *first* context
+                    line, i.e. <line/> minus the number of lines in
+                    <context-before/>; otherwise it is <line/> itself
+                    (the first line of <old-text/>). For a hunk that
+                    *only inserts* new lines (empty <old-text/> *and*
+                    empty context), set it to the
                     line *before* which the insertion happens, clamped to a
                     minimum of `0`, so a top-of-file insertion yields
                     `@@ -0,0 ... @@`.
