@@ -41,7 +41,7 @@ of the decorative, eloquent, and explaining `writer`, the concise,
 factual, and accurate `engineer` (the default), the layered,
 pyramid-structured `journalist`, the brief, factual, and abbreviating
 `telegrapher`, or the terse, rough, and stuttering `caveman`;
-`agent.guidance` selects the amount of unsolicited hints and is one of
+`agent.guidance` selects the number of unsolicited hints and is one of
 `none`, `minimal`, `normal` (the default), or `verbose`; and
 `project.boxing` selects the artifact transparency and is one of `white`,
 `grey`, or `black`. Setting `agent.persona`, `agent.guidance`, or

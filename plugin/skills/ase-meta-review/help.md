@@ -45,12 +45,12 @@ sub-agent so that the silent reading and read-only repository probing
 never leak into the transcript; only the structured verdict and findings
 are rendered.
 
-The skill *complements* rather than duplicates its neighbours:
+The skill *complements* rather than duplicates its neighbors:
 `ase-code-lint` flags *mechanical* code-quality issues, `ase-code-analyze`
 inspects *logic and semantics*, `ase-meta-diff` narrates *what changed*
 (with optional coherence, risk, and blast-radius reports), and
 `ase-meta-diaboli` *adversarially challenges a thesis* - whereas
-`ase-meta-review` renders a *reviewer's judgement* on a concrete diff
+`ase-meta-review` renders a *reviewer's judgment* on a concrete diff
 before it is committed.
 
 ##  OPTIONS

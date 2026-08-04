@@ -151,10 +151,10 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
           Try to keep the number of bullet points (●) in the range of 1-4.
 
         - In case of a *complex context situation* with complex *structure*
-          (layout, components, dependencies, etc), complex *control flow*
-          (branching, concurrency, etc), complex *state machine* (states,
-          transitions, etc), complex *data flow* (actors, messages, etc), or
-          complex *data structure* (classes, entities, relationships, etc),
+          (layout, components, dependencies, etc.), complex *control flow*
+          (branching, concurrency, etc.), complex *state machine* (states,
+          transitions, etc.), complex *data flow* (actors, messages, etc.), or
+          complex *data structure* (classes, entities, relationships, etc.),
           visualize it with an optional diagram <optional-diagram/> by
           building a Mermaid specification <mermaid-spec/> (e.g. `flowchart
           TB`, `stateDiagram-v2`, `sequenceDiagram`, `classDiagram`, or

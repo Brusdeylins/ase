@@ -66,7 +66,7 @@ Procedure
             ⧉ **ASE**: ◉ task: **<id/>**, ▶ status: **<text/>**
             </template>
 
-        -   If <text/> starts NOT with `ERROR:` and NOT with `WARNING:`:
+        -   If <text/> does NOT start with `ERROR:` and NOT with `WARNING:`:
             Set <deleted>true</deleted> and only output the following
             <template/>:
 

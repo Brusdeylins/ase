@@ -178,7 +178,7 @@ by querying *multiple* AIs for an *optimal consensus*.
 
 5.  <step id="STEP 5: Show Results">
 
-    Finally show the summary, the consensus and the complete and
+    Finally, show the summary, the consensus, and the complete and
     unmodified responses of yourself and each of the queried foreign
     AIs, based on the following output <template/>:
 

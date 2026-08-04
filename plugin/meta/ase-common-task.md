@@ -84,7 +84,7 @@ Task Skill Common Steps
     Set <task-content></task-content> (set task content to empty).
     Set <words/> to "0".
 
--   If <text/> starts NOT with `ERROR:` and NOT with `WARNING:`:
+-   If <text/> does NOT start with `ERROR:` and NOT with `WARNING:`:
     Set <task-content><text/></task-content> (set task content to text).
     Calculate the number of words <words/> of <task-content/>.
 
