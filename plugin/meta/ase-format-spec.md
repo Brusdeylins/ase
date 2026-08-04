@@ -563,7 +563,7 @@ manages, defining how information is organized and connected.
 
     ### RELATIONS
 
-    -   `<spec-dm-relation-id/>`: [`<spec-dm-relation-target/>`](#<spec-dm-relation-target-id/>)(`<spec-dm-relation-cardinality/>`):<br/>
+    -   `<spec-dm-relation-id/>`: [`<spec-dm-relation-target/>`](#SPEC-DM-<spec-dm-relation-target-id/>)(`<spec-dm-relation-cardinality/>`):<br/>
         <spec-dm-relation-description/>,
         **BECAUSE** <spec-dm-relation-rationale/>.
 
@@ -668,7 +668,7 @@ manages, defining how information is organized and connected.
         with the columns:
 
         -   `Relation`      (`**<spec-dm-relation-id/>**`)
-        -   `Target`        (`[<spec-dm-relation-target/>](#<spec-dm-relation-target-id/>) (<spec-dm-relation-cardinality/>)`)
+        -   `Target`        (`[<spec-dm-relation-target/>](#SPEC-DM-<spec-dm-relation-target-id/>) (<spec-dm-relation-cardinality/>)`)
         -   `Description`   (`<spec-dm-relation-description/>, **BECAUSE** <spec-dm-relation-rationale/>.`)
 
     -   In case a <spec-dm-entity/> has no relations at all, the
