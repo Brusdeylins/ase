@@ -8,6 +8,7 @@ disable-model-invocation: false
 effort: medium
 allowed-tools:
     - "Bash(git diff *)"
+    - "Bash(git ls-files *)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
