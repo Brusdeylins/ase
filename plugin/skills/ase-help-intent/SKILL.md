@@ -133,6 +133,12 @@ catalog you match <intent/> against:
             *Break* out of the *loop* and stop processing without any
             further output.
 
+        -   If <result/> is `EXECUTE` and the current loop round raised
+            the *no-match* warning in sub-step 2 (so *no* command was
+            rendered): do *not* execute anything -- re-output the warning
+            <template/> of sub-step 2 and *continue* the *loop* at
+            sub-step 4 to obtain a refined intent.
+
         -   If <result/> is `EXECUTE`:
             *Break* out of the *loop*, output the following <template/>,
             and then call the tool `Skill(skill: "ase:<name/>", args:
