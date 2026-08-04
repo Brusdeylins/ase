@@ -38,6 +38,21 @@ by querying *multiple* AIs for an *optimal consensus*.
 
 1.  <step id="STEP 1: Preview Own Answer">
 
+    The user-selectable foreign models are restricted by the
+    `--models`/`-m` option, parsed into <getopt-option-models/>
+    as a comma-separated list of model tokens. The getopt parser
+    validates only the *first* token, so you *MUST* validate each
+    remaining token yourself against the allowed set `all`, `chatgpt`,
+    `gemini`, `deepseek`, `grok`, `glm`, `qwen`, `claude`, `codex`,
+    `copilot`. If any token is *not*
+    in this set, bind <token/> to that offending token, then only output
+    the following <template/> and then immediately *STOP* processing the
+    entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-quorum**, ▶ ERROR: invalid `--models` token: **<token/>**
+    </template>
+
     Prepare the LLM query by setting <query/> to the following <template/>:
 
     <template>
@@ -63,21 +78,6 @@ by querying *multiple* AIs for an *optimal consensus*.
     </step>
 
 2.  <step id="STEP 2: Query Foreign AIs">
-
-    The user-selectable foreign models are restricted by the
-    `--models`/`-m` option, parsed into <getopt-option-models/>
-    as a comma-separated list of model tokens. The getopt parser
-    validates only the *first* token, so you *MUST* validate each
-    remaining token yourself against the allowed set `all`, `chatgpt`,
-    `gemini`, `deepseek`, `grok`, `glm`, `qwen`, `claude`, `codex`,
-    `copilot`. If any token is *not*
-    in this set, bind <token/> to that offending token, then only output
-    the following <template/> and then immediately *STOP* processing the
-    entire current skill:
-
-    <template>
-    ⧉ **ASE**: ✪ skill: **ase-meta-quorum**, ▶ ERROR: invalid `--models` token: **<token/>**
-    </template>
 
     The default is the single token `all`. If <getopt-option-models/>
     contains the token `all`, you *MUST* treat it as the full list
