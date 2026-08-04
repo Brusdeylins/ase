@@ -41,6 +41,15 @@ to <getopt-option-count/>; if <getopt-option-count/> is *non-numeric* or
 
 1.  <step id="STEP 1: Restate Thesis">
 
+    <if condition="<thesis/> is empty">
+    Only output the following <template/> and then immediately *STOP*
+    processing the entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-steelman**, ▶ ERROR: expected a `<thesis>` argument
+    </template>
+    </if>
+
     Begin a *round* of fortification and consolidating reasoning. On
     the first visit, set <i>1</i> (set round counter to one); on each
     subsequent visit (via the jump back in the last step), <i/> has
@@ -125,7 +134,7 @@ to <getopt-option-count/>; if <getopt-option-count/> is *non-numeric* or
 
     -   **Argue in Good Faith**:
         Make clear you are building the best honest case, not
-        overselling, because the goal of the objective is a better
+        overselling, because the goal is a better
         final decision, not a sales pitch.
 
     -   **Concede the Real Weaknesses**:

@@ -114,7 +114,7 @@ multi-*criteria* decision matrix.
 
     -   For each criterion <criteria-L/> (L=1-M), decide on its <weight-L/>
         from the value set { 4.00, 2.00, 1.00, 0.50, 0.25 } (from most
-        important, over normal, to less important). Do not output anything.
+        important, via normal, to less important). Do not output anything.
 
     -   Ensure the final number of criteria is always within the range of
         minimum 8 and maximum 12: if fewer than 8 criteria were requested,
@@ -145,7 +145,7 @@ multi-*criteria* decision matrix.
     -   For each alternative <alternative-K/> (K=1-N) and each criterion
         <criteria-L/> (L=1-M), decide on the evaluation <eval-K-L/>, which
         means how well the alternative meets the criterion on a Likert-scale
-        from { -2, -1, 0, +1, +2 } (from worst, over neutral, to best). Do
+        from { -2, -1, 0, +1, +2 } (from worst, via neutral, to best). Do
         not output anything.
 
     -   Then, calculate the ratings <rating-K/> (K=1-N) for all

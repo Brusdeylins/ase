@@ -37,6 +37,15 @@ addressing surface-level symptoms.
 
 1.  <step id="STEP 1: Restate Problem">
 
+    <if condition="<getopt-arguments/> is empty">
+    Only output the following <template/> and then immediately *STOP*
+    processing the entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-why**, ▶ ERROR: expected a `<fact>` argument
+    </template>
+    </if>
+
     State the problem statement.
 
     <template>

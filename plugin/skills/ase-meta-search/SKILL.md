@@ -38,6 +38,15 @@ Your objective is to *search* the *Internet*/*Web* for the following query:
 
 1.  <step id="STEP 1: Query Search Services">
 
+    <if condition="<query/> is empty">
+    Only output the following <template/> and then immediately *STOP*
+    processing the entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-search**, ▶ ERROR: expected a `<query>` argument
+    </template>
+    </if>
+
     <define name="agent">
     ```text
         Agent(

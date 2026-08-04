@@ -47,7 +47,7 @@ Control Flow Constructs
     <if condition="<if-condition/>"><if-body/></if>:
 
     This specifies a simple condition which is expanded to <if-body/>
-    if <if-condition/> is met, or to empty string if <if-condition/> is
+    if <if-condition/> is met, or to the empty string if <if-condition/> is
     *not* met. It can be optionally followed by one or more <elseif/>
     constructs and/or one final <else/> construct. Do not output anything else.
 

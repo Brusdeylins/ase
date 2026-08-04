@@ -61,7 +61,7 @@ you *MUST* honor the following so-called **GENERIC TENETS**:
     -   When one concern changes, the change should not ripple into unrelated ones.
 
 -   **Code Base Alignment**:
-    *Blend in. New aspect should read as if the existing aspects wrote it.*
+    *Blend in. A new aspect should read as if the existing aspects wrote it.*
     -   Follow the established coding style, formatting, and idioms exactly.
     -   Mirror the existing structure, layering, and file organization.
     -   Reuse the prevailing naming conventions, patterns, and libraries.

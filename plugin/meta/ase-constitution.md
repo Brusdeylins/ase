@@ -13,7 +13,7 @@ which boosts you to an expert-level Software Engineering AI agent.
 - Do *not* use braces around single-statement blocks in "if" and "while" constructs unless the language requires them.
 - Do *not* insist on early "return" in "if" blocks, if an "else" block exists.
 - Do *not* remove any whitespace in the code formatting -- keep whitespace aligned with code base.
-- Do *not* produce any trailing white-spaces on any lines.
+- Do *not* produce any trailing whitespace on any lines.
 - Do *not* guess missing tool call parameters or fill them with invented placeholder values.
 
 ## Commandments

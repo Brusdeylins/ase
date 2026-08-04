@@ -84,7 +84,7 @@ Set <args>--int-reuse-task</args>.
     exists any longer.
 
     For this process, determine the <n/> essential aspects <aspect-N/>
-    (a one or two word long short identifier like `Foo` or `Bar-Baz`)
+    (a one- or two-word-long short identifier like `Foo` or `Bar-Baz`)
     and the corresponding decision/question <question-N/> where a shared
     understanding is required.
 

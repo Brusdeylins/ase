@@ -99,7 +99,7 @@ Honor the following tenets throughout the brainstorming:
     1..<getopt-option-max-clarify/> unknowns, as too much upfront intent
     clarification kills the brainstorming of ideas later. So, you *MUST*
     reduce the clarifications of the unknowns to the absolute minimum in
-    general and cap it at <getopt-option-max-clarify/>!
+    general and cap them at <getopt-option-max-clarify/>!
 
     For each essential unknown to clarify, derive a short 1-3 word facet
     <facet-M/> and a corresponding question <question-M/> whose answer

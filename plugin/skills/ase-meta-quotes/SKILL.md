@@ -185,7 +185,7 @@ Find Quotes on a Topic
         -   ` *(unverified)*` if the exact wording or the attribution of
             the quote could not be established with confidence -- but
             omit this marker for a quote whose wording and attribution
-            the Internet/Web search of STEP 2.2 confirmed -- including
+            the Internet/Web search of STEP 2.2 confirmed, including
             its re-application for a neighborhood topic in STEP 3.
 
         Render the single line `○   (none)` for a quadrant without any

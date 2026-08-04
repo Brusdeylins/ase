@@ -15,7 +15,7 @@
 The `ase-docs-distill` skill reads a *provided document* and distills it
 into a *flat*, *importance-ranked* list of its *key points*. The
 *document-reference* is resolved *probe-as-file-first*: if the argument names
-a *readable file* it is read from disk, otherwise the argument is taken
+a *readable file* it is read from disk; otherwise the argument is taken
 *verbatim* as *pasted text*. The document is read *silently* - only the
 final ranked list is shown - so even a large document does not flood the
 transcript.

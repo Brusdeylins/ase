@@ -230,7 +230,7 @@ capturing their goals, needs, behaviors, and context.
 
     -   <spec-pe-persona-role/>: the role of the persona.
 
-    -   <spec-pe-persona-quote/>: a short and bold, first-person statement -
+    -   <spec-pe-persona-quote/>: a short and bold first-person statement -
         written in the persona's own voice - that captures their core
         attitude, motivation, frustration, or need in a single memorable line.
         It's sometimes called the persona's "tagline," "mantra," or "defining

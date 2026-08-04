@@ -291,7 +291,7 @@ Artifact Boxing Transparency
         -   Findings surfaced: *none* (report only the *outcome*)
         -   Internals exposed: *none* (no diffs, no code, no per-artifact explanation)
 
--   *IMPORTANT*: Precedence rule: skill's *explicit* `black` branches
+-   *IMPORTANT*: Precedence rule: a skill's *explicit* `black` branches
     deterministically skip or suppress and *win* over the implicit decisions
     above. Where no such branches exist, the decisions above apply.
 
