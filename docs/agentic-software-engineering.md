@@ -23,7 +23,7 @@ Agentic Software Engineering
     (responds to environment), proactivity (goal-directed initiative),
     and social ability (interacts with other agents/users). Perceives
     its environment via sensors/inputs (APIs, files, messages,
-    events) and acts via actors/outputs (commands, calls, messages).
+    events) and acts via actuators/outputs (commands, calls, messages).
     Distinguished from a plain program/function by autonomy and
     persistence &mdash; it runs continuously, makes decisions, and pursues
     goals without step-by-step instruction.

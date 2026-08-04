@@ -36,7 +36,7 @@ set placeholders into the context as a side-effect.
         Additionally, simulate <getopt-info/> as a comma-separated
         markdown rendering of the parsed options in the form `<longN/>:
         **<valueN/>**, [...]` (joined with `, `, with each value
-        shell-quoted if value contains spaces or special characters, and
+        shell-quoted if the value contains spaces or special characters, and
         excluding the `help` option and any *internal* option whose long
         name starts with `int-`).
 

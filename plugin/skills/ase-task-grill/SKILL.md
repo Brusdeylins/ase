@@ -78,10 +78,10 @@ Set <args>--int-reuse-task</args>.
     *essential aspect* of the task plan in <plan/> *until* reaching a
     shared understanding and no decisions/questions are left open.
 
-    This especially means, you *MUST* clarify as many aspects as
+    This especially means that you *MUST* clarify as many aspects as
     necessary to ensure that for at least the most important decisions,
-    during a subsequent implementation, no essential freedom of choices
-    exist any longer.
+    during a subsequent implementation, no essential freedom of choice
+    exists any longer.
 
     For this process, determine the <n/> essential aspects <aspect-N/>
     (a one or two word long short identifier like `Foo` or `Bar-Baz`)
@@ -112,7 +112,7 @@ Set <args>--int-reuse-task</args>.
     Then create a decisions/questions tree for them. Walk down each
     branch of this decision tree, resolving dependencies between
     decisions one-by-one. Ask the questions <question-N/> and determine
-    corresponding answer <answer-N/>, one at a time.
+    the corresponding answer <answer-N/>, one at a time.
 
     1.  For each question <question-N/> in the iteration cycle <N/>:
 
@@ -165,7 +165,7 @@ Set <args>--int-reuse-task</args>.
 
     3.  <if condition="the frontmatter of <plan/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
-        timestamp-created to extracted text)
+        timestamp-created to extracted text).
         </if>
 
     4.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the

@@ -29,7 +29,7 @@ Explain a Topic Like I'm 5
 
 <objective>
 *Explain* the following topic in "Explain Like I'm 5" (ELI5) style,
-so that even a five year old child could understand it:
+so that even a five-year-old child could understand it:
 <topic><getopt-arguments/></topic>
 </objective>
 
@@ -46,7 +46,7 @@ so that even a five year old child could understand it:
     </template>
     </if>
 
-    Set <facts></facts> (set to empty)
+    Set <facts></facts> (set to empty).
 
     </step>
 
@@ -80,7 +80,7 @@ so that even a five year old child could understand it:
 3.  <step id="STEP 3: Explain Topic">
 
     Explain the <topic/> in "Explain Like I'm 5" (ELI5) style: use
-    *simple*, *jargon-free* wording a five year old child could
+    *simple*, *jargon-free* wording a five-year-old child could
     understand -- short sentences, everyday words, and familiar images.
     Do *not* use technical terms without immediately putting them into
     child-friendly words.

@@ -75,7 +75,7 @@ Procedure
     </if>
 
     1.  Set <worktree-name><ase-task-id/></worktree-name>. The worktree
-        is *never* named by an own option value: it always carries the
+        is *never* named by its own option value: it always carries the
         unique *task id*, so the worktree directory and its branch stay
         unambiguously tied to the very task plan implemented in them.
         The task id is a plain identifier by construction, hence it is
@@ -89,7 +89,7 @@ Procedure
         `git rev-parse --show-toplevel`
 
         <if condition="this command fails">
-        The current directory is no Git repository, so no worktree can be
+        The current directory is not a Git repository, so no worktree can be
         created. Only output the following <template/> and then
         immediately *STOP* processing the entire current skill, leaving
         the working copy *untouched*:

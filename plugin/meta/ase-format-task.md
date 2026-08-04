@@ -139,7 +139,7 @@ You *MUST* honor the following hints on this *task* format:
     task plan was last modified. Both use an ISO-style format
     value. The value of both can be determined by a call to the
     `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase` MCP
-    server and use the `text` field of its response.
+    server, using the `text` field of its response.
 
 -   The <title/> is a short summary of the <summary-what/>, no longer than
     50 characters.

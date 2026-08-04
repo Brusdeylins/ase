@@ -123,7 +123,7 @@ for the technology stack to *provide* the *needed functionality*
         (which alone is governed by <getopt-option-limit/>) has a
         meaningful set to choose from.
 
-        In the to be discovered candidate set of components <component-K/>
+        In the to-be-discovered candidate set of components <component-K/>
         (K=1-C, where C is the merged and deduplicated candidate count),
         remember the component name as <name-K/>, the
         official package name as <package-K/>, the latest version as

@@ -326,7 +326,7 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan created**
         </template>
 
-    6.  Directly pass-through control to the next skill:
+    6.  Directly pass through control to the next skill:
 
         Treat <getopt-option-next/> as a comma-separated chronological
         list of pre-selected next-step tokens. *Peek* the *first* token

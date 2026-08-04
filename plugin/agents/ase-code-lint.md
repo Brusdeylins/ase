@@ -65,10 +65,10 @@ Workflow
         identifiers, string literals and comments.
 
         Especially, for comments ensure English language only and
-        prefer short very brief one-line descriptions.
+        prefer short, very brief one-line descriptions.
 
     -   **A05 - COMPLEXITY**:
-        Check for extremely long functions, and deeply nested code
+        Check for extremely long functions and deeply nested code
         constructs.
 
         Especially, for functions prefer fewer than 100 lines, and for
@@ -185,8 +185,8 @@ Workflow
     -   **A15 - PERFORMANCE**:
         Check for bad performance and inefficiency issues.
 
-        Especially, check for code constructs with a high (i.e., not
-        constant/O(1), or linear/O(n) complexity) in its execution time
+        Especially, check for code constructs with a high complexity (i.e., not
+        constant/O(1), or linear/O(n)) in their execution time
         and/or memory consumption.
 
     -   **A16 - SECURITY**:

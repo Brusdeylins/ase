@@ -56,5 +56,5 @@ tools:
 4.  Now call the MCP tool `query(prompt: <query/>)` from the MCP server
     <server/> and then return its result `text` *verbatim* and *without
     any modifications* as the last message. Especially, do *NOT* add or
-    remove any text to the MCP server response on your own and do not
+    remove any text to or from the MCP server response on your own and do not
     interpret the result in any way.

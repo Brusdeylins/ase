@@ -119,7 +119,7 @@ multi-*criteria* decision matrix.
     -   Ensure the final number of criteria is always within the range of
         minimum 8 and maximum 12: if fewer than 8 criteria were requested,
         use the set of alternatives to decide on additional criteria
-        which potentially allow best to triage the alternatives, take the
+        which potentially best allow triaging the alternatives, take the
         <reason/> into account, and use the `ase-meta-search` skill (drawing from
         the *skill-wide shared budget* of at most 8 `ase-meta-search` invocations
         in total across STEP 2 and STEP 3 combined) to find out about the

@@ -102,7 +102,7 @@ store those facts in the placeholder named `<arg2/>`.
         <child-4/>.
 
         <expand name="gather-facts"
-            arg1="the CHILDREN topics (narrower topics that are specializations) of the following topic: <topic/>"
+            arg1="the CHILD topics (narrower topics that are specializations) of the following topic: <topic/>"
             arg2="facts-children"></expand>
 
         Ground the determination of the canonical names of the most

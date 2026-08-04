@@ -161,7 +161,7 @@ The following top-level commands exist for service management:
   exits with status 0.
 
 The following top-level command exists for bridging the per-project
-background service as a *Anthropic Claude Code CLI* MCP server:
+background service as an *Anthropic Claude Code CLI* MCP server:
 
 - `ase mcp`:
   Bridge stdio MCP to the per-project background service over
@@ -553,7 +553,7 @@ STATE FILES
 HISTORY
 -------
 
-`ase` was started to be developed in October 2025.
+Development of `ase` started in October 2025.
 
 AUTHOR
 ------

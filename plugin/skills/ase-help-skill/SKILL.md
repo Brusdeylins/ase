@@ -35,7 +35,7 @@ skill name, abbreviation of it, or description of its purpose:
 <skill-ref><getopt-arguments/></skill-ref>
 </objective>
 
-The following <catalog/> is index of all ASE skills -- one
+The following <catalog/> is the index of all ASE skills -- one
 `⎈ **<group/>**` entry per skill group and one
 ``○ `<name/>`: <purpose/>`` entry per skill -- and this is
 the *sole* index <skill-ref/> is resolved against:

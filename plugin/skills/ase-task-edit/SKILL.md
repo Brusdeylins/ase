@@ -177,7 +177,7 @@ Set <args></args> (set args to empty).
 
         <if condition="
             <getopt-option-int-reuse-task/> is equal `true`
-            *and* a `ase_task_save(id: '<ase-task-id/>', ...)` tool call
+            *and* an `ase_task_save(id: '<ase-task-id/>', ...)` tool call
             exists earlier in the current session
         ">
             Set <text/> to the `text` *output* field of the most recent
@@ -232,7 +232,7 @@ Set <args></args> (set args to empty).
         *Determine previous-plan handling*:
 
         -   If <getopt-option-plan/> matches the regex `^(OVERWRITE|REFINE|PRESERVE)$`:
-            Honor the pre-selection what to do with the previous plan.
+            Honor the pre-selection of what to do with the previous plan.
             Set <result><getopt-option-plan/></result>.
 
         -   If <getopt-option-plan/> is equal to `none`:
@@ -326,7 +326,7 @@ Set <args></args> (set args to empty).
         Update <timestamp-modified/> with the current time in
         ISO-style format, which has to be determined by calling the
         `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
-        MCP server and use the `text` field of its response. Update
+        MCP server and using the `text` field of its response. Update
         the `Modified: ...` frontmatter key of <task-content/> with the
         new <timestamp-modified/> value.
         Do not output anything.

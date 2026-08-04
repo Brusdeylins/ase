@@ -37,9 +37,9 @@ you *MUST* honor the following so-called **GENERIC TENETS**:
     -   Handle obvious or expected errors near the origin.
     -   Handle theoretical or unexpected errors in parent scopes.
     -   Avoid introducing dedicated state variables for individual error cases.
-    -   If state variables are needed to detect error cases, use minimum
+    -   If state variables are needed to detect error cases, use the minimum
         number of those variables only.
-    -   Use minimum number of state variables to span the maximum of error space.
+    -   Use the minimum number of state variables to span the maximum of error space.
 
 -   **Surgical Changes**:
     *Keep changes as small as possible.*
@@ -150,12 +150,12 @@ you *MUST* honor the following so-called **RECONCILIATION TENETS**:
     Re-express source facts at the *target's* level of abstraction and
     altitude; do not copy verbatim across artifact levels. A SPEC states
     intent, an ARCH states structure, CODE states realization, DOCS
-    states facts, etc -- align the *meaning*, not the wording.
+    states facts, etc. -- align the *meaning*, not the wording.
 
 -   **Format Conformance**:
     Keep every formatted target (SPEC, ARCH, TASK) conformant to its
     format contract (headings, structure, identifiers). Treat CODE,
-    DOCS, INFR, and OTHR kinds of artifacts as foreign defined, but not
+    DOCS, INFR, and OTHR kinds of artifacts as foreign-defined, but not
     as free-form.
 
 -   **Alignment Traceability**:

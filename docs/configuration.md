@@ -23,8 +23,8 @@ The following configuration parameters control the project:
     infrastructure, task plan, and other artifacts) are treated as a...
 
     -   `white`:     ...white box, i.e., the artifacts are intentionally fully transparent and understood.
-    -   `grey`:      ...grey  box, i.e., the artifacts are intentionally partially intransparent or not understood.
-    -   `black`:     ...black box, i.e., the artifacts are intentionally fully intransparent and not understood.
+    -   `grey`:      ...grey  box, i.e., the artifacts are intentionally partially non-transparent or not understood.
+    -   `black`:     ...black box, i.e., the artifacts are intentionally fully non-transparent and not understood.
 
     The boxing level modulates both the *work depth* (how deeply
     artifact-touching skills inspect and produce artifacts) and the

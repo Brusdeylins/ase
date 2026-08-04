@@ -25,7 +25,7 @@ Explain Source Code
 
 <objective>
 *Analyze* the source code of <getopt-arguments/>, and its directly related source
-code and *explain* it in a *brief*, *standardized*, and *concise* way.
+code, and *explain* it in a *brief*, *standardized*, and *concise* way.
 </objective>
 
 <flow>
@@ -126,10 +126,10 @@ code and *explain* it in a *brief*, *standardized*, and *concise* way.
 4.  <step id="STEP 4: CRUXES and GOTCHAS">
     **Highlight CRUXES and GOTCHAS**.
 
-    First, tell what are the *cruxes* of the code.
+    First, tell what the *cruxes* of the code are.
     Is there something one should really *notice*?
 
-    Second, tell what are the gotchas of the code.
+    Second, tell what the gotchas of the code are.
     Is there something one could really *stumble over*?
 
     Keep your explanation *brief* and *concise*.

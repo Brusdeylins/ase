@@ -6,9 +6,9 @@ Control Flow Constructs
     <define name="<define-name/>"><define-body/></define>:
 
     This specifies a *reusable definition* named <define-name/> and
-    an <define-body/> which can contain arbitrary information with
+    a <define-body/> which can contain arbitrary information with
     optional `<args/>` (or alternatively, individual `<arg1/>`,
-    `<arg2/>`, etc) and optional `<content/>` references from
+    `<arg2/>`, etc.) and optional `<content/>` references from
     subsequent <expand/> calls.
     This construct is expanded into nothing.
     Do not output anything.
@@ -20,7 +20,7 @@ Control Flow Constructs
     construct is expanded to the <define-body/> of <define/> with
     `<args/>` substituted with `<expand-arg1/> <expand-arg2/> [...]`,
     `<arg1/>` substituted with <expand-arg1/>, `<arg2/>` substituted
-    with <expand-arg2/>, etc, and `<content/>` substituted with
+    with <expand-arg2/>, etc., and `<content/>` substituted with
     <expand-content/>. Do not output anything else.
 
 -   *IMPORTANT*: You *MUST* honor the following control flow construct:
@@ -112,11 +112,11 @@ Control Flow Constructs
     anything else.
 
 -   *IMPORTANT*: You *MUST* honor the following control flow construct:
-    <agent-consolidation [group=<agent-group/>]/>
+    <agent-consolidation [group=<agent-group/>]/>:
 
     This specifies the merging of all the Git WorkTrees created by the
-    <agent/> calls with either are identified with the unique group
-    <agent-group/> or all <agent/> calls in the last <parallel/> section
+    <agent/> calls which either are identified with the unique group
+    <agent-group/> or occur in the last <parallel/> section
     of the context. After merging a single Git WorkTree, remove the Git
     WorkTree.
 

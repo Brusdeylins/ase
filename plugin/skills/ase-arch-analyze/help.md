@@ -54,7 +54,7 @@ Analyze a specific module:
 ❯ /ase-arch-analyze src/core
 ```
 
-Analyze a module under an own id namespace, yielding `core-P1`, `core-T1`, ...:
+Analyze a module under its own id namespace, yielding `core-P1`, `core-T1`, ...:
 
 ```text
 ❯ /ase-arch-analyze --prefix core src/core

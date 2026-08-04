@@ -82,7 +82,7 @@ following procedure:
         </else>
 
         <if condition="<opts/> contains `--other` and does *not* contain `--no-other`">
-            Set <hint>Please choose *one* option by typing <keys/>, or other free-text instruction.</hint>.
+            Set <hint>Please choose *one* option by typing <keys/>, or any other free-text instruction.</hint>.
         </if>
         <else>
             Set <hint>Please choose *one* option by typing <keys/>.</hint>.

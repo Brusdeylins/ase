@@ -13,7 +13,7 @@
 ##  DESCRIPTION
 
 The `ase-meta-eli5` skill explains the supplied *topic* in "Explain
-Like I'm 5" (ELI5) style, so that even a five year old child could
+Like I'm 5" (ELI5) style, so that even a five-year-old child could
 understand it. The explanation uses simple, jargon-free wording --
 short sentences, everyday words, and familiar images -- and is
 structured into three labeled blocks: *WHAT* (a plain-words summary),

@@ -137,7 +137,7 @@ to <getopt-option-count/>; if <getopt-option-count/> is *non-numeric* or
         Imagine success scenarios of the thesis, because envisioning
         how it wins clarifies the conditions worth securing in advance.
 
-    For each Pro-Thesis or Supporting-Argument rank it on a Likert
+    For each Pro-Thesis or Supporting-Argument, rank it on a Likert
     scale of 0 (weak) to 10 (strong). Repeat the process of finding
     more Pro-Theses or Supporting-Arguments until you EITHER have found
     at least <count/> Pro-Theses or Supporting-Arguments with at least a

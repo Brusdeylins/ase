@@ -4,7 +4,7 @@ Code Skill Common Steps
 
 <define name="code-tenets">
 
-You *MUST* internalize and strictly honor the **GENERIC TENETS**, and
+You *MUST* internalize and strictly honor the **GENERIC TENETS** and
 the **<arg1/> TENETS** of the **ASE Tenets** in the following creation
 and updating of code. Do not output anything.
 

@@ -44,9 +44,9 @@ source code changes.
     candidate sub-causes, descends into the single most significant one
     (justifying the choice), and retains the rest as *fallbacks*. During
     backward validation a mis-rooted choice is *backtracked* into a fallback
-    and re-descended, so the widening actively improves which root-cause is
+    and re-descended, so the widening actively improves which root cause is
     reached rather than merely listing alternatives. The result is still a
-    single, but better-justified, root-cause. A non-numeric or non-positive
+    single, but better-justified, root cause. A non-numeric or non-positive
     value falls back to the default.
 
 ##  ARGUMENTS
@@ -71,7 +71,7 @@ Drill down deeper with a tunable chain length of seven:
 ```
 
 Weigh several candidate sub-causes per level (with backtracking) to avoid
-committing early to the wrong root-cause:
+committing early to the wrong root cause:
 
 ```text
 ❯ /ase-meta-why -w 3 the release was delayed by two weeks

@@ -92,7 +92,7 @@ Analyze a directory, reporting only `MEDIUM` and `HIGH` problems:
 ❯ /ase-code-analyze -S MEDIUM src/handlers/
 ```
 
-Analyze a directory under an own id namespace, yielding `auth-P1`, `auth-P2`, ...:
+Analyze a directory under its own id namespace, yielding `auth-P1`, `auth-P2`, ...:
 
 ```text
 ❯ /ase-code-analyze --prefix auth src/auth/

@@ -3,7 +3,7 @@ name: hello
 argument-hint: "[--help|-h] [--lang|-l=(en|de|fr|it)] [<subject>]"
 description: >
     Show a nice greeting message with a timestamp.
-    Use this, when the user wants to greet or say hello,
+    Use this when the user wants to greet or say hello,
     optionally to a certain subject <subject> and in a certain language <language>.
 user-invocable: true
 disable-model-invocation: false
@@ -41,7 +41,7 @@ allowed-tools:
 
     </step>
 
-2.  <step id="STEP 2: Product Output">
+2.  <step id="STEP 2: Produce Output">
 
     1.  Create the greeting string, based on the greeting format.
 

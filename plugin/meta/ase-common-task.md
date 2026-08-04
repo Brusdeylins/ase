@@ -62,7 +62,7 @@ Task Skill Common Steps
 
 <if condition="
     <getopt-option-int-reuse-task/> is equal `true`
-    *and* a `ase_task_save(id: '<ase-task-id/>', ...)` tool call
+    *and* an `ase_task_save(id: '<ase-task-id/>', ...)` tool call
     exists earlier in the current session
 ">
     Set <text/> to the `text` *output* field of the most recent
@@ -101,7 +101,7 @@ Only output the following <template/>:
 Update <timestamp-modified/> with the current time in ISO-style
 format, which has to be determined by calling the
 `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
-MCP server and use the `text` field of its response. If
+MCP server and using the `text` field of its response. If
 <timestamp-created/> is still unset (because the plan content
 had no `Created:` frontmatter key), set
 <timestamp-created><timestamp-modified/></timestamp-created>

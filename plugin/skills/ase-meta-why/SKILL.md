@@ -67,16 +67,16 @@ addressing surface-level symptoms.
         <while condition="<n/> is less than or equal to <depth/>">
 
             Ask <question/> and document the answer in <answer/> with the following template.
-            Don't stop at symptoms, keep digging for systemic issues.
+            Don't stop at symptoms; keep digging for systemic issues.
             Consider technical, domain-specific, process-related, or organizational causes.
 
             <template>
             <ase-tpl-bullet-secondary/> **WHY <n/>**: <answer/>
             </template>
 
-            Then, for the next iteration set <question/> now to be the last <answer/>.
-            The magic is NOT in exactly <depth/> "Why" -- you can <break/>
-            the iteration when you already reached the root-cause.
+            Then, for the next iteration, set <question/> now to be the last <answer/>.
+            The magic is NOT in exactly <depth/> "Whys" -- you can <break/>
+            the iteration when you have already reached the root-cause.
             Finally, set <n/> to <n/> + 1 (increment iteration counter).
 
         </while>
@@ -108,7 +108,7 @@ addressing surface-level symptoms.
             *non-overlapping* candidate sub-causes, each documented in <answer-k/>.
             Let <count/> be the number of candidates you actually surfaced
             (at least one, at most <width/>).
-            Don't stop at symptoms, keep digging for systemic issues.
+            Don't stop at symptoms; keep digging for systemic issues.
             Explore *different* candidates -- technical, domain-specific,
             process-related, or organizational causes -- and avoid restating
             the same cause in different words.
@@ -136,7 +136,7 @@ addressing surface-level symptoms.
 
             Record the remaining candidates as <fallbacks/> for level <n/>.
             Then, for the next iteration, set <question/> to the chosen candidate.
-            You can <break/> the iteration when the chosen candidate already
+            You can <break/> the iteration when the chosen candidate has already
             reached its root-cause.
             Finally, set <n/> to <n/> + 1 (increment iteration counter).
 

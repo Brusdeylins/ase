@@ -16,7 +16,7 @@
 The `ase-task-implement` skill performs the *final implementation* of
 a task plan by modifying the corresponding *artifacts* with a complete
 *change set*. The plan is loaded and any optional `IMPLEMENTATION DRAFT`
-section produced by `ase-task-preflight` is used as a hint - the plain
+section produced by `ase-task-preflight` is used as a hint -- the plain
 plan content always overrules the draft. Afterwards the plan's
 `Properties:` frontmatter key gains the value `implemented` (plus
 `verified`, if the verification phase actually ran and succeeded), and

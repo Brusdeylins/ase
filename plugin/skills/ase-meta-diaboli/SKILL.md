@@ -112,10 +112,10 @@ to <getopt-option-count/>; if <getopt-option-count/> is *non-numeric* or
         just a contrarian.
 
     -   **Pre-Mortem Thinking**:
-        Imagine failure scenarios of the thesis, because better to
-        prevent them in advance than having to resolve them later.
+        Imagine failure scenarios of the thesis, because it is better to
+        prevent them in advance than to have to resolve them later.
 
-    For each Anti-Thesis or Counter-Argument rank it on a Likert scale
+    For each Anti-Thesis or Counter-Argument, rank it on a Likert scale
     of 0 (weak) to 10 (strong). Repeat the process of finding more
     Anti-Theses or Counter-Arguments until you EITHER have found at
     least <count/> Anti-Theses or Counter-Arguments with at least a rank

@@ -4,7 +4,7 @@
 **Agentic Software Engineering (ASE)** is the opinionated companion
 tooling of *Dr. Ralf S. Engelschall* for combining Agentic AI Coding
 with Software Engineering in tools like *Anthropic Claude Code CLI*. **ASE** consists
-of a *Anthropic Claude Code CLI* plugin and a Command-Line Interface (CLI) tool.
+of an *Anthropic Claude Code CLI* plugin and a Command-Line Interface (CLI) tool.
 
 ## Repository Layout
 
@@ -13,7 +13,7 @@ of a *Anthropic Claude Code CLI* plugin and a Command-Line Interface (CLI) tool.
 -   `plugin/`: Agentic AI coding tool plugin
 -   `tool/`: the `@rse/ase` CLI.
     `tool/plugin` is a build-time copy of `plugin` and can be ignored.
--   `pages/`: the GitHub Pages site (https://ase.tools),
+-   `pages/`: the GitHub Pages site (https://ase.tools)
 
 ## Tool Build System
 

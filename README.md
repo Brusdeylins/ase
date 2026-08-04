@@ -299,7 +299,7 @@ see whether **ASE** is right for you:
 
 - **Workflow Skill Generation**:
   You want a recurring multi-step procedure -- sequential steps, parallel
-  actions, sub-agent and skill calls -- turned into an own reusable skill?
+  actions, sub-agent and skill calls -- turned into its own reusable skill?
   &rarr; [`/ase-meta-workflow`](plugin/skills/ase-meta-workflow/help.md)
   `optimizer analyze the code, then resolve each finding in a parallel sub-agent`
 
@@ -409,7 +409,7 @@ The following AI services are currently defined:
 
 Hint: All API-based MCP servers of type "Chat" support both the native
 API of the LLM vendor and the *OpenRouter* proxy API as an alternative,
-i.e. you can leverage all paid "Chat" AI services by just providing the
+i.e., you can leverage all paid "Chat" AI services by just providing the
 `ASE_MCP_KEY_OPENROUTER` of an *OpenRouter* account. Alternatively,
 the harness-based MCP servers of type "Chat" (`anthropic-claude`,
 `openai-codex` and `github-copilot`) require no API key at all, as they

@@ -63,7 +63,7 @@ Workflow
         -   incorrect short-circuit evaluation or operator precedence
         -   logical vs. bitwise operator confusion
         -   negation mistakes in compound predicates
-        -   wrong comparison operator (`==` instead of `===`, `<` vs. `<=`, etc)
+        -   wrong comparison operator (`==` instead of `===`, `<` vs. `<=`, etc.)
         -   inverted condition or swapped if/else branches
         -   dead or duplicated conditional branches
         -   fall-through where a break or return was intended

@@ -15,7 +15,7 @@
 The `ase-task-reboot` skill re-creates an existing task plan *from
 scratch* by extracting the original `**WHAT**` and `**WHY**` sections
 (if present) from the current plan, using them as the new instruction,
-preserving the original creation timestamp, and writing a fresh plan
+preserving the original creation timestamp, and writing fresh plan
 content via `ase_task_save`.
 
 After the reboot, the user is asked whether to stop or hand off to

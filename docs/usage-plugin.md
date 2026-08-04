@@ -40,7 +40,7 @@ The following ASE commands/skills exist on the meta-level:
   decision matrix.
 
 - **/ase-meta-diaboli** \[`--count`|`-c` *count*\] *thesis*:<br/>
-  Challenge a thesis by relentlessly playing *Devil's Advocate* (latin:
+  Challenge a thesis by relentlessly playing *Devil's Advocate* (Latin:
   *Advocatus Diaboli*), then derive a *Hegelian* synthesis. `--count`
   sets the number of counter-arguments raised.
 
@@ -64,7 +64,7 @@ The following ASE commands/skills exist on the meta-level:
   `telegrapher`, or an ultra brief, rough and stuttering `caveman`.
 
 - **/ase-meta-changelog**:<br/>
-  Update changes entries in `CHANGELOG.md` files from Git commit information.
+  Update ChangeLog entries in `CHANGELOG.md` files from Git commit information.
 
 - **/ase-meta-commit**:<br/>
   Determine commit message for staged Git changes.

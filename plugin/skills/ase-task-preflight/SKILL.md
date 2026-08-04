@@ -92,7 +92,7 @@ Procedure
         Update <timestamp-modified/> with the current time in
         ISO-style format, which has to be determined by calling the
         `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
-        MCP server and use the `text` field of its response. Update
+        MCP server and using the `text` field of its response. Update
         the `Modified: ...` frontmatter key of <task-content/> with the
         new <timestamp-modified/> value.
         Do not output anything.

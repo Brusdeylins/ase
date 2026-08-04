@@ -141,7 +141,7 @@ Procedure
 
     </template>
 
-    In the <location/>, markup the line-range reference as
+    In the <location/>, mark up the line-range reference as
     code (with backticks) and prepend it with `▢ `.
 
     Keep the overall report *concise* and *brief*. Do *not* output any

@@ -173,7 +173,7 @@ Procedure
         <dimension/> to its `dimension` field, set <location/> to its
         `location` field, and set <finding/> to its `finding` field.
 
-        In the <location/> column, markup the `file:line` reference
+        In the <location/> column, mark up the `file:line` reference
         as code (with backticks) and prepend it with `▢ ` - keep the
         sub-agent's own `:N` / `:N-M` line citation intact and do *not*
         append any further line-count decoration.

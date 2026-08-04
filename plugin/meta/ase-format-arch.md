@@ -28,7 +28,7 @@ is the timestamp when this **Artifact** was created. The
 <timestamp-modified/> is the timestamp when this **Artifact** was last
 modified. Both use an ISO-style format value. The value of both can be
 determined by a call to the `ase_timestamp(format: "yyyy-LL-dd HH:mm")`
-tool of the `ase` MCP server and use the `text` field of its response.
+tool of the `ase` MCP server, using the `text` field of its response.
 Whenever an **Artifact** is updated, the <timestamp-modified/> *MUST* be
 updated, too.
 
@@ -831,7 +831,7 @@ forces at play, the chosen response, and the reasoning that justifies it.
 
     -   <arch-dr-decision-notes/> is *OPTIONAL* and can be omitted when it
         does not add genuine value - most decisions won't need it. The
-        following usually goes into it: information of the decision *process*
+        following usually goes into it: information about the decision *process*
         (e.g. a weighted decision matrix of considered alternatives);
         consequences of the decision (but only when non-obvious downstream
         effects need to be called out); and links to strongly related
@@ -850,7 +850,7 @@ forces at play, the chosen response, and the reasoning that justifies it.
         almost inevitable answer to the context - if a reader is surprised
         by the decision, either the context is missing a force, or the
         decision is under-justified. The rationale should make the decision
-        feel earned, not asserted - if you would delete the rationale and
+        feel earned, not asserted - if you delete the rationale and
         the decision suddenly looks arbitrary, the rationale was doing its
         job.
 
@@ -892,7 +892,7 @@ forces at play, the chosen response, and the reasoning that justifies it.
 
     -   **Boundary and scope decisions.** "Customer data is owned by the
         Customer context; other contexts reference it by ID only." The explicit
-        no-s are as valuable as the yes-s.
+        no's are as valuable as the yes's.
 
     -   **Deliberate deviations from the obvious path.** "We're using
         manual SQL instead of an ORM because X." Anything where a reasonable
@@ -1091,7 +1091,7 @@ its purpose, and the alternatives that were considered but not chosen.
         to bootstrap application parameters.
 
     -   **Configuration Parsing**:
-        Load and parse directives from configuration file to bootstrap
+        Load and parse directives from a configuration file to bootstrap
         application parameters.
 
     -   **Process Daemonizing**:
@@ -1103,7 +1103,7 @@ its purpose, and the alternatives that were considered but not chosen.
         and control them during the life-cycle of the application.
 
     -   **Component Management**:
-        Structure the code into components, instantiate them under run-time
+        Structure the code into components, instantiate them at run-time
         and manage them in a stateful component life-cycle.
 
     -   **Component Communication**:
@@ -1151,7 +1151,7 @@ its purpose, and the alternatives that were considered but not chosen.
         measurement information at certain points of interest.
 
     -   **Database Access**:
-        Map in-memory domain entities onto data store dependent persistent
+        Map in-memory domain entities onto a data-store-dependent persistent
         data structure.
 
     -   **Database Connectivity**:

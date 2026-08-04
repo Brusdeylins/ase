@@ -28,7 +28,7 @@ is the timestamp when this **Artifact** was created. The
 <timestamp-modified/> is the timestamp when this **Artifact** was last
 modified. Both use an ISO-style format value. The value of both can be
 determined by a call to the `ase_timestamp(format: "yyyy-LL-dd HH:mm")`
-tool of the `ase` MCP server and use the `text` field of its response.
+tool of the `ase` MCP server, using the `text` field of its response.
 Whenever an **Artifact** is updated, the <timestamp-modified/> *MUST* be
 updated, too.
 
@@ -122,7 +122,6 @@ SPEC-06-BR Business Rules    ──(constrains)─►     SPEC-05-NR Non-Functio
 SPEC-08-SM State Model       ──(of entity)─►      SPEC-07-DM Data Model
 SPEC-10-UC Use Cases         ──(use case actor)─► SPEC-02-PE Personas
 SPEC-10-UC Use Cases         ──(realizes)─►       SPEC-04-FR Functional Requirements
-SPEC-10-UC Use Cases         ──(transitions)─►    SPEC-08-SM State Model
 SPEC-11-TC Test Cases        ──(verifies)─►       SPEC-04-FR Functional Requirements
 SPEC-11-TC Test Cases        ──(verifies)─►       SPEC-05-NR Non-Functional Requirements
 SPEC-15-DS Dialog Storyboard ──(scenario)─►       SPEC-10-UC Use Cases
@@ -221,7 +220,7 @@ capturing their goals, needs, behaviors, and context.
         in total not longer than 30 characters), derived from
         <spec-pe-persona-name/>.
 
-    -   <spec-pe-persona-name/>: per-artifact unique first name of fictional
+    -   <spec-pe-persona-name/>: per-artifact unique first name of the fictional
         described person.
 
     -   <spec-pe-persona-gender/>: the gender of the persona: `male`,
@@ -287,12 +286,12 @@ over time.
 
     -   <spec-cj-step-stage/> is one of:
 
-        -   `Awareness`:     Customer is not aware of solution, but has a need.
-        -   `Consideration`: Customer is aware of solution, and should consider its use.
+        -   `Awareness`:     Customer is not aware of the solution, but has a need.
+        -   `Consideration`: Customer is aware of the solution, and should consider its use.
         -   `Decision`:      Customer wants to pick the solution.
         -   `Onboarding`:    Customer is using the solution.
-        -   `Retention`:     Customer in the long-term stays a customer.
-        -   `Advocacy`:      Customer is a fan of solution and tells the tribe.
+        -   `Retention`:     Customer in the long term stays a customer.
+        -   `Advocacy`:      Customer is a fan of the solution and tells the tribe.
 
     -   <spec-cj-step-actor/> is a `SPEC-PE-<spec-pe-persona-id/>` reference to the
         corresponding **Aspect** of the Personas **Artifact**.
@@ -664,7 +663,7 @@ manages, defining how information is organized and connected.
         -   `Type`          (`<spec-dm-attribute-qualifier/><spec-dm-attribute-type/>`)
         -   `Description`   (`<spec-dm-attribute-description/>, **BECAUSE** <spec-dm-attribute-rationale/>.`)
 
-    -   <export-table-2/> is a Markdown table for the relation with one
+    -   <export-table-2/> is a Markdown table for the relations with one
         row per <spec-dm-relation-id/>, sorted by <spec-dm-relation-id/> --
         with the columns:
 

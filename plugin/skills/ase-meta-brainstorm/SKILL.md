@@ -185,7 +185,7 @@ Honor the following tenets throughout the brainstorming:
     the unconventional/wildcard angle - because variety in origin yields
     variety in outcome.
 
-    Do still *not* judge, rank, or prune ideas in this step. Generate
+    Still do *not* judge, rank, or prune ideas in this step. Generate
     ideas until you either reach at least <getopt-option-min-ideas/> distinct
     candidate ideas or have clearly exhausted the meaningfully distinct
     space.

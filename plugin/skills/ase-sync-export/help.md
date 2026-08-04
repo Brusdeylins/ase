@@ -73,4 +73,4 @@ Export only the data-model artifact:
 ##  SEE ALSO
 
 [`ase-sync-reconcile`](../ase-sync-reconcile/help.md),
-[`ase-sync-import`](../ase-sync-import/help.md)
+[`ase-sync-import`](../ase-sync-import/help.md).

@@ -71,7 +71,7 @@ ChangeLog
 -------------------
 
 - FEATURE [code]: added `ase-meta-quotes` skill for finding quotes for topic keywords
-- FEATURE [code]: splitted `ase-meta-proximity` skill into a skill and a reusable agent
+- FEATURE [code]: split `ase-meta-proximity` skill into a skill and a reusable agent
 - FEATURE [code]: added `--include`/`-i` and `--exclude`/`-e` options to `ase-code-lint` for narrowing the checked code quality aspects
 - IMPROVEMENT [code]: report findings in descending order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED` in skills with a `--severity`/`-S` option
 - IMPROVEMENT [code]: gate redundancy findings on a 2:1 payoff ratio to avoid mere code relocation (`ase-code-lint.md`)
@@ -616,7 +616,7 @@ ChangeLog
 ------------------
 
 - FEATURE: add `<elseif>`/`<else>` control constructs and improve control flow (`ase-control.md`)
-- IMPROVEMENT: avoid redundant `ase_task_load` round-trips skill hand-offs via internal `--int-reuse-task` option
+- IMPROVEMENT: avoid redundant `ase_task_load` round-trips in skill hand-offs via internal `--int-reuse-task` option
 - IMPROVEMENT: hide internal `--int-*` options from the `ase_getopt` usage help and `info` rendering
 - IMPROVEMENT: speed up task-list processing via parallel `TaskCreate` plus explicit `TaskUpdate` ordering
 - IMPROVEMENT: let `ase-code-{craft,refactor,resolve}` skills trigger more often implicitly
@@ -687,7 +687,7 @@ ChangeLog
 - FEATURE: add `--models`/`-m` model-selection option to `ase-meta-quorum` to choose which foreign LLMs are queried
 - FEATURE: add `--services`/`-s` backend-selection option to `ase-meta-search` to choose which search services are queried
 - FEATURE: add `--limit`/`-l=12` option to `ase-arch-discover` to make the component discovery search and result cap user-controlled
-- BUGFIX: ensure that the "name" field of "Agent" calls are valid strings
+- BUGFIX: ensure that the "name" field of "Agent" calls is a valid string
 
 0.9.4 (2026-06-07)
 ------------------
@@ -972,8 +972,8 @@ ChangeLog
 -------------------
 
 - IMPROVEMENT: rate-limit the HTTP requests in ase-skills.ts to 4 concurrent ones
-- IMPROVEMENT: migrate the weighted decision matrix calculation of the "evaluate" skill into a MCP tool
-- IMPROVEMENT: migrate the parallel WebFetch and sorting functionality of the "discover" skill into a MCP tool
+- IMPROVEMENT: migrate the weighted decision matrix calculation of the "evaluate" skill into an MCP tool
+- IMPROVEMENT: migrate the parallel WebFetch and sorting functionality of the "discover" skill into an MCP tool
 - IMPROVEMENT: add USP/Crux/Gotcha overview table also to "discover" skill
 - REFACTOR: migrate from Axios to OFetch NPM package
 - CLEANUP: remove inclusion of "ase-persona.md" from all skill files (is part of constitution)
@@ -982,7 +982,7 @@ ChangeLog
 -------------------
 
 - CLEANUP: be more precise in calling the "Skill" tool
-- REFACTORING: factor our control constructs from ase-skill.md into ase-control.md to have them available for ase-persona.md
+- REFACTORING: factor out control constructs from ase-skill.md into ase-control.md to have them available for ase-persona.md
 
 0.0.39 (2026-05-22)
 -------------------
@@ -1002,8 +1002,8 @@ ChangeLog
 -------------------
 
 - IMPROVEMENT: add -v|--verbose option to "ase-task-list" skill for explicitly requesting verbose output
-- IMPROVEMENT: add support (via hooks) for agent ready/busy status which is send to tmux
-- IMPROVEMENT: add Github Copilot support under PowerShell (including newer hooks)
+- IMPROVEMENT: add support (via hooks) for agent ready/busy status which is sent to tmux
+- IMPROVEMENT: add GitHub Copilot support under PowerShell (including newer hooks)
 - BUGFIX: remove obsolete matcher in plugin hooks
 - CLEANUP: use consistent naming of dialog across skills
 
@@ -1031,7 +1031,7 @@ ChangeLog
 0.0.34 (2026-05-18)
 -------------------
 
-- IMPROVEMENT: draw a operation modes matrix diagram
+- IMPROVEMENT: draw an operation modes matrix diagram
 - BUGFIX: replace version on "npm start publish" also in plugin/package.json
 - CLEANUP: crop diagram SVGs
 
@@ -1045,14 +1045,14 @@ ChangeLog
 - IMPROVEMENT: support option -n|--next (choose step) in "ase-task-{edit,implement,preflight,reboot}" skills
 - IMPROVEMENT: support option -p|--plan (choose previous-plan handling) in "ase-task-edit" skill
 - BUGFIX: fix bundling of plugin into tool
-- BUGFIX: try to force "ase-code-{craft,refactor,resolve}" skills even hard to not immediately implement.
+- BUGFIX: try to force "ase-code-{craft,refactor,resolve}" skills even harder to not immediately implement.
 
 0.0.32 (2026-05-18)
 -------------------
 
 - IMPROVEMENT: add markdown linting infrastructure to plugin directory
 - IMPROVEMENT: provide PDF versions of docs diagrams
-- UPDATE: add Github Copilot CLI information to README
+- UPDATE: add GitHub Copilot CLI information to README
 - BUGFIX: fix docs/workflow diagram source and SVG
 - CLEANUP: fix markdown linting issues in plugin skills and meta files
 
@@ -1061,7 +1061,7 @@ ChangeLog
 
 - IMPROVEMENT: as "claude plugin install" does not support pinned versions, install plugin from bundled version of NPM package
 - IMPROVEMENT: provide `<ase-agent-tool/>` in context and `ASE_AGENT_TOOL` in environment to identify the agent tool
-- IMPROVEMENT: make skills more portable by using `AskUserQuestion` in Claude Code and `ask_user` in Github Copilot CLI
+- IMPROVEMENT: make skills more portable by using `AskUserQuestion` in Claude Code and `ask_user` in GitHub Copilot CLI
 - IMPROVEMENT: add `<skill>` tags and objectives to all `ase-task-*` skills and use them in skill-started status output
 - IMPROVEMENT: add kv-store persistence of findings to `ase-arch-analyze` skill and unify kv key naming
 - IMPROVEMENT: improve status output and display ASE version during setup operations
@@ -1072,7 +1072,7 @@ ChangeLog
 
 - REVAMPING: reimplement ase-task-* skills to no longer use agent
   harness "plan mode" as especially the `ExitPlanMode` tool is Claude
-  Code specific and cannot be customized and not controlled in any
+  Code specific and cannot be customized or controlled in any
   reasonable way.
 
 0.0.29 (2026-05-16)
@@ -1165,15 +1165,15 @@ ChangeLog
 
 - IMPROVEMENT: at end of `ase-spec-implement` skill, delete the task
 - IMPROVEMENT: support `ASE_HEADLESS` mode for skipping the constitution banner under "claude -p" use by claudeX
-- IMPROVEMENT: add initial Github Copilot CLI support to "ase setup" commands and provide marketplace/plugin JSON config files
+- IMPROVEMENT: add initial GitHub Copilot CLI support to "ase setup" commands and provide marketplace/plugin JSON config files
 - IMPROVEMENT: improve `ase-code-changes` skill by extending its context when necessary
 - IMPROVEMENT: add support for Copilot preToolUse hook
-- IMPROVEMENT: add `-t`/`--tool` option to `ase statusline` and support Github Copilot CLI status line
+- IMPROVEMENT: add `-t`/`--tool` option to `ase statusline` and support GitHub Copilot CLI status line
 - BUGFIX: fix allowed-tools Bash pattern syntax in `ase-meta-chat` skill
 - BUGFIX: omit session name in `ase statusline` output for now
 - BUGFIX: "ase setup install" in development mode has to use the ASE base directory, not cwd
 - BUGFIX: send logs to stderr instead of stdout to not interfere with e.g. MCP on stdin/stdout
-- UPDATE: mention rudimentary Github Copilot CLI support in README
+- UPDATE: mention rudimentary GitHub Copilot CLI support in README
 - CLEANUP: remove debugging leftovers in `plugin/hooks/hooks.json` and `ase-hook.ts`
 - CLEANUP: fix indentation in `ase-spec-implement` skill
 
@@ -1190,7 +1190,7 @@ ChangeLog
 -------------------
 
 - CLEANUP: switch "ase statusline" from hard-coded ANSI sequences to use of NPM package "chalk"
-- IMPROVEMENT: provide a bunch of additional %x placeholders various token, cost and Git information in "ase statusline"
+- IMPROVEMENT: provide a bunch of additional %x placeholders for various token, cost and Git information in "ase statusline"
 - IMPROVEMENT: provide --no-icons and --no-labels options to "ase statusline"
 - IMPROVEMENT: refactor "ase statusline" CLI command to support flexible expansion of information and coloring
 - IMPROVEMENT: retry `claude plugin install` up to 3 times in `ase setup`
@@ -1405,7 +1405,7 @@ ChangeLog
 - IMPROVEMENT: improved README with diagram, caution hint, and homepage URL
 - IMPROVEMENT: added ase-code-commit skill
 - IMPROVEMENT: added ASE logo
-- IMPROVEMENT: provide Github release information on "npm start publish"
+- IMPROVEMENT: provide GitHub release information on "npm start publish"
 - BUGFIX: added missing building-blocks SVG file
 - UPDATE: updated building-blocks and coding-assistance diagrams
 - CLEANUP: various README and plugin skill cleanups
@@ -1432,7 +1432,7 @@ ChangeLog
 - IMPROVEMENT: improved analysis and insight skills
 - IMPROVEMENT: improved error handling and duplicate hook avoidance
 - BUGFIX: fixed descriptions, references, typos, and comments
-- UPDATE: inlined Andrew Karpathy coding guidelines
+- UPDATE: inlined Andrej Karpathy coding guidelines
 - UPDATE: switched from CLAUDE.md to AGENTS.md with hook-based delivery
 - UPDATE: used "ase-" prefix for plugin parts consistently
 - CLEANUP: various code and configuration cleanups

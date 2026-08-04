@@ -112,7 +112,7 @@ Procedure
             | **<intent/>** | <changes/> | <files/>: <description/> |
             </template>
 
-            In the <files/> part of the second column, markup all file
+            In the <files/> part of the second column, mark up all file
             references as code (with backticks), prepend them with `▢ `,
             append ` [+N/-M]` (based on the information in <stat/>) to them,
             and separate them with `, ` (a comma and space). Do *not* repeat
@@ -174,7 +174,7 @@ Procedure
             logging, `TODO`/`FIXME` scaffolding, disabled tests), which
             should be just removed and not part of any commit.
 
-    3.  A hunk that *serves* <thesis/> will be *not* reported. Only hunks that
+    3.  A hunk that *serves* <thesis/> will *not* be reported. Only hunks that
         do *not* serve it will be reported. If *every* hunk serves the thesis,
         the diff is *coherent* and you report *no* flagged hunks.
 
@@ -203,7 +203,7 @@ Procedure
         the hunk does not serve <thesis/> and what to do with it (e.g.
         split into its own commit, drop the debug residue).
 
-        In the <location/> column, markup all file references as code
+        In the <location/> column, mark up all file references as code
         (with backticks), prepend them with `▢ ` and append ` [+N/-M]`
         (based on the information in <stat/>) to them.
 
@@ -212,7 +212,7 @@ Procedure
 
         <template>
 
-        | Deviation        | Location    | Why it does not serve the thesis? |
+        | Deviation        | Location    | Why does it not serve the thesis? |
         | ---------------- | ----------- | --------------------------------- |
         | **<deviation/>** | <location/> | <reason/>                         |
 
@@ -278,7 +278,7 @@ Procedure
         and <mitigation/> texts *concise* and *ultra brief*. Do *not*
         output any further explanation.
 
-        In <evidence/> markup all file references as code (with
+        In <evidence/> mark up all file references as code (with
         backticks), prepend them with `▢ ` and append ` [+N/-M]` (based
         on the information in <stat/>) to them.
 
@@ -297,7 +297,7 @@ Procedure
 
     1.  From the *same* captured <diff/> and <stat/>, *extract the
         touched modules* - the distinct changed source files (or their
-        enclosing modules/ packages, according to the language idiom).
+        enclosing modules/packages, according to the language idiom).
 
     2.  Then, for each touched module, *scan its reverse dependencies*
         - the other first-party files that *import* or *reference* it
@@ -329,7 +329,7 @@ Procedure
         <module/> is a *touched* module and <impact/> is a one-sentence
         note on *what depends on it* and *how far the blast reaches*.
 
-        In <module/> and <impact/>, markup all file references as code
+        In <module/> and <impact/>, mark up all file references as code
         (with backticks), prepend them with `▢ ` and append ` [+N/-M]`
         (based on the information in <stat/>) to them.
 

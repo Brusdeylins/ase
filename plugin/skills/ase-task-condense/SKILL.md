@@ -110,7 +110,7 @@ Set <args></args> (set args to empty).
                 per-line convention of the plan <format/>, but *never*
                 break a line *inside* an inline code span.
             -   *Merge* genuinely-redundant bullets (the same aspect
-                restated) and *drop* pure duplication - but *only* when
+                restated) and *drop* pure duplication -- but *only* when
                 truly redundant; *never* lose a distinct aspect.
 
         3.  *Normalize the rendering artifacts*: the loaded
@@ -136,7 +136,7 @@ Set <args></args> (set args to empty).
             the plan content. This ruleset-based compression is applied
             *regardless* of the currently active session persona style.
 
-        5.  *Hard guardrail - semantics preserved EXACTLY*: condensing
+        5.  *Hard guardrail -- semantics preserved EXACTLY*: condensing
             *only* shortens wording. It *MUST NOT* drop, merge (except
             truly-redundant bullets per sub-item 2), reorder, or alter
             *any* factual claim, requirement, file path, rule, or

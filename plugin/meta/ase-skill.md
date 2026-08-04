@@ -13,7 +13,7 @@ Skill Output
     the value of a placeholder named `xxx`.
 
 -   *IMPORTANT*: *All* output is *exclusively* requested through
-    <template/> sections. You *MUST* *NOT* output anything *EXCEPT* it
+    <template/> sections. You *MUST* *NOT* output anything *UNLESS* it
     is explicitly included in such a <template/> section. Especially,
     you *MUST* *NOT* output any explanations on your own, unless
     explicitly requested.
@@ -95,8 +95,8 @@ Skill Output
 
         -   *Fix conflicts with documented priority*: the
             recommendation would violate a documented priority
-            (hot-path, allocation-free, lock-free, latency-
-            sensitive, sub-µs budget). Either weaken the
+            (hot-path, allocation-free, lock-free,
+            latency-sensitive, sub-µs budget). Either weaken the
             recommendation, convert it to a tradeoff, or mark
             severity `ACCEPTED` with note "priority-conflict
             accepted".
@@ -113,7 +113,7 @@ Skill Sequential Processing
     Each `<step id="xxx" [...]>...</step>` corresponds to a
     `TaskCreate({ subject: "xxx", description: "xxx" })`. In other
     words, use the text of the `id` attribute of <step/> exactly
-    *as-is* for both the `subject`, and the `description` fields of
+    *as-is* for both the `subject` and the `description` fields of
     `TaskCreate`.
 
     For speed, emit *all* `TaskCreate` calls together in a *single* turn
@@ -121,7 +121,7 @@ Skill Sequential Processing
     rely on the call order to establish the step order, as the parallel
     results carry no guaranteed ordering.
 
-    Instead, in the *immediately single following* turn, first
+    Instead, in the *single immediately following* turn, first
     reconstruct the step-id-to-taskId mapping: because each task's
     `subject` equals the originating <step/> `id` (and <step/> ids are
     unique), match every created task back to its <step/> by comparing
@@ -138,7 +138,7 @@ Skill Sequential Processing
     predecessor step (with `taskId` <prev/>).
 
 -   *IMPORTANT*: For each <step/> you *MUST* use the `TaskUpdate` tool
-    for updating its status *during* processing, once a <step/> finished.
+    for updating its status *during* processing, once a <step/> has finished.
 
 -   *IMPORTANT*: Whenever a skill *stops early* -- because a <step/>
     instructed you to *STOP* processing (on an error, a cancelled
@@ -151,12 +151,12 @@ Skill Sequential Processing
 
 -   *IMPORTANT*: You *MUST* *strictly sequentially* execute every <step/> in
     a <flow/>. You *MUST* not implicitly skip any <step/> during
-    processing, except you were explicitly requested to do this or the
+    processing, unless you were explicitly requested to do this or the
     step is configured to be a conditional step!
 
 -   *IMPORTANT*: You *MUST* *strictly sequentially* execute every numbered
     item in a <step/>. You *MUST* not implicitly skip any numbered item during
-    processing, except you were explicitly requested to do this!
+    processing, unless you were explicitly requested to do this!
 
 -   *IMPORTANT*: For any <step/> that specifies an *agent* in its
     `agent="[...]"` XML attribute, you *MUST* use the specified
@@ -252,7 +252,7 @@ Skill Identification
 
 -   *IMPORTANT*:
     You *MUST* *NOT* output any summaries, explanations, or next
-    steps at the end of a skill beside the explicit outputs via any
+    steps at the end of a skill besides the explicit outputs via any
     <template/>.
 
 Artifact Boxing Transparency

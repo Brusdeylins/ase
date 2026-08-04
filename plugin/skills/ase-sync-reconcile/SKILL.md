@@ -153,8 +153,8 @@ Procedure
         the **CRAFTING TENETS** of the **ASE Tenets** when updating in
         the following. Do not output anything.
 
-    3.  Once call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of
-        the `ase` MCP server to find out the current time and store it in
+    3.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of
+        the `ase` MCP server *once* to find out the current time and store it in
         <timestamp-modified/>.
 
     4.  <if condition="<getopt-option-bidirectional/> is equal 'true'">

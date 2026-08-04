@@ -34,8 +34,8 @@ on -- *control flow*, *XML placeholders*, *regex matching*, and
 *arithmetic* -- and report an overall **0%…100% compatibility** rating.
 
 This skill is unusual: it is both the *test definition* and the *system
-under test*. Each *probe* is a pure ASE construct that you execute and
-record its *actual* result. You *MUST NOT* compare against any expected
+under test*. Each *probe* is a pure ASE construct that you execute,
+recording its *actual* result. You *MUST NOT* compare against any expected
 value until STEP 6. Do not fabricate passes: a probe whose actual result
 differs from its expected result *MUST* be recorded as a *fail*.
 

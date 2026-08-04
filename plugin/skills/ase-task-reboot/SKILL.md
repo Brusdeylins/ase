@@ -90,7 +90,7 @@ Procedure
 
     6.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
-        timestamp-created to extracted text)
+        timestamp-created to extracted text).
         </if>
 
     7.  <if condition="<instruction/> is empty or contains only whitespace">
