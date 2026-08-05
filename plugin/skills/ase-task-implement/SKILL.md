@@ -214,26 +214,8 @@ Procedure
             `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
             MCP server.
 
-        Then *normalize the rendering artifacts*: the loaded
-        <task-content/> is the *rendering-prepared* variant of the plan,
-        whose artifacts *MUST NOT* be persisted back. Restore the
-        *authoring form* of the plan <format/> before saving:
-
-        -   *Restore the bullet markers*: a bullet point rendered as
-            `◯   ` is written back as `-   ` -- the persisted
-            <task-content/> *MUST NOT* contain a single `◯` marker.
-
-        -   *Re-join split code spans*: an inline code span which the
-            rendering split across two physical lines into two spans
-            (`` `<head/>` `` at a line end and `` `<tail/>` `` at the
-            next line start) is written back as the *one* original span
-            `` `<head/> <tail/>` ``, and the line is then broken *before*
-            its opening backtick, per the line-breaking rules of the plan
-            <format/>.
-
-        This normalization is *not* a semantic change: apart from the
-        frontmatter keys above, the plan body *MUST* stay *exactly* as
-        loaded.
+        Apart from the frontmatter keys above, the plan body *MUST* stay
+        *exactly* as loaded.
 
         Finally call the `ase_task_save(id: "<ase-task-id/>", text:
         "<task-content/>")` tool of the `ase` MCP server to persist the

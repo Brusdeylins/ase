@@ -180,19 +180,28 @@ Set <args></args> (set args to empty).
             *and* an `ase_task_save(id: '<ase-task-id/>', ...)` tool call
             exists earlier in the current session
         ">
-            Set <text/> to the `text` *output* field of the most recent
+            Set <text/> to the `text` *argument* of the most recent
             `ase_task_save(id: '<ase-task-id/>', ...)` tool call -- this
-            is the rendering-prepared plan content and *MUST NOT* be
-            confused with the `text` *argument* passed into that call --
-            *without* calling `ase_task_load` again. Set <status>plan
-            reused</status>. Do not output anything.
+            is the *authoring form* of the plan and *MUST NOT* be
+            confused with the `text` *output* field of that call --
+            *without* calling `ase_task_load` again. Set
+            <task-render></task-render> (set the rendering-prepared plan
+            to empty, as it is re-derived in step 3.2 or 3.3). Set
+            <status>plan reused</status>. Do not output anything.
         </if>
         <else>
-            Call the `ase_task_load(id: "<ase-task-id/>")` tool of the
-            `ase` MCP server to load any existing plan content and set
-            <text/> to the `text` output field of this `ase_task_load`
-            tool call. Do not output anything related to this MCP tool
-            call. Set <status>plan loaded</status>.
+            Call the `ase_task_load(id: "<ase-task-id/>", variant:
+            "both")` tool of the `ase` MCP server to load any existing
+            plan content in *both* of its forms. From the `text` output
+            field of this `ase_task_load` tool call, set <text/> to the
+            content enclosed in the `<task-plan-source>` delimiter lines
+            (the *authoring form*, the only form which is ever edited and
+            persisted) and set <task-render/> to the content enclosed in
+            the `<task-plan-render>` delimiter lines (the
+            *rendering-prepared* form, used for *display only*). The
+            delimiter lines themselves are *never* part of either form.
+            Do not output anything related to this MCP tool call. Set
+            <status>plan loaded</status>.
         </else>
 
         Set <task-content-dirty>false</task-content-dirty>.
@@ -200,6 +209,7 @@ Set <args></args> (set args to empty).
         -   If <text/> starts with `ERROR:` or `WARNING:`:
             Silently ignore the MCP error.
             Set <task-content/> to empty.
+            Set <task-render/> to empty.
             Set <words/> to "0".
             Do not output anything.
 
@@ -334,45 +344,34 @@ Set <args></args> (set args to empty).
 
     2.  *Persist plan*:
         <if condition="<task-content-dirty/> is 'true'">
-        *Normalize the rendering artifacts first*: whenever <task-content/>
-        stems from `ase_task_load` or from the `text` *output* field of an
-        `ase_task_save` tool call, it is the *rendering-prepared* variant
-        of the plan, whose artifacts *MUST NOT* be persisted back. Restore
-        the *authoring form* of the plan <format/> before saving:
-
-        -   *Restore the bullet markers*: a bullet point rendered as
-            `◯   ` is written back as `-   ` -- the persisted
-            <task-content/> *MUST NOT* contain a single `◯` marker.
-
-        -   *Re-join split code spans*: an inline code span which the
-            rendering split across two physical lines into two spans
-            (`` `<head/>` `` at a line end and `` `<tail/>` `` at the
-            next line start) is written back as the *one* original span
-            `` `<head/> <tail/>` ``, and the line is then broken *before*
-            its opening backtick, per the line-breaking rules of the plan
-            <format/>.
-
-        This normalization is *not* a semantic change, and it is a *no-op*
-        for a plan which already is in authoring form (e.g. one just
-        created by `generate-plan`).
-
-        Then call the `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")` tool
-        of the `ase` MCP server to persist the current plan, and then
-        set <task-content-dirty>false</task-content-dirty> again. Finally,
-        set <task-content/> to the `text` *output* field of this
-        `ase_task_save` tool call -- the rendering-prepared variant of the
-        just-persisted plan, which *MUST NOT* be confused with the `text`
-        *argument* passed into that call -- so the rendering in step 3.3
-        stays consistent across all loop rounds. Calculate the
-        number of words <words/> of <task-content/>. Do not output anything
-        related to this MCP tool call except the following <template/>:
+        Call the `ase_task_save(id: "<ase-task-id/>", text:
+        "<task-content/>", render: true)` tool of the `ase` MCP server to
+        persist the current plan -- <task-content/> always is the
+        *authoring form* of the plan and hence is persisted *as is* --
+        and then set <task-content-dirty>false</task-content-dirty>
+        again. Finally, set <task-render/> to the `text` *output* field
+        of this `ase_task_save` tool call -- the rendering-prepared form
+        of the just-persisted plan, which is for *display only* and
+        *MUST NOT* be confused with the `text` *argument* passed into
+        that call -- so the rendering in step 3.3 stays consistent across
+        all loop rounds. Calculate the number of words <words/> of
+        <task-content/>. Do not output anything related to this MCP tool
+        call except the following <template/>:
 
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan saved**
         </template>
         </if>
 
-    3.  *Render plan*: Treat <task-content/> as *verbatim* Markdown.
+    3.  *Render plan*:
+        <if condition="<task-render/> is empty">
+        Call the `ase_markdown_prepare(text: "<task-content/>")` tool of
+        the `ase` MCP server and set <task-render/> to the `text` output
+        field of this tool call. Do not output anything related to this
+        MCP tool call.
+        </if>
+
+        Treat <task-render/> as *verbatim* Markdown.
 
         For the *rendering only*, drop the leading *frontmatter* block --
         both `---` delimiters and all of their keys -- and instead place
@@ -383,7 +382,8 @@ Set <args></args> (set args to empty).
         frontmatter block sits in the plan file, and *MUST NOT* be moved
         below it. This keeps the `---` delimiters from rendering as a
         horizontal rule plus a *setext heading*. This rewrite is
-        *display-only* and *MUST NOT* change <task-content/> itself:
+        *display-only* and *MUST NOT* change <task-render/> or
+        <task-content/> itself:
 
         <format>
         ◉   **Id:**         <task-id/>
@@ -395,7 +395,7 @@ Set <args></args> (set args to empty).
         </format>
 
         Only output the following <template/>, so the user
-        can read the plan and react to it. If <task-content/> is longer
+        can read the plan and react to it. If <task-render/> is longer
         than 90 lines and a `##  IMPLEMENTATION DRAFT` section (from the
         companion skill `ase-task-preflight`) exists, replace the entire
         content of the `##  IMPLEMENTATION DRAFT` section with `[...]`.
@@ -404,7 +404,7 @@ Set <args></args> (set args to empty).
 
         <template>
         <ase-tpl-head title="TASK" subtitle="<task-id/>"/>
-        <task-content/>
+        <task-render/>
         <ase-tpl-foot title="TASK" subtitle="<task-id/>"/>
         </template>
 

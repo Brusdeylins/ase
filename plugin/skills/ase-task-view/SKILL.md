@@ -54,8 +54,10 @@ Procedure
 
 2.  **Perform Operation**:
 
-    1.  Call the `ase_task_load(id: "<id/>")` tool of the `ase` MCP
-        server to load the task plan content and set <text/> to the
+    1.  Call the `ase_task_load(id: "<id/>", variant: "render")` tool
+        of the `ase` MCP server to load the task plan content in its
+        *rendering-prepared* form -- this skill is *display-only* and
+        hence never persists the plan again -- and set <text/> to the
         `text` output field of this `ase_task_load` tool call. Do not
         output anything related to this MCP tool call.
 

@@ -11,6 +11,7 @@ ChangeLog
 - FEATURE [code]: added the task plan frontmatter keys `Status:` and `Properties:`
 - FEATURE [code]: added `--include`/`-i` and `--exclude`/`-e` options to `ase-task-list` and `ase task list` for filtering the listed task plans
 - FEATURE [docs]: documented the task plan lifecycle states and their transitions (`docs/task-states.md`)
+- IMPROVEMENT [code]: let `ase_task_load` return the authoring form of a task plan by default and the rendering-prepared form only on demand
 - IMPROVEMENT [code]: bounded the unlimited growth of `.ase/service.log` by trimming it to its last 2000 lines whenever the background service is started on a file larger than 1 MB
 - IMPROVEMENT [code]: reduced the noise in `.ase/service.log` by capping the logged MCP tool call arguments and by demoting session handshakes, notifications, and stream opens to log level `debug`
 - IMPROVEMENT [code]: let the detached background service adopt the log level of its spawning process, making `ase --log-level debug service start` log the full MCP traffic again

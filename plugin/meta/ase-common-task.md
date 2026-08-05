@@ -65,19 +65,20 @@ Task Skill Common Steps
     *and* an `ase_task_save(id: '<ase-task-id/>', ...)` tool call
     exists earlier in the current session
 ">
-    Set <text/> to the `text` *output* field of the most recent
+    Set <text/> to the `text` *argument* of the most recent
     `ase_task_save(id: '<ase-task-id/>', ...)` tool call -- this is
-    the rendering-prepared plan content and *MUST NOT* be confused
-    with the `text` *argument* passed into that call -- *without*
+    the *authoring form* of the plan and *MUST NOT* be confused
+    with the `text` *output* field of that call -- *without*
     calling `ase_task_load` again. Set <status>plan
     reused</status>. Do not output anything.
 </if>
 <else>
     Call the `ase_task_load(id: "<ase-task-id/>")` tool of the
-    `ase` MCP server to load the current task plan content and
-    set <text/> to the `text` output field of this `ase_task_load`
-    tool call. Do not output anything related to this MCP tool
-    call. Set <status>plan loaded</status>.
+    `ase` MCP server to load the current task plan content in its
+    *authoring form* -- the `variant` argument defaults to `source`
+    -- and set <text/> to the `text` output field of this
+    `ase_task_load` tool call. Do not output anything related to
+    this MCP tool call. Set <status>plan loaded</status>.
 </else>
 
 -   If <text/> starts with `ERROR:` or `WARNING:`:
@@ -113,8 +114,8 @@ the number of words <words/> of <task-content/>.
 
 Call the `ase_task_save(id: "<ase-task-id/>", text:
 "<task-content/>")` tool of the `ase` MCP server to save the task
-plan content. Do not output anything related to this MCP call
-except the following <template/>:
+plan content in its *authoring form*. Do not output anything
+related to this MCP call except the following <template/>:
 
 <template>
 ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **<arg1/>**

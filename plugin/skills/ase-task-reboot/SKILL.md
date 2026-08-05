@@ -64,26 +64,21 @@ Procedure
 3.  **Reboot Task Plan:**
 
     1.  Start with <instruction></instruction> (set instruction to empty).
+        Do not output anything.
 
-        The loaded <task-content/> is the *rendering-prepared* variant of
-        the plan, so its bullet markers can be rendered as `◯` instead
-        of the authored `-`. Set <marker>◯</marker> if the bullet points
-        of <task-content/> start with `◯`, and set <marker>-</marker>
-        otherwise. Do not output anything.
-
-    2.  <if condition="<task-content/> contains neither '<marker/>   **WHAT**:' nor '<marker/>   **WHY**:'">
+    2.  <if condition="<task-content/> contains neither '-   **WHAT**:' nor '-   **WHY**:'">
         Set <instruction><task-content/></instruction> (set instruction to task content).
         </if>
 
-    3.  <if condition="<task-content/> contains '<marker/>   **WHAT**: <text/>'">
+    3.  <if condition="<task-content/> contains '-   **WHAT**: <text/>'">
         Set <instruction><text/></instruction> (set instruction to extracted text).
         </if>
 
-    4.  <if condition="<task-content/> contains '<marker/>   **WHY**: <text/>' and <instruction/> is empty">
+    4.  <if condition="<task-content/> contains '-   **WHY**: <text/>' and <instruction/> is empty">
         Set <instruction><text/></instruction> (set instruction to extracted text).
         </if>
 
-    5.  <if condition="<task-content/> contains '<marker/>   **WHY**: <text/>' and <instruction/> is NOT empty">
+    5.  <if condition="<task-content/> contains '-   **WHY**: <text/>' and <instruction/> is NOT empty">
         Set <instruction><instruction/>, BECAUSE <text/></instruction>
         (append extracted text to instruction).
         </if>
@@ -115,22 +110,6 @@ Procedure
         <format/> and injecting into it all the information from
         the <instruction/> and all decisions you derived from the
         <instruction/>.
-
-        As <instruction/> was extracted from the *rendering-prepared*
-        variant of the previous plan, it can still carry rendering
-        artifacts which *MUST NOT* leak into the new <task-content/>.
-        The new plan *MUST* be written in the *authoring form* of the
-        plan <format/>:
-
-        -   *Bullet markers*: every bullet point starts with `-   ` --
-            <task-content/> *MUST NOT* contain a single `◯` marker.
-
-        -   *Code spans*: an inline code span which the rendering split
-            across two physical lines into two spans (`` `<head/>` `` at
-            a line end and `` `<tail/>` `` at the next line start) is
-            written as the *one* original span `` `<head/> <tail/>` ``,
-            and the line is then broken *before* its opening backtick,
-            per the line-breaking rules of the plan <format/>.
 
     9.  <expand name="task-save-content" arg1="plan rebooted"></expand>
 

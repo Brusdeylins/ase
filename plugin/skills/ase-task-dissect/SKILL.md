@@ -225,24 +225,6 @@ Procedure
             *MUST* still reproduce the original bullet point *completely*
             and *without* duplication.
 
-            The loaded <task-content/> is the *rendering-prepared*
-            variant of the epic, so it carries artifacts which *MUST NOT*
-            leak into the persisted <part-content/>. While copying, you
-            *MUST* *normalize* every taken-over bullet point back into
-            the authoring form of the plan <format/>:
-
-            -   *Restore the bullet markers*: a bullet point rendered as
-                `◯   ` is written back as `-   ` -- <part-content/>
-                *MUST NOT* contain a single `◯` marker.
-
-            -   *Re-join split code spans*: an inline code span which the
-                rendering split across two physical lines into two spans
-                (`` `<head/>` `` at a line end and `` `<tail/>` `` at the
-                next line start) is written back as the *one* original
-                span `` `<head/> <tail/>` ``, and the line is then broken
-                *before* its opening backtick, per the line-breaking
-                rules of the plan <format/>.
-
             <if condition="<task-content/> does NOT contain a `##  VERIFICATION` section heading">
             The epic itself deliberately *omits* the `##  VERIFICATION`
             section, so you *MUST* omit this section (including its

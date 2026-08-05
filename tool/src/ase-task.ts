@@ -577,15 +577,33 @@ export class TaskMCP {
             description:
                 "Load a previously persisted task by `id`. " +
                 "Returns the task as `text`, normalized into the current Markdown frontmatter shape; " +
-                "returns an empty string if no task exists for the `id`.",
+                "returns an empty string if no task exists for the `id`. " +
+                "The `variant` argument selects the returned form of the plan: " +
+                "`source` (the default) is the *authoring* form and the *only* form which may be " +
+                "edited and passed back into `ase_task_save`; " +
+                "`render` is the *rendering-prepared* form, which is for *display only* and " +
+                "MUST NOT be persisted; " +
+                "`both` returns the source form enclosed in `<task-plan-source>` delimiter lines, " +
+                "followed by the render form enclosed in `<task-plan-render>` delimiter lines.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                variant: z.enum([ "source", "render", "both" ]).optional()
+                    .describe("returned form of the plan: `source` (authoring form, the default), " +
+                        "`render` (rendering-prepared form, display only), or `both` " +
+                        "(both forms, each enclosed in its delimiter lines)")
             }
         }, async (args) => {
             try {
-                const raw  = Task.load(this.log, args.id)
-                const text = Markdown.prepare(raw)
+                const source  = Task.load(this.log, args.id)
+                const variant = args.variant ?? "source"
+                let text = source
+                if (source !== "" && variant === "render")
+                    text = Markdown.prepare(source)
+                else if (source !== "" && variant === "both")
+                    text =
+                        `<task-plan-source>\n${source}\n</task-plan-source>\n\n` +
+                        `<task-plan-render>\n${Markdown.prepare(source)}\n</task-plan-render>\n`
                 return {
                     content: [ { type: "text", text } ]
                 }
@@ -600,22 +618,29 @@ export class TaskMCP {
             title: "ASE task save",
             description:
                 "Persist a task as `text` under `id`. " +
-                "Overwrites any existing task for the same `id`. " +
-                "Returns the persisted task as `text`, prepared for improved rendering.",
+                "The `text` MUST be the *authoring* form of the plan (as returned by the " +
+                "`source` variant of `ase_task_load`) and hence MUST NOT carry any rendering " +
+                "artifacts. Overwrites any existing task for the same `id`. " +
+                "Returns a status `text` by default, or, if `render` is `true`, the " +
+                "*rendering-prepared* form of the just-saved plan, for display purposes only.",
             inputSchema: {
                 id: z.string()
                     .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
                 text: z.string()
-                    .describe("text content of the task")
+                    .describe("text content of the task, in its authoring form"),
+                render: z.boolean().optional()
+                    .describe("if true, return the rendering-prepared form of the just-saved " +
+                        "plan instead of a status message (default: false)")
             }
         }, async (args) => {
             try {
                 Task.save(this.log, args.id, args.text)
 
-                /*  return the prepared content, so a caller reusing the
-                    just-saved plan instead of re-loading it still receives
-                    the rendering-prepared variant  */
-                const text = Markdown.prepare(args.text)
+                /*  return the rendering-prepared content on demand, so a caller
+                    displaying the just-saved plan does not have to re-load it  */
+                const text = (args.render ?? false) ?
+                    Markdown.prepare(args.text) :
+                    `OK: saved task "${args.id}"`
                 return {
                     content: [ { type: "text", text } ]
                 }
