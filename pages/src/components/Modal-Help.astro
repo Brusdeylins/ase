@@ -451,10 +451,16 @@ for (const group of skillGroups)
             debounce = window.setTimeout(search, 120)
         })
 
-        document.querySelectorAll("[data-help-id]").forEach((trigger) => {
-            trigger.addEventListener("click", () => {
-                go(trigger.getAttribute("data-help-id") ?? "")
-            })
+        /*  route every `data-help-id` trigger through a single delegated
+            click handler instead of per-element listeners: the rewritten
+            `SEE ALSO` cross-links live inside the article markup, which
+            `unhighlight` restores wholesale from the cached HTML, so directly
+            bound listeners would be detached by the first search.  */
+        document.addEventListener("click", (event) => {
+            const node    = event.target instanceof Element ? event.target : null
+            const trigger = node?.closest("[data-help-id]")
+            if (!trigger) return
+            go(trigger.getAttribute("data-help-id") ?? "")
         })
 
         /*  external search triggers (the box below the on-page skill catalog):
