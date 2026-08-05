@@ -334,9 +334,36 @@ Set <args></args> (set args to empty).
 
     2.  *Persist plan*:
         <if condition="<task-content-dirty/> is 'true'">
-        Call the `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")` tool
+        *Normalize the rendering artifacts first*: whenever <task-content/>
+        stems from `ase_task_load` or from the `text` *output* field of an
+        `ase_task_save` tool call, it is the *rendering-prepared* variant
+        of the plan, whose artifacts *MUST NOT* be persisted back. Restore
+        the *authoring form* of the plan <format/> before saving:
+
+        -   *Restore the bullet markers*: a bullet point rendered as
+            `◯   ` is written back as `-   ` -- the persisted
+            <task-content/> *MUST NOT* contain a single `◯` marker.
+
+        -   *Re-join split code spans*: an inline code span which the
+            rendering split across two physical lines into two spans
+            (`` `<head/>` `` at a line end and `` `<tail/>` `` at the
+            next line start) is written back as the *one* original span
+            `` `<head/> <tail/>` ``, and the line is then broken *before*
+            its opening backtick, per the line-breaking rules of the plan
+            <format/>.
+
+        This normalization is *not* a semantic change, and it is a *no-op*
+        for a plan which already is in authoring form (e.g. one just
+        created by `generate-plan`).
+
+        Then call the `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")` tool
         of the `ase` MCP server to persist the current plan, and then
-        set <task-content-dirty>false</task-content-dirty> again. Calculate the
+        set <task-content-dirty>false</task-content-dirty> again. Finally,
+        set <task-content/> to the `text` *output* field of this
+        `ase_task_save` tool call -- the rendering-prepared variant of the
+        just-persisted plan, which *MUST NOT* be confused with the `text`
+        *argument* passed into that call -- so the rendering in step 3.3
+        stays consistent across all loop rounds. Calculate the
         number of words <words/> of <task-content/>. Do not output anything
         related to this MCP tool call except the following <template/>:
 
