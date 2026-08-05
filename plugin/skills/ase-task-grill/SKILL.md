@@ -163,12 +163,32 @@ Set <args>--int-reuse-task</args>.
 
     2.  Finally, update the plan in <plan/> based on all answers <answer-N/>.
 
-    3.  <if condition="the frontmatter of <plan/> carries a `Created: <text/>` key">
+    3.  *Normalize the rendering artifacts*: the loaded <plan/> is the
+        *rendering-prepared* variant of the plan, whose artifacts *MUST
+        NOT* be persisted back. Restore the *authoring form* of the plan
+        <format/> before saving:
+
+        -   *Restore the bullet markers*: a bullet point rendered as
+            `◯   ` is written back as `-   ` -- the updated <plan/>
+            *MUST NOT* contain a single `◯` marker.
+
+        -   *Re-join split code spans*: an inline code span which the
+            rendering split across two physical lines into two spans
+            (`` `<head/>` `` at a line end and `` `<tail/>` `` at the
+            next line start) is written back as the *one* original span
+            `` `<head/> <tail/>` ``, and the line is then broken *before*
+            its opening backtick, per the line-breaking rules of the plan
+            <format/>.
+
+        This normalization is *not* a semantic change and hence *never*
+        alters the content of the plan.
+
+    4.  <if condition="the frontmatter of <plan/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
         timestamp-created to extracted text).
         </if>
 
-    4.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the
+    5.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the
         `ase` MCP server and use the `text` field of its response for
         <timestamp-modified/> information. If <timestamp-created/> is
         still unset (because the previous <plan/> had no `Created:`
@@ -182,12 +202,12 @@ Set <args>--int-reuse-task</args>.
         keeping all already present values and *creating* the whole key
         (with the single value `grilled`) if the plan carries none.
 
-    5.  Call the `ase_task_save(id: "<ase-task-id/>",
+    6.  Call the `ase_task_save(id: "<ase-task-id/>",
         text: "<plan/>")` tool of the `ase` MCP server to save the updated
         task plan content. Do not output anything related to this MCP
         call.
 
-    6.  Only output the following <template/> and continue processing:
+    7.  Only output the following <template/> and continue processing:
 
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated**
