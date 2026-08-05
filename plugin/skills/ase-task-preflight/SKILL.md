@@ -88,7 +88,28 @@ Procedure
 
         </template>
 
-    3.  <if condition="the frontmatter of <task-content/> carries a `Modified:` key">
+    3.  *Normalize the rendering artifacts*: the loaded <task-content/>
+        is the *rendering-prepared* variant of the plan, whose artifacts
+        *MUST NOT* be persisted back. Restore the *authoring form* of
+        the plan <format/> before saving:
+
+        -   A bullet point rendered as `◯   ` is written back as
+            `-   ` -- the <task-content/> to be saved *MUST NOT*
+            contain a single `◯` marker.
+
+        -   An inline code span which the rendering split across two
+            physical lines into two spans (`` `<head/>` `` at a line
+            end and `` `<tail/>` `` at the next line start) is written
+            back as the *one* original span `` `<head/> <tail/>` ``,
+            and the line is then broken *before* its opening backtick.
+
+        This normalization applies to the *pre-existing* plan body only
+        -- the fenced `##  IMPLEMENTATION DRAFT` code block carries the
+        verbatim <unified-diff/> and *MUST* stay untouched. The
+        normalization is *not* a semantic change and hence *never*
+        alters any wording of the plan. Do not output anything.
+
+    4.  <if condition="the frontmatter of <task-content/> carries a `Modified:` key">
         Update <timestamp-modified/> with the current time in
         ISO-style format, which has to be determined by calling the
         `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
@@ -104,7 +125,7 @@ Procedure
         single value `preflighted`) if the plan carries none. Do not
         output anything.
 
-    4.  Finally, call the `ase_task_save(id: "<ase-task-id/>",
+    5.  Finally, call the `ase_task_save(id: "<ase-task-id/>",
         text: "<task-content/>")` tool of the `ase` MCP server to save the updated
         task plan content. Calculate the number of words <words/> of
         <task-content/>. Do not output anything related to this MCP tool call
