@@ -81,14 +81,18 @@ catalog you match <intent/> against:
         -   Set <rationale/> to a *very brief*, single-sentence
             justification of why the selected skill and its options match
             <intent/>.
+        -   Set <matched>yes</matched>.
 
     2.  *Guard No Match*:
 
         <if condition="no skill in <corpus/> adequately matches <intent/>">
-        Output the following <template/> and then *continue* the *loop*
-        at sub-step 4 to prompt the user for a refined or clearer intent
-        via the dialog's free-text channel (do *not* stop and do *not*
-        render a command):
+        Set <matched>no</matched> and discard the inadequate selection of
+        sub-step 1 by setting <name></name>, <arguments></arguments>, and
+        <command></command> (all set to empty), so that no stale command
+        can survive into the dialog of sub-step 4. Then output the
+        following <template/> and *continue* the *loop* at sub-step 4 to
+        prompt the user for a refined or clearer intent via the dialog's
+        free-text channel (do *not* stop and do *not* render a command):
 
         <template>
         <ase-tpl-bullet-secondary/> **WARNING**: no confident match for the intent -- please refine or clarify it.
