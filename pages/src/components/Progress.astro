@@ -21,7 +21,7 @@
         const bar    = document.getElementById("scroll-progress")
         const btt    = document.getElementById("back-to-top")
         const ring   = document.getElementById("back-to-top-ring")
-        const cta    = document.getElementById("sticky-cta")
+        let   cta    = document.getElementById("sticky-cta")
         const setup  = document.getElementById("setup")
         const footer = document.getElementById("page-footer")
         let ticking  = false
@@ -44,6 +44,12 @@
                 btt.style.opacity = show ? "1" : "0"
                 btt.style.pointerEvents = show ? "auto" : "none"
             }
+
+            /*  the sticky install bar can be dismissed at any time, which
+                detaches its node from the document -- drop our reference then,
+                so we no longer style a node which is gone for good.  */
+            if (cta && !cta.isConnected)
+                cta = null
             if (cta) {
                 /*  the sticky install bar is shown throughout the page, but
                     stands down while the Setup section is on screen (where the

@@ -69,8 +69,8 @@ const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1")
 </div>
 
 {/*  dismiss: drop the bar for the current page view only — no storage, so a
-     reload brings it back. The stale reference the Progress.astro scroll logic
-     keeps on the detached node is harmless.  */}
+     reload brings it back. The Progress.astro scroll logic notices the
+     detached node and drops its own reference to it.  */}
 <script is:inline>
     (function () {
         const cta = document.getElementById("sticky-cta")
