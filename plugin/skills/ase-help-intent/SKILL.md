@@ -120,16 +120,27 @@ catalog you match <intent/> against:
         dialog according to the expanded `custom-dialog` definition. You
         *MUST* closely follow this definition.
 
-        Let the user decide what to do with the generated command by
-        raising a question with the following custom dialog (invoked with
-        `--other`, so that any free-text instruction is accepted as an
-        intent refinement):
+        Let the user decide how to proceed by raising a question with the
+        following custom dialog (invoked with `--other`, so that any
+        free-text instruction is accepted as an intent refinement). Which
+        dialog is raised depends on <matched/>, so that `EXECUTE` is
+        offered *only* when a command was actually generated in sub-step 1
+        *and* rendered in sub-step 3:
 
+        <if condition="<matched/> is `no`">
+        <expand name="custom-dialog" arg1="--other">
+            Dispatch: What would you like to do with the unmatched intent?
+            REFINE: Refine or clarify the intent.
+            CANCEL: Cancel this dialog.
+        </expand>
+        </if>
+        <else>
         <expand name="custom-dialog" arg1="--other">
             Dispatch: What would you like to do with the generated command?
             EXECUTE: Execute the generated command now.
             CANCEL:  Cancel this dialog.
         </expand>
+        </else>
 
         Check the tool <result/> and dispatch accordingly:
 
@@ -137,13 +148,16 @@ catalog you match <intent/> against:
             *Break* out of the *loop* and stop processing without any
             further output.
 
-        -   If <result/> is `EXECUTE` and the current loop round raised
-            the *no-match* warning in sub-step 2 (so *no* command was
-            rendered): do *not* execute anything -- re-output the warning
-            <template/> of sub-step 2 and *continue* the *loop* at
-            sub-step 4 to obtain a refined intent.
+        -   If <result/> is `REFINE`, or <result/> is `EXECUTE` while
+            <matched/> is `no`: do *not* execute anything -- output the
+            following <template/> and *continue* the *loop* at sub-step 4
+            to obtain a refined intent via the dialog's free-text channel:
 
-        -   If <result/> is `EXECUTE`:
+            <template>
+            <ase-tpl-bullet-secondary/> **HINT**: please enter a refined or clearer intent as free text.
+            </template>
+
+        -   If <result/> is `EXECUTE` (which implies <matched/> is `yes`):
             *Break* out of the *loop*, output the following <template/>,
             and then call the tool `Skill(skill: "ase:<name/>", args:
             "<arguments/>")` to *execute* the generated command:
