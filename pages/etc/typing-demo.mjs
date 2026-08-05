@@ -71,11 +71,57 @@ if (!existsSync(path.join(root, "dst", "typing-demo", "index.html"))) {
     await run("npx", [ "astro", "build", "--config", "etc/astro.config.mjs" ], { cwd: root })
 }
 
-/*  start a self-contained preview server.  */
+/*  refuse to run against a foreign or stale leftover server, as it would
+    silently serve an outdated build while our own preview fails to bind.  */
+const occupied = await fetch(url, { signal: AbortSignal.timeout(1000) })
+    .then(()  => true)
+    .catch(() => false)
+if (occupied)
+    throw new Error(`port ${port} is already served by another process ` +
+        `(possibly a stale "astro preview" of an earlier run): stop it or pass --port`)
+
+/*  start a self-contained preview server. It is detached to become the
+    leader of its own process group, as the spawned "npx" is merely a
+    wrapper around the actual "astro preview" grandchild process.  */
 console.log(`starting preview server on port ${port} ...`)
 const server = spawn("npx",
     [ "astro", "preview", "--config", "etc/astro.config.mjs", "--port", String(port) ],
-    { cwd: root, stdio: "ignore" })
+    { cwd: root, stdio: "ignore", detached: true })
+
+/*  stop the preview server and its entire process group, as signalling
+    just the "npx" wrapper would leave the "astro preview" grandchild
+    behind as an orphan still holding the port.  */
+const stopServer = async (child) => {
+    if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null)
+        return
+    const exited = new Promise((resolve) => child.once("exit", resolve))
+    const signal = (sig) => {
+        try {
+            process.kill(-child.pid, sig)
+        }
+        catch {
+            /*  no process group (or unsupported): fall back to the wrapper  */
+            try {
+                child.kill(sig)
+            }
+            catch {
+                /*  already gone  */
+            }
+        }
+    }
+    signal("SIGTERM")
+    const timer = setTimeout(() => signal("SIGKILL"), 5000)
+    await exited
+    clearTimeout(timer)
+}
+
+/*  also stop the preview server on interactive aborts, as the "finally"
+    block below does not run on a signal-driven process exit.  */
+for (const sig of [ "SIGINT", "SIGTERM" ])
+    process.once(sig, async () => {
+        await stopServer(server)
+        process.exit(1)
+    })
 
 let webm
 try {
@@ -154,7 +200,7 @@ try {
         throw new Error(`no .webm produced in ${tmpDir}`)
 }
 finally {
-    server.kill("SIGTERM")
+    await stopServer(server)
 }
 
 const filters = `fps=${fps},scale=${width}:-1:flags=lanczos`
