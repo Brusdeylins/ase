@@ -116,6 +116,22 @@ Procedure
         the <instruction/> and all decisions you derived from the
         <instruction/>.
 
+        As <instruction/> was extracted from the *rendering-prepared*
+        variant of the previous plan, it can still carry rendering
+        artifacts which *MUST NOT* leak into the new <task-content/>.
+        The new plan *MUST* be written in the *authoring form* of the
+        plan <format/>:
+
+        -   *Bullet markers*: every bullet point starts with `-   ` --
+            <task-content/> *MUST NOT* contain a single `◯` marker.
+
+        -   *Code spans*: an inline code span which the rendering split
+            across two physical lines into two spans (`` `<head/>` `` at
+            a line end and `` `<tail/>` `` at the next line start) is
+            written as the *one* original span `` `<head/> <tail/>` ``,
+            and the line is then broken *before* its opening backtick,
+            per the line-breaking rules of the plan <format/>.
+
     9.  <expand name="task-save-content" arg1="plan rebooted"></expand>
 
     10. Only output the following <template/> and continue processing:
