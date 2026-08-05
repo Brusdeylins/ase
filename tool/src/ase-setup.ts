@@ -935,9 +935,11 @@ export default class SetupCommand {
         const envDev  = process.env.ASE_SETUP_DEV ?? ""
         const devDflt = envDev !== "" && envDev !== "0" && envDev.toLowerCase() !== "false"
 
-        /*  default for --tool derived from ASE_TOOL environment variable  */
+        /*  default for --tool derived from ASE_TOOL environment variable
+            (validated lazily by "parseTool" in each action, so an invalid
+            value cannot break unrelated "ase" commands at startup)  */
         const envTool  = process.env.ASE_TOOL ?? ""
-        const toolDflt = envTool !== "" ? this.parseTool(envTool) : "claude"
+        const toolDflt = envTool !== "" ? envTool : "claude"
 
         /*  register CLI top-level command "ase setup"  */
         const setupCmd = program
