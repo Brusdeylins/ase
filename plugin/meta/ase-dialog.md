@@ -125,7 +125,8 @@ following procedure:
             otherwise indicates that the user doesn't want to proceed,
             or the user declined to answer the question, or that
             the dialog was cancelled, rejected or skipped, set
-            <result>CANCEL</result>.
+            <result>CANCEL</result> and *SKIP* all remaining steps
+            2.3.3 - 2.3.4 of this dispatch.
 
         3.  Otherwise, determine the selected <label/>
             by mapping the <result/> (usually containing one of the
