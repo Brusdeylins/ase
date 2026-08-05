@@ -63,7 +63,7 @@ following procedure:
 
             <text>
             <text/>
-            <ase-tpl-boxline><label-key/>  ▶  <label-text/><label-pad/> <description/></ase-tpl-boxline>
+            <label-key/>  ▶  <label-text/><label-pad/> <description/>
             </text>
 
             <if condition="<keys/> is empty">
@@ -93,7 +93,7 @@ following procedure:
         <text>
         <ase-tpl-boxed title="DIALOG" subtitle="<question-label/>">
 
-        <ase-tpl-boxline>**<question-description/>**</ase-tpl-boxline>
+        **<question-description/>**
 
         <text/>
 
