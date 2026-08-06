@@ -11,8 +11,6 @@ allowed-tools:
     - "Skill"
     - "Agent"
     - "Read"
-    - "Edit"
-    - "Write"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
