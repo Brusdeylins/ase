@@ -11,6 +11,7 @@ ChangeLog
 - BUGFIX [code]: no longer silently erase invalid configuration entries from the target file when writing back a leniently read configuration (`ase-config.ts`)
 - BUGFIX [code]: honor backslash-escaped whitespace outside quotes when tokenizing the raw option input
 - BUGFIX [code]: no longer forbid the file-modifying tools which the `--direct`/`-D` mode requires (`ase-code-resolve`)
+- BUGFIX [code]: document the `--direct`/`-D` option and repair the malformed step tag of its branch (`ase-code-resolve`)
 
 0.9.56 (2026-08-06)
 -------------------
