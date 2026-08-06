@@ -11,6 +11,8 @@ allowed-tools:
     - "Skill"
     - "Agent"
     - "Read"
+    - "Edit"
+    - "Write"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -46,9 +48,18 @@ to `true`, <getopt-option-dry/> to `true`, and <getopt-option-next/> to
 Procedure
 ---------
 
+<if condition="<getopt-option-direct/> is not equal to 'true'">
 You *MUST* *NOT* call `Edit`, `Write`, `NotebookEdit`, or any
 filesystem-modifying tool during this entire skill. The *only*
 permitted way to persist artifacts is via `ase_task_save(...)`.
+</if>
+<else>
+The `--direct`/`-D` mode applies the resolution *in place*, so STEP 4
+below *requires* `Edit` and `Write` to modify the affected artifacts.
+Every modification *MUST* still stay restricted to the artifacts the
+resolution actually demands, and you *MUST* *NOT* call
+`ase_task_save(...)`, as no task plan is composed at all.
+</else>
 
 <flow>
 
