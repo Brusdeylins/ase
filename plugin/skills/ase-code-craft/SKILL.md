@@ -1,6 +1,6 @@
 ---
 name: ase-code-craft
-argument-hint: "[--help|-h] [--auto|-a] [--dry|-d] [--quick|-Q] [--next|-n <option>[,...]] [<task-id>:] <feature>"
+argument-hint: "[--help|-h] [--auto|-a] [--dry|-d] [--direct|-D] [--quick|-Q] [--next|-n <option>[,...]] [<task-id>:] <feature>"
 description: >
     Craft Source Code:
     Use when user wants to "create", "add", or "craft" a new feature from scratch.
@@ -10,6 +10,7 @@ effort: xhigh
 allowed-tools:
     - "Skill"
     - "Agent"
+    - "Read"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -23,7 +24,7 @@ Craft Source Code
 
 <expand name="getopt"
     arg1="ase-code-craft"
-    arg2="--auto|-a --dry|-d --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
+    arg2="--auto|-a --dry|-d --direct|-D --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
     $ARGUMENTS
 </expand>
 
@@ -45,9 +46,18 @@ From scratch *craft* the following feature:
 Procedure
 ---------
 
+<if condition="<getopt-option-direct/> is not equal to 'true'">
 You *MUST* *NOT* call `Edit`, `Write`, `NotebookEdit`, or any
 filesystem-modifying tool during this entire skill. The *only*
 permitted way to persist artifacts is via `ase_task_save(...)`.
+</if>
+<else>
+The `--direct`/`-D` mode applies the crafting *in place*, so STEP 4
+below *requires* `Edit` and `Write` to modify the affected artifacts.
+Every modification *MUST* still stay restricted to the artifacts the
+crafting actually demands, and you *MUST* *NOT* call
+`ase_task_save(...)`, as no task plan is composed at all.
+</else>
 
 <flow>
 
@@ -136,13 +146,31 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
 
     </step>
 
-4.  <step id="STEP 4: Choose Feature Crafting Approaches">
+4.  <if condition="<getopt-option-direct/> is equal to 'true'">
+
+    <step id="STEP 4: Direct Feature Crafting">
+
+    1.  Directly craft the <feature/> by modifying the affected
+        *artifacts* with a corresponding, complete *change set*,
+        based on your gathered knowledge about the code base and your
+        internalized crafting tenets. Also, if a CHANGELOG.md
+        file exists, make an appropriate entry there, too.
+
+    2.  Do not output anything else in this STEP 4. Especially, do not
+        output a change summary or a unified diff of the changes.
+
+    </step>
+
+    </if>
+    <else>
+
+    <step id="STEP 4: Choose Feature Crafting Approaches">
 
     <expand name="code-approaches" arg1="feature" arg2="crafting"></expand>
 
     </step>
 
-5.  <step id="STEP 5: Compose Feature Crafting Plan">
+    <step id="STEP 5: Compose Feature Crafting Plan">
 
     1.  *Compose a feature plan* for the chosen feature A<n/> by
         closely aligning to the existing architecture and the existing
@@ -186,5 +214,7 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
         <expand name="code-next-dispatch"></expand>
 
     </step>
+
+    </else>
 
 </flow>

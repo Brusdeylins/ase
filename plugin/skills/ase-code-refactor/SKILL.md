@@ -1,6 +1,6 @@
 ---
 name: ase-code-refactor
-argument-hint: "[--help|-h] [--auto|-a] [--dry|-d] [--quick|-Q] [--next|-n <option>[,...]] [<task-id>:] <request>"
+argument-hint: "[--help|-h] [--auto|-a] [--dry|-d] [--direct|-D] [--quick|-Q] [--next|-n <option>[,...]] [<task-id>:] <request>"
 description: >
     Refactor Code:
     Use when user wants to "refactor" or "change" the code base.
@@ -10,6 +10,7 @@ effort: xhigh
 allowed-tools:
     - "Skill"
     - "Agent"
+    - "Read"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -23,7 +24,7 @@ Refactor Source Code
 
 <expand name="getopt"
     arg1="ase-code-refactor"
-    arg2="--auto|-a --dry|-d --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
+    arg2="--auto|-a --dry|-d --direct|-D --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
     $ARGUMENTS
 </expand>
 
@@ -45,9 +46,18 @@ to `true`, <getopt-option-dry/> to `true`, and <getopt-option-next/> to
 Procedure
 ---------
 
+<if condition="<getopt-option-direct/> is not equal to 'true'">
 You *MUST* *NOT* call `Edit`, `Write`, `NotebookEdit`, or any
 filesystem-modifying tool during this entire skill. The *only*
 permitted way to persist artifacts is via `ase_task_save(...)`.
+</if>
+<else>
+The `--direct`/`-D` mode applies the refactoring *in place*, so STEP 4
+below *requires* `Edit` and `Write` to modify the affected artifacts.
+Every modification *MUST* still stay restricted to the artifacts the
+refactoring actually demands, and you *MUST* *NOT* call
+`ase_task_save(...)`, as no task plan is composed at all.
+</else>
 
 <flow>
 
@@ -136,13 +146,31 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
 
     </step>
 
-4.  <step id="STEP 4: Choose Refactoring Approaches">
+4.  <if condition="<getopt-option-direct/> is equal to 'true'">
+
+    <step id="STEP 4: Direct Refactoring">
+
+    1.  Directly apply the refactoring <request/> by modifying the
+        affected *artifacts* with a corresponding, complete *change set*,
+        based on your gathered knowledge about the code base and your
+        internalized refactoring tenets. Also, if a CHANGELOG.md
+        file exists, make an appropriate entry there, too.
+
+    2.  Do not output anything else in this STEP 4. Especially, do not
+        output a change summary or a unified diff of the changes.
+
+    </step>
+
+    </if>
+    <else>
+
+    <step id="STEP 4: Choose Refactoring Approaches">
 
     <expand name="code-approaches" arg1="refactoring" arg2="refactoring"></expand>
 
     </step>
 
-5.  <step id="STEP 5: Compose Refactoring Plan">
+    <step id="STEP 5: Compose Refactoring Plan">
 
     1.  *Compose a refactoring plan* for the chosen refactoring A<n/> by
         closely aligning to the existing architecture and the existing
@@ -186,6 +214,8 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
         <expand name="code-next-dispatch"></expand>
 
     </step>
+
+    </else>
 
 </flow>
 

@@ -9,6 +9,7 @@
     [`--help`|`-h`]
     [`--auto`|`-a`]
     [`--dry`|`-d`]
+    [`--direct`|`-D`]
     [`--quick`|`-Q`]
     [`--next`|`-n` *option*[,...]]
     [*task-id*:] *request*
@@ -22,10 +23,11 @@ clear interfaces, ...), proposing one or more *refactoring approaches*
 with pros and cons, letting the user pick the preferred approach,
 and composing a corresponding *task plan*.
 
-The skill does *not* directly modify source files. It persists the
-plan via `ase_task_save` and then hands off to `ase-task-edit`,
-`ase-task-preflight`, or `ase-task-implement`, as selected by
-`--next`.
+By default the skill does *not* directly modify source files. It
+persists the plan via `ase_task_save` and then hands off to
+`ase-task-edit`, `ase-task-preflight`, or `ase-task-implement`, as
+selected by `--next`. Only under `--direct` it skips the plan
+entirely and applies the change set to the affected artifacts itself.
 
 ##  OPTIONS
 
@@ -39,6 +41,15 @@ plan via `ase_task_save` and then hands off to `ase-task-edit`,
     the entire verification phase (no build, tests, linter,
     type-checker, or program execution) once the source files have
     been modified.
+
+`--direct`|`-D`:
+    Apply the refactoring *immediately* and *in place*: skip the
+    refactoring approaches, the interactive dialog, and the entire task
+    plan ceremony, and directly apply the complete change set to the
+    affected artifacts, including a corresponding entry in an existing
+    `CHANGELOG.md` file. In this mode `--auto`, `--dry`, `--quick`, and
+    `--next` have no effect, as neither approaches are proposed nor a
+    plan is composed.
 
 `--quick`|`-Q`:
     Shorthand alias for `-a -d -n IMPLEMENT,DELETE`: automatically pick

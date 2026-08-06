@@ -168,10 +168,12 @@ The following ASE commands/skills exist on the task-level:
 
 The following ASE commands/skills exist on the code-level:
 
-- **/ase-code-craft** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *feature*:<br/>
+- **/ase-code-craft** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--direct`|`-D`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *feature*:<br/>
   Craft source code from scratch. With `--auto`, the skill runs
   non-interactively without asking for confirmation. With `--dry`, it
-  only plans without applying changes. `--quick` is a shorthand that
+  only plans without applying changes. With `--direct`, it skips the
+  approach comparison and task plan ceremony entirely and directly
+  applies the change set in place. `--quick` is a shorthand that
   enables `--auto`, `--dry`, and a preselected `--next`. `--next` passes
   a comma-separated chronological list of pre-selected next-step tokens
   (out of `none`, `DONE`, `EDIT`, `PREFLIGHT`, `IMPLEMENT`) to chain the
@@ -192,15 +194,15 @@ The following ASE commands/skills exist on the code-level:
   report. Usually, for each reported problem you want to resolve it with
   **/ase-code-resolve**.
 
-- **/ase-code-resolve** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *problem*:<br/>
+- **/ase-code-resolve** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--direct`|`-D`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *problem*:<br/>
   Resolve a problem in depth in order to fix it. Usually the
   problem reference is one of the outputs of **/ase-code-analyze**. The
-  `--auto`, `--dry`, `--quick`, `--next`, and *task-id*`:` options behave
-  as for **/ase-code-craft**.
+  `--auto`, `--dry`, `--direct`, `--quick`, `--next`, and *task-id*`:`
+  options behave as for **/ase-code-craft**.
 
-- **/ase-code-refactor** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *refactor-hint*:<br/>
-  Refactor source code. The `--auto`, `--dry`, `--quick`, `--next`, and
-  *task-id*`:` options behave as for **/ase-code-craft**.
+- **/ase-code-refactor** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--direct`|`-D`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *refactor-hint*:<br/>
+  Refactor source code. The `--auto`, `--dry`, `--direct`, `--quick`,
+  `--next`, and *task-id*`:` options behave as for **/ase-code-craft**.
 
 - **/ase-code-lint** \[`--auto`|`-a`\] \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\] \[`--include`|`-i` *aspect*\[,...\]\] \[`--exclude`|`-e` *aspect*\[,...\]\] *source-reference*:<br/>
   Lint the source code in an interactive review loop. With `--auto`, the

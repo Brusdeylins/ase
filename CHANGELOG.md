@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+0.9.58 (2026-08-06)
+-------------------
+
+- FEATURE [code]: added a `--direct`/`-D` option for directly crafting a feature in place, without the approach comparison and task plan ceremony (`ase-code-craft`)
+- FEATURE [code]: added a `--direct`/`-D` option for directly applying a refactoring in place, without the approach comparison and task plan ceremony (`ase-code-refactor`)
+
 0.9.57 (2026-08-06)
 -------------------
 
