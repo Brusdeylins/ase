@@ -33,9 +33,18 @@ currently staged Git changes.
 1.  <step id="STEP 1: Find out staged changes">
 
     Run the following command to find out details of what changes are
-    currently staged in the Git *index* for commit:
+    currently staged in the Git *index* for commit, capturing its output
+    into <diff/>:
 
     `git diff --cached`
+
+    <if condition="<diff/> is empty">
+    Only output the following <template/> and then *STOP* immediately:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-commit**, ▶ status: **no changes to commit**
+    </template>
+    </if>
 
     </step>
 
