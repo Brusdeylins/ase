@@ -289,8 +289,11 @@ Analyze documents for spelling, punctuation, or grammar errors
                 proposal (<old-text/> stays anchored to the existing text
                 at <file/>:<line/>; <new-text/> and <description/> carry the
                 refinement) so the subsequent rendering and any `Edit` use
-                the new proposal rather than the original. Then *go back* to
-                substep 2 of this `for`-iteration. There is *no* cap on
+                the new proposal rather than the original. Then *re-apply*
+                the minimal-form normalization of substep 1 to the refined
+                <old-text/> and <new-text/> (so the re-rendered diff again
+                shows exactly the changed lines) and *go back* to substep 2
+                of this `for`-iteration. There is *no* cap on
                 refinement rounds - keep refining until the user picks
                 `ACCEPT` or `REJECT`.
 
