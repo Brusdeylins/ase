@@ -381,7 +381,7 @@ export class Config {
                     throw new Error(msg)
                 this.log.write("warning", msg)
                 if (isTarget)
-                    this.pruned.push(`unparsable YAML (${doc.errors[0].message})`)
+                    this.pruned.push(`unparsable YAML (${doc.errors[0].message.split("\n")[0]})`)
                 doc = new Document()
             }
             docs.push({ scope: sc, filename, doc })
