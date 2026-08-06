@@ -209,6 +209,20 @@ related to a set of code quality aspects.
                 Set <change-hunks/> to the `change-hunks` field of <item/>.
 
                 Unless <ase-project-boxing/> is equal `grey` (where the
+                full unified diff is suppressed and no context lines are
+                rendered at all), *silently* read the current content of
+                <file/> with the `Read` tool - reusing the content read
+                for the same <file/> earlier in this iteration, unless
+                an `Edit` was applied to it in between - and set
+                <file-lines/> to its lines, *stripped* of the
+                line-number prefixes the tool adds. Set <file-lines/>
+                to empty if the file cannot be read.
+
+                This content is the *authoritative* source of the
+                context lines of substep 2 below, so the rendered diff
+                shows real context even when a sub-agent supplied none.
+
+                Unless <ase-project-boxing/> is equal `grey` (where the
                 full unified diff is suppressed and this per-file header is
                 unused), set <diff-file/> to the following <template/>:
 
@@ -239,6 +253,18 @@ related to a set of code quality aspects.
                     <context-after/>. Finally, *trim* <context-before/>
                     to its *last* two lines and <context-after/> to its
                     *first* two lines.
+
+                    Then, whenever <file-lines/> is non-empty,
+                    *re-derive* both context parts from it, *overriding*
+                    the sub-agent supplied values: set <context-before/>
+                    to the *up to two* lines of <file-lines/> directly
+                    *before* line <line/> (empty if <line/> is `1`) and
+                    <context-after/> to the *up to two* lines of
+                    <file-lines/> starting at line (<line/> + <n/>),
+                    where <n/> is the number of lines in <old-text/>
+                    (empty if that line is beyond the end of the file).
+                    Keep the sub-agent supplied values only when
+                    <file-lines/> is empty.
 
                 2.  *Skip* this substep entirely when <ase-project-boxing/>
                     is equal `grey` - the full unified diff is suppressed

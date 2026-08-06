@@ -334,6 +334,12 @@ Workflow
                 pure-insertion hunk at its new location - *never* by
                 deleting and re-adding the unchanged lines in between.
 
+                This minimality rule applies *only* to <old-text/> and
+                <new-text/>. It *MUST* *NOT* be understood as a reason to
+                also drop the surrounding context of the two following
+                substeps - that context is *mandatory* and is reported
+                *separately* from the changed lines.
+
             3.  Set <context-before/> to exactly *up to two* lines of
                 *unchanged* code context which occurs in <file/>
                 directly *before* <old-text/>, i.e., the lines (<line/>
@@ -364,6 +370,15 @@ Workflow
                         "context_after":  <context-after/>
                     }
                 </template>
+
+                Here `line` is a *number* and all four other fields are
+                *JSON strings* carrying the *verbatim* source lines
+                (embedded newlines escaped as `\n`, no line-number
+                prefixes, original indentation preserved). The empty
+                string `""` is allowed for `context_before` and
+                `context_after` *only* at the very start or end of the
+                file - for every other hunk both *MUST* carry their
+                context lines.
 
         3.  If <change-set/> is not empty, set
             <change-set><change-set/>,</change-set> (append a comma).

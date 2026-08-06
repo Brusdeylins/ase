@@ -50,6 +50,12 @@ Workflow
         as *two separate* problems instead of one large change
         which re-states the unchanged lines.
 
+        This minimality rule applies *only* to <old-text/> and
+        <new-text/>. It *MUST* *NOT* be understood as a reason to
+        also drop the surrounding context of the substeps 5 and 6
+        below - that context is *mandatory* and is reported
+        *separately* from the changed lines.
+
     4.  Set <description/> to an ultra-brief and concise
         Markdown-formatted description of the problem with
         a hint of what is wrong and why it is wrong. In
@@ -93,6 +99,15 @@ Workflow
                 "context_after":  <context-after/>
             }
         </template>
+
+        Here `line` is a *number* and all other fields are *JSON
+        strings*, where <context-before/>, <old-text/>, <new-text/>,
+        and <context-after/> carry the *verbatim* document lines
+        (embedded newlines escaped as `\n`, no line-number prefixes,
+        original indentation preserved). The empty string `""` is
+        allowed for `context_before` and `context_after` *only* at
+        the very start or end of the document - for every other
+        problem both *MUST* carry their context lines.
 
 3.  You *MUST* *NOT* propose, apply, or render any document
     changes yourself. Instead, return *exclusively* as the last message
