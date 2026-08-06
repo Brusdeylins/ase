@@ -194,4 +194,8 @@ Set <args>--int-reuse-task</args>.
     Then call the tool `Skill(skill: "ase:ase-task-edit", args: "<args/>")`.
     </else>
 
+6.  In every branch above which invoked the `Skill` tool, you *MUST*
+    immediately stop processing the current skill once the `Skill`
+    tool was used.
+
 </define>
