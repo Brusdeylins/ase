@@ -179,7 +179,8 @@ for the technology stack to *provide* the *needed functionality*
         and fetches all metadata in maximum parallel and returns an array
         of objects `{ name, version, created, updated, repository, stars,
         downloads, deps, rank }`. For each component <component-K/>
-        (K=1-C) read from its corresponding entry: <version-K/> from
+        (K=1-C) read from its corresponding entry: <name-K/> from `name`
+        (unless already known from the discovery above), <version-K/> from
         `version`, <updated-K/> from `updated`, <created-K/> from
         `created`, <repository-K/> from `repository`, <stars-K/> from
         `stars` (numeric or `N.A.`), <downloads-K/> from `downloads`
