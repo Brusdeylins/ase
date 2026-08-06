@@ -349,7 +349,7 @@ Procedure
 
         [...]
 
-        <ase-tpl-foot/>
+        <ase-tpl-foot title="CHANGE BLAST RADIUS"/>
         </template>
 
     </step>
