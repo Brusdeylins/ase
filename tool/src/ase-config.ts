@@ -438,11 +438,12 @@ export class Config {
                 const segs    = (i.path ?? []).map((p) => String(p.key))
                 const dotPath = segs.join(".")
                 this.log.write("warning", `invalid entry in ${filename}: ${dotPath ? `${dotPath}: ` : ""}${i.message}`)
-                if (segs.length > 0) {
-                    doc.deleteIn(segs)
+                if (segs.length > 0 && doc.deleteIn(segs))
                     progressed = true
-                }
-                /*  root-level issues cannot be deleted; processing continues with the remaining issues  */
+                /*  issues at the document root and issues whose stringified path does not
+                    address a deletable node (e.g. a non-string YAML key like "404:", which
+                    "toJS" stringifies) cannot be removed; processing continues with the
+                    remaining issues  */
             }
             if (!progressed)
                 return
