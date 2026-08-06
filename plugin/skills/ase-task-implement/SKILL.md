@@ -204,10 +204,11 @@ Procedure
 
         -   Set the `Status:` key to `COMPLETED`, but *only* if the
             change set was applied *completely* and *successfully* --
-            this traverses the `start` and `complete` transitions of the
-            state machine of the plan <format/> in one go. Otherwise
-            leave the `Status:` key *untouched*, as an incomplete run
-            transitioned nowhere.
+            this traverses the `approve`, `start`, and `complete`
+            transitions of the state machine of the plan <format/> in one
+            go, starting from the `DRAFTED` state which a freshly authored
+            plan carries. Otherwise leave the `Status:` key *untouched*,
+            as an incomplete run transitioned nowhere.
 
         -   Refresh the `Modified:` key with the current time in
             ISO-style format, determined by calling the
