@@ -78,7 +78,8 @@ preset-bootstrapping operation that stays a shell concern next to
     `user`, `project`, `task:`*id*, and/or `session:`*id* terms, in any
     order and at most one term per kind. The `user` term is always
     implicitly added at the bottom of the chain, and `project` is
-    implicitly added whenever a project context exists. If the option is
+    implicitly added whenever a project context exists, but never above
+    the strongest explicitly requested term. If the option is
     omitted, the chain of the *current session* (`session:`*id*) is used,
     so that reads see the full `user` -> `project` -> `session` cascade
     and writes -- including those to the session-only keys `agent.task`

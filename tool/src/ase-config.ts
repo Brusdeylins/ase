@@ -172,8 +172,9 @@ const hasProjectContext = (): boolean => {
     accepts a comma-separated list of terms in any order. The "user"
     term is always implicitly added at the bottom of the chain; the
     "project" term is implicitly added only when a project context
-    exists (Git repository or ".ase" directory at or above cwd), and
-    an explicit "project" term requires that same context  */
+    exists (Git repository or ".ase" directory at or above cwd) and it
+    stays weaker than the strongest explicitly requested term, and an
+    explicit "project" term requires that same context  */
 export const parseScope = (value: string | undefined): Scope => {
     const projectActive = hasProjectContext()
     const input         = (value === undefined || value === "") ?
@@ -191,7 +192,11 @@ export const parseScope = (value: string | undefined): Scope => {
     if (seen.has("project") && !projectActive)
         throw new Error("invalid --scope: \"project\" requires a project context " +
             "(a Git repository or a \".ase\" directory at or above the current directory)")
-    if (!seen.has("project") && projectActive)
+    /*  the strongest term of the chain is the write target, so an implicitly
+        added "project" term must never outrank the strongest explicitly
+        requested term, as this would silently retarget the caller's request  */
+    const rankMax = Math.max(...terms.map((t) => scopeRank(t.kind)))
+    if (!seen.has("project") && projectActive && rankMax > scopeRank("project"))
         terms.unshift({ kind: "project" })
     if (!seen.has("user"))
         terms.unshift({ kind: "user" })
@@ -610,7 +615,8 @@ export default class ConfigCommand {
                 "configuration scope chain: comma-separated list of \"user\", \"project\", " +
                 "\"task:<id>\", and/or \"session:<id>\" terms (e.g. \"task:N,session:M\"); " +
                 "\"user\" is always implicitly included and \"project\" is implicitly " +
-                "included whenever a project context (Git repo or upward \".ase\" directory) exists")
+                "included whenever a project context (Git repo or upward \".ase\" directory) exists, " +
+                "but never above the strongest explicitly requested term")
             .description("manage ASE configuration")
             .action(() => {
                 configCmd.outputHelp()

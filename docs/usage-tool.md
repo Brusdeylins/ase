@@ -72,7 +72,10 @@ The following top-level commands exist for configuration handling:
   `user` is always implicitly added at the bottom of the chain.
   `project` is implicitly added only when a *project context*
   exists -- i.e. when the current working directory is inside a
-  Git repository, or a `.ase` directory is found at or above it.
+  Git repository, or a `.ase` directory is found at or above it --
+  and only as long as it stays *weaker* than the strongest
+  explicitly requested term, so an explicit `--scope user` is
+  never silently retargeted to `project`.
   Specifying `project` explicitly without a project context is
   an error. Without an explicit `--scope`, the target defaults
   to `project` when a project context exists, otherwise to

@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.57 (2026-08-06)
+-------------------
+
+- BUGFIX [code]: no longer silently retarget an explicit `--scope user` to the project scope inside a project context (`ase-config.ts`, `usage-tool.md`, `ase-meta-config`, `ase-help-intent`)
+
 0.9.56 (2026-08-06)
 -------------------
 
