@@ -132,8 +132,10 @@ Set <args></args> (set args to empty).
             </if>
 
         -   <if condition="<words/> is NOT strictly smaller than <words-before/>">
-            Do *not* save and do *not* bump the timestamp. Only output
-            the following <template/>:
+            Do *not* save and do *not* bump the timestamp. Set
+            <words><words-before/></words> (report the word count of the
+            *unchanged* stored plan, not of the discarded condensed one).
+            Only output the following <template/>:
 
             <template>
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan already condensed**
