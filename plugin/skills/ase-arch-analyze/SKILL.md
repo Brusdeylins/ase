@@ -130,7 +130,7 @@ interface quality, quality attributes, and architecture governance.
     surfaced. *Skip* the entire investigation and reporting: do *not*
     invoke any `Agent` tool and do *not* read any source, only output
     the following <template/> and then *SKIP* the remaining steps STEP 2
-    through STEP 4:
+    and STEP 3:
 
     <template>
     <ase-tpl-bullet-normal/> **ARCHITECTURE ANALYSIS**: *suppressed* (`project.boxing` is `black`)
