@@ -152,21 +152,28 @@ const gitToplevel = (): string | null => {
     return top === "" ? null : top
 }
 
-/*  detect whether a project context exists, i.e. either we are inside
-    a Git working tree or a ".ase" directory is present at or above cwd  */
-const hasProjectContext = (): boolean => {
-    if (gitToplevel() !== null)
-        return true
+/*  determine the project root directory, i.e. either the top-level
+    directory of the Git working tree or the nearest directory at or
+    above cwd which carries a ".ase" directory  */
+const projectRoot = (): string | null => {
+    const top = gitToplevel()
+    if (top !== null)
+        return top
     let dir = fs.realpathSync(process.cwd())
     for (;;) {
         if (fs.existsSync(path.join(dir, ".ase")))
-            return true
+            return dir
         const parent = path.dirname(dir)
         if (parent === dir)
-            return false
+            return null
         dir = parent
     }
 }
+
+/*  detect whether a project context exists, i.e. either we are inside
+    a Git working tree or a ".ase" directory is present at or above cwd  */
+const hasProjectContext = (): boolean =>
+    projectRoot() !== null
 
 /*  parse a raw "--scope" option value into a canonical Scope chain;
     accepts a comma-separated list of terms in any order. The "user"
@@ -302,16 +309,13 @@ export class Config {
             return path.join(this.userConfigDir(), `${name}.yaml`)
         else if (term.kind === "project") {
             const rel   = path.join(".ase", `${name}.yaml`)
-            const cwd   = process.cwd()
-            const top   = gitToplevel()
-            const found = top !== null ?
-                this.findUpward(cwd, top, rel) :
-                (fs.existsSync(path.join(cwd, rel)) ? path.join(cwd, rel) : null)
-            return found ?? path.join(top ?? cwd, rel)
+            const root  = projectRoot() ?? process.cwd()
+            const found = this.findUpward(process.cwd(), root, rel)
+            return found ?? path.join(root, rel)
         }
         else if (term.kind === "task") {
-            const top = gitToplevel() ?? process.cwd()
-            return path.join(top, ".ase", "task", term.id, `${name}.yaml`)
+            const root = projectRoot() ?? process.cwd()
+            return path.join(root, ".ase", "task", term.id, `${name}.yaml`)
         }
         else
             return path.join(os.homedir(), ".ase", "session", term.id, `${name}.yaml`)

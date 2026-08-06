@@ -6,6 +6,7 @@ ChangeLog
 -------------------
 
 - BUGFIX [code]: no longer silently retarget an explicit `--scope user` to the project scope inside a project context (`ase-config.ts`, `usage-tool.md`, `ase-meta-config`, `ase-help-intent`)
+- BUGFIX [code]: resolve the project and task scope files against the project root also outside a Git working tree
 
 0.9.56 (2026-08-06)
 -------------------
