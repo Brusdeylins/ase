@@ -105,19 +105,19 @@ Procedure
         </if>
         </if>
 
-    8.  Create a new plan from scratch and store the result as
+    8.  Only output the following <template/> and continue processing:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
+        </template>
+
+    9.  Create a new plan from scratch and store the result as
         <task-content/> by closely following the defined plan format
         <format/> and injecting into it all the information from
         the <instruction/> and all decisions you derived from the
         <instruction/>.
 
-    9.  <expand name="task-save-content" arg1="plan rebooted"></expand>
-
-    10. Only output the following <template/> and continue processing:
-
-        <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
-        </template>
+    10. <expand name="task-save-content" arg1="plan rebooted"></expand>
 
 4.  **Decide Next Step:**
 
