@@ -78,6 +78,15 @@ Honor the following tenets throughout the brainstorming:
 
 1.  <step id="STEP 1: Restate Topic">
 
+    <if condition="<topic/> is empty">
+    Only output the following <template/> and then immediately *STOP*
+    processing the entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-brainstorm**, ▶ ERROR: expected a `<topic>` argument
+    </template>
+    </if>
+
     Restate the topic to be brainstormed by outputting the following <template/>:
 
     <template>
