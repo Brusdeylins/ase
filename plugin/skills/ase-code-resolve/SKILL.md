@@ -191,26 +191,10 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
 
     <step id="STEP 4: Direct Problem Resolution"
 
-    1.  Output a hint with the following <template/>:
-
-        <template>
-        ⧉ **ASE**: ▶ status: **problem will be directly resolved**
-        </template>
-
-    2.  Directly resolve the <problem/> by modifying the affected
-        *artifacts* with a corresponding, complete *change set*,
-        based on your gathered knowledge about the code base and your
-        internalized problem resilution tenets.
-
-    3.  Output a hint with the following <template/>:
-
-        <template>
-        ⧉ **ASE**: ▶ status: **problem was directly resolved**
-        </template>
-
-    4.  Directly pass through control to the next skill:
-
-        <expand name="code-next-dispatch"></expand>
+    Directly resolve the <problem/> by modifying the affected
+    *artifacts* with a corresponding, complete *change set*,
+    based on your gathered knowledge about the code base and your
+    internalized problem resilution tenets.
 
     </step>
 
