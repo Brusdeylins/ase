@@ -2,6 +2,49 @@
 ChangeLog
 =========
 
+0.9.56 (2026-08-06)
+-------------------
+
+- IMPROVEMENT [code]: normalize legacy task plans into the Markdown frontmatter shape also in `ase-task-edit`, `ase-task-grill`, `ase-task-implement`, `ase-task-preflight`, and `ase-task-reboot`
+- IMPROVEMENT [code]: guard against empty or missing arguments and unavailable backends instead of silently proceeding (`ase-meta-brainstorm`, `ase-meta-diaboli`, `ase-meta-search`, `ase-meta-steelman`, `ase-meta-why`, `ase-meta-commit`)
+- IMPROVEMENT [code]: made the interaction loop and the dialog handling more robust (`ase-help-intent`)
+- IMPROVEMENT [code]: carry a corrective hint on dead-end errors and give final follow-up hints (`ase-task-list`, `ase-sync-reconcile`)
+- IMPROVEMENT [code]: support also empty repositories with no `HEAD` and repeat the box title in its footer (`ase-meta-diff`)
+- IMPROVEMENT [code]: state the output expectations more precisely (`ase-meta-review`)
+- IMPROVEMENT [code]: be more precise on the Kotlin language detection (`ase-arch-discover`)
+- IMPROVEMENT [code]: be more clear on the `CANCEL` outcome of a dialog (`ase-dialog.md`)
+- IMPROVEMENT [code]: render `-` as fallback for still unavailable usage statistics in the statusline (`ase-statusline.ts`)
+- IMPROVEMENT [docs]: made the process handling of the typing demo generator more robust and ensure the Playwright browser is installed (`pages/etc/typing-demo.mjs`, `pages/etc/stx.conf`)
+- BUGFIX [code]: validate the `ASE_TOOL` environment variable lazily, so an invalid value no longer breaks unrelated `ase` commands (`ase-setup.ts`)
+- BUGFIX [code]: strip the second bar layer from the dialog content rendering (`ase-dialog.md`, `ase-skill.md`)
+- BUGFIX [code]: fold commits made after a release into a new section instead of the already released one, and reference the correct command (`ase-meta-changelog`)
+- BUGFIX [code]: really consume and use the code hint argument in all steps (`ase-code-insight`)
+- BUGFIX [code]: honor the `EXECUTE` result correctly (`ase-help-intent`)
+- BUGFIX [code]: fixed the diff handling and allow all used tools (`ase-code-lint`, `ase-docs-proofread`, `ase-meta-commit`)
+- BUGFIX [code]: validate the `--mode`/`-m` option before the sneak preview (`ase-meta-quorum`)
+- BUGFIX [code]: always create a `Modified:` frontmatter key and do not terminate the fenced code block with payload (`ase-task-preflight`)
+- BUGFIX [code]: use the correct order of outputs and declare the internal option (`ase-task-reboot`)
+- BUGFIX [code]: do not contradict the documented task plan state transitions (`ase-task-implement`)
+- BUGFIX [code]: emit the "updated" template only conditionally (`ase-task-id`)
+- BUGFIX [code]: add the three omitted frontmatter keys to the sub-task composition mapping (`ase-task-dissect`)
+- BUGFIX [code]: report the word count of the kept instead of the discarded variant (`ase-task-condense`)
+- BUGFIX [code]: read back the task plan also after saving it (`ase-sync-export`)
+- BUGFIX [code]: do not wrap the already fenced diagram into a second code block (`ase-meta-diff`)
+- BUGFIX [code]: normalize also the `OTHER` refinement branch into the minimal form (`ase-docs-proofread`)
+- BUGFIX [code]: read back the artifact name, too (`ase-arch-discover`)
+- BUGFIX [code]: fixed a wrong step reference, a wrong count, a wrong type, and wrong cross-references (`ase-arch-analyze`, `ase-persona.md`, `ase-constitution.md`, `ase-format-spec.md`)
+- BUGFIX [code]: add the missing option to the synopsis (`ase-code-analyze`)
+- BUGFIX [code]: state the three-space indentation of the frontmatter correctly (`ase-format-task.md`)
+- BUGFIX [docs]: fixed the unhighlighting of search hits and the sticky install bar handling after dismissal (`Modal-Help.astro`, `Progress.astro`, `Sticky-CTA.astro`)
+- UPDATE [code, docs, infr]: massive incorporation of proofreading results across all documentation, skills, and website artifacts
+- UPDATE [docs]: regenerated the typing demo assets (`pages/public/assets/typing-demo.{gif,mp4}`)
+- UPDATE [docs, infr]: upgraded NPM dependencies (`pages/package.json`, `plugin/package.json`, `tool/package.json`)
+- CLEANUP [code]: removed an unreachable guard, a dead reference, and redundant conditions (`ase-code-lint`, `ase-format-arch.md`, `ase-common-task.md`)
+- CLEANUP [code]: do not contradict other statements (`ase-docs-distill`)
+- CLEANUP [code, docs]: cleaned up the statusline namings (`ase-statusline.ts`, `Section-Setup.astro`)
+- REFACTOR [code]: factored the shared tenet internalization of `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` into `ase-common-code.md`
+- REFACTOR [code]: re-use the existing task-related macros and shared descriptions to reduce redundancies (`ase-task-condense`, `ase-task-grill`, `ase-task-reboot`)
+
 0.9.55 (2026-08-03)
 -------------------
 
