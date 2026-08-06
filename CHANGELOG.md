@@ -7,6 +7,7 @@ ChangeLog
 
 - FEATURE [code]: added a `--direct`/`-D` option for directly crafting a feature in place, without the approach comparison and task plan ceremony (`ase-code-craft`)
 - FEATURE [code]: added a `--direct`/`-D` option for directly applying a refactoring in place, without the approach comparison and task plan ceremony (`ase-code-refactor`)
+- BUGFIX [code]: no longer surface a change summary, rationale, or diff after a `--direct`/`-D` run, as the `white` project boxing exposure rules overrode the intended suppression; emit a single `changes directly applied` status line instead (`ase-code-craft`, `ase-code-refactor`, `ase-code-resolve`, `ase-skill.md`)
 
 0.9.57 (2026-08-06)
 -------------------

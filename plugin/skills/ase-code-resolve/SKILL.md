@@ -206,8 +206,18 @@ resolution actually demands, and you *MUST* *NOT* call
         internalized problem resolution tenets. Also, if a CHANGELOG.md
         file exists, make an appropriate entry there, too.
 
-    2.  Do not output anything else in this STEP 4. Especially, do not
-        output a change summary or a unified diff of the changes.
+    2.  Output only the following <template/>:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **changes directly applied**
+        </template>
+
+    3.  Then *IMMEDIATELY* *STOP* all further skill processing. You
+        *MUST* *NOT* output anything else in this STEP 4 or after it --
+        *independent* of <ase-project-boxing/>, whose exposure rules
+        are explicitly *overridden* here. Especially, do not output a
+        change summary, a list of modified artifacts, a rationale, or
+        a unified diff of the changes.
 
     </step>
 
