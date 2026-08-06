@@ -369,6 +369,7 @@ export class Task {
     /*  set the active task id for a given session  */
     static setId (log: Log, session: string, id: string): void {
         Task.validateSession(session)
+        Task.validateId(id)
         const scope   = parseScope(`session:${session}`)
         const cfg = new Config("config", configSchema, log, scope)
         cfg.lock(() => {

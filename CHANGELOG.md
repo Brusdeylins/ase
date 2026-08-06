@@ -5,6 +5,7 @@ ChangeLog
 0.9.57 (2026-08-06)
 -------------------
 
+- BUGFIX [code]: validate the task id also when setting the active task id of a session, instead of persisting arbitrary strings into `agent.task` (`ase-task.ts`)
 - BUGFIX [code]: no longer silently retarget an explicit `--scope user` to the project scope inside a project context (`ase-config.ts`, `usage-tool.md`, `ase-meta-config`, `ase-help-intent`)
 - BUGFIX [code]: resolve the project and task scope files against the project root also outside a Git working tree
 - BUGFIX [code]: no longer loop forever in the lenient configuration validation if a reported issue path cannot be deleted (`ase-config.ts`)
