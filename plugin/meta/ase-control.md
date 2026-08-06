@@ -96,6 +96,27 @@ Control Flow Constructs
     is expanded into nothing. Do not output anything.
 
 -   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <sleep duration="<sleep-duration/>"/>:
+
+    This specifies a single *wait* of <sleep-duration/> seconds
+    (fractional values like `1.5` are allowed): call the
+    `ase_sleep(duration: <sleep-duration/>)` tool of the `ase` MCP
+    server, which returns once the duration has elapsed. This construct
+    is expanded into nothing. Do not output anything.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
+    <await condition="<await-condition/>" [interval="<await-interval/>"]><await-body/></await>:
+
+    This specifies an <await-body/> whose execution *waits* until
+    <await-condition/> is met: if <await-condition/> is met, the
+    <await-body/> is executed once and the construct is finished. If
+    <await-condition/> is *not* met, wait for <await-interval/> seconds
+    (default: `60`) via the `ase_sleep(duration: <await-interval/>)`
+    tool of the `ase` MCP server and then *start over* by re-evaluating
+    <await-condition/>. This construct is expanded to its
+    <await-body/>. Do not output anything else.
+
+-   *IMPORTANT*: You *MUST* honor the following control flow construct:
     <agent <attr/>="<value/>" [...]><agent-body/></agent>:
 
     This specifies the *invocation* of a *sub-agent* through the

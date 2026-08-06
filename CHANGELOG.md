@@ -5,6 +5,8 @@ ChangeLog
 0.9.58 (2026-08-06)
 -------------------
 
+- FEATURE [code]: added a `<sleep>` control flow construct which waits a given, possibly fractional, number of seconds once via the new `ase_sleep` MCP tool, which the `<await>` construct also calls directly for its sleeping (`ase-control.md`, `ase-sleep.ts`, `ase-service.ts`)
+- FEATURE [code]: added an `<await>` control flow construct which waits until its condition is met before executing its body once, sleeping between the condition re-evaluations (`ase-control.md`)
 - FEATURE [code]: added a `--direct`/`-D` option for directly crafting a feature in place, without the approach comparison and task plan ceremony (`ase-code-craft`)
 - FEATURE [code]: added a `--direct`/`-D` option for directly applying a refactoring in place, without the approach comparison and task plan ceremony (`ase-code-refactor`)
 - BUGFIX [code]: no longer surface a change summary, rationale, or diff after a `--direct`/`-D` run, as the `white` project boxing exposure rules overrode the intended suppression; emit a single `changes directly applied` status line instead (`ase-code-craft`, `ase-code-refactor`, `ase-code-resolve`, `ase-skill.md`)

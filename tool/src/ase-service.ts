@@ -32,6 +32,7 @@ import { MarkdownMCP }                   from "./ase-markdown.js"
 import { ArtifactMCP }                   from "./ase-artifact.js"
 import { KVMCP }                         from "./ase-kv.js"
 import { TimestampMCP }                  from "./ase-timestamp.js"
+import { SleepMCP }                      from "./ase-sleep.js"
 import { GetoptMCP }                     from "./ase-getopt.js"
 import { SkillsMCP }                     from "./ase-skills.js"
 import pkg                               from "../package.json" with { type: "json" }
@@ -304,6 +305,7 @@ export default class ServiceCommand {
             new ArtifactMCP(this.log).register(mcp)
             new KVMCP().register(mcp)
             new TimestampMCP().register(mcp)
+            new SleepMCP().register(mcp)
             new GetoptMCP().register(mcp)
             new SkillsMCP().register(mcp)
             new ConfigMCP(this.log).register(mcp)
