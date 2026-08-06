@@ -1,6 +1,6 @@
 ---
 name: ase-code-analyze
-argument-hint: "[--help|-h] [--performance|-p] [--security|-s] [--severity|-S=(LOW|MEDIUM|HIGH)] <source-reference>"
+argument-hint: "[--help|-h] [--performance|-p] [--security|-s] [--severity|-S=(LOW|MEDIUM|HIGH)] [--prefix|-P=<prefix>] <source-reference>"
 description: >
     Analyze the source code for problems in either the logic and
     semantics and its related control flow, performance and efficiency,
