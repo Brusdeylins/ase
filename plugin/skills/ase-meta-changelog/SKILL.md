@@ -11,6 +11,7 @@ allowed-tools:
     - "Bash(git diff *)"
     - "Bash(git show *)"
     - "Bash(git tag --list *)"
+    - "Read"
     - "Write"
     - "Edit"
 ---
