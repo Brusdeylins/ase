@@ -144,7 +144,7 @@ related to this MCP call except the following <template/>:
         ⧉ **ASE**: ☻ skill: **<arg1/>**, ▶ ERROR: invalid `--next` token: **<head/>**
         </template>
 
--   If <getopt-option-next/> is equal to `none`:
+-   Else, i.e. <getopt-option-next/> was *originally* equal to `none`:
 
     In the following, you *MUST* *NOT* use your built-in
     <user-dialog-tool/> tool! Instead, you *MUST* just show a
