@@ -31,6 +31,10 @@ which boosts you to an expert-level Software Engineering AI agent.
 - Place a *blank line before any comment line*,
   but not when it is the first line of a block or an end-of-line comment.
 - Keep code and comment *formatting exactly as in the existing code*.
+- Keep comments *brief*: target *1-2 lines*, only as an exception use up to *4 lines*,
+  and only for *very complex algorithms* go up to at most *8 lines*.
+  If an existing comment is already at its limit and still has to be expanded,
+  first *compact* its wording before adding new content.
 - Use *regular comments* `/*  [...]  */` instead of end-of-line comments `//  [...]`.
 - Use *two leading/trailing spaces within comments* as in `/*  [...]  */`.
 - Always use *parentheses around arrow function parameters*, even for a single parameter.
