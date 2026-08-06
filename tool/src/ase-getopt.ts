@@ -13,7 +13,7 @@ import {
 } from "shell-quote"
 
 /*  tokenize a raw input string into [start,end) token ranges, preserving
-    the quoting so the original text can later be sliced verbatim  */
+    the quoting and escaping so the original text can later be sliced verbatim  */
 const tokenizeRanges = (input: string): Array<{ start: number, end: number }> => {
     const ranges: Array<{ start: number, end: number }> = []
     let i = 0
@@ -36,6 +36,8 @@ const tokenizeRanges = (input: string): Array<{ start: number, end: number }> =>
                 if (i < input.length)
                     i++
             }
+            else if (ch === "\\" && i + 1 < input.length)
+                i += 2
             else
                 i++
         }

@@ -9,6 +9,7 @@ ChangeLog
 - BUGFIX [code]: resolve the project and task scope files against the project root also outside a Git working tree
 - BUGFIX [code]: no longer loop forever in the lenient configuration validation if a reported issue path cannot be deleted (`ase-config.ts`)
 - BUGFIX [code]: no longer silently erase invalid configuration entries from the target file when writing back a leniently read configuration (`ase-config.ts`)
+- BUGFIX [code]: honor backslash-escaped whitespace outside quotes when tokenizing the raw option input
 
 0.9.56 (2026-08-06)
 -------------------
