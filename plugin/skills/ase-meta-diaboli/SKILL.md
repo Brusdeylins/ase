@@ -37,6 +37,15 @@ to <getopt-option-count/>; if <getopt-option-count/> is *non-numeric* or
 
 1.  <step id="STEP 1: Restate Thesis">
 
+    <if condition="<thesis/> is empty">
+    Only output the following <template/> and then immediately *STOP*
+    processing the entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-diaboli**, ▶ ERROR: expected a `<thesis>` argument
+    </template>
+    </if>
+
     Output the thesis with the following <template/>:
 
     <template>
