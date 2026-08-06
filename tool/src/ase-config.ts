@@ -258,6 +258,7 @@ export class Config {
     private log:     Log
     private docs:    Layer[]
     private target:  number
+    private pruned:  string[]
 
     /*  creation  */
     constructor (
@@ -276,6 +277,7 @@ export class Config {
         this.filename = this.resolveFilename(name, tgt)
         this.docs     = [ { scope: tgt, filename: this.filename, doc: new Document() } ]
         this.target   = 0
+        this.pruned   = []
     }
 
     /*  render a scope term as a short textual label  */
@@ -346,6 +348,7 @@ export class Config {
     read (mode: "strict" | "lenient" = "lenient"): void {
         const chain = this.scope
         const docs: Layer[] = []
+        this.pruned = []
         for (let i = 0; i < chain.length; i++) {
             const sc         = chain[i]
             if (sc.kind === "default") {
@@ -377,6 +380,8 @@ export class Config {
                 if (perDocMode === "strict")
                     throw new Error(msg)
                 this.log.write("warning", msg)
+                if (isTarget)
+                    this.pruned.push(`unparsable YAML (${doc.errors[0].message})`)
                 doc = new Document()
             }
             docs.push({ scope: sc, filename, doc })
@@ -386,7 +391,9 @@ export class Config {
         for (let i = 0; i < docs.length; i++) {
             const isTarget   = (i === this.target)
             const perDocMode: "strict" | "lenient" = isTarget ? mode : "lenient"
-            this.validateDoc(docs[i].doc, docs[i].filename, perDocMode)
+            const removed    = this.validateDoc(docs[i].doc, docs[i].filename, perDocMode)
+            if (isTarget)
+                this.pruned.push(...removed)
         }
     }
 
@@ -413,19 +420,31 @@ export class Config {
         const td = this.docs[this.target]
         if (td.scope.kind === "default")
             throw new Error("internal error: \"default\" scope is not writable")
+
+        /*  a lenient read physically removes the invalid content from the in-memory
+            target document, so writing that document back would silently erase the
+            very same content from the file on disk  */
+        if (this.pruned.length > 0)
+            throw new Error(`refusing to overwrite ${td.filename}: it carries invalid content ` +
+                `(${this.pruned.join(", ")}) which was skipped on reading and hence would be ` +
+                "lost on writing -- repair the file first")
+
         this.validateDoc(td.doc, td.filename, "strict")
         fs.mkdirSync(path.dirname(td.filename), { recursive: true })
         writeFileAtomic.sync(td.filename, td.doc.toString({ indent: 4 }), { encoding: "utf8" })
     }
 
-    /*  validate a single YAML document against the optional schema  */
-    private validateDoc (doc: Document, filename: string, mode: "strict" | "lenient" = "strict"): void {
+    /*  validate a single YAML document against the optional schema; in "strict"
+        mode all invalid entries are reported as a thrown error, in "lenient" mode
+        they are removed from the document and their dotted paths are returned  */
+    private validateDoc (doc: Document, filename: string, mode: "strict" | "lenient" = "strict"): string[] {
         if (this.schema === null)
-            return
+            return []
+        const removed: string[] = []
         for (;;) {
             const result = v.safeParse(this.schema, doc.toJS())
             if (result.success)
-                return
+                return removed
             if (mode === "strict") {
                 const issues = result.issues.map((i) => {
                     const dotPath = (i.path ?? []).map((p) => String(p.key)).join(".")
@@ -433,20 +452,20 @@ export class Config {
                 }).join("; ")
                 throw new Error(`invalid configuration in ${filename}: ${issues}`)
             }
-            let progressed = false
+            const before = removed.length
             for (const i of result.issues) {
                 const segs    = (i.path ?? []).map((p) => String(p.key))
                 const dotPath = segs.join(".")
                 this.log.write("warning", `invalid entry in ${filename}: ${dotPath ? `${dotPath}: ` : ""}${i.message}`)
                 if (segs.length > 0 && doc.deleteIn(segs))
-                    progressed = true
+                    removed.push(dotPath)
                 /*  issues at the document root and issues whose stringified path does not
                     address a deletable node (e.g. a non-string YAML key like "404:", which
                     "toJS" stringifies) cannot be removed; processing continues with the
                     remaining issues  */
             }
-            if (!progressed)
-                return
+            if (removed.length === before)
+                return removed
         }
     }
 
