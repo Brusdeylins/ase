@@ -208,6 +208,20 @@ Procedure
 
         </if>
 
+    6.  Finally, give the closing hints by expanding the following
+        (which, depending on the configured <ase-guidance-level/>, may
+        each expand into nothing and hence emit no output at all):
+
+        <if condition="at least one output artifact was changed">
+        <ase-tpl-hint level="normal">
+        Use `/ase-sync-export` to re-materialize the derived export files of the reconciled artifacts.
+        </ase-tpl-hint>
+        </if>
+
+        <ase-tpl-hint level="verbose">
+        Use `/ase-sync-reconcile --bidirectional` to align target and source against *each other*, and a trailing `<hint>` argument to narrow the reconciliation.
+        </ase-tpl-hint>
+
     </step>
 
 </flow>
