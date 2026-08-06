@@ -21,7 +21,7 @@ Reboot a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-reboot"
-    arg2="--next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)...">
+    arg2="--next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
     $ARGUMENTS
 </expand>
 
