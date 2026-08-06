@@ -528,6 +528,22 @@ export class Config {
         return undefined
     }
 
+    /*  retrieve the explicitly configured value at a dotted key, i.e. the same
+        cascade as "get", but skipping the built-in "default" scope layer, so
+        callers can distinguish a deliberately configured value from a merely
+        preset one  */
+    getExplicit (key: string): unknown {
+        const segs = this.resolveKey(key).split(".")
+        for (let i = this.docs.length - 1; i >= 0; i--) {
+            if (this.docs[i].scope.kind === "default")
+                continue
+            const node = this.docs[i].doc.getIn(segs)
+            if (node !== undefined)
+                return node
+        }
+        return undefined
+    }
+
     /*  enumerate the effective leaf entries across the full scope chain;
         each returned entry identifies the originating scope  */
     entries (): Array<{ key: string, value: unknown, scope: ScopeTerm }> {

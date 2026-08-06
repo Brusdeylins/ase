@@ -285,10 +285,12 @@ export default class HookCommand {
         /*  determine user id  */
         const userId = process.env.USER ?? process.env.LOGNAME ?? "unknown"
 
-        /*  helper function: determine a setting from the configuration,
-            falling back to an environment variable and a default  */
+        /*  helper function: determine a setting from the explicitly configured
+            scopes, falling back to an environment variable and a default; the
+            built-in "default" scope layer is deliberately skipped, as its preset
+            value is always present and would hence shadow the environment variable  */
         const setting = (key: string, envVar: string, dflt: string): string => {
-            const val = cfg.get(key)
+            const val = cfg.getExplicit(key)
             return typeof val === "string" ? val : (process.env[envVar] ?? dflt)
         }
 
