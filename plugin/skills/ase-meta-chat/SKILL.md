@@ -28,6 +28,15 @@ Query Foreign LLM for Chat
 Query foreign LLM for: <query><getopt-arguments/></query>
 </objective>
 
+<if condition="<query/> is empty">
+Only output the following <template/> and then immediately *STOP*
+processing the entire current skill:
+
+<template>
+⧉ **ASE**: ✪ skill: **ase-meta-chat**, ▶ ERROR: expected a `<query>` argument
+</template>
+</if>
+
 1.  You *MUST* *NOT* output anything in this step.
     Just call the underlying agent with the following tool:
 
