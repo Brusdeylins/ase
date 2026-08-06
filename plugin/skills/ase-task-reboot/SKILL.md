@@ -143,47 +143,14 @@ Procedure
             </template>
 
         -   If <result/> is `EDIT`:
-            Set <args>--int-reuse-task</args>.
-            <if condition="<getopt-option-next/> is not equal `none`">
-                Set <args><args/> --next <getopt-option-next/></args>
-            </if>
-            Only output the following <template/> and then call the
-            tool `Skill(skill: "ase:ase-task-edit", args: "<args/>")`
-            to invoke the `ase:ase-task-edit` skill in order to *edit*
-            the updated plan. Immediately stop processing the current
-            skill once the `Skill` tool was used.
-
-            <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan rebooted -- hand-off to edit**
-            </template>
+            <expand name="task-next-handoff" arg1="ase-task-edit"
+                arg2="plan rebooted -- hand-off to edit"></expand>
 
         -   If <result/> is `IMPLEMENT`:
-            Set <args>--int-reuse-task</args>.
-            <if condition="<getopt-option-next/> is not equal `none`">
-                Set <args><args/> --next <getopt-option-next/></args>
-            </if>
-            Only output the following <template/> and then call the
-            tool `Skill(skill: "ase:ase-task-implement", args: "<args/>")`
-            to invoke the `ase:ase-task-implement` skill in order to
-            *implement* the updated plan. Immediately stop processing
-            the current skill once the `Skill` tool was used.
-
-            <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan rebooted -- hand-off to implementation**
-            </template>
+            <expand name="task-next-handoff" arg1="ase-task-implement"
+                arg2="plan rebooted -- hand-off to implementation"></expand>
 
         -   If <result/> is `PREFLIGHT`:
-            Set <args>--int-reuse-task</args>.
-            <if condition="<getopt-option-next/> is not equal `none`">
-                Set <args><args/> --next <getopt-option-next/></args>
-            </if>
-            Only output the following <template/> and then call the
-            tool `Skill(skill: "ase:ase-task-preflight", args: "<args/>")`
-            to invoke the `ase:ase-task-preflight` skill in order to
-            *preflight* the updated plan. Immediately stop processing
-            the current skill once the `Skill` tool was used.
-
-            <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan rebooted -- hand-off to pre-flight**
-            </template>
+            <expand name="task-next-handoff" arg1="ase-task-preflight"
+                arg2="plan rebooted -- hand-off to pre-flight"></expand>
 

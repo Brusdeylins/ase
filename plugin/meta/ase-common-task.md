@@ -156,3 +156,20 @@ related to this MCP call except the following <template/>:
     </expand>
 
 </define>
+
+<define name="task-next-handoff">
+
+Set <args>--int-reuse-task</args>.
+<if condition="<getopt-option-next/> is not equal `none`">
+    Set <args><args/> --next <getopt-option-next/></args>
+</if>
+Only output the following <template/> and then call the tool
+`Skill(skill: "ase:<arg1/>", args: "<args/>")` to invoke the
+`ase:<arg1/>` skill to continue with the updated plan. Immediately
+stop processing the current skill once the `Skill` tool was used.
+
+<template>
+⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **<arg2/>**
+</template>
+
+</define>
