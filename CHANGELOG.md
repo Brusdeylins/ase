@@ -10,6 +10,7 @@ ChangeLog
 - BUGFIX [code]: no longer loop forever in the lenient configuration validation if a reported issue path cannot be deleted (`ase-config.ts`)
 - BUGFIX [code]: no longer silently erase invalid configuration entries from the target file when writing back a leniently read configuration (`ase-config.ts`)
 - BUGFIX [code]: honor backslash-escaped whitespace outside quotes when tokenizing the raw option input
+- BUGFIX [code]: no longer forbid the file-modifying tools which the `--direct`/`-D` mode requires (`ase-code-resolve`)
 
 0.9.56 (2026-08-06)
 -------------------
