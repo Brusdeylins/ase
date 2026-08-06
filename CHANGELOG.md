@@ -5,17 +5,23 @@ ChangeLog
 0.9.57 (2026-08-06)
 -------------------
 
+- FEATURE [code]: added a `--direct`/`-D` option for directly applying a problem fix in place, without the approach comparison and task plan ceremony (`ase-code-resolve`)
+- IMPROVEMENT [code]: stop the current skill immediately once the task hand-over invoked the `Skill` tool (`ase-common-code.md`)
+- IMPROVEMENT [code]: guard against an empty query argument instead of silently proceeding (`ase-meta-chat`)
+- IMPROVEMENT [code]: widen the allowed tool sets to the actually required operations (`ase-meta-changelog`, `ase-arch-discover`)
+- IMPROVEMENT [code]: log only the first line of an unparsable YAML error in the pruning report (`ase-config.ts`)
 - BUGFIX [code]: validate the task id also when setting the active task id of a session, instead of persisting arbitrary strings into `agent.task` (`ase-task.ts`)
-- BUGFIX [code]: no longer silently retarget an explicit `--scope user` to the project scope inside a project context (`ase-config.ts`, `usage-tool.md`, `ase-meta-config`, `ase-help-intent`)
+- BUGFIX [code, docs]: no longer silently retarget an explicit `--scope user` to the project scope inside a project context (`ase-config.ts`, `usage-tool.md`, `ase-meta-config`, `ase-help-intent`)
 - BUGFIX [code]: resolve the project and task scope files against the project root also outside a Git working tree
 - BUGFIX [code]: no longer loop forever in the lenient configuration validation if a reported issue path cannot be deleted (`ase-config.ts`)
 - BUGFIX [code]: no longer silently erase invalid configuration entries from the target file when writing back a leniently read configuration (`ase-config.ts`)
 - BUGFIX [code]: honor backslash-escaped whitespace outside quotes when tokenizing the raw option input
-- BUGFIX [code]: no longer forbid the file-modifying tools which the `--direct`/`-D` mode requires (`ase-code-resolve`)
-- BUGFIX [code]: document the `--direct`/`-D` option and repair the malformed step tag of its branch (`ase-code-resolve`)
+- BUGFIX [code]: add the missing `--prefix`/`-P` option to the synopsis (`ase-arch-analyze`)
 - BUGFIX [code]: no longer misclassify an inline code span delimited by a run of 3+ backticks as a fenced code block opener, which inverted the fence state and mangled the content of a subsequent real code block (`ase-markdown.ts`)
 - BUGFIX [code]: honor the `ASE_PERSONA_STYLE`, `ASE_GUIDANCE_LEVEL`, and `ASE_PROJECT_BOXING` environment variables again, as the always-present preset values of the built-in `default` scope layer shadowed them (`ase-hook.ts`, `ase-config.ts`)
 - BUGFIX [code]: no longer let a non-`ECONNREFUSED` probe error escape the service start flow (`ase-service.ts`)
+- REFACTOR [code]: factored the shared task plan hand-over into the `task-next-handoff` definition (`ase-common-task.md`, `ase-task-preflight`, `ase-task-reboot`)
+- REFACTOR [code]: moved the artifact blank line and timestamp instructions into the shared meta file (`ase-format-meta.md`, `ase-format-arch.md`, `ase-format-spec.md`)
 
 0.9.56 (2026-08-06)
 -------------------
