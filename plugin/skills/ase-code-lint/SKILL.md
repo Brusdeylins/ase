@@ -343,7 +343,7 @@ related to a set of code quality aspects.
 
             </template>
 
-        5.  <if condition="<getopt-option-auto/> is not equal `true` and <ase-project-boxing/> is not equal `black`">
+        5.  <if condition="<getopt-option-auto/> is not equal `true`">
 
             <if condition="<ase-project-boxing/> is equal `grey`">
 
