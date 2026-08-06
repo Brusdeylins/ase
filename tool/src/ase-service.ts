@@ -480,7 +480,7 @@ export default class ServiceCommand {
             return await new Promise<number>(() => { /*  never resolves  */ })
         }
         if (port !== null) {
-            const match = await probe(port, ctx.projectId)
+            const match = await probe(port, ctx.projectId).catch(() => null)
             if (match === true) {
                 this.log.write("info", `service: already running on port ${port}`)
                 return 0
