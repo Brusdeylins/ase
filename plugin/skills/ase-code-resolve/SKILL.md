@@ -10,6 +10,7 @@ effort: xhigh
 allowed-tools:
     - "Skill"
     - "Agent"
+    - "Read"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -23,7 +24,7 @@ Resolve Problem
 
 <expand name="getopt"
     arg1="ase-code-resolve"
-    arg2="--auto|-a --dry|-d --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
+    arg2="--auto|-a --dry|-d --direct|-D --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
     $ARGUMENTS
 </expand>
 
@@ -120,14 +121,19 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
         ⧉ **ASE**: ⇌ problem: **<problem/>**
         </template>
 
-    7.  Figure out what the requested <problem/> is about.
+    </step>
 
-    8.  Ask the user for clarification if the goal of this resolution is
-        too unclear.
+2.  <step id="STEP 2: Investigate Code Base">
 
-    9.  Do not output anything else in this step, unless you asked the user.
+    1.  Check the existing source files for all code which is related to the
+        requested <problem/> resolution.
 
-    10. Investigate and *figure out details* related to this problem.
+    2.  Check the architecture of the existing code base to understand the
+        overall structures and dynamics.
+
+    3.  Investigate and *figure out details* related to this problem.
+
+        <if condition="<getopt-option-direct/> is not equal to 'true'">
         Report those details with the following <template/>:
 
         <template>
@@ -165,18 +171,9 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
           run_in_background: false)`, reproducing its
           returned fenced code block verbatim. Omit <optional-diagram/>
           entirely for simple or purely local situations.
+        </if>
 
-    </step>
-
-2.  <step id="STEP 2: Investigate Code Base">
-
-    1.  Check the existing source files for all code which is related to the
-        requested <problem/> resolution.
-
-    2.  Check the architecture of the existing code base to understand the
-        overall structures and dynamics.
-
-    3.  Do not output anything in this STEP 2.
+    4.  Do not output anything else in this STEP 2.
 
     </step>
 
@@ -190,13 +187,43 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
 
     </step>
 
-4.  <step id="STEP 4: Choose Problem Resolution Approaches">
+4.  <if condition="<getopt-option-direct/> is equal to 'true'">
+
+    <step id="STEP 4: Direct Problem Resolution"
+
+    1.  Output a hint with the following <template/>:
+
+        <template>
+        ⧉ **ASE**: ▶ status: **problem will be directly resolved**
+        </template>
+
+    2.  Directly resolve the <problem/> by modifying the affected
+        *artifacts* with a corresponding, complete *change set*,
+        based on your gathered knowledge about the code base and your
+        internalized problem resilution tenets.
+
+    3.  Output a hint with the following <template/>:
+
+        <template>
+        ⧉ **ASE**: ▶ status: **problem was directly resolved**
+        </template>
+
+    4.  Directly pass through control to the next skill:
+
+        <expand name="code-next-dispatch"></expand>
+
+    </step>
+
+    </if>
+    <else>
+
+    <step id="STEP 4: Choose Problem Resolution Approaches">
 
     <expand name="code-approaches" arg1="resolution" arg2="resolution"></expand>
 
     </step>
 
-5.  <step id="STEP 5: Compose Problem Resolution Plan">
+    <step id="STEP 5: Compose Problem Resolution Plan">
 
     1.  *Compose a plan* with code references, a precise description of the
         problem, the chosen resolution approach, a preview of the *unified
@@ -247,6 +274,8 @@ permitted way to persist artifacts is via `ase_task_save(...)`.
         <expand name="code-next-dispatch"></expand>
 
     </step>
+
+    </else>
 
 </flow>
 
