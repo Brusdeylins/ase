@@ -23,9 +23,12 @@ export class Markdown {
         /*  segment the input line-wise into alternating non-fenced and
             fenced regions: a fenced code block opens with a line whose first
             non-whitespace content is a run of 3+ backticks or tildes and
-            closes with a matching-or-longer run of the same marker; fenced
-            regions are emitted verbatim while only non-fenced regions are
-            handed to the rewriting passes below  */
+            closes with a matching-or-longer run of the same marker; for a
+            backtick fence the info string trailing the run must not carry any
+            further backtick, so an inline code span delimited by a run of 3+
+            backticks never opens a fence; fenced regions are emitted verbatim
+            while only non-fenced regions are handed to the rewriting passes
+            below  */
         const lines  = text.split("\n")
         let result   = ""
         let buf      = ""
@@ -41,7 +44,7 @@ export class Markdown {
         for (let li = 0; li < lines.length; li++) {
             const line = lines[li]
             const nl   = li < lines.length - 1 ? "\n" : ""
-            const m    = line.match(/^\s*(`{3,}|~{3,})/)
+            const m    = line.match(/^\s*(`{3,}(?![^`]*`)|~{3,})/)
             if (!inFence && m) {
                 /*  a fence-opening line: flush the pending non-fenced buffer,
                     enter fenced mode, and emit the opener verbatim  */
