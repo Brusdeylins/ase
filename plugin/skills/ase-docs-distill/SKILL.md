@@ -77,7 +77,7 @@ Procedure
 
         </if>
 
-    You *MUST* *NOT* output anything in this STEP 1.
+    You *MUST* *NOT* output anything else in this STEP 1.
 
     </step>
 
