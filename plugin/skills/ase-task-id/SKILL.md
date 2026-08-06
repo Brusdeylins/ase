@@ -60,8 +60,18 @@ Procedure
 
 4.  <if condition="<request/> is NOT empty">
     -   Call the `ase_task_id(id: "<request/>", session: "<ase-session-id/>")`
-        tool from the `ase` MCP server. Check the response as mandated
-        above; only on a clean response set <ase-task-id><request/></ase-task-id>.
+        tool from the `ase` MCP server and set <text/> to its `text`
+        output. On an `ERROR:`/`WARNING:` response, silently ignore the
+        MCP error (deviating from the generic MCP error rule), keep the
+        <ase-task-id/> inherited from the current context, and only
+        output the following <template/> and then immediately *STOP*
+        processing the entire current skill:
+
+        <template>
+        ⧉ **ASE**: ☻ skill: **ase-task-id**, ▶ ERROR: failed to switch to task `<request/>`
+        </template>
+
+    -   Only on a clean response set <ase-task-id><request/></ase-task-id>.
 
     -   Output:
         <template>
