@@ -62,10 +62,7 @@ Set <args>--int-reuse-task</args>.
 
         <expand name="task-load-content"></expand>
 
-        Set <plan><task-content/></plan> (alias the loaded task content
-        for the subsequent steps). Do not output anything.
-
-    2.  <if condition="<plan/> is empty">
+    2.  <if condition="<task-content/> is empty">
         Complain and tell the user to use the `ase-code-resolve`,
         `ase-code-refactor`, `ase-code-craft`, or `ase-task-edit` skills
         first to create a task plan. Then immediately stop processing
@@ -75,7 +72,7 @@ Set <args>--int-reuse-task</args>.
 3.  **Iterate Over Task Plan Aspects:**
 
     Interactively interview the user *relentlessly* about every
-    *essential aspect* of the task plan in <plan/> *until* reaching a
+    *essential aspect* of the task plan in <task-content/> *until* reaching a
     shared understanding and no decisions/questions are left open.
 
     This especially means that you *MUST* clarify as many aspects as
@@ -124,7 +121,7 @@ Set <args>--int-reuse-task</args>.
 
         2.  Determine the answer alternatives:
 
-            1.  Check the <plan/> for the answer <answer-N-1/>.
+            1.  Check the <task-content/> for the answer <answer-N-1/>.
 
             2.  Check the code base and your world knowledge and
                 use this information to find *up to three* grounded
@@ -161,37 +158,19 @@ Set <args>--int-reuse-task</args>.
                 <ase-tpl-bullet-normal/> ASPECT <N/>/<n/>: **<aspect-N/>**, ANSWER: **<answer-N/>**
                 </template>
 
-    2.  Finally, update the plan in <plan/> based on all answers <answer-N/>.
+    2.  Finally, update <task-content/> based on all answers <answer-N/>.
 
-    3.  <if condition="the frontmatter of <plan/> carries a `Created: <text/>` key">
+    3.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
         timestamp-created to extracted text).
         </if>
 
-    4.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the
-        `ase` MCP server and use the `text` field of its response for
-        <timestamp-modified/> information. If <timestamp-created/> is
-        still unset (because the previous <plan/> had no `Created:`
-        frontmatter key), set <timestamp-created><timestamp-modified/></timestamp-created>
-        (fall back to the modified timestamp). Then insert the current
-        <ase-task-id/>, previous <timestamp-created/>, and refreshed
-        <timestamp-modified/> information into the frontmatter keys `Id:`,
-        `Created:`, and `Modified:` and calculate the number of
-        words <words/> of <plan/>. Additionally *add* the value `grilled`
-        to the `Properties:` frontmatter key if it is still absent,
-        keeping all already present values and *creating* the whole key
-        (with the single value `grilled`) if the plan carries none.
+    4.  *Add* the value `grilled` to the `Properties:` frontmatter key of
+        <task-content/> if it is still absent, keeping all already
+        present values and *creating* the whole key (with the single
+        value `grilled`) if the plan carries none.
 
-    5.  Call the `ase_task_save(id: "<ase-task-id/>",
-        text: "<plan/>")` tool of the `ase` MCP server to save the updated
-        task plan content. Do not output anything related to this MCP
-        call.
-
-    6.  Only output the following <template/> and continue processing:
-
-        <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated**
-        </template>
+    5.  <expand name="task-save-content" arg1="plan updated"></expand>
 
 4.  **Decide Next Step:**
 
