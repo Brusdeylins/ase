@@ -1,6 +1,6 @@
 ---
 name: ase-arch-analyze
-argument-hint: "[--help|-h] <source-reference>"
+argument-hint: "[--help|-h] [--prefix|-P=<prefix>] <source-reference>"
 description: Review software architecture, including package cohesion and inter-package coupling
 user-invocable: true
 disable-model-invocation: false
