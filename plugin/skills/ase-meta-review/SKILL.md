@@ -150,14 +150,16 @@ Procedure
         You *MUST* *NOT* output anything else in this STEP 3.1.
 
     2.  <if condition="<findings/> is empty">
-        Only output the following <template/> and then *SKIP* the
-        remainder of this STEP 3 (an empty finding list implies the
-        `APPROVE` verdict, so the closing hint of substep 4 would expand
+        Only output the following <template/> - with <note/> set to `the
+        change was not reviewed` if <verdict/> starts with `SKIPPED` and
+        to `the change is clean` otherwise - and then *SKIP* the
+        remainder of this STEP 3 (an empty finding list never yields the
+        `REJECT` verdict, so the closing hint of substep 4 would expand
         into nothing anyway):
 
         <template>
 
-        <ase-tpl-bullet-normal/> **NO FINDINGS**: the change is clean, nothing to flag.
+        <ase-tpl-bullet-normal/> **NO FINDINGS**: <note/>, nothing to flag.
 
         </template>
         </if>
