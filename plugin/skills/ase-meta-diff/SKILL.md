@@ -322,7 +322,7 @@ Procedure
             calling the tool `Agent(description: "Diagram Rendering",
             subagent_type: "ase:ase-meta-diagram", prompt:
             "<mermaid-spec/>", run_in_background: false)` and capture
-            its returned `text` field as <diagram/>.
+            its returned *fenced code block* verbatim as <diagram/>.
 
     4.  Then emit the following <template/>, showing <diagram/> and
         appending a *brief impact summary* of bullets, where each
@@ -341,9 +341,7 @@ Procedure
 
         <ase-tpl-bullet-signal/> **CHANGE BLAST RADIUS MAP**:
 
-        ```text
         <diagram/>
-        ```
 
         <ase-tpl-bullet-signal/> **BLAST**: ⚑ **<module/>**: <impact/>
 
