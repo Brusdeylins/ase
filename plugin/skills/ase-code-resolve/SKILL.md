@@ -202,10 +202,14 @@ resolution actually demands, and you *MUST* *NOT* call
 
     <step id="STEP 4: Direct Problem Resolution"
 
-    Directly resolve the <problem/> by modifying the affected
-    *artifacts* with a corresponding, complete *change set*,
-    based on your gathered knowledge about the code base and your
-    internalized problem resilution tenets.
+    1.  Directly resolve the <problem/> by modifying the affected
+        *artifacts* with a corresponding, complete *change set*,
+        based on your gathered knowledge about the code base and your
+        internalized problem resilution tenets. Also, if a CHANGELOG.md
+        file exists, make an appropriate entry there, too.
+
+    2.  Do not output anything else in this STEP 3. Especially, do not
+        output a change summary or a unified diff of the changes.
 
     </step>
 
