@@ -78,8 +78,9 @@ for the technology stack to *provide* the *needed functionality*
         2.  Else, if a file `package.json` is found in the top-level directory
             of the project, then <stack>JavaScript</stack>.
 
-        3.  Else, if a file `build.gradle.kts` or `settings.gradle.kts`
-            is found in the top-level directory, then <stack>Kotlin</stack>.
+        3.  Else, if a file `build.gradle.kts` is found in the top-level directory and
+            is applying `kotlin`, `org.jetbrains.kotlin.jvm`, `kotlin-android`,
+            or `kotlin-multiplatform` plugins, then <stack>Kotlin</stack>.
 
         4.  Else, if a file `build.gradle` is found in the top-level directory and
             is applying `kotlin`, `org.jetbrains.kotlin.jvm`, `kotlin-android`,
@@ -89,8 +90,8 @@ for the technology stack to *provide* the *needed functionality*
             contains `kotlin-maven-plugin` or `kotlin-stdlib` dependencies, then
             <stack>Kotlin</stack>.
 
-        6.  Else, if a file `pom.xml` or `build.gradle` is found in the top-level directory
-            of the project, then <stack>Java</stack>.
+        6.  Else, if a file `pom.xml`, `build.gradle`, or `build.gradle.kts` is found
+            in the top-level directory of the project, then <stack>Java</stack>.
 
         7.  Else, use <stack>Unknown</stack>.
 
