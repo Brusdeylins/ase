@@ -18,20 +18,6 @@ at `01`) according to the order of the **Artifact** list below, and with
 Pascal-casing each word (upper-casing its first letter) and using `-`
 characters instead of spaces (e.g. `Customer-Journey`).
 
-Each **Artifact** file *MUST* begin with a single blank line before its
-`#` heading and end with a single blank line after its last content line
-(followed by the trailing newline), mirroring the blank lines shown
-inside the `<format>` blocks below.
-
-Each **Artifact** contains two timestamps: the <timestamp-created/>
-is the timestamp when this **Artifact** was created. The
-<timestamp-modified/> is the timestamp when this **Artifact** was last
-modified. Both use an ISO-style format value. The value of both can be
-determined by a call to the `ase_timestamp(format: "yyyy-LL-dd HH:mm")`
-tool of the `ase` MCP server, using the `text` field of its response.
-Whenever an **Artifact** is updated, the <timestamp-modified/> *MUST* be
-updated, too.
-
 The **Artifact Set** **Specification (SPEC)** consists of the following
 distinct **Artifact**s (listed under their <artifact-name/> and their
 <artifact-id/>):
