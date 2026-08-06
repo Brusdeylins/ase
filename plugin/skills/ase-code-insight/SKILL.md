@@ -51,7 +51,8 @@ Give *insights* into the project through the source code of <getopt-arguments/>.
 
     Determine an <abstract/> summary of this project.
     For this, check a potentially existing `README.*` file
-    or scan the source files and figure it out indirectly.
+    or scan the source files of <getopt-arguments/> and figure it out
+    indirectly.
 
     Display the results with the following <template/>:
 
@@ -80,8 +81,8 @@ Give *insights* into the project through the source code of <getopt-arguments/>.
     </step>
 
 3.  <step id="STEP 3: SOURCE CHURN">
-    Display the source files which caused the most churn by
-    figuring out which source files have the most commits.
+    Display the source files of <getopt-arguments/> which caused the
+    most churn by figuring out which of them have the most commits.
     Display the following <template/>:
 
     <template>
@@ -91,7 +92,7 @@ Give *insights* into the project through the source code of <getopt-arguments/>.
     Then run the following command...
 
     ```
-    git log --format=format: --name-only --since="1 year ago" | grep -v '^$' | sort | uniq -c | sort -nr | head -10
+    git log --format=format: --name-only --since="1 year ago" -- <getopt-arguments/> | grep -v '^$' | sort | uniq -c | sort -nr | head -10
     ```
 
     ...and then display its result as a table with a table head and
@@ -106,9 +107,10 @@ Give *insights* into the project through the source code of <getopt-arguments/>.
     <ase-tpl-bullet-normal/> **MODULE STRUCTURE**:
     </template>
 
-    Find all modules (or OOP classes) and build a Mermaid specification
-    <mermaid-spec/> for a `flowchart TB` diagram with all modules as
-    boxes and the imports between modules as the directed edges. Then
+    Find all modules (or OOP classes) of <getopt-arguments/> and build a
+    Mermaid specification <mermaid-spec/> for a `flowchart TB` diagram
+    with all modules as boxes and the imports between modules as the
+    directed edges. Then
     dispatch the rendering to the `ase-meta-diagram` sub-agent by
     calling the tool `Agent(description: "Diagram Rendering",
     subagent_type: "ase:ase-meta-diagram", prompt: <mermaid-spec/>,
