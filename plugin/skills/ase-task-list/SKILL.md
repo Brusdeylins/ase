@@ -55,6 +55,15 @@ Procedure
     ⧉ **ASE**: ✪ skill: **ase-task-list**, ▶ ERROR: options `--include` and `--exclude` cancel out to an empty state set
     </template>
 
+    Directly *after* this error <template/>, and *before* stopping, give
+    the corrective hint by expanding the following (which, depending on
+    the configured <ase-guidance-level/>, may expand into nothing and
+    hence emit no output at all):
+
+    <ase-tpl-hint level="minimal">
+    The `--exclude` default `COMPLETED,CANCELLED` still applies -- add `--exclude none` to reach states like `COMPLETED` via `--include`.
+    </ase-tpl-hint>
+
 2.  Call the `ase_task_list(verbose: <getopt-option-verbose/>)` tool from
     the `ase` MCP server. The result is a structured object with a
     `tasks` array where each entry has an `id` and a `status` field, and
