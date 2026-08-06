@@ -204,6 +204,11 @@ Procedure
             following the plan <format/>, where:
 
             -   the <task-id/> is <part-id/>,
+            -   the <task-status/> is `DRAFTED` and the <task-properties/>
+                is `none`, as every part is a *newly created* plan,
+            -   the <task-kind/> is taken over from the epic *verbatim*,
+                or inferred from the part content if the epic carries no
+                `Kind:` key,
             -   the <title/> is derived from the part's <scope/>,
             -   the `##  CONTEXT` section carries a part-local
                 <summary-what/> and <summary-why/>, derived from the
