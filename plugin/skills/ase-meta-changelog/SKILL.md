@@ -108,7 +108,11 @@ Processing
     corresponding Git tag already exists with the command `git tag --list
     N.M.K`. If this command *does* produce output, the first section is
     already released/tagged, so use the `N.M.K` from the *first* level-2
-    header as the baseline tag. If this command produces *no* output, the
+    header as the baseline tag and *insert* a new, still-unreleased
+    level-2 section (next patch version, current date) *above* it, which
+    then becomes the *first* (most recent) section all subsequent steps
+    operate on - the already released section *MUST* *NOT* be modified.
+    If this command produces *no* output, the
     first section is still in-progress/untagged, so use the `N.M.K` from
     the *second* level-2 header as the baseline tag instead. If *no*
     second level-2 header exists (very first, still untagged release),
