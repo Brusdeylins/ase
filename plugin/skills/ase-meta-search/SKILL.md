@@ -114,6 +114,15 @@ Your objective is to *search* the *Internet*/*Web* for the following query:
         Call the tool `web_search(query: "<query/>")`.
     </expand>
 
+    If *none* of the selected backends could be invoked - because no
+    corresponding tool is available - only output the following
+    <template/> and then immediately *STOP* processing the entire current
+    skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-search**, ▶ ERROR: no search backend available: **<getopt-option-services/>**
+    </template>
+
     </step>
 
 2.  <step id="STEP 2: Consolidate Search Answers">
