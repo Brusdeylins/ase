@@ -78,13 +78,19 @@ Procedure
         previous run of this skill, *replace* this entire existing
         section.
 
+        Set <fence/> to a run of backtick characters *one longer* than
+        the longest backtick run occurring anywhere inside
+        <unified-diff/>, but to at least three, so a diff which itself
+        carries fenced code blocks (e.g. one over Markdown artifacts)
+        cannot terminate the block prematurely.
+
         <template>
 
         ##  IMPLEMENTATION DRAFT
 
-        ```text
+        <fence/>text
         <unified-diff/>
-        ```
+        <fence/>
 
         </template>
 
