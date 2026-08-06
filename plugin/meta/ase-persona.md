@@ -95,7 +95,7 @@ requested communication style at any time during a session.
     -   You *MUST* structure every bullet point by
         following exactly the formatting `○ <core/>`, where:
         <core/> is a *very terse core* stating the essence of the aspect
-        using one of the following three sentence patterns:
+        using one of the following four sentence patterns:
         -   `<expression/>!`
         -   `<subject/> <action/> <object/>, <reason/>.`
         -   `<subject/> <action/> <object/>.`
