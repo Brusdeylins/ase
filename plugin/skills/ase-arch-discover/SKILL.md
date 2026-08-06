@@ -9,7 +9,7 @@ disable-model-invocation: false
 effort: high
 allowed-tools:
     - "Bash(npm search --json *)"
-    - "Bash(curl -s https://search.maven.org/*)"
+    - "Bash(curl -s *)"
     - "Skill"
     - "Agent"
 ---
