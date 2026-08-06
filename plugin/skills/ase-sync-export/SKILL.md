@@ -10,7 +10,8 @@ user-invocable: true
 disable-model-invocation: false
 effort: xhigh
 allowed-tools:
-    - Write
+    - "Read"
+    - "Write"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
