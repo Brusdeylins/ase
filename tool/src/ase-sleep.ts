@@ -14,11 +14,11 @@ export class SleepMCP {
             title: "ASE sleep",
             description:
                 "Wait once for `duration` seconds and then return. " +
-                "The duration can be fractional (e.g. `1.5`). " +
+                "The duration can be fractional (e.g. `1.5`) and is at most 120 (default: 60). " +
                 "Returns `OK: slept <duration> seconds` as `text` after the duration elapsed.",
             inputSchema: {
-                duration: z.number().positive().max(3600)
-                    .describe("wait duration in seconds (fractional values allowed, at most 3600)")
+                duration: z.number().positive().max(120).default(60)
+                    .describe("wait duration in seconds (fractional values allowed, at most 120, default 60)")
             }
         }, async (args) => {
             await new Promise<void>((resolve) => setTimeout(resolve, args.duration * 1000))
