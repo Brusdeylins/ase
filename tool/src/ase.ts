@@ -19,6 +19,7 @@ import ArtifactCommand             from "./ase-artifact.js"
 import MetaCommand                 from "./ase-meta.js"
 import CompatCommand               from "./ase-compat.js"
 import DiagramCommand              from "./ase-diagram.js"
+import WorktreeCommand             from "./ase-worktree.js"
 import pkg                         from "../package.json" with { type: "json" }
 
 /*  type of top-level (global) options  */
@@ -69,6 +70,7 @@ const main = async (): Promise<void> => {
     new MetaCommand(log).register(program)
     new CompatCommand().register(program)
     new DiagramCommand(log).register(program)
+    new WorktreeCommand().register(program)
 
     /*  parse program arguments  */
     await program.parseAsync(process.argv)

@@ -169,7 +169,28 @@ Procedure
 3.  <step id="STEP 3: Detect Target Collisions"
         condition="<getopt-option-dry/> is not equal `true`">
 
-    1.  Determine the *existing worktrees* and *existing branches* by
+    1.  Determine the *worktree directory* of every part by calling the
+        `ase_worktree_path(id: "<part-id/>", create: true)` tool of the
+        `ase` MCP server once per <part-id/> of <parts/> and capturing
+        its output into the <part-dir/> of that part.
+
+        You *MUST* *NEVER* assemble such a path yourself, as only this
+        tool rejects a path leading through a symbolic link, through a
+        non-directory, or out of the repository -- a path both `git
+        worktree add` and `git worktree remove` would otherwise silently
+        follow and thereby write outside the repository.
+
+        <if condition="this tool call fails for any part">
+        Only output the following <template/> and then immediately *STOP*
+        processing the entire current skill, leaving the working copy and
+        *all* existing worktrees and branches untouched:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-code-dissect**, ▶ ERROR: unsafe worktree directory -- cannot create worktrees
+        </template>
+        </if>
+
+    2.  Determine the *existing worktrees* and *existing branches* by
         running the corresponding commands (taken exactly as given) and
         capturing their outputs:
 
@@ -177,11 +198,11 @@ Procedure
 
         `git branch --list`
 
-    2.  Set <collisions/> to all <part-id/> of <parts/> for which either
-        a worktree directory `<repo-root/>/.ase/worktree/<part-id/>` or
-        a branch `<part-id/>` already exists.
+    3.  Set <collisions/> to all <part-id/> of <parts/> for which either
+        the worktree directory <part-dir/> or a branch `<part-id/>`
+        already exists.
 
-    3.  <if condition="<collisions/> is not empty AND <getopt-option-force/> is not equal `true`">
+    4.  <if condition="<collisions/> is not empty AND <getopt-option-force/> is not equal `true`">
         Only output the following <template/> -- with <collisions/>
         rendered as a comma-separated list of code spans -- and then
         immediately *STOP* processing the entire current skill, leaving
@@ -202,13 +223,13 @@ Procedure
         </ase-tpl-hint>
         </if>
 
-    4.  <if condition="<collisions/> is not empty AND <getopt-option-force/> is equal `true`">
+    5.  <if condition="<collisions/> is not empty AND <getopt-option-force/> is equal `true`">
         *Remove* every colliding target by running the corresponding
         commands (taken exactly as given) per colliding <part-id/>, and
         silently ignore the failure of an individual command when the
         corresponding worktree or branch does not exist:
 
-        `git worktree remove --force "<repo-root/>/.ase/worktree/<part-id/>"`
+        `git worktree remove --force "<part-dir/>"`
 
         `git worktree prune`
 
@@ -255,7 +276,7 @@ Procedure
             git-ignored, so the worktree itself never shows up as a
             change:
 
-            `git worktree add "<repo-root/>/.ase/worktree/<part-id/>"`
+            `git worktree add "<part-dir/>"`
 
             <if condition="this command fails">
             Only output the following <template/>, then *continue* with
@@ -270,7 +291,7 @@ Procedure
         4.  Apply the patch *inside* the freshly created worktree by
             running the corresponding command (taken exactly as given):
 
-            `git -C "<repo-root/>/.ase/worktree/<part-id/>" apply --whitespace=nowarn "<tmp-dir/>/ase-dissect-<part-id/>.patch"`
+            `git -C "<part-dir/>" apply --whitespace=nowarn "<tmp-dir/>/ase-dissect-<part-id/>.patch"`
 
             <if condition="this command fails">
             Only output the following <template/>, then *continue* with

@@ -35,6 +35,7 @@ import { TimestampMCP }                  from "./ase-timestamp.js"
 import { SleepMCP }                      from "./ase-sleep.js"
 import { GetoptMCP }                     from "./ase-getopt.js"
 import { SkillsMCP }                     from "./ase-skills.js"
+import { WorktreeMCP }                   from "./ase-worktree.js"
 import pkg                               from "../package.json" with { type: "json" }
 
 /*  shared service host  */
@@ -308,6 +309,7 @@ export default class ServiceCommand {
             new SleepMCP().register(mcp)
             new GetoptMCP().register(mcp)
             new SkillsMCP().register(mcp)
+            new WorktreeMCP().register(mcp)
             new ConfigMCP(this.log).register(mcp)
             return mcp
         }

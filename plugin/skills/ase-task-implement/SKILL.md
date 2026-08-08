@@ -82,24 +82,28 @@ Procedure
         directly usable as both a directory and a branch name. Do not
         output anything.
 
-    2.  Determine the *repository root* by running the corresponding
-        command (taken exactly as given) and capturing its output into
-        <repo-root/>:
+    2.  Determine the *worktree directory* by calling the
+        `ase_worktree_path(id: "<worktree-name/>", create: true)` tool of
+        the `ase` MCP server and capturing its output into
+        <worktree-dir/>.
 
-        `git rev-parse --show-toplevel`
+        You *MUST* *NEVER* assemble this path yourself, as only this tool
+        rejects a path leading through a symbolic link, through a
+        non-directory, or out of the repository -- a path `git worktree
+        add` would otherwise silently follow and thereby write outside
+        the repository.
 
-        <if condition="this command fails">
-        The current directory is not a Git repository, so no worktree can be
-        created. Only output the following <template/> and then
-        immediately *STOP* processing the entire current skill, leaving
-        the working copy *untouched*:
+        <if condition="this tool call fails">
+        Either the current directory is not a Git repository or the
+        worktree directory is unsafe, so no worktree can be created. Only
+        output the following <template/> and then immediately *STOP*
+        processing the entire current skill, leaving the working copy
+        *untouched*:
 
         <template>
-        ⧉ **ASE**: ☻ skill: **ase-task-implement**, ▶ ERROR: no Git repository -- cannot create worktree
+        ⧉ **ASE**: ☻ skill: **ase-task-implement**, ▶ ERROR: no Git repository or unsafe worktree directory -- cannot create worktree
         </template>
         </if>
-
-        Then set <worktree-dir><repo-root/>/.ase/worktree/<worktree-name/></worktree-dir>.
 
     3.  Determine the *existing worktrees* and *existing branches* by
         running the corresponding commands (taken exactly as given) and

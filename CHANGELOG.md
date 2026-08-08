@@ -5,6 +5,7 @@ ChangeLog
 0.9.58 (2026-08-06)
 -------------------
 
+- FEATURE [code]: introduce `ase_worktree_path` for a safe way to discover a worktree path
 - FEATURE [code]: added the `<sleep>` and `<await>` control flow constructs for waiting a given, possibly fractional, number of seconds once and for waiting until a condition is met, both backed by the new `ase_sleep` MCP tool (`ase-control.md`, `ase-sleep.ts`, `ase-service.ts`)
 - FEATURE [code, docs]: added a `--direct`/`-D` option for directly crafting a feature or applying a refactoring in place, without the approach comparison and task plan ceremony (`ase-code-craft`, `ase-code-refactor`, `usage-plugin.md`)
 - IMPROVEMENT [code]: keep comments concise by bounding their length and demanding a compaction of the existing wording before an expansion (`ase-constitution.md`)
