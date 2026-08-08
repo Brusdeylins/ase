@@ -11,7 +11,7 @@
         "@rse/stx":                               "1.1.6",
         "@astrojs/check":                         "0.9.10",
         "typescript":                             "6.0.3",
-        "eslint":                                 "10.8.0",
+        "eslint":                                 "10.8.1",
         "@eslint/js":                             "10.0.1",
         "@typescript-eslint/parser":              "8.66.0",
         "typescript-eslint":                      "8.66.0",
@@ -23,7 +23,7 @@
         "playwright":                             "1.62.1"
     },
     "dependencies": {
-        "astro":                                  "7.1.6",
+        "astro":                                  "7.2.0",
         "@astrojs/sitemap":                       "3.7.3",
         "@astro-community/astro-embed-youtube":   "0.5.10",
         "astro-robots-txt":                       "1.0.0",
