@@ -2,6 +2,15 @@
 ChangeLog
 =========
 
+0.9.59 (2026-08-08)
+-------------------
+
+- FEATURE [code]: introduce `ase_worktree_path` for a safe way to discover a worktree path (`ase-worktree.ts`, `ase-service.ts`, `ase.ts`, `ase-code-dissect`, `ase-task-implement`)
+- IMPROVEMENT [code]: support arbitrary `<sleep>` and `<await>` durations by chunking them into consecutive 60 second `ase_sleep` calls (`ase-control.md`)
+- IMPROVEMENT [infr]: ignore `package-lock.json` files (`.gitignore`)
+- BUGFIX [code]: cap the `ase_sleep` duration at 120 seconds (default 60), as Claude Code rejects longer MCP calls (`ase-sleep.ts`)
+- BUGFIX [code]: resurrect the unified diff context lines by re-deriving them from the actual file content instead of trusting the sub-agent supplied ones (`ase-code-lint`, `ase-docs-proofread`)
+
 0.9.58 (2026-08-06)
 -------------------
 
