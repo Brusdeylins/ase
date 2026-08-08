@@ -99,10 +99,18 @@ Control Flow Constructs
     <sleep duration="<sleep-duration/>"/>:
 
     This specifies a single *wait* of <sleep-duration/> seconds
-    (fractional values like `1.5` are allowed): call the
-    `ase_sleep(duration: <sleep-duration/>)` tool of the `ase` MCP
-    server, which returns once the duration has elapsed. This construct
-    is expanded into nothing. Do not output anything.
+    (fractional values like `1.5` are allowed).
+
+    The wait is performed with the `ase_sleep(duration:
+    <chunk-duration/>)` tool of the `ase` MCP server, which returns once
+    <chunk-duration/> has elapsed. To stay safely inside the tool's own
+    duration limit, <chunk-duration/> is *never* above `60`: a
+    <sleep-duration/> above `60` is therefore *split* into consecutive
+    calls -- as many `60` second calls as fit, followed by one final
+    call carrying the remaining seconds -- so the calls sum up to
+    exactly <sleep-duration/>.
+
+    This construct is expanded into nothing. Do not output anything.
 
 -   *IMPORTANT*: You *MUST* honor the following control flow construct:
     <await condition="<await-condition/>" [interval="<await-interval/>"]><await-body/></await>:
@@ -111,10 +119,20 @@ Control Flow Constructs
     <await-condition/> is met: if <await-condition/> is met, the
     <await-body/> is executed once and the construct is finished. If
     <await-condition/> is *not* met, wait for <await-interval/> seconds
-    (default: `60`) via the `ase_sleep(duration: <await-interval/>)`
-    tool of the `ase` MCP server and then *start over* by re-evaluating
-    <await-condition/>. This construct is expanded to its
-    <await-body/>. Do not output anything else.
+    (default: `60`) and then *start over* by re-evaluating
+    <await-condition/>.
+
+    A single wait is performed with the `ase_sleep(duration:
+    <chunk-duration/>)` tool of the `ase` MCP server. To stay safely
+    inside the tool's own duration limit, <chunk-duration/> is *never*
+    above `60`: an <await-interval/> above `60` is therefore *split* into
+    consecutive calls -- as many `60` second calls as fit, followed by
+    one final call carrying the remaining seconds -- so the calls sum up
+    to exactly <await-interval/>. You *MUST* *NOT* re-evaluate
+    <await-condition/> between the calls of one such wait.
+
+    This construct is expanded to its <await-body/>. Do not output
+    anything else.
 
 -   *IMPORTANT*: You *MUST* honor the following control flow construct:
     <agent <attr/>="<value/>" [...]><agent-body/></agent>:
