@@ -102,6 +102,11 @@ const toolInputSchema = v.object({
 })
 type ToolInput = v.InferOutput<typeof toolInputSchema>
 
+/*  maximum tolerated age of an idle session directory: the session-end hook
+    removes it regularly, but a crashed or SIGKILLed agent leaves it behind
+    forever, so orphans are garbage-collected once they exceed this age  */
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+
 /*  CLI command "ase hook"  */
 export default class HookCommand {
     constructor (private log: Log) {}
@@ -109,6 +114,42 @@ export default class HookCommand {
     /*  validate a session id against the accepted character set  */
     private isValidSessionId (id: string): boolean {
         return /^[A-Za-z0-9._-]+$/.test(id)
+    }
+
+    /*  resolve the base directory holding all per-session state  */
+    private sessionBaseDir (): string {
+        return path.join(os.homedir(), ".ase", "session")
+    }
+
+    /*  garbage-collect orphaned session directories left behind by agents
+        which died before their session-end hook could run; a live session
+        keeps its directory's mtime current, as every tool call acquires a
+        lock file inside it, so plain age is a reliable liveness signal  */
+    private pruneStaleSessions (currentSessionId: string): void {
+        const base = this.sessionBaseDir()
+        let entries: fs.Dirent[]
+        try {
+            entries = fs.readdirSync(base, { withFileTypes: true })
+        }
+        catch (_e) {
+            /*  best-effort: no base directory yet, or unreadable  */
+            return
+        }
+        const deadline = Date.now() - SESSION_MAX_AGE_MS
+        for (const entry of entries) {
+            if (!entry.isDirectory() || entry.name === currentSessionId)
+                continue
+            const dir = path.join(base, entry.name)
+            try {
+                if (fs.statSync(dir).mtimeMs >= deadline)
+                    continue
+                fs.rmSync(dir, { recursive: true, force: true })
+                this.log.write("debug", `hook: pruned stale session directory: ${dir}`)
+            }
+            catch (_e) {
+                /*  best-effort: ignore vanished or undeletable directories  */
+            }
+        }
     }
 
     /*  drain and discard the stdin event payload  */
@@ -248,6 +289,9 @@ export default class HookCommand {
 
         /*  determine session id  */
         const sessionId = this.pickSessionId(input)
+
+        /*  garbage-collect orphaned session directories of previous agent runs  */
+        this.pruneStaleSessions(sessionId)
 
         /*  establish config context (session-scoped only if a valid sessionId is present)  */
         const hasSession = this.isValidSessionId(sessionId)
@@ -424,7 +468,7 @@ export default class HookCommand {
 
         /*  remove the session directory ~/.ase/session/<id> (only for a valid sessionId)  */
         if (this.isValidSessionId(sessionId)) {
-            const dir = path.join(os.homedir(), ".ase", "session", sessionId)
+            const dir = path.join(this.sessionBaseDir(), sessionId)
             try {
                 fs.rmSync(dir, { recursive: true, force: true })
             }
