@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+0.9.60 (2026-08-09)
+-------------------
+
+- IMPROVEMENT [code]: garbage collect orphaned session directories left behind by died agents (`ase-hook.ts`)
+- UPDATE [infr]: upgraded NPM dependencies (`package.json`)
+
 0.9.59 (2026-08-08)
 -------------------
 
