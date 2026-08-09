@@ -48,6 +48,17 @@ When refining the plan this way, preserve the overall structure of the
 plan and only modify what the user actually requested. Do *not* rewrite
 unrelated sections of the plan.
 
+<if condition="<task-content/> contains a `##  IMPLEMENTATION DRAFT`
+    section (from the companion skill `ase-task-preflight`) AND the
+    applied <instruction/> changed the plan text *outside* of that
+    section">
+The implementation draft was created for the *previous* plan text and
+hence is *stale* now. Remove the entire `##  IMPLEMENTATION DRAFT`
+section from <task-content/>, remove the value `preflighted` from the
+`Properties:` frontmatter key (dropping the whole key if it carries no
+values anymore), and set <draft-removed>true</draft-removed>.
+</if>
+
 Calculate the number of words <words/> of <task-content/>.
 Set <task-content-dirty>true</task-content-dirty>.
 </define>
@@ -205,6 +216,7 @@ Set <args></args> (set args to empty).
         </else>
 
         Set <task-content-dirty>false</task-content-dirty>.
+        Set <draft-removed>false</draft-removed>.
 
         -   If <text/> starts with `ERROR:` or `WARNING:`:
             Silently ignore the MCP error.
@@ -361,6 +373,18 @@ Set <args></args> (set args to empty).
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan saved**
         </template>
+
+        <if condition="<draft-removed/> is equal `true`">
+        Directly *after* this <template/>, reset
+        <draft-removed>false</draft-removed> and give the corrective
+        hint by expanding the following (which, depending on the
+        configured <ase-guidance-level/>, may expand into nothing and
+        hence emit no output at all):
+
+        <ase-tpl-hint level="minimal">
+        The `IMPLEMENTATION DRAFT` section became stale through the plan change and was removed -- run `/ase-task-preflight` again to re-create the draft for the changed plan.
+        </ase-tpl-hint>
+        </if>
         </if>
 
     3.  *Render plan*:

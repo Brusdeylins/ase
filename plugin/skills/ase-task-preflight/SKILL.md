@@ -72,6 +72,18 @@ Procedure
         which *would* fully implement the task plan <task-content/>. Store
         this artifact change set in *unified diff* format in <unified-diff/>.
 
+        Create this draft with the *same rigor* as the final
+        implementation of the companion skill `ase-task-implement`,
+        because that skill later takes the draft over *1:1* -- the user
+        is assumed to review the draft in between. Hence *read* the
+        current content of *every* artifact the draft touches before
+        drafting its hunks, so all context lines match the artifacts
+        *exactly* and the diff would apply *cleanly*, and honor the
+        task plan and the internalized tenets just as the final
+        implementation would. Only the actual modification of the
+        artifacts and the verification phase are deferred to
+        `ase-task-implement`.
+
     2.  Append this artifact change set <unified-diff/> to the end
         of the <task-content/> with the following <template/>. If a section
         named `##  IMPLEMENTATION DRAFT` already exists from a

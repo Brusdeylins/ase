@@ -162,13 +162,21 @@ Procedure
         by modifying the *artifacts* with a corresponding, complete
         *change set*.
 
-        For this, primarily follow and honor the task plan in <task-content/>.
+        <if condition="<task-content/> contains an `##  IMPLEMENTATION DRAFT` section (from skill `ase-task-preflight`)">
+        Take over the implementation draft of this section *1:1* as
+        the change set: the draft is assumed to have been *reviewed*
+        by the user, so you *MUST* *NOT* create a fresh implementation
+        from scratch. Apply the draft *verbatim* and *adjust* only
+        those parts which actually *fail* -- because a hunk no longer
+        applies to meanwhile drifted artifacts, or because the
+        verification phase rejects the result. For such adjusted parts,
+        and for aspects the draft does not cover at all, follow the
+        task plan in <task-content/>.
+        </if>
 
-        Secondarily, derive hints from the optionally existing
-        `IMPLEMENTATION DRAFT` section (from skill `ase-task-preflight`)
-        in <task-content/>. But the specification text in <task-content/> always
-        overrules the implementation draft in the `IMPLEMENTATION DRAFT`
-        section of <task-content/>.
+        <if condition="<task-content/> contains NO `##  IMPLEMENTATION DRAFT` section">
+        Follow and honor the task plan in <task-content/>.
+        </if>
 
         <if condition="<worktree-dir/> is not empty">
         The change set *MUST* land *exclusively inside* the worktree

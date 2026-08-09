@@ -19,6 +19,13 @@ through a *chat-driven loop*. The user steers each round via an
 interactive dialog that offers continued refinement, finalization, or
 hand-off to implementation or preflight.
 
+When a refinement changes the plan text while an `IMPLEMENTATION
+DRAFT` section (produced by `ase-task-preflight`) exists, that section
+became *stale* and is *removed* -- together with the `preflighted`
+value of the `Properties:` frontmatter key -- and a hint is emitted
+that `ase-task-preflight` has to be run again to re-create the draft
+for the changed plan.
+
 ##  OPTIONS
 
 `--plan`|`-p` *option*:

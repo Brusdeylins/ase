@@ -18,7 +18,11 @@ draft for a corresponding, complete *artifact change set* in
 *unified diff* format. The draft is appended to the task plan as
 an `IMPLEMENTATION DRAFT` section (replacing any previous draft) and
 the plan's `Properties:` frontmatter key gains the value `preflighted`.
-No source files are modified.
+No source files are modified. The draft is produced under the *same
+tenets* and with the *same rigor* as a final implementation, because
+`ase-task-implement` later takes it over *1:1* after user review --
+only the actual artifact modification and the verification phase
+are deferred.
 
 The *kind of change* stated by the plan's `Kind:` frontmatter key
 (`CRAFTING`, `REFACTORING`, or `RESOLVING`) selects which
