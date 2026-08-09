@@ -23,10 +23,10 @@ Code](https://claude.com/product/claude-code) — and with reduced support also 
 tool [GitHub Copilot CLI](https://github.com/features/copilot/cli) or
 [OpenAI Codex CLI](https://github.com/openai/codex).
 
-**ASE** ships with agent hooks, agent skills, an underlying Model-Context-Protocol (MCP)
-service and a Command-Line Interface (CLI), incorporating reasonable methodology
-and automation aspects, to support the recurring tasks of a
-*Software Developer* and *Software Architect*.
+**ASE** ships with 47 agent skills, agent hooks, agent sub-agents, an
+underlying Model-Context-Protocol (MCP) service and a Command-Line Interface
+(CLI), incorporating reasonable methodology and automation aspects, to
+support the recurring tasks of a *Software Developer* and *Software Architect*.
 
 **ASE** is primarily motivated by the following statement of its primary
 author, [*Dr. Ralf S. Engelschall*](https://ase.tools/#author):
@@ -182,9 +182,28 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-sync-export`](plugin/skills/ase-sync-export/help.md)
   `-s SPEC,ARCH`
 
+- **Task Plan Life-Cycle**:
+  You want your named, persisted task plans switched, listed, viewed,
+  renamed, condensed, rebooted, or deleted right from within the session?
+  &rarr; [`/ase-task-id`](plugin/skills/ase-task-id/help.md),
+  [`/ase-task-list`](plugin/skills/ase-task-list/help.md),
+  [`/ase-task-view`](plugin/skills/ase-task-view/help.md),
+  [`/ase-task-rename`](plugin/skills/ase-task-rename/help.md),
+  [`/ase-task-condense`](plugin/skills/ase-task-condense/help.md),
+  [`/ase-task-reboot`](plugin/skills/ase-task-reboot/help.md),
+  [`/ase-task-delete`](plugin/skills/ase-task-delete/help.md)
+
 - **Direct Skill Usage Help**:
   You want usage help for skills directly within your agent tool sessions?
-  &rarr; `/ase-xxx-xxx` `--help`
+  &rarr; `/ase-xxx-xxx` `--help` or
+  [`/ase-help-skill`](plugin/skills/ase-help-skill/help.md)
+  `root cause`
+
+- **Intent-Based Skill Matching**:
+  You know what you want, but not which skill and which options realize it,
+  and want the best-fitting `/ase-xxx-xxx` command generated for you?
+  &rarr; [`/ase-help-intent`](plugin/skills/ase-help-intent/help.md)
+  `split my huge change set into separate commits`
 
 </td>
 <td width="50%" valign="top">
@@ -303,6 +322,22 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-meta-workflow`](plugin/skills/ase-meta-workflow/help.md)
   `optimizer analyze the code, then resolve each finding in a parallel sub-agent`
 
+- **Commit Message Crafting**:
+  You want a concise commit message crafted from the currently staged
+  Git changes instead of writing it by hand?
+  &rarr; [`/ase-meta-commit`](plugin/skills/ase-meta-commit/help.md)
+
+- **Conceptual Topic Neighborhood**:
+  You want to explore the parent, sibling, and child topics of a concept,
+  optionally grounded in Web facts and navigable in an interactive loop?
+  &rarr; [`/ase-meta-proximity`](plugin/skills/ase-meta-proximity/help.md)
+  `software architecture`
+
+- **Harness Compatibility Self-Test**:
+  You want to check how faithfully your current LLM and its agent harness
+  execute the core interpreter primitives the **ASE** skills rely on?
+  &rarr; [`/ase-meta-compat`](plugin/skills/ase-meta-compat/help.md)
+
 - **Convenient Foreign MCP Server Setup**:
   You have API keys for popular AI chat services and/or Web search services
   which ASE could *optionally* leverage in various skills?
@@ -344,6 +379,28 @@ ase setup update [--tool claude|copilot|codex] [--scope user|project|local]
 #   uninstall ASE tool from PATH and ASE plugin from agent tool
 ase setup uninstall [--tool claude|copilot|codex] [--scope user|project|local]
 ```
+
+### Enabling/Disabling
+
+```
+#   enable/disable ASE plugin in agent tool (without uninstalling it)
+ase setup enable    [--tool claude|copilot|codex] [--scope user|project|local]
+ase setup disable   [--tool claude|copilot|codex] [--scope user|project|local]
+```
+
+### Statusline
+
+```
+#   activate/deactivate ASE statusline in agent tool
+ase setup statusline activate   [--tool claude|copilot] [--scope user|project|local] [<line> ...]
+ase setup statusline deactivate [--tool claude|copilot] [--scope user|project|local]
+```
+
+The statusline is only supported for `--tool claude` and `--tool
+copilot`; `codex` has no statusline concept. Each optional `<line>`
+argument is a format template of literal text and `%`-prefixed
+placeholders (e.g. `"%u %p %T"`); without any, a single default line
+`"%m %e %t"` is rendered.
 
 The `--scope` option defaults to `user` (today's global, machine-wide behavior). Use
 `--scope project` to share the plugin registration via the repository, or `--scope
