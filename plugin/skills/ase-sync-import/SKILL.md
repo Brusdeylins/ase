@@ -167,7 +167,8 @@ Procedure
 
         Apply the generation/update directly to the target artifacts via
         the `Write`/`Edit` tools. For a `TASK` target, apply it via the
-        `ase_task_save` tool instead.
+        `ase_task_save` MCP tool instead -- *NEVER* write a task plan
+        file via `Write`/`Edit` or by executing a shell command.
 
     6.  Report the performed changes with the following <template/>, listing
         one bullet line per generated or updated file (with <file/> its

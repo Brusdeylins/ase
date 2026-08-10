@@ -232,7 +232,10 @@ Procedure
 
         Finally call the `ase_task_save(id: "<ase-task-id/>", text:
         "<task-content/>")` tool of the `ase` MCP server to persist the
-        updated task plan. Do not output anything in this sub-step.
+        updated task plan. This `ase_task_save` MCP tool call is the
+        *only* permitted way to persist the plan -- *NEVER* write the
+        plan file via `Write`/`Edit` or by executing a shell command.
+        Do not output anything in this sub-step.
 
     3.  Only output the following <template/>:
 

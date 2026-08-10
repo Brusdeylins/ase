@@ -124,7 +124,10 @@ Procedure
 
     4.  Finally, call the `ase_task_save(id: "<ase-task-id/>",
         text: "<task-content/>")` tool of the `ase` MCP server to save the updated
-        task plan content. Calculate the number of words <words/> of
+        task plan content. This `ase_task_save` MCP tool call is the
+        *only* permitted way to persist the plan -- *NEVER* write the
+        plan file via `Write`/`Edit` or by executing a shell command.
+        Calculate the number of words <words/> of
         <task-content/>. Do not output anything related to this MCP tool call
         except the following <template/>:
 

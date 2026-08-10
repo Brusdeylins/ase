@@ -245,7 +245,10 @@ Procedure
 
         2.  Call the `ase_task_save(id: "<part-id/>", text:
             "<part-content/>")` tool of the `ase` MCP server to persist
-            the sub-task plan, and calculate the number of words
+            the sub-task plan -- this MCP tool call is the *only*
+            permitted way to persist it, *NEVER* write the plan file
+            via `Write`/`Edit` or by executing a shell command -- and
+            calculate the number of words
             <part-words/> of <part-content/>. Do not output anything
             related to this MCP tool call except the following
             <template/>:

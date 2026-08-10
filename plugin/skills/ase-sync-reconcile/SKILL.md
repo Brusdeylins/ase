@@ -177,7 +177,9 @@ Procedure
         parts of an output artifact.
 
         Apply the update directly to the output artifacts via the
-        `Write`/`Edit` tools.
+        `Write`/`Edit` tools. For a `TASK` output, apply it via the
+        `ase_task_save` MCP tool instead -- *NEVER* write a task plan
+        file via `Write`/`Edit` or by executing a shell command.
 
         For each formatted output artifact kind, strictly honor its
         format contract.

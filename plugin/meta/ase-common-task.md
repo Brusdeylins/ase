@@ -114,7 +114,10 @@ the number of words <words/> of <task-content/>.
 
 Call the `ase_task_save(id: "<ase-task-id/>", text:
 "<task-content/>")` tool of the `ase` MCP server to save the task
-plan content in its *authoring form*. Do not output anything
+plan content in its *authoring form*. This `ase_task_save` MCP
+tool call is the *only* permitted way to persist the task plan --
+you *MUST* *NEVER* write the plan file via `Write`/`Edit` or by
+executing a shell command. Do not output anything
 related to this MCP call except the following <template/>:
 
 <template>

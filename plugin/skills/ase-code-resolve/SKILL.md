@@ -48,8 +48,9 @@ Procedure
 
 <if condition="<getopt-option-direct/> is not equal to 'true'">
 You *MUST* *NOT* call `Edit`, `Write`, `NotebookEdit`, or any
-filesystem-modifying tool during this entire skill. The *only*
-permitted way to persist artifacts is via `ase_task_save(...)`.
+filesystem-modifying tool, nor execute any filesystem-modifying
+shell command, during this entire skill. The *only* permitted way
+to persist artifacts is via the `ase_task_save(...)` MCP tool.
 </if>
 <else>
 The `--direct`/`-D` mode applies the resolution *in place*, so STEP 4
@@ -261,7 +262,8 @@ resolution actually demands, and you *MUST* *NOT* call
         the number of words <words/> of <task-content/>.
 
     3.  You then *MUST* *save* the resulting plan content with the
-        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`.
+        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`
+        MCP tool call only -- *NEVER* by executing a shell command.
 
     4.  If <problem-id/> is set (i.e. the <problem/> was retrieved from
         `ase_kv_get` in STEP 1.1 via key `ase-issue-<problem-id/>`),

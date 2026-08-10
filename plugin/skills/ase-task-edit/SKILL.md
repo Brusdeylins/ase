@@ -361,7 +361,10 @@ Set <args></args> (set args to empty).
         persist the current plan -- <task-content/> always is the
         *authoring form* of the plan and hence is persisted *as is* --
         and then set <task-content-dirty>false</task-content-dirty>
-        again. Finally, set <task-render/> to the `text` *output* field
+        again. This `ase_task_save` MCP tool call is the *only*
+        permitted way to persist the plan -- *NEVER* write the plan
+        file via `Write`/`Edit` or by executing a shell command.
+        Finally, set <task-render/> to the `text` *output* field
         of this `ase_task_save` tool call -- the rendering-prepared form
         of the just-persisted plan, which is for *display only* and
         *MUST NOT* be confused with the `text` *argument* passed into
