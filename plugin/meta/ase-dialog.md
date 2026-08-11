@@ -102,8 +102,10 @@ following procedure:
         </ase-tpl-boxed>
         </text>
 
-        If <n/> is less than 2:
-        Set <result>ERROR: custom-dialog requires 2-9 answer lines, got <n/></result>
+        If <n/> is less than 2 -- or less than 1 when <opts/> contains
+        `--other` and does *not* contain `--no-other`, as the free-text
+        path then complements a single answer option:
+        Set <result>ERROR: custom-dialog requires 2-9 (with free-text: 1-9) answer lines, got <n/></result>
         and *SKIP* the following step 2.2 and continue with step 2.3 dispatch.
 
     2.  Output the following <template/>, end the current turn, wait for the
