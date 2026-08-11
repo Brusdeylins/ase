@@ -168,12 +168,14 @@ The following ASE commands/skills exist on the task-level:
 
 The following ASE commands/skills exist on the code-level:
 
-- **/ase-code-craft** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--direct`|`-D`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *feature*:<br/>
+- **/ase-code-craft** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--direct`|`-D`\] \[`--interactive`|`-i`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *feature*:<br/>
   Craft source code from scratch. With `--auto`, the skill runs
   non-interactively without asking for confirmation. With `--dry`, it
   only plans without applying changes. With `--direct`, it skips the
   approach comparison and task plan ceremony entirely and directly
-  applies the change set in place. `--quick` is a shorthand that
+  applies the change set in place. With `--interactive`, it implies
+  `--direct` and repeatedly asks for the next change, immediately
+  applying each one in place. `--quick` is a shorthand that
   enables `--auto`, `--dry`, and a preselected `--next`. `--next` passes
   a comma-separated chronological list of pre-selected next-step tokens
   (out of `none`, `DONE`, `EDIT`, `PREFLIGHT`, `IMPLEMENT`) to chain the

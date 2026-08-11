@@ -10,6 +10,7 @@
     [`--auto`|`-a`]
     [`--dry`|`-d`]
     [`--direct`|`-D`]
+    [`--interactive`|`-i`]
     [`--quick`|`-Q`]
     [`--next`|`-n` *option*[,...]]
     [*task-id*:] *feature*
@@ -50,6 +51,12 @@ entirely and applies the change set to the affected artifacts itself.
     `CHANGELOG.md` file. In this mode `--auto`, `--dry`, `--quick`, and
     `--next` have no effect, as neither approaches are proposed nor a
     plan is composed.
+
+`--interactive`|`-i`:
+    Craft *interactively*: implies `--direct` and, once the initial
+    *feature* has been applied, repeatedly asks for the *next change*
+    with a free-text dialog and immediately applies it in place, too,
+    until the user stops the loop by answering `DONE`.
 
 `--quick`|`-Q`:
     Shorthand alias for `-a -d -n IMPLEMENT,DELETE`: automatically pick
@@ -94,6 +101,12 @@ Craft a feature under a named task and directly hand off to implementation:
 
 ```text
 ❯ /ase-code-craft --next IMPLEMENT auth: add JWT authentication middleware
+```
+
+Craft interactively, applying one change after the other in place:
+
+```text
+❯ /ase-code-craft -i add a --verbose option to the CLI
 ```
 
 ##  SEE ALSO

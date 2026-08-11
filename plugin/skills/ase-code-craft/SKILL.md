@@ -1,6 +1,6 @@
 ---
 name: ase-code-craft
-argument-hint: "[--help|-h] [--auto|-a] [--dry|-d] [--direct|-D] [--quick|-Q] [--next|-n <option>[,...]] [<task-id>:] <feature>"
+argument-hint: "[--help|-h] [--auto|-a] [--dry|-d] [--direct|-D] [--interactive|-i] [--quick|-Q] [--next|-n <option>[,...]] [<task-id>:] <feature>"
 description: >
     Craft Source Code:
     Use when user wants to "create", "add", or "craft" a new feature from scratch.
@@ -24,7 +24,7 @@ Craft Source Code
 
 <expand name="getopt"
     arg1="ase-code-craft"
-    arg2="--auto|-a --dry|-d --direct|-D --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
+    arg2="--auto|-a --dry|-d --direct|-D --interactive|-i --quick|-Q --next|-n=(none|DONE|EDIT|GRILL|PREFLIGHT|IMPLEMENT)...">
     $ARGUMENTS
 </expand>
 
@@ -32,6 +32,11 @@ Craft Source Code
 The `--quick`/`-Q` flag is a *shorthand alias*: set <getopt-option-auto/>
 to `true`, <getopt-option-dry/> to `true`, and <getopt-option-next/> to
 `IMPLEMENT,DELETE`. Do not output anything.
+</if>
+
+<if condition="<getopt-option-interactive/> is equal `true`">
+The `--interactive`/`-i` flag *implies* the `--direct`/`-D` mode: set
+<getopt-option-direct/> to `true`. Do not output anything.
 </if>
 
 <objective>
@@ -48,8 +53,9 @@ Procedure
 
 <if condition="<getopt-option-direct/> is not equal to 'true'">
 You *MUST* *NOT* call `Edit`, `Write`, `NotebookEdit`, or any
-filesystem-modifying tool during this entire skill. The *only*
-permitted way to persist artifacts is via `ase_task_save(...)`.
+filesystem-modifying tool, nor execute any filesystem-modifying
+shell command, during this entire skill. The *only* permitted way
+to persist artifacts is via the `ase_task_save(...)` MCP tool.
 </if>
 <else>
 The `--direct`/`-D` mode applies the crafting *in place*, so STEP 4
@@ -162,7 +168,35 @@ crafting actually demands, and you *MUST* *NOT* call
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **changes directly applied**
         </template>
 
-    3.  Then *IMMEDIATELY* *STOP* all further skill processing. You
+    3.  <if condition="<getopt-option-interactive/> is equal `true`">
+        Enter the *interactive crafting loop*:
+
+        <while condition="`true`">
+
+        1.  In the following, you *MUST* *NOT* use your built-in
+            <user-dialog-tool/> tool! Instead, you *MUST* just show a
+            custom dialog according to the expanded `custom-dialog`
+            definition. You *MUST* closely follow this definition.
+
+            Ask the user for the next change with the following
+            custom dialog:
+
+            <expand name="custom-dialog" arg1="--other">
+                Next Change: What is the next change to craft?
+                DONE: Finish the interactive crafting loop
+            </expand>
+
+        2.  If <result/> is `DONE` or `CANCEL`, <break/>.
+
+        3.  Otherwise <result/> has the format `OTHER: <text/>`: set
+            <feature/> to <text/>, then directly craft it and report
+            it exactly as specified by the items 1 and 2 above
+            (including the CHANGELOG.md entry).
+
+        </while>
+        </if>
+
+    4.  Then *IMMEDIATELY* *STOP* all further skill processing. You
         *MUST* *NOT* output anything else in this STEP 4 or after it --
         *independent* of <ase-project-boxing/>, whose exposure rules
         are explicitly *overridden* here. Especially, do not output a
@@ -211,7 +245,8 @@ crafting actually demands, and you *MUST* *NOT* call
         the number of words <words/> of <task-content/>.
 
     3.  You then *MUST* *save* the resulting plan content with the
-        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`.
+        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`
+        MCP tool call only -- *NEVER* by executing a shell command.
 
     4.  Output a hint with the following <template/>:
 
