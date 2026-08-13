@@ -127,12 +127,11 @@ Procedure
         task plan content. This `ase_task_save` MCP tool call is the
         *only* permitted way to persist the plan -- *NEVER* write the
         plan file via `Write`/`Edit` or by executing a shell command.
-        Calculate the number of words <words/> of
-        <task-content/>. Do not output anything related to this MCP tool call
+        Do not output anything related to this MCP tool call
         except the following <template/>:
 
         <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated**
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated**
         </template>
 
 4.  **Decide Next Step:**
@@ -154,7 +153,7 @@ Procedure
             Only output the following <template/> and then *STOP*.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated -- done**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated -- done**
             </template>
 
         -   If <result/> is `EDIT`:

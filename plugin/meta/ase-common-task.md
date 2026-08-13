@@ -83,16 +83,14 @@ Task Skill Common Steps
 
 -   If <text/> starts with `ERROR:` or `WARNING:`:
     Set <task-content></task-content> (set task content to empty).
-    Set <words/> to "0".
 
 -   If <text/> does NOT start with `ERROR:` and NOT with `WARNING:`:
     Set <task-content><text/></task-content> (set task content to text).
-    Calculate the number of words <words/> of <task-content/>.
 
 Only output the following <template/>:
 
 <template>
-⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **<status/>**
+⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **<status/>**
 </template>
 
 </define>
@@ -109,8 +107,7 @@ had no `Created:` frontmatter key), set
 (fall back to the modified timestamp). Re-insert the current
 <ase-task-id/>, the original <timestamp-created/>, and the
 refreshed <timestamp-modified/> into the frontmatter keys `Id:`,
-`Created:`, and `Modified:` of <task-content/> and calculate
-the number of words <words/> of <task-content/>.
+`Created:`, and `Modified:` of <task-content/>.
 
 Call the `ase_task_save(id: "<ase-task-id/>", text:
 "<task-content/>")` tool of the `ase` MCP server to save the task
@@ -121,7 +118,7 @@ executing a shell command. Do not output anything
 related to this MCP call except the following <template/>:
 
 <template>
-⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **<arg1/>**
+⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **<arg1/>**
 </template>
 
 </define>
@@ -172,7 +169,7 @@ Only output the following <template/> and then call the tool
 stop processing the current skill once the `Skill` tool was used.
 
 <template>
-⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **<arg2/>**
+⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **<arg2/>**
 </template>
 
 </define>

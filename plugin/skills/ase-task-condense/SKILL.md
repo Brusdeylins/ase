@@ -64,8 +64,8 @@ Set <args></args> (set args to empty).
 
         <expand name="task-load-content"></expand>
 
-        Set <words-before><words/></words-before> (remember the loaded
-        word count for the strictly-smaller check in step 3).
+        Set <content-before><task-content/></content-before> (remember the
+        loaded plan content for the strictly-shorter check in step 3).
 
         <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (extract the
@@ -124,21 +124,21 @@ Set <args></args> (set args to empty).
             example. If a shortening would change meaning, *keep the
             longer wording*.
 
-    2.  *Persist only if smaller*: calculate the number of words <words/>
-        of the condensed <task-content/>.
+    2.  *Persist only if smaller*: compare the condensed <task-content/>
+        against <content-before/>, without counting words.
 
-        -   <if condition="<words/> is strictly smaller than <words-before/>">
+        -   <if condition="the condensed <task-content/> is strictly shorter than <content-before/>">
             <expand name="task-save-content" arg1="plan condensed"></expand>
             </if>
 
-        -   <if condition="<words/> is NOT strictly smaller than <words-before/>">
+        -   <if condition="the condensed <task-content/> is NOT strictly shorter than <content-before/>">
             Do *not* save and do *not* bump the timestamp. Set
-            <words><words-before/></words> (report the word count of the
-            *unchanged* stored plan, not of the discarded condensed one).
+            <task-content><content-before/></task-content> (keep the
+            *unchanged* stored plan, discard the condensed one).
             Only output the following <template/>:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan already condensed**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan already condensed**
             </template>
             </if>
 
@@ -162,7 +162,7 @@ Set <args></args> (set args to empty).
             Only output the following <template/> and then *STOP*.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan condensed -- done**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan condensed -- done**
             </template>
 
         -   If <result/> is `EDIT`:
@@ -174,7 +174,7 @@ Set <args></args> (set args to empty).
             skill once the `Skill` tool was used.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan condensed -- hand-off to edit**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan condensed -- hand-off to edit**
             </template>
 
         -   If <result/> is `IMPLEMENT`:
@@ -184,7 +184,7 @@ Set <args></args> (set args to empty).
             to *apply* the plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan condensed -- hand-off to implementation**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan condensed -- hand-off to implementation**
             </template>
 
         -   If <result/> is `PREFLIGHT`:
@@ -194,5 +194,5 @@ Set <args></args> (set args to empty).
             to *apply* the plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan condensed -- hand-off to pre-flight**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan condensed -- hand-off to pre-flight**
             </template>

@@ -247,14 +247,12 @@ Procedure
             "<part-content/>")` tool of the `ase` MCP server to persist
             the sub-task plan -- this MCP tool call is the *only*
             permitted way to persist it, *NEVER* write the plan file
-            via `Write`/`Edit` or by executing a shell command -- and
-            calculate the number of words
-            <part-words/> of <part-content/>. Do not output anything
-            related to this MCP tool call except the following
-            <template/>:
+            via `Write`/`Edit` or by executing a shell command. Do not
+            output anything related to this MCP tool call except the
+            following <template/>:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<part-id/>**, ✪ plan: **<part-words/>** words, ▶ status: **sub-task plan created**
+            ⧉ **ASE**: ◉ task: **<part-id/>**, ▶ status: **sub-task plan created**
             </template>
 
     4.  *Report the overall result* with the following <template/>:

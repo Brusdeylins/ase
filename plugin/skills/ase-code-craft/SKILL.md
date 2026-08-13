@@ -241,8 +241,7 @@ crafting actually demands, and you *MUST* *NOT* call
         `ase` MCP server and use the `text` field of its response for
         <timestamp-created/> and <timestamp-modified/> information. Then
         insert the current <ase-task-id/>, <timestamp-created/>,
-        <timestamp-modified/>, and <task-kind/> information and calculate
-        the number of words <words/> of <task-content/>.
+        <timestamp-modified/>, and <task-kind/> information.
 
     3.  You then *MUST* *save* the resulting plan content with the
         `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`
@@ -251,7 +250,7 @@ crafting actually demands, and you *MUST* *NOT* call
     4.  Output a hint with the following <template/>:
 
         <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan created**
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan created**
         </template>
 
     5.  Directly pass-through control to the next skill:

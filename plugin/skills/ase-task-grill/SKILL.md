@@ -193,7 +193,7 @@ Set <args>--int-reuse-task</args>.
             without output of any further information.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated -- done**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated -- done**
             </template>
 
         -   If <result/> is `EDIT`:
@@ -205,7 +205,7 @@ Set <args>--int-reuse-task</args>.
             skill once the `Skill` tool was used.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated -- hand-off to edit**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated -- hand-off to edit**
             </template>
 
         -   If <result/> is `PREFLIGHT`:
@@ -215,7 +215,7 @@ Set <args>--int-reuse-task</args>.
             to *apply* the plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated -- hand-off to pre-flight**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated -- hand-off to pre-flight**
             </template>
 
         -   If <result/> is `IMPLEMENT`:
@@ -225,5 +225,5 @@ Set <args>--int-reuse-task</args>.
             to *apply* the plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan updated -- hand-off to implementation**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated -- hand-off to implementation**
             </template>

@@ -139,7 +139,7 @@ Procedure
             Only output the following <template/> and then *STOP*.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan rebooted -- done**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan rebooted -- done**
             </template>
 
         -   If <result/> is `EDIT`:

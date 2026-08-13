@@ -71,11 +71,10 @@ Procedure
 
         -   If <text/> starts NOT with `ERROR:` and NOT with `WARNING:`:
             Set <task-content><text/></task-content> (set task content to text).
-            Calculate the number of words <words/> of <task-content/>.
             Only output the following <template/>:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<id/>**, ✪ plan: **<words/>** words, ▶ status: **plan loaded**
+            ⧉ **ASE**: ◉ task: **<id/>**, ▶ status: **plan loaded**
             </template>
 
     2.  <if condition="<task-content/> is not empty">

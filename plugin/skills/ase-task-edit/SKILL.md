@@ -59,7 +59,6 @@ section from <task-content/>, remove the value `preflighted` from the
 values anymore), and set <draft-removed>true</draft-removed>.
 </if>
 
-Calculate the number of words <words/> of <task-content/>.
 Set <task-content-dirty>true</task-content-dirty>.
 </define>
 
@@ -87,8 +86,7 @@ Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the
 `ase` MCP server and use the `text` field of its response
 for fresh <timestamp-created/> and <timestamp-modified/>
 information. Then insert the current <ase-task-id/>,
-<timestamp-created/>, and <timestamp-modified/> information
-and calculate the number of words <words/> of <task-content/>.
+<timestamp-created/>, and <timestamp-modified/> information.
 Set <task-content-dirty>true</task-content-dirty>.
 </define>
 
@@ -222,16 +220,14 @@ Set <args></args> (set args to empty).
             Silently ignore the MCP error.
             Set <task-content/> to empty.
             Set <task-render/> to empty.
-            Set <words/> to "0".
             Do not output anything.
 
         -   If <text/> starts NOT with `ERROR:` and NOT with `WARNING:`:
             Set <task-content><text/></task-content> (set task content to text).
-            Calculate the number of words <words/> of <task-content/>.
             Only output the following <template/>:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **<status/>**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **<status/>**
             </template>
 
     2.  <if condition="<task-content/> is empty AND <instruction/> is empty">
@@ -279,7 +275,7 @@ Set <args></args> (set args to empty).
             *STOP* processing this skill:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan preserved**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan preserved**
             </template>
 
         -   If <result/> is `OVERWRITE`:
@@ -289,7 +285,7 @@ Set <args></args> (set args to empty).
             Only output the following <template/> and continue processing:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan overwritten**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan overwritten**
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
             </template>
 
@@ -300,7 +296,7 @@ Set <args></args> (set args to empty).
             Only output the following <template/> and continue processing:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan refined**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan refined**
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
             </template>
 
@@ -314,7 +310,7 @@ Set <args></args> (set args to empty).
             Only output the following <template/> and continue processing:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan refined**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan refined**
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
             </template>
         </if>
@@ -333,7 +329,7 @@ Set <args></args> (set args to empty).
 
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan generated**
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan generated**
         </template>
         </if>
 
@@ -369,12 +365,11 @@ Set <args></args> (set args to empty).
         of the just-persisted plan, which is for *display only* and
         *MUST NOT* be confused with the `text` *argument* passed into
         that call -- so the rendering in step 3.3 stays consistent across
-        all loop rounds. Calculate the number of words <words/> of
-        <task-content/>. Do not output anything related to this MCP tool
+        all loop rounds. Do not output anything related to this MCP tool
         call except the following <template/>:
 
         <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan saved**
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan saved**
         </template>
 
         <if condition="<draft-removed/> is equal `true`">
@@ -486,7 +481,7 @@ Set <args></args> (set args to empty).
             and then *STOP*. Do *not* implement the plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan finalized -- done**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan finalized -- done**
             </template>
 
         -   If <result/> is `GRILL`:
@@ -498,7 +493,7 @@ Set <args></args> (set args to empty).
             to *grill* the finalized plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan finalized -- hand-off to grilling**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan finalized -- hand-off to grilling**
             </template>
 
         -   If <result/> is `PREFLIGHT`:
@@ -510,7 +505,7 @@ Set <args></args> (set args to empty).
             to *apply* the finalized plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan finalized -- hand-off to pre-flight**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan finalized -- hand-off to pre-flight**
             </template>
 
         -   If <result/> is `IMPLEMENT`:
@@ -522,7 +517,7 @@ Set <args></args> (set args to empty).
             to *apply* the finalized plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan finalized -- hand-off to implementation**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan finalized -- hand-off to implementation**
             </template>
 
         -   If <result/> matches `OTHER: <text/>`:
@@ -544,6 +539,6 @@ Set <args></args> (set args to empty).
             and then *STOP*. Do *not* implement the plan.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan refinement cancelled**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan refinement cancelled**
             </template>
 

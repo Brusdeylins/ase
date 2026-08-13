@@ -240,7 +240,7 @@ Procedure
     3.  Only output the following <template/>:
 
         <template>
-        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan implemented**
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan implemented**
         </template>
 
     4.  <if condition="<worktree-dir/> is not empty">
@@ -271,7 +271,7 @@ Procedure
             Only output the following <template/> and then *STOP*.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan implemented -- done**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan implemented -- done**
             </template>
 
         -   If <result/> is `DELETE`:
@@ -286,6 +286,6 @@ Procedure
             current skill once the `Skill` tool was used.
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan implemented -- hand-off to delete task**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan implemented -- hand-off to delete task**
             </template>
 

@@ -138,7 +138,7 @@ Set <args>--int-reuse-task</args>.
     <template/> and then *STOP*. Do *not* implement the plan.
 
     <template>
-    ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ✪ plan: **<words/>** words, ▶ status: **plan finalized -- done**
+    ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan finalized -- done**
     </template>
     </if>
 
