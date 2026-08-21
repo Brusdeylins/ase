@@ -17,13 +17,13 @@
         "@rse/stx":                         "1.1.6",
         "markdownlint":                     "0.41.1",
         "markdownlint-cli2":                "0.23.2",
-        "eslint":                           "10.8.1",
+        "eslint":                           "10.9.0",
         "@eslint/markdown":                 "8.0.3",
-        "eslint-markdown":                  "0.13.0"
+        "eslint-markdown":                  "0.14.0"
     },
     "engines": {
         "npm":                              ">=10.0.0",
-        "node":                             ">=22.0.0"
+        "node":                             ">=22.13.0"
     },
     "scripts": {
         "start":                            "stx -v4 -l warning -c etc/stx.conf"

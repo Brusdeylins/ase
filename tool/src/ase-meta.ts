@@ -49,7 +49,7 @@ export class Meta {
         }
         catch (err) {
             const message = err instanceof Error ? err.message : String(err)
-            throw new Error(`meta: failed to read file: ${abs} (${message})`)
+            throw new Error(`meta: failed to read file: ${abs} (${message})`, { cause: err })
         }
     }
 }

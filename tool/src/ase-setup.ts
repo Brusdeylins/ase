@@ -83,7 +83,7 @@ export default class SetupCommand {
 
         /*  determine the npm global prefix and probe writability of the
             directories that "npm -g" actually mutates  */
-        let prefix = ""
+        let prefix: string
         try {
             const result = await execa("npm", [ "prefix", "-g" ], { stdio: "pipe" })
             prefix = result.stdout.trim()

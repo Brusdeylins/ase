@@ -226,7 +226,7 @@ export class Markdown {
             }
             if (fence > 0 && (ch === "\r" || ch === "\n")) {
                 /*  consume optional CR followed by mandatory LF  */
-                let nl = ""
+                let nl: string
                 if (ch === "\r" && i + 1 < text.length && text[i + 1] === "\n") {
                     nl = "\r\n"
                     i += 2

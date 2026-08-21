@@ -251,14 +251,14 @@ export default class HookCommand {
         try {
             pkg = fs.readFileSync(filePkg, "utf8")
         }
-        catch (_e) {
-            throw new Error(`failed to read plugin manifest: ${filePkg}`)
+        catch (err) {
+            throw new Error(`failed to read plugin manifest: ${filePkg}`, { cause: err })
         }
         try {
             md = fs.readFileSync(fileMd, "utf8")
         }
-        catch (_e) {
-            throw new Error(`failed to read constitution file: ${fileMd}`)
+        catch (err) {
+            throw new Error(`failed to read constitution file: ${fileMd}`, { cause: err })
         }
 
         /*  determine own version  */

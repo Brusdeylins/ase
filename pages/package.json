@@ -11,15 +11,15 @@
         "@rse/stx":                               "1.1.6",
         "@astrojs/check":                         "0.9.10",
         "typescript":                             "6.0.3",
-        "eslint":                                 "10.8.1",
+        "eslint":                                 "10.9.0",
         "@eslint/js":                             "10.0.1",
-        "@typescript-eslint/parser":              "8.66.0",
-        "typescript-eslint":                      "8.66.0",
+        "@typescript-eslint/parser":              "8.67.0",
+        "typescript-eslint":                      "8.67.0",
         "@stylistic/eslint-plugin":               "5.10.0",
         "@types/fast-levenshtein":                "0.0.4",
         "eslint-plugin-astro":                    "3.1.0",
-        "astro-eslint-parser":                    "3.0.0",
-        "globals":                                "17.9.0",
+        "astro-eslint-parser":                    "3.1.0",
+        "globals":                                "17.11.0",
         "playwright":                             "1.62.1"
     },
     "dependencies": {
@@ -38,7 +38,7 @@
         "typed.js":                               "3.0.0"
     },
     "engines": {
-        "node":                                   ">=22.0.0"
+        "node":                                   ">=22.13.0"
     },
     "overrides": {
         "typopro-web": {

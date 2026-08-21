@@ -4,24 +4,23 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import pluginJs      from "@eslint/js"
-import pluginStd     from "neostandard"
-import pluginImport  from "eslint-plugin-import"
-import pluginPromise from "eslint-plugin-promise"
-import pluginTS      from "typescript-eslint"
-import globals       from "globals"
-import parserTS      from "@typescript-eslint/parser"
+import pluginJs        from "@eslint/js"
+import * as pluginStd  from "neostandard"
+import pluginPromise   from "eslint-plugin-promise"
+import pluginTS        from "typescript-eslint"
+import globals         from "globals"
+import parserTS        from "@typescript-eslint/parser"
 
 export default [
     pluginJs.configs.recommended,
     ...pluginTS.configs.strict,
     ...pluginTS.configs.stylistic,
-    ...pluginStd({
+    ...pluginStd.neostandard({
+        ts:      true,
         ignores: pluginStd.resolveIgnoresFromGitignore()
     }),
     {
         plugins: {
-            "import":  pluginImport,
             "promise": pluginPromise
         },
         files: [ "src/*.ts" ],
@@ -49,7 +48,7 @@ export default [
             "@stylistic/indent":                                  [ "error", 4, { SwitchCase: 1 } ],
             "@stylistic/linebreak-style":                         [ "error", "unix" ],
             "@stylistic/semi":                                    [ "error", "never" ],
-            "@stylistic/operator-linebreak":                      [ "error", "after", { overrides: { "&&": "before", "||": "before", ":": "after" } } ],
+            "@stylistic/operator-linebreak":                      [ "error", "after", { overrides: { "&&": "before", "||": "before", "|": "ignore", ":": "after" } } ],
             "@stylistic/brace-style":                             [ "error", "stroustrup", { allowSingleLine: true } ],
             "@stylistic/quotes":                                  [ "error", "double" ],
 
