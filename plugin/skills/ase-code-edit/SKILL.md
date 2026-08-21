@@ -234,10 +234,17 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             of grilling, by focusing on the mentioned *Focus Areas*.
             For each <question-N/> determine its <focus-area-N/> and a
             <topic-N/>, a 1-2 word hint describing what the question is
-            about. Use the format `Shall...?` for questions of
+            about. Render <focus-area-N/> in the tables below as
+            `**DOMAIN** (MUST)`, `**INTERFACE** (MUST)`,
+            `**ARCHITECTURE** (SHOULD)`, or `**IMPLEMENTATION** (MAY)`
+            correspondingly. Use the format `Shall...?` for questions of
             focus area *DOMAIN* and *INTERFACE*, the format `Should...?`
             for questions of focus area *ARCHITECTURE*, and the format
-            `May...?` for questions of focus area *IMPLEMENTATION*.
+            `May...?` for questions of focus area *IMPLEMENTATION*. In
+            every <question-N/>, encode all *literal aspects* -- file
+            and directory paths, identifiers, symbols, types, commands,
+            options, configuration keys, and literal values -- with
+            backticks.
 
         3.  Finally, *sort* the questions by descending
             focus area order -- first all `DOMAIN`, then all
@@ -252,7 +259,13 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             custom dialogs according to the expanded `custom-dialog`
             definition. You *MUST* closely follow this definition. Both
             dialog variants below carry the two fixed answer options
-            `STOP SKILL` and `SKIP GRILLING`, dispatched as follows:
+            `SKIP GRILLING` and `STOP SKILL`, dispatched as follows:
+
+            -   If a <result/> is `SKIP GRILLING` or `CANCEL`, ask no
+                further questions, continue with item 5 below (merging
+                the answers gathered so far), and after item 6 skip all
+                remaining rounds and continue with the *implementing*
+                state.
 
             -   If a <result/> is `STOP SKILL`, only output the
                 following <template/> and then immediately *STOP*
@@ -261,12 +274,6 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 <template>
                 ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ status: **editing stopped**
                 </template>
-
-            -   If a <result/> is `SKIP GRILLING` or `CANCEL`, ask no
-                further questions, continue with item 5 below (merging
-                the answers gathered so far), and after item 6 skip all
-                remaining rounds and continue with the *implementing*
-                state.
 
             <if condition="<getopt-option-grill-batch/> is equal `true`">
 
@@ -283,11 +290,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | ○ ASPECT | ◎ FOCUS-AREA     | ◆ TOPIC     | ▶ **QUESTION**    |
-                | -------- | ---------------- | ----------- | ----------------- |
-                | 1/<n/>   | <focus-area-1/>  | <topic-1/>  | **<question-1/>** |
-                | 2/<n/>   | <focus-area-2/>  | <topic-2/>  | **<question-2/>** |
-                | [...]    | [...]            | [...]       | [...]             |
+                | ○ ASPECT | ◎ FOCUS-AREA    | ◆ TOPIC     | ▶ **QUESTION**    |
+                | -------- | --------------- | ----------- | ----------------- |
+                | 1/<n/>   | <focus-area-1/> | <topic-1/>  | **<question-1/>** |
+                | 2/<n/>   | <focus-area-2/> | <topic-2/>  | **<question-2/>** |
+                | [...]    | [...]           | [...]       | [...]             |
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
@@ -296,11 +303,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
                 <expand name="custom-dialog" arg1="--other">
                     <round-id/>: What is your (combined) answer to all (or a subset) of the above questions? (keywords are sufficient)
-                    STOP SKILL: stop the entire skill immediately
                     SKIP GRILLING: skip all remaining grilling and continue with the implementation
+                    STOP SKILL: stop the entire skill immediately
                 </expand>
 
-                Dispatch `STOP SKILL`, `SKIP GRILLING`, and `CANCEL` as
+                Dispatch `SKIP GRILLING`, `STOP SKILL`, and `CANCEL` as
                 defined above. Otherwise, strip any leading `OTHER: `
                 prefix from <result/> and treat the remainder as the
                 combined free-text answers to all questions of the
@@ -346,11 +353,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                     ASPECT <N/>/<n/>: What is your answer to the above question? (keyword is sufficient)
                     <answer-N-K-label/>: <answer-N-K-description/>
                     [...]
-                    STOP SKILL: stop the entire skill immediately
                     SKIP GRILLING: skip all remaining grilling and continue with the implementation
+                    STOP SKILL: stop the entire skill immediately
                 </expand>
 
-                Dispatch `STOP SKILL`, `SKIP GRILLING`, and `CANCEL` as
+                Dispatch `SKIP GRILLING`, `STOP SKILL`, and `CANCEL` as
                 defined above. Otherwise, set <answer-N/> to the
                 selected <result/>.
 
