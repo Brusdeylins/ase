@@ -232,16 +232,20 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         2.  Determine the questions <question-N/>, chosen to
             resolve the open points related to the above understanding
             of grilling, by focusing on the mentioned *Focus Areas*.
+
             For each <question-N/> determine its <focus-area-N/> and a
             <topic-N/>, a 1-2 word hint describing what the question is
             about. Render <focus-area-N/> in the tables below as
             `**DOMAIN** (MUST)`, `**INTERFACE** (MUST)`,
             `**ARCHITECTURE** (SHOULD)`, or `**IMPLEMENTATION** (MAY)`
-            correspondingly. Use the format `Shall...?` for questions of
+            correspondingly.
+
+            Use the format `Shall...?` for questions of
             focus area *DOMAIN* and *INTERFACE*, the format `Should...?`
             for questions of focus area *ARCHITECTURE*, and the format
-            `May...?` for questions of focus area *IMPLEMENTATION*. In
-            every <question-N/>, encode all *literal aspects* -- file
+            `May...?` for questions of focus area *IMPLEMENTATION*.
+
+            In every <question-N/>, encode all *literal aspects* -- file
             and directory paths, identifiers, symbols, types, commands,
             options, configuration keys, and literal values -- with
             backticks.
@@ -254,7 +258,17 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             set <n/> to the number of remaining questions. Do not output
             anything.
 
-        4.  In the following, you *MUST* *NOT* use your built-in
+        4.  For all remaining <question-N/>, check the code base
+            and your world knowledge to find *two to four*
+            grounded answer alternatives <answer-N-K/> with a
+            brief label <answer-N-K-label/> and a description
+            <answer-N-K-description/> which reflects the current
+            <todo-what/>/<todo-how/> understanding by prefixing its
+            description with `✻ **CURRENT** ✻`. Assemble a <answer-N/>
+            out of `**<answer-N-1-label/>**: <answer-N-1-description/> ─◇─
+            **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
+
+        5.  In the following, you *MUST* *NOT* use your built-in
             <user-dialog-tool/> tool! Instead, you *MUST* just show
             custom dialogs according to the expanded `custom-dialog`
             definition. You *MUST* closely follow this definition. Both
@@ -280,21 +294,18 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             1.  Output only the following <template/> -- it lists *all*
                 questions of the round up-front, one table row per
                 aspect, so the subsequent dialog only has to ask for the
-                combined answer. Align all column edges of the table. In
-                the header row, emit the space between each marker symbol
-                and its word as a *non-breaking space* (U+00A0) instead of
-                a regular space, so no column can line-break its header. If
+                combined answer. Align all column edges of the table. If
                 <getopt-option-grill-rounds/> is equal `1`, *omit* the
                 leading `<round-id/>` line:
 
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | ○ ASPECT | ◎ FOCUS-AREA    | ◆ TOPIC     | ▶ **QUESTION**    |
-                | -------- | --------------- | ----------- | ----------------- |
-                | 1/<n/>   | <focus-area-1/> | <topic-1/>  | **<question-1/>** |
-                | 2/<n/>   | <focus-area-2/> | <topic-2/>  | **<question-2/>** |
-                | [...]    | [...]           | [...]       | [...]             |
+                | ASPECT   | FOCUS AREA      | TOPIC       | **QUESTION** ┈─▶ **ANSWERS**      |
+                | -------- | --------------- | ----------- | --------------------------------- |
+                | 1/<n/>   | <focus-area-1/> | <topic-1/>  | **<question-1/>** ┈─▶ <answer-1/> |
+                | 2/<n/>   | <focus-area-2/> | <topic-2/>  | **<question-2/>** ┈─▶ <answer-2/> |
+                | [...]    | [...]           | [...]       | [...]                             |
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
@@ -343,7 +354,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 <answer-N-K-description/>, and mark the alternative
                 which reflects the current <todo-what/>/<todo-how/>
                 understanding by prefixing its description with
-                `⚝ **CURRENT** ⚝ `.
+                `✻ **CURRENT** ✻`.
 
                 Show a custom dialog. Emit only the answer lines for the
                 alternatives you actually determined, always followed by
@@ -363,12 +374,12 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
             </else>
 
-        5.  Merge all gathered answers of the round -- the individual
+        6.  Merge all gathered answers of the round -- the individual
             <answer-N/> values or the combined batch reply --
             *exclusively* back into <todo-what/> and <todo-how/>. Do
             not output anything.
 
-        6.  Set <round-suffix/> to
+        7.  Set <round-suffix/> to
             ` round <m/>/<getopt-option-grill-rounds/>` if
             <getopt-option-grill-rounds/> is greater than 1, or to
             empty otherwise, and expand the following -- this
