@@ -273,16 +273,17 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             1.  Output only the following <template/> -- it lists *all*
                 questions of the round up-front, one table row per
                 aspect, so the subsequent dialog only has to ask for the
-                combined answer. Align all column edges of the table.
-                Keep the non-breaking spaces (U+00A0) between the header
-                marker symbols and their words, so narrow columns cannot
-                line-break the headers. If <getopt-option-grill-rounds/>
-                is equal `1`, *omit* the leading `<round-id/>` line:
+                combined answer. Align all column edges of the table. In
+                the header row, emit the space between each marker symbol
+                and its word as a *non-breaking space* (U+00A0) instead of
+                a regular space, so no column can line-break its header. If
+                <getopt-option-grill-rounds/> is equal `1`, *omit* the
+                leading `<round-id/>` line:
 
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | ○ ASPECT | ◎ FOCUS-AREA     | ◆ TOPIC     | ▶ **QUESTION**    |
+                | ○ ASPECT | ◎ FOCUS-AREA     | ◆ TOPIC     | ▶ **QUESTION**    |
                 | -------- | ---------------- | ----------- | ----------------- |
                 | 1/<n/>   | <focus-area-1/>  | <topic-1/>  | **<question-1/>** |
                 | 2/<n/>   | <focus-area-2/>  | <topic-2/>  | **<question-2/>** |
@@ -314,16 +315,17 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 aspect question up-front as a two-row table (the header
                 row plus a single question row), so the subsequent
                 dialog only has to ask for the answer. Align all column
-                edges of the table. Keep the non-breaking spaces (U+00A0)
-                between the header marker symbols and their words, so
-                narrow columns cannot line-break the headers. If
+                edges of the table. In the header row, emit the space
+                between each marker symbol and its word as a *non-breaking
+                space* (U+00A0) instead of a regular space, so no column
+                can line-break its header. If
                 <getopt-option-grill-rounds/> is equal `1`, *omit* the
                 leading `<round-id/>` line:
 
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | ○ ASPECT   | ◎ FOCUS-AREA    | ◆ TOPIC    | ▶ **QUESTION**    |
+                | ○ ASPECT   | ◎ FOCUS-AREA    | ◆ TOPIC    | ▶ **QUESTION**    |
                 | ---------- | --------------- | ---------- | ----------------- |
                 | <N/>/<n/>  | <focus-area-N/> | <topic-N/> | **<question-N/>** |
                 </template>
