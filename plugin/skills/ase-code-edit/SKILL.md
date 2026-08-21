@@ -1,6 +1,6 @@
 ---
 name: ase-code-edit
-argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--grill-batch|-b] [--verify|-v] [--worktree|-w] [--loop|-l] [<query>]"
+argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--verify|-v] [--worktree|-w] [--loop|-l] [<query>]"
 description: >
     Edit Source Code: Use when the user wants to "edit" the code base in
     one shot from a query, fusing crafting, refactoring, and resolving
@@ -22,7 +22,7 @@ Edit Source Code
 
 <expand name="getopt"
     arg1="ase-code-edit"
-    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --grill-batch|-b --verify|-v --worktree|-w --loop|-l">
+    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --verify|-v --worktree|-w --loop|-l">
     $ARGUMENTS
 </expand>
 
@@ -269,15 +269,15 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
 
         5.  In the following, you *MUST* *NOT* use your built-in
-            <user-dialog-tool/> tool! Instead, you *MUST* just show
-            custom dialogs according to the expanded `custom-dialog`
-            definition. You *MUST* closely follow this definition. Both
-            dialog variants below carry the two fixed answer options
+            <user-dialog-tool/> tool! Instead, you *MUST* just show a
+            custom dialog according to the expanded `custom-dialog`
+            definition. You *MUST* closely follow this definition. The
+            dialog below carries the two fixed answer options
             `SKIP GRILLING` and `STOP SKILL`, dispatched as follows:
 
             -   If a <result/> is `SKIP GRILLING` or `CANCEL`, ask no
-                further questions, continue with item 5 below (merging
-                the answers gathered so far), and after item 6 skip all
+                further questions, continue with item 6 below (merging
+                the answers gathered so far), and after item 7 skip all
                 remaining rounds and continue with the *implementing*
                 state.
 
@@ -288,8 +288,6 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 <template>
                 ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ status: **editing stopped**
                 </template>
-
-            <if condition="<getopt-option-grill-batch/> is equal `true`">
 
             1.  Output only the following <template/> -- it lists *all*
                 questions of the round up-front, one table row per
@@ -324,60 +322,9 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 combined free-text answers to all questions of the
                 round.
 
-            </if>
-            <else>
-
-            For each question <question-N/>, one at a time:
-
-            1.  Output only the following <template/> -- it states the
-                aspect question up-front as a two-row table (the header
-                row plus a single question row), so the subsequent
-                dialog only has to ask for the answer. Align all column
-                edges of the table. In the header row, emit the space
-                between each marker symbol and its word as a *non-breaking
-                space* (U+00A0) instead of a regular space, so no column
-                can line-break its header. If
-                <getopt-option-grill-rounds/> is equal `1`, *omit* the
-                leading `<round-id/>` line:
-
-                <template>
-                ⧉ **ASE**: <round-id/>:
-
-                | ○ ASPECT   | ◎ FOCUS-AREA    | ◆ TOPIC    | ▶ **QUESTION**    |
-                | ---------- | --------------- | ---------- | ----------------- |
-                | <N/>/<n/>  | <focus-area-N/> | <topic-N/> | **<question-N/>** |
-                </template>
-
-            2.  Check the code base and your world knowledge to find
-                *two to four* grounded answer alternatives <answer-N-K/>
-                with a brief label <answer-N-K-label/> and a description
-                <answer-N-K-description/>, and mark the alternative
-                which reflects the current <todo-what/>/<todo-how/>
-                understanding by prefixing its description with
-                `✻ **CURRENT** ✻`.
-
-                Show a custom dialog. Emit only the answer lines for the
-                alternatives you actually determined, always followed by
-                the two fixed ones:
-
-                <expand name="custom-dialog" arg1="--other">
-                    ASPECT <N/>/<n/>: What is your answer to the above question? (keyword is sufficient)
-                    <answer-N-K-label/>: <answer-N-K-description/>
-                    [...]
-                    SKIP GRILLING: skip all remaining grilling and continue with the implementation
-                    STOP SKILL: stop the entire skill immediately
-                </expand>
-
-                Dispatch `SKIP GRILLING`, `STOP SKILL`, and `CANCEL` as
-                defined above. Otherwise, set <answer-N/> to the
-                selected <result/>.
-
-            </else>
-
-        6.  Merge all gathered answers of the round -- the individual
-            <answer-N/> values or the combined batch reply --
-            *exclusively* back into <todo-what/> and <todo-how/>. Do
-            not output anything.
+        6.  Merge all gathered answers of the round -- the combined
+            reply -- *exclusively* back into <todo-what/> and
+            <todo-how/>. Do not output anything.
 
         7.  Set <round-suffix/> to
             ` round <m/>/<getopt-option-grill-rounds/>` if

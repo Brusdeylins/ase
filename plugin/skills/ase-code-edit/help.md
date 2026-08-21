@@ -10,7 +10,6 @@
     [`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`]
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
-    [`--grill-batch`|`-b`]
     [`--verify`|`-v`]
     [`--worktree`|`-w`]
     [`--loop`|`-l`]
@@ -53,18 +52,19 @@ implementation until it passes). The *querying* state and every
     can be clarified) -- and a 1-2 word `TOPIC` hint. The questions of a
     round are sorted by descending focus area importance (`DOMAIN`,
     `INTERFACE`, `ARCHITECTURE`, `IMPLEMENTATION`).
-    Each question is announced
-    as a two-row `ASPECT`/`FOCUS-AREA`/`TOPIC`/`QUESTION` table below a
-    `GRILLING ROUND K/L` line (the
-    announcement line and round numbering are omitted when only a
-    single round is performed), and asked via an interactive dialog
-    titled `ASPECT M/N`
-    which asks for the answer to the announced aspect question, carrying
-    two to four grounded answer alternatives (with the alternative
-    reflecting the current understanding marked as `CURRENT`), the fixed
-    `STOP SKILL` (stop the skill) and `SKIP GRILLING` (skip the
-    remaining grilling) options,
-    plus free-text input. The answers are
+    All questions of a round are announced together below a
+    `GRILLING ROUND K/L` line (the announcement line and round numbering
+    are omitted when only a single round is performed) as an
+    `ASPECT`/`FOCUS AREA`/`TOPIC`/`QUESTION` table with one row per
+    question, each row carrying two to four grounded answer alternatives
+    (with the alternative reflecting the current understanding marked as
+    `CURRENT`). They are then asked in *one* batch via a single
+    interactive dialog titled `GRILLING ROUND K/L` (or plain `GRILLING`
+    for a single round), whose question asks for the combined answer to
+    all (or a subset) of the listed aspect questions and whose only
+    answer options are the fixed `STOP SKILL` (stop the skill) and
+    `SKIP GRILLING` (skip the remaining grilling) ones, plus free-text
+    input. The answers are
     merged back into the WHAT and HOW parts of the query. Without
     `--grill`, no questions are asked at all.
 
@@ -73,19 +73,6 @@ implementation until it passes). The *querying* state and every
     starts from scratch from only the current WHAT and HOW parts,
     forgetting all information of previous rounds, and closes with an
     `EDIT TODO` box. Only effective together with `--grill`.
-
-`--grill-batch`|`-b`:
-    Batch the questions of a grill round together into one single
-    dialog, announced as a `GRILLING ROUND K/L` line (omitted when only
-    a single round is performed) followed by an
-    `ASPECT`/`FOCUS-AREA`/`TOPIC`/`QUESTION` table with
-    one row per question, and titled `GRILLING ROUND K/L` (or plain
-    `GRILLING` for a single round),
-    whose question asks for the combined answer to all (or a subset
-    of) the listed aspect questions and whose only answer options are
-    `STOP SKILL` and `SKIP GRILLING`, so the user answers all aspects
-    in one free-text reply instead of one-by-one via sequential
-    dialogs.
 
 `--verify`|`-v`:
     Verify whether the implementation fulfills the requirements, by
