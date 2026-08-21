@@ -5,6 +5,7 @@ ChangeLog
 0.9.60 (2026-08-09)
 -------------------
 
+- FEATURE [code, docs]: added `ase-code-edit` skill -- a plan-less fusion of `ase-code-{craft,refactor,resolve}`, `ase-task-grill`, and `ase-task-implement`
 - FEATURE [code, docs]: added an `--interactive`/`-i` option to `ase-code-craft` which implies `--direct`/`-D` and interactively asks for the next change to craft via a `DONE`-or-free-text dialog, immediately applying each one in place; for this, the custom dialog now permits a single answer option when free-text input is enabled (`ase-code-craft`, `ase-dialog.md`, `usage-plugin.md`)
 - IMPROVEMENT [code]: garbage collect orphaned session directories left behind by died agents (`ase-hook.ts`)
 - IMPROVEMENT [code]: no longer count and report the number of words of task plans in the skill status lines to speed processing

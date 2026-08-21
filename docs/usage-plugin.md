@@ -206,6 +206,20 @@ The following ASE commands/skills exist on the code-level:
   Refactor source code. The `--auto`, `--dry`, `--direct`, `--quick`,
   `--next`, and *task-id*`:` options behave as for **/ase-code-craft**.
 
+- **/ase-code-edit** \[`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`\] \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-batch`|`-b`\] \[`--verify`|`-v`\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+  Edit the code base directly from a *query* in a plan-less state
+  machine (querying, discovering, grilling, implementing, verifying)
+  which fuses **/ase-code-craft**, **/ase-code-refactor**,
+  **/ase-code-resolve**, **/ase-task-grill**, and
+  **/ase-task-implement**. `--mode` selects the internalized tenet set
+  (`auto` infers it from the query). With `--grill`, the query is
+  grilled with `--grill-rounds` rounds of questions before implementing
+  (`--grill-batch` asks the questions of a round in one batch). With
+  `--verify`, the implementation is verified until it passes; otherwise
+  strictly no verification is performed. With `--worktree`, all change
+  sets land in one dedicated Git worktree. With `--loop`, the skill
+  repeatedly asks for the next query until the user answers `done`.
+
 - **/ase-code-lint** \[`--auto`|`-a`\] \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\] \[`--include`|`-i` *aspect*\[,...\]\] \[`--exclude`|`-e` *aspect*\[,...\]\] *source-reference*:<br/>
   Lint the source code in an interactive review loop. With `--auto`, the
   loop runs non-interactively. `--severity` sets the minimum severity of

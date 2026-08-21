@@ -23,7 +23,7 @@ Code](https://claude.com/product/claude-code) — and with reduced support also 
 tool [GitHub Copilot CLI](https://github.com/features/copilot/cli) or
 [OpenAI Codex CLI](https://github.com/openai/codex).
 
-**ASE** ships with 47 agent skills, agent hooks, agent sub-agents, an
+**ASE** ships with 48 agent skills, agent hooks, agent sub-agents, an
 underlying Model-Context-Protocol (MCP) service and a Command-Line Interface
 (CLI), incorporating reasonable methodology and automation aspects, to
 support the recurring tasks of a *Software Developer* and *Software Architect*.

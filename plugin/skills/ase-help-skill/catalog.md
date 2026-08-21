@@ -28,6 +28,7 @@
 ○   `ase-code-craft`:      Craft Source Code
 ○   `ase-code-refactor`:   Refactor Artifacts
 ○   `ase-code-resolve`:    Resolve Problem
+○   `ase-code-edit`:       Edit Source Code
 ○   `ase-sync-import`:     Import Foreign Sources into Artifact Set
 ○   `ase-sync-reconcile`:  Reconcile Artifact Set to Artifact Set
 ○   `ase-sync-export`:     Export Artifact Set to Side-by-Side Files

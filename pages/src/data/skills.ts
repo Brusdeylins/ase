@@ -77,7 +77,8 @@ export const skillGroups: SkillGroup[] = [
             "ase-code-analyze",
             "ase-code-craft",
             "ase-code-refactor",
-            "ase-code-resolve"
+            "ase-code-resolve",
+            "ase-code-edit"
         ]
     },
     {
