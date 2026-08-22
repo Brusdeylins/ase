@@ -15,7 +15,7 @@ Workflow
 1.  Set the requested context: <context>$ARGUMENTS</context>.
     The *first* whitespace-separated token of <context/> is the
     comma-separated *aspect set* <aspects/> (a non-empty subset of the
-    aspect ids `A01`...`A20`). The *remaining* tokens are the source
+    aspect ids `A01`...`A21`). The *remaining* tokens are the source
     code files to check.
 
 2.  Use the `Read` tool to read all source code files referenced by
@@ -28,7 +28,7 @@ Workflow
 
 4.  Set <problems/> to empty.
     Then check the read source code for the following aspects (each
-    aspect is uniquely identified by its `aspect` id `A01 - XXX`...`A20
+    aspect is uniquely identified by its `aspect` id `A01 - XXX`...`A21
     - XXX`), but *strictly limited* to those aspects whose id is
     contained in the aspect set <aspects/> -- all other aspects are
     *not* checked and their problems are *never* reported:
@@ -266,6 +266,50 @@ Workflow
         *masks* another bug (e.g., unreachable code after a misplaced
         `return` that skips cleanup logic).
 
+    -   **A21 - DOCUMENTATION**:
+        Check for *incomplete* and for *excessive* code documentation
+        across the following sub-aspects. The yardstick is a *minimal*
+        description: one or two lines stating WHAT the construct does,
+        written in the *idiomatic documentation convention* of the
+        target programming language (e.g., JSDoc/TSDoc in
+        JavaScript/TypeScript, docstrings in Python, doc comments in
+        Rust/Go/Java).
+
+        -   **C1 MISSING-DOCUMENTATION**: functions, methods, classes,
+            interfaces, or modules without any documentation comment
+            describing their purpose - *private* and *internal*
+            constructs included, not just the public API surface.
+            Exclude trivial constructs whose name already fully conveys
+            the purpose (plain getters/setters, one-line lambdas,
+            delegating overloads) and constructs inheriting the
+            documentation of an overridden or implemented declaration.
+
+        -   **C2 EXCESSIVE-DOCUMENTATION**: comments going far beyond
+            the minimal description: narrated decision logs ("chose X
+            over Y because ..."), change history ("now uses X instead
+            of Y"), line-by-line explanations of the obvious, or
+            comment blocks substantially longer than the code they
+            describe. Propose *condensing* to a brief 1-2 line
+            description (up to 4 lines only for genuinely non-obvious
+            constraints).
+
+        -   **C3 RESTATING-DOCUMENTATION**: comments merely repeating
+            the code or the identifier verbatim without adding any
+            information (e.g., "increment i" above `i++`). Propose
+            *removing* them.
+
+        -   **C4 DRIFTED-DOCUMENTATION**: comments contradicting the
+            code they describe (stale parameter lists, outdated
+            behavior claims). Propose correcting the *comment* only -
+            *never* change the code under this aspect.
+
+        Keep intact comments stating a *constraint the code cannot
+        show* (brief WHY-comments on non-obvious decisions) - they are
+        neither excessive nor restating. Severity guidance: C4 defaults
+        to MEDIUM (it actively misleads); C1 defaults to MEDIUM for
+        non-trivial constructs, else LOW; C2 and C3 default to LOW,
+        escalating to MEDIUM when the noise dominates the file.
+
     Be conservative - only report clear, well-grounded issues
     that require an actual *code change*. Think twice to avoid
     *false positives*.
@@ -277,7 +321,7 @@ Workflow
 
     For *each* found problem which requires a code change:
 
-    1.  Set <aspect/> to the identifier `A01 - XXX`...`A20 - XXX`,
+    1.  Set <aspect/> to the identifier `A01 - XXX`...`A21 - XXX`,
         indicating the aspect under which the problem was detected.
 
     2.  Set <severity/> to the string `LOW`, `MEDIUM`, or `HIGH`,
