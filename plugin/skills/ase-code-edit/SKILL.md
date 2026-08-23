@@ -301,7 +301,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 ⧉ **ASE**: <round-id/>:
 
                 | #    | FOCUS ▶ TOPIC                 | **QUESTION** ┈─▶ **ANSWERS**      |
-                | ---- | ----------------------------- | --------------------------------- |
+                | :--: | ----------------------------- | --------------------------------- |
                 | 1    | <focus-area-1/> ▶ <topic-1/>  | **<question-1/>** ┈─▶ <answer-1/> |
                 | 2    | <focus-area-2/> ▶ <topic-2/>  | **<question-2/>** ┈─▶ <answer-2/> |
                 | [..] | [...]                         | [...]                             |
