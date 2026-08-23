@@ -252,6 +252,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             options, configuration keys, and literal values -- with
             backticks.
 
+            Keep every <question-N/> at most *200 characters* long, as a
+            longer question overflows its table cell and silently
+            degrades the entire table into a plain text rendering.
+
         3.  Finally, *sort* the questions by descending
             focus area order -- first all `DOMAIN`, then all
             `INTERFACE`, then all `ARCHITECTURE`, and then all
@@ -261,14 +265,21 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             anything.
 
         4.  For all remaining <question-N/>, check the code base
-            and your world knowledge to find *two to four*
+            and your world knowledge to find *two to three*
             grounded answer alternatives <answer-N-K/> with a
-            1-3 word label <answer-N-K-label/> and a ultra brief description
-            <answer-N-K-description/>. For the anser which reflects the current
+            1-3 word label <answer-N-K-label/> and an ultra brief description
+            <answer-N-K-description/> of at most *10 words*. For the answer
+            which reflects the current
             <todo-what/>/<todo-how/> understanding prefixing its
             description with `✻ **CURRENT** ✻`. Assemble a <answer-N/>
             out of `**A1**: **<answer-N-1-label/>**: <answer-N-1-description/> ─◇─
             **A2**: **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
+
+            Keep every assembled <answer-N/> at most *240 characters*
+            long -- drop the least relevant alternative and compact the
+            descriptions until it fits -- as a longer answer overflows
+            its table cell and silently degrades the entire table into a
+            plain text rendering.
 
         5.  In the following, you *MUST* *NOT* use your built-in
             <user-dialog-tool/> tool! Instead, you *MUST* just show a
@@ -296,16 +307,23 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 aspect, so the subsequent dialog only has to ask for the
                 combined answer. Align all column edges of the table. If
                 <getopt-option-grill-rounds/> is equal `1`, *omit* the
-                leading `<round-id/>` line:
+                leading `<round-id/>` line.
+
+                In every table cell you *MUST* escape each literal pipe
+                character outside a code span as `\|` and you *MUST*
+                open *and* close every backtick code span within the
+                *same* cell -- an unescaped pipe or an unbalanced
+                backtick run splits the cell and silently degrades the
+                entire table into a plain text rendering:
 
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | #    | FOCUS ▶ TOPIC                 | **QUESTION** ┈─▶ **ANSWERS**      |
-                | :--: | ----------------------------- | --------------------------------- |
-                | Q1   | <focus-area-1/> ▶ <topic-1/>  | **<question-1/>** ┈─▶ <answer-1/> |
-                | Q2   | <focus-area-2/> ▶ <topic-2/>  | **<question-2/>** ┈─▶ <answer-2/> |
-                | [..] | [...]                         | [...]                             |
+                | #      | FOCUS ▶ TOPIC                 | **QUESTION**      | **ANSWERS** |
+                | :----: | ----------------------------- | ----------------- | ----------- |
+                | **Q1** | <focus-area-1/> ▶ <topic-1/>  | **<question-1/>** | <answer-1/> |
+                | **Q2** | <focus-area-2/> ▶ <topic-2/>  | **<question-2/>** | <answer-2/> |
+                | [..]   | [...]                         | [...]             | [...]       |
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
