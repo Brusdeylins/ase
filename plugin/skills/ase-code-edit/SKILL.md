@@ -331,7 +331,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 *one* free-text reply:
 
                 <expand name="custom-dialog" arg1="--other">
-                    <round-id/>: What is your (combined) answer to all (or a subset) of the above questions? (keywords are sufficient)
+                    <round-id/>: What is your (combined) answer to all (or a subset) of the above questions? (keywords or `Qn:An` references are sufficient)
                     SKIP GRILLING: skip all remaining grilling and continue with the implementation
                     STOP SKILL: stop the entire skill immediately
                 </expand>
