@@ -23,15 +23,15 @@
         "playwright":                             "1.62.1"
     },
     "dependencies": {
-        "astro":                                  "7.2.0",
+        "astro":                                  "7.2.4",
         "@astrojs/sitemap":                       "3.7.3",
         "@astro-community/astro-embed-youtube":   "0.5.10",
         "astro-robots-txt":                       "1.0.0",
-        "astro-swiper":                           "2.9.0",
+        "astro-swiper":                           "2.10.0",
         "tailwindcss":                            "4.3.3",
         "@tailwindcss/vite":                      "4.3.3",
         "typopro-web":                            "4.2.8",
-        "marked":                                 "18.0.9",
+        "marked":                                 "18.0.10",
         "dice-coefficient":                       "2.1.1",
         "fast-levenshtein":                       "3.0.0",
         "plyr":                                   "3.8.4",
