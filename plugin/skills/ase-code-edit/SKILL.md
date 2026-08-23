@@ -272,8 +272,8 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             which reflects the current
             <todo-what/>/<todo-how/> understanding prefixing its
             description with `✻ **CURRENT** ✻`. Assemble a <answer-N/>
-            out of `**A1**: **<answer-N-1-label/>**: <answer-N-1-description/> ─◇─
-            **A2**: **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
+            out of `**A1** ▶ **<answer-N-1-label/>**: <answer-N-1-description/> ─◇─
+            **A2** ▶ **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
 
             Keep every assembled <answer-N/> at most *240 characters*
             long -- drop the least relevant alternative and compact the
