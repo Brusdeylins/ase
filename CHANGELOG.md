@@ -2,14 +2,17 @@
 ChangeLog
 =========
 
-0.9.60 (2026-08-09)
+0.9.60 (2026-08-23)
 -------------------
 
-- FEATURE [code, docs]: added `ase-code-edit` skill -- a plan-less fusion of `ase-code-{craft,refactor,resolve}`, `ase-task-grill`, and `ase-task-implement`
+- FEATURE [code, docs]: added `ase-code-edit` skill -- a plan-less fusion of `ase-code-{craft,refactor,resolve}`, `ase-task-grill`, and `ase-task-implement`, with batch grilling as the sole grilling mode (`ase-code-edit`, `usage-plugin.md`, `workflow.svg`)
 - FEATURE [code, docs]: added an `--interactive`/`-i` option to `ase-code-craft` which implies `--direct`/`-D` and interactively asks for the next change to craft via a `DONE`-or-free-text dialog, immediately applying each one in place; for this, the custom dialog now permits a single answer option when free-text input is enabled (`ase-code-craft`, `ase-dialog.md`, `usage-plugin.md`)
+- IMPROVEMENT [code]: make `ase_task_save` the only way to update task plans (`ase-common-task.md`, `ase-code-refactor`, `ase-code-resolve`, `ase-sync-import`, `ase-sync-reconcile`, `ase-task-dissect`, `ase-task-edit`, `ase-task-implement`, `ase-task-preflight`)
+- IMPROVEMENT [code]: treat the preflight draft of a task plan as authoritative -- take it over 1:1 when still fresh and remove it once stale (`ase-task-edit`, `ase-task-implement`, `ase-task-preflight`)
 - IMPROVEMENT [code]: garbage collect orphaned session directories left behind by died agents (`ase-hook.ts`)
 - IMPROVEMENT [code]: no longer count and report the number of words of task plans in the skill status lines to speed processing
-- UPDATE [infr]: upgraded NPM dependencies (`package.json`)
+- IMPROVEMENT [docs, infr]: regenerated the project overview from the current implementation artifacts (`AGENTS.md`, `README.md`)
+- UPDATE [code, infr]: upgraded NPM dependencies and adapted the ESLint configuration and sources to them (`package.json`, `eslint.mjs`, `tool/src`)
 
 0.9.59 (2026-08-08)
 -------------------
