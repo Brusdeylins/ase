@@ -50,12 +50,12 @@ which shows the established <todo-what/> and <todo-how/>, where a still
 empty <todo-what/> or <todo-how/> renders as `(none)`:
 
 <template>
-<ase-tpl-boxed title="EDIT TODO" subtitle="<arg1/>">
+<ase-tpl-head title="EDIT TODO" subtitle="<arg1/>"/>
 
 **WHAT**: <todo-what/>
 **HOW**:  <todo-how/>
 
-</ase-tpl-boxed>
+<ase-tpl-foot title="EDIT TODO" subtitle="<arg1/>"/>
 </template>
 
 </define>

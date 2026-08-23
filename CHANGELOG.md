@@ -2,6 +2,11 @@
 ChangeLog
 =========
 
+0.9.61 (2026-08-23)
+-------------------
+
+- IMPROVEMENT [code]: render the EDIT TODO output with just a header and footer instead of a full box (`ase-code-edit`)
+
 0.9.60 (2026-08-23)
 -------------------
 
