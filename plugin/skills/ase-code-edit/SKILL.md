@@ -53,6 +53,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 <ase-tpl-head title="EDIT TODO" subtitle="<arg1/>"/>
 
 **WHAT**: <todo-what/>
+
 **HOW**:  <todo-how/>
 
 <ase-tpl-foot title="EDIT TODO" subtitle="<arg1/>"/>
@@ -299,11 +300,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | ASPECT   | FOCUS AREA      | TOPIC       | **QUESTION** ┈─▶ **ANSWERS**      |
-                | -------- | --------------- | ----------- | --------------------------------- |
-                | 1/<n/>   | <focus-area-1/> | <topic-1/>  | **<question-1/>** ┈─▶ <answer-1/> |
-                | 2/<n/>   | <focus-area-2/> | <topic-2/>  | **<question-2/>** ┈─▶ <answer-2/> |
-                | [...]    | [...]           | [...]       | [...]                             |
+                | #    | FOCUS ▶ TOPIC                 | **QUESTION** ┈─▶ **ANSWERS**      |
+                | ---- | ----------------------------- | --------------------------------- |
+                | 1    | <focus-area-1/> ▶ <topic-1/>  | **<question-1/>** ┈─▶ <answer-1/> |
+                | 2    | <focus-area-2/> ▶ <topic-2/>  | **<question-2/>** ┈─▶ <answer-2/> |
+                | [..] | [...]                         | [...]                             |
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the

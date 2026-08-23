@@ -55,7 +55,7 @@ implementation until it passes). The *querying* state and every
     All questions of a round are announced together below a
     `GRILLING ROUND K/L` line (the announcement line and round numbering
     are omitted when only a single round is performed) as an
-    `ASPECT`/`FOCUS AREA`/`TOPIC`/`QUESTION` table with one row per
+    `#`/`FOCUS ▶ TOPIC`/`QUESTION` table with one row per
     question, each row carrying two to four grounded answer alternatives
     (with the alternative reflecting the current understanding marked as
     `CURRENT`). They are then asked in *one* batch via a single
