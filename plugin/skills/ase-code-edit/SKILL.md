@@ -230,9 +230,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             `GRILLING` otherwise (a single round needs no round
             numbering). Do not output anything.
 
-        2.  Determine the questions <question-N/>, chosen to
-            resolve the open points related to the above understanding
-            of grilling, by focusing on the mentioned *Focus Areas*.
+        2.  Determine the very brief but precise questions <question-N/>,
+            chosen to resolve the open points related to the above
+            understanding of grilling, by focusing on the mentioned
+            *Focus Areas*.
 
             For each <question-N/> determine its <focus-area-N/> and a
             <topic-N/>, a 1-2 word hint describing what the question is
@@ -262,12 +263,12 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         4.  For all remaining <question-N/>, check the code base
             and your world knowledge to find *two to four*
             grounded answer alternatives <answer-N-K/> with a
-            brief label <answer-N-K-label/> and a description
-            <answer-N-K-description/> which reflects the current
-            <todo-what/>/<todo-how/> understanding by prefixing its
+            1-3 word label <answer-N-K-label/> and a ultra brief description
+            <answer-N-K-description/>. For the anser which reflects the current
+            <todo-what/>/<todo-how/> understanding prefixing its
             description with `✻ **CURRENT** ✻`. Assemble a <answer-N/>
-            out of `**<answer-N-1-label/>**: <answer-N-1-description/> ─◇─
-            **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
+            out of `**A1**: **<answer-N-1-label/>**: <answer-N-1-description/> ─◇─
+            **A2**: **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
 
         5.  In the following, you *MUST* *NOT* use your built-in
             <user-dialog-tool/> tool! Instead, you *MUST* just show a
@@ -302,8 +303,8 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
                 | #    | FOCUS ▶ TOPIC                 | **QUESTION** ┈─▶ **ANSWERS**      |
                 | :--: | ----------------------------- | --------------------------------- |
-                | 1    | <focus-area-1/> ▶ <topic-1/>  | **<question-1/>** ┈─▶ <answer-1/> |
-                | 2    | <focus-area-2/> ▶ <topic-2/>  | **<question-2/>** ┈─▶ <answer-2/> |
+                | Q1   | <focus-area-1/> ▶ <topic-1/>  | **<question-1/>** ┈─▶ <answer-1/> |
+                | Q2   | <focus-area-2/> ▶ <topic-2/>  | **<question-2/>** ┈─▶ <answer-2/> |
                 | [..] | [...]                         | [...]                             |
                 </template>
 
