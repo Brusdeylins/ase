@@ -250,7 +250,7 @@ export class Backlog {
                 status: Backlog.stateToLane(lanes, state),
                 labels: [ `ase:${id}` ]
             })
-            const content = `---\n${front}---\n\n${body}`
+            const content = `---\n${front}---\n\n## Description\n\n${body}`
             const file    = path.join(Backlog.tasksDir(), `task-${n} - ${Backlog.safeTitle(title)}.md`)
             expected.set(n, file)
             if (!fs.existsSync(file) || fs.readFileSync(file, "utf8") !== content) {
@@ -645,9 +645,11 @@ export default class BacklogCommand {
                 process.exit(await this.doWeb())
             })
 
-        /*  register CLI sub-command "ase backlog serve"  */
+        /*  register the hidden CLI sub-command "ase backlog serve":
+            the user-facing surface is deliberately just "board" and
+            "web" -- everything else is internal machinery  */
         backlog
-            .command("serve")
+            .command("serve", { hidden: true })
             .description("Run the board server in the foreground (internal)")
             .action(async () => {
                 /*  adopt the log level of the spawning process, as the
@@ -660,25 +662,25 @@ export default class BacklogCommand {
                 await this.runServe(port)
             })
 
-        /*  register CLI sub-command "ase backlog sync"  */
+        /*  register the hidden CLI sub-command "ase backlog sync"  */
         backlog
-            .command("sync")
+            .command("sync", { hidden: true })
             .description("Synchronize task plans and board mirror once")
             .action(async () => {
                 process.exit(await this.doSync())
             })
 
-        /*  register CLI sub-command "ase backlog status"  */
+        /*  register the hidden CLI sub-command "ase backlog status"  */
         backlog
-            .command("status")
+            .command("status", { hidden: true })
             .description("List all running board servers across all projects")
             .action(async () => {
                 process.exit(await this.doStatus())
             })
 
-        /*  register CLI sub-command "ase backlog stop"  */
+        /*  register the hidden CLI sub-command "ase backlog stop"  */
         backlog
-            .command("stop")
+            .command("stop", { hidden: true })
             .description("Stop the board server of the current project")
             .option("-a, --all", "stop the board servers of all projects")
             .action(async (opts: { all?: boolean }) => {
