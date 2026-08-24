@@ -26,7 +26,8 @@ import { readStdin, writeStdout }             from "./ase-stdio.js"
     values of the "Status:" frontmatter key of a task plan  */
 export const taskStates = [
     "DRAFTED", "REJECTED", "APPROVED", "DEFERRED",
-    "STARTED", "BLOCKED", "COMPLETED", "CANCELLED"
+    "STARTED", "BLOCKED", "COMPLETED", "CLOSED",
+    "CANCELLED"
 ]
 
 /*  reusable functionality: persisted task plans under
@@ -408,7 +409,7 @@ export default class TaskCommand {
             .option("-e, --exclude <states>",
                 "comma-separated list of lifecycle states to not list " +
                 `(${taskStates.join("|")}), or "none" for no exclusion`,
-                "COMPLETED,CANCELLED")
+                "COMPLETED,CLOSED,CANCELLED")
             .action(async (opts: { verbose?: boolean, include: string, exclude: string }) => {
                 const states = Task.states(opts.include, opts.exclude)
                 const items  = Task.list(this.log, opts.verbose ?? false)
