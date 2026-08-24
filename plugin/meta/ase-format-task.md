@@ -70,7 +70,7 @@ You *MUST* honor the following hints on this *task* format:
     of the task plan. The key is *optional* and defaults to `DRAFTED`:
     an *absent* key reads as `DRAFTED`, and a *newly created* plan
     carries `DRAFTED` explicitly. The <task-status/> value is *strictly*
-    one of the following eight states:
+    one of the following nine states:
 
     -   `DRAFTED`: plan exists but is still provisional and not yet
         cleared for implementation.
@@ -84,11 +84,13 @@ You *MUST* honor the following hints on this *task* format:
     -   `BLOCKED`: implementation is halted by an impediment which
         someone has to remove before it can resume.
     -   `COMPLETED`: plan was implemented in full and reached its
-        intended outcome.
+        intended outcome, and now awaits the user's review.
+    -   `CLOSED`: plan was completed and its outcome was reviewed and
+        accepted by the user.
     -   `CANCELLED`: plan was terminated before completion, because it
         failed, was called off, or became obsolete.
 
--   The eight states form a *state machine*. Whoever sets the `Status:`
+-   The nine states form a *state machine*. Whoever sets the `Status:`
     key *MUST* only move along one of the following transitions, whereby
     a *single* operation *MAY* traverse *several* transitions at once if
     it performs the corresponding stages in one go:
@@ -97,13 +99,15 @@ You *MUST* honor the following hints on this *task* format:
     DRAFTED   ──reject───▶ REJECTED      STARTED   ──block────▶ BLOCKED
     REJECTED  ──redraft──▶ DRAFTED       BLOCKED   ──unblock──▶ STARTED
     DRAFTED   ──approve──▶ APPROVED      STARTED   ──complete─▶ COMPLETED
-    APPROVED  ──defer────▶ DEFERRED
+    APPROVED  ──defer────▶ DEFERRED      COMPLETED ──close────▶ CLOSED
     DEFERRED  ──resume───▶ APPROVED      any non-terminal state
     APPROVED  ──start────▶ STARTED       ──cancel───▶ CANCELLED
     ```
 
-    `COMPLETED` and `CANCELLED` are the two *terminal* states: a plan
-    which reached one of them is *finished* and leaves the state machine.
+    `CLOSED` and `CANCELLED` are the two *terminal* states: a plan
+    which reached one of them is *finished* and leaves the state
+    machine. A `COMPLETED` plan may also rest as-is, but is *closed*
+    once the user reviewed and accepted its outcome.
 
 -   The `Properties:` frontmatter key states which *stages* the task
     plan already passed through. The <task-properties/> value is

@@ -22,6 +22,7 @@ import CompatCommand               from "./ase-compat.js"
 import DiagramCommand              from "./ase-diagram.js"
 import WorktreeCommand             from "./ase-worktree.js"
 import MintCommand                 from "./ase-mint.js"
+import BacklogCommand              from "./ase-backlog.js"
 import pkg                         from "../package.json" with { type: "json" }
 
 /*  type of top-level (global) options  */
@@ -75,6 +76,7 @@ const main = async (): Promise<void> => {
     new DiagramCommand(log).register(program)
     new WorktreeCommand().register(program)
     new MintCommand().register(program)
+    new BacklogCommand(log).register(program)
 
     /*  parse program arguments  */
     await program.parseAsync(process.argv)

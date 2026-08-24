@@ -68,7 +68,8 @@
         "lru-cache":                        "11.5.2",
         "@rse/specbook":                    "1.0.3",
         "source-code-error":                "1.2.0",
-        "pure-uuid":                        "2.0.0"
+        "pure-uuid":                        "2.0.0",
+        "backlog.md":                       "1.50.1"
     },
     "allowScripts": {
         "fsevents":                         true

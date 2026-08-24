@@ -99,7 +99,9 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "project.artifact.docs.basedir": [ "user", "project" ],
     "project.artifact.docs.files":   [ "user", "project" ],
     "project.artifact.infr.basedir": [ "user", "project" ],
-    "project.artifact.infr.files":   [ "user", "project" ]
+    "project.artifact.infr.files":   [ "user", "project" ],
+    "project.backlog.port":          [ "user", "project" ],
+    "project.backlog.lanes":         [ "user", "project" ]
 }
 
 /*  default set of scope kinds writable for any unrestricted key  */
@@ -236,6 +238,13 @@ export const configSchema = v.nullish(v.strictObject({
             docs: artifactSchema,
             infr: artifactSchema,
             task: artifactSchema
+        })),
+        backlog: v.optional(v.strictObject({
+            port:  v.optional(v.union([
+                v.pipe(v.number(), v.integer(), v.minValue(1024), v.maxValue(65535)),
+                v.pipe(v.string(), v.regex(/^[0-9]+$/))
+            ])),
+            lanes: v.optional(v.pipe(v.string(), v.minLength(1)))
         }))
     })),
     agent: v.optional(v.strictObject({

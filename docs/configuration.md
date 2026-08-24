@@ -66,6 +66,16 @@ session-start hook as the `<ase-spec-basedir/>` and `<ase-spec-schema/>` placeho
 the `ASE_SPEC_BASEDIR` and `ASE_SPEC_SCHEMA` environment variables), so the specification format
 description `ase-format-spec.md` can reference the effective schema and base directory.
 
+The following configuration parameters control the `ase backlog`
+visual task board:
+
+-   **project.backlog.port**: the fixed port of the per-project board server
+    (default: randomly allocated in the range `46000`..`48000`).
+
+-   **project.backlog.lanes**: the board lane specification of the form
+    `<lane>=<STATE>[+<STATE>...][;<lane>=...]`, grouping every task plan
+    lifecycle state into exactly one Kanban lane (default: `Crafting=DRAFTED+REJECTED;Ready=APPROVED;Deferred=DEFERRED;Implementation=STARTED+BLOCKED;Code-Review=COMPLETED;Closed=CLOSED+CANCELLED`).
+
 The following configuration parameters control the agent:
 
 -   **agent.persona**: the Agentic AI *persona* has the communication style of a...

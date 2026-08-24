@@ -22,9 +22,9 @@ is the command-line companion tool to the *ASE* Anthropic Claude Code CLI plugin
 It provides plugin/tool setup, layered project configuration
 management, a per-project background HTTP service (bridged into the
 agent tool as an MCP server), agent hook handlers, status line
-rendering, persisted task plan management, artifact resolution,
-specification linting and exporting, diagram rendering, identifier
-minting, and a compatibility self-test helper.
+rendering, persisted task plan management, a visual Kanban task board,
+artifact resolution, specification linting and exporting, diagram
+rendering, identifier minting, and a compatibility self-test helper.
 
 OPTIONS
 -------
@@ -440,6 +440,59 @@ single-file layout on first access:
   *age* (default: `31d`). The *age* argument is a `<number><unit>`
   value, where *unit* is one of `h` (hour), `d` (day), `m` (month), or
   `y` (year).
+
+The following top-level commands exist for visualizing the persisted
+task plans on a [Backlog.md](https://github.com/MrLesk/Backlog.md)
+Kanban board. The board lanes group the task plan lifecycle states,
+by default as `Crafting` (DRAFTED, REJECTED), `Ready` (APPROVED),
+`Deferred` (DEFERRED), `Implementation` (STARTED, BLOCKED),
+`Code-Review` (COMPLETED), and `Closed` (CLOSED, CANCELLED), and are
+configurable via the `project.backlog.lanes` configuration key (a
+`<lane>=<STATE>[+<STATE>...][;<lane>=...]` specification). The task
+plans remain the single source of truth: they are mirrored into a
+generated Backlog.md project under `.ase/backlog/`, and dragging a task
+into another lane on the board writes only the `Status:` frontmatter
+key of the corresponding task plan back (traversing the lane's primary
+state) -- every other board-side edit is discarded by the next sync:
+
+- `ase backlog`:
+  Entry point group for the task board. Without a subcommand, the help
+  text is shown and the command exits with status 1.
+
+- `ase backlog board`:
+  Synchronize the board mirror and show the interactive Kanban board
+  TUI in the terminal. Lane changes made in the TUI are written back
+  to the task plans when the TUI exits.
+
+- `ase backlog web`:
+  Ensure the background board server of the current project is running
+  (starting it detached if needed) and open the board web UI in the
+  browser. Each project runs its own server on its own port (bound to
+  `127.0.0.1`), so multiple projects can show their boards
+  simultaneously. The port is taken from the `project.backlog.port`
+  configuration key, or randomly allocated in the range
+  `46000`..`48000`.
+
+- `ase backlog serve`:
+  Run the board server in the foreground (internal): the Backlog.md
+  web UI plus the file watchers keeping the task plans and the board
+  mirror in sync in both directions. Intended to be spawned detached
+  by `ase backlog web` and not invoked directly by end users.
+
+- `ase backlog sync`:
+  Synchronize the task plans and the board mirror once: write back
+  board-side lane changes into the task plans, then re-render the
+  mirror.
+
+- `ase backlog status`:
+  List all running board servers across all projects, each with its
+  project id, port, process id, and board web UI URL, as a
+  cross-project jump list. Exits with status 1 if no board server is
+  running.
+
+- `ase backlog stop` \[`-a`|`--all`\]:
+  Stop the board server of the current project. With `--all`, the
+  board servers of all projects are stopped.
 
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the

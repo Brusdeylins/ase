@@ -181,6 +181,16 @@ The following ASE commands/skills exist on the task-level:
 - **/ase-task-delete** \[*id*\]:<br/>
   Delete the current or given task plan.
 
+- **/ase-backlog**:<br/>
+  Show a Kanban board overview of all persisted task plans, grouped by
+  their board lanes, plus all running board servers, by delegating to
+  `ase backlog`.
+
+- **/ase-backlog-web**:<br/>
+  Start the background board server of the current project and open the
+  Kanban board web UI in the browser, by delegating to
+  `ase backlog web`.
+
 ### Code Commands
 
 The following ASE commands/skills exist on the code-level:

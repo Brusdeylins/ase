@@ -200,6 +200,13 @@ see whether **ASE** is right for you:
   [`/ase-task-reboot`](plugin/skills/ase-task-reboot/help.md),
   [`/ase-task-delete`](plugin/skills/ase-task-delete/help.md)
 
+- **Visual Task Board**:
+  You want your persisted task plans visualized on a per-project
+  Kanban board (TUI and web UI, powered by *Backlog.md*), with the
+  lanes reflecting the task plan lifecycle states?
+  &rarr; [`/ase-backlog`](plugin/skills/ase-backlog/help.md),
+  [`/ase-backlog-web`](plugin/skills/ase-backlog-web/help.md)
+
 - **Direct Skill Usage Help**:
   You want usage help for skills directly within your agent tool sessions?
   &rarr; `/ase-xxx-xxx` `--help` or
