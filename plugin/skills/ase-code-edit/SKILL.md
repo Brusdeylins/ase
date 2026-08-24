@@ -319,11 +319,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | #      | FOCUS ▶ TOPIC                 | **QUESTION**      | **ANSWERS** |
-                | :----: | ----------------------------- | ----------------- | ----------- |
-                | **Q1** | <focus-area-1/> ▶ <topic-1/>  | **<question-1/>** | <answer-1/> |
-                | **Q2** | <focus-area-2/> ▶ <topic-2/>  | **<question-2/>** | <answer-2/> |
-                | [..]   | [...]                         | [...]             | [...]       |
+                | FOCUS ▶ TOPIC                 | **QUESTION**               | **ANSWERS** |
+                | ----------------------------- | -------------------------- | ----------- |
+                | <focus-area-1/> ▶ <topic-1/>  | **Q1** ▶ **<question-1/>** | <answer-1/> |
+                | <focus-area-2/> ▶ <topic-2/>  | **Q2** ▶ **<question-2/>** | <answer-2/> |
+                | [...]                         | [...]                      | [...]       |
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
