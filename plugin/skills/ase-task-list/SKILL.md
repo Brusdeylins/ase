@@ -1,6 +1,6 @@
 ---
 name: ase-task-list
-argument-hint: "[--help|-h] [--verbose|-v] [--sort|-s=<key>] [--include|-i=<state>[,...]] [--exclude|-e=<state>[,...]]"
+argument-hint: "[--help|-h] [--verbose|-v] [--include|-i=<state>[,...]] [--exclude|-e=<state>[,...]]"
 description: >
     List all available task ids.
     Use when user wants to see all tasks.
@@ -19,7 +19,7 @@ List Task Plans
 
 <expand name="getopt"
     arg1="ase-task-list"
-    arg2="--verbose|-v --sort|-s=(id|status) --include|-i=none --exclude|-e=COMPLETED,CLOSED,CANCELLED">
+    arg2="--verbose|-v --include|-i=none --exclude|-e=COMPLETED,CLOSED,CANCELLED">
     $ARGUMENTS
 </expand>
 
@@ -70,12 +70,10 @@ Procedure
     -- if <getopt-option-verbose/> is `true` -- additionally an `mtime`
     field (formatted as `YYYY-MM-DD HH:MM`). *Drop* from the `tasks`
     array every entry whose `status` is *not* contained in <states/>.
-    Then *sort* the remaining entries: if <getopt-option-sort/> is
-    `status`, order them by the lifecycle order of their `status`
-    (`DRAFTED`, `REJECTED`, `APPROVED`, `DEFERRED`, `STARTED`,
-    `BLOCKED`, `COMPLETED`, `CLOSED`, `CANCELLED`), with ties broken by
-    `id`; else keep the lexicographic `id` order. Do not output
-    anything.
+    Then *sort* the remaining entries by the lifecycle order of their
+    `status` (`DRAFTED`, `REJECTED`, `APPROVED`, `DEFERRED`, `STARTED`,
+    `BLOCKED`, `COMPLETED`, `CLOSED`, `CANCELLED`), with ties broken
+    lexicographically by `id`. Do not output anything.
 
 3.  If the `tasks` array is empty, output the following <template/>:
 
@@ -142,10 +140,4 @@ Procedure
     <ase-tpl-hint level="verbose">
     Use `/ase-task-list --include`/`--exclude` to narrow the listing to certain lifecycle states, e.g. `--include STARTED,BLOCKED`.
     </ase-tpl-hint>
-
-    <if condition="<getopt-option-sort/> is not equal `status`">
-    <ase-tpl-hint level="verbose">
-    Use `/ase-task-list --sort status` to order the listing by the lifecycle state instead of the task id.
-    </ase-tpl-hint>
-    </if>
 
