@@ -473,26 +473,14 @@ state) -- every other board-side edit is discarded by the next sync:
   configuration key, or randomly allocated in the range
   `46000`..`48000`.
 
-- `ase backlog serve`:
-  Run the board server in the foreground (internal): the Backlog.md
-  web UI plus the file watchers keeping the task plans and the board
-  mirror in sync in both directions. Intended to be spawned detached
-  by `ase backlog web` and not invoked directly by end users.
-
-- `ase backlog sync`:
-  Synchronize the task plans and the board mirror once: write back
-  board-side lane changes into the task plans, then re-render the
-  mirror.
-
-- `ase backlog status`:
-  List all running board servers across all projects, each with its
-  project id, port, process id, and board web UI URL, as a
-  cross-project jump list. Exits with status 1 if no board server is
-  running.
-
-- `ase backlog stop` \[`-a`|`--all`\]:
-  Stop the board server of the current project. With `--all`, the
-  board servers of all projects are stopped.
+Synchronization needs no user decision: `board` and `web` synchronize
+on their own (one-shot around the TUI, file watchers behind the web
+UI). The hidden helper subcommands `ase backlog serve` (foreground
+board server, spawned detached by `web`), `ase backlog sync` (one-shot
+synchronization), `ase backlog status` (jump list of all running board
+servers across all projects), and `ase backlog stop` \[`-a`|`--all`\]
+(terminate board servers) exist for scripting and diagnosis, but are
+deliberately excluded from the help text.
 
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the
