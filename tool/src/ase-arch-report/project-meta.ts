@@ -342,9 +342,8 @@ const findAdrFiles = async (root: string): Promise<ProjectMeta["adrFiles"]> => {
     const out: ProjectMeta["adrFiles"] = []
     for (const rel of ADR_DIRS) {
         const dir = path.join(root, rel)
-        let entries: string[] = []
-        try { entries = await fs.readdir(dir) }
-        catch { continue }
+        const entries = await fs.readdir(dir).catch(() => null)
+        if (entries === null) continue
         for (const f of entries) {
             if (!f.endsWith(".md")) continue
             const full = path.join(dir, f)
