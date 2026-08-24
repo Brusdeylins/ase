@@ -27,12 +27,12 @@ listed states are shown; with `--exclude` only, all states except the
 listed ones; with both, the included ones minus the excluded ones. An
 unknown state, or a combination which cancels out to an empty set,
 aborts the skill with an error. By default,
-`--exclude COMPLETED,CANCELLED` is in effect, so finished and
-abandoned task plans stay out of the way. The eight states are:
+`--exclude COMPLETED,CLOSED,CANCELLED` is in effect, so finished and
+abandoned task plans stay out of the way. The nine states are:
 
 ```text
-DRAFTED   APPROVED  STARTED  COMPLETED
-REJECTED  DEFERRED  BLOCKED  CANCELLED
+DRAFTED   APPROVED  STARTED  COMPLETED  CANCELLED
+REJECTED  DEFERRED  BLOCKED  CLOSED
 ```
 
 ##  OPTIONS
@@ -45,13 +45,13 @@ REJECTED  DEFERRED  BLOCKED  CANCELLED
 -   `--include`|`-i`=*state*[`,`...]:
     Restrict the listed task plans to the given comma-separated list of
     lifecycle states (e.g. `STARTED,BLOCKED`). Without this option, all
-    eight states are listed. The `none` sentinel selects no state at all.
+    nine states are listed. The `none` sentinel selects no state at all.
 
 -   `--exclude`|`-e`=*state*[`,`...]:
     Remove the given comma-separated list of lifecycle states from the
     listed task plans. Applied *after* `--include`, so
     `-i DRAFTED,STARTED -e STARTED` lists `DRAFTED` only. Defaults to
-    `COMPLETED,CANCELLED`; pass `--exclude none` to suppress the
+    `COMPLETED,CLOSED,CANCELLED`; pass `--exclude none` to suppress the
     default and list task plans in every state.
 
 ##  SCENARIOS

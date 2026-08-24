@@ -19,7 +19,7 @@ List Task Plans
 
 <expand name="getopt"
     arg1="ase-task-list"
-    arg2="--verbose|-v --include|-i=none --exclude|-e=COMPLETED,CANCELLED">
+    arg2="--verbose|-v --include|-i=none --exclude|-e=COMPLETED,CLOSED,CANCELLED">
     $ARGUMENTS
 </expand>
 
@@ -34,18 +34,18 @@ Procedure
     states a task plan has to be in to be listed at all. For this, parse
     <getopt-option-include/> and <getopt-option-exclude/> as
     comma-separated token lists, silently dropping the `none` sentinel
-    and any empty token. If a token <token/> is *not* one of the eight
+    and any empty token. If a token <token/> is *not* one of the nine
     `Status:` values `DRAFTED`, `REJECTED`, `APPROVED`, `DEFERRED`,
-    `STARTED`, `BLOCKED`, `COMPLETED`, or `CANCELLED`, only output the
-    following <template/> and then *STOP* processing the entire current
-    skill:
+    `STARTED`, `BLOCKED`, `COMPLETED`, `CLOSED`, or `CANCELLED`, only
+    output the following <template/> and then *STOP* processing the
+    entire current skill:
 
     <template>
     ⧉ **ASE**: ✪ skill: **ase-task-list**, ▶ ERROR: invalid state: **<token/>**
     </template>
 
-    Otherwise set <states/> to *all* eight states if both lists are
-    empty, to the *include* list if only it is non-empty, to all eight
+    Otherwise set <states/> to *all* nine states if both lists are
+    empty, to the *include* list if only it is non-empty, to all nine
     *minus* the *exclude* list if only it is non-empty, and to the
     *include* list *minus* the *exclude* list if both are non-empty. If
     the resulting <states/> is *empty*, only output the following
@@ -61,7 +61,7 @@ Procedure
     hence emit no output at all):
 
     <ase-tpl-hint level="minimal">
-    The `--exclude` default `COMPLETED,CANCELLED` still applies -- add `--exclude none` to reach states like `COMPLETED` via `--include`.
+    The `--exclude` default `COMPLETED,CLOSED,CANCELLED` still applies -- add `--exclude none` to reach states like `COMPLETED` via `--include`.
     </ase-tpl-hint>
 
 2.  Call the `ase_task_list(verbose: <getopt-option-verbose/>)` tool from
