@@ -222,7 +222,9 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
         For each round:
 
-        1.  Explicitly start *from scratch* from *only* the current
+        1.  INITIALIZE TODO:
+
+            Explicitly start *from scratch* from *only* the current
             <todo-what/> and <todo-how/> and *forget* all information
             gathered in previous rounds. Set <round-id/> to
             `GRILLING ROUND <m/>/<getopt-option-grill-rounds/>` if
@@ -230,50 +232,73 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             `GRILLING` otherwise (a single round needs no round
             numbering). Do not output anything.
 
-        2.  Determine the very brief but precise questions <question-N/>,
-            chosen to resolve the open points related to the above
-            understanding of grilling, by focusing on the mentioned
-            *Focus Areas*.
+        2.  DETERMINE QUESTIONS:
 
-            For each <question-N/> determine its <focus-area-N/> and a
-            <topic-N/>, a 1-2 word hint describing what the question is
-            about. Render <focus-area-N/> in the tables below as
-            `**DOMAIN** (MUST)`, `**INTERFACE** (MUST)`,
-            `**ARCHITECTURE** (SHOULD)`, or `**IMPLEMENTATION** (MAY)`
-            correspondingly.
+            Determine the questions, comprised of a globally-unique id
+            <question-N-id/> of `Q<N/>`, and a very brief but precise
+            question text <question-N-text/>. Each question is chosen to
+            resolve the open points related to the above understanding
+            of grilling, by focusing on the mentioned *Focus Areas*.
 
-            Use the format `Shall...?` for questions of
-            focus area *DOMAIN* and *INTERFACE*, the format `Should...?`
-            for questions of focus area *ARCHITECTURE*, and the format
-            `May...?` for questions of focus area *IMPLEMENTATION*.
+            For <question-N-text/> use the format `Shall...?` for
+            questions of focus area `DOMAIN` and `INTERFACE`, the format
+            `Should...?` for questions of focus area `ARCHITECTURE`,
+            and the format `May...?` for questions of focus area
+            `IMPLEMENTATION`.
 
-            In every <question-N/>, encode all *literal aspects* -- file
-            and directory paths, identifiers, symbols, types, commands,
-            options, configuration keys, and literal values -- with
-            backticks.
+            In every <question-N-text/>, encode all *literal aspects*
+            -- file and directory paths, identifiers, symbols, types,
+            commands, options, configuration keys, and literal values --
+            with backticks.
 
-            Keep every <question-N/> at most *200 characters* long, as a
-            longer question overflows its table cell and silently
-            degrades the entire table into a plain text rendering.
+            Keep every <question-N-text/> at most *240 characters* long
+            -- compact the text until it fits --, as a longer question
+            overflows its table cell and silently degrades the entire
+            table into a plain text rendering.
 
-        3.  Finally, *sort* the questions by descending
-            focus area order -- first all `DOMAIN`, then all
-            `INTERFACE`, then all `ARCHITECTURE`, and then all
-            `IMPLEMENTATION` ones -- and renumber <N/> according to this
-            order. Truncate the list after a maximum of 10 questions and
-            set <n/> to the number of remaining questions. Do not output
-            anything.
+            Assemble the <question-N/> out of `**<question-N-id/>** ▶
+            <question-N-text/>`.
 
-        4.  For all remaining <question-N/>, check the code base
-            and your world knowledge to find *two to three*
-            grounded answer alternatives <answer-N-K/> with a
-            1-3 word label <answer-N-K-label/> and an ultra brief description
-            <answer-N-K-description/> of at most *10 words*. For the answer
-            which reflects the current
-            <todo-what/>/<todo-how/> understanding prefixing its
-            description with `✻ **CURRENT** ✻`. Assemble a <answer-N/>
-            out of `**A1** ▶ **<answer-N-1-label/>**: <answer-N-1-description/> ─◇─
-            **A2** ▶ **<answer-N-2-label/>**: <answer-N-2-description/> ─◇─ [...]`.
+        3.  DETERMINE CONTEXT:
+
+            For each question, determine its focus area
+            <context-N-focus/> from the mentioned *Focus Areas*, a 1-3
+            word hint <context-N-topic/>, describing what the question
+            is about, and a <context-N-severity/>, describing how
+            important this question is.
+
+            Set <context-N-severity/> to `MUST` for <context-N-focus/>
+            of `DOMAIN` or `INTERFACE`, `SHOULD` for <context-N-focus/>
+            of `ARCHITECTURE`, and `MAY` for <context-N-focus/> of
+            `IMPLEMENTATION`.
+
+            Assemble the <context-N/> out of `<context-N-focus/>
+            (<context-N-severity/>) ▶ <context-N-topic/>`.
+
+        4.  SORT QUESTIONS:
+
+            Finally, *sort* the questions by descending focus area
+            order -- first all `DOMAIN`, then all `INTERFACE`, then all
+            `ARCHITECTURE`, and then all `IMPLEMENTATION` ones -- and
+            renumber <N/> according to this order. Truncate the list
+            after a maximum of 10 questions and set <n/> to the number
+            of remaining questions. Do not output anything.
+
+        5.  DETERMINE ANSWERS:
+
+            For all remaining <question-N/>, check the code base and
+            your world knowledge to find *two to three* grounded answer
+            alternatives <answer-N-K/> with an id <answer-N-K-id/>
+            of `A<K/>`, a 1-3 word label <answer-N-K-label/>, and
+            an ultra brief description <answer-N-K-description/> of
+            at most *10 words*. For the answer which reflects the
+            current <todo-what/>/<todo-how/> understanding, prefix its
+            <answer-N-K-description/> with `✻**CURRENT**✻`.
+
+            Assemble an <answer-N/> out of `**<answer-N-1-id/>**
+            ▶ **<answer-N-1-label/>**: <answer-N-1-description/>
+            ─◇─ **<answer-N-2-id/>** ▶ **<answer-N-2-label/>**:
+            <answer-N-2-description/> ─◇─ [...]`.
 
             Keep every assembled <answer-N/> at most *240 characters*
             long -- drop the least relevant alternative and compact the
@@ -281,7 +306,9 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             its table cell and silently degrades the entire table into a
             plain text rendering.
 
-        5.  In the following, you *MUST* *NOT* use your built-in
+        6.  INTERACTIVE DIALOG:
+
+            In the following, you *MUST* *NOT* use your built-in
             <user-dialog-tool/> tool! Instead, you *MUST* just show a
             custom dialog according to the expanded `custom-dialog`
             definition. You *MUST* closely follow this definition. The
@@ -289,8 +316,8 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             `SKIP GRILLING` and `STOP SKILL`, dispatched as follows:
 
             -   If a <result/> is `SKIP GRILLING` or `CANCEL`, ask no
-                further questions, continue with item 6 below (merging
-                the answers gathered so far), and after item 7 skip all
+                further questions, continue with item 7 below (merging
+                the answers gathered so far), and after item 8 skip all
                 remaining rounds and continue with the *implementing*
                 state.
 
@@ -319,11 +346,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 <template>
                 ⧉ **ASE**: <round-id/>:
 
-                | FOCUS ▶ TOPIC                 | **QUESTION**               | **ANSWERS** |
-                | ----------------------------- | -------------------------- | ----------- |
-                | <focus-area-1/> ▶ <topic-1/>  | **Q1** ▶ **<question-1/>** | <answer-1/> |
-                | <focus-area-2/> ▶ <topic-2/>  | **Q2** ▶ **<question-2/>** | <answer-2/> |
-                | [...]                         | [...]                      | [...]       |
+                | CONTEXT      | QUESTION      | ANSWERS     |
+                | ------------ | ------------- | ----------- |
+                | <context-1/> | <question-1/> | <answer-1/> |
+                | <context-2/> | <question-2/> | <answer-2/> |
+                | [...]        | [...]         | [...]       |
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
@@ -342,11 +369,15 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 combined free-text answers to all questions of the
                 round.
 
-        6.  Merge all gathered answers of the round -- the combined
-            reply -- *exclusively* back into <todo-what/> and
+        7.  MERGE ANSWERS INTO TODO:
+
+            Merge all gathered answers in <result/> of the round -- the
+            combined reply -- *exclusively* back into <todo-what/> and
             <todo-how/>. Do not output anything.
 
-        7.  Set <round-suffix/> to
+        8.  SHOW CURRENT TODO:
+
+            Set <round-suffix/> to
             ` round <m/>/<getopt-option-grill-rounds/>` if
             <getopt-option-grill-rounds/> is greater than 1, or to
             empty otherwise, and expand the following -- this
@@ -467,7 +498,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
     1.  Verify whether the implementation fulfills <todo-what/> and
         <todo-how/> by running available verification commands
         (build, tests, linter, type-checker)
-        <if condition=" <worktree-dir/> is not empty">
+        <if condition="<worktree-dir/> is not empty">
         , each with <worktree-dir/> as its working directory
         </if>.
 
