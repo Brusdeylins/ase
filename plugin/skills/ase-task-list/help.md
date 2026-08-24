@@ -8,6 +8,7 @@
 `ase-task-list`
     [`--help`|`-h`]
     [`--verbose`|`-v`]
+    [`--sort`|`-s` *key*]
     [`--include`|`-i`=*state*[`,`...]]
     [`--exclude`|`-e`=*state*[`,`...]]
 
@@ -66,6 +67,12 @@ List all unfinished task ids:
 
 ```text
 ❯ /ase-task-list
+```
+
+List all unfinished task ids, ordered by their lifecycle state:
+
+```text
+❯ /ase-task-list --sort status
 ```
 
 List all task ids together with their status and last-modified timestamps:

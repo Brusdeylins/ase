@@ -128,9 +128,10 @@ The following ASE commands/skills exist on the task-level:
   argument, displays the current task id. With an argument, sets the
   task id (persisted in the session-scoped configuration).
 
-- **/ase-task-list** \[`--verbose`|`-v`\]:<br/>
+- **/ase-task-list** \[`--verbose`|`-v`\] \[`--sort`|`-s` *key*\]:<br/>
   List all available persisted task ids. With `--verbose`, each entry is
-  annotated with its last-modification timestamp.
+  annotated with its last-modification timestamp. With `--sort status`,
+  the entries are ordered by the lifecycle state instead of the task id.
 
 - **/ase-task-edit** \[`--plan`|`-p` *option*\] \[`--dry`|`-d`\] \[`--next`|`-n` *option*\[,...\]\] \[*id* | *id*`:` *instruction* | *instruction*\]:<br/>
   Iteratively craft and refine a named task plan through a
