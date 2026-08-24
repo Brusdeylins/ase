@@ -251,13 +251,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             commands, options, configuration keys, and literal values --
             with backticks.
 
-            Keep every <question-N-text/> at most *240 characters* long
+            Keep every <question-N-text/> at most *200 characters* long
             -- compact the text until it fits --, as a longer question
             overflows its table cell and silently degrades the entire
             table into a plain text rendering.
-
-            Assemble the <question-N/> out of `**<question-N-id/>** ▶
-            <question-N-text/>`.
 
         3.  DETERMINE CONTEXT:
 
@@ -267,13 +264,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             is about, and a <context-N-severity/>, describing how
             important this question is.
 
-            Set <context-N-severity/> to `MUST` for <context-N-focus/>
-            of `DOMAIN` or `INTERFACE`, `SHOULD` for <context-N-focus/>
-            of `ARCHITECTURE`, and `MAY` for <context-N-focus/> of
-            `IMPLEMENTATION`.
-
-            Assemble the <context-N/> out of `<context-N-focus/>
-            (<context-N-severity/>) ▶ <context-N-topic/>`.
+            Set <context-N-id/> to `DOM` for <context-N-focus/> of
+            `DOMAIN`, `IFC` for <context-N-focus/> of `INTERFACE`, `ARC`
+            for <context-N-focus/> of `ARCHITECTURE`, and `IMP` for
+            <context-N-focus/> of `IMPLEMENTATION`.
 
         4.  SORT QUESTIONS:
 
@@ -284,6 +278,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             after a maximum of 10 questions and set <n/> to the number
             of remaining questions. Do not output anything.
 
+            Finally, assemble the <question-N/> out of
+            `**<question-N-id/>** ▶ **<context-N-id/>** ▷
+            **<context-N-topic/>**: <question-N-text/>`.
+
         5.  DETERMINE ANSWERS:
 
             For all remaining <question-N/>, check the code base and
@@ -292,13 +290,13 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             of `A<K/>`, a 1-3 word label <answer-N-K-label/>, and
             an ultra brief description <answer-N-K-description/> of
             at most *10 words*. For the answer which reflects the
-            current <todo-what/>/<todo-how/> understanding, prefix its
-            <answer-N-K-description/> with `✻**CURRENT**✻`.
+            current <todo-what/>/<todo-how/> understanding, append
+            ` ⚑` to its <answer-N-K-label/>.
 
             Assemble an <answer-N/> out of `**<answer-N-1-id/>**
-            ▶ **<answer-N-1-label/>**: <answer-N-1-description/>
-            ─◇─ **<answer-N-2-id/>** ▶ **<answer-N-2-label/>**:
-            <answer-N-2-description/> ─◇─ [...]`.
+            ▶ **<answer-N-1-label/>**: <answer-N-1-description/>,
+            **<answer-N-2-id/>** ▶ **<answer-N-2-label/>**:
+            <answer-N-2-description/>[, ...]`.
 
             Keep every assembled <answer-N/> at most *240 characters*
             long -- drop the least relevant alternative and compact the
@@ -332,9 +330,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             1.  Output only the following <template/> -- it lists *all*
                 questions of the round up-front, one table row per
                 aspect, so the subsequent dialog only has to ask for the
-                combined answer. Align all column edges of the table. If
-                <getopt-option-grill-rounds/> is equal `1`, *omit* the
-                leading `<round-id/>` line.
+                combined answer. Align all column edges of the table.
 
                 In every table cell you *MUST* escape each literal pipe
                 character outside a code span as `\|` and you *MUST*
@@ -344,13 +340,16 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 entire table into a plain text rendering:
 
                 <template>
-                ⧉ **ASE**: <round-id/>:
+                ⧉ **ASE**: <round-id/>: *Relentless Interviewing Until Clarity*
 
-                | CONTEXT      | QUESTION      | ANSWERS     |
-                | ------------ | ------------- | ----------- |
-                | <context-1/> | <question-1/> | <answer-1/> |
-                | <context-2/> | <question-2/> | <answer-2/> |
-                | [...]        | [...]         | [...]       |
+                | QUESTION      | ANSWERS     |
+                | ------------- | ----------- |
+                | <question-1/> | <answer-1/> |
+                | <question-2/> | <answer-2/> |
+                | [...]         | [...]       |
+
+                Legend: **DOM**: Domain (MUST), **IFC**: Interface (MUST), **ARC**: Architecture (SHOULD), **IMP**: Implementation (MAY)
+                        **Qn**: global question id, **An**: question-local answer id, ⚑: current decision state
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
