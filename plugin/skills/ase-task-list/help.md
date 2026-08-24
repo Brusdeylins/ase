@@ -8,7 +8,6 @@
 `ase-task-list`
     [`--help`|`-h`]
     [`--verbose`|`-v`]
-    [`--sort`|`-s` *key*]
     [`--include`|`-i`=*state*[`,`...]]
     [`--exclude`|`-e`=*state*[`,`...]]
 
@@ -19,7 +18,10 @@ current project by calling the `ase_task_list` MCP tool. In the
 default mode, only the task ids are rendered as a single-column
 Markdown table. In verbose mode, the lifecycle status and the
 last-modified timestamp of each task plan are rendered as additional
-columns.
+columns. The listing is grouped by the lifecycle order of the states
+(`DRAFTED`, `REJECTED`, `APPROVED`, `DEFERRED`, `STARTED`, `BLOCKED`,
+`COMPLETED`, `CLOSED`, `CANCELLED`), with ties broken alphabetically
+by task id.
 
 The listing is restricted to an *effective state set*, derived from the
 `Status:` frontmatter key of each task plan (which defaults to `DRAFTED`
@@ -67,12 +69,6 @@ List all unfinished task ids:
 
 ```text
 ❯ /ase-task-list
-```
-
-List all unfinished task ids, ordered by their lifecycle state:
-
-```text
-❯ /ase-task-list --sort status
 ```
 
 List all task ids together with their status and last-modified timestamps:
