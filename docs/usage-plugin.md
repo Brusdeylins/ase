@@ -194,7 +194,7 @@ The following ASE commands/skills exist on the code-level:
   performance and efficiency; with `--security`, additionally analyze
   security. `--severity` sets the minimum severity of findings to
   report. Usually, for each reported problem you want to resolve it with
-  **/ase-code-resolve**.
+  **/ase-code-resolve** or directly fix it with **/ase-code-edit**.
 
 - **/ase-code-resolve** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--direct`|`-D`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *problem*:<br/>
   Resolve a problem in depth in order to fix it. Usually the

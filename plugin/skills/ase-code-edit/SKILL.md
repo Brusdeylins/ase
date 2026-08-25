@@ -3,9 +3,9 @@ name: ase-code-edit
 argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--verify|-v] [--worktree|-w] [--loop|-l] [<query>]"
 description: >
     Edit Source Code: Use when the user wants to "edit" the code base in
-    one shot from a query, fusing crafting, refactoring, and resolving
-    with optional grilling, verification, looping, and Git worktree
-    isolation.
+    one shot from a query or a bare analyzer issue id like "P1", fusing
+    crafting, refactoring, and resolving with optional grilling,
+    verification, looping, and Git worktree isolation.
 user-invocable: true
 disable-model-invocation: false
 effort: xhigh
@@ -114,7 +114,32 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
         </if>
 
-    2.  Convert the <query/> *fresh* into <todo-what/> -- the
+    2.  <if condition="<query/> matches the regexp `^([a-zA-Z][a-zA-Z0-9_]*-)?[PT]\d+$`">
+
+        The <query/> is a bare issue identifier (like `P1`, `T1`, or
+        `<prefix>-P1`) previously produced by `ase-code-analyze` or
+        `ase-arch-analyze`. Set <issue-id><query/></issue-id> and call
+        the `ase_kv_get(key: "ase-issue-<issue-id/>")` tool of the
+        `ase` MCP server to retrieve the persisted problem description.
+        If the returned `text` is non-empty, set <query><text/></query>
+        and only output the following <template/>:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-code-edit**, ⇌ issue: **<issue-id/>**, ▶ status: **issue retrieved**
+        </template>
+
+        Otherwise, set <issue-id></issue-id> (empty) and only output the
+        following <template/>, then, under `--loop`, continue with the
+        *next* iteration at item 3.1 above, or, without `--loop`,
+        immediately *STOP* processing the entire current skill:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: no analyzer result exists for issue **<query/>**
+        </template>
+
+        </if>
+
+    3.  Convert the <query/> *fresh* into <todo-what/> -- the
         domain-specific, non-implementation-detail information -- and
         <todo-how/> -- the remaining information -- discarding all
         <todo-what/>/<todo-how/> content of any previous iteration.
@@ -122,11 +147,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         and during later implementation just interpret the query best-effort.
         Do not output anything.
 
-    3.  Expand the following:
+    4.  Expand the following:
 
         <expand name="todo-box" arg1="current state (after querying)"></expand>
 
-    4.  Set <query></query> (clear the query, so every further `--loop`
+    5.  Set <query></query> (clear the query, so every further `--loop`
         iteration asks for a fresh one). Do not output anything.
 
 4.  **State: discovering:**
@@ -393,6 +418,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             `resolve`: Set <task-kind/> to `CRAFTING`, `REFACTORING`,
             or `RESOLVING` correspondingly.
 
+        -   Else if <issue-id/> is not empty (`auto` with a retrieved
+            analyzer issue): Set <task-kind/> to `RESOLVING`, as the
+            edit fixes a reported problem.
+
         -   Else (`auto`): *Infer* the <task-kind/> from <todo-what/> and
             <todo-how/>: set to `RESOLVING` if the edit predominantly
             fixes a defect, set to `REFACTORING` if it predominantly
@@ -477,7 +506,15 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         user keeps full control over the final commit.
         </if>
 
-    4.  Output only the following <template/>. You *MUST* *NOT* output a
+    4.  <if condition="<issue-id/> is not empty">
+        Call the `ase_kv_delete(key: "ase-issue-<issue-id/>")` tool of
+        the `ase` MCP server to remove the now-resolved analyzer result
+        from the key/value store, then set <issue-id></issue-id> (empty),
+        so every further `--loop` iteration starts without an issue.
+        Do not output anything.
+        </if>
+
+    5.  Output only the following <template/>. You *MUST* *NOT* output a
         change summary, a list of modified artifacts, a rationale, or a
         unified diff of the changes -- *independent* of
         <ase-project-boxing/>, whose exposure rules are explicitly

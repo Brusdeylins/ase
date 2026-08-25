@@ -5,6 +5,7 @@ ChangeLog
 0.9.61 (2026-08-23)
 -------------------
 
+- FEATURE [code, docs]: accept a bare analyzer issue id like `P1`, `T1`, or `<prefix>-P1` as the lone argument of `ase-code-edit`
 - IMPROVEMENT [code]: compacted the grilling question table into a centered `#`/`FOCUS ▶ TOPIC`/`QUESTION`/`ANSWERS` layout with `Q<n>`-labeled rows and `A<n>`-labeled answer alternatives (`ase-code-edit`)
 - IMPROVEMENT [code]: bounded the grilling questions and answers in length and demanded escaped pipes and balanced backticks, as an overflowing or split table cell silently degrades the table into a plain text rendering (`ase-code-edit`)
 - IMPROVEMENT [code]: render the EDIT TODO output with just a header and footer instead of a full box, with WHAT and HOW separated by a blank line (`ase-code-edit`)
