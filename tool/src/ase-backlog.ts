@@ -336,9 +336,16 @@ export class Backlog {
             let   text  = fs.readFileSync(file, "utf8")
             let   dirty = false
 
+            /*  both write-back directions apply only when the mirror is
+                the newer side (last writer wins): a plan-side change is
+                the newer one otherwise and the next forward render
+                aligns the mirror to it instead  */
+            const mirrorNewer = fs.statSync(mirrorFile).mtimeMs > fs.statSync(file).mtimeMs
+
             /*  lane change → "Status:" frontmatter key  */
             const state = lane !== null ? Backlog.laneToState(lanes, lane) : null
-            if (state !== null && Backlog.stateToLane(lanes, Backlog.statusOf(text)) !== lane) {
+            if (mirrorNewer && state !== null
+                && Backlog.stateToLane(lanes, Backlog.statusOf(text)) !== lane) {
                 const updated = Backlog.replaceStatus(text, state)
                 if (updated === null) {
                     log.write("warning", `backlog: task "${id}" carries no frontmatter -- skipping write-back`)
@@ -349,13 +356,10 @@ export class Backlog {
                 log.write("info", `backlog: task "${id}" moved to lane "${lane}" -- status set to "${state}"`)
             }
 
-            /*  edited description → plan body, but only when the mirror
-                is the newer side (last writer wins): the older side is
-                overwritten by the next forward render anyway  */
+            /*  edited description → plan body  */
             const desc = Backlog.descriptionOf(mirrorText)
             const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n\s*/, "").replace(/\s+$/, "")
-            if (desc !== null && desc !== body
-                && fs.statSync(mirrorFile).mtimeMs > fs.statSync(file).mtimeMs) {
+            if (mirrorNewer && desc !== null && desc !== body) {
                 const updated = Backlog.replaceBody(text, desc)
                 if (updated !== null) {
                     text  = updated
