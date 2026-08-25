@@ -1,7 +1,15 @@
 ---
 name: ase-code-review
 argument-hint: "[--help|-h] [<ref>]"
-description: "Review uncommitted changes and curate them into clean, bisect-safe commits grouped by theme."
+description: >
+    Review uncommitted changes and curate them into clean, bisect-safe
+    commits grouped by theme: hunks are grouped, staged group by group,
+    explained file by file, and committed only on the user's explicit
+    accept. Use when the user wants to walk through unstaged/uncommitted
+    changes step by step, get chunks staged and explained one at a time,
+    accept ("abnehmen") changes chunk by chunk, or curate a change set
+    into separate commits. Not for judging an existing staged diff --
+    that is ase-meta-review.
 user-invocable: true
 disable-model-invocation: false
 model: opus
