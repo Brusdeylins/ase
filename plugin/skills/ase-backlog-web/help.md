@@ -16,11 +16,12 @@ web UI in the browser, by delegating to `ase backlog web`.
 
 The board server runs one instance per project on its own local port
 (bound to `127.0.0.1`), so multiple projects can show their boards
-simultaneously. It keeps the board and the persisted task plans in sync:
-dragging a task into another lane rewrites the `Status` frontmatter key
-of the corresponding task plan, and task plan changes appear on the
-board without a restart. The server keeps running in the background
-until it is stopped via `ase backlog stop`.
+simultaneously. It keeps the board and the persisted task plans in sync
+fully automatically: dragging a task into another lane rewrites the
+`Status` frontmatter key of the corresponding task plan, editing the
+task description on the board rewrites the plan body, and task plan
+changes appear on the board without a restart. The server keeps running
+in the background until it is stopped via `ase backlog stop`.
 
 ##  OPTIONS
 
