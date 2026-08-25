@@ -114,7 +114,13 @@ export class Backlog {
                 return ""
             return String(isScalar(val) ? val.value : val)
         }
-        const projectId = read("project.id") || path.basename(Task.projectRoot())
+        /*  the built-in preset layer always carries the "example"
+            placeholder id, so only an *explicitly* configured project
+            id may override the project directory name  */
+        const explicit  = cfg.getExplicit("project.id")
+        const projectId = explicit !== undefined ?
+            String(isScalar(explicit) ? explicit.value : explicit) :
+            path.basename(Task.projectRoot())
         const rawPort   = read("project.backlog.port")
         const port      = rawPort !== "" ? Number(rawPort) : null
         const lanes     = Backlog.parseLanes(read("project.backlog.lanes") || defaultLanes)
@@ -216,6 +222,15 @@ export class Backlog {
         return m !== null && m[1].trim() !== "" ? m[1].trim() : id
     }
 
+    /*  read the "Created:" frontmatter key of an ASE task plan text  */
+    static createdOf (text: string): string {
+        const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
+        if (fm === null)
+            return ""
+        const m = /^Created:[ \t]*(.*?)[ \t]*$/m.exec(fm[1])
+        return m !== null ? m[1] : ""
+    }
+
     /*  sanitize a task title for use inside a mirror task filename  */
     static safeTitle (title: string): string {
         const safe = title.replace(/[/\\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60).trim()
@@ -246,10 +261,11 @@ export class Backlog {
             const title = Backlog.titleOf(text, id)
             const body  = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n\s*/, "")
             const front = yamlStringify({
-                id:     `task-${n}`,
+                id:           `task-${n}`,
                 title,
-                status: Backlog.stateToLane(lanes, state),
-                labels: [ `ase:${id}` ]
+                status:       Backlog.stateToLane(lanes, state),
+                created_date: Backlog.createdOf(text),
+                labels:       [ `ase:${id}` ]
             })
             const content = `---\n${front}---\n\n## Description\n\n${body}`
             const file    = path.join(Backlog.tasksDir(), `task-${n} - ${Backlog.safeTitle(title)}.md`)
