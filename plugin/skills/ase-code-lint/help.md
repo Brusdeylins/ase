@@ -27,21 +27,30 @@ correction interactively (or refine it via a free-text hint, which
 re-proposes the correction without limit) or - with `--auto` - applies
 all corrections automatically.
 
-By default all twenty code quality aspects are checked. The `--include`
+By default all twenty-one code quality aspects are checked. The `--include`
 and `--exclude` options narrow this to an *effective aspect set*: with
 `--include` only, exactly the listed aspects are checked; with
 `--exclude` only, all aspects except the listed ones; with both, the
 included ones minus the excluded ones. An unknown aspect id, or a
 combination which cancels out to an empty set, aborts the skill with an
-error. The twenty aspect ids are:
+error. The twenty-one aspect ids are:
 
 ```text
-A01 FORMATTING     A06 REDUNDANCY       A11 TYPING          A16 SECURITY
-A02 COMPREHENSION  A07 PATTERNS         A12 ERROR-HANDLING  A17 ARCHITECTURE
-A03 CLEANLINESS    A08 COMPLICATEDNESS  A13 MEMORY-LEAK     A18 LOGIC
-A04 SPELLING       A09 CONCISENESS      A14 CONCURRENCY     A19 FLOW
-A05 COMPLEXITY     A10 SMELLS           A15 PERFORMANCE     A20 DEAD-CODE
+A01 FORMATTING     A07 PATTERNS         A13 MEMORY-LEAK    A19 FLOW
+A02 COMPREHENSION  A08 COMPLICATEDNESS  A14 CONCURRENCY    A20 DEAD-CODE
+A03 CLEANLINESS    A09 CONCISENESS      A15 PERFORMANCE    A21 DOCUMENTATION
+A04 SPELLING       A10 SMELLS           A16 SECURITY
+A05 COMPLEXITY     A11 TYPING           A17 ARCHITECTURE
+A06 REDUNDANCY     A12 ERROR-HANDLING   A18 LOGIC
 ```
+
+The `A21 DOCUMENTATION` aspect checks the code documentation in *both*
+directions: it flags functions, methods, classes, and modules - *private
+ones included* - which lack a minimal 1-2 line description in the
+idiomatic documentation convention of the target language, *and* it
+flags excessive comments (narrated decision logs, change history,
+line-by-line explanations of the obvious), comments merely restating
+the code, and comments contradicting the code.
 
 ##  OPTIONS
 
@@ -60,7 +69,7 @@ A05 COMPLEXITY     A10 SMELLS           A15 PERFORMANCE     A20 DEAD-CODE
 `--include`|`-i`=*aspect*[`,`...]:
     Restrict the checked code quality aspects to the given
     comma-separated list of aspect ids (e.g. `A01,A04`). Without this
-    option, all twenty aspects are checked.
+    option, all twenty-one aspects are checked.
 
 `--exclude`|`-e`=*aspect*[`,`...]:
     Remove the given comma-separated list of aspect ids from the checked
@@ -102,6 +111,12 @@ Lint a directory for all aspects except dead code:
 
 ```text
 ❯ /ase-code-lint --exclude A20 src/handlers/
+```
+
+Lint a directory for the documentation aspect only:
+
+```text
+❯ /ase-code-lint -i A21 src/handlers/
 ```
 
 ##  SEE ALSO
