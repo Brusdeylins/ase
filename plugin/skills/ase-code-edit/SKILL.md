@@ -189,9 +189,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
         2.  DETERMINE QUESTIONS:
 
-            Determine the questions, comprised of a globally-unique id
-            <question-N-id/> of `Q<N/>`, and a very brief but precise
-            question text <question-N-text/>. Each question is chosen to
+            Determine the questions, comprised of a round-local id
+            <question-N-id/> of `Q<N/>` -- where <N/> restarts at `1`
+            in *every* round, independent of the numbering of previous
+            rounds --, and a very brief but precise question text
+            <question-N-text/>. Each question is chosen to
             resolve the open points related to the above understanding
             of grilling, by focusing on the mentioned *Focus Areas*.
 
@@ -229,9 +231,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             Finally, *sort* the questions by descending focus area
             order -- first all `DOMAIN`, then all `INTERFACE`, then all
             `ARCHITECTURE`, and then all `IMPLEMENTATION` ones -- and
-            renumber <N/> according to this order. Truncate the list
-            after a maximum of 10 questions and set <n/> to the number
-            of remaining questions. Do not output anything.
+            renumber <N/> according to this order, starting at `1`.
+            Truncate the list after a maximum of 10 questions and set
+            <n/> to the number of remaining questions. Do not output
+            anything.
 
             Finally, assemble the <question-N/> out of
             `**<question-N-id/>** ▶ **<context-N-id/>** ▷
@@ -241,8 +244,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
             For all remaining <question-N/>, check the code base and
             your world knowledge to find *two to three* grounded answer
-            alternatives <answer-N-K/> with an id <answer-N-K-id/>
-            of `A<K/>`, a 1-3 word label <answer-N-K-label/>, and
+            alternatives <answer-N-K/> with a question-local id
+            <answer-N-K-id/> of `A<K/>` -- where <K/> restarts at `1`
+            for *every* question, independent of the numbering of other
+            questions --, a 1-3 word label <answer-N-K-label/>, and
             an ultra brief description <answer-N-K-description/> of
             at most *10 words*. For the answer which reflects the
             current <todo-what/>/<todo-how/> understanding, append
@@ -304,7 +309,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 | [...]         | [...]       |
 
                 Legend: **DOM**: Domain (MUST), **IFC**: Interface (MUST), **ARC**: Architecture (SHOULD), **IMP**: Implementation (MAY)
-                        **Qn**: global question id, **An**: question-local answer id, ⚑: current decision state
+                        **Qn**: round-local question id, **An**: question-local answer id, ⚑: current decision state
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the

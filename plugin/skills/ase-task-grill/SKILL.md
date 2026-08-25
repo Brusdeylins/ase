@@ -141,10 +141,11 @@ Set <args>--int-reuse-task</args>.
             `ARCHITECTURE`, and then all `IMPLEMENTATION` ones -- and
             *secondarily*, within each focus area, by the decision tree
             order, so that each decision is asked *after* the decisions
-            it depends on. Renumber <N/> according to this order.
-            Truncate the list after a maximum of 10 questions and set
-            <n/> to the number of remaining questions. Do not output
-            anything.
+            it depends on. Renumber <N/> according to this order,
+            starting at `1` in *every* round, independent of the
+            numbering of previous rounds. Truncate the list after a
+            maximum of 10 questions and set <n/> to the number of
+            remaining questions. Do not output anything.
 
         5.  For each question <question-N/> in the iteration cycle <N/>,
             *one at a time*:
