@@ -450,10 +450,12 @@ by default as `Crafting` (DRAFTED, REJECTED), `Ready` (APPROVED),
 configurable via the `project.backlog.lanes` configuration key (a
 `<lane>=<STATE>[+<STATE>...][;<lane>=...]` specification). The task
 plans remain the single source of truth: they are mirrored into a
-generated Backlog.md project under `.ase/backlog/`, and dragging a task
-into another lane on the board writes only the `Status:` frontmatter
-key of the corresponding task plan back (traversing the lane's primary
-state) -- every other board-side edit is discarded by the next sync:
+generated Backlog.md project under `.ase/backlog/`. Dragging a task
+into another lane on the board writes the `Status:` frontmatter key of
+the corresponding task plan back (traversing the lane's primary
+state), and editing the task description on the board writes the plan
+body back (last writer wins) -- every other board-side field is
+discarded by the next sync:
 
 - `ase backlog`:
   Entry point group for the task board. Without a subcommand, the help

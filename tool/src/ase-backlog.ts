@@ -12,6 +12,7 @@ import { spawn }              from "node:child_process"
 
 import { Command }            from "commander"
 import { execaSync }          from "execa"
+import { DateTime }           from "luxon"
 import { parse as yamlParse, stringify as yamlStringify, isScalar } from "yaml"
 import Table                  from "cli-table3"
 import lockfile               from "proper-lockfile"
@@ -277,10 +278,12 @@ export class Backlog {
         return changed
     }
 
-    /*  write-back sync: propagate a lane change made on the board
-        (drag&drop in the web UI or TUI) back into the "Status:"
-        frontmatter key of the corresponding ASE task plan -- and
-        nothing else; returns the ids of the updated plans  */
+    /*  write-back sync: propagate the board-side edits back into the
+        corresponding ASE task plan -- a lane change (drag&drop in the
+        web UI or TUI) into its "Status:" frontmatter key, and an edited
+        description into its plan body (last writer wins); every other
+        board-side field is discarded by the next mirror render;
+        returns the ids of the updated plans  */
     static writeBack (log: Log, lanes: Lane[]): string[] {
         const dir = Backlog.tasksDir()
         if (!fs.existsSync(dir))
@@ -297,32 +300,78 @@ export class Backlog {
             const id = reverse.get(Number(m[1]))
             if (id === undefined)
                 continue
-            const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(fs.readFileSync(path.join(dir, entry), "utf8"))
+            const mirrorFile = path.join(dir, entry)
+            const mirrorText = fs.readFileSync(mirrorFile, "utf8")
+            const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(mirrorText)
             if (fm === null)
                 continue
             const front = yamlParse(fm[1]) as Record<string, unknown> | null
             const lane  = typeof front?.status === "string" ? front.status : null
-            if (lane === null)
-                continue
-            const state = Backlog.laneToState(lanes, lane)
-            if (state === null)
-                continue
-            const file = Task.path(log, id)
+            const file  = Task.path(log, id)
             if (!fs.existsSync(file))
                 continue
-            const text = fs.readFileSync(file, "utf8")
-            if (Backlog.stateToLane(lanes, Backlog.statusOf(text)) === lane)
-                continue
-            const updated = Backlog.replaceStatus(text, state)
-            if (updated === null) {
-                log.write("warning", `backlog: task "${id}" carries no frontmatter -- skipping write-back`)
-                continue
+            let   text  = fs.readFileSync(file, "utf8")
+            let   dirty = false
+
+            /*  lane change → "Status:" frontmatter key  */
+            const state = lane !== null ? Backlog.laneToState(lanes, lane) : null
+            if (state !== null && Backlog.stateToLane(lanes, Backlog.statusOf(text)) !== lane) {
+                const updated = Backlog.replaceStatus(text, state)
+                if (updated === null) {
+                    log.write("warning", `backlog: task "${id}" carries no frontmatter -- skipping write-back`)
+                    continue
+                }
+                text  = updated
+                dirty = true
+                log.write("info", `backlog: task "${id}" moved to lane "${lane}" -- status set to "${state}"`)
             }
-            fs.writeFileSync(file, updated, "utf8")
-            changed.push(id)
-            log.write("info", `backlog: task "${id}" moved to lane "${lane}" -- status set to "${state}"`)
+
+            /*  edited description → plan body, but only when the mirror
+                is the newer side (last writer wins): the older side is
+                overwritten by the next forward render anyway  */
+            const desc = Backlog.descriptionOf(mirrorText)
+            const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n\s*/, "").replace(/\s+$/, "")
+            if (desc !== null && desc !== body
+                && fs.statSync(mirrorFile).mtimeMs > fs.statSync(file).mtimeMs) {
+                const updated = Backlog.replaceBody(text, desc)
+                if (updated !== null) {
+                    text  = updated
+                    dirty = true
+                    log.write("info", `backlog: task "${id}" description edited -- plan body updated`)
+                }
+            }
+            if (dirty) {
+                fs.writeFileSync(file, text, "utf8")
+                changed.push(id)
+            }
         }
         return changed
+    }
+
+    /*  extract the description payload of a mirror task file: the
+        content between Backlog.md's SECTION markers (present once the
+        board edited the task), falling back to everything below the
+        "## Description" heading of a freshly rendered mirror  */
+    static descriptionOf (text: string): string | null {
+        const marked = /<!-- SECTION:DESCRIPTION:BEGIN -->\r?\n?([\s\S]*?)<!-- SECTION:DESCRIPTION:END -->/.exec(text)
+        if (marked !== null)
+            return marked[1].replace(/^\s+|\s+$/g, "")
+        const plain = /^## Description\r?\n\r?\n([\s\S]*)$/m.exec(text)
+        if (plain !== null)
+            return plain[1].replace(/^\s+|\s+$/g, "")
+        return null
+    }
+
+    /*  replace the body of an ASE task plan (everything below its
+        frontmatter block) and refresh its "Modified:" key; returns
+        null if the plan carries no frontmatter block at all  */
+    static replaceBody (text: string, body: string): string | null {
+        const fm = /^---\r?\n[\s\S]*?\r?\n---\r?\n/.exec(text)
+        if (fm === null)
+            return null
+        const stamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
+        const front = fm[0].replace(/^(Modified:[ \t]*).*$/m, `$1${stamp}`)
+        return `${front}\n${body}\n`
     }
 
     /*  rewrite (or insert) the "Status:" frontmatter key of an ASE task
