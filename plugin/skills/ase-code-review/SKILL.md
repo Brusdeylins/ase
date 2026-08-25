@@ -34,9 +34,15 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
 
-<skill name="ase-code-review">
+<purpose name="ase-code-review">
 Review and Curate Uncommitted Changes
-</skill>
+</purpose>
+
+<define name="user-dialog">
+<expand name="custom-dialog" arg1="--other"><content/></expand>
+Where the dispatch on <result/> below carries no explicit branch for a
+result starting with `OTHER:`, treat such a result as `CANCEL`.
+</define>
 
 <objective>
 Acting as an *expert-level software developer* who *reviews and curates*,
