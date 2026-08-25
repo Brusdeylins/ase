@@ -127,11 +127,14 @@ The following ASE commands/skills exist on the task-level:
   may be a bare *id*, an *id* with an inline *instruction*, or an
   *instruction* alone.
 
-- **/ase-task-grill** \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
+- **/ase-task-grill** \[`--rounds`|`-r` *n*\] \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
   Relentlessly interview the user about every essential aspect of the
-  task plan until a shared understanding is reached. `--next` passes a
-  comma-separated list of pre-selected next-step tokens to chain the
-  subsequent skill.
+  task plan until a shared understanding is reached, asking up to 10
+  focus-area-sorted (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`,
+  `IMPLEMENTATION`) questions sequentially, one at a time. `--rounds`
+  sets the number of grill rounds (default: `1`), each re-deriving its
+  questions from the updated plan. `--next` passes a comma-separated
+  list of pre-selected next-step tokens to chain the subsequent skill.
 
 - **/ase-task-view** \[`--full`|`-f`\] \[*id*\]:<br/>
   View the current or given task plan. With `--full`, the entire plan is

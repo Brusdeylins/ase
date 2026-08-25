@@ -1,6 +1,6 @@
 ---
 name: ase-task-grill
-argument-hint: "[--help|-h] [--next|-n <option>[,...]] [<id>]"
+argument-hint: "[--help|-h] [--rounds|-r <n>] [--next|-n <option>[,...]] [<id>]"
 description: >
     Interview the user relentlessly about the task plan until reaching a
     shared understanding, resolving each branch of the question decision
@@ -22,7 +22,7 @@ Iteratively Grill a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-grill"
-    arg2="--next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
+    arg2="--rounds|-r=1 --next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -33,6 +33,7 @@ task plan until reaching a shared understanding.
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-task.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-common-grill.md
 
 Procedure
 ---------
@@ -52,7 +53,15 @@ Set <args>--int-reuse-task</args>.
         Inherit the always existing <ase-session-id/> from the current context.
         Do not output anything.
 
-    2.  React on task id:
+    2.  If <getopt-option-rounds/> is not a positive integer,
+        only output the following <template/> and then immediately
+        *STOP* processing the entire current skill:
+
+        <template>
+        ⧉ **ASE**: ☻ skill: **ase-task-grill**, ▶ ERROR: invalid `--rounds` value: **<getopt-option-rounds/>**
+        </template>
+
+    3.  React on task id:
 
         <expand name="task-react-id" arg1="ase-task-grill"></expand>
 
@@ -71,62 +80,97 @@ Set <args>--int-reuse-task</args>.
 
 3.  **Iterate Over Task Plan Aspects:**
 
-    Interactively interview the user *relentlessly* about every
-    *essential aspect* of the task plan in <task-content/> *until* reaching a
-    shared understanding and no decisions/questions are left open.
+    1.  Understand what "grilling" is about:
 
-    This especially means that you *MUST* clarify as many aspects as
-    necessary to ensure that for at least the most important decisions,
-    during a subsequent implementation, no essential freedom of choice
-    exists any longer.
+        <expand name="grill-understanding" arg1="the task plan in <task-content/>"></expand>
 
-    For this process, determine the <n/> essential aspects <aspect-N/>
-    (a one- or two-word-long short identifier like `Foo` or `Bar-Baz`)
-    and the corresponding decision/question <question-N/> where a shared
-    understanding is required.
+    2.  Perform <getopt-option-rounds/> grilling *rounds*, numbered
+        <m/> (1-<getopt-option-rounds/>). Each round starts *from
+        scratch* from *only* the *current* <task-content/> -- as
+        updated by all previous rounds -- and *forgets* all questions
+        and answers gathered in previous rounds.
 
-    Honor also the following checks for identifying the problematic
-    aspects:
+        For each round:
 
-    -   **Fuzzy Language**:
-        When the user uses vague or overloaded terms instead of a precise
-        or canonical term.
+        1.  INITIALIZE ROUND:
 
-    -   **Conflicting Terminology**:
-        When the user uses a term that conflicts with the existing
-        terminology in the code base.
-
-    -   **Conflicting Code**:
-        When the user states how something works, check whether the
-        current code state really agrees.
-
-    -   **Non-Concrete Scenarios**:
-        When domain relationships are being discussed, stress-test them
-        with specific scenarios. Invent scenarios that probe edge cases
-        and force the user to be precise about the boundaries between
-        concepts.
-
-    Then create a decisions/questions tree for them. Walk down each
-    branch of this decision tree, resolving dependencies between
-    decisions one-by-one. Ask the questions <question-N/> and determine
-    the corresponding answer <answer-N/>, one at a time.
-
-    1.  For each question <question-N/> in the iteration cycle <N/>:
-
-        1.  Output the following <template/>:
+            Set <round-id/> to `GRILLING ROUND <m/>/<getopt-option-rounds/>`
+            if <getopt-option-rounds/> is greater than 1, or to
+            `GRILLING` otherwise (a single round needs no round
+            numbering). Then output only the following <template/>:
 
             <template>
-            <ase-tpl-bullet-signal/> ASPECT <N/>/<n/>: **<aspect-N/>**, QUESTION: **<question-N/>**
+            ⧉ **ASE**: <round-id/>: *Relentless Interviewing Until Clarity*
             </template>
 
-        2.  Determine the answer alternatives:
+        2.  DETERMINE QUESTIONS:
 
-            1.  Check the <task-content/> for the answer <answer-N-1/>.
+            Determine the essential aspects <aspect-N/> (a one- or
+            two-word-long short identifier like `Foo` or `Bar-Baz`, also
+            serving as the topic hint) and the corresponding, very brief
+            but precise decision/question <question-N/> where a shared
+            understanding is required. Each question is chosen to
+            resolve the open points related to the above understanding
+            of grilling, by focusing on the mentioned *Focus Areas* and
+            checking the mentioned *Indicators*.
 
-            2.  Check the code base and your world knowledge and
-                use this information to find *up to three* grounded
-                alternative answers <answer-N-K/> (K={2,3,4}), so there
-                are between two and four answer options in total.
+            For <question-N/> use the format `Shall...?` for
+            questions of focus area `DOMAIN` and `INTERFACE`, the format
+            `Should...?` for questions of focus area `ARCHITECTURE`,
+            and the format `May...?` for questions of focus area
+            `IMPLEMENTATION`.
+
+            In every <question-N/>, encode all *literal aspects*
+            -- file and directory paths, identifiers, symbols, types,
+            commands, options, configuration keys, and literal values --
+            with backticks. Do not output anything.
+
+        3.  DETERMINE CONTEXT:
+
+            For each question, determine its focus area
+            <context-N-focus/> from the mentioned *Focus Areas*.
+            <context-N-severity/>, describing how important this
+            question is.
+
+        4.  SORT QUESTIONS:
+
+            Create a decisions/questions tree for the questions,
+            capturing the dependencies between the decisions. Then
+            *sort* the questions *primarily* by descending focus area
+            order -- first all `DOMAIN`, then all `INTERFACE`, then all
+            `ARCHITECTURE`, and then all `IMPLEMENTATION` ones -- and
+            *secondarily*, within each focus area, by the decision tree
+            order, so that each decision is asked *after* the decisions
+            it depends on. Renumber <N/> according to this order.
+            Truncate the list after a maximum of 10 questions and set
+            <n/> to the number of remaining questions. Do not output
+            anything.
+
+        5.  For each question <question-N/> in the iteration cycle <N/>,
+            *one at a time*:
+
+            1.  Output the following <template/>:
+
+                <template>
+                <ase-tpl-bullet-signal/> ASPECT <N/>/<n/> ▶ **<context-N-focus/>** (<context-N-severity/>) ▷ **<aspect-N/>**
+                </template>
+
+            2.  Determine the answer alternatives:
+
+                1.  Check the <task-content/> for the answer <answer-N-1/>,
+                    which reflects the current plan.
+
+                2.  Check the code base and your world knowledge and
+                    use this information to find *up to three* grounded
+                    alternative answers <answer-N-K/> (K={2,3,4}), so there
+                    are between two and four answer options in total.
+
+                3.  For each <answer-N-K/> (K={1,2,3,4}) determine
+                    a 1-3 word label <answer-N-K-label/>, and an
+                    ultra brief description <answer-N-K-description/>
+                    of at most *10 words*. Prepend `⚑ ` to the
+                    <answer-N-K-description/> which reflects the current
+                    plan. Do not output anything.
 
             3.  In the following, you *MUST* *NOT* use your built-in
                 <user-dialog-tool/> tool! Instead, you *MUST* just show a
@@ -135,30 +179,46 @@ Set <args>--int-reuse-task</args>.
 
                 Let the user select the <answer-N/> out of the answer
                 alternatives <answer-N-K/> by raising a question with the
-                following custom dialog, where per alternative <answer-N-K/>
-                you determine a brief label <answer-N-K-label/> and a
-                description <answer-N-K-description/>, and you mark the
-                <answer-N-1/> by prefixing its description with
-                `⚝ **CURRENT PLAN** ⚝ `. Emit only the answer lines for the
-                alternatives <answer-N-K/> you actually determined in the
-                previous step (between two and four lines in total):
+                following custom dialog. Emit only the answer lines for
+                the alternatives <answer-N-K/> you actually determined in
+                the previous step (between two and four lines in total),
+                followed by the fixed `SKIP GRILLING` answer option:
 
                 <expand name="custom-dialog" arg1="--other">
                     <aspect-N/>: <question-N/>
-                    <answer-N-1-label/>: ⚝ **CURRENT PLAN** ⚝ - <answer-N-1-description/>
-                    <answer-N-K-label/>: <answer-N-K-description/>
+                    <answer-N-1-label/>: <answer-N-1-description/>
+                    <answer-N-2-label/>: <answer-N-2-description/>
                     [...]
+                    SKIP GRILLING: skip all remaining grilling and continue with the plan update
                 </expand>
 
-                Set <answer-N/> to the selected <result/>.
+                Check the <result/> and dispatch accordingly:
+
+                -   If <result/> is `CANCEL`, only output the following
+                    <template/> and then immediately *STOP* processing
+                    the entire current skill, leaving the plan *untouched*:
+
+                    <template>
+                    ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **grilling stopped**
+                    </template>
+
+                -   If <result/> is `SKIP GRILLING`, ask no further
+                    questions, continue with item 6 below (updating the
+                    plan with the answers gathered so far), and after
+                    item 6 skip all remaining rounds and continue with
+                    item 3.3 below.
+
+                -   Otherwise, strip any leading `OTHER: ` prefix from
+                    <result/> and set <answer-N/> to the remainder.
 
             4.  Output the following <template/>:
 
                 <template>
-                <ase-tpl-bullet-normal/> ASPECT <N/>/<n/>: **<aspect-N/>**, ANSWER: **<answer-N/>**
+                <ase-tpl-bullet-normal/> ASPECT <N/>/<n/> ▶ **<context-N-focus/>** (<context-N-severity/>) ▷ **<aspect-N/>**, ANSWER: **<answer-N/>**
                 </template>
 
-    2.  Finally, update <task-content/> based on all answers <answer-N/>.
+        6.  Update <task-content/> based on all answers <answer-N/>
+            gathered in this round. Do not output anything.
 
     3.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set

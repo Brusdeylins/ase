@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+0.9.62 (2026-08-25)
+-------------------
+
+- FEATURE [code, docs]: took over the grilling aspects of `ase-code-edit --grill` into `ase-task-grill`
+- REFACTOR [code]: factored the shared grilling understanding (goal, focus areas, indicators) into the new `ase-common-grill.md`
+
 0.9.61 (2026-08-23)
 -------------------
 
