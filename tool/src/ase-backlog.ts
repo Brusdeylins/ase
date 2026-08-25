@@ -127,6 +127,15 @@ export class Backlog {
         return { projectId, port, lanes }
     }
 
+    /*  when invoked from inside a mirror directory, hop back to the
+        real project root first: the mirror is an implementation detail
+        and must never be mistaken for a project of its own  */
+    static escapeMirror (): void {
+        const m = /^(.*)[/\\]\.ase[/\\]backlog(?:[/\\].*)?$/.exec(fs.realpathSync(process.cwd()))
+        if (m !== null)
+            process.chdir(m[1])
+    }
+
     /*  resolve the mirror directory holding the generated Backlog.md
         project of the current ASE project  */
     static mirrorDir (): string {
@@ -154,21 +163,19 @@ export class Backlog {
     }
 
     /*  ensure the mirror directory exists as a minimal Backlog.md
-        project: task directory, Git repository (Backlog.md expects
-        one), and generated "config.yml" carrying the lane names as its
-        board statuses  */
+        project: task directory and generated "config.yml" carrying the
+        lane names as its board statuses  */
     static ensureMirror (log: Log, projectId: string, lanes: Lane[], port: number | null): void {
         const mirror = Backlog.mirrorDir()
         fs.mkdirSync(Backlog.tasksDir(), { recursive: true })
-        if (!fs.existsSync(path.join(mirror, ".git"))) {
-            try {
-                execaSync("git", [ "init", "--quiet" ], { cwd: mirror, stderr: "ignore" })
-            }
-            catch {
-                /*  tolerate a missing Git, Backlog.md still works read-only  */
-                log.write("warning", "backlog: cannot \"git init\" the mirror directory")
-            }
-        }
+
+        /*  drop a stale Git repository inside the mirror (created by
+            earlier ASE versions): Backlog.md works without one, and a
+            nested Git toplevel would hijack the project root detection
+            of every command started inside the mirror directory  */
+        const git = path.join(mirror, ".git")
+        if (fs.existsSync(git))
+            fs.rmSync(git, { recursive: true, force: true })
         const config: Record<string, unknown> = {
             project_name:      projectId,
             statuses:          lanes.map((l) => l.name),
@@ -579,6 +586,7 @@ export default class BacklogCommand {
     /*  ensure the board server daemon of the current project is
         running, spawning it detached if needed; returns its port  */
     private async doStart (): Promise<number> {
+        Backlog.escapeMirror()
         const root = Task.projectRoot()
         const live = Backlog.registryLoad().find((e) => e.root === root)
         if (live !== undefined)
@@ -623,6 +631,7 @@ export default class BacklogCommand {
 
     /*  board flow: sync, run the interactive TUI, write back  */
     private doBoard (): number {
+        Backlog.escapeMirror()
         const { projectId, lanes } = Backlog.settings(this.log)
         Backlog.ensureMirror(this.log, projectId, lanes, null)
         Backlog.syncForward(this.log, lanes)
@@ -633,6 +642,7 @@ export default class BacklogCommand {
 
     /*  sync flow: one-shot bidirectional synchronization  */
     private async doSync (): Promise<number> {
+        Backlog.escapeMirror()
         const { projectId, lanes } = Backlog.settings(this.log)
         Backlog.ensureMirror(this.log, projectId, lanes, null)
         const back    = Backlog.writeBack(this.log, lanes)
@@ -662,6 +672,7 @@ export default class BacklogCommand {
 
     /*  stop flow: terminate the board server(s)  */
     private async doStop (all: boolean): Promise<number> {
+        Backlog.escapeMirror()
         const root    = Task.projectRoot()
         const entries = Backlog.registryLoad()
         const targets = all ? entries : entries.filter((e) => e.root === root)
@@ -678,8 +689,10 @@ export default class BacklogCommand {
             }
             await writeStdout(`backlog: stopped board server of project "${e.projectId}" (port ${e.port})\n`)
         }
-        const pids = new Set(targets.map((e) => e.pid))
-        Backlog.registryUpdate((current) => current.filter((e) => !pids.has(e.pid)))
+
+        /*  no registry cleanup here: the daemons unregister themselves
+            on SIGTERM (avoiding a lock race with them), and a crashed
+            entry is pruned by the next registry read anyway  */
         return 0
     }
 
