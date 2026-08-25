@@ -270,28 +270,26 @@ Workflow
         Check for *incomplete* and for *excessive* code documentation
         across the following sub-aspects. The yardstick is a *minimal*
         description: one or two lines stating WHAT the construct does,
-        written in the *idiomatic documentation convention* of the
-        target programming language (e.g., JSDoc/TSDoc in
-        JavaScript/TypeScript, docstrings in Python, doc comments in
-        Rust/Go/Java).
+        optimally written in the *idiomatic documentation convention* of
+        the project or the target programming language.
 
         -   **C1 MISSING-DOCUMENTATION**: functions, methods, classes,
             interfaces, or modules without any documentation comment
-            describing their purpose - *private* and *internal*
+            describing their purpose -- *private* and *internal*
             constructs included, not just the public API surface.
             Exclude trivial constructs whose name already fully conveys
             the purpose (plain getters/setters, one-line lambdas,
             delegating overloads) and constructs inheriting the
             documentation of an overridden or implemented declaration.
+            Propose *adding* those missing comments.
 
         -   **C2 EXCESSIVE-DOCUMENTATION**: comments going far beyond
             the minimal description: narrated decision logs ("chose X
-            over Y because ..."), change history ("now uses X instead
-            of Y"), line-by-line explanations of the obvious, or
-            comment blocks substantially longer than the code they
-            describe. Propose *condensing* to a brief 1-2 line
-            description (up to 4 lines only for genuinely non-obvious
-            constraints).
+            over Y because ..."), change history ("now uses X instead of
+            Y"), line-by-line explanations of the obvious, or comment
+            blocks substantially longer than the code they describe.
+            Propose *condensing* to a brief 1-2 line description (up to
+            4 lines only for genuinely non-obvious constraints).
 
         -   **C3 RESTATING-DOCUMENTATION**: comments merely repeating
             the code or the identifier verbatim without adding any
@@ -299,16 +297,18 @@ Workflow
             *removing* them.
 
         -   **C4 DRIFTED-DOCUMENTATION**: comments contradicting the
-            code they describe (stale parameter lists, outdated
-            behavior claims). Propose correcting the *comment* only -
-            *never* change the code under this aspect.
+            code they describe (stale parameter lists, outdated behavior
+            claims). Propose *correcting* the *comment* only -- *never*
+            change the code under this aspect.
 
         Keep intact comments stating a *constraint the code cannot
-        show* (brief WHY-comments on non-obvious decisions) - they are
-        neither excessive nor restating. Severity guidance: C4 defaults
-        to MEDIUM (it actively misleads); C1 defaults to MEDIUM for
-        non-trivial constructs, else LOW; C2 and C3 default to LOW,
-        escalating to MEDIUM when the noise dominates the file.
+        show* (brief WHY-comments on non-obvious decisions) -- they are
+        neither excessive nor restating.
+
+        Severity guidance: C1 defaults to MEDIUM for non-trivial
+        constructs, else LOW; C2 and C3 default to LOW, escalating to
+        MEDIUM when the noise dominates the file; and C4 defaults to
+        MEDIUM (it actively misleads).
 
     Be conservative - only report clear, well-grounded issues
     that require an actual *code change*. Think twice to avoid
