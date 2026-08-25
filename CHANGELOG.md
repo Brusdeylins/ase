@@ -6,6 +6,13 @@ ChangeLog
 -------------------
 
 - FEATURE [code, docs]: took over the grilling aspects of `ase-code-edit --grill` into `ase-task-grill`
+- FEATURE [code]: added the lint aspect `A21 - DOCUMENTATION`, checking for missing, excessive, restating, and drifted code documentation (`ase-code-lint`)
+- IMPROVEMENT [code]: condensed the grilling question table into a two-column `QUESTION`/`ANSWERS` layout with `Qn`-prefixed questions, short `DOM`/`IFC`/`ARC`/`IMP` focus ids, a `⚑` marker for the current decision state, and a trailing legend (`ase-code-edit`, `ase-task-grill`)
+- IMPROVEMENT [code]: structured the grilling round into the explicit sub-steps INITIALIZE TODO, DETERMINE QUESTIONS, DETERMINE CONTEXT, SORT QUESTIONS, and DETERMINE ANSWERS (`ase-code-edit`, `ase-task-grill`)
+- IMPROVEMENT [code]: accept `Qn:An` references in addition to keywords as the combined grilling answer (`ase-code-edit`, `ase-task-grill`)
+- IMPROVEMENT [code]: mention the accepted `<issue-id>` alternative in the argument hint (`ase-code-edit`)
+- BUGFIX [code]: no longer render the question label twice by splitting the first custom dialog line into the box subtitle label and a description without it (`ase-dialog.md`)
+- CLEANUP [code]: streamlined the wording and severity guidance of the `A21 - DOCUMENTATION` lint aspect (`ase-code-lint`)
 - REFACTOR [code]: factored the shared grilling understanding (goal, focus areas, indicators) into the new `ase-common-grill.md`
 
 0.9.61 (2026-08-23)
