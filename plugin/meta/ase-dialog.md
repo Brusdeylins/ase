@@ -36,6 +36,12 @@ following procedure:
     description. The second and following lines each provide an
     answer label and an answer description.
 
+    Parse the first line by splitting it at its *first* `: ` into
+    <question-label/> (the text before) and <question-description/>
+    (the remaining text, *without* the label). The label is rendered
+    *only* as the box subtitle below, so <question-description/>
+    *MUST* *NOT* repeat it.
+
     Do not output anything in this step!
 
 2.  Render the custom dialog, collect the user input, and dispatch on the result:
