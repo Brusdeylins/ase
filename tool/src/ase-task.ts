@@ -224,11 +224,21 @@ export class Task {
     }
 
     /*  save a task as UTF-8 text under the given id into the
-        <project>/<basedir>/TASK-<id>.md file  */
+        <project>/<basedir>/TASK-<id>.md file; as the state machine has
+        no transition out of CLOSED back to COMPLETED, a save carrying a
+        stale COMPLETED (e.g. from a skill's cached plan text) must not
+        silently reopen a plan the user already closed  */
     static save (log: Log, id: string, text: string): void {
         if (typeof text !== "string")
             throw new Error("task: text must be a string")
         const file = Task.path(log, id)
+        if (fs.existsSync(file) && Task.status(file) === "CLOSED") {
+            const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
+            if (fm !== null && /^Status:[ \t]*COMPLETED[ \t]*$/m.test(fm[1])) {
+                text = text.replace(fm[1], fm[1].replace(/^(Status:[ \t]*)COMPLETED[ \t]*$/m, "$1CLOSED"))
+                log.write("info", `task: "${id}" is already CLOSED -- ignoring stale COMPLETED status on save`)
+            }
+        }
         fs.mkdirSync(path.dirname(file), { recursive: true })
         fs.writeFileSync(file, text, "utf8")
     }
