@@ -33,10 +33,17 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-skill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-dialog.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
 <purpose name="ase-code-review">
 Review and Curate Uncommitted Changes
 </purpose>
+
+<expand name="getopt"
+    arg1="ase-code-review"
+    arg2="">
+    $ARGUMENTS
+</expand>
 
 <define name="user-dialog">
 <expand name="custom-dialog" arg1="--other"><content/></expand>
@@ -46,7 +53,7 @@ result starting with `OTHER:`, treat such a result as `CANCEL`.
 
 <objective>
 Acting as an *expert-level software developer* who *reviews and curates*,
-*review* the uncommitted changes at <ref>$ARGUMENTS</ref> (default:
+*review* the uncommitted changes at <ref><getopt-arguments/></ref> (default:
 working tree + index + untracked), *group* hunks by theme, *walk* the
 user through each file group with an explanation for confirmation,
 *apply* them
@@ -142,6 +149,31 @@ skill *curates and commits*; it does *not* judge code quality.
     <ase-tpl-bullet-secondary/> **CURATION STRATEGY**: <review-mode/>
     </template>
 
+    Then let the *user interactively choose* how *test* changes are
+    handled:
+
+    <expand name="user-dialog">
+        Test Handling: Should test changes be reviewed like everything else?
+        REVIEW-TESTS: Tests join their themes and are reviewed alongside the code.
+        TESTS-LAST: Keep tests out of the themes and stage them at the end as one block.
+    </expand>
+
+    Dispatch on the tool <result/>:
+
+    -   <if condition="<result/> is `TESTS-LAST`">
+        Set <test-mode>TESTS-LAST</test-mode>.
+        </if>
+
+    -   <else>
+        Set <test-mode>REVIEW-TESTS</test-mode>.
+        </else>
+
+    Emit the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-secondary/> **TEST HANDLING**: <test-mode/>
+    </template>
+
     Hints:
 
     -   *VERTICAL* (bisect-safe history): a theme is the minimal
@@ -158,6 +190,16 @@ skill *curates and commits*; it does *not* judge code quality.
     -   The chosen <review-mode/> is carried through STEP 3 (theme
         proposal), STEP 5 (group walk), STEP 6 (staging order), and
         STEP 8 (build gating).
+    -   The chosen <test-mode/> is carried through STEP 3/4: with
+        `TESTS-LAST`, every hunk in a test file (test directories like
+        `src/test/`, `tests/`, `__tests__/`, and test-named files like
+        `*Test.java`, `*.spec.ts`, `*_test.go`) is kept out of the
+        ordinary themes and assigned to one dedicated final theme
+        `UPDATE(test): accompanying tests`, which is always ordered
+        *last* in STEP 6, treated as a *single layer* in STEP 8.4, and
+        thus staged and committed as one block. With `REVIEW-TESTS`
+        (the default, also on CANCEL), test hunks join their themes
+        like any other hunk.
 
     </step>
 
@@ -406,6 +448,12 @@ skill *curates and commits*; it does *not* judge code quality.
 
     Hints:
 
+    -   In *both* modes the order is first of all a *comprehension*
+        order: every theme may build only on concepts the user has
+        already accepted — foundations (types, interfaces, utilities)
+        come before the code depending on them, so the reviewer's
+        mental model grows monotonically and never meets a forward
+        reference to a not-yet-reviewed concept.
     -   In *VERTICAL* mode, choose a *topological* order so each theme
         builds independently given the previous ones: if theme `T2`
         adds a call to a function defined in `T3`, order `T3` before
@@ -417,8 +465,9 @@ skill *curates and commits*; it does *not* judge code quality.
         run fails, reorder or return to STEP 4 and mark SPLIT.
     -   In *HORIZONTAL* mode a standalone green build per theme may be
         impossible by design; the patch-applicability dry-run still
-        applies, but build-greenness is not required for ordering —
-        keep topically related themes adjacent instead.
+        applies, and build-greenness is not required for ordering —
+        keep topically related themes adjacent, but still
+        dependency-first per the comprehension order above.
 
     </step>
 
@@ -577,9 +626,18 @@ skill *curates and commits*; it does *not* judge code quality.
              `interfaces/`, `domain/`, `service/`, `api/`, `ui/`).
          -   *Symbol-kind*: separate type declarations,
              implementations, and call-sites.
-         -   *Dependency direction*: order layers so later layers
-             reference earlier ones (bottom-up) or the reverse
-             (top-down narrative), whichever explains the change best.
+         -   *Dependency direction*: partition along the reference
+             structure itself when neither paths nor symbol kinds
+             yield a stable split.
+
+         Whatever heuristic produced the partition, *order* the
+         layers — and the files within each layer — strictly
+         bottom-up along the dependency direction: every layer and
+         file may reference only identifiers introduced earlier in
+         the walk, so the explanation never leans on a
+         not-yet-seen concept and the reviewer's mental model grows
+         monotonically. Fall back to path-prefix order only where
+         references are circular.
 
          Build a Mermaid specification showing how *this theme's*
          files collaborate and dispatch its rendering to the
