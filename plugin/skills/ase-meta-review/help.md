@@ -27,7 +27,7 @@ naming, abstraction level), **clarity** (readability and
 self-documentation for a future reader), **robustness** (error handling,
 resource and concurrency safety), **security** and **performance** (risks
 introduced by the change), **convention** (conformance to the
-project's documented conventions - code style and the plan/spec/arch
+project's documented conventions - code style and the plan/spec
 formats described in `AGENTS.md` and the `ase-format-*` meta documents),
 **testing** (inadequate coverage for the change - new or fixed behavior
 left untested, adjacent tests not updated, or existing tests silently

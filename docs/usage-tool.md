@@ -23,7 +23,8 @@ It provides plugin/tool setup, layered project configuration
 management, a per-project background HTTP service (bridged into the
 agent tool as an MCP server), agent hook handlers, status line
 rendering, persisted task plan management, artifact resolution,
-diagram rendering, and a compatibility self-test helper.
+specification linting and exporting, diagram rendering, and a
+compatibility self-test helper.
 
 OPTIONS
 -------
@@ -59,7 +60,7 @@ The following top-level commands exist for configuration handling:
   Recognized keys are grouped under two top-level sections:
   `project.*` (project identity, classification, and artifact
   globs: `project.id`, `project.name`, `project.boxing`, and the
-  `project.artifact.`*kind*`.{basedir,files}` globs) and `agent.*`
+  `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
   task identifier -- and `agent.skill`).
   All `ase config` subcommands accept a `--scope` *scope* option
@@ -434,7 +435,7 @@ kinds to project-relative file lists, driven by the
 - `ase artifact list` \[`--kind` *kinds*\]:
   Resolve one or more artifact kinds to project-relative file paths.
   The optional `--kind` *kinds* option is a comma-separated list of
-  artifact kinds out of `spec`, `arch`, `code`, `docs`, `infr`, and
+  artifact kinds out of `spec`, `code`, `docs`, `infr`, and
   `othr` (default: all kinds). Each kind's files are printed as a
   bullet list; when more than one kind is resolved, each list is
   preceded by a `# `*kind*`:` header. The `othr` kind is the implicit
@@ -442,9 +443,42 @@ kinds to project-relative file lists, driven by the
 
 - `ase artifact name` *filename* \[`--kind` *kind*\]:
   Resolve a base-relative *filename* within an artifact *kind* to a
-  project-relative path. The `--kind` option selects one of the five
-  configured kinds `spec`, `arch`, `code`, `docs`, or `infr` (default:
+  project-relative path. The `--kind` option selects one of the four
+  configured kinds `spec`, `code`, `docs`, or `infr` (default:
   `code`).
+
+The following top-level commands exist for linting and exporting the
+*SpecBook*-based project specification, i.e. the Markdown files below
+the `project.artifact.spec.basedir` directory, governed by the SpecBook
+YAML schema configuration `project.artifact.spec.schema` (default: the
+standard `ase-format-specbook.yaml` bundled with the plugin):
+
+- `ase spec`:
+  Entry point group for the specification commands. Without a
+  subcommand, the help text is shown and the command exits with status 1.
+
+- `ase spec lint` \[`-v`|`--verbose`\]:
+  Lint the specification Markdown files against the SpecBook schema
+  configuration. Every diagnostic is printed as a
+  `<file>:<line>:<column>: <message>` line (with *file* relative to the
+  project root), or, with `--verbose`, as a multi-line message with the
+  affected source snippet (colorized on a terminal); `--verbose` also
+  logs the SpecBook processing information at the `info` level. The
+  command exits with status 1 if there is any diagnostic.
+
+- `ase spec export` \[`-o`|`--output` \[*format*`:`\]*file*\] \[...\] \[`-v`|`--verbose`\]:
+  Export the specification Markdown files as `json`, `json5`, `yaml`,
+  `toon` (the specification object model), `html` (self-contained single
+  document), `pdf` (paginated print document), or `md` (normalized single
+  Markdown document). The repeatable `--output` option names an output
+  file (`-` for standard output), whose *format* is inferred from the
+  filename extension unless explicitly given as a prefix (plain `-`
+  defaults to `json`). Without any `--output` option, the HTML rendering
+  is written to `index.html` inside the specification base directory
+  (e.g. `docs/specbook/index.html`). With `--verbose`, the SpecBook
+  processing information is logged at the `info` level. The export fails
+  on any lint diagnostic, so a partial or invalid specification is never
+  emitted.
 
 The following top-level command exists for exposing plugin meta files:
 

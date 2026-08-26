@@ -2,6 +2,19 @@
 ChangeLog
 =========
 
+0.9.63 (2026-08-25)
+-------------------
+
+- FEATURE [code, docs]: added the `ase-spec-edit` skill -- the specification-level counterpart of `ase-code-edit` -- which edits the `SPEC` artifacts plan-lessly from a query through the states querying, discovering, grilling, implementing, and verifying, keeps them conformant to the *SpecBook* format contract, refreshes their `Modified:` timestamps, and validates them via `ase_specbook_lint` resp. `ase spec lint` under `--verify` (`ase-spec-edit`, `catalog.md`, `skills.ts`, `usage-plugin.md`, `README.md`, `AGENTS.md`)
+- FEATURE [code]: added the **SPECIFYING TENETS** -- intent over realization, statement with rationale, unambiguous and verifiable, single source of truth, atomic statement, schema conformance, referential integrity, and no fabrication (`ase-tenets.md`)
+- FEATURE [code, docs]: integrated *SpecBook* (`@rse/specbook`) as the specification format: the `SPEC` artifact kind now covers both requirements and architecture, governed by the build-time generated standard SpecBook schema configuration `ase-format-specbook.yaml` (overridable via the new `project.artifact.spec.schema` key) and described by `ase-format-spec.md`, which wraps the generated `ase-format-specbook.md` and references the effective schema and base directory through the new `<ase-spec-schema/>` and `<ase-spec-basedir/>` session-start hook placeholders (`plugin/meta`, `plugin/etc/stx.conf`, `plugin/package.json`)
+- FEATURE [code, docs]: added the `ase spec lint` and `ase spec export` CLI commands and the `ase_specbook_lint` and `ase_specbook_export` MCP tools, mapping onto the SpecBook API and locating the specification via `project.artifact.spec.basedir` and `project.artifact.spec.schema`; with `--verbose` resp. `verbose`, the lint diagnostics carry their affected source snippet rendered via `source-code-error` (`ase-spec.ts`, `ase.ts`, `ase-service.ts`, `ase-config.ts`, `ase-hook.ts`, `usage-tool.md`, `configuration.md`)
+- FEATURE [code, docs]: re-based `ase-sync-export` onto the SpecBook export, rendering the whole specification into `[<format>:]<file>` outputs after a successful lint; both the skill and `ase spec export` default to `index.html` inside the `SPEC` base directory (`ase-sync-export`, `ase-spec.ts`, `usage-plugin.md`, `usage-tool.md`, `README.md`)
+- IMPROVEMENT [code]: validate generated or updated `SPEC` artifacts via `ase_specbook_lint` and fix the diagnostics in at most three rounds, surfacing any leftovers (`ase-sync-import`, `ase-sync-reconcile`)
+- IMPROVEMENT [code]: exposed the absolute artifact base directory via `Artifact.basedir()` and let `writeStdout()` accept buffers (`ase-artifact.ts`, `ase-stdio.ts`)
+- CHANGE [code, docs]: changed the `project.artifact.spec` defaults to `docs/specbook` and `*.{md,txt,svg,png,jpg}` (`ase-config.ts`, `configuration.md`)
+- CHANGE [code, docs, infr]: removed the `ARCH` artifact kind, its `project.artifact.arch.*` configuration, the hand-written `ase-format-arch.md`, and all `ARCH` references, and reduced `ase-format-meta.md` to the artifact-set overview (`ase-artifact.ts`, `ase-config.ts`, `ase-format-meta.md`, `ase-tenets.md`, `ase-sync-*`, `configuration.md`, `usage-tool.md`, `usage-plugin.md`, `README.md`, `AGENTS.md`, `.ase/config.yaml`)
+
 0.9.62 (2026-08-25)
 -------------------
 

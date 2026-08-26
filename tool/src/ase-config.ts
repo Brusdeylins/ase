@@ -57,10 +57,9 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.boxing":  "white",
         "project.artifact.task.basedir": ".ase/task",
         "project.artifact.task.files":   "*.md",
-        "project.artifact.spec.basedir": "doc/spec",
-        "project.artifact.spec.files":   "*.{md,txt}",
-        "project.artifact.arch.basedir": "doc/arch",
-        "project.artifact.arch.files":   "*.{md,txt}",
+        "project.artifact.spec.basedir": "docs/specbook",
+        "project.artifact.spec.files":   "*.{md,txt,svg,png,jpg}",
+        "project.artifact.spec.schema":  "",
         "project.artifact.code.basedir": "src",
         "project.artifact.code.files":   "** !**/etc/** !**/{.gitignore,.npmignore,package.json}",
         "project.artifact.docs.basedir": "doc",
@@ -94,8 +93,7 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "project.artifact.task.files":   [ "user", "project" ],
     "project.artifact.spec.basedir": [ "user", "project" ],
     "project.artifact.spec.files":   [ "user", "project" ],
-    "project.artifact.arch.basedir": [ "user", "project" ],
-    "project.artifact.arch.files":   [ "user", "project" ],
+    "project.artifact.spec.schema":  [ "user", "project" ],
     "project.artifact.code.basedir": [ "user", "project" ],
     "project.artifact.code.files":   [ "user", "project" ],
     "project.artifact.docs.basedir": [ "user", "project" ],
@@ -218,6 +216,14 @@ const artifactSchema = v.optional(v.strictObject({
     files:   v.optional(v.string())
 }))
 
+/*  schema for the "spec" artifact kind, additionally carrying the
+    SpecBook YAML "schema" configuration file (empty: bundled standard)  */
+const artifactSpecSchema = v.optional(v.strictObject({
+    basedir: v.optional(v.string()),
+    files:   v.optional(v.string()),
+    schema:  v.optional(v.string())
+}))
+
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
@@ -225,8 +231,7 @@ export const configSchema = v.nullish(v.strictObject({
         name:    v.optional(v.pipe(v.string(), v.minLength(1))),
         boxing:  v.optional(v.picklist(projectClassification.boxing)),
         artifact: v.optional(v.strictObject({
-            spec: artifactSchema,
-            arch: artifactSchema,
+            spec: artifactSpecSchema,
             code: artifactSchema,
             docs: artifactSchema,
             infr: artifactSchema,

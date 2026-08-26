@@ -24,26 +24,30 @@ be local files or directories, remote URLs, pasted text passages, or
 references to other documents. Local files are read via the `Read` tool
 and remote URLs are fetched via the available web tools.
 
-The *target* is a comma-separated list over the seven recognized
-artifact kinds `SPEC` (Specification), `ARCH` (Architecture), `CODE`
-(Source Code), `DOCS` (Documentation), `TASK` (Task Plans), `INFR`
-(Infrastructure), and `OTHR` (catch-all). It defaults to `SPEC,ARCH`.
-The file lists for the involved kinds are resolved via the
-`ase_artifact_list` MCP tool of the `ase` MCP server.
+The *target* is a comma-separated list over the six recognized
+artifact kinds `SPEC` (Specification, covering both requirements and
+architecture), `CODE` (Source Code), `DOCS` (Documentation), `TASK`
+(Task Plans), `INFR` (Infrastructure), and `OTHR` (catch-all). It
+defaults to `SPEC`. The file lists for the involved kinds are resolved
+via the `ase_artifact_list` MCP tool of the `ase` MCP server.
 
 While importing, the skill honors the artifact-format conventions of
-`ase-format-meta.md`, `ase-format-spec.md`, `ase-format-arch.md`, and
+`ase-format-meta.md`, `ase-format-spec.md` (the *SpecBook* models and
+formats plus the SpecBook schema configuration), and
 `ase-format-task.md`; the kinds `CODE`, `DOCS`, `INFR`, and `OTHR` have
 no dedicated format contract and are treated as free-form. A target
 artifact that does not yet exist but is warranted by the imported
 information is *generated* from scratch, while an existing target
 artifact is *surgically updated* to reflect the imported information.
+Generated or updated `SPEC` artifacts are validated via the
+`ase_specbook_lint` MCP tool and the reported diagnostics are fixed in
+at most three rounds; any remaining diagnostics are surfaced.
 
 ##  OPTIONS
 
 `--target`|`-t` *target*[,...]:
     The comma-separated list of artifact kinds to generate or update.
-    Defaults to `SPEC,ARCH`. The skill errors out on an empty target or
+    Defaults to `SPEC`. The skill errors out on an empty target or
     an unknown/unsupported kind.
 
 ##  ARGUMENTS
@@ -61,8 +65,8 @@ Import a foreign requirements document into the specification:
 ❯ /ase-sync-import -t SPEC docs/legacy/requirements.txt
 ```
 
-Import an external design write-up into the architecture, defaulting to
-both specification and architecture as targets:
+Import an external design write-up into the specification (the default
+target), which covers the architecture, too:
 
 ```text
 ❯ /ase-sync-import https://example.com/design-notes.html

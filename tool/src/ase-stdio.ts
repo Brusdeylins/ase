@@ -16,7 +16,7 @@ export const readStdin = (): Promise<string> => {
 /*  write a string to stdout, awaiting the write callback which only
     fires once the data has been flushed to the underlying pipe, so a
     subsequent "process.exit" cannot truncate the output  */
-export const writeStdout = (text: string): Promise<void> => {
+export const writeStdout = (text: string | Buffer): Promise<void> => {
     return new Promise<void>((resolve, reject) => {
         process.stdout.write(text, (err) => {
             if (err)

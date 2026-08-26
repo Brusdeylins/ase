@@ -6,7 +6,7 @@ The following are the **ASE Tenets** -- the guiding principles you
 *MUST* internalize when requested. They are organized into *Generic
 Tenets*, which always apply, and *Operation-Specific Tenets*, which
 apply only to a particular kind of operation (Crafting, Reconciling,
-Refactoring, Resolving).
+Refactoring, Resolving, Specifying).
 
 GENERIC TENETS
 --------------
@@ -149,11 +149,11 @@ you *MUST* honor the following so-called **RECONCILIATION TENETS**:
 -   **Level-Appropriate Translation**:
     Re-express source facts at the *target's* level of abstraction and
     altitude; do not copy verbatim across artifact levels. A SPEC states
-    intent, an ARCH states structure, CODE states realization, DOCS
-    states facts, etc. -- align the *meaning*, not the wording.
+    intent and structure, CODE states realization, DOCS states facts,
+    etc. -- align the *meaning*, not the wording.
 
 -   **Format Conformance**:
-    Keep every formatted target (SPEC, ARCH, TASK) conformant to its
+    Keep every formatted target (SPEC, TASK) conformant to its
     format contract (headings, structure, identifiers). Treat CODE,
     DOCS, INFR, and OTHR kinds of artifacts as foreign-defined, but not
     as free-form.
@@ -221,3 +221,62 @@ you *MUST* honor the following so-called **RESOLVING TENETS**:
     handled *near the origin*. Problems for *theoretical, fictive, or
     unexpected* errors *should* be handled more generally and in parent
     scopes.
+
+SPECIFYING TENETS
+-----------------
+
+When *specifying* -- creating, revising, or editing the statements of a
+specification artifact set -- you *MUST* honor the following so-called
+**SPECIFYING TENETS**:
+
+-   **Intent over Realization**:
+    A specification, in its domain-specific and non-architecture related
+    aspects, states only the *WHAT* and the *WHY*, never the *HOW*.
+    Record intent, structure, constraints, and relationships here.
+    Implementation steps, algorithms, technologies, and code-level
+    details describe the *WHAT* and *HOW* and belong only into
+    the domain-unspecific and architecture-related aspects of the
+    specification.
+
+-   **Statement with Rationale**:
+    Every statement carries its *WHY* behind the `, BECAUSE ` clause in
+    a description. A statement without a rationale can neither be judged
+    nor revised, so never leave the rationale implicit and never restate
+    the statement as its own rationale.
+
+-   **Unambiguous and Verifiable**:
+    Every statement is precise enough that two readers derive the same
+    meaning and that its fulfillment is decidable. Replace vague
+    qualifiers ("fast", "user-friendly", "robust") with the concrete
+    property, threshold, or scenario actually meant.
+
+-   **Single Source of Truth**:
+    Every fact resides in exactly *one* object of the specification. Do
+    not restate a fact in a second place -- point at its owning object
+    with a `[[xxx]]` reference instead, so a later change has exactly
+    one place to land.
+
+-   **Atomic Statement**:
+    Every statement expresses exactly *one* fact with exactly *one*
+    rationale. Split a statement that joins independent facts with
+    "and"/"or" -- otherwise its fulfillment is only partially decidable
+    and its rationale covers more than it explains.
+
+-   **Schema Conformance**:
+    Every object stays conformant to the **SpecBook SCHEMA Model** of
+    the project: allowed kinds, allowed nesting, mandatory and optional
+    properties, and the configured value constraints. Never invent an
+    object kind or a property key the schema does not define.
+
+-   **Referential Integrity**:
+    Every `[[xxx]]` reference resolves to exactly one object. When an
+    object is renamed, moved, or removed, follow *all* references to it
+    through the entire specification corpus and adjust or remove them
+    in the same change set -- a dangling or ambiguous reference is a
+    defect.
+
+-   **No Fabrication**:
+    Never invent specification content the request does not warrant. If
+    the request is silent, ambiguous, or contradictory on something the
+    specification needs, surface the gap explicitly rather than papering
+    over it with a plausible guess.

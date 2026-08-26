@@ -343,6 +343,11 @@ export default class HookCommand {
         const guidance = setting("agent.guidance", "ASE_GUIDANCE_LEVEL", "normal")
         const boxing   = setting("project.boxing", "ASE_PROJECT_BOXING", "white")
 
+        /*  determine the specification base directory and the SpecBook
+            schema configuration (empty: the bundled standard schema)  */
+        const specBasedir = String(cfg.get("project.artifact.spec.basedir") ?? "")
+        const specSchema  = String(cfg.get("project.artifact.spec.schema")  ?? "")
+
         /*  determine headless mode  */
         const headless = process.env.ASE_HEADLESS === "true" ? "true" : "false"
 
@@ -356,6 +361,8 @@ export default class HookCommand {
                 `export ASE_USER_ID=${quote([ userId ])}\n` +
                 `export ASE_PROJECT_ID=${quote([ projectId ])}\n` +
                 `export ASE_PROJECT_BOXING=${quote([ boxing ])}\n` +
+                `export ASE_SPEC_BASEDIR=${quote([ specBasedir ])}\n` +
+                `export ASE_SPEC_SCHEMA=${quote([ specSchema ])}\n` +
                 `export ASE_TASK_ID=${quote([ taskId ])}\n` +
                 `export ASE_SESSION_ID=${quote([ sessionId ])}\n` +
                 `export ASE_HEADLESS=${quote([ headless ])}\n` +
@@ -379,6 +386,8 @@ export default class HookCommand {
             `<ase-user-id>${userId}</ase-user-id>\n` +
             `<ase-project-id>${projectId}</ase-project-id>\n` +
             `<ase-project-boxing>${boxing}</ase-project-boxing>\n` +
+            `<ase-spec-basedir>${specBasedir}</ase-spec-basedir>\n` +
+            `<ase-spec-schema>${specSchema}</ase-spec-schema>\n` +
             `<ase-task-id>${taskId}</ase-task-id>\n` +
             `<ase-session-id>${sessionId}</ase-session-id>\n` +
             `<ase-headless>${headless}</ase-headless>\n` +

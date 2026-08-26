@@ -20,20 +20,23 @@ kinds (the *source*). It reads the source artifacts and then adjusts the
 target artifacts *directly* and *surgically* to match the source state,
 while optionally honoring a filtering *hint*.
 
-Both *target* and *source* are comma-separated lists over the seven
-recognized artifact kinds `SPEC` (Specification), `ARCH` (Architecture),
-`CODE` (Source Code), `DOCS` (Documentation), `TASK` (Task Plans), `INFR`
-(Infrastructure), and `OTHR` (catch-all). When *source* is `auto`, it
-resolves to all seven kinds *minus* the kinds listed in *target*. Unless
-`--bidirectional` is given, a kind present in *target* is never used as
-its own source.
+Both *target* and *source* are comma-separated lists over the six
+recognized artifact kinds `SPEC` (Specification, covering both
+requirements and architecture), `CODE` (Source Code), `DOCS`
+(Documentation), `TASK` (Task Plans), `INFR` (Infrastructure), and
+`OTHR` (catch-all). When *source* is `auto`, it resolves to all six
+kinds *minus* the kinds listed in *target*. Unless `--bidirectional` is
+given, a kind present in *target* is never used as its own source.
 
 The file lists for all involved kinds are resolved via the
 `ase_artifact_list` MCP tool of the `ase` MCP server. While reconciling,
 the skill honors the artifact-format conventions of `ase-format-meta.md`,
-`ase-format-spec.md`, `ase-format-arch.md`, and `ase-format-task.md`;
-the kinds `CODE`, `DOCS`, `INFR`, and `OTHR` have no dedicated format
-contract and are treated as free-form.
+`ase-format-spec.md` (the *SpecBook* models and formats plus the
+SpecBook schema configuration), and `ase-format-task.md`; the kinds
+`CODE`, `DOCS`, `INFR`, and `OTHR` have no dedicated format contract and
+are treated as free-form. Changed `SPEC` artifacts are validated via
+the `ase_specbook_lint` MCP tool and the reported diagnostics are fixed
+in at most three rounds; any remaining diagnostics are surfaced.
 
 ##  OPTIONS
 
@@ -62,25 +65,25 @@ contract and are treated as free-form.
 ##  EXAMPLES
 
 Reconcile the code and documentation
-to reflect the current specification and architecture
+to reflect the current specification
 in a "forward engineering" approach:
 
 ```text
-❯ /ase-sync-reconcile -t CODE,DOCS -s SPEC,ARCH
+❯ /ase-sync-reconcile -t CODE,DOCS -s SPEC
 ```
 
-Reconcile specification and architecture from everything else
+Reconcile the specification from everything else
 in a "reverse engineering" approach:
 
 ```text
-❯ /ase-sync-reconcile -t SPEC,ARCH -s CODE,DOCS
+❯ /ase-sync-reconcile -t SPEC -s CODE,DOCS
 ```
 
-Bidirectionally reconcile specification and architecture against
+Bidirectionally reconcile specification and code against
 each other, limited to the authentication aspect:
 
 ```text
-❯ /ase-sync-reconcile -b -t SPEC -s ARCH authentication
+❯ /ase-sync-reconcile -b -t SPEC -s CODE authentication
 ```
 
 ##  SEE ALSO

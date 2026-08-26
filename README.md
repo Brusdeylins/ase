@@ -23,7 +23,7 @@ Code](https://claude.com/product/claude-code) — and with reduced support also 
 tool [GitHub Copilot CLI](https://github.com/features/copilot/cli) or
 [OpenAI Codex CLI](https://github.com/openai/codex).
 
-**ASE** ships with 48 agent skills, agent hooks, agent sub-agents, an
+**ASE** ships with 49 agent skills, agent hooks, agent sub-agents, an
 underlying Model-Context-Protocol (MCP) service and a Command-Line Interface
 (CLI), incorporating reasonable methodology and automation aspects, to
 support the recurring tasks of a *Software Developer* and *Software Architect*.
@@ -162,25 +162,32 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-task-dissect`](plugin/skills/ase-task-dissect/help.md)
   `hello`
 
+- **Specification Editing**:
+  You want your SpecBook-based specification changed straight from a
+  plain description, in one shot and kept conformant to its format
+  contract?
+  &rarr; [`/ase-spec-edit`](plugin/skills/ase-spec-edit/help.md)
+  `-g -v add a Reviewer persona`
+
 - **Artifact Reconciliation**:
   You want one set of artifacts (e.g. CODE, DOCS) automatically aligned
-  to reflect the current state of another set (e.g. SPEC, ARCH), one-way
+  to reflect the current state of another set (e.g. SPEC), one-way
   or bidirectionally?
   &rarr; [`/ase-sync-reconcile`](plugin/skills/ase-sync-reconcile/help.md)
   `-s SPEC -t DOCS`
 
 - **Foreign Source Import**:
   You want external files, URLs, or pasted text ingested and turned into
-  structured SPEC, ARCH, CODE, DOCS, or TASK artifacts?
+  structured SPEC, CODE, DOCS, or TASK artifacts?
   &rarr; [`/ase-sync-import`](plugin/skills/ase-sync-import/help.md)
   `-t SPEC @requirements.txt`
 
-- **Artifact Export**:
-  You want artifact content materialized into derived, side-by-side
-  files, like the Data Model rendered as an SVG diagram or the Technology
-  Stack rendered as a Markdown table?
+- **Specification Export**:
+  You want your SpecBook-based specification rendered into
+  ready-to-consume files, like a self-contained HTML document or a
+  paginated PDF document?
   &rarr; [`/ase-sync-export`](plugin/skills/ase-sync-export/help.md)
-  `-s SPEC,ARCH`
+  `-o docs/spec.html,docs/spec.pdf`
 
 - **Task Plan Life-Cycle**:
   You want your named, persisted task plans switched, listed, viewed,

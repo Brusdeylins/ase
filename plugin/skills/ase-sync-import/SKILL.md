@@ -6,7 +6,7 @@ description: >
     (the target), generating or updating them to reflect the imported
     information. Use when the user wants to "import", "ingest", or
     "bring in" external sources like files, URLs, or pasted text into
-    artifacts like SPEC, ARCH, CODE, DOCS, TASK, INFR, or OTHR.
+    artifacts like SPEC, CODE, DOCS, TASK, INFR, or OTHR.
 user-invocable: true
 disable-model-invocation: false
 effort: xhigh
@@ -22,7 +22,7 @@ Import Foreign Sources into Artifact Set
 
 <expand name="getopt"
     arg1="ase-sync-import"
-    arg2="--target|-t=SPEC,ARCH">
+    arg2="--target|-t=SPEC">
     $ARGUMENTS
 </expand>
 
@@ -36,7 +36,6 @@ reflect the imported information:
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-meta.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-spec.md
-@${CLAUDE_SKILL_DIR}/../../meta/ase-format-arch.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
 
@@ -47,8 +46,8 @@ Procedure
 
 1.  <step id="STEP 1: Determine Target">
 
-    1.  The recognized artifact kinds are the seven tokens `TASK`,
-        `SPEC`, `ARCH`, `CODE`, `DOCS`, `INFR`, and `OTHR`. Parse
+    1.  The recognized artifact kinds are the six tokens `TASK`,
+        `SPEC`, `CODE`, `DOCS`, `INFR`, and `OTHR`. Parse
         <getopt-option-target/> as the comma-separated <target/> kind list.
         Upper-case and trim every parsed kind token. Do not output
         anything.
@@ -64,7 +63,7 @@ Procedure
 
         </if>
 
-    3.  If any token in <target/> is *not* one of the seven recognized
+    3.  If any token in <target/> is *not* one of the six recognized
         kinds, only output the following <template/> (with <kind/> set to
         the first offending token) and then immediately *STOP* processing
         the entire current skill:
@@ -123,16 +122,18 @@ Procedure
 
     2.  Internalize and honor the artifact-format conventions:
 
-        -   the artifact-set/artifact/aspect meta information (`ase-format-meta.md`),
-        -   the `SPEC` format (`ase-format-spec.md`),
-        -   the `ARCH` format (`ase-format-arch.md`),
+        -   the artifact-set meta information (`ase-format-meta.md`),
+        -   the `SPEC` format, i.e. the SpecBook models and formats plus
+            the SpecBook schema configuration of the project
+            (`ase-format-spec.md`),
         -   the `TASK` format (`ase-format-task.md`).
 
         Whenever a target artifact belongs to one of these kinds, it
         *MUST* be kept (or made) conformant to the corresponding format
-        (headings, structure, identifiers, and the `<timestamp-modified/>`
-        rule). The kinds `CODE`, `DOCS`, `INFR`, and `OTHR` have no
-        dedicated format contract and are treated as free-form.
+        (headings, structure, identifiers, references, and the
+        `Modified:` timestamp rule). The kinds `CODE`, `DOCS`, `INFR`,
+        and `OTHR` have no dedicated format contract and are treated as
+        free-form.
 
     3.  You *MUST* internalize and strictly honor the **GENERIC TENETS**,
         the **CRAFTING TENETS**, and the **RECONCILIATION TENETS** of the
@@ -163,14 +164,35 @@ Procedure
         sources do not support; if the sources are silent or ambiguous on
         something the target needs, surface the gap rather than guessing.
         Re-express the imported facts at the *target's* level of
-        abstraction (a SPEC states intent, an ARCH states structure).
+        abstraction (a SPEC states intent and structure).
 
         Apply the generation/update directly to the target artifacts via
         the `Write`/`Edit` tools. For a `TASK` target, apply it via the
         `ase_task_save` MCP tool instead -- *NEVER* write a task plan
         file via `Write`/`Edit` or by executing a shell command.
 
-    6.  Report the performed changes with the following <template/>, listing
+    6.  <if condition="at least one `SPEC` artifact was generated or updated">
+
+        Validate the specification by calling the `ase_specbook_lint()`
+        tool of the `ase` MCP server and reading its returned
+        `diagnostics` array of `{ file, line, column, message }`
+        objects. If it is not empty, fix the reported problems in the
+        affected `SPEC` artifacts via the `Write`/`Edit` tools and call
+        the tool again -- for at most *three* rounds in total. Do not
+        output anything, unless diagnostics remain after the last round,
+        in which case output the following <template/>, listing one
+        bullet line per remaining diagnostic:
+
+        <template>
+        <ase-tpl-bullet-signal/> **REMAINING DIAGNOSTICS**:
+
+        -   `<file/>:<line/>:<column/>`: <message/>
+        [...]
+        </template>
+
+        </if>
+
+    7.  Report the performed changes with the following <template/>, listing
         one bullet line per generated or updated file (with <file/> its
         project-relative path and <note/> an ultra-brief description of
         what was imported):
@@ -192,7 +214,7 @@ Procedure
 
         </if>
 
-    7.  Finally, give the closing hint by expanding the following (which,
+    8.  Finally, give the closing hint by expanding the following (which,
         depending on the configured <ase-guidance-level/>, may expand
         into nothing and hence emit no output at all):
 

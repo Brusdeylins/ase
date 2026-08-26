@@ -16,12 +16,16 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
 **ASE (Agentic Software Engineering)** ships three deliverables from one repo:
 
 -   `plugin/`: the agent tool plugin
-    -   `plugin/skills/ase-xxx-xxx/`: the 48 skills, each with a `SKILL.md`
+    -   `plugin/skills/ase-xxx-xxx/`: the 49 skills, each with a `SKILL.md`
         (agent instructions) and a `help.md` (Unix-style manual page)
     -   `plugin/agents/`: the sub-agent definitions leveraged by the skills
     -   `plugin/meta/`: the shared meta files (constitution, tenets, persona,
         dialog, getopt, and artifact format conventions), exposed to skills
-        via `ase meta <name>`
+        via `ase meta <name>`; the specification format `ase-format-spec.md`
+        includes the SpecBook models and formats description
+        `ase-format-specbook.md` and the standard SpecBook schema
+        configuration `ase-format-specbook.yaml`, both generated at
+        build-time by *SpecBook* (`@rse/specbook`)
     -   `plugin/hooks/`: the per-agent-tool hook wiring
         (`hooks.json`, `hooks-copilot.json`, `hooks-codex.json`)
     -   `plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
@@ -30,7 +34,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `tool/src/ase.ts`: the entry point, wiring all top-level commands
     -   `tool/src/ase-*.ts`: one module per top-level command (`setup`,
         `config`, `mcp`, `service`, `hook`, `statusline`, `task`, `artifact`,
-        `meta`, `compat`, `diagram`, `worktree`) plus support modules
+        `spec`, `meta`, `compat`, `diagram`, `worktree`) plus support modules
         (`log`, `stdio`, `getopt`, `kv`, `markdown`, `skills`, `sleep`,
         `timestamp`, `version`)
     -   `tool/bin/ase`: the published shim, loading compiled output from `dst/`
@@ -118,7 +122,8 @@ Beyond `ase setup`, the CLI provides `ase config` (layered `user` <
 background HTTP service), `ase mcp` (stdio-to-service MCP bridge), `ase
 hook` (agent tool hook handlers), `ase statusline` (statusline renderer),
 `ase task` (persisted task plans), `ase artifact` (artifact kind
-resolution), `ase meta` (plugin meta file output), `ase diagram` (Mermaid
+resolution), `ase spec` (SpecBook specification linting and exporting),
+`ase meta` (plugin meta file output), `ase diagram` (Mermaid
 rendering), `ase worktree` (ASE worktree path resolution), and `ase
 compat` (probe values for the `ase-meta-compat` self-test skill). See
 `docs/usage-tool.md` for the full manual page.

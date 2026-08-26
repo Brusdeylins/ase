@@ -20,12 +20,12 @@ import { writeStdout }          from "./ase-stdio.js"
 
 /*  the recognized artifact kinds, in descending precedence order;
     "othr" is the implicit catch-all and is always resolved last  */
-export const artifactKinds = [ "spec", "arch", "code", "docs", "infr", "othr" ] as const
+export const artifactKinds = [ "spec", "code", "docs", "infr", "othr" ] as const
 export type ArtifactKind = (typeof artifactKinds)[number]
 
-/*  the five configured kinds (i.e. all kinds except the implicit "othr")  */
+/*  the four configured kinds (i.e. all kinds except the implicit "othr")  */
 const configuredKinds: ReadonlyArray<Exclude<ArtifactKind, "othr">> =
-    [ "spec", "arch", "code", "docs", "infr" ]
+    [ "spec", "code", "docs", "infr" ]
 
 /*  a single ".gitignore" rule, pre-compiled into a picomatch matcher  */
 type IgnoreRule = { matcher: (p: string) => boolean, negated: boolean, dirOnly: boolean }
@@ -191,7 +191,7 @@ export class Artifact {
         const cfg = new Config("config", configSchema, log)
         cfg.read()
 
-        /*  raw-resolve all five configured kinds  */
+        /*  raw-resolve all four configured kinds  */
         const raw = new Map<Exclude<ArtifactKind, "othr">, Set<string>>()
         for (const kind of configuredKinds) {
             const { basedir, files } = Artifact.spec(cfg, kind)
@@ -236,6 +236,18 @@ export class Artifact {
         cfg.read()
         const { basedir } = Artifact.spec(cfg, kind)
         return basedir === "" ? file : `${basedir}/${file}`
+    }
+
+    /*  resolve the configured "basedir" of a kind to an absolute path;
+        the implicit "othr" catch-all has no configured "basedir" and is
+        therefore rejected  */
+    static basedir (log: Log, kind: ArtifactKind): string {
+        if (kind === "othr")
+            throw new Error("artifact: kind \"othr\" has no configured basedir")
+        const cfg = new Config("config", configSchema, log)
+        cfg.read()
+        const { basedir } = Artifact.spec(cfg, kind)
+        return path.join(Task.projectRoot(), basedir)
     }
 }
 
@@ -306,12 +318,12 @@ export class ArtifactMCP {
             title: "ASE artifact list",
             description:
                 "Resolve one or more artifact `kind`s to project-relative file lists. " +
-                "Recognized kinds are `spec`, `arch`, `code`, `docs`, `infr`, and `othr`. " +
+                "Recognized kinds are `spec`, `code`, `docs`, `infr`, and `othr`. " +
                 "Returns an `artifacts` array of `{ kind, files }` objects. " +
                 "If `kind` is omitted or empty, all kinds are resolved.",
             inputSchema: {
                 kind: z.array(z.string()).optional()
-                    .describe("list of artifact kinds (`spec`, `arch`, `code`, `docs`, `infr`, " +
+                    .describe("list of artifact kinds (`spec`, `code`, `docs`, `infr`, " +
                         "`othr`); if omitted or empty, all kinds are resolved")
             },
             outputSchema: {
@@ -341,13 +353,13 @@ export class ArtifactMCP {
             description:
                 "Resolve a base-relative `filename` within an artifact `kind` to a project-relative path " +
                 "by prefixing it with the kind's configured `basedir`. " +
-                "Recognized kinds are `spec`, `arch`, `code`, `docs`, and `infr` " +
+                "Recognized kinds are `spec`, `code`, `docs`, and `infr` " +
                 "(the implicit `othr` catch-all has no basedir and is rejected). " +
                 "If `kind` is omitted, it defaults to `code`. " +
                 "Returns the resolved path as `name`.",
             inputSchema: {
                 kind: z.string().optional()
-                    .describe("artifact kind (`spec`, `arch`, `code`, `docs`, `infr`); defaults to `code`"),
+                    .describe("artifact kind (`spec`, `code`, `docs`, `infr`); defaults to `code`"),
                 filename: z.string()
                     .describe("base-relative filename within the kind's basedir")
             },

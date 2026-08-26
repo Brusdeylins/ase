@@ -65,7 +65,9 @@
         "pacote":                           "22.0.0",
         "ofetch":                           "1.5.1",
         "picomatch":                        "4.0.5",
-        "lru-cache":                        "11.5.2"
+        "lru-cache":                        "11.5.2",
+        "@rse/specbook":                    "1.0.2",
+        "source-code-error":                "1.2.0"
     },
     "allowScripts": {
         "fsevents":                         true

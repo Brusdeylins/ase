@@ -5,7 +5,7 @@ description: >
     Reconcile one set of artifact kinds (the target) to reflect the
     current state of another set of artifact kinds (the source), while
     optionally honoring a filtering hint. Use when the user wants to
-    "reconcile", "sync", "align", or "update" artifacts like SPEC, ARCH,
+    "reconcile", "sync", "align", or "update" artifacts like SPEC,
     CODE, DOCS, TASK, INFR, or OTHR against each other.
 user-invocable: true
 disable-model-invocation: false
@@ -35,7 +35,6 @@ artifacts and aligning the target artifacts accordingly:
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-meta.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-spec.md
-@${CLAUDE_SKILL_DIR}/../../meta/ase-format-arch.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
 
@@ -46,8 +45,8 @@ Procedure
 
 1.  <step id="STEP 1: Determine Target and Source">
 
-    1.  The recognized artifact kinds are the seven tokens `TASK`,
-        `SPEC`, `ARCH`, `CODE`, `DOCS`, `INFR`, and `OTHR`. Parse
+    1.  The recognized artifact kinds are the six tokens `TASK`,
+        `SPEC`, `CODE`, `DOCS`, `INFR`, and `OTHR`. Parse
         <getopt-option-target/> as the comma-separated <target/> kind list and
         <getopt-option-source/> as the comma-separated <source/> kind list.
         Upper-case and trim every parsed kind token. Do not output
@@ -66,13 +65,13 @@ Procedure
 
     3.  <if condition="<source/> is equal 'AUTO'">
 
-        Set <source/> to the seven recognized kinds
-        `TASK,SPEC,ARCH,CODE,DOCS,INFR,OTHR` *minus* all kinds present
+        Set <source/> to the six recognized kinds
+        `TASK,SPEC,CODE,DOCS,INFR,OTHR` *minus* all kinds present
         in <target/>. Do not output anything.
 
         </if>
 
-    4.  If any token in <target/> or <source/> is *not* one of the seven
+    4.  If any token in <target/> or <source/> is *not* one of the six
         recognized kinds, only output the following <template/> (with
         <kind/> set to the first offending token) and then immediately
         *STOP* processing the entire current skill:
@@ -136,17 +135,18 @@ Procedure
 
     1.  Internalize and honor the artifact-format conventions:
 
-        -   the artifact-set/artifact/aspect meta information (`ase-format-meta.md`),
-        -   the `SPEC` format (`ase-format-spec.md`),
-        -   the `ARCH` format (`ase-format-arch.md`),
+        -   the artifact-set meta information (`ase-format-meta.md`),
+        -   the `SPEC` format, i.e. the SpecBook models and formats plus
+            the SpecBook schema configuration of the project
+            (`ase-format-spec.md`),
         -   the `TASK` format (`ase-format-task.md`).
 
         Whenever a target artifact belongs to one of these
         kinds, the update *MUST* keep it conformant to the
-        corresponding format (headings, structure, identifiers, and the
-        `<timestamp-modified/>` rule). The kinds `CODE`, `DOCS`, `INFR`,
-        and `OTHR` have no dedicated format contract and are treated as
-        free-form.
+        corresponding format (headings, structure, identifiers,
+        references, and the `Modified:` timestamp rule). The kinds
+        `CODE`, `DOCS`, `INFR`, and `OTHR` have no dedicated format
+        contract and are treated as free-form.
 
     2.  You *MUST* internalize and strictly honor the **GENERIC TENETS**,
         the **RECONCILIATION TENETS**, the **REFACTORING TENETS**, and
@@ -188,7 +188,28 @@ Procedure
         <timestamp-modified-old/>` line, replace this with `Modified:
         <timestamp-modified/>`.
 
-    5.  Report the performed updates with the following <template/>, listing
+    5.  <if condition="at least one `SPEC` output artifact was changed">
+
+        Validate the specification by calling the `ase_specbook_lint()`
+        tool of the `ase` MCP server and reading its returned
+        `diagnostics` array of `{ file, line, column, message }`
+        objects. If it is not empty, fix the reported problems in the
+        affected `SPEC` artifacts via the `Write`/`Edit` tools and call
+        the tool again -- for at most *three* rounds in total. Do not
+        output anything, unless diagnostics remain after the last round,
+        in which case output the following <template/>, listing one
+        bullet line per remaining diagnostic:
+
+        <template>
+        <ase-tpl-bullet-signal/> **REMAINING DIAGNOSTICS**:
+
+        -   `<file/>:<line/>:<column/>`: <message/>
+        [...]
+        </template>
+
+        </if>
+
+    6.  Report the performed updates with the following <template/>, listing
         one bullet line per changed output file (with <file/> its
         project-relative path and <note/> an ultra-brief description of
         what was reconciled):
@@ -210,7 +231,7 @@ Procedure
 
         </if>
 
-    6.  Finally, give the closing hints by expanding the following
+    7.  Finally, give the closing hints by expanding the following
         (which, depending on the configured <ase-guidance-level/>, may
         each expand into nothing and hence emit no output at all):
 

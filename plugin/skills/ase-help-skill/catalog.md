@@ -20,6 +20,9 @@
 ○   `ase-arch-analyze`:    Review Software Architecture
 ○   `ase-arch-discover`:   Discover Components
 
+⎈   **SPECIFICATION**
+○   `ase-spec-edit`:       Edit Specification
+
 ⎈   **CODING**
 ○   `ase-code-analyze`:    Analyze Source Code
 ○   `ase-code-lint`:       Lint Source Code

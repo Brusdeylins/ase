@@ -16,6 +16,7 @@ import HookCommand                 from "./ase-hook.js"
 import StatuslineCommand           from "./ase-statusline.js"
 import TaskCommand                 from "./ase-task.js"
 import ArtifactCommand             from "./ase-artifact.js"
+import SpecCommand                 from "./ase-spec.js"
 import MetaCommand                 from "./ase-meta.js"
 import CompatCommand               from "./ase-compat.js"
 import DiagramCommand              from "./ase-diagram.js"
@@ -67,6 +68,7 @@ const main = async (): Promise<void> => {
     new StatuslineCommand(log).register(program)
     new TaskCommand(log).register(program)
     new ArtifactCommand(log).register(program)
+    new SpecCommand(log).register(program)
     new MetaCommand(log).register(program)
     new CompatCommand().register(program)
     new DiagramCommand(log).register(program)

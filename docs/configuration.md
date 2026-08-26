@@ -38,22 +38,33 @@ The project *artifacts* are configured per kind, each kind defined by a
 `.basedir` anchor and a `.files` miniglob spec. The `.basedir` is a
 directory resolved relative to the project root (empty means the project
 root itself); the `.files` whitespace-separated glob spec resolves
-relative to `.basedir`. The six configurable kinds are `task`, `spec`,
-`arch`, `code`, `docs`, and `infr`; in addition, the implicit `othr`
+relative to `.basedir`. The five configurable kinds are `task`, `spec`,
+`code`, `docs`, and `infr`; in addition, the implicit `othr`
 catch-all collects all remaining files and is resolved last (it has no
 configurable `.basedir`/`.files`):
 
 -   **project.artifact.task.{basedir,files}**: anchor directory and glob spec matching the project *task plan* files.
 
--   **project.artifact.spec.{basedir,files}**: anchor directory and glob spec matching the project *specification* files.
-
--   **project.artifact.arch.{basedir,files}**: anchor directory and glob spec matching the project *architecture* files.
+-   **project.artifact.spec.{basedir,files}**: anchor directory and glob spec matching the project *specification* files,
+    i.e. the *SpecBook*-based specification covering both requirements and architecture
+    (default: `docs/specbook` and `*.{md,txt,svg,png,jpg}`).
 
 -   **project.artifact.code.{basedir,files}**: anchor directory and glob spec matching the project *source code* files.
 
 -   **project.artifact.docs.{basedir,files}**: anchor directory and glob spec matching the project *documentation* files.
 
 -   **project.artifact.infr.{basedir,files}**: anchor directory and glob spec matching the project *infrastructure* files.
+
+The project *specification* is additionally controlled by:
+
+-   **project.artifact.spec.schema**: the *SpecBook* YAML schema configuration file governing the
+    specification, resolved relative to the project root (default: empty). If unset or empty, the
+    standard schema configuration `ase-format-specbook.yaml` bundled with the ASE plugin is used.
+
+Both `project.artifact.spec.basedir` and `project.artifact.spec.schema` are exported by the
+session-start hook as the `<ase-spec-basedir/>` and `<ase-spec-schema/>` placeholders (and as
+the `ASE_SPEC_BASEDIR` and `ASE_SPEC_SCHEMA` environment variables), so the specification format
+description `ase-format-spec.md` can reference the effective schema and base directory.
 
 The following configuration parameters control the agent:
 

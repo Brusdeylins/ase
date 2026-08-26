@@ -30,6 +30,7 @@ import { DiagramMCP }                    from "./ase-diagram.js"
 import { TaskMCP }                       from "./ase-task.js"
 import { MarkdownMCP }                   from "./ase-markdown.js"
 import { ArtifactMCP }                   from "./ase-artifact.js"
+import { SpecMCP }                       from "./ase-spec.js"
 import { KVMCP }                         from "./ase-kv.js"
 import { TimestampMCP }                  from "./ase-timestamp.js"
 import { SleepMCP }                      from "./ase-sleep.js"
@@ -304,6 +305,7 @@ export default class ServiceCommand {
             new TaskMCP(this.log).register(mcp)
             new MarkdownMCP().register(mcp)
             new ArtifactMCP(this.log).register(mcp)
+            new SpecMCP(this.log).register(mcp)
             new KVMCP().register(mcp)
             new TimestampMCP().register(mcp)
             new SleepMCP().register(mcp)

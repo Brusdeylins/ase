@@ -1,73 +1,61 @@
 
 ##  NAME
 
-`ase-sync-export` - Export Artifact Set to Side-by-Side Files
+`ase-sync-export` - Export Specification into Rendered Files
 
 ##  SYNOPSIS
 
 `ase-sync-export`
     [`--help`|`-h`]
-    [`--source`|`-s` *source*[,...]]
-    [*filter*]
+    [`--output`|`-o` *output*[,...]]
 
 ##  DESCRIPTION
 
-The `ase-sync-export` skill exports the content of a set of artifact
-kinds (the *source*) into *derived*, ready-to-consume files placed
-*side-by-side* with the artifacts themselves. For every source artifact
-that declares an *export* in its format definition, the skill builds the
-declared rendering and writes it to a sibling file.
+The `ase-sync-export` skill exports the `SPEC` artifact set -- the
+*SpecBook*-based specification of the project, located via the
+`project.artifact.spec.basedir` configuration -- into *derived*,
+ready-to-consume renderings. The specification is first validated
+against the SpecBook schema configuration via the `ase_specbook_lint`
+MCP tool of the `ase` MCP server; on any diagnostic the skill errors out
+and exports nothing, as a partial or invalid specification must never be
+rendered. Otherwise every requested *output* is rendered via the
+`ase_specbook_export` MCP tool.
 
-The *source* is a comma-separated list over the seven recognized
-artifact kinds `SPEC` (Specification), `ARCH` (Architecture), `CODE`
-(Source Code), `DOCS` (Documentation), `TASK` (Task Plans), `INFR`
-(Infrastructure), and `OTHR` (catch-all). The file lists for the
-involved kinds are resolved via the `ase_artifact_list` MCP tool of the
-`ase` MCP server.
-
-An *export* is declared by a `-   Export:` bullet point in an artifact's
-format definition (see `ase-format-meta.md`, `ase-format-spec.md`, and
-`ase-format-arch.md`); an artifact *without* such a bullet is *not*
-exported. Each exported file is named
-`<set>-<no>-<id>-<slug>-<export-name>.<ext>` (e.g.
-`SPEC-07-DM-Data-Model-export.svg`) and stored in the artifact's own
-base directory. Initially, the *Data Model* (`SPEC-DM`) exports as a
-Mermaid UML diagram converted to SVG, and the *Technology Stack*
-(`ARCH-TS`) exports as a compact Markdown table.
+Each *output* is an `[<format>:]<file>` entry, where the format is one
+of `json`, `json5`, `yaml`, `toon` (the specification object model),
+`html` (self-contained single document with table of contents, full-text
+search, and light/dark theme), `pdf` (paginated print document), or `md`
+(normalized single Markdown document). The format is inferred from the
+filename extension unless it is explicitly given as a prefix. The
+standard output sentinel `-` is not supported.
 
 ##  OPTIONS
 
-`--source`|`-s` *source*[,...]:
-    The comma-separated list of artifact kinds to export. Defaults to
-    `SPEC,ARCH` (the skill errors out on an empty source).
-
-##  ARGUMENTS
-
-*filter*:
-    An optional free-form filtering hint that narrows the source
-    artifacts, or the aspects of those artifacts, to take into account
-    when materializing the exports. If omitted, every export declared by
-    a source artifact is materialized.
+`--output`|`-o` *output*[,...]:
+    The comma-separated list of `[<format>:]<file>` entries to render,
+    with each file path relative to the project root. Defaults to the
+    single HTML rendering `index.html` inside the `SPEC` base directory
+    (e.g. `docs/specbook/index.html`).
 
 ##  EXAMPLES
 
-Export the specification and architecture artifacts to their
-side-by-side files (the default):
+Export the specification to its default HTML rendering:
 
 ```text
 ❯ /ase-sync-export
 ```
 
-Export only the specification artifacts:
+Export the specification as HTML and PDF:
 
 ```text
-❯ /ase-sync-export -s SPEC
+❯ /ase-sync-export -o docs/spec.html,docs/spec.pdf
 ```
 
-Export only the data-model artifact:
+Export the specification object model as YAML into a file without a
+telling extension:
 
 ```text
-❯ /ase-sync-export -s SPEC data model
+❯ /ase-sync-export -o yaml:docs/spec.model
 ```
 
 ##  SEE ALSO

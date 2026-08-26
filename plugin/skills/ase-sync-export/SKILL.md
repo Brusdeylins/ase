@@ -1,17 +1,13 @@
 ---
 name: ase-sync-export
-argument-hint: "[--help|-h] [--source|-s <source>[,...]] [<hint>]"
+argument-hint: "[--help|-h] [--output|-o <output>[,...]]"
 description: >
-    Export artifact content into side-by-side, ready-to-consume files,
-    one per artifact that declares an export. Use when the user wants to
-    "export", "render", or "materialize" artifacts like SPEC or ARCH into
-    derived files such as diagrams or tables.
+    Export the SpecBook-based specification (SPEC) into ready-to-consume
+    renderings like HTML, PDF, normalized Markdown, or JSON. Use when the
+    user wants to "export", "render", or "materialize" the specification.
 user-invocable: true
 disable-model-invocation: false
 effort: xhigh
-allowed-tools:
-    - "Read"
-    - "Write"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -19,174 +15,119 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
 <purpose name="ase-sync-export">
-Export Artifact Set to Side-by-Side Files
+Export Specification into Rendered Files
 </purpose>
 
 <expand name="getopt"
     arg1="ase-sync-export"
-    arg2="--source|-s=SPEC,ARCH">
+    arg2="--output|-o=">
     $ARGUMENTS
 </expand>
 
 <objective>
-*Export* the *source* artifact kinds (optionally filtered by
-<hint/>) into side-by-side files, by reading the source artifacts
-and materializing, for every artifact that declares an export,
-the corresponding derived file next to the artifact itself.
-<hint><getopt-arguments/></hint>.
+*Export* the `SPEC` artifact set -- the SpecBook-based specification --
+into the requested output files, by validating the specification and
+rendering it through the SpecBook export.
 </objective>
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-meta.md
-@${CLAUDE_SKILL_DIR}/../../meta/ase-format-spec.md
-@${CLAUDE_SKILL_DIR}/../../meta/ase-format-arch.md
 
 Procedure
 ---------
 
 <flow>
 
-1.  <step id="STEP 1: Determine Source">
+1.  <step id="STEP 1: Determine Outputs">
 
-    1.  The recognized artifact kinds are the seven tokens `TASK`,
-        `SPEC`, `ARCH`, `CODE`, `DOCS`, `INFR`, and `OTHR`. Parse
-        <getopt-option-source/> as the comma-separated <source/> kind list.
-        Upper-case and trim every parsed kind token. Do not output
-        anything.
+    1.  Parse <getopt-option-output/> as the comma-separated <outputs/>
+        list of `[<format>:]<file>` entries, with <format/> one of
+        `json`, `json5`, `yaml`, `toon`, `html`, `pdf`, or `md`, and
+        <file/> a project-relative output file path. Trim every parsed
+        entry. Do not output anything.
 
-    2.  <if condition="<source/> is empty">
+    2.  <if condition="<outputs/> is empty">
 
-        Only output the following <template/> and then immediately *STOP*
+        Determine the default output by calling the
+        `ase_artifact_name(filename: "index.html", kind: "spec")` tool
+        of the `ase` MCP server and set <outputs/> to the single entry
+        of its returned `name`. Do not output anything.
+
+        </if>
+
+    3.  If any entry in <outputs/> is `-` (the standard output sentinel),
+        only output the following <template/> and then immediately *STOP*
         processing the entire current skill:
 
         <template>
-        ⧉ **ASE**: ☻ skill: **ase-sync-export**, ▶ ERROR: empty source artifact list
+        ⧉ **ASE**: ☻ skill: **ase-sync-export**, ▶ ERROR: output `-` is not supported -- give an output file
         </template>
 
-        </if>
-
-    3.  If any token in <source/> is *not* one of the seven recognized
-        kinds, only output the following <template/> (with <kind/> set to
-        the first offending token) and then immediately *STOP* processing
-        the entire current skill:
+    4.  Report the resolved outputs with the following <template/>:
 
         <template>
-        ⧉ **ASE**: ☻ skill: **ase-sync-export**, ▶ ERROR: unknown artifact kind: **<kind/>**
-        </template>
-
-    4.  Report the resolved source with the following <template/>:
-
-        <template>
-        <ase-tpl-bullet-signal/> **SOURCE**: <source/>
+        <ase-tpl-bullet-signal/> **OUTPUTS**: <outputs/>
         </template>
 
     </step>
 
-2.  <step id="STEP 2: Resolve and Read Artifacts">
+2.  <step id="STEP 2: Validate Specification">
 
-    1.  Do not output anything in this STEP 2.
+    1.  Call the `ase_specbook_lint()` tool of the `ase` MCP server
+        *once* and read its returned `diagnostics` array of `{ file,
+        line, column, message }` objects. Do not output anything.
 
-    2.  For all kinds in <source/> except `TASK`, call the
-        `ase_artifact_list(kind: [ ... ])` tool of the `ase` MCP server
-        *once*, passing the lower-cased `kind` tokens, and read the
-        returned `artifacts` array of `{ kind, files }` objects to obtain
-        the project-relative file list per kind. The `TASK` kind is *not*
-        resolvable via `ase_artifact_list` (task plans are managed by the
-        `ase_task_*` tools) and declares no export, so *silently skip* it.
+    2.  <if condition="<diagnostics/> is not empty">
 
-    3.  <if condition="<hint/> is not empty">
+        Only output the following <template/> (listing one bullet line
+        per diagnostic), give the closing hint by expanding the
+        `<ase-tpl-hint/>` below it, and then immediately *STOP*
+        processing the entire current skill:
 
-        Honor the filtering <hint/> to reduce the source artifacts
-        and/or the aspects of those artifacts you should take into
-        account.
+        <template>
+        ⧉ **ASE**: ☻ skill: **ase-sync-export**, ▶ ERROR: specification invalid -- nothing exported
+
+        -   `<file/>:<line/>:<column/>`: <message/>
+        [...]
+        </template>
+
+        <ase-tpl-hint level="minimal">
+        Fix the reported diagnostics in the `SPEC` artifacts (e.g. via `/ase-sync-reconcile -t SPEC`), then re-run this skill.
+        </ase-tpl-hint>
 
         </if>
 
-    4.  Internalize and honor the artifact-format conventions:
-
-        -   the artifact-set/artifact/aspect/export meta information (`ase-format-meta.md`),
-        -   the `SPEC` format (`ase-format-spec.md`),
-        -   the `ARCH` format (`ase-format-arch.md`).
-
-        In particular, internalize the generic *Artifact Export*
-        contract of `ase-format-meta.md` (the `-   Export:` bullet, the
-        side-by-side file-name convention, and the rule that an artifact
-        without an `-   Export:` bullet is *not* exported), and which
-        artifacts declare an export in the `SPEC` and `ARCH` formats.
-
-    5.  Read all resolved source artifacts and build a precise
-        understanding of the content of each artifact that declares an
-        export.
-
     </step>
 
-3.  <step id="STEP 3: Materialize Exports">
+3.  <step id="STEP 3: Export Specification">
 
-    1.  For *each* read source artifact that declares an `-   Export:`
-        bullet in its format definition, *materialize* the declared
-        export:
+    1.  For *each* <output/> in <outputs/>, call the
+        `ase_specbook_export(output: "<output/>")` tool of the `ase` MCP
+        server, which infers the format from the `[<format>:]<file>`
+        entry, writes the rendering to the file, and returns a
+        confirmation `text` carrying the written byte size. Do not
+        output anything.
 
-        -   *Build* the derived rendering exactly as described by the
-            artifact's <export-transform/>, faithfully reflecting the
-            artifact's current content -- no more, no less. Honor **No
-            Fabrication**: never invent content the artifact does not
-            support.
-
-        -   For an export whose <export-transform/> is a *Mermaid
-            diagram converted to SVG*, build the Mermaid specification
-            from the artifact content and render it to an SVG document by
-            calling the `ase_diagram(diagram: "<mermaid-spec/>", format:
-            "svg")` tool of the `ase` MCP server, using its `text` output
-            field as the SVG document. For a textual export (e.g. a
-            Markdown table), build the content directly. For Markdown
-            *tables*, honor the table-alignment rule of `ase-skill.md`.
-
-        -   *Determine* the side-by-side target file name
-            <export-filename/>
-            as `<artifact-set-id/>-<artifact-no/>-<artifact-id/>-<artifact-slug/>-<export-name/>.<export-ext/>`
-            and resolve it to a project-relative path inside the
-            artifact's own base directory (`<basedir/>`) by calling the
-            `ase_artifact_name(filename: "<export-filename/>", kind:
-            "<artifact-kind/>")` tool of the `ase` MCP server, with
-            <artifact-kind/> the artifact's own lower-cased kind.
-
-        -   *Write* the derived rendering to that resolved path via the
-            `Write` tool, overwriting any pre-existing export file of the
-            same name.
-
-    2.  Report the materialized exports with the following <template/>,
+    2.  Report the exported files with the following <template/>,
         listing one bullet line per written file (with <file/> its
-        project-relative path and <note/> an ultra-brief description of
-        what was exported):
+        project-relative path and <note/> the format and the byte size):
 
         <template>
-        <ase-tpl-bullet-signal/> **EXPORTED ARTIFACTS**:
+        <ase-tpl-bullet-signal/> **EXPORTED SPECIFICATION**:
 
         -   `<file/>`: <note/>
         [...]
         </template>
 
-        <if condition="no source artifact declares an export">
-
-        Only output the following <template/>:
-
-        <template>
-        <ase-tpl-bullet-normal/> **EXPORTED ARTIFACTS**: none -- no source artifact declares an export
-        </template>
-
-        </if>
-
     3.  Finally, give the closing hints by expanding the following
         (which, depending on the configured <ase-guidance-level/>, may
         each expand into nothing and hence emit no output at all):
 
-        <if condition="at least one export file was written">
         <ase-tpl-hint level="normal">
-        Exports are *derived* and go stale as their source artifacts drift -- use `/ase-sync-reconcile` to align the artifacts first, then re-run this skill.
+        Exports are *derived* and go stale as the specification drifts -- use `/ase-sync-reconcile` to align the artifacts first, then re-run this skill.
         </ase-tpl-hint>
-        </if>
 
         <ase-tpl-hint level="verbose">
-        Use `/ase-sync-export --source` to narrow the exported artifact kinds, and a trailing filtering hint to narrow the exports themselves.
+        Use `/ase-sync-export --output` with a comma-separated list of `[<format>:]<file>` entries to export several renderings at once (e.g. `-o docs/spec.html,docs/spec.pdf`).
         </ase-tpl-hint>
 
     </step>

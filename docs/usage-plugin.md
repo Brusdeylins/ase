@@ -246,6 +246,25 @@ The following ASE commands/skills exist on the documentation-level:
   line-cited evidence snippet. `--top` limits the output to the *N*
   highest-ranked points.
 
+### Specification Commands
+
+The following ASE commands/skills exist on the specification-level:
+
+- **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--verify`|`-v`\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+  Edit the *SpecBook*-based specification (`SPEC`) directly from a
+  *query* in a plan-less state machine (querying, discovering, grilling,
+  implementing, verifying), the specification-level counterpart of
+  **/ase-code-edit**. The change set stays strictly restricted to the
+  `SPEC` artifacts and keeps them conformant to the *SpecBook* format
+  contract, refreshing the `Modified:` timestamp of every changed file.
+  With `--grill`, the query is grilled with `--grill-rounds` rounds of
+  questions before implementing. With `--verify`, the specification is
+  validated via *SpecBook* linting and the diagnostics are fixed in at
+  most three rounds; otherwise strictly no validation is performed. With
+  `--worktree`, all change sets land in one dedicated Git worktree. With
+  `--loop`, the skill repeatedly asks for the next query until the user
+  answers `STOP SKILL`.
+
 ### Synchronization Commands
 
 The following ASE commands/skills exist on the synchronization-level:
@@ -255,23 +274,25 @@ The following ASE commands/skills exist on the synchronization-level:
   current state of another set (the *source*), reading the source
   artifacts and surgically adjusting the target artifacts. Both *target*
   and *source* are comma-separated lists of the artifact kinds `TASK`,
-  `SPEC`, `ARCH`, `CODE`, `DOCS`, `INFR`, and `OTHR`; when *source* is
+  `SPEC`, `CODE`, `DOCS`, `INFR`, and `OTHR`; when *source* is
   omitted, it defaults to all remaining kinds not present in *target*.
   With `--bidirectional`, the alignment is performed in both directions.
-  An optional *hint* narrows the scope of the reconciliation.
+  An optional *hint* narrows the scope of the reconciliation. Changed
+  `SPEC` artifacts are validated via *SpecBook* linting.
 
 - **/ase-sync-import** \[`--target`|`-t` *target*\] *hint*:<br/>
   Import information from foreign sources (files, URLs, or pasted text)
   into a set of artifact kinds (the *target*), generating or updating
   them to reflect the imported information. The *target* is a
-  comma-separated list of the artifact kinds `TASK`, `SPEC`, `ARCH`,
-  `CODE`, `DOCS`, `INFR`, and `OTHR`.
+  comma-separated list of the artifact kinds `TASK`, `SPEC`,
+  `CODE`, `DOCS`, `INFR`, and `OTHR`. Generated or updated `SPEC`
+  artifacts are validated via *SpecBook* linting.
 
-- **/ase-sync-export** \[`--source`|`-s` *source*\] \[*filter*\]:<br/>
-  Export artifact content into side-by-side, ready-to-consume files, one
-  per artifact that declares an export (e.g. the Data Model rendered as
-  an SVG diagram or the Technology Stack rendered as a Markdown table).
-  The *source* is a comma-separated list of the artifact kinds `TASK`,
-  `SPEC`, `ARCH`, `CODE`, `DOCS`, `INFR`, and `OTHR`; an optional
-  *filter* restricts which declared exports are materialized.
+- **/ase-sync-export** \[`--output`|`-o` *output*\]:<br/>
+  Export the *SpecBook*-based specification (`SPEC`) into ready-to-consume
+  renderings. The *output* is a comma-separated list of
+  \[*format*`:`\]*file* entries with *format* one of `json`, `json5`,
+  `yaml`, `toon`, `html`, `pdf`, or `md` (inferred from the filename
+  extension unless prefixed); it defaults to the HTML rendering
+  `index.html` inside the `SPEC` base directory.
 
