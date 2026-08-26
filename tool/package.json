@@ -16,11 +16,11 @@
     "type":                                 "module",
     "bin":                                  { "ase": "bin/ase" },
     "devDependencies": {
-        "eslint":                           "10.9.0",
+        "eslint":                           "10.9.1",
         "@eslint/js":                       "10.0.1",
-        "@typescript-eslint/parser":        "8.67.0",
-        "@typescript-eslint/eslint-plugin": "8.67.0",
-        "typescript-eslint":                "8.67.0",
+        "@typescript-eslint/parser":        "8.68.0",
+        "@typescript-eslint/eslint-plugin": "8.68.0",
+        "typescript-eslint":                "8.68.0",
         "eslint-plugin-promise":            "7.3.0",
         "neostandard":                      "0.14.0-next.1",
         "globals":                          "17.11.0",
@@ -30,7 +30,7 @@
         "nodemon":                          "3.1.14",
         "shx":                              "0.4.0",
 
-        "@types/node":                      "26.2.0",
+        "@types/node":                      "26.3.0",
         "@types/luxon":                     "3.7.5",
         "@types/which":                     "3.0.4",
         "@types/update-notifier":           "6.0.8",
@@ -64,7 +64,7 @@
         "write-file-atomic":                "8.0.0",
         "pacote":                           "22.0.0",
         "ofetch":                           "1.5.1",
-        "picomatch":                        "4.0.5",
+        "picomatch":                        "4.0.7",
         "lru-cache":                        "11.5.2",
         "@rse/specbook":                    "1.0.2",
         "source-code-error":                "1.2.0"

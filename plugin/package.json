@@ -18,7 +18,7 @@
         "@rse/specbook":                    "1.0.2",
         "markdownlint":                     "0.41.1",
         "markdownlint-cli2":                "0.23.2",
-        "eslint":                           "10.9.0",
+        "eslint":                           "10.9.1",
         "@eslint/markdown":                 "8.0.3",
         "eslint-markdown":                  "0.14.0"
     },
