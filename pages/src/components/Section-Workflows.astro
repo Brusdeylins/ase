@@ -191,14 +191,13 @@ import Annotation  from "./Annotation.astro"
                 <h3 class="ase-h3">Quick &amp; Dirty</h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The quick &amp; dirty approach is the <b>ASE</b>{" "}
-                    Funnel Mode, followed by the <b>ASE</b> Task Mode,
-                    but driven in an automatic approach decision
-                    mode, without validations and with an immediate
-                    implementation. The pro is its grounding, speed and
-                    batch operation, the con is that it might require
-                    subsequent session reverts or ad-hoc adjustment
-                    promptings. Use for medium tasks where backing off
-                    the previous state is acceptable.
+                    Quick Mode, which borrows underlying instructions
+                    from the <b>ASE</b> Funnel Model, but works without
+                    the ceremony of the <b>ASE</b> Task Mode. The pro
+                    is its speed, the con is that it might require
+                    subsequent ad-hoc adjustment promptings, at least
+                    as long as its "grill" feature is not used. Use for
+                    medium tasks.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
@@ -206,7 +205,7 @@ import Annotation  from "./Annotation.astro"
                 <Terminal
                     prefix="Claude Code"
                     commands={[
-                        "**/ase-code-craft** --quick Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
+                        "**/ase-code-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
                     ]}
                 />
             </div>
