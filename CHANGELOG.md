@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-0.9.63 (2026-08-25)
+0.9.63 (2026-08-26)
 -------------------
 
 -   FEATURE [code, docs]: Specification editing skill
@@ -32,6 +32,22 @@ ChangeLog
 -   IMPROVEMENT [code]: Artifact base directory accessor
     Exposed the absolute artifact base directory via `Artifact.basedir()` and let `writeStdout()`
     accept buffers (`ase-artifact.ts`, `ase-stdio.ts`).
+
+-   IMPROVEMENT [docs]: More readable ChangeLog format
+    Reformatted all `CHANGELOG.md` entries into a short title line plus an indented, line-wrapped
+    description, instead of a single long paragraph per entry.
+
+-   BUGFIX [code]: Round-local grilling question numbering
+    Restart the grilling question ids `Qn` at `1` in every round and the answer ids `An` at `1` for
+    every question, so question and answer counts stay correct (`ase-code-edit`, `ase-task-grill`).
+
+-   UPDATE [docs]: Refreshed workflow diagram
+    Updated the workflow diagram sources and renderings
+    (`docs/workflow.graffle`, `docs/workflow.pdf`, `docs/workflow.svg`, `pages/public/assets/workflow.svg`).
+
+-   UPDATE [docs, infr]: Upgraded dependencies
+    Upgraded the dependency versions of the `plugin`, `tool`, and `pages` deliverables
+    (`plugin/package.json`, `tool/package.json`, `pages/package.json`).
 
 -   CHANGE [code, docs]: New SPEC artifact defaults
     Changed the `project.artifact.spec` defaults to `docs/specbook` and `*.{md,txt,svg,png,jpg}`
