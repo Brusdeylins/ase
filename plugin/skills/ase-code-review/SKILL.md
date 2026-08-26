@@ -46,6 +46,12 @@ Review and Curate Uncommitted Changes
 </expand>
 
 <define name="user-dialog">
+In the following, you *MUST* *NOT* use your built-in
+<user-dialog-tool/> tool (e.g. `AskUserQuestion`) -- rendering a
+native selection widget instead of the ASE dialog box is a *defect*.
+Instead, you *MUST* show the boxed ASE custom dialog according to the
+expanded `custom-dialog` definition, end your turn, and let the user
+answer by typing. You *MUST* closely follow this definition.
 Before rendering the dialog, determine from the current context the
 single *recommended* answer option and prefix its description with
 ` ⚝ **RECOMMENDATION** ⚝ - `. Exactly *one* option carries the marker.
