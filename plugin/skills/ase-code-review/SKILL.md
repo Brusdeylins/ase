@@ -46,6 +46,18 @@ Review and Curate Uncommitted Changes
 </expand>
 
 <define name="user-dialog">
+Before rendering the dialog, determine from the current context the
+single *recommended* answer option and prefix its description with
+` ⚝ **RECOMMENDATION** ⚝ - `. Exactly *one* option carries the marker.
+Unless stronger contextual evidence suggests otherwise, recommend:
+curation strategy → `VERTICAL`; test handling → `REVIEW-TESTS`;
+staging order → `ACCEPT-ORDER`; branch name → `ACCEPT-NAME`; build
+command → the first discovered candidate; group confirmation → the
+proposed group as-is; file/section walk → advancing to the next
+file/section; theme decision → `ACCEPT` on a green build with an empty
+fix-queue, otherwise the `FIX`/`CORRECT` path; requeue → `DEFER`; and
+on a *destructive* confirmation always the non-destructive way out
+(`CANCEL`) — never recommend destruction.
 <expand name="custom-dialog" arg1="--other"><content/></expand>
 Where the dispatch on <result/> below carries no explicit branch for a
 result starting with `OTHER:`, treat such a result as `CANCEL`.
