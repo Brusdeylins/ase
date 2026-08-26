@@ -67,6 +67,15 @@ export const comparison: Comparison[] = [
                   "**guided by refactoring tenets** and an optional **preflight** you approve first."
     },
     {
+        topic:    "Specification First",
+        manually: "**Up-front** write a **monolithic** spec in Word and" +
+                  "paint overview diagrams in Visio.",
+        native:   "**Iteratively** write a **modular** spec in **ad-hoc** Markdown, " +
+                  "and accept that no overview diagrams and no real export formats exist.",
+        ase:      "**Iteratively** write a modular spec in **strict**, **pre-defined** Markdown, " +
+                  "then run `/ase-spec-export` to get HTML and PDF exports with automatically generated diagrams."
+    },
+    {
         topic:    "Spec-Driven<br/>Development",
         manually: "**Up-front** write a **monolithic** spec in Word, then **manually** " +
                   "derive and implement User-Stories from the Backlog.",
