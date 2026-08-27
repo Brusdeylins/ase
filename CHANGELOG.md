@@ -5,17 +5,21 @@ ChangeLog
 0.9.64 (2026-08-27)
 -------------------
 
--   IMPROVEMENT [code, docs]: Scenario-based intent matching
-    Added a `SCENARIOS` section ("You want ...") to the manual page of every skill and let
-    `ase-help-intent` propose all adequately fitting commands, ranked best-fitting first.
-
 -   FEATURE [code]: SpecBook environment notices
     Route the SpecBook `notice` messages to the `warning` log and collect them into the new
     `notices` output field of `ase_specbook_export`, which `ase-sync-export` reports verbatim.
 
+-   IMPROVEMENT [code, docs]: Scenario-based intent matching
+    Added a `SCENARIOS` section ("You want ...") to the manual page of every skill and let
+    `ase-help-intent` propose all adequately fitting commands, ranked best-fitting first.
+
 -   IMPROVEMENT [docs]: PDF export prerequisite
     Document the Chromium-class browser the `pdf` export needs, and the one-time
     `npx playwright install chromium` remedy, in `README.md`, `usage-tool.md`, and the skill help.
+
+-   IMPROVEMENT [docs]: Refreshed website content
+    Switched the "Quick & Dirty" workflow to `ase-code-edit`, reworded the typing demo, and added a
+    "Specification First" comparison row (`Section-Workflows.astro`, `Typing-Demo.astro`, `comparison.ts`).
 
 0.9.63 (2026-08-26)
 -------------------
