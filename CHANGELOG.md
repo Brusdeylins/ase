@@ -2,6 +2,27 @@
 ChangeLog
 =========
 
+0.9.65 (2026-08-28)
+-------------------
+
+-   FEATURE [code]: Additional tenets and commandments
+    Added the "Factual Locality" crafting/refactoring tenet, the "Cause before Symptom"
+    resolving tenet, and the "Check first, then worry" and "Comprehension before acting"
+    commandments to `ase-tenets.md` and `ase-constitution.md`.
+
+-   IMPROVEMENT [docs]: Quick Mode as a distinct operation mode
+    Documented the *Quick Mode* as the fourth *ASE* operation mode on the website, with
+    its plain and its `--grill --verify` variant, plus an `ase-code-edit` post-adjustment
+    moment in the day sample (`Section-Usage.astro`, `Section-Workflows.astro`, `Section-Day.astro`).
+
+-   IMPROVEMENT [docs]: Refreshed operation modes diagram
+    Regenerated `operation-modes.svg`/`.pdf`/`.xlsx` and the website asset copy to cover
+    the *Quick Mode*.
+
+-   IMPROVEMENT [docs]: Refreshed website and README references
+    Directed readers to the built-in methodology table (`Section-Design.astro`), reduced the
+    reconciliation example to `--source SPEC`, and listed *SpecBook* in the README "See Also" section.
+
 0.9.64 (2026-08-27)
 -------------------
 
