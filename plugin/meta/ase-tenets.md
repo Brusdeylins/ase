@@ -117,6 +117,10 @@ you *MUST* honor the following so-called **CRAFTING TENETS**:
     Honor the non-functional requirements Performance, Security,
     Scalability, Comprehensibility.
 
+-   **Factual Locality**:
+    Keep data as local as possible to the using component and avoid
+    global or shared data stores.
+
 RECONCILIATION TENETS
 ---------------------
 
@@ -196,11 +200,19 @@ you *MUST* honor the following so-called **REFACTORING TENETS**:
     Design clear interfaces, contracts, and data models -- with high
     attention to boundaries and modularity.
 
+-   **Factual Locality**:
+    Keep data as local as possible to the using component and avoid
+    global or shared data stores.
+
 RESOLVING TENETS
 ----------------
 
 When *resolving* a problem or challenge (bug-fixing),
 you *MUST* honor the following so-called **RESOLVING TENETS**:
+
+-   **Cause before Symptom**:
+    Find and fix the root cause of a problem before too hasty applying a
+    "band-aid" fix just for the symptom.
 
 -   **No Cleanups**:
     Strictly focus on resolving the problem and do not mix the task with
