@@ -12,10 +12,69 @@
 import SectionGlow     from "./Section-Glow.astro"
 import Diagram         from "./Diagram.astro"
 import Annotation      from "./Annotation.astro"
+import Terminal        from "./Terminal.astro"
 import { skillGroups } from "../data/skills.ts"
 ---
 <section id="usage" class="relative isolate mx-auto max-w-4xl px-6 py-8">
     <header class="ase-section-head" data-reveal>
+        <h2 class="ase-h2">
+            Quickly <span class="text-accent">Get Started</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            <b>ASE</b> is a comprehensive toolkit with 49 individual
+            skills and initially can be overhelming, as there is no
+            pre-defined workflow with a fixed begin. Instead, <b>ASE</b>{" "}
+            keeps you in the driver's seat, but as a consequence and
+            intentionally you have to trigger the wished <b>ASE</b> actions yourself.
+            The following gives you a few hints on how to quickly get started.
+        </p>
+    </header>
+
+    <div class="mt-12 flex flex-col gap-12">
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <p class="ase-eyebrow">Online Help</p>
+                <h3 class="ase-h3">From Intention to Skills</h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    <b>ASE</b> skills are primarily intended to be
+                    triggered by the user through so-called "slash commands"
+                    <code>/ase-xxx-xxx</code>. In order to find the right
+                    commands, just use the <code>ase-help-intent</code>
+                    skill and express your intention. It will show you
+                    which particular slash commands (potentially even with their suitable options
+                    and arguments) can be used by you to achieve your intention.
+                </p>
+                <p class="ase-indent-p text-foreground-secondary">
+                    Once you found the suitable skill, either excecute the
+                    proposed corresponding slash commands, or use the <code>ase-help-skill</code>
+                    skill to get a catalog of all available skills or show the
+                    manual page of a particular skill to find our more about the skill.
+                </p>
+            </div>
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <SectionGlow variant="text" side="right"/>
+                <Terminal
+                    prefix="Claude Code"
+                    commands={[
+                        "**/ase-help-intent** create a \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
+                        "**/ase-help-intent** find 10 new clever ideas for Software Engineering skills",
+                        "**/ase-help-intent** locate a good library for option parsing in TypeScript",
+                    ]}
+                />
+                <Terminal
+                    class="mt-4"
+                    prefix="Claude Code"
+                    commands={[
+                        "**/ase-help-skill**",
+                        "**/ase-help-skill** ase-meta-brainstorm",
+                        "**/ase-help-skill** ase-code-edit"
+                    ]}
+                />
+            </div>
+        </div>
+    </div>
+
+    <header class="mt-16 ase-section-head" data-reveal>
         <h2 class="ase-h2">
             Understand Our <span class="text-accent">Philosophy</span>
         </h2>
