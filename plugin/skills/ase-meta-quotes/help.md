@@ -90,6 +90,13 @@ the attribution of the quote.
     search query and as the keyword set of the *literalness* dimension of
     the matrix.
 
+##  SCENARIOS
+
+-   You want quotes, sayings, or aphorisms on a topic
+-   You want citations arranged by attribution and literalness
+-   You want quote wording and attribution verified against the Web
+-   You want the quote harvest widened to related topics
+
 ##  EXAMPLES
 
 Find quotes from model knowledge:

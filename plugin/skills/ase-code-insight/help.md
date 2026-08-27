@@ -24,6 +24,13 @@ a *MODULE STRUCTURE* Mermaid diagram of modules and their imports.
     One or more file or directory references to source code that
     should be inspected for insights.
 
+##  SCENARIOS
+
+-   You want a high-level overview of a project
+-   You want to know who wrote the project and which files churn most
+-   You want a module structure diagram of the imports
+-   You want to get familiar with an unknown code base quickly
+
 ##  EXAMPLES
 
 Get insights into the current project:

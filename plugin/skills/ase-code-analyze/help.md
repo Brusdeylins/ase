@@ -61,6 +61,14 @@ fixed via `ase-code-edit P<n>`.
     A file, directory, function, or other reference to the source code
     to analyze.
 
+##  SCENARIOS
+
+-   You want your code checked for logic, semantics, and control-flow problems
+-   You want a read-only report of problems without any changes applied
+-   You want performance and efficiency opportunities surfaced
+-   You want a security-focused inspection of your code
+-   You want problems persisted as issue ids like `P1` for later resolving
+
 ##  EXAMPLES
 
 Analyze a specific source file for logic/semantic problems:

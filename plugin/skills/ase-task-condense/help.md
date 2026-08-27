@@ -57,6 +57,12 @@ After condensing, the user is asked whether to stop or hand off to
     The unique identifier of the task whose plan should be condensed.
     If omitted, the *current* task id is used.
 
+##  SCENARIOS
+
+-   You want a task plan shortened without losing meaning
+-   You want plan wording compressed for faster reading
+-   You want fluff removed from a plan while keeping all semantics
+
 ##  EXAMPLES
 
 Condense the current task plan:

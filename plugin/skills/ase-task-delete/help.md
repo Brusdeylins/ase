@@ -23,6 +23,12 @@ switched back to `default`.
     The unique identifier of the task plan to delete. If omitted,
     the current task id is used.
 
+##  SCENARIOS
+
+-   You want a task plan removed
+-   You want a finished or obsolete task cleared
+-   You want a plan discarded, falling back to the default task
+
 ##  EXAMPLES
 
 Delete the current task plan:

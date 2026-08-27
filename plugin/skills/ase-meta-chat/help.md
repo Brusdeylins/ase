@@ -26,6 +26,12 @@ without any further interpretation.
 *query*:
     The chat message to send to the foreign LLM.
 
+##  SCENARIOS
+
+-   You want a single question answered by one specific foreign LLM
+-   You want an answer from ChatGPT, Gemini, DeepSeek, Grok, GLM, or Qwen
+-   You want a second opinion from exactly one other model, verbatim
+
 ##  EXAMPLES
 
 Ask ChatGPT a quick question:

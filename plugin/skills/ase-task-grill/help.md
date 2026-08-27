@@ -73,6 +73,13 @@ offered a hand-off to editing, implementation, or preflight.
     The skill accepts *only* an optional *id* argument and never a
     free-text instruction.
 
+##  SCENARIOS
+
+-   You want to be interviewed about your plan until it is watertight
+-   You want the open decisions of a plan resolved question by question
+-   You want fuzzy language and conflicts flushed out of a plan
+-   You want shared understanding before the implementation starts
+
 ##  EXAMPLES
 
 Grill the current task plan:

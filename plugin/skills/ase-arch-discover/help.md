@@ -57,6 +57,13 @@ demotes dependency-heavy components.
     A short description of the desired functionality the third-party
     component should provide.
 
+##  SCENARIOS
+
+-   You want a third-party library or framework for a needed functionality
+-   You want a ranked survey of candidate components from NPM or Maven Central
+-   You want to know whether a package is healthy or stale and abandoned
+-   You want to decide between a dependency and hand-rolling a small feature
+
 ##  EXAMPLES
 
 Discover components for JSON schema validation:

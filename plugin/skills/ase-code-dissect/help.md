@@ -89,6 +89,13 @@ cleanly and are then reported as failed; stage everything and use
 The worktree names are *not* argument-driven: they are always derived
 from the *current* project id and the per-part feature slug.
 
+##  SCENARIOS
+
+-   You want a large uncommitted change set split into atomic parts
+-   You want each cohesive part of a diff in its own Git worktree
+-   You want mixed-up changes untangled before committing them
+-   You want a preview of how a change set would be divided
+
 ##  EXAMPLES
 
 Dissect the current working copy changes:

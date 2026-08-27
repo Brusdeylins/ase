@@ -23,6 +23,12 @@ comma-separated *artifact class* tags out of `spec`, `arch`, `code`,
 prefix. The date in the section header is also updated to the current
 date.
 
+##  SCENARIOS
+
+-   You want the `CHANGELOG.md` brought up to date with recent commits
+-   You want changelog entries completed, consolidated, and sorted
+-   You want a tidy changelog section before a release
+
 ##  EXAMPLES
 
 Update the most recent ChangeLog section:

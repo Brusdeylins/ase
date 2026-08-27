@@ -34,6 +34,12 @@ Brave, or `WebSearch` individually.
 *query*:
     The search query to dispatch to the search services.
 
+##  SCENARIOS
+
+-   You want the Internet/Web searched for a query
+-   You want results from several search backends consolidated
+-   You want current facts which model knowledge may lack
+
 ##  EXAMPLES
 
 Search the Web for a topic across all backends:

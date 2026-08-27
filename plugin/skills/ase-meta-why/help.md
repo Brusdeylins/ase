@@ -56,6 +56,13 @@ source code changes.
     whose root cause should be investigated. The skill implicitly
     prepends "Why" to form the initial question.
 
+##  SCENARIOS
+
+-   You want the root cause of a problem, not just its symptom
+-   You want a Five-Whys causality chain walked for an observed fact
+-   You want candidate causes weighed with backtracking
+-   You want a solution proposed which addresses the root cause
+
 ##  EXAMPLES
 
 Investigate the root cause of a build failure:

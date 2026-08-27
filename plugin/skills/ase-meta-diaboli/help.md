@@ -51,6 +51,13 @@ contrarian.
     It may be technical, factual, or opinion-based; the skill attacks
     its strongest ("steelman") interpretation.
 
+##  SCENARIOS
+
+-   You want a thesis relentlessly challenged with counter-arguments
+-   You want a decision stress-tested before you commit to it
+-   You want the strongest anti-theses ranked plus a synthesis
+-   You want a devil's advocate against a claim or plan
+
 ##  EXAMPLES
 
 Challenge a technology-choice claim:

@@ -68,6 +68,12 @@ cheerleading.
     It may be technical, factual, or opinion-based; the skill defends
     its strongest ("steelman") interpretation.
 
+##  SCENARIOS
+
+-   You want the strongest possible case built for a thesis
+-   You want supporting arguments ranked plus a fortification
+-   You want a charitable defense before pitching a decision
+
 ##  EXAMPLES
 
 Strengthen a technology-choice claim:

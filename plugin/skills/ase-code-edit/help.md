@@ -101,6 +101,13 @@ implementation until it passes). The *querying* state and every
     for the query via an interactive `Edit Query` dialog, carrying the
     fixed `STOP SKILL` option plus free-text input.
 
+##  SCENARIOS
+
+-   You want the code base edited in one shot from a plain description
+-   You want an analyzer issue like `P1` fixed directly without a plan
+-   You want a quick change with optional grilling and verification
+-   You want several edits chained in a loop, optionally in a worktree
+
 ##  EXAMPLES
 
 Edit in one shot, without any questions or verification:

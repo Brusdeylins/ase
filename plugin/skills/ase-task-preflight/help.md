@@ -55,6 +55,13 @@ unless `--next` pre-selects this choice.
     The unique identifier of the task whose plan should be
     preflighted. If omitted, the *current* task id is used.
 
+##  SCENARIOS
+
+-   You want a dry-run of a plan's implementation
+-   You want the change set previewed as a unified diff before applying
+-   You want an implementation draft to review before committing to it
+-   You want a plan test-driven without touching any source files
+
 ##  EXAMPLES
 
 Preflight the current task plan:

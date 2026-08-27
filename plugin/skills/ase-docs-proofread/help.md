@@ -36,6 +36,13 @@ hint, which re-proposes the correction without limit) or - with
     A file, directory, or other reference to the documents to
     proofread.
 
+##  SCENARIOS
+
+-   You want documents checked for spelling, punctuation, and grammar
+-   You want corrections proposed which you accept or reject one by one
+-   You want a whole documentation directory corrected automatically
+-   You want a final language pass over a text before publishing
+
 ##  EXAMPLES
 
 Proofread a single document interactively:

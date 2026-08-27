@@ -54,6 +54,12 @@ REJECTED  DEFERRED  BLOCKED  CANCELLED
     `COMPLETED,CANCELLED`; pass `--exclude none` to suppress the
     default and list task plans in every state.
 
+##  SCENARIOS
+
+-   You want an overview of all task plans
+-   You want task ids listed with status and timestamps
+-   You want the unfinished or in-progress tasks found
+
 ##  EXAMPLES
 
 List all unfinished task ids:

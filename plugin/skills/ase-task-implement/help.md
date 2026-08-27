@@ -79,6 +79,13 @@ delete the task plan, unless `--next` pre-selects this choice.
     The unique identifier of the task whose plan should be
     implemented. If omitted, the *current* task id is used.
 
+##  SCENARIOS
+
+-   You want a task plan turned into actual changes
+-   You want the planned change set applied and verified
+-   You want a reviewed implementation draft applied 1:1
+-   You want the implementation isolated in a Git worktree
+
 ##  EXAMPLES
 
 Implement the current task plan:

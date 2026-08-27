@@ -46,6 +46,13 @@ The skill exposes *no* option flags beyond `--help`/`-h`.
     description of its purpose. If omitted, the entire skill catalog is
     listed.
 
+##  SCENARIOS
+
+-   You want the manual page of an ASE skill
+-   You want to know what a certain `ase-xxx-xxx` skill does
+-   You want a skill found by an abbreviation or a purpose description
+-   You want to browse the whole catalog of ASE skills
+
 ##  EXAMPLES
 
 Show the manual page of `ase-code-lint` via its shortest abbreviation:

@@ -42,6 +42,12 @@ knowledge.
     phenomenon, or any other subject; the skill explains it in a
     child-friendly way.
 
+##  SCENARIOS
+
+-   You want a topic explained so simply a child could follow
+-   You want a jargon-free summary with an everyday analogy
+-   You want a simple explanation grounded in current Internet/Web facts
+
 ##  EXAMPLES
 
 Explain a technical concept from model knowledge:

@@ -76,6 +76,13 @@ The epic plan itself always stays *untouched*.
     A free-text hint telling *how* the epic should be split. If omitted,
     the parts are derived from the plan alone.
 
+##  SCENARIOS
+
+-   You want a large task plan split into cohesive sub-tasks
+-   You want an epic decomposed into independently implementable parts
+-   You want a preview of how a plan would be divided
+-   You want each part of a plan persisted as its own separate plan
+
 ##  EXAMPLES
 
 Dissect the current task plan:

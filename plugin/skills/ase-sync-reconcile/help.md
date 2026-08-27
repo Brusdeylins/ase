@@ -62,6 +62,13 @@ in at most three rounds; any remaining diagnostics are surfaced.
     target artifacts, or the aspects of those artifacts to take into
     account during reconciliation.
 
+##  SCENARIOS
+
+-   You want one artifact set updated to reflect another one
+-   You want code and docs aligned with the specification
+-   You want the specification recovered from the code base
+-   You want spec and code bidirectionally synchronized
+
 ##  EXAMPLES
 
 Reconcile the code and documentation

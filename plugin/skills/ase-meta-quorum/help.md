@@ -40,6 +40,12 @@ complete, unmodified individual responses.
 *question*:
     The question to ask all available AIs.
 
+##  SCENARIOS
+
+-   You want a consensus answer from multiple AIs
+-   You want to know whether different models agree on a question
+-   You want the individual responses plus a consensus rate
+
 ##  EXAMPLES
 
 Ask the quorum a factual question:

@@ -52,6 +52,13 @@ non-numeric value falls back to the default *5*.
     *text* itself pasted inline. If it resolves to a readable file the
     file is read; otherwise it is treated verbatim as pasted text.
 
+##  SCENARIOS
+
+-   You want the key points of a document extracted and ranked
+-   You want the essence of a long text without reading all of it
+-   You want each key point backed by verbatim, line-cited evidence
+-   You want a pasted text or file boiled down to what matters
+
 ##  EXAMPLES
 
 Distill the key points of a document file:

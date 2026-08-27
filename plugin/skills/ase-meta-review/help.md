@@ -69,6 +69,13 @@ before it is committed.
 The `ase-meta-review` skill takes no positional arguments; it always
 reviews the currently *staged* Git changes.
 
+##  SCENARIOS
+
+-   You want the staged changes reviewed like a human reviewer would
+-   You want an approve or reject verdict before committing
+-   You want severity-tagged, line-cited findings on a diff
+-   You want a holistic judgment instead of a mechanical lint
+
 ##  EXAMPLES
 
 Review the currently staged changes before committing:

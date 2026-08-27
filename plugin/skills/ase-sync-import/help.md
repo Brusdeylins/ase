@@ -57,6 +57,13 @@ at most three rounds; any remaining diagnostics are surfaced.
     from (e.g. a file path, directory, URL, or pasted text). The skill
     errors out on an empty hint.
 
+##  SCENARIOS
+
+-   You want external sources brought into the project artifacts
+-   You want a foreign document, URL, or pasted text reflected in the `SPEC`
+-   You want requirements from outside imported into a task plan
+-   You want legacy material ingested into the specification
+
 ##  EXAMPLES
 
 Import a foreign requirements document into the specification:

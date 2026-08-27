@@ -59,6 +59,13 @@ the `ase-meta-proximity` sub-agent before its proximity is re-determined.
     a technical concept, a phenomenon, or any other subject; the skill
     determines its parent, sibling, and child topics.
 
+##  SCENARIOS
+
+-   You want the conceptual neighborhood of a topic explored
+-   You want the parent, sibling, and child topics of a subject
+-   You want a topic taxonomy navigated interactively
+-   You want related topics grounded in Internet/Web facts
+
 ##  EXAMPLES
 
 Determine the proximity of a topic from model knowledge:

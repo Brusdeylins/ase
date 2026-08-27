@@ -54,6 +54,12 @@ The `ase-meta-compat` skill takes no arguments (besides `--help`|`-h`). It
 always runs the most rigorous self-test, with 6 *probes per category*
 (7 for *Regex Matching*), for 25 probes in total.
 
+##  SCENARIOS
+
+-   You want to know how faithfully the current model runs ASE skills
+-   You want a 0-100% compatibility rating of the LLM and its harness
+-   You want the core interpreter primitives checked before relying on ASE
+
 ##  EXAMPLES
 
 Run the compatibility self-test:

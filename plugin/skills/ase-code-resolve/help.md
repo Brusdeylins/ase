@@ -88,6 +88,13 @@ entirely and applies the change set to the affected artifacts itself.
     skill. Optionally prefixed with a *task-id* followed by a colon
     to bind the resulting plan to a specific task id.
 
+##  SCENARIOS
+
+-   You want a bug fixed or a problem resolved in the code
+-   You want an issue like `P1` reported by an analyzer resolved
+-   You want resolution approaches with pros and cons before any changes
+-   You want a task plan composed for a bugfix
+
 ##  EXAMPLES
 
 Resolve a free-text problem:

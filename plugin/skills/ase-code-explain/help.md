@@ -24,6 +24,13 @@ notice), and *GOTCHAS* (what to not stumble over).
     A file, directory, function, or other reference to the source code
     to explain.
 
+##  SCENARIOS
+
+-   You want to understand how a piece of code works
+-   You want an explanation with WHAT, WHY, analogy, and diagram
+-   You want the cruxes and gotchas of unfamiliar code pointed out
+-   You want a quick orientation before touching foreign code
+
 ##  EXAMPLES
 
 Explain a single source file:

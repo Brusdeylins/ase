@@ -96,6 +96,13 @@ agent tool:
     dispatched "in a sub-agent", or naming concrete `ase-xxx-xxx` skills
     steers the derived structure accordingly.
 
+##  SCENARIOS
+
+-   You want a recurring multi-step procedure automated as its own skill
+-   You want several ASE skills orchestrated or chained into one command
+-   You want sequential and parallel actions woven into a generated skill
+-   You want a new agent tool skill generated in the style of ASE skills
+
 ##  EXAMPLES
 
 Generate a project-local skill which analyzes the code and then resolves

@@ -94,6 +94,13 @@ preset-bootstrapping operation that stays a shell concern next to
     The operands of the operation: none for `list`, a dotted *key* for
     `get` and `delete`, and a dotted *key* plus a *value* for `set`.
 
+##  SCENARIOS
+
+-   You want the ASE configuration inspected or changed
+-   You want the persona, guidance, or boxing switched for a session
+-   You want a configuration value persisted at user or project scope
+-   You want to see which scope supplies each effective value
+
 ##  EXAMPLES
 
 List all effective configuration entries:

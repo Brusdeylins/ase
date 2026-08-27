@@ -18,6 +18,12 @@ the form `<type>: <summary>` where *type* is one of `FEATURE`,
 *summary* is a 60-80 character imperative-mood summary without
 trailing period or Markdown formatting.
 
+##  SCENARIOS
+
+-   You want a commit message for the currently staged changes
+-   You want a typed one-line summary derived from the staged diff
+-   You want to commit but cannot phrase what changed
+
 ##  EXAMPLES
 
 Craft a commit message for the currently staged changes:

@@ -24,6 +24,12 @@ task id is automatically switched to *new*.
     If only one token is given, *old* defaults to the current
     task id.
 
+##  SCENARIOS
+
+-   You want a task plan renamed
+-   You want a task given a better id
+-   You want the current task moved to a new id
+
 ##  EXAMPLES
 
 Rename the current task:

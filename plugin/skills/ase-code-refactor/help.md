@@ -82,6 +82,13 @@ entirely and applies the change set to the affected artifacts itself.
     with a *task-id* followed by a colon to bind the resulting plan
     to a specific task id.
 
+##  SCENARIOS
+
+-   You want existing code restructured without changing its behavior
+-   You want refactoring approaches with pros and cons before any changes
+-   You want a task plan composed for a cleanup
+-   You want a one-shot refactoring applied directly in place
+
 ##  EXAMPLES
 
 Refactor a module into smaller files:

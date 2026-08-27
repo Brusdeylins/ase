@@ -61,6 +61,14 @@ the highest-ranked option or a principled synthesis of the shortlist.
     The subject to brainstorm - a feature, component, behavior, or
     design question to explore *what* to build before *how*.
 
+##  SCENARIOS
+
+-   You want to get fresh ideas for an open-ended question
+-   You want to explore what to build before deciding how to build it
+-   You want to widen a solution space that holds a single candidate
+-   You want to get a shortlist of distinct directions with a recommendation
+-   You want to ideate on a feature, component, or design question
+
 ##  EXAMPLES
 
 Brainstorm an approach for a new feature:

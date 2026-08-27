@@ -36,6 +36,12 @@ the plan in full, without any truncation or summarization.
     The unique identifier of the task plan to view. If omitted,
     the current task id is used.
 
+##  SCENARIOS
+
+-   You want the current or a given task plan shown
+-   You want a plan rendered before deciding the next steps
+-   You want a plan inspected including its implementation draft
+
 ##  EXAMPLES
 
 View the current task plan:

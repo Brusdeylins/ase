@@ -104,6 +104,13 @@ timestamp refreshed.
     skill asks for the query via an interactive `Edit Query` dialog,
     carrying the fixed `STOP SKILL` option plus free-text input.
 
+##  SCENARIOS
+
+-   You want the specification edited in one shot from a description
+-   You want `SPEC` changes without the task plan ceremony
+-   You want the query stress-tested by grilling before the spec is edited
+-   You want specification edits validated by SpecBook linting
+
 ##  EXAMPLES
 
 Edit in one shot, without any questions or validation:

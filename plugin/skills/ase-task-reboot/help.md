@@ -43,6 +43,12 @@ unless `--next` pre-selects this choice.
     The unique identifier of the task whose plan should be rebooted.
     If omitted, the *current* task id is used.
 
+##  SCENARIOS
+
+-   You want a task plan re-created from scratch
+-   You want a fresh plan from the original WHAT and WHY
+-   You want planning restarted after a plan degraded
+
 ##  EXAMPLES
 
 Reboot the current task plan:

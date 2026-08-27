@@ -73,6 +73,13 @@ giving a visual sense of *what a diff endangers* before a deeper review.
     *reverse dependencies* - plus a *brief impact summary* of what
     depends on the touched code and how far the blast reaches.
 
+##  SCENARIOS
+
+-   You want a readable, intent-grouped summary of the staged changes
+-   You want a diff checked for scope creep and stray debug leftovers
+-   You want a graded risk report of a change before committing
+-   You want a blast-radius map of what depends on the touched code
+
 ##  EXAMPLES
 
 Summarize the currently staged changes:

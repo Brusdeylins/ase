@@ -208,7 +208,7 @@ see whether **ASE** is right for you:
 
 - **Intent-Based Skill Matching**:
   You know what you want, but not which skill and which options realize it,
-  and want the best-fitting `/ase-xxx-xxx` command generated for you?
+  and want the fitting `/ase-xxx-xxx` commands generated for you?
   &rarr; [`/ase-help-intent`](plugin/skills/ase-help-intent/help.md)
   `split my huge change set into separate commits`
 

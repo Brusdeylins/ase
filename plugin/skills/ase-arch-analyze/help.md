@@ -40,6 +40,13 @@ covers the *entire* `ase-issue-*` space, including any prefixed results.
     A file, directory, or other reference to the source code that
     is to be analyzed architecturally.
 
+##  SCENARIOS
+
+-   You want the software architecture of your code base reviewed
+-   You want coupling and cohesion problems between packages found
+-   You want an architecture diagram plus PROBLEM and TRADEOFF findings
+-   You want architecture findings persisted for later resolution
+
 ##  EXAMPLES
 
 Analyze architecture of the current project:

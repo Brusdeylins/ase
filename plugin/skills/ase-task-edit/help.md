@@ -65,6 +65,13 @@ for the changed plan.
     Optionally, *instruction* either gives instructions for creating a
     new task or gives instructions for refining an existing task.
 
+##  SCENARIOS
+
+-   You want a task planned through chat-driven refinement
+-   You want a plan created or refined round by round
+-   You want a plan iterated on before implementing it
+-   You want plan refinement with hand-off to preflight or implementation
+
 ##  EXAMPLES
 
 Edit the current task:

@@ -81,6 +81,14 @@ the code, and comments contradicting the code.
 *source-reference*:
     A file, directory, or other reference to the source code to lint.
 
+##  SCENARIOS
+
+-   You want your code checked for code quality problems
+-   You want corrections proposed which you accept or reject one by one
+-   You want all quality corrections applied automatically
+-   You want only specific quality aspects like formatting or spelling checked
+-   You want missing or excessive code documentation flagged
+
 ##  EXAMPLES
 
 Lint a source file interactively:

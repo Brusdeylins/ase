@@ -31,6 +31,13 @@ all alternatives rate negatively.
     A description of what should be evaluated, including the
     alternatives and, optionally, the criteria to consider.
 
+##  SCENARIOS
+
+-   You want alternatives compared and the best one named
+-   You want a weighted multi-criteria decision matrix
+-   You want a defensible, criteria-based technology choice
+-   You want to know which option out of a list wins and by how much
+
 ##  EXAMPLES
 
 Compare logging libraries for a TypeScript project:

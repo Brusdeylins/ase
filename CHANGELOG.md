@@ -2,6 +2,13 @@
 ChangeLog
 =========
 
+0.9.64 (2026-08-27)
+-------------------
+
+-   IMPROVEMENT [code, docs]: Scenario-based intent matching
+    Added a `SCENARIOS` section ("You want ...") to the manual page of every skill and let
+    `ase-help-intent` propose all adequately fitting commands, ranked best-fitting first.
+
 0.9.63 (2026-08-26)
 -------------------
 

@@ -37,6 +37,12 @@ standard output sentinel `-` is not supported.
     single HTML rendering `index.html` inside the `SPEC` base directory
     (e.g. `docs/specbook/index.html`).
 
+##  SCENARIOS
+
+-   You want the specification rendered as HTML, PDF, Markdown, or JSON
+-   You want a shareable, ready-to-consume export of the `SPEC` artifacts
+-   You want the specification validated and then materialized into files
+
 ##  EXAMPLES
 
 Export the specification to its default HTML rendering:

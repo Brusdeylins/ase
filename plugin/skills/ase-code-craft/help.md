@@ -89,6 +89,13 @@ entirely and applies the change set to the affected artifacts itself.
     a *task-id* followed by a colon to bind the resulting plan to
     a specific task id.
 
+##  SCENARIOS
+
+-   You want to add a new feature to the code base
+-   You want feature approaches with pros and cons before any code changes
+-   You want a task plan composed for building something new
+-   You want a fast one-shot crafting without any plan ceremony
+
 ##  EXAMPLES
 
 Craft a new logging feature:

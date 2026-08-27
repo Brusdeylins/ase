@@ -22,6 +22,12 @@ task id via the `ase_task_id` MCP tool.
     The new task id to activate. If omitted, the currently active
     task id is reported.
 
+##  SCENARIOS
+
+-   You want to know which task is currently active
+-   You want the session switched to another task
+-   You want to work on a certain task
+
 ##  EXAMPLES
 
 Show the current task id:
