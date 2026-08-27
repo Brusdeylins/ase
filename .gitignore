@@ -1,5 +1,9 @@
 node_modules/
-.ase
+.ase/service.log
+.ase/service.yaml
+.ase/sessions
+.ase/task
+.ase/worktree
 .env
 .DS_Store
 .playwright-mcp

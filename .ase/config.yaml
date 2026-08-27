@@ -1,0 +1,22 @@
+project:
+    id: example
+    name: Example Project
+    boxing: white
+    artifact:
+        spec:
+            basedir: "docs/spec"
+            files: "*.{md,txt}"
+        code:
+            basedir: "."
+            files: "plugin/** tool/** !**/etc/** !**/{.gitignore,.npmignore,package.json}"
+        docs:
+            basedir: "."
+            files: "docs/** pages/** **/{README,LICENSE,CHANGELOG}.{md,txt}
+                !docs/{spec,arch}/**"
+        infr:
+            basedir: "."
+            files: "bin/** **/{.github,.claude*,etc}/**
+                **/{AGENTS.md,{package,tsconfig*}.json,.{git,npm}ignore}"
+agent:
+    persona: engineer
+    guidance: minimal
