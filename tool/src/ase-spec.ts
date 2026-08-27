@@ -41,11 +41,36 @@ export class Spec {
     }
 
     /*  create the SpecBook API instance, routing its verbose processing
-        messages into the info log if requested, else into the debug log  */
-    private static api (log: Log, verbose: boolean): SpecBook {
+        messages into the info log if requested, else into the debug log,
+        while its "notice" messages always reach the warning log and, for
+        consumers which never see the log, the given collector  */
+    private static api (log: Log, verbose: boolean, notices?: string[]): SpecBook {
         return new SpecBook({
-            verbose: (cmd, msg) => log.write(verbose ? "info" : "debug", `specbook: ${cmd}: ${renderVerbose(msg)}`)
+            verbose: (cmd, msg, level) => {
+                const text = renderVerbose(msg)
+                if (level === "notice") {
+                    log.write("warning", `specbook: ${cmd}: ${text}`)
+                    notices?.push(text)
+                }
+                else
+                    log.write(verbose ? "info" : "debug", `specbook: ${cmd}: ${text}`)
+            }
         })
+    }
+
+    /*  SpecBook marks the literal values inside its messages, but only
+        its verbose messages ever reach a renderer, so strip the markers
+        off the error messages here at the API boundary -- unstyled, as
+        they travel on into the log and the MCP tool results  */
+    private static async unmarked <T> (result: Promise<T>): Promise<T> {
+        try {
+            return await result
+        }
+        catch (err: unknown) {
+            if (err instanceof Error)
+                err.message = renderVerbose(err.message)
+            throw err
+        }
     }
 
     /*  render a diagnostic file path relative to the project root,
@@ -60,10 +85,10 @@ export class Spec {
     /*  lint the specification Markdown files below the "spec" artifact
         base directory against the schema configuration  */
     static async lint (log: Log, verbose = false): Promise<Diagnostic[]> {
-        const result = await Spec.api(log, verbose).lint({
+        const result = await Spec.unmarked(Spec.api(log, verbose).lint({
             config:  Spec.configFile(log),
             basedir: Artifact.basedir(log, "spec")
-        })
+        }))
         return result.diagnostics.map((d) => ({ ...d, file: Spec.relativize(d.file) }))
     }
 
@@ -92,13 +117,14 @@ export class Spec {
     }
 
     /*  export the specification Markdown files below the "spec" artifact
-        base directory into the requested formats, one buffer per format  */
-    static export (log: Log, formats: ExportFormat[], verbose = false): Promise<Buffer[]> {
-        return Spec.api(log, verbose).export({
+        base directory into the requested formats, one buffer per format,
+        collecting the emitted environment notices if requested  */
+    static export (log: Log, formats: ExportFormat[], verbose = false, notices?: string[]): Promise<Buffer[]> {
+        return Spec.unmarked(Spec.api(log, verbose, notices).export({
             config:  Spec.configFile(log),
             basedir: Artifact.basedir(log, "spec"),
             formats
-        })
+        }))
     }
 }
 
@@ -223,34 +249,49 @@ export class SpecMCP {
                 "`project.artifact.spec.basedir` configuration) as JSON, JSON5, YAML, TOON, HTML, PDF, " +
                 "or normalized Markdown. The result is written to the `output` file (a relative path " +
                 "resolves against the project root) if given, else it is returned directly " +
-                "(PDF as a base64-encoded resource). The export fails on any lint diagnostic.",
+                "(PDF as a base64-encoded resource). The export fails on any lint diagnostic. " +
+                "The `notices` array carries the environment notices emitted during the export " +
+                "(like a PDF rendering falling back onto a system-installed browser), which are " +
+                "worth reporting to the user verbatim.",
             inputSchema: {
                 format: z.enum(formats).optional()
                     .describe("output format (default: inferred from the `output` file extension, else `json`)"),
                 output: z.string().optional()
                     .describe("output file path (\"-\" or omitted returns the result directly)")
+            },
+            outputSchema: {
+                notices: z.array(z.string())
+                    .describe("environment notices emitted during the export, empty if there were none")
             }
         }, async (args) => {
+            const notices = new Array<string>()
             try {
                 /*  an explicit format takes the output as a plain file path, while
                     otherwise the output is an "[<format>:]<file>" specification  */
                 const spec = args.format !== undefined || args.output === undefined ?
                     { format: args.format ?? "json", output: args.output } :
                     parseOutputSpec(args.output)
-                const [ data ] = await Spec.export(this.log, [ spec.format ])
+                const [ data ] = await Spec.export(this.log, [ spec.format ], false, notices)
                 if (spec.output !== undefined && spec.output !== "-") {
                     await fs.promises.writeFile(path.resolve(Task.projectRoot(), spec.output), data)
-                    return { content: [ { type: "text", text: `exported specification into "${spec.output}" (${data.length} bytes)` } ] }
+                    return {
+                        structuredContent: { notices },
+                        content: [ { type: "text", text: `exported specification into "${spec.output}" (${data.length} bytes)` } ]
+                    }
                 }
                 else if (spec.format === "pdf")
                     return {
+                        structuredContent: { notices },
                         content: [ {
                             type:     "resource",
                             resource: { uri: "ase:specbook-export.pdf", mimeType: "application/pdf", blob: data.toString("base64") }
                         } ]
                     }
                 else
-                    return { content: [ { type: "text", text: data.toString("utf8") } ] }
+                    return {
+                        structuredContent: { notices },
+                        content: [ { type: "text", text: data.toString("utf8") } ]
+                    }
             }
             catch (err: unknown) {
                 return mcpToolError(err)

@@ -104,8 +104,9 @@ Procedure
         `ase_specbook_export(output: "<output/>")` tool of the `ase` MCP
         server, which infers the format from the `[<format>:]<file>`
         entry, writes the rendering to the file, and returns a
-        confirmation `text` carrying the written byte size. Do not
-        output anything.
+        confirmation `text` carrying the written byte size plus a
+        `notices` array of environment notices. Set <notices/> to the
+        *distinct* notices of all calls. Do not output anything.
 
     2.  Report the exported files with the following <template/>,
         listing one bullet line per written file (with <file/> its
@@ -118,7 +119,21 @@ Procedure
         [...]
         </template>
 
-    3.  Finally, give the closing hints by expanding the following
+    3.  <if condition="<notices/> is not empty">
+
+        Report the environment notices *verbatim* with the following
+        <template/>, listing one bullet line per notice:
+
+        <template>
+        <ase-tpl-bullet-signal/> **ENVIRONMENT NOTICES**:
+
+        -   <notice/>
+        [...]
+        </template>
+
+        </if>
+
+    4.  Finally, give the closing hints by expanding the following
         (which, depending on the configured <ase-guidance-level/>, may
         each expand into nothing and hence emit no output at all):
 

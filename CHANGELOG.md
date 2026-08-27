@@ -9,6 +9,14 @@ ChangeLog
     Added a `SCENARIOS` section ("You want ...") to the manual page of every skill and let
     `ase-help-intent` propose all adequately fitting commands, ranked best-fitting first.
 
+-   FEATURE [code]: SpecBook environment notices
+    Route the SpecBook `notice` messages to the `warning` log and collect them into the new
+    `notices` output field of `ase_specbook_export`, which `ase-sync-export` reports verbatim.
+
+-   IMPROVEMENT [docs]: PDF export prerequisite
+    Document the Chromium-class browser the `pdf` export needs, and the one-time
+    `npx playwright install chromium` remedy, in `README.md`, `usage-tool.md`, and the skill help.
+
 0.9.63 (2026-08-26)
 -------------------
 

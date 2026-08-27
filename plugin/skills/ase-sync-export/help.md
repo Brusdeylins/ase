@@ -29,6 +29,15 @@ search, and light/dark theme), `pdf` (paginated print document), or `md`
 filename extension unless it is explicitly given as a prefix. The
 standard output sentinel `-` is not supported.
 
+The `pdf` format is the only one with an external prerequisite: it
+prints the rendering through a Chromium-class browser. Neither `npm
+install -g @rse/ase` nor `ase setup install` downloads one, so unless a
+*Google Chrome* is installed system-wide, the Playwright Chromium has to
+be fetched once via `npx playwright install chromium`. Without any such
+browser the export fails up-front, before the specification is parsed,
+and reports that very command; when it falls back onto a system-installed
+*Google Chrome*, the skill reports this as an environment notice.
+
 ##  OPTIONS
 
 `--output`|`-o` *output*[,...]:

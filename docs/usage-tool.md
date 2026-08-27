@@ -478,7 +478,14 @@ standard `ase-format-specbook.yaml` bundled with the plugin):
   (e.g. `docs/specbook/index.html`). With `--verbose`, the SpecBook
   processing information is logged at the `info` level. The export fails
   on any lint diagnostic, so a partial or invalid specification is never
-  emitted.
+  emitted. The `pdf` format additionally requires a Chromium-class
+  browser, which neither `npm install -g @rse/ase` nor `ase setup
+  install` provides: unless a *Google Chrome* is installed system-wide,
+  fetch the Playwright Chromium once via `npx playwright install
+  chromium`. Without any such browser the export fails before the
+  specification is even parsed and reports that very command; a fallback
+  onto a system-installed *Google Chrome* is logged at the `warning`
+  level, independent of `--verbose`.
 
 The following top-level command exists for exposing plugin meta files:
 
