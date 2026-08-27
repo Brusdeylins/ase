@@ -1,7 +1,7 @@
 project:
-    id: example
-    name: Example Project
-    boxing: white
+    id: ase
+    name: Agentic Software Engineering (ASE)
+    boxing: grey
     artifact:
         spec:
             basedir: "docs/spec"
