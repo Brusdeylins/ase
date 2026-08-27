@@ -38,17 +38,18 @@ import { skillGroups } from "../data/skills.ts"
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     <b>ASE</b> skills are primarily intended to be
                     triggered by the user through so-called "slash commands"
-                    <code>/ase-xxx-xxx</code>. In order to find the right
-                    commands, just use the <code>ase-help-intent</code>
+                    <b><code>/ase-xxx-xxx</code></b>. In order to find the right
+                    commands, just use the <b><code>ase-help-intent</code></b>
                     skill and express your intention. It will show you
                     which particular slash commands (potentially even with their suitable options
                     and arguments) can be used by you to achieve your intention.
                 </p>
                 <p class="ase-indent-p text-foreground-secondary">
                     Once you found the suitable skill, either excecute the
-                    proposed corresponding slash commands, or use the <code>ase-help-skill</code>
+                    proposed corresponding slash commands, or use the <b><code>ase-help-skill</code></b>
                     skill to get a catalog of all available skills or show the
                     manual page of a particular skill to find our more about the skill.
+                    Or alternatively, read the manual pages below.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
@@ -62,7 +63,7 @@ import { skillGroups } from "../data/skills.ts"
                     ]}
                 />
                 <Terminal
-                    class="mt-4"
+                    class="mt-8"
                     prefix="Claude Code"
                     commands={[
                         "**/ase-help-skill**",
@@ -70,6 +71,48 @@ import { skillGroups } from "../data/skills.ts"
                         "**/ase-help-skill** ase-code-edit"
                     ]}
                 />
+            </div>
+        </div>
+
+        <div class="relative overflow-hidden rounded-xl border border-border-strong p-6 shadow-xl sm:p-8" data-reveal>
+            <div class="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-5">
+                {skillGroups.map((group) => {
+                    /*  split a group label like "Standalone Mode 1/2" around
+                        " Mode" into the leading word and an optional trailing
+                        "1/2" fraction, so the header keeps its original
+                        two-line "<word><br/>Mode [fraction]" layout while the
+                        label text lives solely in the shared catalog.  */
+                    const [ word, fraction ] = group.label.split(" Mode")
+                    return (
+                        <div>
+                            <p class="text-sm font-bold uppercase tracking-wider text-accent">{word}<br/>Mode {fraction.trim() && <span class="font-light">{fraction.trim()}</span>}</p>
+                            <ul class="mt-3 space-y-1 text-[0.90625rem] leading-none text-foreground-secondary">
+                                {group.skills.map((id) => {
+                                    const idx    = id.lastIndexOf("-")
+                                    const prefix = id.slice(0, idx + 1)
+                                    const name   = id.slice(idx + 1)
+                                    return (
+                                        <li>{prefix}<button type="button" class="cursor-grab text-accent transition-colors hover:text-white" data-help-id={id}><b>{name}</b></button></li>
+                                    )
+                                })}
+                            </ul>
+                        </div>
+                    )
+                })}
+            </div>
+
+            <div class="mt-6 flex flex-col items-end gap-2 sm:absolute sm:bottom-8 sm:right-8 sm:mt-0">
+                <input
+                    type="search"
+                    data-help-search
+                    autocomplete="off"
+                    placeholder="Search man-pages…"
+                    aria-label="Search man-pages"
+                    class="w-64 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none"
+                />
+                <button type="button" class="w-64 cursor-grab text-sm ase-btn" data-help-id={skillGroups[0].skills[0]}>
+                    Open Manpage Browser
+                </button>
             </div>
         </div>
     </div>
@@ -182,59 +225,6 @@ import { skillGroups } from "../data/skills.ts"
             </div>
             <div class="lg:order-1" data-reveal="right">
                 <Diagram src="/assets/workflow.svg" label="ASE usage workflow diagram" />
-            </div>
-        </div>
-
-        <div class="relative overflow-hidden rounded-xl border border-border-strong p-6 shadow-xl sm:p-8" data-reveal>
-            <div class="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-5">
-                {skillGroups.map((group) => {
-                    /*  split a group label like "Standalone Mode 1/2" around
-                        " Mode" into the leading word and an optional trailing
-                        "1/2" fraction, so the header keeps its original
-                        two-line "<word><br/>Mode [fraction]" layout while the
-                        label text lives solely in the shared catalog.  */
-                    const [ word, fraction ] = group.label.split(" Mode")
-                    return (
-                        <div>
-                            <p class="text-sm font-bold uppercase tracking-wider text-accent">{word}<br/>Mode {fraction.trim() && <span class="font-light">{fraction.trim()}</span>}</p>
-                            <ul class="mt-3 space-y-1 text-[0.90625rem] leading-none text-foreground-secondary">
-                                {group.skills.map((id) => {
-                                    const idx    = id.lastIndexOf("-")
-                                    const prefix = id.slice(0, idx + 1)
-                                    const name   = id.slice(idx + 1)
-                                    return (
-                                        <li>{prefix}<button type="button" class="cursor-grab text-accent transition-colors hover:text-white" data-help-id={id}><b>{name}</b></button></li>
-                                    )
-                                })}
-                            </ul>
-                        </div>
-                    )
-                })}
-            </div>
-
-            {/* bottom-right entry points into the man-page browser: a search
-                box which opens the modal with its query already applied (see
-                the `data-help-search` handler in `Modal-Help.astro`), stacked
-                on top of the plain opener. The latter is the very same
-                `data-help-id` trigger the individual skill names use, pointed
-                at the first catalog entry, so the modal opens on a rendered
-                man-page instead of an empty pane. Both are absolutely parked
-                in the bottom-right corner of the surrounding box, into the
-                empty space the shorter catalog columns leave -- except on the
-                single-column phone layout, where no such space exists and they
-                stay in the regular flow below the catalog. */}
-            <div class="mt-6 flex flex-col items-end gap-2 sm:absolute sm:bottom-8 sm:right-8 sm:mt-0">
-                <input
-                    type="search"
-                    data-help-search
-                    autocomplete="off"
-                    placeholder="Search man-pages…"
-                    aria-label="Search man-pages"
-                    class="w-64 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none"
-                />
-                <button type="button" class="w-64 cursor-grab text-sm ase-btn" data-help-id={skillGroups[0].skills[0]}>
-                    Open Manpage Browser
-                </button>
             </div>
         </div>
 
