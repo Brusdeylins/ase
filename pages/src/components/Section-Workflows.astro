@@ -48,9 +48,9 @@ import Annotation  from "./Annotation.astro"
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The simplest approach is a straight and ad-hoc
                     instruction, as provided by <b>Anthropic Claude Code CLI</b>{" "}
-                    already without <b>ASE</b>. The pro is its
+                    already without <b>ASE</b> in its standard mode. The pro is its
                     simplicity, the con is its weakness due to missing
-                    detail decisions. Use for simple tasks only.
+                    detail decisions. Use for simple ad-hoc tasks only.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
@@ -58,6 +58,58 @@ import Annotation  from "./Annotation.astro"
                     prefix="Claude Code"
                     commands={[
                         "Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
+                    ]}
+                />
+            </div>
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <p class="ase-eyebrow">Quick Mode</p>
+                <h3 class="ase-h3">Quick &amp; Dirty I</h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    The simple quick &amp; dirty approach in <b>ASE</b>{" "}
+                    is the Quick Mode, which borrows underlying instructions
+                    from the <b>ASE</b> Task Mode and Funnel Mode, but works without
+                    the ceremony of the <b>ASE</b> Task Mode. The pro
+                    is its speed, the con is that it might require
+                    subsequent ad-hoc adjustment promptings, as the
+                    expressed intent is still not "grilled" and no
+                    "verification" of the result are done.
+                    Use for simple and clear ad-hoc tasks only.
+                </p>
+            </div>
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <SectionGlow variant="text" side="right"/>
+                <Terminal
+                    prefix="Claude Code"
+                    commands={[
+                        "**/ase-code-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
+                    ]}
+                />
+            </div>
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <p class="ase-eyebrow">Quick Mode</p>
+                <h3 class="ase-h3">Quick &amp; Dirty II</h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    The advanced quick &amp; dirty approach in
+                    <b>ASE</b>{" "} is the Quick Mode where the
+                    expressed intent is "grilled" and the results are
+                    verified. The pro is its decent balance between
+                    higher speed and good result quality, the con is
+                    that it requires more interaction. Use for medium
+                    complex tasks.
+                </p>
+            </div>
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <SectionGlow variant="text" side="right"/>
+                <Terminal
+                    prefix="Claude Code"
+                    commands={[
+                        "**/ase-code-edit** **--grill** **--verify** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
                     ]}
                 />
             </div>
@@ -187,51 +239,24 @@ import Annotation  from "./Annotation.astro"
 
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
-                <p class="ase-eyebrow">Quick Mode</p>
-                <h3 class="ase-h3">Quick &amp; Dirty</h3>
-                <p class="mt-4 text-foreground-secondary ase-justify">
-                    The quick &amp; dirty approach is the <b>ASE</b>{" "}
-                    Quick Mode, which borrows underlying instructions
-                    from the <b>ASE</b> Funnel Model, but works without
-                    the ceremony of the <b>ASE</b> Task Mode. The pro
-                    is its speed, the con is that it might require
-                    subsequent ad-hoc adjustment promptings, at least
-                    as long as its "grill" feature is not used. Use for
-                    medium tasks.
-                </p>
-            </div>
-            <div class="lg:order-2 relative isolate" data-reveal="left">
-                <SectionGlow variant="text" side="right"/>
-                <Terminal
-                    prefix="Claude Code"
-                    commands={[
-                        "**/ase-code-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
-                    ]}
-                />
-            </div>
-        </div>
-
-        <div class="ase-grid-split">
-            <div class="lg:order-1 relative isolate" data-reveal="right">
                 <SectionGlow variant="text" side="left"/>
                 <p class="ase-eyebrow">Reconciliation Mode</p>
                 <h3 class="ase-h3">Artifact Reconciliation</h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The artifact reconciliation approach updates
                     the CODE and DOCS artifacts based on (changed)
-                    information in the SPEC and ARCH artifacts.
-                    The pro is its precise grounding and batch
-                    operation, the con is its requirement for using a
-                    specification-driven development approach. Use for
-                    very complex projects where explicit specifications
-                    drive the development.
+                    information in the SPEC artifacts. The pro is its
+                    precise grounding and batch operation, the con is
+                    its requirement for using a specification-driven
+                    development approach. Use for very complex projects
+                    where explicit specifications drive the development.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
                 <Terminal
                     prefix="Claude Code"
                     commands={[
-                        "**/ase-sync-reconcile** --source SPEC,ARCH --target CODE,DOCS"
+                        "**/ase-sync-reconcile** --source SPEC --target CODE,DOCS"
                     ]}
                 />
             </div>
