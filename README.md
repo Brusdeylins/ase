@@ -485,10 +485,11 @@ via its own configured credentials.
 See Also
 --------
 
-- [claudeX](https://github.com/rse/claudex) (convenience wrapper for Anthropic Claude Code CLI)
-- [mcp-to-openai](https://github.com/rse/mcp-to-openai) (gateway between MCP and OpenAI-compatible APIs)
-- [mcp-to-harness](https://github.com/rse/mcp-to-harness) (bridge between MCP and AI agent harness CLIs)
-- [bash-authorize](https://github.com/rse/bash-authorize) (pre-tool-use hook for Bash commands)
+- [claudeX](https://github.com/rse/claudex)(convenience wrapper for Anthropic Claude Code CLI)
+- [MCP-to-OpenAI](https://github.com/rse/mcp-to-openai)(gateway between MCP and OpenAI-compatible APIs)
+- [MCP-to-Harness](https://github.com/rse/mcp-to-harness)(bridge between MCP and AI agent harness CLIs)
+- [Bash-Authorize](https://github.com/rse/bash-authorize)(pre-tool-use hook for Bash commands)
+- [SpecBook](https://github.com/rse/specbook)(Markdown-based specification)
 
 Support
 -------
