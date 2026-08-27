@@ -411,7 +411,7 @@ export default class HookCommand {
             `\n⧉ ASE: ☯ persona: ${persona}, ▶ guidance: ${guidance}, ▢ boxing: ${boxing}` +
             (guidance === "normal" || guidance === "verbose" ?
                 "\n" +
-                "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent-description>\" for skill command proposal" +
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent-description>\" for skill command proposals" +
                 "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill-name>]\" for skill catalog or skill manpage" : "")
 
         /*  inject markdown into session context.
