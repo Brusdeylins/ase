@@ -14,8 +14,6 @@ ChangeLog
     workflows, and video-row components plus the `fit.ts`, `highlights.ts`, and
     `methods.ts` data.
 
--   CLEANUP [docs]: Dropped an obsolete comment in `Section-Day.astro`
-
 -   REFACTOR [docs]: Consistent component file naming
     Renamed all `pages/src/components/*.astro` files into the `Section-`, `Widget-`,
     `Feature-`, and `Modal-` prefix scheme (including `Section-Hero` to `Section-Title`).
