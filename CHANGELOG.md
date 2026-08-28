@@ -2,6 +2,28 @@
 ChangeLog
 =========
 
+0.9.66 (2026-08-28)
+-------------------
+
+-   FEATURE [docs]: Getting Started section on the website
+    Added a "Getting Started" part to `Section-Usage.astro`, guiding new users from
+    installation to their first skill invocation.
+
+-   FEATURE [docs]: Icons across the website sections
+    Introduced `@lucide/astro` icons in the architecture, day, design, fit, usage,
+    workflows, and video-row components plus the `fit.ts`, `highlights.ts`, and
+    `methods.ts` data.
+
+-   CLEANUP [docs]: Dropped an obsolete comment in `Section-Day.astro`
+
+-   REFACTOR [docs]: Consistent component file naming
+    Renamed all `pages/src/components/*.astro` files into the `Section-`, `Widget-`,
+    `Feature-`, and `Modal-` prefix scheme (including `Section-Hero` to `Section-Title`).
+
+-   REFACTOR [docs]: Split website sections into own components
+    Factored the philosophy part out of `Section-Usage.astro` into `Section-Philosophy.astro`
+    and the contributors/sponsors part out of `Section-Author.astro` into `Section-Thanks.astro`.
+
 0.9.65 (2026-08-28)
 -------------------
 
