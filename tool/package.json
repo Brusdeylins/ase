@@ -67,7 +67,8 @@
         "picomatch":                        "4.0.7",
         "lru-cache":                        "11.5.2",
         "@rse/specbook":                    "1.0.3",
-        "source-code-error":                "1.2.0"
+        "source-code-error":                "1.2.0",
+        "pure-uuid":                        "2.0.0"
     },
     "allowScripts": {
         "fsevents":                         true

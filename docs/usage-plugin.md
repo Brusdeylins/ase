@@ -84,6 +84,20 @@ The following ASE commands/skills exist on the meta-level:
   prioritized, severity-tagged, line-cited findings. `--severity` sets
   the minimum severity of findings to report.
 
+- **/ase-meta-mint** \[`--type`|`-t` `uuid`|`sha1`|`const`|`var`|`class`|`func`|`path`|`name`\] \[`--count`|`-c` *count*\] \[*hint*\]:<br/>
+  Mint an identifier or a name of the requested type out of a free-text
+  *hint*. The hash-derived types `uuid` (a deterministic *UUID V5* within
+  the fixed *ASE* namespace, or a random *UUID V4* without a *hint*) and
+  `sha1` (the hexadecimal *SHA-1* digest) are delegated to the `ase_mint`
+  tool of the `ase` MCP server, while the linguistic types `const`
+  (`FOO_BAR_QUUX`), `var` (`fooBarQuux`, substantive last part), `func`
+  (`fooBarQuux`, verb first part), `class` (`FooBarQuux`), `path`
+  (`foo-bar-quux`), and `name` (`FooBarQuux`, a product-like brand name)
+  are derived by the skill itself. `--count` mints more than one
+  identifier at once, which for the hash-derived types is possible for
+  an empty *hint* only, as hashing a non-empty *hint* is deterministic
+  and hence always yields exactly one identifier.
+
 - **/ase-meta-compat**:<br/>
   Run the *ASE* compatibility self-test, probing the agent harness and
   LLM for the control structures and placeholder handling *ASE* relies

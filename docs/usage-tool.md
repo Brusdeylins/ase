@@ -23,8 +23,8 @@ It provides plugin/tool setup, layered project configuration
 management, a per-project background HTTP service (bridged into the
 agent tool as an MCP server), agent hook handlers, status line
 rendering, persisted task plan management, artifact resolution,
-specification linting and exporting, diagram rendering, and a
-compatibility self-test helper.
+specification linting and exporting, diagram rendering, identifier
+minting, and a compatibility self-test helper.
 
 OPTIONS
 -------
@@ -287,6 +287,23 @@ The following top-level command exists for diagram rendering:
       extra clipping of the diagram relative to terminal width/height.
     - \[`--terminal-width` *n*\] / \[`--terminal-height` *n*\]:
       explicit terminal width/height for clipping.
+
+The following top-level command exists for identifier minting:
+
+- `ase mint` \[`-t`|`--type` `uuid`|`sha1`\] \[`-c`|`--count` *count*\] \[*hint* \[...\]\]:
+  Mint one or more hash-derived identifiers out of the *hint* formed by
+  the remaining arguments, one identifier per output line. With `--type`
+  `uuid` (default), a deterministic *UUID V5* over the *hint* within the
+  fixed *ASE* namespace is emitted, or a random *UUID V4* if no *hint*
+  is given. With `--type` `sha1`, the 40-character hexadecimal *SHA-1*
+  digest of the *hint* is emitted, which requires a non-empty *hint*.
+  `--count` (default: `1`) selects how many identifiers are minted, but
+  is honored for an empty *hint* only, where random *UUID V4* values are
+  emitted; with a non-empty *hint*, hashing always yields exactly one
+  identifier, so `--count` is clamped to `1` and a warning is emitted on
+  *stderr*. This backs the `uuid` and `sha1` types
+  of the `ase-meta-mint` skill; the language-level types of that skill
+  require the AI and hence exist in the skill only.
 
 The following top-level commands exist for installing, updating, and
 uninstalling the *ASE* tool and its companion *Anthropic Claude Code CLI* plugin:

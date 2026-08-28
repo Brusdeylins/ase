@@ -340,6 +340,13 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-meta-proximity`](plugin/skills/ase-meta-proximity/help.md)
   `software architecture`
 
+- **Identifier and Name Minting**:
+  You want a UUID, a SHA-1 digest, a constant, variable, function, or class
+  identifier, a path component, or a catchy product name minted from a
+  short description?
+  &rarr; [`/ase-meta-mint`](plugin/skills/ase-meta-mint/help.md)
+  `-t name a background service bridged into the agent tool`
+
 - **Harness Compatibility Self-Test**:
   You want to check how faithfully your current LLM and its agent harness
   execute the core interpreter primitives the **ASE** skills rely on?

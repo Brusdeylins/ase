@@ -39,6 +39,7 @@ export const skillGroups: SkillGroup[] = [
         label: "Standalone Mode 2/2",
         skills: [
             "ase-meta-compat",
+            "ase-meta-mint",
             "ase-meta-workflow",
             "ase-arch-discover",
             "ase-code-insight",

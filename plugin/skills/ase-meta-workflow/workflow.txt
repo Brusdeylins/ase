@@ -22,6 +22,7 @@ START               -> ase-meta-diff
 START               -> ase-meta-changelog
 START               -> ase-meta-commit
 START               -> ase-meta-proximity
+START               -> ase-meta-mint
 START               -> ase-meta-workflow
 START               -> ase-code-dissect
 ase-help-skill      -> END
@@ -48,6 +49,7 @@ ase-meta-diff       -> END
 ase-meta-changelog  -> END
 ase-meta-commit     -> END
 ase-meta-proximity  -> END
+ase-meta-mint       -> END
 ase-meta-workflow   -> END
 ase-code-dissect    -> END
 START               -> SKETCH

@@ -5,6 +5,12 @@ ChangeLog
 0.9.66 (2026-08-28)
 -------------------
 
+-   FEATURE [code]: Identifier and name minting
+    Added the `ase-meta-mint` skill for minting identifiers and names out of a
+    free-text hint, backed by the new `ase mint` CLI command and `ase_mint` MCP tool
+    in `tool/src/ase-mint.ts`, which derive UUIDs via `pure-uuid` (V5/V4) and SHA-1
+    digests via `node:crypto`.
+
 -   FEATURE [docs]: Getting Started section on the website
     Added a "Getting Started" part to `Section-Usage.astro`, guiding new users from
     installation to their first skill invocation.
