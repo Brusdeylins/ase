@@ -26,13 +26,13 @@ hint, which re-proposes the correction without limit) or - with
 
 ##  OPTIONS
 
-`--auto`|`-a`:
+-   `--auto`|`-a`:
     Automatically apply every proposed correction without asking the
     user via the interactive dialog.
 
 ##  ARGUMENTS
 
-*docs-reference*:
+-   *docs-reference*:
     A file, directory, or other reference to the documents to
     proofread.
 

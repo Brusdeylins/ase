@@ -19,7 +19,7 @@ task id is automatically switched to *new*.
 
 ##  ARGUMENTS
 
-[*old*] *new*:
+-   [*old*] *new*:
     The *old* task id to rename and the *new* task id to assign.
     If only one token is given, *old* defaults to the current
     task id.

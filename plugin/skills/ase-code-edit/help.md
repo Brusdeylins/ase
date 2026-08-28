@@ -36,12 +36,12 @@ implementation until it passes). The *querying* state and every
 
 ##  OPTIONS
 
-`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`:
+-   `--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`:
     Select the tenet set internalized for the implementation: `craft`
     (CRAFTING), `refactor` (REFACTORING), or `resolve` (RESOLVING).
     The default `auto` infers the tenet set from the query itself.
 
-`--grill`|`-g`:
+-   `--grill`|`-g`:
     Grill the query before implementing, similar to `ase-task-grill`:
     raise 1-10 questions per round which resolve the open points of the
     query. Each question carries a `FOCUS-AREA` -- `DOMAIN`
@@ -68,27 +68,27 @@ implementation until it passes). The *querying* state and every
     merged back into the WHAT and HOW parts of the query. Without
     `--grill`, no questions are asked at all.
 
-`--grill-rounds`|`-r` *n*:
+-   `--grill-rounds`|`-r` *n*:
     The number of grill rounds to apply (default: `1`). Each round
     starts from scratch from only the current WHAT and HOW parts,
     forgetting all information of previous rounds, and closes with an
     `EDIT TODO` box. Only effective together with `--grill`.
 
-`--verify`|`-v`:
+-   `--verify`|`-v`:
     Verify whether the implementation fulfills the requirements, by
     running the available verification commands (build, tests, linter,
     type-checker) and adjusting the failing parts of the change set
     until the verification passes. Without `--verify`, strictly no
     verification is performed at all.
 
-`--worktree`|`-w`:
+-   `--worktree`|`-w`:
     Apply the change sets inside a dedicated Git worktree (as
     `ase-task-implement --worktree`) instead of the current working
     copy. One single worktree, named by a two-word id derived from the
     first query, serves the whole skill run: all `--loop` iterations
     land in it and it is left uncommitted for review.
 
-`--loop`|`-l`:
+-   `--loop`|`-l`:
     Loop the whole state cycle: after each iteration, ask for the next
     edit query via the interactive `Edit Query` dialog and repeat, until
     the user answers with its fixed `STOP SKILL` option or cancels the
@@ -96,7 +96,7 @@ implementation until it passes). The *querying* state and every
 
 ##  ARGUMENTS
 
-*query*:
+-   *query*:
     Description of the edit to perform. When omitted, the skill asks
     for the query via an interactive `Edit Query` dialog, carrying the
     fixed `STOP SKILL` option plus free-text input.

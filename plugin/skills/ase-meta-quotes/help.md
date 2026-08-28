@@ -50,7 +50,7 @@ the attribution of the quote.
 
 ##  OPTIONS
 
-`--ground`|`-g`:
+-   `--ground`|`-g`:
     Gather quotes from the Internet/Web via the `ase-meta-search` skill
     (dispatched in a sub-agent, querying all available search backends)
     *in addition to* -- and never *instead* of -- the model knowledge,
@@ -63,7 +63,7 @@ the attribution of the quote.
     and the skill falls back to the model knowledge only. Without this
     option, the quotes are derived from model knowledge only.
 
-`--proximity`|`-p`:
+-   `--proximity`|`-p`:
     Widen the harvest beyond the given topic to its *conceptual
     neighborhood* -- the parent (more general) topic, the four sibling
     (same-level) topics, and the four child (more specialized) topics --
@@ -76,7 +76,7 @@ the attribution of the quote.
     warning is emitted and the skill continues with the narrow topic
     only. Without this option, only the given topic is harvested.
 
-`--count`|`-c` *count*:
+-   `--count`|`-c` *count*:
     Maximum total number of quotes across all four quadrants (default:
     `8`, i.e. about two quotes per quadrant). The quotes are distributed
     as evenly as possible across the quadrants, preferring the most
@@ -85,7 +85,7 @@ the attribution of the quote.
 
 ##  ARGUMENTS
 
-*topic-keywords*:
+-   *topic-keywords*:
     The topic keywords the quotes are searched for. They act both as the
     search query and as the keyword set of the *literalness* dimension of
     the matrix.

@@ -28,7 +28,7 @@ for the changed plan.
 
 ##  OPTIONS
 
-`--plan`|`-p` *option*:
+-   `--plan`|`-p` *option*:
     Automatically answer the user dialog for the plan refinement
     with *option*, which can be either `none` (default, interactive
     answer required), `OVERWRITE` (overwrite an existing plan
@@ -36,7 +36,7 @@ for the changed plan.
     *instruction*), or `PRESERVE` (preserve the existing plan by
     ignoring *instruction* and stopping skill processing).
 
-`--dry`|`-d`:
+-   `--dry`|`-d`:
     Generate any *new* plan *without* the `##  VERIFICATION` section.
     Applies only to freshly generated plans, not to existing plans
     loaded from disk. When `ase-task-implement` later applies such
@@ -44,7 +44,7 @@ for the changed plan.
     build, tests, linter, type-checker, or program execution) once
     the source files have been modified.
 
-`--next`|`-n` *option*[,...]:
+-   `--next`|`-n` *option*[,...]:
     Automatically answer the user dialog for the next step (at the end
     of this skill). *option* is a single token or a *comma-separated
     chronological list* of tokens; each iteration of the planning
@@ -60,7 +60,7 @@ for the changed plan.
 
 ##  ARGUMENTS
 
-*id* | *id*: *instruction* | *instruction*:
+-   *id* | *id*: *instruction* | *instruction*:
     Edit the task with the unique identifier *id* (default: `default`).
     Optionally, *instruction* either gives instructions for creating a
     new task or gives instructions for refining an existing task.

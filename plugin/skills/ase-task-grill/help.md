@@ -47,14 +47,14 @@ offered a hand-off to editing, implementation, or preflight.
 
 ##  OPTIONS
 
-`--rounds`|`-r` *n*:
+-   `--rounds`|`-r` *n*:
     The number of grill rounds to apply (default: `1`). Each round
     starts from scratch from only the current plan, as updated by all
     previous rounds, and re-derives its questions from it, forgetting
     all questions and answers of previous rounds. With more than one
     round, each round is announced as `GRILLING ROUND K/L`.
 
-`--next`|`-n` *option*[,...]:
+-   `--next`|`-n` *option*[,...]:
     Automatically answer the user dialog for the next step (at the end
     of this skill). *option* is a single token or a *comma-separated
     chronological list* of tokens; the *first* token is consumed by
@@ -68,7 +68,7 @@ offered a hand-off to editing, implementation, or preflight.
 
 ##  ARGUMENTS
 
-*id*:
+-   *id*:
     Grill the task with the unique identifier *id* (default: `default`).
     The skill accepts *only* an optional *id* argument and never a
     free-text instruction.

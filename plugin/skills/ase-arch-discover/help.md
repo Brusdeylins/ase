@@ -32,19 +32,19 @@ demotes dependency-heavy components.
 
 ##  OPTIONS
 
-`--limit`|`-l=12`:
+-   `--limit`|`-l=12`:
     The *maximum* number of components retained in the final ranking
     (default: 12); each discovery source may fetch up to twice this
     number of candidates for ranking. Raise it for a broader, more
     exhaustive survey, lower it for a quicker, narrower lookup.
 
-`--staleness`|`-s=18`:
+-   `--staleness`|`-s=18`:
     The *staleness threshold* in months (default: 18). A component whose
     last release is older than this is rank-penalized and flagged with an
     `aging` gotcha; older than *twice* the threshold, it is penalized
     harder and flagged as `stale/abandoned`.
 
-`--small-scope`|`-S`:
+-   `--small-scope`|`-S`:
     Treat the requested *functionality* as *small-scope* (default: off).
     When enabled, the ranking demotes dependency-heavy components by a
     dependency-weight penalty, since a dependency-free/hand-rolled
@@ -53,7 +53,7 @@ demotes dependency-heavy components.
 
 ##  ARGUMENTS
 
-*functionality*:
+-   *functionality*:
     A short description of the desired functionality the third-party
     component should provide.
 

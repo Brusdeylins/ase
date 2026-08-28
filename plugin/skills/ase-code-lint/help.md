@@ -54,11 +54,11 @@ the code, and comments contradicting the code.
 
 ##  OPTIONS
 
-`--auto`|`-a`:
+-   `--auto`|`-a`:
     Automatically apply every proposed correction without asking the
     user via the interactive dialog.
 
-`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`):
+-   `--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`):
     Set the *severity floor* (default `LOW`): findings below the chosen
     threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
     `HIGH`. The default `LOW` keeps all findings; `ACCEPTED` findings are
@@ -66,19 +66,19 @@ the code, and comments contradicting the code.
     severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`, keeping the
     `file`/`line` order within the same severity.
 
-`--include`|`-i`=*aspect*[`,`...]:
+-   `--include`|`-i`=*aspect*[`,`...]:
     Restrict the checked code quality aspects to the given
     comma-separated list of aspect ids (e.g. `A01,A04`). Without this
     option, all twenty-one aspects are checked.
 
-`--exclude`|`-e`=*aspect*[`,`...]:
+-   `--exclude`|`-e`=*aspect*[`,`...]:
     Remove the given comma-separated list of aspect ids from the checked
     code quality aspects. Applied *after* `--include`, so
     `-i A01,A02 -e A02` checks `A01` only.
 
 ##  ARGUMENTS
 
-*source-reference*:
+-   *source-reference*:
     A file, directory, or other reference to the source code to lint.
 
 ##  SCENARIOS

@@ -37,7 +37,7 @@ unless `--next` pre-selects this choice.
 
 ##  OPTIONS
 
-`--next`|`-n` *option*[,...]:
+-   `--next`|`-n` *option*[,...]:
     Automatically answer the user dialog for the next step. *option*
     is a single token or a *comma-separated chronological list* of
     tokens; the *first* token is consumed by this skill, and any
@@ -51,7 +51,7 @@ unless `--next` pre-selects this choice.
 
 ##  ARGUMENTS
 
-*id*:
+-   *id*:
     The unique identifier of the task whose plan should be
     preflighted. If omitted, the *current* task id is used.
 

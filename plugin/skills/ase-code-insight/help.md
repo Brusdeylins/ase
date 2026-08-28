@@ -20,7 +20,7 @@ a *MODULE STRUCTURE* Mermaid diagram of modules and their imports.
 
 ##  ARGUMENTS
 
-*code-references*:
+-   *code-references*:
     One or more file or directory references to source code that
     should be inspected for insights.
 

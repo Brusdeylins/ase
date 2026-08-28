@@ -19,7 +19,7 @@ switched back to `default`.
 
 ##  ARGUMENTS
 
-*id*:
+-   *id*:
     The unique identifier of the task plan to delete. If omitted,
     the current task id is used.
 

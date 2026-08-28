@@ -31,13 +31,13 @@ source code changes.
 
 ##  OPTIONS
 
-`--depth`|`-d` *N*:
+-   `--depth`|`-d` *N*:
     The *maximum* number of "why" iterations (the Five-Whys chain
     length), acting as an *upper bound* only - the analysis still stops
     early once the root cause is reached. Defaults to *5*. A non-numeric
     or non-positive value falls back to the default.
 
-`--width`|`-w` *M*:
+-   `--width`|`-w` *M*:
     The *maximum* number of *candidate sub-causes* to surface per "why"
     level. With the default *1*, the skill walks a single causality chain
     (classic Five-Whys); with *M* > 1, each level surfaces up to *M*
@@ -51,7 +51,7 @@ source code changes.
 
 ##  ARGUMENTS
 
-*fact*:
+-   *fact*:
     The observed *fact* (symptom, problem, or surprising outcome)
     whose root cause should be investigated. The skill implicitly
     prepends "Why" to form the initial question.

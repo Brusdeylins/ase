@@ -40,24 +40,24 @@ in at most three rounds; any remaining diagnostics are surfaced.
 
 ##  OPTIONS
 
-`--bidirectional`|`-b`:
+-   `--bidirectional`|`-b`:
     Reconcile the *target* and *source* artifacts so that they
     faithfully reflect the current state of *each other*, instead of
     only updating the *target* from the *source*. With this flag, a kind
     present in *target* is *not* removed from *source*.
 
-`--target`|`-t` *target*[,...]:
+-   `--target`|`-t` *target*[,...]:
     The comma-separated list of artifact kinds to update. Required (the
     skill errors out on an empty target).
 
-`--source`|`-s` *source*[,...]:
+-   `--source`|`-s` *source*[,...]:
     The comma-separated list of artifact kinds to update *from*. The
     special value `auto` resolves to all recognized kinds except those
     in *target*.
 
 ##  ARGUMENTS
 
-*hint*:
+-   *hint*:
     An optional free-form filtering hint that narrows the source and/or
     target artifacts, or the aspects of those artifacts to take into
     account during reconciliation.

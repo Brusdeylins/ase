@@ -45,14 +45,14 @@ at most three rounds; any remaining diagnostics are surfaced.
 
 ##  OPTIONS
 
-`--target`|`-t` *target*[,...]:
+-   `--target`|`-t` *target*[,...]:
     The comma-separated list of artifact kinds to generate or update.
     Defaults to `SPEC`. The skill errors out on an empty target or
     an unknown/unsupported kind.
 
 ##  ARGUMENTS
 
-*hint*:
+-   *hint*:
     The mandatory free-form description of the foreign sources to import
     from (e.g. a file path, directory, URL, or pasted text). The skill
     errors out on an empty hint.

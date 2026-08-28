@@ -55,7 +55,7 @@ before it is committed.
 
 ##  OPTIONS
 
-`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`):
+-   `--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`):
     Set the *severity floor* (default `LOW`): findings below the chosen
     threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
     `HIGH`. The default `LOW` keeps all findings; `ACCEPTED` findings are

@@ -35,29 +35,29 @@ the highest-ranked option or a principled synthesis of the shortlist.
 
 ##  OPTIONS
 
-`--max-clarify`|`-c=3`:
+-   `--max-clarify`|`-c=3`:
     The *maximum* number of essential-unknown clarification questions
     asked in the *clarify intent* phase (default: 3). Lower it for a
     faster, leaner intake, raise it for more upfront grounding.
 
-`--min-ideas`|`-i=12`:
+-   `--min-ideas`|`-i=12`:
     The *minimum* number of candidate ideas to generate in the *diverge*
     phase before converging (default: 12). Raise it for a broader idea
     space, lower it for a quicker, narrower session.
 
-`--min-rank`|`-r=7`:
+-   `--min-rank`|`-r=7`:
     The *minimum* 0-10 fit rank an idea must score to survive the
     *converge* phase (default: 7). Raise it for a stricter filter, lower
     it to retain more ideas.
 
-`--max-shortlist`|`-s=4`:
+-   `--max-shortlist`|`-s=4`:
     The *maximum* number of distilled options on the final *shortlist*
     (default: 4). Lower it for a sharper focus, raise it for more
     finalists.
 
 ##  ARGUMENTS
 
-*topic*:
+-   *topic*:
     The subject to brainstorm - a feature, component, behavior, or
     design question to explore *what* to build before *how*.
 

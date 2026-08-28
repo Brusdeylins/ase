@@ -40,7 +40,7 @@ and reports that very command; when it falls back onto a system-installed
 
 ##  OPTIONS
 
-`--output`|`-o` *output*[,...]:
+-   `--output`|`-o` *output*[,...]:
     The comma-separated list of `[<format>:]<file>` entries to render,
     with each file path relative to the project root. Defaults to the
     single HTML rendering `index.html` inside the `SPEC` base directory

@@ -20,7 +20,7 @@ notice), and *GOTCHAS* (what to not stumble over).
 
 ##  ARGUMENTS
 
-*source-reference*:
+-   *source-reference*:
     A file, directory, function, or other reference to the source code
     to explain.
 

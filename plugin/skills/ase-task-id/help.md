@@ -18,7 +18,7 @@ task id via the `ase_task_id` MCP tool.
 
 ##  ARGUMENTS
 
-*id*:
+-   *id*:
     The new task id to activate. If omitted, the currently active
     task id is reported.
 

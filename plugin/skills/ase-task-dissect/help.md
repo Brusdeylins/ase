@@ -48,31 +48,31 @@ The epic plan itself always stays *untouched*.
 
 ##  OPTIONS
 
-`--max-parts`|`-m` *count*:
+-   `--max-parts`|`-m` *count*:
     Upper bound for the number of derived parts (default: `8`). The
     lower bound is always `2`, because fewer parts are no dissection.
 
-`--dry`|`-d`:
+-   `--dry`|`-d`:
     *Report only* -- print the dissection table but create *no*
     artifacts at all, so the decision stays fully reversible. Note that
     this meaning differs from `--dry`/`-d` in `ase-code-craft`, where it
     instead omits the `##  VERIFICATION` section of the composed plan.
 
-`--force`|`-f`:
+-   `--force`|`-f`:
     Overwrite already existing sub-task plans. Without this option, the
     skill detects colliding sub-task ids *before* writing anything,
     reports them, and stops with status *targets exist*.
 
 ##  ARGUMENTS
 
-*task-id*:
+-   *task-id*:
     The unique identifier of the task whose plan should be dissected.
     If omitted, the *current* task id is used. A *lone* argument
     matching the task id syntax is always taken as the *task id*, never
     as a hint; to combine both, separate them with a `:` character, as
     in `auth: split by API and UI`.
 
-*dissect-hint*:
+-   *dissect-hint*:
     A free-text hint telling *how* the epic should be split. If omitted,
     the parts are derived from the plan alone.
 

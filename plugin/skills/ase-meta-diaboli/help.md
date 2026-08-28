@@ -41,12 +41,12 @@ contrarian.
 
 ##  ARGUMENTS
 
-`--count`, `-c` *count*:
+-   `--count`, `-c` *count*:
     Surface at least *count* strong anti-theses (default *10*) before
     sorting and reporting the top *count* and deriving the *SYNTHESIS*. An
     invalid or non-positive *count* reverts to the default *10*.
 
-*thesis*:
+-   *thesis*:
     The statement, claim, or position to be relentlessly challenged.
     It may be technical, factual, or opinion-based; the skill attacks
     its strongest ("steelman") interpretation.

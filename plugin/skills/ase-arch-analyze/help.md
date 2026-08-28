@@ -36,7 +36,7 @@ covers the *entire* `ase-issue-*` space, including any prefixed results.
 
 ##  ARGUMENTS
 
-*source-reference*:
+-   *source-reference*:
     A file, directory, or other reference to the source code that
     is to be analyzed architecturally.
 

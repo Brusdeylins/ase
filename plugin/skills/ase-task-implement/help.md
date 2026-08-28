@@ -55,7 +55,7 @@ delete the task plan, unless `--next` pre-selects this choice.
 
 ##  OPTIONS
 
-`--next`|`-n` *option*[,...]:
+-   `--next`|`-n` *option*[,...]:
     Automatically answer the user dialog for the next step. *option*
     is a single token or a *comma-separated chronological list* of
     tokens; the *first* token is consumed by this skill, and any
@@ -65,7 +65,7 @@ delete the task plan, unless `--next` pre-selects this choice.
     answer required), `DONE` (preserve task plan and stop), or
     `DELETE` (hand off to `ase-task-delete`).
 
-`--worktree`|`-w`:
+-   `--worktree`|`-w`:
     Apply the change set inside a dedicated *Git WorkTree* instead of
     the current working copy. The worktree directory `.ase/worktree/<id>`
     and its equally named branch are derived from the *task id* and
@@ -75,7 +75,7 @@ delete the task plan, unless `--next` pre-selects this choice.
 
 ##  ARGUMENTS
 
-*id*:
+-   *id*:
     The unique identifier of the task whose plan should be
     implemented. If omitted, the *current* task id is used.
 

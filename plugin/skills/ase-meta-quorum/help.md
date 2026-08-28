@@ -26,7 +26,7 @@ complete, unmodified individual responses.
 
 ##  OPTIONS
 
-`--models`|`-m` *model*[,...]:
+-   `--models`|`-m` *model*[,...]:
     Restrict the *foreign* LLMs that are queried to the given
     comma-separated list of *model* tokens. Recognized tokens are
     `all`, `chatgpt`, `gemini`, `deepseek`, `grok`, `glm`, and `qwen`,
@@ -37,7 +37,7 @@ complete, unmodified individual responses.
 
 ##  ARGUMENTS
 
-*question*:
+-   *question*:
     The question to ask all available AIs.
 
 ##  SCENARIOS

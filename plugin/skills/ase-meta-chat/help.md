@@ -19,11 +19,11 @@ without any further interpretation.
 
 ##  ARGUMENTS
 
-*llm*:
+-   *llm*:
     Identifier of the foreign LLM to query, e.g. `chatgpt`,
     `gemini`, `deepseek`, `grok`, `glm`, or `qwen`.
 
-*query*:
+-   *query*:
     The chat message to send to the foreign LLM.
 
 ##  SCENARIOS

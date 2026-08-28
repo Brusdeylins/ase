@@ -66,7 +66,7 @@ agent tool:
 
 ##  OPTIONS
 
-`--scope`|`-s` `local`|`user`:
+-   `--scope`|`-s` `local`|`user`:
     Where the generated skill is stored. With `local` (the default),
     it is written into the current project, where it can be committed
     and reviewed alongside the code. With `user`, it is written into the
@@ -77,20 +77,20 @@ agent tool:
     Copilot*, and `.agents/skills/` and `~/.codex/skills/` under *OpenAI
     Codex*.
 
-`--force`|`-f`:
+-   `--force`|`-f`:
     Overwrite an already existing skill. Without this option, the skill
     refuses with an error as soon as the target `SKILL.md` exists, so
     hand-edited skills are never lost silently.
 
 ##  ARGUMENTS
 
-*skill-name*:
+-   *skill-name*:
     Name of the skill to generate, matching `^[a-zA-Z][a-zA-Z0-9_-]*$`.
     It is used as the directory name, as the frontmatter `name`, and as
     the resulting `/`*skill-name* command (respectively the
     `$`*skill-name* mention under *OpenAI Codex*).
 
-*workflow-description*:
+-   *workflow-description*:
     Free-text description of the workflow the generated skill should
     perform. Mentioning that actions run "in parallel", that they are
     dispatched "in a sub-agent", or naming concrete `ase-xxx-xxx` skills

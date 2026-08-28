@@ -27,7 +27,7 @@ all alternatives rate negatively.
 
 ##  ARGUMENTS
 
-*request*:
+-   *request*:
     A description of what should be evaluated, including the
     alternatives and, optionally, the criteria to consider.
 

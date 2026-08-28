@@ -45,7 +45,7 @@ timestamp refreshed.
 
 ##  OPTIONS
 
-`--grill`|`-g`:
+-   `--grill`|`-g`:
     Grill the query before implementing, similar to `ase-task-grill`:
     raise 1-10 questions per round which resolve the open points of the
     query. Each question carries a `FOCUS-AREA` -- `DOMAIN`
@@ -69,20 +69,20 @@ timestamp refreshed.
     into the WHAT and HOW parts of the query. Without `--grill`, no
     questions are asked at all.
 
-`--grill-rounds`|`-r` *n*:
+-   `--grill-rounds`|`-r` *n*:
     The number of grill rounds to apply (default: `1`). Each round
     starts from scratch from only the current WHAT and HOW parts,
     forgetting all information of previous rounds, and closes with an
     `EDIT TODO` box. Only effective together with `--grill`.
 
-`--verify`|`-v`:
+-   `--verify`|`-v`:
     Verify the edited specification by validating it via *SpecBook*
     linting and fixing the reported diagnostics in the affected `SPEC`
     artifacts, for at most three rounds. Any diagnostics remaining after
     the last round are listed as `REMAINING DIAGNOSTICS`. Without
     `--verify`, strictly no validation is performed at all.
 
-`--worktree`|`-w`:
+-   `--worktree`|`-w`:
     Apply the change sets inside a dedicated Git worktree (as
     `ase-task-implement --worktree`) instead of the current working
     copy. One single worktree, named by a two-word id derived from the
@@ -91,7 +91,7 @@ timestamp refreshed.
     the validation then runs as the `ase spec lint` command inside the
     worktree.
 
-`--loop`|`-l`:
+-   `--loop`|`-l`:
     Loop the whole state cycle: after each iteration, ask for the next
     edit query via the interactive `Edit Query` dialog and repeat, until
     the user answers with its fixed `STOP SKILL` option or cancels the
@@ -99,7 +99,7 @@ timestamp refreshed.
 
 ##  ARGUMENTS
 
-*query*:
+-   *query*:
     Description of the specification edit to perform. When omitted, the
     skill asks for the query via an interactive `Edit Query` dialog,
     carrying the fixed `STOP SKILL` option plus free-text input.

@@ -39,7 +39,7 @@ non-numeric value falls back to the default *5*.
 
 ##  OPTIONS
 
-`--top`|`-t` *N*:
+-   `--top`|`-t` *N*:
     Bound the ranked list to at most *N* key points (default *5*). The
     bound is a *cap*, never a *quota* - fewer points are emitted when the
     document does not contain *N* salient ones, and an invalid or
@@ -47,7 +47,7 @@ non-numeric value falls back to the default *5*.
 
 ##  ARGUMENTS
 
-*document-reference*:
+-   *document-reference*:
     The document to distill - either a *path* to a readable file or the
     *text* itself pasted inline. If it resolves to a readable file the
     file is read; otherwise it is treated verbatim as pasted text.

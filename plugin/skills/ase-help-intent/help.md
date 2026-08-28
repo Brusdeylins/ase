@@ -36,7 +36,7 @@ entirely through the intent argument and the interactive dialog.
 
 ##  ARGUMENTS
 
-*intent*:
+-   *intent*:
     The free-text intent to be realized. It describes *what* the user
     wants to achieve; the skill determines *which* ASE skills and *which*
     options and arguments realize it.

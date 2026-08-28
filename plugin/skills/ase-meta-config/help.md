@@ -73,7 +73,7 @@ preset-bootstrapping operation that stays a shell concern next to
 
 ##  OPTIONS
 
-`--scope`|`-s` *scope*:
+-   `--scope`|`-s` *scope*:
     The scope chain to operate on, given as a comma-separated list of
     `user`, `project`, `task:`*id*, and/or `session:`*id* terms, in any
     order and at most one term per kind. The `user` term is always
@@ -87,10 +87,10 @@ preset-bootstrapping operation that stays a shell concern next to
 
 ##  ARGUMENTS
 
-*operation*:
+-   *operation*:
     The operation to perform; one of `list`, `get`, `set`, or `delete`.
 
-*args*:
+-   *args*:
     The operands of the operation: none for `list`, a dotted *key* for
     `get` and `delete`, and a dotted *key* plus a *value* for `set`.
 

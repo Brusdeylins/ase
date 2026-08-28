@@ -32,18 +32,18 @@ entirely and applies the change set to the affected artifacts itself.
 
 ##  OPTIONS
 
-`--auto`|`-a`:
+-   `--auto`|`-a`:
     Automatically pick the recommended feature approach without
     asking the user via the interactive dialog.
 
-`--dry`|`-d`:
+-   `--dry`|`-d`:
     Compose the plan *without* the `##  VERIFICATION` section. When
     `ase-task-implement` later applies such a plan, it strictly skips
     the entire verification phase (no build, tests, linter,
     type-checker, or program execution) once the source files have
     been modified.
 
-`--direct`|`-D`:
+-   `--direct`|`-D`:
     Craft the feature *immediately* and *in place*: skip the
     feature approaches, the interactive dialog, and the entire task
     plan ceremony, and directly apply the complete change set to the
@@ -52,20 +52,20 @@ entirely and applies the change set to the affected artifacts itself.
     `--next` have no effect, as neither approaches are proposed nor a
     plan is composed.
 
-`--interactive`|`-i`:
+-   `--interactive`|`-i`:
     Craft *interactively*: implies `--direct` and, once the initial
     *feature* has been applied, repeatedly asks for the *next change*
     with a free-text dialog and immediately applies it in place, too,
     until the user stops the loop by answering `DONE`.
 
-`--quick`|`-Q`:
+-   `--quick`|`-Q`:
     Shorthand alias for `-a -d -n IMPLEMENT,DELETE`: automatically pick
     the recommended feature approach, compose the plan *without* the
     `##  VERIFICATION` section, immediately hand off to `ase-task-implement`,
     and finally `ase-task-delete` the now-consumed plan. This gives a
     single, fast *one-shot* crafting mode.
 
-`--next`|`-n` *option*[,...]:
+-   `--next`|`-n` *option*[,...]:
     Automatically choose the next step after composing the plan.
     *option* is a single token or a *comma-separated chronological
     list* of tokens; an `IMPLEMENT`, `PREFLIGHT`, or `GRILL` head token
@@ -84,7 +84,7 @@ entirely and applies the change set to the affected artifacts itself.
 
 ##  ARGUMENTS
 
-[*task-id*:] *feature*:
+-   [*task-id*:] *feature*:
     Description of the *feature* to craft. Optionally prefixed with
     a *task-id* followed by a colon to bind the resulting plan to
     a specific task id.

@@ -41,7 +41,7 @@ The skill exposes *no* option flags beyond `--help`/`-h`.
 
 ##  ARGUMENTS
 
-*skill-name*:
+-   *skill-name*:
     The full name of the ASE skill, any abbreviation of it, or a
     description of its purpose. If omitted, the entire skill catalog is
     listed.

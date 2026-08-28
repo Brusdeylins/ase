@@ -30,14 +30,14 @@ knowledge.
 
 ##  OPTIONS
 
-`--ground`|`-g`:
+-   `--ground`|`-g`:
     Ground the explanation in Internet/Web facts gathered via the
     `ase-meta-search` skill before explaining. Without this option,
     the explanation is derived from model knowledge only.
 
 ##  ARGUMENTS
 
-*topic*:
+-   *topic*:
     The topic to be explained. It may be a technical concept, a
     phenomenon, or any other subject; the skill explains it in a
     child-friendly way.

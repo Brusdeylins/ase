@@ -59,22 +59,22 @@ cleanly and are then reported as failed; stage everything and use
 
 ##  OPTIONS
 
-`--max-parts`|`-m` *count*:
+-   `--max-parts`|`-m` *count*:
     Upper bound for the number of derived parts (default: `8`). The
     lower bound is always `2`, because fewer parts are no dissection.
 
-`--staged`|`-s`:
+-   `--staged`|`-s`:
     Dissect the *staged* changes (the Git index against `HEAD`) instead
     of the working copy changes. Untracked files are then *not* folded
     in, because they are by definition not part of the index.
 
-`--dry`|`-d`:
+-   `--dry`|`-d`:
     *Report only* -- print the dissection table but create *no*
     artifacts at all, so the decision stays fully reversible. Note that
     this meaning differs from `--dry`/`-d` in `ase-code-craft`, where it
     instead omits the `##  VERIFICATION` section of the composed plan.
 
-`--force`|`-f`:
+-   `--force`|`-f`:
     Remove and re-create already existing worktrees and branches of the
     derived names. Without this option, the skill detects colliding
     targets *before* writing anything, reports them, and stops with
@@ -82,7 +82,7 @@ cleanly and are then reported as failed; stage everything and use
 
 ##  ARGUMENTS
 
-*dissect-hint*:
+-   *dissect-hint*:
     A free-text hint telling *how* the change set should be split. If
     omitted, the parts are derived from the change set alone.
 

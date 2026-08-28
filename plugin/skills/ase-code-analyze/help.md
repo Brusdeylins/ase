@@ -57,7 +57,7 @@ fixed via `ase-code-edit P<n>`.
 
 ##  ARGUMENTS
 
-*source-reference*:
+-   *source-reference*:
     A file, directory, function, or other reference to the source code
     to analyze.
 

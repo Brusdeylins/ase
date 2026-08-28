@@ -37,17 +37,17 @@ REJECTED  DEFERRED  BLOCKED  CANCELLED
 
 ##  OPTIONS
 
-`--verbose`|`-v`:
+-   `--verbose`|`-v`:
     Render an additional `Status` column with the lifecycle state and an
     additional `Last Modified` column with the `YYYY-MM-DD HH:MM`
     timestamp of each task plan.
 
-`--include`|`-i`=*state*[`,`...]:
+-   `--include`|`-i`=*state*[`,`...]:
     Restrict the listed task plans to the given comma-separated list of
     lifecycle states (e.g. `STARTED,BLOCKED`). Without this option, all
     eight states are listed. The `none` sentinel selects no state at all.
 
-`--exclude`|`-e`=*state*[`,`...]:
+-   `--exclude`|`-e`=*state*[`,`...]:
     Remove the given comma-separated list of lifecycle states from the
     listed task plans. Applied *after* `--include`, so
     `-i DRAFTED,STARTED -e STARTED` lists `DRAFTED` only. Defaults to

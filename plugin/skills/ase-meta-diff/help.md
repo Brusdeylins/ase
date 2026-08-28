@@ -53,21 +53,21 @@ giving a visual sense of *what a diff endangers* before a deeper review.
 
 ##  ARGUMENTS
 
-`--coherence`, `-c`:
+-   `--coherence`, `-c`:
     In addition to the intent-grouped summary, reconstruct the diff's
     *single intended change* as one crisp *thesis* sentence and flag
     *every* hunk that does *not* serve it - *scope creep* or *stray
     debug* - then emit an overall **COHERENT** / **INCOHERENT** verdict
     with a table of the flagged hunks.
 
-`--risk`, `-r`:
+-   `--risk`, `-r`:
     In addition to the intent-grouped summary, score the diff against
     the *coupling-criticality-coverage-reversibility* rubric and emit a
     *graded risk report* with an overall risk band and per-axis
     *mitigations*. Scores are equal-weighted, evidence-backed, and
     deliberately untuned to the project.
 
-`--blast`, `-b`:
+-   `--blast`, `-b`:
     In addition to the intent-grouped summary, render a *blast-radius
     map* - a Mermaid `flowchart` of the *touched modules* and their
     *reverse dependencies* - plus a *brief impact summary* of what

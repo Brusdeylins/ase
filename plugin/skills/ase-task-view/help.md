@@ -25,14 +25,14 @@ the plan in full, without any truncation or summarization.
 
 ##  OPTIONS
 
-`--full`|`-f`:
+-   `--full`|`-f`:
     Render the plan in full, without collapsing the
     `IMPLEMENTATION DRAFT` section. By default, that section is
     replaced with `[...]` for plans longer than 90 lines.
 
 ##  ARGUMENTS
 
-*id*:
+-   *id*:
     The unique identifier of the task plan to view. If omitted,
     the current task id is used.
 

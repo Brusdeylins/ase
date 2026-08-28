@@ -39,14 +39,14 @@ the `ase-meta-proximity` sub-agent before its proximity is re-determined.
 
 ##  OPTIONS
 
-`--ground`|`-g`:
+-   `--ground`|`-g`:
     Ground the determination in Internet/Web facts gathered by the
     `ase-meta-proximity` agent before determining the proximity. Without
     this option, the determination is derived from model knowledge only.
     When combined with `--loop`, every newly navigated-to topic is
     re-grounded.
 
-`--loop`|`-l`:
+-   `--loop`|`-l`:
     Present the neighboring topics in an interactive dialog and, upon
     selection, adopt the picked topic as the new current topic and
     restart the determination. Without this option, the proximity of the
@@ -54,7 +54,7 @@ the `ase-meta-proximity` sub-agent before its proximity is re-determined.
 
 ##  ARGUMENTS
 
-*topic*:
+-   *topic*:
     The topic whose conceptual proximity is to be determined. It may be
     a technical concept, a phenomenon, or any other subject; the skill
     determines its parent, sibling, and child topics.
