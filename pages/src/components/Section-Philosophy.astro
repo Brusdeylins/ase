@@ -1,0 +1,207 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  "Philosophy" section: three text/diagram pairs laid out as alternating
+    two-column rows (zig-zag), mirroring the highlights rows. Each text block
+    has a brand glow behind it; each diagram opens the shared image modal on
+    click.  */
+
+import SectionGlow from "./Section-Glow.astro"
+import Diagram     from "./Widget-Diagram.astro"
+import Annotation  from "./Widget-Annotation.astro"
+import Signal      from "@lucide/astro/icons/signal"
+import Footprints  from "@lucide/astro/icons/footprints"
+import Workflow    from "@lucide/astro/icons/workflow"
+---
+<section id="philosophy" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+    <header class="ase-section-head" data-reveal>
+        <h2 class="ase-h2">
+            Understand Our <span class="text-accent">Philosophy</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            <b>ASE</b> is based on{" "}
+            <b>Dr. Ralf S. Engelschall</b>'s Agentic AI Level model,
+            which tries to focus on the "sweet-spot" levels.
+            Here <b>ASE</b> provides its
+            various skills to let the engineer drive the next steps.
+            Some skills are stand-alone, others are part of a particular
+            operation mode.
+        </p>
+    </header>
+
+    <div class="mt-12 flex flex-col gap-12">
+        <div class="ase-grid-split">
+            <div class="relative isolate lg:order-1" data-reveal="right">
+                <SectionGlow variant="text" side="left" />
+                <p class="ase-eyebrow">Agentic AI Levels</p>
+                {/*  "mt-1" centers the icon on the first line box of the
+                     heading, so the two-line title keeps it on top  */}
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Signal class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>From Manual To<br/>Fully Autonomous</span>
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    <b>ASE</b> supports <b>Dr. Ralf S. Engelschall</b>'s{" "}
+                    <b>Agentic AI Level Model</b>, which classifies
+                    the gradual sharing of work with AI agents.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Level 0 (manual)</b>: you do everything
+                    manually and without support from the AI agent at all
+                    &mdash; think "do-it-yourself", where you obviously
+                    know the results and inherently train your own
+                    skills.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Level 1 (assisted)</b>: you are supported by the
+                    AI agent for individual steps only &mdash; think
+                    "assistant", where you still know all results in
+                    detail, but inherently your practical execution
+                    skills can partly start to wane in the long term.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Level 2 (supervised)</b>: you are working on
+                    an entire task with the AI agent as an equal pair
+                    &mdash; think "co-worker", where your colleague
+                    shares the task workload with you, you mutually
+                    review each other's results, hence you still know
+                    all results in detail, but inherently your practical
+                    execution skills can be lost in the long term.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Level 3 (delegated)</b>: you are delegating
+                    entire workflows to the AI agent &mdash; think
+                    "offshoring", where your colleague shoulders the entire
+                    workload for you, you just review the results, but
+                    your own practical execution skill and your ability
+                    to quality assure the results will be forever lost
+                    if you are not regularly, at least virtually,
+                    replaying the delegated work.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Level 4 (autonomous)</b>: you are assigning
+                    entire process lifecycles to the AI agent &mdash;
+                    think "third-party", where your vendor does
+                    everything for you fully autonomously, you just take
+                    the results as is, and your own practical execution
+                    skill doesn't matter as it is already out of scope.
+                </p>
+            </div>
+            <div class="lg:order-2 relative" data-reveal="left">
+                <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                    ASE focuses on the<br/>
+                    sweet spot of the<br/>
+                    Agentic AI Levels!
+                </Annotation>
+                <Diagram src="/assets/agentic-levels.svg" label="agentic levels diagram" />
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-12 flex flex-col gap-12">
+        <div class="ase-grid-split">
+            <div class="relative isolate lg:order-2" data-reveal="left">
+                <SectionGlow variant="text" side="right" />
+                <p class="ase-eyebrow">Skills &amp; Workflows</p>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Footprints class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Step-Wise Driving,<br/>You In The Loop</span>
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    Within the above Agentic AI Levels, <b>ASE</b> provides its
+                    various skills to let the engineer trigger the
+                    next steps. Some skills are stand-alone, others
+                    are part of a particular operation mode that
+                    chains skills into a repeatable workflow.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    Each skill is named <b><code>/ase-xxx-xxx</code></b>{" "}
+                    and most of those skills even have useful Unix-style options
+                    for adjusting their behavior. Click on the skill name
+                    in the following table to open its Unix-style man-page
+                    in an in-page popup or run <b><code>/ase-xxx-xxx --help</code></b> at run-time.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    In case you are lost with the <b>ASE</b> skills, just
+                    tell <b><code>/ase-help-intent</code></b> your intent and it will
+                    tell you what the corresponding <b>ASE</b> skill and its
+                    options are!
+                </p>
+            </div>
+            <div class="lg:order-1" data-reveal="right">
+                <Diagram src="/assets/workflow.svg" label="ASE usage workflow diagram" />
+            </div>
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="relative isolate lg:order-1" data-reveal="right">
+                <SectionGlow variant="text" side="left" />
+                <p class="ase-eyebrow">Operation Modes</p>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Workflow class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Advanced Workflows, Maximum Flexibility</span>
+                </h3>
+                <div class="mt-4 text-foreground-secondary">
+                    <p class="ase-justify">
+                    On top of the standard Agentic AI Coding tool modes{" "}
+                    <i>Ad-Hoc Mode</i> and <i>Plan Mode</i>,{" "}
+                    <b>ASE</b> adds four distinct operation modes:
+                    </p>
+
+                    <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Quick Mode</b>: The more advanced variant of the
+                    <i>Ad-Hoc Mode</i>, where the
+                    directly modifies artifacts, but where
+                    the underlying <b>ASE</b> tenets are still applied
+                    and honored and optionally the prompt and its intent
+                    can be relentlessly "grilled" as in <b>Task Mode</b>.
+                    </p>
+
+                    <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Task Mode</b>: The more advanced variant of the
+                    <i>Plan Mode</i>, where the user initially
+                    crafts and then continuously refines a task plan.
+                    The task plan has a fixed format and is persisted
+                    and hence is available across agent sessions. The
+                    most prominent feature is that the task plan can be
+                    relentllessly "grilled" to ensure that the later
+                    implementation by the AI really meets the intentions
+                    of the user.
+                    </p>
+
+                    <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Funnel Mode</b>: The even more advanced mode
+                    where the user first sketches the plan, then the
+                    agent figures out possible approaches, then the user
+                    selects one approach, then a task plan is created
+                    for this approach, and then finally this switches
+                    over to the regular <b>Task Mode</b>. The task plan
+                    has a fixed format and is persisted and hence is
+                    available across agent sessions.
+                    </p>
+
+                    <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b>Sync Mode</b>: The separated reconciliation mode
+                    where the user aligns the code and documentation
+                    to the specification and architecture ("forward
+                    engineering") or even aligns the specification and
+                    architecture to the code and documentation ("reverse
+                    engineering").
+                    </p>
+                </div>
+            </div>
+            <div class="lg:order-2 relative" data-reveal="left">
+                <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                    Get 3 new powerful<br/>
+                    operation modes in<br/>
+                    your Claude Code!
+                </Annotation>
+                <Diagram src="/assets/operation-modes.svg" label="ASE operation modes diagram" />
+            </div>
+        </div>
+    </div>
+</section>
