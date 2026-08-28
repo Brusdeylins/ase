@@ -12,6 +12,22 @@
 import SectionGlow from "./Section-Glow.astro"
 import Terminal    from "./Terminal.astro"
 import Annotation  from "./Annotation.astro"
+
+/*  one icon per workflow, picked for the trait that distinguishes the workflow
+    from its neighbours: a bare chat bubble for the plain prompt, a bolt for
+    speed, a double check for the added grilling and verification, a clipboard
+    for the single ad-hoc plan, stacked layers for the co-existing task plans,
+    a take-off for the preflight, a funnel for the Funnel Mode, and a refresh
+    cycle for the round-trip reconciliation  */
+
+import MessageSquare from "@lucide/astro/icons/message-square"
+import Zap           from "@lucide/astro/icons/zap"
+import CheckCheck    from "@lucide/astro/icons/check-check"
+import ClipboardList from "@lucide/astro/icons/clipboard-list"
+import Layers        from "@lucide/astro/icons/layers"
+import PlaneTakeoff  from "@lucide/astro/icons/plane-takeoff"
+import Funnel        from "@lucide/astro/icons/funnel"
+import RefreshCw     from "@lucide/astro/icons/refresh-cw"
 ---
 <section id="workflows" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header class="ase-section-head" data-reveal>
@@ -44,7 +60,10 @@ import Annotation  from "./Annotation.astro"
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <SectionGlow variant="text" side="left"/>
                 <p class="ase-eyebrow">Ad-Hoc Prompt</p>
-                <h3 class="ase-h3">Simple Prompting</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <MessageSquare class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Simple Prompting
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The simplest approach is a straight and ad-hoc
                     instruction, as provided by <b>Anthropic Claude Code CLI</b>{" "}
@@ -66,7 +85,10 @@ import Annotation  from "./Annotation.astro"
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <p class="ase-eyebrow">Quick Mode</p>
-                <h3 class="ase-h3">Quick &amp; Dirty I</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <Zap class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Quick &amp; Dirty I
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The simple quick &amp; dirty approach in <b>ASE</b>{" "}
                     is the Quick Mode, which borrows underlying instructions
@@ -93,7 +115,10 @@ import Annotation  from "./Annotation.astro"
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <p class="ase-eyebrow">Quick Mode</p>
-                <h3 class="ase-h3">Quick &amp; Dirty II</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <CheckCheck class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Quick &amp; Dirty II
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The advanced quick &amp; dirty approach in
                     <b>ASE</b>{" "} is the Quick Mode where the
@@ -118,7 +143,10 @@ import Annotation  from "./Annotation.astro"
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <p class="ase-eyebrow">Plan Mode</p>
-                <h3 class="ase-h3">Simple Planning</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <ClipboardList class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Simple Planning
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The advanced approach is to use the standard plan
                     mode, as provided by <b>Anthropic Claude Code CLI</b> already
@@ -149,7 +177,10 @@ import Annotation  from "./Annotation.astro"
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <SectionGlow variant="text" side="left"/>
                 <p class="ase-eyebrow">Task Mode #1</p>
-                <h3 class="ase-h3">Advanced Planning</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <Layers class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Advanced Planning
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The advanced approach is the <b>ASE</b> Task Mode.
                     The pro is that its plans can easily co-exist and
@@ -177,7 +208,10 @@ import Annotation  from "./Annotation.astro"
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <p class="ase-eyebrow">Task Mode #2</p>
-                <h3 class="ase-h3">Professional Planning</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <PlaneTakeoff class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Professional Planning
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The professional approach is the <b>ASE</b> Task
                     Mode, based on various <b>ASE</b> task skills
@@ -209,7 +243,10 @@ import Annotation  from "./Annotation.astro"
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <SectionGlow variant="text" side="left"/>
                 <p class="ase-eyebrow">Funnel Mode</p>
-                <h3 class="ase-h3">Expert Planning</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <Funnel class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Expert Planning
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The expert approach is the <b>ASE</b> Funnel Mode,
                     followed by the <b>ASE</b> Task Mode. The pro
@@ -241,7 +278,10 @@ import Annotation  from "./Annotation.astro"
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <SectionGlow variant="text" side="left"/>
                 <p class="ase-eyebrow">Reconciliation Mode</p>
-                <h3 class="ase-h3">Artifact Reconciliation</h3>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <RefreshCw class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Artifact Reconciliation
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The artifact reconciliation approach updates
                     the CODE and DOCS artifacts based on (changed)

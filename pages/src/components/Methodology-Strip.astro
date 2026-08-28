@@ -21,17 +21,27 @@ const { class: className = "" } = Astro.props
 ---
 <div class={`overflow-hidden rounded-xl border border-border-strong p-6 shadow-xl sm:p-8 ${className}`} data-reveal>
     <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-        {methods.map((method) => (
-            <button
-                type="button"
-                data-help-id={method.skill}
-                aria-label={`${method.name}, implemented by ${method.skill}`}
-                class="group cursor-grab rounded-lg border border-border-strong bg-accent/10 px-3 py-2 text-center transition-colors hover:border-accent"
-            >
-                <span class="block text-sm font-bold leading-tight text-accent transition-colors group-hover:text-white">{method.name}</span>
-                <span class="mt-0.5 block text-xs leading-tight text-foreground-muted">{method.note}</span>
-            </button>
-        ))}
+        {methods.map((method) => {
+            /*  bind to a capitalized name so the expression below is
+                recognized as a component and not as an HTML element  */
+            const Icon = method.icon
+            return (
+                <button
+                    type="button"
+                    data-help-id={method.skill}
+                    aria-label={`${method.name}, implemented by ${method.skill}`}
+                    class="group cursor-grab rounded-lg border border-border-strong bg-accent/10 px-3 py-2 text-center transition-colors hover:border-accent"
+                >
+                    {/*  the icon sits inside the coloring span, so it takes
+                         part in the accent-to-white hover transition  */}
+                    <span class="flex items-center justify-center gap-1.5 text-sm font-bold leading-tight text-accent transition-colors group-hover:text-white">
+                        <Icon class="h-4 w-4 shrink-0" stroke-width={1}/>
+                        {method.name}
+                    </span>
+                    <span class="mt-0.5 block text-xs leading-tight text-foreground-muted">{method.note}</span>
+                </button>
+            )
+        })}
     </div>
 </div>
 

@@ -13,41 +13,67 @@
     states the honest boundaries and the non-goals.
 
     The `body` texts carry the same lightweight inline HTML the other data
-    modules use, so the section renders them via `set:html`.  */
+    modules use, so the section renders them via `set:html`.
+
+    The optional `icon` carries a Lucide component that the section renders as a
+    prefix of the title. The icons are imported one by one from
+    `@lucide/astro/icons/*` instead of the package barrel, so only the used ones
+    are pulled through the bundler.  */
+
+import type { AstroComponent } from "@lucide/astro"
+import CircleGauge             from "@lucide/astro/icons/circle-gauge"
+import DraftingCompass         from "@lucide/astro/icons/drafting-compass"
+import Brain                   from "@lucide/astro/icons/brain"
+import ShieldCheck             from "@lucide/astro/icons/shield-check"
+import SquareTerminal          from "@lucide/astro/icons/square-terminal"
+import Cpu                     from "@lucide/astro/icons/cpu"
+import WandSparkles            from "@lucide/astro/icons/wand-sparkles"
+import Bot                     from "@lucide/astro/icons/bot"
+import Briefcase               from "@lucide/astro/icons/briefcase"
+import PiggyBank               from "@lucide/astro/icons/piggy-bank"
+import SlidersHorizontal       from "@lucide/astro/icons/sliders-horizontal"
+import BatteryLow              from "@lucide/astro/icons/battery-low"
 
 export type Fit = {
-    title: string  /*  short, bold headline of the qualification criterion  */
-    body:  string  /*  one- to two-sentence elaboration of the criterion    */
+    icon?: AstroComponent  /*  Lucide icon rendered as prefix of the title          */
+    title: string          /*  short, bold headline of the qualification criterion  */
+    body:  string          /*  one- to two-sentence elaboration of the criterion    */
 }
 
 export const fitFor: Fit[] = [
     {
+        icon:  CircleGauge,
         title: "You want to stay in the driver's seat",
         body:  "You decide and trigger the next operation, and you review what came back. " +
                "<b>ASE</b> hands you the wheel — it does not take it."
     },
     {
+        icon:  DraftingCompass,
         title: "You are an experienced developer or architect",
         body:  "You can tell a good result from a plausible one. <b>ASE</b> raises the " +
                "<i>ceiling</i> of what you produce; it does not raise the <i>floor</i> of what you know."
     },
     {
+        icon:  Brain,
         title: "You prefer thinking before acting",
         body:  "You accept an approach funnel and a written plan before the first line changes, " +
                "because post-hoc repair of a wrong change set costs more than the detour."
     },
     {
+        icon:  ShieldCheck,
         title: "You have to defend your decisions",
         body:  "Component picks, architecture calls, and refactorings get challenged sooner or later. " +
                "<b>ASE</b> hands you weighted decision matrices, an <i>Advocatus Diaboli</i>, and a " +
                "<i>Steelman</i> — so you arrive with reasoning instead of a hunch."
     },
     {
+        icon:  SquareTerminal,
         title: "You like the Unix command-line style",
         body:  "<b>ASE</b> skills are explicit commands with Unix-style options, like " +
                "<code>/ase-code-craft --next IMPLEMENT</code> — not a chat you nudge until it complies."
     },
     {
+        icon:  Cpu,
         title: "You run Claude Code CLI with a strong LLM",
         body:  "<b>ASE</b> is primarily developed against <b>Anthropic Claude Code CLI</b> plus " +
                "<b>Claude Opus</b> or <b>Claude Fable</b>, and needs that class of instruction-following."
@@ -56,31 +82,37 @@ export const fitFor: Fit[] = [
 
 export const fitAgainst: Fit[] = [
     {
+        icon:  WandSparkles,
         title: "You want plain Vibe Coding",
         body:  "If \"prompt it, ship it, never read it\" is your goal, <b>ASE</b> only adds " +
                "ceremony you will route around anyway."
     },
     {
+        icon:  Bot,
         title: "You want a fully autonomous agent fleet",
         body:  "<b>ASE</b> deliberately keeps a human in the loop at every decision point. " +
                "It, by default, is not an unattended, self-dispatching swarm, even it can be forced to it to some extend."
     },
     {
+        icon:  Briefcase,
         title: "You do consulting, operations, or management",
         body:  "<b>ASE</b> primarily targets the recurring tasks of <i>Software Engineering</i>, " +
                "although various skills are also useful outside this scope."
     },
     {
+        icon:  PiggyBank,
         title: "You optimize for the smallest token bill",
         body:  "Methodology costs tokens: a preloaded constitution, on-demand meta descriptions, " +
                "approach funnels, and plans. Even if the <code>persona</code> setting can trim the output tokens, stringency has its price."
     },
     {
+        icon:  SlidersHorizontal,
         title: "You want an unopinionated framework",
         body:  "<b>ASE</b> ships strict artifact formats, fixed skill families, and built-in tenets. " +
                "You can configure it to some extend, but you cannot make it neutral."
     },
     {
+        icon:  BatteryLow,
         title: "You are on a weak LLM or a non-mainstream harness",
         body:  "<b>ASE</b> leans on elaborate control constructs and XML placeholders. Weaker models " +
                "and non-mainstream harnesses follow them only partially."

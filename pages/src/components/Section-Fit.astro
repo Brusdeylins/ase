@@ -15,6 +15,13 @@ import Annotation              from "./Annotation.astro"
 import { fitFor, fitAgainst }  from "../data/fit.ts"
 import { comparison }          from "../data/comparison.ts"
 
+/*  the three comparison-table column icons, staging the same progression the
+    columns themselves describe: hand tool, AI assistance, boosted AI  */
+
+import Hammer                  from "@lucide/astro/icons/hammer"
+import Sparkles                from "@lucide/astro/icons/sparkles"
+import Rocket                  from "@lucide/astro/icons/rocket"
+
 /*  render lightweight inline markup in the comparison cells: turn "**...**"
     into <b>...</b>, "*...*" into <i>...</i>, and "`...`" into <code>...</code>.
     The "**" pass runs first so the single-asterisk pass never consumes a bold
@@ -53,12 +60,25 @@ const inline = (text: string) => text
                 <b>ASE</b> is for YOU, if &hellip;
             </h3>
             <ul class="flex flex-col gap-3 p-4 text-sm sm:p-6">
-                {fitFor.map((entry) => (
-                    <li>
-                        <b class="text-accent uppercase">{entry.title}</b>
-                        <p class="text-foreground ase-justify" set:html={entry.body}/>
-                    </li>
-                ))}
+                {fitFor.map((entry) => {
+                    /*  bind to a capitalized name so the expression below is
+                        recognized as a component and not as an HTML element  */
+                    const Icon = entry.icon
+                    return (
+                        <li>
+                            {/*  "mt-0.5" centers the 1rem icon on the 1.25rem
+                                 line box of the first title line, so a title
+                                 wrapping to two lines keeps the icon on top  */}
+                            <div class="flex items-start gap-2">
+                                {Icon && <Icon class="mt-0.5 h-4 w-4 shrink-0 text-accent" stroke-width={0.75}/>}
+                                <b class="text-accent uppercase">{entry.title}</b>
+                            </div>
+                            {/*  hanging indent of icon width plus gap, so the
+                                 body aligns with the title instead of the icon  */}
+                            <p class="text-foreground ase-justify pl-6" set:html={entry.body}/>
+                        </li>
+                    )
+                })}
             </ul>
         </div>
 
@@ -69,12 +89,20 @@ const inline = (text: string) => text
                 <b>ASE</b> is <u>not</u> for YOU, if &hellip;
             </h3>
             <ul class="flex flex-col gap-3 p-4 text-sm sm:p-6">
-                {fitAgainst.map((entry) => (
-                    <li>
-                        <b class="text-foreground-muted uppercase">{entry.title}</b>
-                        <p class="text-foreground-secondary ase-justify" set:html={entry.body}/>
-                    </li>
-                ))}
+                {/*  same icon/title/body layout as the "for you" column above,
+                     only in the muted palette of this column  */}
+                {fitAgainst.map((entry) => {
+                    const Icon = entry.icon
+                    return (
+                        <li>
+                            <div class="flex items-start gap-2">
+                                {Icon && <Icon class="mt-0.5 h-4 w-4 shrink-0 text-foreground-muted" stroke-width={0.75}/>}
+                                <b class="text-foreground-muted uppercase">{entry.title}</b>
+                            </div>
+                            <p class="text-foreground-secondary ase-justify pl-6" set:html={entry.body}/>
+                        </li>
+                    )
+                })}
             </ul>
         </div>
     </div>
@@ -106,11 +134,23 @@ const inline = (text: string) => text
         <div class="mt-6 overflow-hidden rounded-xl border border-border-strong p-3 shadow-xl sm:p-4" data-reveal>
             <table class="ase-compat-table w-full text-left text-xs sm:text-sm">
                 <thead>
+                    {/*  the icon sits on its own flex line, which makes the
+                         following <i> subtitle start a new line by itself and
+                         so replaces the former <br/>  */}
                     <tr class="border-b border-border-strong text-accent">
                         <th class="pb-2 pr-1 font-semibold sm:pr-2"></th>
-                        <th class="pb-2 px-1 font-semibold sm:px-2">Manually:<br/><i>Old-School</i></th>
-                        <th class="pb-2 px-1 font-semibold sm:px-2">Claude Code CLI:<br/><i>AI Native</i></th>
-                        <th class="pb-2 pl-1 font-semibold sm:pl-2">Claude Code CLI + ASE:<br/><i>AI Advanced</i></th>
+                        <th class="pb-2 px-1 font-semibold sm:px-2">
+                            <span class="flex items-center gap-1.5"><Hammer class="h-4 w-4 shrink-0" stroke-width={0.75}/>Manually:</span>
+                            <i>Old-School</i>
+                        </th>
+                        <th class="pb-2 px-1 font-semibold sm:px-2">
+                            <span class="flex items-center gap-1.5"><Sparkles class="h-4 w-4 shrink-0" stroke-width={0.75}/>Claude Code CLI:</span>
+                            <i>AI Native</i>
+                        </th>
+                        <th class="pb-2 pl-1 font-semibold sm:pl-2">
+                            <span class="flex items-center gap-1.5"><Rocket class="h-4 w-4 shrink-0" stroke-width={0.75}/>Claude Code CLI + ASE:</span>
+                            <i>AI Advanced</i>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>

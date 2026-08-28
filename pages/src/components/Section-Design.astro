@@ -13,6 +13,24 @@
 import SectionGlow      from "./Section-Glow.astro"
 import Annotation       from "./Annotation.astro"
 import MethodologyStrip from "./Methodology-Strip.astro"
+
+/*  one icon per assumption and per decision, used as the bullet marker of the
+    list entry. The first, second, and fourth assumption deliberately reuse the
+    icons the "Fit Check" section already carries for the very same three
+    statements, so the reader recognizes them again.  */
+
+import CircleGauge    from "@lucide/astro/icons/circle-gauge"
+import Brain          from "@lucide/astro/icons/brain"
+import Route          from "@lucide/astro/icons/route"
+import SquareTerminal from "@lucide/astro/icons/square-terminal"
+import Puzzle         from "@lucide/astro/icons/puzzle"
+import Repeat         from "@lucide/astro/icons/repeat"
+import BookOpen       from "@lucide/astro/icons/book-open"
+import Link           from "@lucide/astro/icons/link"
+import Settings       from "@lucide/astro/icons/settings"
+import ScrollText     from "@lucide/astro/icons/scroll-text"
+import Command        from "@lucide/astro/icons/command"
+import FileCode       from "@lucide/astro/icons/file-code"
 ---
 <section id="design" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <SectionGlow variant="section" side="left"/>
@@ -32,41 +50,56 @@ import MethodologyStrip from "./Methodology-Strip.astro"
     </header>
     <div class="mt-6 grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
         <ul class="flex flex-col gap-6 text-foreground-secondary ase-justify" data-reveal="right">
-            <li>
-                <b class="text-accent uppercase">You are in the Driver's Seat</b>:<br/>
-                <b>ASE</b> assumes you are an experienced Software Developer
-                or even Software Architect and want to still be in the
-                driver's seat, i.e., you decide and trigger the next
-                operations and you are reviewing the results. This means{" "}
-                <b>ASE</b> is neither about plain "vibe coding" nor
-                driving fully autonomous Software Engineering agents.
+            {/*  the icon replaces the list marker; "mt-1" centers it on the
+                 first line box of the title, and the flex row indents the
+                 whole entry body against it  */}
+            <li class="flex items-start gap-2">
+                <CircleGauge class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">You are in the Driver's Seat</b>:<br/>
+                    <b>ASE</b> assumes you are an experienced Software Developer
+                    or even Software Architect and want to still be in the
+                    driver's seat, i.e., you decide and trigger the next
+                    operations and you are reviewing the results. This means{" "}
+                    <b>ASE</b> is neither about plain "vibe coding" nor
+                    driving fully autonomous Software Engineering agents.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Thinking before Acting</b>:<br/>
-                <b>ASE</b> assumes you are an engineer, which means that
-                you prefer thinking long enough instead of immediately
-                acting to increase the overall result quality and
-                at least avoid unnecessary post-adjustments to your
-                results.
+            <li class="flex items-start gap-2">
+                <Brain class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Thinking before Acting</b>:<br/>
+                    <b>ASE</b> assumes you are an engineer, which means that
+                    you prefer thinking long enough instead of immediately
+                    acting to increase the overall result quality and
+                    at least avoid unnecessary post-adjustments to your
+                    results.
+                </div>
             </li>
         </ul>
         <ul class="flex flex-col gap-6 text-foreground-secondary ase-justify" data-reveal="left">
-            <li>
-                <b class="text-accent uppercase">Flexible Operation Modes</b>:<br/>
-                <b>ASE</b> assumes your job as a Software Developer
-                and Software Architect inherently requires multiple
-                operation modes, ranging from ad-hoc LLM prompting,
-                through user-story-based planning mode, through an
-                approach-selecting funnel mode, up to an artifact reconciliation
-                mode. You are free to choose per task the mode which
-                fits best.
+            <li class="flex items-start gap-2">
+                <Route class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Flexible Operation Modes</b>:<br/>
+                    <b>ASE</b> assumes your job as a Software Developer
+                    and Software Architect inherently requires multiple
+                    operation modes, ranging from ad-hoc LLM prompting,
+                    through user-story-based planning mode, through an
+                    approach-selecting funnel mode, up to an artifact reconciliation
+                    mode. You are free to choose per task the mode which
+                    fits best.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Unix CLI-style Skills</b>:<br/>
-                <b>ASE</b> assumes you like the style of the Unix
-                command-line interface (CLI) and appreciate skills which
-                are intended to be explicitly called as commands and
-                which can be parametrized through Unix-style options.
+            <li class="flex items-start gap-2">
+                <SquareTerminal class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Unix CLI-style Skills</b>:<br/>
+                    <b>ASE</b> assumes you like the style of the Unix
+                    command-line interface (CLI) and appreciate skills which
+                    are intended to be explicitly called as commands and
+                    which can be parametrized through Unix-style options.
+                </div>
             </li>
         </ul>
     </div>
@@ -83,76 +116,100 @@ import MethodologyStrip from "./Methodology-Strip.astro"
     </header>
     <div class="mt-6 grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
         <ul class="flex flex-col gap-6 text-foreground-secondary ase-justify" data-reveal="right">
-            <li>
-                <b class="text-accent uppercase">Agent &amp; Plugin</b>:<br/>
-                <b>ASE</b> is a real <i>plugin</i> for the Agentic AI Coding
-                tools <b>Anthropic Claude Code CLI</b>, <b>GitHub Copilot CLI</b>,
-                and <b>OpenAI Codex CLI</b>, and can be non-intrusively
-                and easily installed and later also residue-free uninstalled from
-                those tools at any time.
+            <li class="flex items-start gap-2">
+                <Puzzle class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Agent &amp; Plugin</b>:<br/>
+                    <b>ASE</b> is a real <i>plugin</i> for the Agentic AI Coding
+                    tools <b>Anthropic Claude Code CLI</b>, <b>GitHub Copilot CLI</b>,
+                    and <b>OpenAI Codex CLI</b>, and can be non-intrusively
+                    and easily installed and later also residue-free uninstalled from
+                    those tools at any time.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Recurring Software Engineering Tasks</b>:<br/>
-                <b>ASE</b> targets the most important, recurring tasks in industrial
-                Software Engineering only. Especially, <b>ASE</b> is not targeting
-                the Consulting, Operations, or Management disciplines.
+            <li class="flex items-start gap-2">
+                <Repeat class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Recurring Software Engineering Tasks</b>:<br/>
+                    <b>ASE</b> targets the most important, recurring tasks in industrial
+                    Software Engineering only. Especially, <b>ASE</b> is not targeting
+                    the Consulting, Operations, or Management disciplines.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Built-In Methodology</b>:<br/>
-                <b>ASE</b> tries to ship out-of-the-box with built-in
-                well-known methodology aspects to make them more
-                accessible to the average software developer and
-                software architect. See below under <i>Trust Built-In
-                Methodology</i> for more details on the actually
-                built-in methods.
+            <li class="flex items-start gap-2">
+                <BookOpen class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Built-In Methodology</b>:<br/>
+                    <b>ASE</b> tries to ship out-of-the-box with built-in
+                    well-known methodology aspects to make them more
+                    accessible to the average software developer and
+                    software architect. See below under <i>Trust Built-In
+                    Methodology</i> for more details on the actually
+                    built-in methods.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Skills &amp; MCP/CLI</b>:<br/>
-                The probabilistic LLM-based <b>ASE</b> skills are
-                strongly coupled to and work on top of the deterministic
-                TypeScript-based <b>ASE</b> MCP/CLI service. In particular,
-                the <b>ASE</b> skills are not written to be used
-                standalone or in foreign environments.
+            <li class="flex items-start gap-2">
+                <Link class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Skills &amp; MCP/CLI</b>:<br/>
+                    The probabilistic LLM-based <b>ASE</b> skills are
+                    strongly coupled to and work on top of the deterministic
+                    TypeScript-based <b>ASE</b> MCP/CLI service. In particular,
+                    the <b>ASE</b> skills are not written to be used
+                    standalone or in foreign environments.
+                </div>
             </li>
         </ul>
         <ul class="flex flex-col gap-6 text-foreground-secondary ase-justify" data-reveal="left">
-            <li>
-                <b class="text-accent uppercase">Configuration Scopes</b>:<br/>
-                Parameters of the agent and the project can be
-                configured across the hierarchy of the distinct scopes{" "}
-                <i>default</i>, <i>user</i>, <i>project</i>, and{" "}
-                <i>session</i>. This allows the flexible configuration
-                of <b>ASE</b>.
+            <li class="flex items-start gap-2">
+                <Settings class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Configuration Scopes</b>:<br/>
+                    Parameters of the agent and the project can be
+                    configured across the hierarchy of the distinct scopes{" "}
+                    <i>default</i>, <i>user</i>, <i>project</i>, and{" "}
+                    <i>session</i>. This allows the flexible configuration
+                    of <b>ASE</b>.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Session Constitution</b>:<br/>
-                All agent sessions have meta descriptions — a sort
-                of "constitution" — preloaded at all times, based on
-                the configured parameters. This allows controlling the{" "}
-                <i>general</i> LLM behavior. Additionally, skills load
-                more meta descriptions on demand. This allows skills to
-                reuse definitions.
+            <li class="flex items-start gap-2">
+                <ScrollText class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Session Constitution</b>:<br/>
+                    All agent sessions have meta descriptions — a sort
+                    of "constitution" — preloaded at all times, based on
+                    the configured parameters. This allows controlling the{" "}
+                    <i>general</i> LLM behavior. Additionally, skills load
+                    more meta descriptions on demand. This allows skills to
+                    reuse definitions.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Task Skills</b>:<br/>
-                Recurring tasks are supported with dedicated skills,
-                which can be manually triggered as commands. This allows
-                explicitly controlling the specific agent behavior.
-                Skills are grouped into meta (<code>ase-meta-*</code>),
-                code (<code>ase-code-*</code>), architecture
-                (<code>ase-arch-*</code>), task
-                (<code>ase-task-*</code>), documentation
-                (<code>ase-docs-*</code>), synchronization
-                (<code>ase-sync-*</code>), and help
-                (<code>ase-help-*</code>) families.
+            <li class="flex items-start gap-2">
+                <Command class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Task Skills</b>:<br/>
+                    Recurring tasks are supported with dedicated skills,
+                    which can be manually triggered as commands. This allows
+                    explicitly controlling the specific agent behavior.
+                    Skills are grouped into meta (<code>ase-meta-*</code>),
+                    code (<code>ase-code-*</code>), architecture
+                    (<code>ase-arch-*</code>), task
+                    (<code>ase-task-*</code>), documentation
+                    (<code>ase-docs-*</code>), synchronization
+                    (<code>ase-sync-*</code>), and help
+                    (<code>ase-help-*</code>) families.
+                </div>
             </li>
-            <li>
-                <b class="text-accent uppercase">Artifact Formats</b>:<br/>
-                The format of the primary input artifacts of Software
-                Engineering (requirements specification and architecture
-                description) is strictly defined. This allows{" "}
-                <i>both</i> humans <i>and</i> agents to operate on them
-                concurrently.
+            <li class="flex items-start gap-2">
+                <FileCode class="mt-1 h-4 w-4 shrink-0 text-accent" stroke-width={1}/>
+                <div>
+                    <b class="text-accent uppercase">Artifact Formats</b>:<br/>
+                    The format of the primary input artifacts of Software
+                    Engineering (requirements specification and architecture
+                    description) is strictly defined. This allows{" "}
+                    <i>both</i> humans <i>and</i> agents to operate on them
+                    concurrently.
+                </div>
             </li>
         </ul>
     </div>

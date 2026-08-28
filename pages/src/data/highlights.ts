@@ -13,18 +13,40 @@
     here to keep the front page tight and punchy.
 
     The `index.astro` page alternates the USP/video column order per row, so
-    the order below is also the visual top-to-bottom order on the page.  */
+    the order below is also the visual top-to-bottom order on the page.
+
+    Each entry also carries the Lucide icon `Video-Row.astro` renders in front
+    of the headline. Where the showcased skill already has an icon elsewhere on
+    the page -- in the methodology strip or the "Day in the Life" timeline --
+    the very same icon is reused, so one skill reads as one symbol throughout.  */
+
+import type { AstroComponent } from "@lucide/astro"
+import VenetianMask            from "@lucide/astro/icons/venetian-mask"
+import Lightbulb               from "@lucide/astro/icons/lightbulb"
+import Pickaxe                 from "@lucide/astro/icons/pickaxe"
+import PackageSearch           from "@lucide/astro/icons/package-search"
+import Scale                   from "@lucide/astro/icons/scale"
+import Swords                  from "@lucide/astro/icons/swords"
+import Shield                  from "@lucide/astro/icons/shield"
+import Pyramid                 from "@lucide/astro/icons/pyramid"
+import SpellCheck              from "@lucide/astro/icons/spell-check"
+import Bug                     from "@lucide/astro/icons/bug"
+import Funnel                  from "@lucide/astro/icons/funnel"
+import ClipboardCheck          from "@lucide/astro/icons/clipboard-check"
+import Tag                     from "@lucide/astro/icons/tag"
 
 export type Highlight = {
-    eyebrow: string  /*  short, signal-colored eyebrow above the heading    */
-    title:   string  /*  the headline of the USP                            */
-    body:    string  /*  one- to two-sentence elaboration                   */
-    skill:   string  /*  the ASE skill the USP showcases                    */
-    video:   string  /*  the `ase-media` recording base name (without ext)  */
+    icon:    AstroComponent  /*  the Lucide icon prefixing the headline            */
+    eyebrow: string          /*  short, signal-colored eyebrow above the heading   */
+    title:   string          /*  the headline of the USP                           */
+    body:    string          /*  one- to two-sentence elaboration                  */
+    skill:   string          /*  the ASE skill the USP showcases                   */
+    video:   string          /*  the `ase-media` recording base name (without ext) */
 }
 
 export const highlights: Highlight[] = [
     {
+        icon:    VenetianMask,
         eyebrow: "Token and Time Optimization",
         title:   "Switch persona to cut down tokens and reading time",
         body:    "To reduce your overall output tokens and necessary reading time, " +
@@ -38,6 +60,7 @@ export const highlights: Highlight[] = [
         video:   "ase-meta-persona"
     },
     {
+        icon:    Lightbulb,
         eyebrow: "Parametrized Brainstorming",
         title:   "Diverge, cluster, and shortlist new ideas",
         body:    "Turn a fuzzy topic into a focused shortlist: first diverge into a " +
@@ -47,6 +70,7 @@ export const highlights: Highlight[] = [
         video:   "ase-meta-brainstorm"
     },
     {
+        icon:    Pickaxe,
         eyebrow: "Root-Cause Analysis",
         title:   "Trace root cause with Five-Whys method",
         body:    "Drill past symptoms to the real cause: the Five-Whys method iteratively asks " +
@@ -56,6 +80,7 @@ export const highlights: Highlight[] = [
         video:   "ase-meta-why"
     },
     {
+        icon:    PackageSearch,
         eyebrow: "Component Discovery",
         title:   "Discover the right components for your technology stack",
         body:    "Get methodical support in finding suitable libraries and frameworks to " +
@@ -66,6 +91,7 @@ export const highlights: Highlight[] = [
         video:   "ase-arch-discover"
     },
     {
+        icon:    Scale,
         eyebrow: "Multi-Criteria Decisions",
         title:   "Evaluate alternatives with a multi-criteria decision matrix",
         body:    "Compare alternatives the rigorous way: a weighted multi-criteria decision matrix " +
@@ -75,6 +101,7 @@ export const highlights: Highlight[] = [
         video:   "ase-meta-evaluate"
     },
     {
+        icon:    Swords,
         eyebrow: "Play Advocatus Diaboli",
         title:   "Challenge your decision with an Advocatus Diaboli",
         body:    "Know the antitheses to your decision before others bring them up. " +
@@ -84,6 +111,7 @@ export const highlights: Highlight[] = [
         video:   "ase-meta-diaboli"
     },
     {
+        icon:    Shield,
         eyebrow: "Play Steelman",
         title:   "Strengthen your decision with a Steelman",
         body:    "Further improve the strength of your decision before others challenge it. " +
@@ -94,6 +122,7 @@ export const highlights: Highlight[] = [
         video:   "ase-meta-steelman"
     },
     {
+        icon:    Pyramid,
         eyebrow: "Document Distillation",
         title:   "Distill a document down to its ranked key points",
         body:    "Cut a long document down to its essence: distill it into a flat, " +
@@ -103,6 +132,7 @@ export const highlights: Highlight[] = [
         video:   "ase-docs-distill"
     },
     {
+        icon:    SpellCheck,
         eyebrow: "Document Proofreading",
         title:   "Analyze documents for spelling, punctuation, and grammar",
         body:    "Scan your documents for problems in spelling, punctuation, and grammar. " +
@@ -111,6 +141,7 @@ export const highlights: Highlight[] = [
         video:   "ase-docs-proofread"
     },
     {
+        icon:    Bug,
         eyebrow: "Logical Code Analysis",
         title:   "Analyze code for logic and control-flow defects",
         body:    "Scan your source code for problems in its logic, semantics, and control flow, with " +
@@ -119,6 +150,7 @@ export const highlights: Highlight[] = [
         video:   "ase-code-analyze"
     },
     {
+        icon:    Funnel,
         eyebrow: "Alternative Approach Funnel",
         title:   "Craft through a funnel of approaches",
         body:    "Plan-driven, but not too direct and hence with enough preliminary consideration: " +
@@ -129,6 +161,7 @@ export const highlights: Highlight[] = [
         video:   "ase-code-craft"
     },
     {
+        icon:    ClipboardCheck,
         eyebrow: "Named and Persisted Plans",
         title:   "Implement against named, persisted, structured task plans",
         body:    "Use named, persisted, structured, and cross-session task plans in a strict, fixed format — then " +
@@ -137,6 +170,7 @@ export const highlights: Highlight[] = [
         video:   "ase-task-implement"
     },
     {
+        icon:    Tag,
         eyebrow: "Automatic ChangeLog",
         title:   "Auto-generate ChangeLog entries from Git",
         body:    "Keep your <code>CHANGELOG.md</code> file current without the chore: derive concise, " +

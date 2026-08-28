@@ -14,6 +14,16 @@ import Diagram         from "./Diagram.astro"
 import Annotation      from "./Annotation.astro"
 import Terminal        from "./Terminal.astro"
 import { skillGroups } from "../data/skills.ts"
+
+/*  one icon per subsection heading: a compass for navigating from an intent to
+    the matching skill, rising signal bars for the ascending Agentic AI Levels,
+    footprints for the step-wise driving, and a workflow graph for the
+    operation modes  */
+
+import Compass         from "@lucide/astro/icons/compass"
+import Signal          from "@lucide/astro/icons/signal"
+import Footprints      from "@lucide/astro/icons/footprints"
+import Workflow        from "@lucide/astro/icons/workflow"
 ---
 <section id="usage" class="relative isolate mx-auto max-w-4xl px-6 py-8">
     <header class="ase-section-head" data-reveal>
@@ -34,7 +44,10 @@ import { skillGroups } from "../data/skills.ts"
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <p class="ase-eyebrow">Online Help</p>
-                <h3 class="ase-h3">From Intention to Skills</h3>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Compass class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>From Intention to Skills</span>
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     <b>ASE</b> skills are primarily intended to be
                     triggered by the user through so-called "slash commands"
@@ -137,7 +150,12 @@ import { skillGroups } from "../data/skills.ts"
             <div class="relative isolate lg:order-1" data-reveal="right">
                 <SectionGlow variant="text" side="left" />
                 <p class="ase-eyebrow">Agentic AI Levels</p>
-                <h3 class="ase-h3">From Manual To<br/>Fully Autonomous</h3>
+                {/*  "mt-1" centers the icon on the first line box of the
+                     heading, so the two-line title keeps it on top  */}
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Signal class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>From Manual To<br/>Fully Autonomous</span>
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     <b>ASE</b> supports <b>Dr. Ralf S. Engelschall</b>'s{" "}
                     <b>Agentic AI Level Model</b>, which classifies
@@ -201,7 +219,10 @@ import { skillGroups } from "../data/skills.ts"
             <div class="relative isolate lg:order-2" data-reveal="left">
                 <SectionGlow variant="text" side="right" />
                 <p class="ase-eyebrow">Skills &amp; Workflows</p>
-                <h3 class="ase-h3">Step-Wise Driving,<br/>You In The Loop</h3>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Footprints class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Step-Wise Driving,<br/>You In The Loop</span>
+                </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     Within the above Agentic AI Levels, <b>ASE</b> provides its
                     various skills to let the engineer trigger the
@@ -232,7 +253,10 @@ import { skillGroups } from "../data/skills.ts"
             <div class="relative isolate lg:order-1" data-reveal="right">
                 <SectionGlow variant="text" side="left" />
                 <p class="ase-eyebrow">Operation Modes</p>
-                <h3 class="ase-h3">Advanced Workflows, Maximum Flexibility</h3>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Workflow class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Advanced Workflows, Maximum Flexibility</span>
+                </h3>
                 <div class="mt-4 text-foreground-secondary">
                     <p class="ase-justify">
                     On top of the standard Agentic AI Coding tool modes{" "}
