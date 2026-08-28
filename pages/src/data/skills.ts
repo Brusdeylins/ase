@@ -32,14 +32,14 @@ export const skillGroups: SkillGroup[] = [
             "ase-meta-quorum",
             "ase-meta-chat",
             "ase-meta-search",
-            "ase-meta-brainstorm",
-            "ase-meta-compat",
-            "ase-meta-workflow"
+            "ase-meta-brainstorm"
         ]
     },
     {
         label: "Standalone Mode 2/2",
         skills: [
+            "ase-meta-compat",
+            "ase-meta-workflow",
             "ase-arch-discover",
             "ase-code-insight",
             "ase-code-explain",

@@ -13,6 +13,17 @@ import SectionGlow     from "./Section-Glow.astro"
 import Terminal        from "./Widget-Terminal.astro"
 import { skillGroups } from "../data/skills.ts"
 import Compass         from "@lucide/astro/icons/compass"
+
+/*  arrange the skill groups into the five catalog columns, where the
+    last column stacks "Quick Mode" and "Sync Mode" vertically instead
+    of letting the sixth group wrap into an own grid row  */
+const columns = [
+    [ "Standalone Mode 1/2" ],
+    [ "Standalone Mode 2/2" ],
+    [ "Quick Mode", "Sync Mode" ],
+    [ "Funnel Mode" ],
+    [ "Task Mode" ]
+].map((labels) => labels.map((label) => skillGroups.find((group) => group.label === label)!))
 ---
 <section id="usage" class="relative isolate mx-auto max-w-4xl px-6 py-8">
     <header class="ase-section-head" data-reveal>
@@ -76,45 +87,52 @@ import Compass         from "@lucide/astro/icons/compass"
             </div>
         </div>
 
-        <div class="relative overflow-hidden rounded-xl border border-border-strong p-6 shadow-xl sm:p-8" data-reveal>
-            <div class="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-5">
-                {skillGroups.map((group) => {
-                    /*  split a group label like "Standalone Mode 1/2" around
-                        " Mode" into the leading word and an optional trailing
-                        "1/2" fraction, so the header keeps its original
-                        two-line "<word><br/>Mode [fraction]" layout while the
-                        label text lives solely in the shared catalog.  */
-                    const [ word, fraction ] = group.label.split(" Mode")
-                    return (
-                        <div>
-                            <p class="text-sm font-bold uppercase tracking-wider text-accent">{word}<br/>Mode {fraction.trim() && <span class="font-light">{fraction.trim()}</span>}</p>
-                            <ul class="mt-3 space-y-1 text-[0.90625rem] leading-none text-foreground-secondary">
-                                {group.skills.map((id) => {
-                                    const idx    = id.lastIndexOf("-")
-                                    const prefix = id.slice(0, idx + 1)
-                                    const name   = id.slice(idx + 1)
-                                    return (
-                                        <li>{prefix}<button type="button" class="cursor-grab text-accent transition-colors hover:text-white" data-help-id={id}><b>{name}</b></button></li>
-                                    )
-                                })}
-                            </ul>
-                        </div>
-                    )
-                })}
-            </div>
-
-            <div class="mt-6 flex flex-col items-end gap-2 sm:absolute sm:bottom-8 sm:right-8 sm:mt-0">
+        <div class="relative overflow-hidden rounded-xl border border-border-strong bg-background-elevated/60 p-6 shadow-xl sm:p-8" data-reveal>
+            {/*  the search field and browser button share the top line of the
+                 panel, above the catalog columns, the search field flush left
+                 and the browser button flush right  */}
+            <div class="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <input
                     type="search"
                     data-help-search
                     autocomplete="off"
-                    placeholder="Search man-pages…"
+                    placeholder="Search all manpages…"
                     aria-label="Search man-pages"
                     class="w-64 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none"
                 />
-                <button type="button" class="w-64 cursor-grab text-sm ase-btn" data-help-id={skillGroups[0].skills[0]}>
+                <button type="button" class="w-64 cursor-grab bg-accent/10 text-sm ase-btn" data-help-id={skillGroups[0].skills[0]}>
                     Open Manpage Browser
                 </button>
+            </div>
+
+            <div class="grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-5">
+                {columns.map((column) => (
+                    <div class="space-y-8">
+                        {column.map((group) => {
+                            /*  split a group label like "Standalone Mode 1/2" around
+                                " Mode" into the leading word and an optional trailing
+                                "1/2" fraction, so the header keeps its original
+                                two-line "<word><br/>Mode [fraction]" layout while the
+                                label text lives solely in the shared catalog.  */
+                            const [ word, fraction ] = group.label.split(" Mode")
+                            return (
+                                <div>
+                                    <p class="text-sm font-bold uppercase tracking-wider text-accent">{word}<br/>Mode {fraction.trim() && <span class="font-light">{fraction.trim()}</span>}</p>
+                                    <ul class="mt-3 space-y-1 text-[0.90625rem] leading-none text-foreground-secondary">
+                                        {group.skills.map((id) => {
+                                            const idx    = id.lastIndexOf("-")
+                                            const prefix = id.slice(0, idx + 1)
+                                            const name   = id.slice(idx + 1)
+                                            return (
+                                                <li>{prefix}<button type="button" class="cursor-grab text-accent transition-colors hover:text-white" data-help-id={id}><b>{name}</b></button></li>
+                                            )
+                                        })}
+                                    </ul>
+                                </div>
+                            )
+                        })}
+                    </div>
+                ))}
             </div>
         </div>
     </div>
