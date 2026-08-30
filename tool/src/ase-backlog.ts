@@ -640,12 +640,22 @@ export default class BacklogCommand {
         return 0
     }
 
-    /*  board flow: sync, run the interactive TUI, write back  */
-    private doBoard (): number {
+    /*  board flow: ensure the daemon, run the interactive TUI, write
+        back. The daemon's watchers keep the mirror synchronized while
+        the TUI runs; when its start fails, the one-shot sync around
+        the TUI still yields a consistent (if static) board  */
+    private async doBoard (): Promise<number> {
         Backlog.escapeMirror()
         const { projectId, lanes } = Backlog.settings(this.log)
         Backlog.ensureMirror(this.log, projectId, lanes, null)
         Backlog.syncForward(this.log, lanes)
+        try {
+            await this.doStart()
+        }
+        catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            this.log.write("warning", `backlog: board daemon unavailable, falling back to one-shot sync: ${message}`)
+        }
         execaSync(Backlog.bin(), [ "board" ], { cwd: Backlog.mirrorDir(), stdio: "inherit" })
         Backlog.writeBack(this.log, lanes)
         return 0
@@ -722,8 +732,8 @@ export default class BacklogCommand {
         backlog
             .command("board")
             .description("Show the interactive Kanban board in the terminal")
-            .action(() => {
-                process.exit(this.doBoard())
+            .action(async () => {
+                process.exit(await this.doBoard())
             })
 
         /*  register CLI sub-command "ase backlog web"  */
