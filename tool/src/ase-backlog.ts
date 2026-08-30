@@ -181,8 +181,10 @@ export class Backlog {
         if (fs.existsSync(git))
             fs.rmSync(git, { recursive: true, force: true })
         const ase = path.join(mirror, ".ase")
-        if (fs.existsSync(ase))
+        if (fs.existsSync(ase)) {
             Backlog.trash(ase)
+            log.write("info", "backlog: stale nested \".ase\" directory retired to trash")
+        }
         const config: Record<string, unknown> = {
             project_name:          projectId,
             statuses:              lanes.map((l) => l.name),
@@ -322,6 +324,7 @@ export class Backlog {
             const file = path.join(Backlog.tasksDir(), entry)
             if (expected.get(n) !== file) {
                 Backlog.trash(file)
+                log.write("info", `backlog: mirror file "${entry}" retired to trash`)
                 changed++
             }
         }
