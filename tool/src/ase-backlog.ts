@@ -169,20 +169,27 @@ export class Backlog {
         const mirror = Backlog.mirrorDir()
         fs.mkdirSync(Backlog.tasksDir(), { recursive: true })
 
-        /*  drop a stale Git repository inside the mirror (created by
-            earlier ASE versions): Backlog.md works without one, and a
-            nested Git toplevel would hijack the project root detection
-            of every command started inside the mirror directory  */
-        const git = path.join(mirror, ".git")
-        if (fs.existsSync(git))
-            fs.rmSync(git, { recursive: true, force: true })
+        /*  drop stale artifacts inside the mirror left behind by
+            earlier ASE versions: a Git repository (Backlog.md works
+            without one, and a nested Git toplevel would hijack the
+            project root detection of every command started inside the
+            mirror directory) and a nested ".ase" directory (created
+            when a mis-rooted board server once mistook the mirror for
+            a project of its own)  */
+        for (const stale of [ ".git", ".ase" ]) {
+            const p = path.join(mirror, stale)
+            if (fs.existsSync(p))
+                fs.rmSync(p, { recursive: true, force: true })
+        }
         const config: Record<string, unknown> = {
-            project_name:      projectId,
-            statuses:          lanes.map((l) => l.name),
-            default_status:    lanes[0].name,
-            auto_open_browser: false,
-            remote_operations: false,
-            auto_commit:       false
+            project_name:          projectId,
+            statuses:              lanes.map((l) => l.name),
+            default_status:        lanes[0].name,
+            auto_open_browser:     false,
+            remote_operations:     false,
+            auto_commit:           false,
+            filesystem_only:       true,
+            check_active_branches: false
         }
         if (port !== null)
             config.default_port = port
