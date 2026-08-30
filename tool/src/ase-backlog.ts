@@ -169,18 +169,20 @@ export class Backlog {
         const mirror = Backlog.mirrorDir()
         fs.mkdirSync(Backlog.tasksDir(), { recursive: true })
 
-        /*  drop stale artifacts inside the mirror left behind by
+        /*  clear stale artifacts inside the mirror left behind by
             earlier ASE versions: a Git repository (Backlog.md works
             without one, and a nested Git toplevel would hijack the
             project root detection of every command started inside the
-            mirror directory) and a nested ".ase" directory (created
-            when a mis-rooted board server once mistook the mirror for
-            a project of its own)  */
-        for (const stale of [ ".git", ".ase" ]) {
-            const p = path.join(mirror, stale)
-            if (fs.existsSync(p))
-                fs.rmSync(p, { recursive: true, force: true })
-        }
+            mirror directory) is dropped, and a nested ".ase" directory
+            (created when a mis-rooted board server once mistook the
+            mirror for a project of its own) is moved to the trash, as
+            it may carry task plans of its own  */
+        const git = path.join(mirror, ".git")
+        if (fs.existsSync(git))
+            fs.rmSync(git, { recursive: true, force: true })
+        const ase = path.join(mirror, ".ase")
+        if (fs.existsSync(ase))
+            Backlog.trash(ase)
         const config: Record<string, unknown> = {
             project_name:          projectId,
             statuses:              lanes.map((l) => l.name),
@@ -216,6 +218,16 @@ export class Backlog {
     static saveMapping (mapping: Record<string, number>): void {
         fs.mkdirSync(Backlog.mirrorDir(), { recursive: true })
         writeFileAtomic.sync(Backlog.mappingFile(), yamlStringify(mapping), { encoding: "utf8" })
+    }
+
+    /*  move a mirror file or directory into the mirror's trash
+        directory instead of deleting it: content on disk must never
+        silently disappear, whatever created it  */
+    static trash (p: string): void {
+        const dir = path.join(Backlog.mirrorDir(), "trash")
+        fs.mkdirSync(dir, { recursive: true })
+        const stamp = DateTime.now().toFormat("yyyyLLdd-HHmmss")
+        fs.renameSync(p, path.join(dir, `${stamp} ${path.basename(p)}`))
     }
 
     /*  read the "Status:" frontmatter key of an ASE task plan text,
@@ -292,16 +304,24 @@ export class Backlog {
         if (grown)
             Backlog.saveMapping(mapping)
 
-        /*  sweep: drop mirror files whose ordinal maps to a vanished
-            plan or whose filename drifted (e.g. after a title change);
-            foreign files without a "task-<n>" prefix are left alone  */
+        /*  sweep: retire a mirror file only when its ordinal is
+            *mapped* and either its plan vanished or its filename
+            drifted (e.g. after a title change) -- and even then only
+            into the trash directory, never by deletion. Files with an
+            *unmapped* ordinal -- tasks created directly on the board --
+            and foreign files are never touched: sweeping them would
+            silently destroy content which exists nowhere else.  */
+        const mapped = new Set(Object.values(mapping))
         for (const entry of fs.readdirSync(Backlog.tasksDir())) {
             const m = /^task-(\d+) - .*\.md$/.exec(entry)
             if (m === null)
                 continue
+            const n = Number(m[1])
+            if (!mapped.has(n))
+                continue
             const file = path.join(Backlog.tasksDir(), entry)
-            if (expected.get(Number(m[1])) !== file) {
-                fs.rmSync(file, { force: true })
+            if (expected.get(n) !== file) {
+                Backlog.trash(file)
                 changed++
             }
         }
@@ -327,9 +347,6 @@ export class Backlog {
             const m = /^task-(\d+) - .*\.md$/.exec(entry)
             if (m === null)
                 continue
-            const id = reverse.get(Number(m[1]))
-            if (id === undefined)
-                continue
             const mirrorFile = path.join(dir, entry)
             const mirrorText = fs.readFileSync(mirrorFile, "utf8")
             const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(mirrorText)
@@ -337,6 +354,16 @@ export class Backlog {
                 continue
             const front = yamlParse(fm[1]) as Record<string, unknown> | null
             const lane  = typeof front?.status === "string" ? front.status : null
+            const id    = reverse.get(Number(m[1]))
+            if (id === undefined) {
+                /*  a task created directly on the board: adopt it as a
+                    regular ASE task plan, so it becomes visible to the
+                    task skills instead of living as a board-only ghost  */
+                const imported = Backlog.importBoardTask(log, lanes, Number(m[1]), front, mirrorText)
+                if (imported !== null)
+                    changed.push(imported)
+                continue
+            }
             const file  = Task.path(log, id)
             if (!fs.existsSync(file))
                 continue
@@ -406,6 +433,44 @@ export class Backlog {
         const stamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
         const front = fm[0].replace(/^(Modified:[ \t]*).*$/m, `$1${stamp}`)
         return `${front}\n${body}\n`
+    }
+
+    /*  adopt a task created directly on the board (a mirror file with
+        an unmapped ordinal) as a regular ASE task plan: the plan
+        becomes the source of truth and the next forward render
+        canonicalizes the mirror file; returns the new task id  */
+    static importBoardTask (log: Log, lanes: Lane[], n: number,
+        front: Record<string, unknown> | null, mirrorText: string): string | null {
+        const title = typeof front?.title === "string" && front.title.trim() !== "" ?
+            front.title.trim() : `board-task-${n}`
+        const lane  = typeof front?.status === "string" ? front.status : ""
+        const state = Backlog.laneToState(lanes, lane) ?? "DRAFTED"
+        const desc  = (Backlog.descriptionOf(mirrorText) ?? "").replace(/\s+$/, "")
+
+        /*  derive a unique task id slug from the title  */
+        let slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "").slice(0, 40).replace(/-+$/, "")
+        if (slug === "")
+            slug = `board-task-${n}`
+        const mapping = Backlog.loadMapping()
+        let id = slug
+        for (let i = 2; fs.existsSync(Task.path(log, id)) || mapping[id] !== undefined; i++)
+            id = `${slug}-${i}`
+        const stamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
+        const body  = /^#[ \t]+TASK[ \t]*:/m.test(desc) ? desc : `#   TASK: ${title}\n\n${desc}`.replace(/\s+$/, "")
+        const text  =
+            "---\n" +
+            `${"Id:".padEnd(12)}${id}\n` +
+            `${"Created:".padEnd(12)}${stamp}\n` +
+            `${"Modified:".padEnd(12)}${stamp}\n` +
+            `${"Status:".padEnd(12)}${state}\n` +
+            "---\n\n" +
+            `${body}\n`
+        Task.save(log, id, text)
+        mapping[id] = n
+        Backlog.saveMapping(mapping)
+        log.write("info", `backlog: task "${id}" imported from board-created "task-${n}"`)
+        return id
     }
 
     /*  rewrite (or insert) the "Status:" frontmatter key of an ASE task

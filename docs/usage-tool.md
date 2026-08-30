@@ -453,9 +453,11 @@ plans remain the single source of truth: they are mirrored into a
 generated Backlog.md project under `.ase/backlog/`. Dragging a task
 into another lane on the board writes the `Status:` frontmatter key of
 the corresponding task plan back (traversing the lane's primary
-state), and editing the task description on the board writes the plan
-body back (last writer wins) -- every other board-side field is
-discarded by the next sync:
+state), editing the task description on the board writes the plan
+body back (last writer wins), and a task *created* on the board is
+imported as a regular task plan -- every other board-side field is
+discarded by the next sync. Nothing is ever deleted from disk: a
+retired mirror file is moved into `.ase/backlog/trash/` instead:
 
 - `ase backlog`:
   Entry point group for the task board. Without a subcommand, the help
