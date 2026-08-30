@@ -462,9 +462,12 @@ discarded by the next sync:
   text is shown and the command exits with status 1.
 
 - `ase backlog board`:
-  Synchronize the board mirror and show the interactive Kanban board
-  TUI in the terminal. Lane changes made in the TUI are written back
-  to the task plans when the TUI exits.
+  Synchronize the board mirror, ensure the background board server of
+  the project is running (its watchers keep the mirror synchronized
+  while the TUI is open), and show the interactive Kanban board TUI in
+  the terminal. Lane changes made in the TUI are written back to the
+  task plans by the running watchers, at the latest when the TUI
+  exits.
 
 - `ase backlog web`:
   Ensure the background board server of the current project is running
