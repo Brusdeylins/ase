@@ -40,9 +40,13 @@ forward references): exactly the group's hunks are *staged* into the
 plain Git index -- no work branch, no `git stash`, no working-tree
 mutation -- so the user's editor (e.g. VSCode Source Control) always
 shows the staged group and the remaining unstaged changes side by
-side. The skill emits a compact *group card* (rationale plus one line
-per staged file) and deliberately *no diff* -- the staged lines are
-reviewed in the editor. On *accept*, the commit message is crafted via
+side. The skill emits a compact *group card*: a short rationale plus
+one table with `Layer | File | ±Lines | Explanation` per staged file,
+ordered foundations-first, with the explanations written in the
+user's conversation language in simply understandable wording -- and
+deliberately *no diff*, as the staged lines are reviewed in the
+editor. A single *accept* then covers the whole group. On accept, the
+commit message is crafted via
 `ase-meta-commit` and the group is committed; *skip* unstages the
 group and defers it; *regroup* recuts the remaining groups. Nothing
 here ever discards working-tree content.

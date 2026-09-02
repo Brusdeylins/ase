@@ -81,6 +81,14 @@ duplicating them: `ase-meta-diff` narrates *what changed*,
 commits*; it does *not* judge code quality.
 </objective>
 
+*IMPORTANT*: Author *every* free-text output of this skill -- the
+change intent, group one-liners, rationales, per-file explanations,
+and discussion answers -- in the *user's conversation language* (e.g.
+German when the user talks German) and in *simply understandable*
+wording, as for a colleague who did not write the code and is building
+a mental model of it. Technical identifiers, filenames, and quoted
+code stay in their original form.
+
 <flow>
 
 1.  <step id="STEP 1: Ingest Surface">
@@ -140,6 +148,7 @@ commits*; it does *not* judge code quality.
         Set <review-mode>HORIZONTAL</review-mode>.
         </else>
 
+    <if condition="the manifest contains at least one test file">
     Then let the *user interactively choose* how *test* changes are
     handled:
 
@@ -152,6 +161,11 @@ commits*; it does *not* judge code quality.
     Dispatch on the tool <result/>: set <test-mode>TESTS-LAST</test-mode>
     on `TESTS-LAST`, otherwise (including `CANCEL`) set
     <test-mode>REVIEW-TESTS</test-mode>.
+    </if>
+    <else>
+    The change set carries no test files, so this dialog is *skipped*:
+    set <test-mode>REVIEW-TESTS</test-mode> without asking.
+    </else>
 
     Hints:
 
@@ -201,11 +215,16 @@ commits*; it does *not* judge code quality.
 
 4.  <step id="STEP 4: Confirm the Grouping">
 
-    Present the grouping as *one compact table* -- nothing else -- so
-    the user can judge whether the cut fits:
+    Present the *whole before the parts*: first a 2-3 sentence
+    <intent/> reconstructing what the entire change set wants to
+    achieve (the umbrella the groups hang under), then the grouping as
+    *one compact table* -- nothing else -- so the user can judge
+    whether the cut fits:
 
     <template>
     <ase-tpl-bullet-normal/> **GROUPS** (<group-count/> groups, <review-mode/>, <test-mode/>)
+
+    *Intent*: <intent/>
 
     | G#    | Theme                           | Files         | +Lines    | -Lines       |
     |-------|---------------------------------|---------------|-----------|--------------|
@@ -284,15 +303,17 @@ commits*; it does *not* judge code quality.
          run any build, test, or linter.
          </else>
 
-    5.3. Emit the *group card* -- a compact explanation, no diff:
+    5.3. Emit the *group card* -- one compact table, no diff, so the
+         user can give a *single* ok for the whole group:
 
          <template>
          <ase-tpl-bullet-secondary/> **GROUP G<n/>/<group-count/>** · <type/>(<scope/>): <one-liner/>
 
          *Why*: <rationale/>
 
-         *Staged files*:
-         <staged-file-lines/>
+         | Layer     | File         | ±Lines            | Explanation     |
+         |-----------|--------------|-------------------|-----------------|
+         | <layer/>  | `<filepath/>` | +<added/>/-<removed/> | <explanation/>  |
 
          *Build*: <build-line/>
          </template>
@@ -301,9 +322,17 @@ commits*; it does *not* judge code quality.
 
          -   `<rationale/>` is 2-4 sentences reconstructing the goal
              this group addresses -- what problem, what outcome, what
-             design choice.
-         -   `<staged-file-lines/>` is one bullet per file:
-             `- <filepath> (+<a>/-<r>) — <one-sentence role in this group>`.
+             design choice. Anchor it in the mental model built so
+             far: connect to already *accepted* groups where they
+             relate, and never lean on a not-yet-reviewed group.
+         -   One table row per staged file. `<layer/>` is the file's
+             coarse architectural layer (e.g. `interface`, `domain`,
+             `service`, `adapter`, `ui`, `test`, `docs`); order the
+             rows bottom-up along the layers (foundations first), so
+             the table reads in comprehension order.
+         -   `<explanation/>` is 1-2 short sentences on what this
+             file's staged change does within the group -- simply
+             understandable, in the user's language.
          -   Review the staged lines themselves in the editor
              (VSCode Source Control shows exactly this group as
              "Staged Changes").
