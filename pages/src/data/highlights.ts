@@ -9,14 +9,14 @@
     Each entry pairs one USP (distilled from the project `README.md`) with one
     demo recording from the `ase-media` repository, which is published to
     GitHub Pages at https://rse.github.io/ase-media/ as `<video>.mp4` (with a
-    `<video>.jpg` poster). Only the ~6 strongest USP+video pairs are surfaced
-    here to keep the front page tight and punchy.
+    `<video>.jpg` poster). Only the strongest USP+video pairs are surfaced
+    here to keep the "Highlights" page tight and punchy.
 
-    The `index.astro` page alternates the USP/video column order per row, so
-    the order below is also the visual top-to-bottom order on the page.
+    `Section-Highlights.astro` alternates the USP/video column order per row,
+    so the order below is also the visual top-to-bottom order on the page.
 
-    Each entry also carries the Lucide icon `Video-Row.astro` renders in front
-    of the headline. Where the showcased skill already has an icon elsewhere on
+    Each entry also carries the Lucide icon `Widget-Video-Row.astro` renders
+    in front of the headline. Where the showcased skill has an icon elsewhere on
     the page -- in the methodology strip or the "Day in the Life" timeline --
     the very same icon is reused, so one skill reads as one symbol throughout.  */
 

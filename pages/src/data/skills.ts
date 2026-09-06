@@ -6,9 +6,8 @@
 
 /*  shared skill catalog: the single source of truth for the grouping and
     ordering of all ASE skills. Both the catalog grid in `Section-Usage.astro`
-    and the sidebar in `Modal-Help.astro` iterate this list, so the two stay
-    perfectly in sync (DRY). The order and grouping mirror the original,
-    hand-written catalog grid one-to-one.  */
+    (which arranges the groups into its own column layout) and the sidebar in
+    `Modal-Help.astro` are driven by this list, so the two stay in sync (DRY).  */
 
 export interface SkillGroup {
     label:  string

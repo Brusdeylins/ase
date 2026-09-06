@@ -237,7 +237,8 @@ for (const group of skillGroups)
         }
 
         /*  leave search mode: drop the highlights, un-reduce the sidebar, and
-            hide both no-match notices. Which doc is shown is left to the caller.  */
+            hide both no-match notices, and drop the pending fall-back doc.
+            Which doc is shown is left to the caller.  */
         const leave = () => {
             unhighlight()
             helpPane.classList.remove("searching")
@@ -249,6 +250,7 @@ for (const group of skillGroups)
             })
             helpHint.classList.add("hidden")
             helpNone.classList.add("hidden")
+            restore = ""
         }
 
         /*  reflect the shown man-page in the document title and in the
@@ -414,8 +416,9 @@ for (const group of skillGroups)
             const keywords = query.toLowerCase().split(/\s+/).filter(Boolean)
             unhighlight()
             if (keywords.length === 0) {
+                const back = restore || shown
                 leave()
-                select(restore || shown)
+                select(back)
                 return
             }
             if (!helpPane.classList.contains("searching")) restore = shown

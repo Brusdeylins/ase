@@ -5,6 +5,10 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
+/*  "Title" section: the page hero with the ASE logo, the headline, the
+    rotating quote carousel, the GitHub badges, the two intro paragraphs with
+    the floated video preview, and the typed-out skill demo.  */
+
 import LogoASE      from "./Widget-Logo-ASE.astro"
 import TypingDemo   from "./Widget-Typing-Demo.astro"
 import Flag         from "./Widget-Flag.astro"
@@ -140,7 +144,7 @@ const badges = [
                 toolkit of renowned and prolific author <a href="/author/">Dr. Ralf S. Engelschall</a>, for fusing the concepts of{" "}
                 <b>Agentic AI Coding</b> and traditional <b>Software Engineering</b>.{" "}
                 <b>ASE</b> ships as a plugin for the software development tool{" "}
-                <a href="https://claude.com/product/claude-code">Anthropic Claude Code CLI</a> &mdash;
+                <a href="https://claude.com/products/claude-code">Anthropic Claude Code CLI</a> &mdash;
                 and with reduced support also for the alternative
                 tools <a href="https://github.com/features/copilot/cli">GitHub Copilot CLI</a> and{" "}
                 <a href="https://github.com/openai/codex">OpenAI Codex CLI</a>.{" "}
@@ -177,16 +181,6 @@ const badges = [
             <TypingDemo/>
         </div>
     </div>
-
-    {/* scroll-down indicator (desktop only, fades against the hero base),
-        leading into the testimonials section below the hero. */}
-    <!-- <a
-        href="#testimonials"
-        aria-label="Scroll to the voices from the practitioners"
-        class="absolute inset-x-0 bottom-8 mx-auto hidden w-max flex-col items-center text-accent md:flex">
-        <span class="chevron-bounce text-2xl leading-none">⌄</span>
-    </a>
-    -->
 </section>
 
 {/* rendered outside the Hero's <section> (which has isolate + overflow-hidden)
@@ -195,9 +189,7 @@ const badges = [
 <ModalYouTube id={video.id} label={video.label}/>
 
 <style is:global>
-    /*  hero entrance animations:
-        the hero children stagger in on load;
-        the scroll-down chevron bounces.  */
+    /*  hero entrance animations: the hero children stagger in on load  */
 
     @keyframes hero-slide-up {
         from { opacity: 0; transform: translateY(80px); }
@@ -211,15 +203,8 @@ const badges = [
     .hero-stagger > *:nth-child(3) { animation-delay: 180ms; }
     .hero-stagger > *:nth-child(4) { animation-delay: 270ms; }
 
-    @keyframes chevron-bounce {
-        0%, 100% { transform: translateY(0); opacity: 0.5; }
-        50%      { transform: translateY(8px); opacity: 1; }
-    }
-    .chevron-bounce { animation: chevron-bounce 1.8s ease-in-out infinite; }
-
     @media (prefers-reduced-motion: reduce) {
-        .hero-stagger > *,
-        .chevron-bounce { animation: none; }
+        .hero-stagger > * { animation: none; }
     }
 
     /*  theme the swiper quote carousel to the brand palette. The carousel

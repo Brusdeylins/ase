@@ -91,7 +91,7 @@ export const fitAgainst: Fit[] = [
         icon:  Bot,
         title: "You want a fully autonomous agent fleet",
         body:  "<b>ASE</b> deliberately keeps a human in the loop at every decision point. " +
-               "It, by default, is not an unattended, self-dispatching swarm, even it can be forced to it to some extend."
+               "It, by default, is not an unattended, self-dispatching swarm, even if it can be forced into it to some extent."
     },
     {
         icon:  Briefcase,
@@ -109,7 +109,7 @@ export const fitAgainst: Fit[] = [
         icon:  SlidersHorizontal,
         title: "You want an unopinionated framework",
         body:  "<b>ASE</b> ships strict artifact formats, fixed skill families, and built-in tenets. " +
-               "You can configure it to some extend, but you cannot make it neutral."
+               "You can configure it to some extent, but you cannot make it neutral."
     },
     {
         icon:  BatteryLow,

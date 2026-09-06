@@ -6,10 +6,11 @@
 */
 
 /*  the actual, scannable QR code for `site.url`, generated offline (qrcode,
-    33x33 modules, quiet-zone trimmed). The white background rect is dropped so
-    the code sits transparent on its surroundings, and the module stroke is
-    switched to `currentColor` so it inherits the wrapper's text colour. `class`
-    is forwarded to the <svg> for sizing (e.g. "h-16 w-16").  */
+    25x25 modules plus the standard 4-module quiet zone, hence the 33x33
+    viewBox). The white background rect is dropped so the code sits transparent
+    on its surroundings, and the module stroke is switched to `currentColor` so
+    it inherits the wrapper's text colour. `class` is forwarded to the <svg>
+    for sizing (e.g. "h-16 w-16").  */
 
 import { site } from "../data/site.ts"
 

@@ -134,10 +134,10 @@ const moments: Moment[] = [
         icon:    Brush,
         eyebrow: "The Polishing Gate",
         title:   "Polish Your Changes",
-        body:    "After realizing the change, you analyze the current status quo — three ways. Logic " +
-                 "and control-flow defects, code-quality smells, and finally a holistic, " +
-                 "human-reviewer-style critique of the staged diff with an approve or reject " +
-                 "verdict and **line-cited, severity-tagged findings**.",
+        body:    "After realizing the change, you analyze the current status quo — three ways. " +
+                 "Code-quality smells, documentation spelling and grammar defects, and finally " +
+                 "logic and control-flow defects — each reported with **line-cited, " +
+                 "severity-tagged findings**.",
         skills:  [
             "**/ase-code-lint** --severity=MEDIUM --auto",
             "**/ase-docs-proofread** --auto",
@@ -158,7 +158,7 @@ const moments: Moment[] = [
         icon:    Wrench,
         eyebrow: "The Post-Adjustment",
         title:   "Post-Adjust Your Changes",
-        body:    "Just before you thought you are done you determine a defect in your changes " +
+        body:    "Just when you thought you were done, you spot a defect in your changes " +
                  "and perform an ad-hoc post-adjustment.",
         skills:  [
             "**/ase-code-edit** --grill --verify [...]"
@@ -221,7 +221,7 @@ const inline = (text: string) => text
                 recognized as a component and not as an HTML element  */
             const Icon = moment.icon
             return (
-                <li class="grid grid-cols-1 items-left gap-y-2 lg:grid-cols-[2.0rem_0.75fr_1.0fr] lg:gap-x-10" data-reveal>
+                <li class="grid grid-cols-1 items-start gap-y-2 lg:grid-cols-[2.0rem_0.75fr_1.0fr] lg:gap-x-10" data-reveal>
                     <div class="self-start">
                         <span class="relative z-10 flex h-[2.5rem] w-[2.5rem] items-center justify-center rounded-full border border-border-strong bg-brand-800 font-bold text-white">
                             {index + 1}
