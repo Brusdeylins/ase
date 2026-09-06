@@ -255,8 +255,8 @@ The following ASE commands/skills exist on the documentation-level:
   running a three-stage cascade -- tighten the sentences, drop low-value
   content, compress the remaining content into shorter expressions --
   entering each stage only while the target is still not met. Each
-  proposed change is reviewed as a whole `BEFORE`/`AFTER` block; with
-  `--auto` all of them are applied unattended.
+  proposed change is cut as a whole block and reviewed as a unified
+  diff; with `--auto` all of them are applied unattended.
 
 - **/ase-docs-refine** \[`--auto`|`-a`\] *docs-reference*:<br/>
   Refine the sentence structure and style of the referenced documents:

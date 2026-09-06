@@ -50,12 +50,13 @@ argument is kept, and fenced code blocks, inline code spans, link
 targets, Markdown frontmatter, and the heading structure are never
 touched.
 
-Each proposed change is reviewed as a *whole block* - a paragraph, a
-list item, a blockquote, or a heading with its following paragraph -
-rendered as a `BEFORE`/`AFTER` preview annotated with the length it
-saves. A line-level unified diff is deliberately *not* used, because
-shortening rewrites entire sentences, which would degrade every hunk
-into a full-block deletion followed by a full-block insertion. The user
+Each proposed change is cut as a *whole block* - a paragraph, a list
+item, a blockquote, or a heading with its following paragraph - because
+a shortening is only judgeable in the context of the whole block it
+rewrites. It is rendered as a *unified diff* with up to two lines of
+context, annotated with the length it saves, exactly as in
+[`ase-docs-refine`](../ase-docs-refine/help.md) and
+[`ase-docs-proofread`](../ase-docs-proofread/help.md). The user
 either accepts or rejects each block interactively (or refines it via a
 free-text hint, which re-proposes the block without limit) or - with
 `--auto` - applies all of them automatically. A closing *LENGTH REPORT*

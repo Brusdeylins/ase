@@ -26,8 +26,8 @@ ChangeLog
     `--chars <N>` or `--words <N>` option, through a three-stage cascade --
     tighten the sentences, drop low-value content, compress the remaining content
     into shorter expressions -- entering each stage only while the target is still
-    not met, and reviewing every proposed change as a whole `BEFORE`/`AFTER` block
-    instead of a line-level diff.
+    not met, and cutting every proposed change as a whole block which is
+    reviewed as a unified diff.
 
 -   FEATURE [docs]: Document refinement skill
     Added the `ase-docs-refine` skill and its sub-agent for a light rewriting of

@@ -120,8 +120,8 @@ Workflow
         document -- a paragraph, a list item, a blockquote, or a heading
         together with its immediately following paragraph. It *MUST*
         *NOT* be an individual line and *MUST* *NOT* be a fragment of a
-        sentence, because the review shows *whole blocks* instead of
-        line diffs.
+        sentence, because a shortening is only judgeable in the context
+        of the *whole block* it rewrites.
 
         Blocks *MUST* *NOT* overlap: every line of the document belongs
         to at most *one* block.

@@ -258,6 +258,36 @@ than the user asked for.
             expressed as a *rounded* percentage of <block-before/>, so
             the reviewer sees what the block actually saves.
 
+            Then set <context-before/> and <context-after/> to empty and
+            *normalize* the change to its *minimal* form, so that the
+            proposed diff shows exactly the lines the later `Edit` will
+            actually change: while the *first* line of <old-text/> is
+            identical to the *first* line of <new-text/>, *move* that
+            line from both to the end of <context-before/> and increment
+            <line/> by one; likewise, while the *last* line of
+            <old-text/> is identical to the *last* line of <new-text/>,
+            *move* that line from both to the front of <context-after/>.
+            Finally, *trim* <context-before/> to its *last* two lines and
+            <context-after/> to its *first* two lines.
+
+            Then, unless <ase-project-boxing/> is equal `grey` (where
+            the full unified diff is suppressed and no context lines are
+            rendered at all), *silently* read the current content of
+            <file/> with the `Read` tool - reusing the content read
+            earlier in this iteration, unless an `Edit` was applied in
+            between - and set <file-lines/> to its lines, *stripped* of
+            the line-number prefixes the tool adds. Set <file-lines/> to
+            empty if the file cannot be read.
+
+            Whenever <file-lines/> is non-empty, *re-derive* both
+            context parts from it, so the rendered diff shows real
+            context: set <context-before/> to the *up to two* lines of
+            <file-lines/> directly *before* line <line/> (empty if
+            <line/> is `1`) and <context-after/> to the *up to two*
+            lines of <file-lines/> starting at line (<line/> + <n/>),
+            where <n/> is the number of lines in <old-text/> (empty if
+            that line is beyond the end of the document).
+
         2.  Report the proposed block with the following <template/>:
 
             <template>
@@ -270,7 +300,7 @@ than the user asked for.
 
             The project source artifacts are classified as a *grey box*,
             so the user does *not* want the full artifact internals
-            surfaced: *suppress* the full block preview and instead show
+            surfaced: *suppress* the full unified diff and instead show
             only a *condensed* one-line representation. Determine
             <old-snippet/> as the *single-line* collapse of <old-text/>
             (join its lines with ` ⏎ `) and <new-snippet/> as the same
@@ -287,37 +317,55 @@ than the user asked for.
             </if>
             <elseif condition="<getopt-option-auto/> is not equal `true`">
 
-            Render the proposed shortening as a *block preview* -- the
-            original block and its shortened form side by side, each in
-            its own fenced block, so the reviewer judges *whole blocks*
-            rather than line-level diff noise. Emit <old-text/> and
-            <new-text/> *verbatim*, with their original indentation and
-            without line-number prefixes, based on the following
-            <template/>:
+            Determine the hunk *body* as an ordered list of lines, each
+            carrying a one-character prefix (` ` for context, `-` for
+            old-side, `+` for new-side). Build it by concatenating, in
+            order and *skipping any part that is empty*:
+
+            - one ` `-prefixed line for *each* line of <context-before/>
+              (if non-empty),
+            - one `-`-prefixed line for *each* line of <old-text/>
+              (if non-empty; split <old-text/> on newlines),
+            - one `+`-prefixed line for *each* line of <new-text/>
+              (if non-empty; split <new-text/> on newlines),
+            - one ` `-prefixed line for *each* line of <context-after/>
+              (if non-empty).
+
+            Set <hunk-body/> to those prefixed lines joined by newlines.
+
+            Set <old-count/> to the number of old-side hunk lines, i.e.,
+            the combined line count of <context-before/>, <old-text/>, and
+            <context-after/> (each empty part counts as `0`).
+            Set <new-count/> to the number of new-side hunk lines, i.e.,
+            the combined line count of <context-before/>, <new-text/>, and
+            <context-after/> (each empty part counts as `0`).
+
+            Set <old-start/> to the 1-based line number of the *first*
+            old-side hunk line: if <context-before/> is non-empty, that is
+            the line of its *first* context line, i.e., <line/> minus the
+            number of lines in <context-before/>; otherwise it is <line/> itself
+            (the first line of <old-text/>).
+            Set <new-start/> to the same value as <old-start/>, but clamped
+            to a minimum of `1` whenever <new-count/> is greater than `0`
+            (the shortened side then has a real first line).
+
+            Render the proposed shortening as a *unified diff* with *up to
+            two* lines of context in a fenced block based on the following
+            <template/>, emitting <hunk-body/> verbatim (one already-prefixed
+            line per line, with no extra blank or space-only lines):
 
             <template>
 
             <ase-tpl-bullet-normal/> **<stage/> SHORTENING** (**<block-before/>** → **<block-after/>** <unit/>, **-<block-percent/>%**):
 
-            *BEFORE*:
-
-            ```text
-            <old-text/>
-            ```
-
-            *AFTER*:
-
-            ```text
-            <new-text/>
+            ```diff
+            --- <file/> (original)
+            +++ <file/> (shortened)
+            @@ -<old-start/>,<old-count/> +<new-start/>,<new-count/> @@
+            <hunk-body/>
             ```
 
             </template>
-
-            When <new-text/> is *empty*, the whole block is removed:
-            *replace* the entire `*AFTER*` part of the template above
-            (its label *and* its fenced block) with the single line
-            `*AFTER*: *(block removed entirely)*`, as an empty fenced
-            block carries no information.
 
             </elseif>
 
@@ -364,7 +412,11 @@ than the user asked for.
                 (<old-text/> stays anchored to the existing text at
                 <file/>:<line/>; <new-text/> and <description/> carry the
                 new shortening) so the subsequent rendering and any `Edit`
-                use the new proposal rather than the original. Then *go
+                use the new proposal rather than the original. Then
+                *re-apply* the minimal-form normalization and the context
+                re-derivation of substep 1 to the refined <old-text/> and
+                <new-text/> (so the re-rendered diff again shows exactly
+                the changed lines) and *go
                 back* to substep 2 of this `for`-iteration. There is *no*
                 cap on refinement rounds - keep refining until the user
                 picks `ACCEPT` or `REJECT`.
