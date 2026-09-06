@@ -5,6 +5,13 @@ ChangeLog
 0.9.66 (2026-08-28)
 -------------------
 
+-   FEATURE [code]: Boxing transparency in the statusline
+    Added the `%B` placeholder to `ase statusline`, rendering the project boxing
+    transparency (`white`, `grey`, `black`) resolved from the *ASE* configuration
+    cascade with an `ASE_PROJECT_BOXING` environment variable fallback, and added
+    it to the default statusline format line, so the boxing is permanently
+    observable instead of only in the session-start banner.
+
 -   FEATURE [code]: Text length metrics
     Added the `ase_text_metric` MCP tool and the `ase metric` CLI command in
     `tool/src/ase-metric.ts`, measuring the `words`, `lines`, `chars` (Unicode

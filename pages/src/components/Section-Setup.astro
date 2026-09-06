@@ -185,7 +185,7 @@ import Annotation  from "./Widget-Annotation.astro"
                     <code>default</code>).
                     When no <code class="text-brand-400!">&lt;format&gt;</code> arguments are given, <b>ASE</b> uses
                     the following implicit positional arguments: <code>"&lt;blue&gt;%u&lt;/blue&gt; &lt;red&gt;%p&lt;/red&gt; &lt;black&gt;%T&lt;/black&gt; %s"
-                    "%m %e %t" "%P %h %c"</code>.
+                    "%m %e %t" "%P %h %B %c"</code>.
                 </p>
             </div>
 
@@ -264,9 +264,10 @@ import Annotation  from "./Widget-Annotation.astro"
                                 [ [ "%O", "Output style" ],        [ "%a", "Agent lines added" ] ],
                                 [ [ "%P", "Persona style" ],       [ "%r", "Agent lines removed" ] ],
                                 [ [ "%h", "Guidance level" ],      [ "%b", "Git branch" ] ],
-                                [ [ "%c", "Context gauge" ],       [ "%g", "Git changes" ] ],
-                                [ [ "%C", "Token count" ],         [ "%G", "Untracked files" ] ],
-                                [ [ "%M", "Memory usage" ],        [ "%d", "Working directory" ] ]
+                                [ [ "%B", "Boxing transparency" ], [ "%g", "Git changes" ] ],
+                                [ [ "%c", "Context gauge" ],       [ "%G", "Untracked files" ] ],
+                                [ [ "%C", "Token count" ],         [ "%d", "Working directory" ] ],
+                                [ [ "%M", "Memory usage" ],        [ "",   "" ] ]
                             ].map(([ left, right ]) => (
                                 <tr class="border-b border-border/40 last:border-0">
                                     <td class="py-0 pr-1 align-top font-bold text-accent leading-tight sm:pr-3">{left[0] !== "" && <code>{left[0]}</code>}</td>

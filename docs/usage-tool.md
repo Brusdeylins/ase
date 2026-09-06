@@ -208,6 +208,7 @@ or *GitHub Copilot CLI* statusline:
   suppressed if empty), `%s` (session id, or `unknown` if absent),
   `%m` (model), `%e` (effort), `%t` (thinking), `%P` (persona,
   suppressed if empty), `%h` (guidance level, suppressed if empty),
+  `%B` (project boxing transparency, suppressed if empty),
   `%c` (context-usage progress bar with a
   20-cell bar and percentage),
   `%C` (current/limit context tokens, e.g. `334k/1.0M`),
@@ -234,10 +235,12 @@ or *GitHub Copilot CLI* statusline:
   `magenta`, `cyan`, `white`, or `default`. A closing tag resets the
   foreground color to the terminal default (no nesting); unrecognized
   color names are kept literally in the output. If no *line* arguments
-  are given, a single default line `"%m %e %t"` is rendered. The active task id
-  and persona style are resolved from the *ASE* configuration cascade
-  (with the current session id) and fall back to the `ASE_TASK_ID`
-  and `ASE_PERSONA_STYLE` environment variables. Each rendered line
+  are given, a single default line `"%m %e %t"` is rendered. The active task id,
+  persona style, guidance level, and boxing transparency are resolved
+  from the *ASE* configuration cascade (with the current session id)
+  and fall back to the `ASE_TASK_ID`, `ASE_PERSONA_STYLE`,
+  `ASE_GUIDANCE_LEVEL`, and `ASE_PROJECT_BOXING` environment
+  variables. Each rendered line
   is wrapped automatically when it would exceed the available width
   budget, where the budget is derived from the controlling terminal
   width (probed via `/dev/tty`) reduced by `2 *` (*margin* `+`

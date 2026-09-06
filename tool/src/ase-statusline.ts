@@ -321,7 +321,7 @@ export default class StatuslineCommand {
             .option("--no-labels",
                 "disable labels in front of bold values")
             .argument("[lines...]",
-                "one or more template lines with %u %p %T %s %m %e %t %O %P %h %c %C %a %r " +
+                "one or more template lines with %u %p %T %s %m %e %t %O %P %h %B %c %C %a %r " +
                 "%S %D %W %Q %H %X %b %g %G %d %M %V placeholders and <color>...</color> markup " +
                 "(color: black, red, green, yellow, blue, magenta, cyan, white, default) " +
                 "(default: single line \"%m %e %t\")")
@@ -403,10 +403,11 @@ export default class StatuslineCommand {
                     once per run and only when first requested by a renderer (or by the
                     post-loop tmux publish for the Config cascade)  */
                 const getSession = memoize((): string => data.session_id ?? "unknown")
-                const getCfg = memoize((): { taskId: string, persona: string, guidance: string } => {
+                const getCfg = memoize((): { taskId: string, persona: string, guidance: string, boxing: string } => {
                     let taskId   = process.env.ASE_TASK_ID        ?? ""
                     let persona  = process.env.ASE_PERSONA_STYLE  ?? ""
                     let guidance = process.env.ASE_GUIDANCE_LEVEL ?? ""
+                    let boxing   = process.env.ASE_PROJECT_BOXING ?? ""
                     try {
                         const cfg = new Config("config", configSchema, this.log,
                             parseScope(`session:${getSession()}`))
@@ -414,17 +415,20 @@ export default class StatuslineCommand {
                         const t = String(cfg.get("agent.task")     ?? "").trim()
                         const p = String(cfg.get("agent.persona")  ?? "").trim()
                         const g = String(cfg.get("agent.guidance") ?? "").trim()
+                        const b = String(cfg.get("project.boxing") ?? "").trim()
                         if (t !== "")
                             taskId = t
                         if (p !== "")
                             persona = p
                         if (g !== "")
                             guidance = g
+                        if (b !== "")
+                            boxing = b
                     }
                     catch (_e) {
                         /*  cascade unavailable; keep env-var fallbacks  */
                     }
-                    return { taskId, persona, guidance }
+                    return { taskId, persona, guidance, boxing }
                 })
                 const getModel = memoize((): { name: string, effort: string } => {
                     const display = data.model?.display_name ?? ""
@@ -487,6 +491,11 @@ export default class StatuslineCommand {
                         const { guidance } = getCfg()
                         if (guidance !== "")
                             emit(`${prefix("▶", "guidance")}${c.bold(guidance)}`)
+                    },
+                    B: () => {
+                        const { boxing } = getCfg()
+                        if (boxing !== "")
+                            emit(`${prefix("▢", "boxing")}${c.bold(boxing)}`)
                     },
 
                     /*  ==== CONTEXT ====  */
