@@ -68,7 +68,7 @@ export const comparison: Comparison[] = [
     },
     {
         topic:    "Specification First",
-        manually: "**Up-front** write a **monolithic** spec in Word and" +
+        manually: "**Up-front** write a **monolithic** spec in Word and " +
                   "paint overview diagrams in Visio.",
         native:   "**Iteratively** write a **modular** spec in **ad-hoc** Markdown, " +
                   "and accept that no overview diagrams and no real export formats exist.",
