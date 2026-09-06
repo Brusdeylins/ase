@@ -25,9 +25,11 @@ const gradient = variant === "section" ?
     "radial-gradient(ellipse 60% 50% at center, color-mix(in oklch, var(--brand-500) 30%, transparent), transparent 80%)" :
     "radial-gradient(ellipse 70% 60% at center, color-mix(in oklch, var(--brand-500) 30%, transparent), transparent 80%)"
 
+/*  the height is relative to the parent, so short sections would otherwise
+    squash the glow into a barely visible sliver -- a min-height floors it  */
 const placement = variant === "section" ?
-    `top-0 h-[120%] w-[80%] -translate-y-[20%] ${side === "left" ? "left-0 -translate-x-[70%]" : "right-0 translate-x-[70%]"}` :
-    `top-1/2 h-[260%] w-[240%] -translate-y-1/2 ${side === "left" ? "right-0 -translate-x-[10%]" : "left-0 translate-x-[10%]"}`
+    `top-0 h-[120%] min-h-[48rem] w-[80%] -translate-y-[20%] ${side === "left" ? "left-0 -translate-x-[70%]" : "right-0 translate-x-[70%]"}` :
+    `top-1/2 h-[260%] min-h-[36rem] w-[240%] -translate-y-1/2 ${side === "left" ? "right-0 -translate-x-[10%]" : "left-0 translate-x-[10%]"}`
 ---
 <div
     class:list={[ "pointer-events-none absolute -z-10", placement ]}
