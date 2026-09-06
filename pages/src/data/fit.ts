@@ -95,9 +95,9 @@ export const fitAgainst: Fit[] = [
     },
     {
         icon:  Briefcase,
-        title: "You do consulting, operations, or management",
-        body:  "<b>ASE</b> primarily targets the recurring tasks of <i>Software Engineering</i>, " +
-               "although various skills are also useful outside this scope."
+        title: "You do consulting or management",
+        body:  "<b>ASE</b> primarily targets the recurring tasks of <i>Software Engineering</i> " +
+               "and <i>Software Architecture</i>, although various skills are also useful outside this scope."
     },
     {
         icon:  PiggyBank,
@@ -113,7 +113,7 @@ export const fitAgainst: Fit[] = [
     },
     {
         icon:  BatteryLow,
-        title: "You are on a weak LLM or a non-mainstream harness",
+        title: "You are on weak LLM or non-mainstream harness",
         body:  "<b>ASE</b> leans on elaborate control constructs and XML placeholders. Weaker models " +
                "and non-mainstream harnesses follow them only partially."
     }
