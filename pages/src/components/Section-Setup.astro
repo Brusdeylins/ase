@@ -12,6 +12,87 @@
 import SectionGlow from "./Section-Glow.astro"
 import Terminal    from "./Widget-Terminal.astro"
 import Annotation  from "./Widget-Annotation.astro"
+
+/*  the ASE configuration parameters, mirroring the schema, the "default"
+    preset, and the writable-scope map of "tool/src/ase-config.ts"  */
+const configParams: Array<{ name: string, value: string, scopes: string, desc: string }> = [
+    { name: "agent.persona",
+      value: "engineer",
+      scopes: "user, project, task, session",
+      desc: "Communication style of the agent: writer, engineer, journalist, telegrapher, or caveman." },
+    { name: "agent.guidance",
+      value: "normal",
+      scopes: "user, project, task, session",
+      desc: "Amount of unsolicited help hints towards the ASE skills: none, minimal, normal, or verbose." },
+    { name: "agent.task",
+      value: "default",
+      scopes: "session",
+      desc: "Unique id of the currently active task, selecting the task plan the skills operate on." },
+    { name: "agent.skill",
+      value: "",
+      scopes: "session",
+      desc: "Unique id of the currently active skill, maintained by ASE at run-time." },
+    { name: "project.id",
+      value: "example",
+      scopes: "user, project, task, session",
+      desc: "Unique short id of the project." },
+    { name: "project.name",
+      value: "Example Project",
+      scopes: "user, project, task, session",
+      desc: "Full human-readable name of the project." },
+    { name: "project.boxing",
+      value: "white",
+      scopes: "user, project, task, session",
+      desc: "Transparency class of all project artifacts: white (fully transparent), " +
+            "grey (partially transparent), or black (fully non-transparent). It modulates " +
+            "both the work depth of the skills and the visibility of their output." },
+    { name: "project.artifact.task.basedir",
+      value: ".ase/task",
+      scopes: "user, project",
+      desc: "Anchor directory of the task plan files, relative to the project root." },
+    { name: "project.artifact.task.files",
+      value: "*.md",
+      scopes: "user, project",
+      desc: "Glob spec matching the task plan files, relative to the anchor directory." },
+    { name: "project.artifact.spec.basedir",
+      value: "docs/specbook",
+      scopes: "user, project",
+      desc: "Anchor directory of the SpecBook-based specification files, relative to the project root." },
+    { name: "project.artifact.spec.files",
+      value: "*.{md,txt,svg,png,jpg}",
+      scopes: "user, project",
+      desc: "Glob spec matching the specification files, relative to the anchor directory." },
+    { name: "project.artifact.spec.schema",
+      value: "",
+      scopes: "user, project",
+      desc: "SpecBook YAML schema configuration file governing the specification, relative to the " +
+            "project root. If empty, the standard schema bundled with the ASE plugin is used." },
+    { name: "project.artifact.code.basedir",
+      value: "src",
+      scopes: "user, project",
+      desc: "Anchor directory of the source code files, relative to the project root." },
+    { name: "project.artifact.code.files",
+      value: "** !**/etc/** !**/{.gitignore,.npmignore,package.json}",
+      scopes: "user, project",
+      desc: "Glob spec matching the source code files, relative to the anchor directory." },
+    { name: "project.artifact.docs.basedir",
+      value: "doc",
+      scopes: "user, project",
+      desc: "Anchor directory of the documentation files, relative to the project root." },
+    { name: "project.artifact.docs.files",
+      value: "** **/{README,LICENSE,CHANGELOG}.{md,txt} !{spec,arch}/**",
+      scopes: "user, project",
+      desc: "Glob spec matching the documentation files, relative to the anchor directory." },
+    { name: "project.artifact.infr.basedir",
+      value: "",
+      scopes: "user, project",
+      desc: "Anchor directory of the infrastructure files, relative to the project root " +
+            "(empty means the project root itself)." },
+    { name: "project.artifact.infr.files",
+      value: "**/{.github,.claude*,etc}/** **/{AGENTS.md,{package,tsconfig*}.json,.{git,npm}ignore}",
+      scopes: "user, project",
+      desc: "Glob spec matching the infrastructure files, relative to the anchor directory." }
+]
 ---
 <section id="setup" class="relative isolate mx-auto max-w-4xl px-6 py-8">
     <SectionGlow variant="section" side="left" />
@@ -377,6 +458,64 @@ import Annotation  from "./Widget-Annotation.astro"
                     ]}
                 />
             </div>
+        </div>
+    </div>
+
+    <div class="relative isolate">
+        <SectionGlow variant="section" side="left" />
+        <header class="mt-12 ase-section-head" data-reveal>
+            <h2 class="text-xl font-bold sm:text-2xl">
+                Fine-Tune with <span class="text-accent">Configuration</span>
+            </h2>
+        </header>
+
+        <div class="mt-6 ase-section-head" data-reveal="right">
+            <p class="text-foreground-secondary ase-justify">
+                <b>ASE</b> is driven by a small set of configuration parameters,
+                managed with the <code>ase config</code> command and stored as YAML.
+                They are resolved along the layered scope chain{" "}
+                <code>default</code> &larr; <code>user</code> &larr; <code>project</code> &larr;{" "}
+                <code>task</code> &larr; <code>session</code>, where every stronger scope
+                overrides the weaker ones. Reads always cascade through the entire
+                chain, while writes are confined to the strongest scope selected
+                via <code>--scope</code>. The <b>Scopes</b> column below lists the
+                scopes a parameter may be <i>written</i> on.
+            </p>
+        </div>
+
+        <div class="bg-background-elevated/60 mt-6 overflow-x-auto rounded-xl border border-border-strong p-3 shadow-xl sm:p-4" data-reveal>
+            <table class="w-full text-left text-xs sm:text-sm">
+                <colgroup>
+                    <col class="w-[24%]" />
+                    <col class="w-[24%]" />
+                    <col class="w-[12%]" />
+                    <col class="w-[40%]" />
+                </colgroup>
+                <thead>
+                    <tr class="border-b border-border text-accent">
+                        <th class="pb-2 px-2 font-semibold">Parameter</th>
+                        <th class="pb-2 px-2 font-semibold">Default Value</th>
+                        <th class="pb-2 px-2 font-semibold">Write Scopes</th>
+                        <th class="pb-2 px-2 font-semibold">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {configParams.map((param, i) => (
+                        <tr class={`border-b border-border/40 last:border-0${i % 2 === 0 ? " bg-background-elevated" : ""}`}>
+                            <td class="py-1 px-2 align-top">
+                                <code class="break-all text-accent!">{param.name}</code>
+                            </td>
+                            <td class="py-1 px-2 align-top text-foreground-secondary">
+                                {param.value === "" ?
+                                    <span class="opacity-60">&mdash;</span> :
+                                    <code class="break-all">{param.value}</code>}
+                            </td>
+                            <td class="py-1 px-2 align-top text-foreground-secondary">{param.scopes}</td>
+                            <td class="py-1 px-2 align-top text-foreground-secondary">{param.desc}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     </div>
 
