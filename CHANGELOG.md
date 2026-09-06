@@ -2,6 +2,21 @@
 ChangeLog
 =========
 
+0.9.68 (2026-09-06)
+-------------------
+
+-   REFACTOR [docs]: Website navigation turned into distinct pages
+    Turned every navigation bar entry of the website into its own *Astro* page
+    route under `pages/src/pages/` (`highlights`, `setup`, `usage`, `workflows`,
+    `architecture`, `design`, `philosophy`, `compat`, `author`), driven by the
+    new single-source-of-truth `pages/src/data/nav.ts` which carries route path,
+    nav label, browser title, and meta description per entry, extracted the
+    comparison table into the new `Section-Productivity.astro` component,
+    replaced the single-page scroll-spy (`Feature-Scroll-Spy.astro`) with
+    per-page navigation plus the new `Feature-Scroll-Reveal.astro`, and adjusted
+    `BaseLayout.astro`, `Section-Header.astro`, and the affected sections and
+    widgets accordingly, so the site no longer is one long scrolling page.
+
 0.9.67 (2026-09-06)
 -------------------
 
