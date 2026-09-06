@@ -305,6 +305,20 @@ The following top-level command exists for identifier minting:
   of the `ase-meta-mint` skill; the language-level types of that skill
   require the AI and hence exist in the skill only.
 
+The following top-level command exists for text measuring:
+
+- `ase metric` \[`-f`|`--file` *file*\] \[*text* \[...\]\]:
+  Measure the length metrics of a text, given either as the content of
+  *file* or as the *text* formed by the remaining arguments, which are
+  mutually exclusive and of which exactly one has to be given. The
+  metrics are emitted as a single JSON object with the fields `words`
+  (the whitespace-separated tokens), `lines` (the newline-separated
+  lines, where a trailing line without a final newline still counts as
+  one line), `chars` (the Unicode characters, i.e. code points), and
+  `bytes` (the octets: the raw file size for *file*, the UTF-8 length
+  for *text*). This backs the `ase_text_metric` MCP tool, which the
+  skills use instead of estimating a text length themselves.
+
 The following top-level commands exist for installing, updating, and
 uninstalling the *ASE* tool and its companion *Anthropic Claude Code CLI* plugin:
 

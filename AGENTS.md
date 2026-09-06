@@ -34,7 +34,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `tool/src/ase.ts`: the entry point, wiring all top-level commands
     -   `tool/src/ase-*.ts`: one module per top-level command (`setup`,
         `config`, `mcp`, `service`, `hook`, `statusline`, `task`, `artifact`,
-        `spec`, `meta`, `compat`, `diagram`, `worktree`, `mint`) plus support modules
+        `spec`, `meta`, `compat`, `diagram`, `worktree`, `mint`, `metric`) plus support modules
         (`log`, `stdio`, `getopt`, `kv`, `markdown`, `skills`, `sleep`,
         `timestamp`, `version`)
     -   `tool/bin/ase`: the published shim, loading compiled output from `dst/`
@@ -126,7 +126,8 @@ resolution), `ase spec` (SpecBook specification linting, exporting, and
 previewing),
 `ase meta` (plugin meta file output), `ase diagram` (Mermaid
 rendering), `ase worktree` (ASE worktree path resolution), `ase mint`
-(hash-derived identifier minting), and `ase compat` (probe values for
+(hash-derived identifier minting), `ase metric` (text length metrics),
+and `ase compat` (probe values for
 the `ase-meta-compat` self-test skill). See
 `docs/usage-tool.md` for the full manual page.
 

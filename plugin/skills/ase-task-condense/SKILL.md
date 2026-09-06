@@ -124,14 +124,17 @@ Set <args></args> (set args to empty).
             example. If a shortening would change meaning, *keep the
             longer wording*.
 
-    2.  *Persist only if smaller*: compare the condensed <task-content/>
-        against <content-before/>, without counting words.
+    2.  *Persist only if smaller*: call the `ase_text_metric(text:
+        "<text/>")` tool of the `ase` MCP server once for the condensed
+        <task-content/> and once for <content-before/>, and take the
+        `chars` field of each result, so the comparison rests on a
+        *measured* length instead of an estimate.
 
-        -   <if condition="the condensed <task-content/> is strictly shorter than <content-before/>">
+        -   <if condition="the condensed <task-content/> has strictly fewer `chars` than <content-before/>">
             <expand name="task-save-content" arg1="plan condensed"></expand>
             </if>
 
-        -   <if condition="the condensed <task-content/> is NOT strictly shorter than <content-before/>">
+        -   <if condition="the condensed <task-content/> has NOT strictly fewer `chars` than <content-before/>">
             Do *not* save and do *not* bump the timestamp. Set
             <task-content><content-before/></task-content> (keep the
             *unchanged* stored plan, discard the condensed one).

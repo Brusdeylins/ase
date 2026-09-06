@@ -5,6 +5,14 @@ ChangeLog
 0.9.66 (2026-08-28)
 -------------------
 
+-   FEATURE [code]: Text length metrics
+    Added the `ase_text_metric` MCP tool and the `ase metric` CLI command in
+    `tool/src/ase-metric.ts`, measuring the `words`, `lines`, `chars` (Unicode
+    characters), and `bytes` (octets) of either a `file` or a literal `text`, and
+    switched the `ase-docs-shorten` skill and sub-agent, the `ase-meta-workflow`
+    skill, and the `ase-task-condense` skill over to it, so text lengths are
+    measured instead of estimated.
+
 -   FEATURE [code]: Identifier and name minting
     Added the `ase-meta-mint` skill for minting identifiers and names out of a
     free-text hint, backed by the new `ase mint` CLI command and `ase_mint` MCP tool

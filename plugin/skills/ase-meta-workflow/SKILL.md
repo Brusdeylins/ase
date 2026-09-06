@@ -338,8 +338,9 @@ Procedure
         following the `Generated Skill Contract` above.
 
     3.  Write <skill-content/> to <target-skill/>, creating the directory
-        `<dir/>/<new-skill-name/>` if it does not exist yet. Calculate the
-        number of words <words/> of <skill-content/>.
+        `<dir/>/<new-skill-name/>` if it does not exist yet. Then call the
+        `ase_text_metric(file: "<target-skill/>")` tool of the `ase` MCP
+        server and set <words/> to the `words` field of its result.
 
     4.  Report the result with the following <template/>:
 

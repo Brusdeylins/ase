@@ -38,6 +38,7 @@ import { GetoptMCP }                     from "./ase-getopt.js"
 import { SkillsMCP }                     from "./ase-skills.js"
 import { WorktreeMCP }                   from "./ase-worktree.js"
 import { MintMCP }                       from "./ase-mint.js"
+import { MetricMCP }                     from "./ase-metric.js"
 import pkg                               from "../package.json" with { type: "json" }
 
 /*  shared service host  */
@@ -314,6 +315,7 @@ export default class ServiceCommand {
             new SkillsMCP().register(mcp)
             new WorktreeMCP().register(mcp)
             new MintMCP().register(mcp)
+            new MetricMCP().register(mcp)
             new ConfigMCP(this.log).register(mcp)
             return mcp
         }
