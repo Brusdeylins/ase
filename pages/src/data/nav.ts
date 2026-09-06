@@ -47,7 +47,7 @@ export const navItems: NavItem[] = [
       label:       "Design",
       title:       "Design Decisions",
       description: "The assumptions behind ASE, the four design decisions derived from them, " +
-                   "and the named software engineering methods ASE builds upon." },
+                   "and the named Software Engineering methods ASE builds upon." },
     { path:        "/architecture/",
       label:       "Architecture",
       title:       "Architecture",
