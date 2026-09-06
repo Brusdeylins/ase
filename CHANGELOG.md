@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-0.9.66 (2026-08-28)
+0.9.66 (2026-09-06)
 -------------------
 
 -   FEATURE [code]: Boxing transparency in the statusline
