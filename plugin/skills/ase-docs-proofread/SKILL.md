@@ -2,7 +2,7 @@
 name: ase-docs-proofread
 argument-hint: "[--help|-h] [--auto|-a] <docs-reference>"
 description: >
-    Analyze the documents for spelling, punctuation, or grammar errors.
+    Analyze the documents for spelling, capitalization, punctuation, word break, or grammar errors.
     Use when the user wants to "proofread" or "spellcheck" a document.
 user-invocable: true
 disable-model-invocation: false
@@ -15,7 +15,7 @@ effort: high
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
 <purpose name="ase-docs-proofread">
-Analyze documents for spelling, punctuation, or grammar errors
+Analyze documents for spelling, capitalization, punctuation, word break, or grammar errors
 </purpose>
 
 <expand name="getopt"
@@ -26,7 +26,7 @@ Analyze documents for spelling, punctuation, or grammar errors
 
 <objective>
 *Proofread* the documents of `<getopt-arguments/>` for problems in their
-*spelling*, *punctuation*, or *grammar* and propose corrections.
+*spelling*, *capitalization*, *punctuation*, *word break*, or *grammar* and propose corrections.
 </objective>
 
 <flow>
@@ -100,19 +100,23 @@ Analyze documents for spelling, punctuation, or grammar errors
     <template>
     <ase-tpl-bullet-secondary/> **PROOFREADING SUMMARY**:
 
-    | *Proofread Type* | *Proofread Result*      |
-    | ---------------- | ----------------------- |
-    | **SPELLING**:    | **<n/>** problems found |
-    | **PUNCTUATION**: | **<m/>** problems found |
-    | **GRAMMAR**:     | **<k/>** problems found |
+    | *Proofread Type*    | *Proofread Result*      |
+    | ------------------- | ----------------------- |
+    | **SPELLING**:       | **<n/>** problems found |
+    | **CAPITALIZATION**: | **<c/>** problems found |
+    | **PUNCTUATION**:    | **<m/>** problems found |
+    | **WORD-BREAK**:     | **<w/>** problems found |
+    | **GRAMMAR**:        | **<k/>** problems found |
 
     </template>
 
     Hints:
 
-    -   <n/> is the number of problems with `type` equal to `SPELLING`    in <problems/>
-    -   <m/> is the number of problems with `type` equal to `PUNCTUATION` in <problems/>
-    -   <k/> is the number of problems with `type` equal to `GRAMMAR`     in <problems/>
+    -   <n/> is the number of problems with `type` equal to `SPELLING`       in <problems/>
+    -   <c/> is the number of problems with `type` equal to `CAPITALIZATION` in <problems/>
+    -   <m/> is the number of problems with `type` equal to `PUNCTUATION`    in <problems/>
+    -   <w/> is the number of problems with `type` equal to `WORD-BREAK`     in <problems/>
+    -   <k/> is the number of problems with `type` equal to `GRAMMAR`        in <problems/>
 
     </step>
 
@@ -238,7 +242,7 @@ Analyze documents for spelling, punctuation, or grammar errors
 
             Set <old-start/> to the 1-based line number of the *first*
             old-side hunk line: if <context-before/> is non-empty, that is
-            the line of its *first* context line, i.e. <line/> minus the
+            the line of its *first* context line, i.e., <line/> minus the
             number of lines in <context-before/>; otherwise it is <line/> itself
             (the first line of <old-text/>). For a hunk that *only inserts*
             new lines (empty <old-text/> *and* empty context), set it to the

@@ -20,19 +20,20 @@ Workflow
     types:
 
     - **Spelling**
+    - **Capitalization**
     - **Punctuation**
+    - **Word-Break**
     - **Grammar**
 
-    Do *NOT* flag stylistic preferences, Markdown formatting
-    choices, code/identifiers, XML/template tags, technical
-    terms, intentional capitalization, list/heading style, or
-    anything inside fenced code blocks or backtick spans. Be
-    conservative — only report clear, objective errors.
+    Do *NOT* flag stylistic preferences, Markdown formatting choices,
+    code/identifiers, XML/template tags, technical terms, list/heading style, or
+    anything inside fenced code blocks or backtick spans. Be conservative — only
+    report clear, objective errors.
 
     For *each* found problem:
 
-    1.  Set <type/> to the string `SPELLING`, `PUNCTUATION`, or
-        `GRAMMAR`, indicating the problem type.
+    1.  Set <type/> to the string `SPELLING`, `CAPITALIZATION`,
+        `PUNCTUATION`, `WORD-BREAK`, or `GRAMMAR`, indicating the problem type.
 
     2.  Set <file/> to the *relative* filename path of the document.
         Set <line/> to the numeric 1-based line number in the

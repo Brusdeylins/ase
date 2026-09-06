@@ -13,10 +13,10 @@
 ##  DESCRIPTION
 
 The `ase-docs-proofread` skill analyzes the referenced documents for
-*spelling*, *punctuation*, and *grammar* errors and proposes
-corrections. The investigation is dispatched to a sub-agent
-(`ase:ase-docs-proofread`) so that scanning details do not leak into
-the user-visible transcript.
+*spelling*, *capitalization*, *punctuation*, *word break*, and *grammar*
+errors and proposes corrections. The investigation is dispatched to a
+sub-agent (`ase:ase-docs-proofread`) so that scanning details do not
+leak into the user-visible transcript.
 
 For each detected problem, the skill renders a unified-diff
 *CORRECTION* preview and either asks the user to `ACCEPT` or `REJECT`
@@ -38,7 +38,10 @@ hint, which re-proposes the correction without limit) or - with
 
 ##  SCENARIOS
 
--   You want documents checked for spelling, punctuation, and grammar
+-   You want documents checked for spelling, capitalization,
+    punctuation, word break, and grammar
+-   You want inconsistent capitalization of terms and headings unified
+-   You want wrong word breaks like "data base" or "check-list" repaired
 -   You want corrections proposed which you accept or reject one by one
 -   You want a whole documentation directory corrected automatically
 -   You want a final language pass over a text before publishing

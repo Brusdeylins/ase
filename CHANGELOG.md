@@ -28,6 +28,9 @@ ChangeLog
     Factored the philosophy part out of `Section-Usage.astro` into `Section-Philosophy.astro`
     and the contributors/sponsors part out of `Section-Author.astro` into `Section-Thanks.astro`.
 
+-   FEATURE [docs]: Add Capitalization and Word-Break corrections
+    Improved `ase-docs-proofread` skill by adding Capitalization and Word-Break correction types.
+
 0.9.65 (2026-08-28)
 -------------------
 
