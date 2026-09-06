@@ -33,8 +33,6 @@ import Command        from "@lucide/astro/icons/command"
 import FileCode       from "@lucide/astro/icons/file-code"
 ---
 <section id="design" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <GlowSide variant="section" side="left"/>
-
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
             <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
@@ -104,16 +102,25 @@ import FileCode       from "@lucide/astro/icons/file-code"
         </ul>
     </div>
 
-    <GlowSide variant="section" side="right"/>
-    <header class="mt-20 ase-section-head" data-reveal>
-        <h2 class="ase-h2">
-            Know Design <span class="text-accent">Decisions</span>
-        </h2>
-        <p class="ase-lead">
-            <b>ASE</b> is based on the following distinct decisions
-            which inherently shaped the overall design of <b>ASE</b>:
-        </p>
-    </header>
+    {/*  the glow deliberately sits in a plain "relative" wrapper instead of
+         inside the header: a "[data-reveal]" element carries a transform and
+         "will-change", which forms a stacking context and would trap the
+         "-z-10" glow inside it, painting it above the surrounding content.
+         From the wrapper it escapes into the section's isolation context and
+         hence stays behind everything. The header's own top margin collapses
+         through the wrapper, so the glow keeps its anchor.  */}
+    <div class="relative mx-auto max-w-2xl">
+        <GlowSide variant="section" side="right"/>
+        <header class="mt-20 ase-section-head" data-reveal>
+            <h2 class="ase-h2">
+                Know Design <span class="text-accent">Decisions</span>
+            </h2>
+            <p class="ase-lead">
+                <b>ASE</b> is based on the following distinct decisions
+                which inherently shaped the overall design of <b>ASE</b>:
+            </p>
+        </header>
+    </div>
     <div class="mt-6 grid items-start gap-10 lg:grid-cols-2 lg:gap-16">
         <ul class="flex flex-col gap-6 text-foreground-secondary ase-justify" data-reveal="right">
             <li class="flex items-start gap-2">
@@ -214,15 +221,18 @@ import FileCode       from "@lucide/astro/icons/file-code"
         </ul>
     </div>
 
-    <header class="mt-20 ase-section-head" data-reveal>
-        <h2 class="ase-h2">
-            Trust Built-In <span class="text-accent">Methodology</span>
-        </h2>
-        <p class="ase-lead">
-            <b>ASE</b> bakes the following classic, well-known methods
-            directly into its skills &mdash; click any of them to open the
-            man-page of the skill implementing it:
-        </p>
-    </header>
+    <div class="relative mx-auto max-w-2xl">
+        <GlowSide variant="section" side="left"/>
+        <header class="mt-20 ase-section-head" data-reveal>
+            <h2 class="ase-h2">
+                Trust Built-In <span class="text-accent">Methodology</span>
+            </h2>
+            <p class="ase-lead">
+                <b>ASE</b> bakes the following classic, well-known methods
+                directly into its skills &mdash; click any of them to open the
+                man-page of the skill implementing it:
+            </p>
+        </header>
+    </div>
     <MethodologyStrip class="mt-6"/>
 </section>

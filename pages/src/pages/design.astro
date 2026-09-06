@@ -10,10 +10,12 @@
 
 import BaseLayout    from "../layouts/BaseLayout.astro"
 import SectionDesign from "../components/Section-Design.astro"
+import GlowTop       from "../components/Widget-Glow-Top.astro"
 import { navItem }   from "../data/nav.ts"
 
 const page = navItem("/design/")
 ---
 <BaseLayout title={page.title} description={page.description} pad>
+    <GlowTop/>
     <SectionDesign/>
 </BaseLayout>

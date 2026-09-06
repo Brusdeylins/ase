@@ -9,7 +9,6 @@
     of recurring work-steps done old-school by hand, done with the bare Claude
     Code CLI, and done with the very same tool boosted by the ASE plugin.  */
 
-import GlowSide       from "./Widget-Glow-Side.astro"
 import Annotation     from "./Widget-Annotation.astro"
 import { comparison } from "../data/comparison.ts"
 
@@ -39,8 +38,6 @@ const inline = (text: string) => text
     .replace(/`(.+?)`/g,       "<code>$1</code>")
 ---
 <section id="productivity" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <GlowSide variant="section" side="right" />
-
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2 relative inline-block">
             <Annotation flat class="right-0 translate-x-2/4">

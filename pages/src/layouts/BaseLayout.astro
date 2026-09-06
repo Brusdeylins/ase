@@ -68,7 +68,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href
     <body>
         <PageHeader/>
 
-        <main class={mainClass}>
+        {/*  "relative isolate" gives the per-page <GlowTop/> wash its
+             positioning context and keeps it stacked below the page content  */}
+        <main class:list={[ "relative isolate", mainClass ]}>
             <slot/>
         </main>
 

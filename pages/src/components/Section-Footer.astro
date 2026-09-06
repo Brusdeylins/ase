@@ -7,7 +7,12 @@
 
 import QRCode from "./Widget-QR-Code.astro"
 ---
-<footer id="page-footer" class="border-t border-border/60 bg-background-secondary">
+{/*  "relative" is load-bearing: the page decorations live inside the
+     "isolate" <main>, which hence paints as one unit above every plain block
+     following it. On a page shorter than the viewport the one-viewport-tall
+     <GlowTop/> band bleeds past the bottom edge of <main> and would cover the
+     footer. Positioning the footer lifts it back above that bleed.  */}
+<footer id="page-footer" class="relative border-t border-border/60 bg-background-secondary">
     <div class="mx-auto flex max-w-4xl items-center gap-5 px-6 py-5 text-sm text-foreground-muted">
         {/*  QR-code trigger: opens the `#qr-modal` popup showing the QR code for
              the site URL. Opening is wired in Modal-QR.astro (which owns the

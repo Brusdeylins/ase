@@ -11,11 +11,13 @@
 import BaseLayout       from "../layouts/BaseLayout.astro"
 import SectionWorkflows from "../components/Section-Workflows.astro"
 import SectionDay       from "../components/Section-Day.astro"
+import GlowTop          from "../components/Widget-Glow-Top.astro"
 import { navItem }      from "../data/nav.ts"
 
 const page = navItem("/workflows/")
 ---
 <BaseLayout title={page.title} description={page.description} pad>
+    <GlowTop/>
     <SectionWorkflows/>
     <SectionDay/>
 </BaseLayout>

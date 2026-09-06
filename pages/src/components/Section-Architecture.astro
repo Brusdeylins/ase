@@ -8,7 +8,6 @@
 /*  "Architecture" section: an overview paragraph plus one text/diagram row
     describing the Hooks / Skills / MCP / CLI building blocks.  */
 
-import GlowSide   from "./Widget-Glow-Side.astro"
 import Diagram    from "./Widget-Diagram.astro"
 import Annotation from "./Widget-Annotation.astro"
 
@@ -18,7 +17,6 @@ import Annotation from "./Widget-Annotation.astro"
 import Blocks      from "@lucide/astro/icons/blocks"
 ---
 <section id="architecture" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <GlowSide variant="section" side="left" />
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
             <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
@@ -38,7 +36,6 @@ import Blocks      from "@lucide/astro/icons/blocks"
     <div class="mt-12 flex flex-col gap-24">
         <div class="ase-grid-split">
             <div class="relative isolate lg:order-1" data-reveal="right">
-                <GlowSide variant="text" side="left" />
                 <p class="ase-eyebrow">Software Architecture</p>
                 {/*  "mt-1" centers the icon on the first line box of the
                      heading, so a wrapping heading keeps it on top  */}

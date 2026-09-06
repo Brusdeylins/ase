@@ -95,8 +95,6 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
 ]
 ---
 <section id="setup" class="relative isolate mx-auto max-w-4xl px-6 py-8">
-    <GlowSide variant="section" side="left" />
-
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2 mt-12">
             <Annotation flat class="hidden sm:block left-[75%] -translate-x-full">
@@ -364,99 +362,102 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
         </div>
     </div>
 
-    <header class="mt-8 ase-section-head" data-reveal>
-        <h2 class="text-xl font-bold sm:text-2xl">
-            Power-Up with <span class="text-accent">Foreign Services</span>
-        </h2>
-    </header>
+    <div class="relative isolate">
+        <GlowSide variant="section" side="left" />
+        <header class="mt-8 ase-section-head" data-reveal>
+            <h2 class="text-xl font-bold sm:text-2xl">
+                Power-Up with <span class="text-accent">Foreign Services</span>
+            </h2>
+        </header>
 
-    <div class="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-start">
-        <div class="mt-6 ase-section-head" data-reveal="right">
-            <p class="text-foreground-secondary ase-justify">
-                <b>ASE</b> can <i>optionally</i> leverage additional
-                Model-Context-Protocol (MCP) servers for contacting foreign
-                LLM services (<b>OpenAI ChatGPT</b>, <b>Google Gemini</b>, <b>DeepSeek</b>, <b>xAI
-                Grok</b>, <b>Alibaba Qwen</b>, or <b>Z.AI GLM</b>) via MCP-to-OpenAI servers,
-                locally installed AI agent harness CLIs (<b>Anthropic Claude</b>, <b>OpenAI
-                Codex</b>, or <b>GitHub Copilot</b>) via MCP-to-Harness servers,
-                and Web Search services (<b>Brave</b>, <b>Perplexity</b>, or <b>Exa</b>) via their
-                dedicated MCP servers.
-            </p>
-            <p class="text-foreground-secondary ase-indent-p ase-justify">
-                You only need the access tokens
-                of those services at hand. <b>ASE</b> will just add the
-                corresponding local MCP servers to the Agentic AI Coding
-                tool. The harness-based servers require no access token at
-                all, as the harness CLIs authenticate via their own configured
-                credentials. Their environment variable instead carries the
-                harness model identifier (or the special value{" "}
-                <code>default</code> for the default model of the harness).
-            </p>
-            <blockquote class="mt-4 rounded-r-md border-l-4 border-accent bg-background-elevated/80 px-6 py-4 text-foreground-secondary ase-justify">
-                <b class="text-accent">NOTICE:</b>
-                <span class="mt-1 block text-foreground-secondary">
-                    These add-on MCP servers are <b>NOT</b> required
-                    for <b>ASE</b> to work. They are fully
-                    optional when using <b>ASE</b>, but will
-                    power up some of the <b>ASE</b> skills (like{" "}
-                    <code>ase-meta-chat</code>, <code>ase-meta-search</code>,
-                    and <code>ase-meta-quorum</code>) with additional
-                    functionality.
-                </span>
-            </blockquote>
-        </div>
-
-        <div class="relative mt-6">
-            <div data-reveal="left">
-                <Terminal
-                    class="mx-auto mt-8 lg:mt-0 max-w-2xl"
-                    copy={true}
-                    title="MCP Installation"
-                    tabs={[
-                        { label: "Claude", commands: [
-                            "**ase** setup mcp list",
-                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
-                            "**ase** setup mcp activate"
-                        ] },
-                        { label: "Copilot", commands: [
-                            "**ase** setup mcp list",
-                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
-                            "**ase** setup mcp activate --tool copilot"
-                        ] },
-                        { label: "Codex", commands: [
-                            "**ase** setup mcp list",
-                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
-                            "**ase** setup mcp activate --tool codex"
-                        ] },
-                        { label: "Generic", commands: [
-                            "**ase** setup mcp list",
-                            "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
-                            "**ase** setup mcp activate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
-                        ] }
-                    ]}
-                />
+        <div class="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-start">
+            <div class="mt-6 ase-section-head" data-reveal="right">
+                <p class="text-foreground-secondary ase-justify">
+                    <b>ASE</b> can <i>optionally</i> leverage additional
+                    Model-Context-Protocol (MCP) servers for contacting foreign
+                    LLM services (<b>OpenAI ChatGPT</b>, <b>Google Gemini</b>, <b>DeepSeek</b>, <b>xAI
+                    Grok</b>, <b>Alibaba Qwen</b>, or <b>Z.AI GLM</b>) via MCP-to-OpenAI servers,
+                    locally installed AI agent harness CLIs (<b>Anthropic Claude</b>, <b>OpenAI
+                    Codex</b>, or <b>GitHub Copilot</b>) via MCP-to-Harness servers,
+                    and Web Search services (<b>Brave</b>, <b>Perplexity</b>, or <b>Exa</b>) via their
+                    dedicated MCP servers.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    You only need the access tokens
+                    of those services at hand. <b>ASE</b> will just add the
+                    corresponding local MCP servers to the Agentic AI Coding
+                    tool. The harness-based servers require no access token at
+                    all, as the harness CLIs authenticate via their own configured
+                    credentials. Their environment variable instead carries the
+                    harness model identifier (or the special value{" "}
+                    <code>default</code> for the default model of the harness).
+                </p>
+                <blockquote class="mt-4 rounded-r-md border-l-4 border-accent bg-background-elevated/80 px-6 py-4 text-foreground-secondary ase-justify">
+                    <b class="text-accent">NOTICE:</b>
+                    <span class="mt-1 block text-foreground-secondary">
+                        These add-on MCP servers are <b>NOT</b> required
+                        for <b>ASE</b> to work. They are fully
+                        optional when using <b>ASE</b>, but will
+                        power up some of the <b>ASE</b> skills (like{" "}
+                        <code>ase-meta-chat</code>, <code>ase-meta-search</code>,
+                        and <code>ase-meta-quorum</code>) with additional
+                        functionality.
+                    </span>
+                </blockquote>
             </div>
 
-            <div data-reveal="left">
-                <Terminal
-                    class="mx-auto mt-8 max-w-2xl"
-                    copy={true}
-                    title="MCP Uninstallation"
-                    tabs={[
-                        { label: "Claude", commands: [
-                            "**ase** setup mcp deactivate"
-                        ] },
-                        { label: "Copilot", commands: [
-                            "**ase** setup mcp deactivate --tool copilot"
-                        ] },
-                        { label: "Codex", commands: [
-                            "**ase** setup mcp deactivate --tool codex"
-                        ] },
-                        { label: "Generic", commands: [
-                            "**ase** setup mcp deactivate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
-                        ] }
-                    ]}
-                />
+            <div class="relative mt-6">
+                <div data-reveal="left">
+                    <Terminal
+                        class="mx-auto mt-8 lg:mt-0 max-w-2xl"
+                        copy={true}
+                        title="MCP Installation"
+                        tabs={[
+                            { label: "Claude", commands: [
+                                "**ase** setup mcp list",
+                                "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                                "**ase** setup mcp activate"
+                            ] },
+                            { label: "Copilot", commands: [
+                                "**ase** setup mcp list",
+                                "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                                "**ase** setup mcp activate --tool copilot"
+                            ] },
+                            { label: "Codex", commands: [
+                                "**ase** setup mcp list",
+                                "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                                "**ase** setup mcp activate --tool codex"
+                            ] },
+                            { label: "Generic", commands: [
+                                "**ase** setup mcp list",
+                                "export ASE_MCP_KEY_**<service>**=\"**<token>**\"",
+                                "**ase** setup mcp activate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                            ] }
+                        ]}
+                    />
+                </div>
+
+                <div data-reveal="left">
+                    <Terminal
+                        class="mx-auto mt-8 max-w-2xl"
+                        copy={true}
+                        title="MCP Uninstallation"
+                        tabs={[
+                            { label: "Claude", commands: [
+                                "**ase** setup mcp deactivate"
+                            ] },
+                            { label: "Copilot", commands: [
+                                "**ase** setup mcp deactivate --tool copilot"
+                            ] },
+                            { label: "Codex", commands: [
+                                "**ase** setup mcp deactivate --tool codex"
+                            ] },
+                            { label: "Generic", commands: [
+                                "**ase** setup mcp deactivate\n**[**--tool claude**|**copilot**|**codex**]\n[**--scope user**|**project**|**local**]**"
+                            ] }
+                        ]}
+                    />
+                </div>
             </div>
         </div>
     </div>

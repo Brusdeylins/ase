@@ -11,11 +11,13 @@
 import BaseLayout    from "../layouts/BaseLayout.astro"
 import SectionAuthor from "../components/Section-Author.astro"
 import SectionThanks from "../components/Section-Thanks.astro"
+import GlowTop       from "../components/Widget-Glow-Top.astro"
 import { navItem }   from "../data/nav.ts"
 
 const page = navItem("/author/")
 ---
 <BaseLayout title={page.title} description={page.description} pad>
+    <GlowTop/>
     <SectionAuthor/>
     <SectionThanks/>
 </BaseLayout>
