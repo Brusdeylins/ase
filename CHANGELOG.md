@@ -13,6 +13,22 @@ ChangeLog
     skill, and the `ase-task-condense` skill over to it, so text lengths are
     measured instead of estimated.
 
+-   FEATURE [docs]: Document shortening skill
+    Added the `ase-docs-shorten` skill and its sub-agent for reducing a single
+    document to a target length, given by the mutually exclusive and mandatory
+    `--chars <N>` or `--words <N>` option, through a three-stage cascade --
+    tighten the sentences, drop low-value content, compress the remaining content
+    into shorter expressions -- entering each stage only while the target is still
+    not met, and reviewing every proposed change as a whole `BEFORE`/`AFTER` block
+    instead of a line-level diff.
+
+-   FEATURE [docs]: Document refinement skill
+    Added the `ase-docs-refine` skill and its sub-agent for a light rewriting of
+    awkward or unclear sentences -- restructuring sentences for rhythm and clarity,
+    replacing nominal constructions with verbs, making enumerations parallel,
+    cutting filler and redundancy, fixing awkward transitions, and adjusting
+    voice -- while content, numbers, and technical terms stay exactly as they are.
+
 -   FEATURE [code]: Identifier and name minting
     Added the `ase-meta-mint` skill for minting identifiers and names out of a
     free-text hint, backed by the new `ase mint` CLI command and `ase_mint` MCP tool

@@ -1,0 +1,161 @@
+
+ACHTUNG: Dies ist mein persönlicher Erfahrungsbericht in der Rolle eines
+erfahrenen Software-Entwicklers im Kontext eines Open-Source-Projektes
+und KEINE(!) Aussage in meiner CTO-Rolle im Kontext eines industriellen
+Software-Projektes! Für Industrie-Projekte gelten andere Parameter, so
+daß man hier keine direkte Analogie ziehen darf.
+
+Seit 2025/Q1 leben wir in einer veränderten Welt, in der dank Agentic AI
+Coding die Softwareentwicklung anderen Maßstäben unterliegt als früher.
+Da Software auf formalen Sprachen programmiert wird und sich aktuelle
+Generative AI Services auf Large-Language-Models (LLM) stützen, welche
+mit formalen Sprachen besonders gut umgehen können, ist in dieser Domäne
+ein hoher Produktivitätsgewinn zu erwarten. Aber wie hoch fällt der
+genau aus?
+
+Es gibt zahlreiche Studien zu dem Thema, aber aus meiner persönlichen
+Perspektive immer noch keine belastbaren Aussagen. Denn wie so oft gilt
+auch hier die uralte Beraterweisheit: "It depends!". Auf die Nachfrage
+des Kunden "Und von was genau hängt es ab?" kann man unter anderem
+antworten:
+
+- Umfang der Software-Lösung
+- Grad der Wiederverwendung von Funktionalitäten
+- Qualität des Entwicklungsprozesses
+- Typ des Entwicklungsprozesses
+- Anzahl beteiligter Personen
+- Qualität des Codes
+- Komplexität der Software-Lösung
+- Tiefe des eigenen Code-Verständnisses
+- Tiefe der Code-Verifikation
+- ...
+
+Aus diesem Grunde findet man auch bei den Angaben von
+Produktivitätssteigerungsraten am Markt so ziemlich alles im Bereich von
+-50% bis +1000%.
+
+Das größte Problem ist, daß man für eine wirklich belastbare
+Aussage eigentlich eine Zeitmaschine bräuchte: man läßt ein Team eine
+konkrete Softwarelösung traditionell und somit ohne Agentic AI Coding
+bauen, dann geht man mit der Zeitmaschine zurück und läßt exakt
+dasselbe Team exakt dieselbe Softwarelösung mit Agentic AI Coding bauen.
+Kurzum: man wird es nicht wirklich belastbar herausfinden können,
+denn Zeitmaschinen stehen uns absehbar nicht zur Verfügung.
+
+Dennoch beschäftigt mich seit längerem, wieviel Produktivitätssteigerung
+mit Agentic AI Coding realistisch machbar ist. Und wenn schon nicht
+allgemein, dann zumindest, welche ich bei mir selber(!) messen kann.
+Eine typische Metrik ist hier das seit Jahrzehnten bekannte
+"Lines-of-Code (LoC) / Person-Day (PD)".
+
+Ich weiß nach über 40 Jahren Software-Entwicklung und Zahlen aus etwa
+den letzten 15-20 Jahren, daß ich in meinen Open Source Software (OSS)
+Projekten bisher bei etwa 350 LoC/PD lag, was sehr hoch ist. Der
+Durchschnitt in der Software-Industrie lag früher immer bei etwa 100-150
+LoC/PD.
+
+Deshalb habe ich in einem meiner aktuellen OSS-Projekte mal
+versucht, meine Produktivität bewußt zu maximieren. Das Projekt heißt
+SpecBook und ist unter https://github.com/rse/specbook/ zu finden.
+Im Zuge dieses Projektes habe ich außerdem Funktionalitäten
+gebraucht, die anschließend zu zwei kleineren Unterprojekten
+führten: Gradia (https://github.com/rse/gradia/) und MRCS
+(https://github.com/rse/mrcs/).
+
+Um sich Projekt, Aufwände und Komplexität vorstellen zu können,
+ein paar Hintergrundinformationen zu SpecBook. Dieses Projekt erlaubt im Kern einen Dreisprung: zuerst
+wird die Struktur einer eigenen Spezifikation über ein Schema in
+YAML konfiguriert; danach wird die eigene Spezifikation, basierend
+auf diesem Schema, in Markdown erstellt; und anschließend kann man
+diese Spezifikation in verschiedene Ausgabeformate (AST, HTML, PDF)
+exportieren lassen.
+
+Angelehnt an die obigen Dimensionen der Produktivitätsabhängigkeiten,
+waren bei diesem Projekt SpecBook meine Parameter:
+
+- Umfang der Software-Lösung: 9485 LoC
+- Grad der Wiederverwendung: maximaler Einsatz von Libraries
+- Qualität des Entwicklungsprozesses: reines Software Craftsmanship
+- Typ des Entwicklungsprozesses: User-Stories
+- Anzahl beteiligter Personen: One-Man Show
+- Qualität des Codes: Clean Code
+- Komplexität der Software-Lösung: mittel
+- Tiefe des eigenen Code-Verständnisses: "Grey-Box"
+- Tiefe der Code-Verifikation: Smoke-Tests
+
+Dabei ist zu beachten, daß dies KEINE(!) Referenz eines
+Industrieprojektes ist. Aber bis auf den Anspruch in der "Tiefe des
+eigenen Code-Verständnisses" entspricht dies ziemlich genau den
+Szenarien, die ich seit über 20 Jahren im OSS-Umfeld habe, so daß ich
+meine bekannten 350 LoC hier als Vergleich heranziehen kann.
+
+Zur Entwicklung verwendete ich Visual Studio Code und Anthropic Claude
+Code CLI mit meiner Agentic Software Engineering (ASE) Extension. Als
+Modelle kamen ausschließlich Anthropic Claude Opus 5 als "Work-Horse"
+und Anthropic Claude Fable 5 bei komplizierteren User-Stories zum Einsatz.
+
+Meine End-to-End-Entwicklungsaufwände beliefen sich auf 5,25 PD,
+verteilt über 12 Kalendertage, da ich täglich nur etwa 3,5 Stunden an
+dem Projekt arbeiten konnte.
+
+Bei den LoC/PD komme ich auf 1807 LoC/PD, was einer effektiven
+Produktivitätssteigerung um den Faktor 5,1 oder 510% entspricht. Daß ich
+etwa fünfmal schneller war als noch vor 2025/Q1, deckt sich mit meinem
+Bauchgefühl.
+
+Ich habe außerdem meine Claude Code Session-Logs auswerten lassen. Wenn
+man die Ausreißer-Prompts wegläßt, habe ich 8,1 Prompts/Hour bzw. 65
+Prompts/Person-Day abgesetzt, was einer Anweisung an Claude Code alle
+7,4 Minuten entsprach. Diese 7,4 Minuten haben sich jeweils gefühlt in
+vier Bereiche aufgeteilt: 2 Minuten "Thinking", 0,5 Minuten "Prompting",
+3 Minuten Claude Code werkeln lassen und nur zuschauen und 2 Minuten das
+Ergebnis reviewen und verstehen. Die Prompts waren außerdem im
+Durchschnitt 98 und im Median 82 Zeichen lang.
+
+Und die reinen API-Token-Consumption-Kosten waren laut CodeBurn-Report
+etwa 200 USD/PD, was allerdings durch eine Anthropic Claude Max
+Subscription nicht direkt zu Buche schlug.
+
+Was lernte ich aus diesem persönlichen Experiment?
+
+Die +1000% Produktivitätssteigerungen in manchen Publikationen sind sehr
+hoch gegriffen, aber bei eventuell leicht veränderten Parametern (vor
+allem niedrigerer Komplexität und noch kleinerem Umfang) noch
+realistisch erreichbar.
+
+Die -20% Produktivitätsverlust sind es aber leider auch, denn es
+gibt Aufgaben, da hält einen die KI einfach mehr auf als sie hilft.
+Vor allem, weil aktuelle LLMs mit ihren üblicherweise 50 Token/Second
+immer noch "schnarch-langsam" sind. Sie sind
+leider zu kurz für einen sinnvollen echten Wechsel der Tätigkeit und
+sie sind leider zu lang für Zuschauen und Abwarten. Mein einziger Ausweg:
+mehrere User-Stories parallel bearbeiten. Ich selber habe des öfteren
+2-3 Claude Sessions parallel offen, merke aber, daß noch mehr nicht viel
+hilft, da der "Mental Overload" sonst viel zu hoch wird und man nicht
+mehr weiß, in welcher Session man gerade was als nächstes tun möchte.
+
+Die "Tiefe des eigenen Code-Verständnisses" als "Grey-Box" ist ebenfalls
+interessant, denn dies war der Hauptunterschied gegenüber meinen anderen
+OSS-Projekten. Wenn man Code selber schreibt, muß man ihn nicht
+gesondert reviewen und verstehen. Läßt man aber die AI den Code
+schreiben, dann muß man nicht zu vernachlässigende Aufwände in Review
+und Verstehen stecken. Und das nervt bei der täglichen Arbeit so viel,
+daß man regelmäßig die eine oder andere Änderung einfach "durchwinkt",
+weil es einem zu lästig wird.
+
+Die 200 USD/PD sind für Open-Source-Entwicklung bereits nicht mehr
+tragfähig und auch in der Industrie ein erheblicher Kostenfaktor.
+
+Der Produktivitätssteigerungs-Faktor 5,1 bedeutet, daß ich seit 2025/Q1
+mit Agentic AI Coding gefühlt "ein Team von fünf brillanten
+Praktikanten" als Co-Worker habe, die zwar eine enge fachliche Führung
+durch mich benötigen, meine Produktivität aber erheblich steigern.
+
+Welche Fragen sind nun für mich offen?
+
+Kann man, und wenn ja wie, das Szenario auf traditionelle
+Industrie-Projekte übertragen, die nun mal vollkommen andere Parameter
+haben? Welche wesentlichen Änderungen im Prozess müssten wir hier
+durchführen? Welche Produktivitätssteigerung bekämen wir? Sicherlich bei
+weitem nicht den extremen Faktor 5,1, soviel ist klar...
+

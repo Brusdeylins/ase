@@ -126,6 +126,21 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-code-lint`](plugin/skills/ase-code-lint/help.md)
   `@tool/src/*.ts`
 
+- **Document Shortening**:
+  You want a document cut down to a hard length budget -- sentences
+  tightened first, low-value content dropped next, the rest compressed
+  last -- with every cut reviewed as a whole block before it is applied?
+  &rarr; [`/ase-docs-shorten`](plugin/skills/ase-docs-shorten/help.md)
+  `--chars 4000 @README.md`
+
+- **Document Refinement**:
+  You want the wording of a document refined -- long sentences shortened,
+  nominal constructions turned into verbs, enumerations made parallel,
+  filler words struck -- while content, numbers, and technical terms
+  stay exactly as they are?
+  &rarr; [`/ase-docs-refine`](plugin/skills/ase-docs-refine/help.md)
+  `@README.md`
+
 - **Document Proofreading**:
   You want your text documents checked and corrected for spelling,
   punctuation, and grammar errors?

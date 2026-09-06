@@ -37,8 +37,10 @@
 ○   `ase-sync-export`:     Export Artifact Set to Side-by-Side Files
 
 ⎈   **DOCUMENTATION**
-○   `ase-docs-distill`:    Distill Document Key Points
+○   `ase-docs-shorten`:    Shorten a Document to a Target Length
+○   `ase-docs-refine`:     Refine Document Wording
 ○   `ase-docs-proofread`:  Proofread Documents
+○   `ase-docs-distill`:    Distill Document Key Points
 
 ⎈   **VERSION CONTROL**
 ○   `ase-meta-changelog`:  Update ChangeLog Entries

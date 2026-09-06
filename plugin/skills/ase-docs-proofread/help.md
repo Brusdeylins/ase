@@ -24,6 +24,13 @@ the proposed correction interactively (or refine it via a free-text
 hint, which re-proposes the correction without limit) or - with
 `--auto` - applies all corrections automatically.
 
+`ase-docs-proofread` is the correctness-fixing member of the document
+triple. The recommended order over one document is
+[`ase-docs-shorten`](../ase-docs-shorten/help.md) first (cut the bulk),
+then [`ase-docs-refine`](../ase-docs-refine/help.md) (polish what
+survives), then `ase-docs-proofread` (final correctness pass), so no
+correction effort is spent on text which is later dropped.
+
 ##  OPTIONS
 
 -   `--auto`|`-a`:
@@ -62,4 +69,4 @@ Proofread an entire documentation directory automatically:
 
 ##  SEE ALSO
 
-[`ase-code-lint`](../ase-code-lint/help.md), [`ase-meta-changelog`](../ase-meta-changelog/help.md).
+[`ase-docs-shorten`](../ase-docs-shorten/help.md), [`ase-docs-refine`](../ase-docs-refine/help.md), [`ase-docs-distill`](../ase-docs-distill/help.md), [`ase-code-lint`](../ase-code-lint/help.md), [`ase-meta-changelog`](../ase-meta-changelog/help.md).

@@ -15,8 +15,10 @@ START               -> ase-arch-discover
 START               -> ase-code-insight
 START               -> ase-code-explain
 START               -> ase-code-lint
-START               -> ase-docs-distill
+START               -> ase-docs-shorten
+START               -> ase-docs-refine
 START               -> ase-docs-proofread
+START               -> ase-docs-distill
 START               -> ase-meta-review
 START               -> ase-meta-diff
 START               -> ase-meta-changelog
@@ -42,8 +44,10 @@ ase-arch-discover   -> END
 ase-code-insight    -> END
 ase-code-explain    -> END
 ase-code-lint       -> END
-ase-docs-distill    -> END
+ase-docs-shorten    -> END
+ase-docs-refine     -> END
 ase-docs-proofread  -> END
+ase-docs-distill    -> END
 ase-meta-review     -> END
 ase-meta-diff       -> END
 ase-meta-changelog  -> END

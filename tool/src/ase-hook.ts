@@ -544,7 +544,7 @@ export default class HookCommand {
 
     /*  the edit-capable skills whose active state lets the pre-tool-use
         hook auto-approve subsequent "Edit" invocations  */
-    private editCapableSkills = [ "ase-code-lint", "ase-docs-proofread" ]
+    private editCapableSkills = [ "ase-code-lint", "ase-docs-shorten", "ase-docs-refine", "ase-docs-proofread" ]
 
     /*  determine whether an ASE tool invocation described by the parsed
         hook input should be auto-approved, and (if so) the human-readable

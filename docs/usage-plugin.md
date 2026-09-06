@@ -249,6 +249,24 @@ The following ASE commands/skills exist on the code-level:
 
 The following ASE commands/skills exist on the documentation-level:
 
+- **/ase-docs-shorten** \[`--auto`|`-a`\] (`--chars`|`-c` *N* | `--words`|`-w` *N*) *docs-reference*:<br/>
+  Shorten a single document until it reaches the target length given by
+  the mutually exclusive, mandatory `--chars` or `--words` option, by
+  running a three-stage cascade -- tighten the sentences, drop low-value
+  content, compress the remaining content into shorter expressions --
+  entering each stage only while the target is still not met. Each
+  proposed change is reviewed as a whole `BEFORE`/`AFTER` block; with
+  `--auto` all of them are applied unattended.
+
+- **/ase-docs-refine** \[`--auto`|`-a`\] *docs-reference*:<br/>
+  Refine the sentence structure and style of the referenced documents:
+  restructure sentences for rhythm and clarity, replace cumbersome
+  nominal constructions with verbs, bring enumerations into one
+  grammatical shape, cut filler and redundancy, fix awkward
+  transitions, and adjust voice, while content, numbers, and technical
+  terms stay exactly as they are. With `--auto` all proposed
+  refinements are applied unattended.
+
 - **/ase-docs-proofread** \[`--auto`|`-a`\] *docs-reference*:<br/>
   Analyze the documents for spelling, punctuation, or grammar errors
   and immediately correct all found problems. With `--auto`, corrections
