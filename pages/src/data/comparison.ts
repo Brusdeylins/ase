@@ -44,9 +44,9 @@ export const comparison: Comparison[] = [
         manually: "**Brainstorm** the ideas of the magazine article alone and " +
                   "**stress-test** your own arguments in your head.",
         native:   "Tell the agent to **ad-hoc** assist in brainstorming and " +
-                  "strengthening your arguments.",
+                  "challenge your arguments.",
         ase:      "Run `/ase-meta-brainstorm` to diverge, cluster, and **distill** ideas, then " +
-                  "`/ase-meta-diaboli` and `/ase-meta-steelman` to **challenge** and **strengthen** your arguments."
+                  "`/ase-meta-diaboli` to **challenge** your arguments."
     },
     {
         topic:    "Correcting<br/>Articles",
