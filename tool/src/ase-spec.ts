@@ -12,8 +12,8 @@ import { isScalar }             from "yaml"
 import { z }                    from "zod"
 import sourceCodeError          from "source-code-error"
 import type { McpServer }       from "@modelcontextprotocol/sdk/server/mcp.js"
-import { SpecBook, renderDiagnostic, renderVerbose, formats, parseOutputSpec } from "@rse/specbook"
-import type { Diagnostic, ExportFormat }                                       from "@rse/specbook"
+import { SpecBook, renderDiagnostic, renderVerbose, formats, parseOutputSpec, previewAddr, previewPort } from "@rse/specbook"
+import type { Diagnostic, ExportFormat }                                                                from "@rse/specbook"
 
 import type Log                 from "./ase-log.js"
 import { Config, configSchema } from "./ase-config.js"
@@ -22,22 +22,22 @@ import { Artifact }             from "./ase-artifact.js"
 import { Meta }                 from "./ase-meta.js"
 import { writeStdout }          from "./ase-stdio.js"
 
-/*  reusable functionality: lint and export the SpecBook-based project
-    specification, located via the "project.artifact.spec.basedir" and
-    "project.artifact.spec.schema" configuration  */
+/*  reusable functionality: lint, export, and preview the SpecBook-based
+    project specification, located via the "project.artifact.spec.basedir"
+    and "project.artifact.spec.schema" configuration  */
 export class Spec {
-    /*  resolve the YAML schema configuration file: the configured
+    /*  resolve the YAML schema configuration files: the configured
         "project.artifact.spec.schema" relative to the project root, or
         the bundled standard "ase-format-specbook.yaml" plugin meta file
         if unset or empty  */
-    static configFile (log: Log): string {
+    static configFiles (log: Log): string[] {
         const cfg = new Config("config", configSchema, log)
         cfg.read()
         const val  = cfg.get("project.artifact.spec.schema")
         const file = val === undefined ? "" : String(isScalar(val) ? val.value : val)
         if (file === "")
-            return Meta.resolve("ase-format-specbook.yaml")
-        return path.resolve(Task.projectRoot(), file)
+            return [ Meta.resolve("ase-format-specbook.yaml") ]
+        return [ path.resolve(Task.projectRoot(), file) ]
     }
 
     /*  create the SpecBook API instance, routing its verbose processing
@@ -86,7 +86,7 @@ export class Spec {
         base directory against the schema configuration  */
     static async lint (log: Log, verbose = false): Promise<Diagnostic[]> {
         const result = await Spec.unmarked(Spec.api(log, verbose).lint({
-            config:  Spec.configFile(log),
+            config:  Spec.configFiles(log),
             basedir: Artifact.basedir(log, "spec")
         }))
         return result.diagnostics.map((d) => ({ ...d, file: Spec.relativize(d.file) }))
@@ -107,6 +107,7 @@ export class Spec {
         if (code === "")
             return `${renderDiagnostic(diagnostic)}\n`
         return sourceCodeError({
+            type:     diagnostic.severity === "warning" ? "WARNING" : "ERROR",
             message:  diagnostic.message,
             filename: diagnostic.file,
             code,
@@ -121,9 +122,41 @@ export class Spec {
         collecting the emitted environment notices if requested  */
     static export (log: Log, formats: ExportFormat[], verbose = false, notices?: string[]): Promise<Buffer[]> {
         return Spec.unmarked(Spec.api(log, verbose, notices).export({
-            config:  Spec.configFile(log),
+            config:  Spec.configFiles(log),
             basedir: Artifact.basedir(log, "spec"),
             formats
+        }))
+    }
+
+    /*  export the specification like "export" and then keep the export
+        in sync with its sources, handing every fresh set of buffers to
+        "onExport", where "outputs" names the files "onExport" writes,
+        so an output which is itself an observed source can be refused  */
+    static watch (
+        log:      Log,
+        formats:  ExportFormat[],
+        outputs:  string[],
+        onExport: (buffers: Buffer[]) => Promise<void>,
+        verbose = false
+    ): Promise<void> {
+        return Spec.unmarked(Spec.api(log, verbose).watch({
+            config:  Spec.configFiles(log),
+            basedir: Artifact.basedir(log, "spec"),
+            formats,
+            outputs,
+            onExport
+        }))
+    }
+
+    /*  serve the HTML export of the specification as a live preview,
+        kept in sync with its sources and pushed into the connected
+        browsers as an in-place document update  */
+    static preview (log: Log, addr: string, port: number, verbose = false): Promise<void> {
+        return Spec.unmarked(Spec.api(log, verbose).preview({
+            config:  Spec.configFiles(log),
+            basedir: Artifact.basedir(log, "spec"),
+            addr,
+            port
         }))
     }
 }
@@ -137,7 +170,7 @@ export default class SpecCommand {
         /*  register CLI top-level command "ase spec"  */
         const spec = program
             .command("spec")
-            .description("Lint and export the SpecBook-based project specification")
+            .description("Lint, export, and preview the SpecBook-based project specification")
             .action(() => {
                 spec.outputHelp()
                 process.exit(1)
@@ -154,7 +187,7 @@ export default class SpecCommand {
                     await writeStdout(opts.verbose === true ?
                         Spec.render(diagnostic, process.stdout.isTTY === true) :
                         `${renderDiagnostic(diagnostic)}\n`)
-                if (diagnostics.length > 0)
+                if (diagnostics.some((diagnostic) => diagnostic.severity === "error"))
                     process.exitCode = 1
             })
 
@@ -167,21 +200,53 @@ export default class SpecCommand {
                 "from the filename extension unless explicitly prefixed " +
                 "(default: \"index.html\" inside the specification base directory)",
                 (value: string, previous: string[]) => previous.concat(value), new Array<string>())
+            .option("-w, --watch", "keep the outputs in sync by re-exporting on every source change")
             .option("-v, --verbose", "print verbose processing information")
-            .action(async (opts: { output: string[], verbose?: boolean }) => {
+            .action(async (opts: { output: string[], watch?: boolean, verbose?: boolean }) => {
                 const outputs  = (opts.output.length > 0 ? opts.output :
                     [ path.join(Artifact.basedir(this.log, "spec"), "index.html") ]).map(parseOutputSpec)
+
+                /*  a re-export has to land somewhere it can be picked up again,
+                    which a one-shot stdout stream cannot provide  */
+                if (opts.watch === true && outputs.some(({ output }) => output === "-"))
+                    throw new Error("the watch mode requires regular output files " +
+                        "(\"-\" for stdout is not supported)")
+
+                /*  parse the input once and export each distinct format once  */
                 const distinct = Array.from(new Set(outputs.map(({ format }) => format)))
-                const buffers  = await Spec.export(this.log, distinct, opts.verbose === true)
-                for (const { format, output } of outputs) {
-                    const data = buffers[distinct.indexOf(format)]
-                    if (output === "-")
-                        await writeStdout(data)
-                    else {
-                        await fs.promises.writeFile(output, data)
-                        this.log.write("info", `spec: exported specification into "${output}" (${data.length} bytes)`)
+                const write = async (buffers: Buffer[]) => {
+                    for (const { format, output } of outputs) {
+                        const data = buffers[distinct.indexOf(format)]
+                        if (output === "-")
+                            await writeStdout(data)
+                        else {
+                            await fs.promises.writeFile(output, data)
+                            this.log.write("info", `spec: exported specification into "${output}" (${data.length} bytes)`)
+                        }
                     }
                 }
+                if (opts.watch === true) {
+                    await Spec.watch(this.log, distinct, outputs.map(({ output }) => output),
+                        write, opts.verbose === true)
+                    await new Promise<void>(() => { /*  never resolves  */ })
+                }
+                else
+                    await write(await Spec.export(this.log, distinct, opts.verbose === true))
+            })
+
+        /*  register CLI sub-command "ase spec preview"  */
+        spec
+            .command("preview")
+            .description("Serve the HTML export of the specification Markdown files as a live preview")
+            .option("-a, --addr <ip-addr>", "IP address to listen on", previewAddr)
+            .option("-p, --port <tcp-port>", "TCP port to listen on", String(previewPort))
+            .option("-v, --verbose", "print verbose processing information")
+            .action(async (opts: { addr: string, port: string, verbose?: boolean }) => {
+                const port = Number(opts.port)
+                if (!Number.isInteger(port) || port < 1 || port > 65535)
+                    throw new Error(`invalid TCP port "${opts.port}"`)
+                await Spec.preview(this.log, opts.addr, port, opts.verbose === true)
+                await new Promise<void>(() => { /*  never resolves  */ })
             })
     }
 }
@@ -204,21 +269,24 @@ export class SpecMCP {
                 "Lint the SpecBook specification Markdown files of the project (located via the " +
                 "`project.artifact.spec.basedir` configuration) against the SpecBook YAML schema " +
                 "configuration (`project.artifact.spec.schema`, defaulting to the bundled `ase-format-specbook.yaml`). " +
-                "Returns a `diagnostics` array of `{ file, line, column, message }` objects (with " +
-                "project-relative `file`), rendered as bullet points in `text`. With `verbose`, " +
+                "Returns a `diagnostics` array of `{ file, line, column, severity, message }` objects (with " +
+                "project-relative `file` and a `severity` of `error` or `warning`), rendered as bullet " +
+                "points in `text`. With `verbose`, " +
                 "each diagnostic additionally carries a multi-line `snippet` rendering with the " +
                 "affected source lines, which is also used for `text`. An empty array " +
-                "(`text` of `specification valid`) means the specification is valid.",
+                "(`text` of `specification valid`) means the specification is valid; only " +
+                "diagnostics of `error` severity make an export fail.",
             inputSchema: {
                 verbose: z.boolean().optional()
                     .describe("if true, render each diagnostic with its affected source snippet (default: false)")
             },
             outputSchema: {
                 diagnostics: z.array(z.object({
-                    file:    z.string().describe("project-relative file path"),
-                    line:    z.number().describe("line number (1-based)"),
-                    column:  z.number().describe("column number (1-based)"),
-                    message: z.string().describe("diagnostic message"),
+                    file:     z.string().describe("project-relative file path"),
+                    line:     z.number().describe("line number (1-based)"),
+                    column:   z.number().describe("column number (1-based)"),
+                    severity: z.enum([ "error", "warning" ]).describe("diagnostic severity"),
+                    message:  z.string().describe("diagnostic message"),
                     snippet: z.string().optional()
                         .describe("multi-line rendering with the affected source snippet (with `verbose` only)")
                 })).describe("lint diagnostics, empty if the specification is valid")

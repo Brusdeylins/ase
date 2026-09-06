@@ -454,7 +454,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
     *NOT* run any build, tests, linter, or type-checker.
 
     1.  Validate the specification and capture its <diagnostics/> array
-        of `{ file, line, column, message }` objects:
+        of `{ file, line, column, severity, message }` objects:
 
         <if condition="<worktree-dir/> is not empty">
         Run the command `ase spec lint` with <worktree-dir/> as its

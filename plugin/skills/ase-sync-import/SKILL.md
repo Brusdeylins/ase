@@ -175,7 +175,7 @@ Procedure
 
         Validate the specification by calling the `ase_specbook_lint()`
         tool of the `ase` MCP server and reading its returned
-        `diagnostics` array of `{ file, line, column, message }`
+        `diagnostics` array of `{ file, line, column, severity, message }`
         objects. If it is not empty, fix the reported problems in the
         affected `SPEC` artifacts via the `Write`/`Edit` tools and call
         the tool again -- for at most *three* rounds in total. Do not

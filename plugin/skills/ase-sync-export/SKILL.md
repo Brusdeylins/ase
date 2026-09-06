@@ -74,7 +74,9 @@ Procedure
 
     1.  Call the `ase_specbook_lint()` tool of the `ase` MCP server
         *once* and read its returned `diagnostics` array of `{ file,
-        line, column, message }` objects. Do not output anything.
+        line, column, severity, message }` objects, reduced to those
+        entries whose <severity/> is `error`, as only those make the
+        export fail. Do not output anything.
 
     2.  <if condition="<diagnostics/> is not empty">
 

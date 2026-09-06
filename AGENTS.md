@@ -122,7 +122,8 @@ Beyond `ase setup`, the CLI provides `ase config` (layered `user` <
 background HTTP service), `ase mcp` (stdio-to-service MCP bridge), `ase
 hook` (agent tool hook handlers), `ase statusline` (statusline renderer),
 `ase task` (persisted task plans), `ase artifact` (artifact kind
-resolution), `ase spec` (SpecBook specification linting and exporting),
+resolution), `ase spec` (SpecBook specification linting, exporting, and
+previewing),
 `ase meta` (plugin meta file output), `ase diagram` (Mermaid
 rendering), `ase worktree` (ASE worktree path resolution), `ase mint`
 (hash-derived identifier minting), and `ase compat` (probe values for
