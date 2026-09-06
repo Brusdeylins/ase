@@ -12,9 +12,9 @@
     and hence lives inline in this frontmatter, mirroring the inline matrices
     of `Section-Compat.astro`.  */
 
-import SectionGlow from "./Section-Glow.astro"
-import Annotation  from "./Widget-Annotation.astro"
-import Terminal    from "./Widget-Terminal.astro"
+import GlowSide   from "./Widget-Glow-Side.astro"
+import Annotation from "./Widget-Annotation.astro"
+import Terminal   from "./Widget-Terminal.astro"
 
 import type { AstroComponent } from "@lucide/astro"
 import Sunrise                 from "@lucide/astro/icons/sunrise"
@@ -189,7 +189,7 @@ const inline = (text: string) => text
     .replace(/`(.+?)`/g,       "<code>$1</code>")
 ---
 <section id="day" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <SectionGlow variant="section" side="right"/>
+    <GlowSide variant="section" side="right"/>
 
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">

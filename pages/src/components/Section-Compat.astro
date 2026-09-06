@@ -9,8 +9,8 @@
     matrices for ASE, rendered as two framed tables (mirroring the diagram
     frame), plus footnotes and an explanatory NOTE callout.  */
 
-import SectionGlow from "./Section-Glow.astro"
-import Annotation  from "./Widget-Annotation.astro"
+import GlowSide   from "./Widget-Glow-Side.astro"
+import Annotation from "./Widget-Annotation.astro"
 
 /*  the two compatibility matrices: each row carries the product name (with an
     optional dagger marker), version, compatibility percentage, and the ASE
@@ -31,7 +31,7 @@ const llms = [
 ]
 ---
 <section id="compat" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <SectionGlow variant="section" side="right" />
+    <GlowSide variant="section" side="right" />
 
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2 relative inline-block">

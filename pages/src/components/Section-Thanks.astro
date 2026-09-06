@@ -10,8 +10,8 @@
     of logo plates and the sibling projects. The closing bottom spacing is
     owned by the <main> element of BaseLayout.  */
 
-import SectionGlow from "./Section-Glow.astro"
-import Annotation  from "./Widget-Annotation.astro"
+import GlowSide   from "./Widget-Glow-Side.astro"
+import Annotation from "./Widget-Annotation.astro"
 
 const contributors = [
     "Lars Artmann",
@@ -50,7 +50,7 @@ const inline = (text: string) => text
     .replace(/\s*--\s*/g,      " &mdash; ")
 ---
 <section id="contributors" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <SectionGlow variant="section" side="right" />
+    <GlowSide variant="section" side="right" />
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
             <Annotation flat class="hidden sm:block right-0 -translate-x-2/3">
@@ -79,7 +79,7 @@ const inline = (text: string) => text
 </section>
 
 <section id="sponsors" class="relative isolate mx-auto max-w-4xl px-6 py-8">
-    <SectionGlow variant="section" side="left" />
+    <GlowSide variant="section" side="left" />
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
             Thanks to the <span class="text-accent">Sponsors</span>
@@ -112,7 +112,7 @@ const inline = (text: string) => text
 </section>
 
 <section id="siblings" class="relative isolate mx-auto max-w-4xl px-6 py-8">
-    <SectionGlow variant="section" side="right" />
+    <GlowSide variant="section" side="right" />
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
             See Also the <span class="text-accent">Sibling Projects</span>

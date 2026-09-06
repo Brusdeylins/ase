@@ -10,7 +10,7 @@
     renders nothing at all while no (real, consented) endorsement exists, so an
     empty data file never surfaces as an empty carousel.  */
 
-import SectionGlow      from "./Section-Glow.astro"
+import GlowSide         from "./Widget-Glow-Side.astro"
 import { testimonials } from "../data/testimonials.ts"
 import {
     Swiper,
@@ -23,7 +23,7 @@ import {
 ---
 {testimonials.length > 0 && (
 <section id="testimonials" class="relative isolate mx-auto max-w-4xl px-6 py-12">
-    <SectionGlow variant="section" side="left"/>
+    <GlowSide variant="section" side="left"/>
 
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">

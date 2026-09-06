@@ -1,0 +1,18 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  decorative blue radial wash, covering its (relative, isolate) parent
+    entirely: a brand-colored ellipse hanging in from the top edge, laid
+    over a vertical background gradient (used behind the page hero).  */
+---
+<div
+    class="pointer-events-none absolute inset-0 -z-10"
+    style="background:
+        radial-gradient(ellipse 60% 180% at 50% -20%, color-mix(in oklch, var(--brand-500) 30%, transparent), transparent 75%),
+        linear-gradient(to bottom, var(--background-secondary), var(--background));"
+    aria-hidden="true"
+></div>

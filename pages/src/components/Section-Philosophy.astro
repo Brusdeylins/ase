@@ -10,12 +10,12 @@
     has a brand glow behind it; each diagram opens the shared image modal on
     click.  */
 
-import SectionGlow from "./Section-Glow.astro"
-import Diagram     from "./Widget-Diagram.astro"
-import Annotation  from "./Widget-Annotation.astro"
-import Signal      from "@lucide/astro/icons/signal"
-import Footprints  from "@lucide/astro/icons/footprints"
-import Workflow    from "@lucide/astro/icons/workflow"
+import GlowSide   from "./Widget-Glow-Side.astro"
+import Diagram    from "./Widget-Diagram.astro"
+import Annotation from "./Widget-Annotation.astro"
+import Signal     from "@lucide/astro/icons/signal"
+import Footprints from "@lucide/astro/icons/footprints"
+import Workflow   from "@lucide/astro/icons/workflow"
 ---
 <section id="philosophy" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header class="ase-section-head" data-reveal>
@@ -41,7 +41,7 @@ import Workflow    from "@lucide/astro/icons/workflow"
     <div class="mt-12 flex flex-col gap-12">
         <div class="ase-grid-split">
             <div class="relative isolate lg:order-1" data-reveal="right">
-                <SectionGlow variant="text" side="left" />
+                <GlowSide variant="text" side="left" />
                 <p class="ase-eyebrow">Agentic AI Levels</p>
                 {/*  "mt-1" centers the icon on the first line box of the
                      heading, so the two-line title keeps it on top  */}
@@ -110,7 +110,7 @@ import Workflow    from "@lucide/astro/icons/workflow"
     <div class="mt-12 flex flex-col gap-12">
         <div class="ase-grid-split">
             <div class="relative isolate lg:order-2" data-reveal="left">
-                <SectionGlow variant="text" side="right" />
+                <GlowSide variant="text" side="right" />
                 <p class="ase-eyebrow">Skills &amp; Workflows</p>
                 <h3 class="ase-h3 flex items-start gap-2">
                     <Footprints class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
@@ -131,7 +131,7 @@ import Workflow    from "@lucide/astro/icons/workflow"
 
         <div class="ase-grid-split">
             <div class="relative isolate lg:order-1" data-reveal="right">
-                <SectionGlow variant="text" side="left" />
+                <GlowSide variant="text" side="left" />
                 <p class="ase-eyebrow">Operation Modes</p>
                 <h3 class="ase-h3 flex items-start gap-2">
                     <Workflow class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>

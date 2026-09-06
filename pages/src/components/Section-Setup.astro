@@ -9,9 +9,9 @@
     install / update / uninstall commands (each row has a "❯" prompt and a copy
     button wired by the Clipboard-Copy component in BaseLayout).  */
 
-import SectionGlow from "./Section-Glow.astro"
-import Terminal    from "./Widget-Terminal.astro"
-import Annotation  from "./Widget-Annotation.astro"
+import GlowSide   from "./Widget-Glow-Side.astro"
+import Terminal   from "./Widget-Terminal.astro"
+import Annotation from "./Widget-Annotation.astro"
 
 /*  the ASE configuration parameters, mirroring the schema, the "default"
     preset, and the writable-scope map of "tool/src/ase-config.ts"  */
@@ -95,7 +95,7 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
 ]
 ---
 <section id="setup" class="relative isolate mx-auto max-w-4xl px-6 py-8">
-    <SectionGlow variant="section" side="left" />
+    <GlowSide variant="section" side="left" />
 
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2 mt-12">
@@ -218,7 +218,7 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
     </div>
 
     <div class="relative isolate">
-        <SectionGlow variant="section" side="right" />
+        <GlowSide variant="section" side="right" />
         <header class="mt-12 ase-section-head" data-reveal>
             <h2 class="text-xl font-bold sm:text-2xl">
                 Power-Up with <span class="text-accent">Custom Statusline</span>
@@ -462,7 +462,7 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
     </div>
 
     <div class="relative isolate">
-        <SectionGlow variant="section" side="right" />
+        <GlowSide variant="section" side="right" />
         <header class="mt-12 ase-section-head" data-reveal>
             <h2 class="text-xl font-bold sm:text-2xl">
                 Fine-Tune with <span class="text-accent">Configuration</span>
