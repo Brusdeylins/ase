@@ -13,9 +13,10 @@ import { z }                    from "zod"
 import sourceCodeError          from "source-code-error"
 import type { McpServer }       from "@modelcontextprotocol/sdk/server/mcp.js"
 import { SpecBook, renderDiagnostic, renderVerbose, formats, parseOutputSpec, previewAddr, previewPort } from "@rse/specbook"
-import type { Diagnostic, ExportFormat }                                                                from "@rse/specbook"
+import type { Diagnostic, ExportFormat, VerboseLevel }                                                  from "@rse/specbook"
 
 import type Log                 from "./ase-log.js"
+import type { LogLevel }        from "./ase-log.js"
 import { Config, configSchema } from "./ase-config.js"
 import { Task }                 from "./ase-task.js"
 import { Artifact }             from "./ase-artifact.js"
@@ -40,20 +41,31 @@ export class Spec {
         return [ path.resolve(Task.projectRoot(), file) ]
     }
 
+    /*  the ASE log level each SpecBook verbosity level maps onto: the
+        "none" level carries the messages a bare SpecBook CLI run always
+        prints, which are mere progress chatter under ASE and hence are
+        not logged at all, while the regular and detailed processing
+        messages reach the info log and the tracing ones the debug log  */
+    private static logLevel: Record<VerboseLevel, LogLevel | null> = {
+        none:   null,
+        notice: "info",
+        detail: "info",
+        trace:  "debug"
+    }
+
     /*  create the SpecBook API instance, routing its verbose processing
-        messages into the info log if requested, else into the debug log,
-        while its "notice" messages always reach the warning log and, for
-        consumers which never see the log, the given collector  */
-    private static api (log: Log, verbose: boolean, notices?: string[]): SpecBook {
+        messages into the log according to their verbosity level, while
+        its "none" level messages, for consumers which never see the log,
+        additionally reach the given collector  */
+    private static api (log: Log, notices?: string[]): SpecBook {
         return new SpecBook({
             verbose: (cmd, msg, level) => {
                 const text = renderVerbose(msg)
-                if (level === "notice") {
-                    log.write("warning", `specbook: ${cmd}: ${text}`)
+                if (level === "none")
                     notices?.push(text)
-                }
-                else
-                    log.write(verbose ? "info" : "debug", `specbook: ${cmd}: ${text}`)
+                const logLevel = Spec.logLevel[level]
+                if (logLevel !== null)
+                    log.write(logLevel, `specbook: ${cmd}: ${text}`)
             }
         })
     }
@@ -84,8 +96,8 @@ export class Spec {
 
     /*  lint the specification Markdown files below the "spec" artifact
         base directory against the schema configuration  */
-    static async lint (log: Log, verbose = false): Promise<Diagnostic[]> {
-        const result = await Spec.unmarked(Spec.api(log, verbose).lint({
+    static async lint (log: Log): Promise<Diagnostic[]> {
+        const result = await Spec.unmarked(Spec.api(log).lint({
             config:  Spec.configFiles(log),
             basedir: Artifact.basedir(log, "spec")
         }))
@@ -120,8 +132,8 @@ export class Spec {
     /*  export the specification Markdown files below the "spec" artifact
         base directory into the requested formats, one buffer per format,
         collecting the emitted environment notices if requested  */
-    static export (log: Log, formats: ExportFormat[], verbose = false, notices?: string[]): Promise<Buffer[]> {
-        return Spec.unmarked(Spec.api(log, verbose, notices).export({
+    static export (log: Log, formats: ExportFormat[], notices?: string[]): Promise<Buffer[]> {
+        return Spec.unmarked(Spec.api(log, notices).export({
             config:  Spec.configFiles(log),
             basedir: Artifact.basedir(log, "spec"),
             formats
@@ -136,10 +148,9 @@ export class Spec {
         log:      Log,
         formats:  ExportFormat[],
         outputs:  string[],
-        onExport: (buffers: Buffer[]) => Promise<void>,
-        verbose = false
+        onExport: (buffers: Buffer[]) => Promise<void>
     ): Promise<void> {
-        return Spec.unmarked(Spec.api(log, verbose).watch({
+        return Spec.unmarked(Spec.api(log).watch({
             config:  Spec.configFiles(log),
             basedir: Artifact.basedir(log, "spec"),
             formats,
@@ -151,8 +162,8 @@ export class Spec {
     /*  serve the HTML export of the specification as a live preview,
         kept in sync with its sources and pushed into the connected
         browsers as an in-place document update  */
-    static preview (log: Log, addr: string, port: number, verbose = false): Promise<void> {
-        return Spec.unmarked(Spec.api(log, verbose).preview({
+    static preview (log: Log, addr: string, port: number): Promise<void> {
+        return Spec.unmarked(Spec.api(log).preview({
             config:  Spec.configFiles(log),
             basedir: Artifact.basedir(log, "spec"),
             addr,
@@ -180,9 +191,9 @@ export default class SpecCommand {
         spec
             .command("lint")
             .description("Lint the specification Markdown files against the SpecBook schema configuration")
-            .option("-v, --verbose", "print verbose processing information and each diagnostic with its affected source snippet")
+            .option("-v, --verbose", "print each diagnostic with its affected source snippet")
             .action(async (opts: { verbose?: boolean }) => {
-                const diagnostics = await Spec.lint(this.log, opts.verbose === true)
+                const diagnostics = await Spec.lint(this.log)
                 for (const diagnostic of diagnostics)
                     await writeStdout(opts.verbose === true ?
                         Spec.render(diagnostic, process.stdout.isTTY === true) :
@@ -201,8 +212,7 @@ export default class SpecCommand {
                 "(default: \"index.html\" inside the specification base directory)",
                 (value: string, previous: string[]) => previous.concat(value), new Array<string>())
             .option("-w, --watch", "keep the outputs in sync by re-exporting on every source change")
-            .option("-v, --verbose", "print verbose processing information")
-            .action(async (opts: { output: string[], watch?: boolean, verbose?: boolean }) => {
+            .action(async (opts: { output: string[], watch?: boolean }) => {
                 const outputs  = (opts.output.length > 0 ? opts.output :
                     [ path.join(Artifact.basedir(this.log, "spec"), "index.html") ]).map(parseOutputSpec)
 
@@ -226,12 +236,11 @@ export default class SpecCommand {
                     }
                 }
                 if (opts.watch === true) {
-                    await Spec.watch(this.log, distinct, outputs.map(({ output }) => output),
-                        write, opts.verbose === true)
+                    await Spec.watch(this.log, distinct, outputs.map(({ output }) => output), write)
                     await new Promise<void>(() => { /*  never resolves  */ })
                 }
                 else
-                    await write(await Spec.export(this.log, distinct, opts.verbose === true))
+                    await write(await Spec.export(this.log, distinct))
             })
 
         /*  register CLI sub-command "ase spec preview"  */
@@ -240,12 +249,11 @@ export default class SpecCommand {
             .description("Serve the HTML export of the specification Markdown files as a live preview")
             .option("-a, --addr <ip-addr>", "IP address to listen on", previewAddr)
             .option("-p, --port <tcp-port>", "TCP port to listen on", String(previewPort))
-            .option("-v, --verbose", "print verbose processing information")
-            .action(async (opts: { addr: string, port: string, verbose?: boolean }) => {
+            .action(async (opts: { addr: string, port: string }) => {
                 const port = Number(opts.port)
                 if (!Number.isInteger(port) || port < 1 || port > 65535)
                     throw new Error(`invalid TCP port "${opts.port}"`)
-                await Spec.preview(this.log, opts.addr, port, opts.verbose === true)
+                await Spec.preview(this.log, opts.addr, port)
                 await new Promise<void>(() => { /*  never resolves  */ })
             })
     }
@@ -339,7 +347,7 @@ export class SpecMCP {
                 const spec = args.format !== undefined || args.output === undefined ?
                     { format: args.format ?? "json", output: args.output } :
                     parseOutputSpec(args.output)
-                const [ data ] = await Spec.export(this.log, [ spec.format ], false, notices)
+                const [ data ] = await Spec.export(this.log, [ spec.format ], notices)
                 if (spec.output !== undefined && spec.output !== "-") {
                     await fs.promises.writeFile(path.resolve(Task.projectRoot(), spec.output), data)
                     return {

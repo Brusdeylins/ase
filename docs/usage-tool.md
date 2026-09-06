@@ -485,7 +485,10 @@ The following top-level commands exist for linting, exporting and previewing the
 *SpecBook*-based project specification, i.e. the Markdown files below
 the `project.artifact.spec.basedir` directory, governed by the SpecBook
 YAML schema configuration `project.artifact.spec.schema` (default: the
-standard `ase-format-specbook.yaml` bundled with the plugin):
+standard `ase-format-specbook.yaml` bundled with the plugin). The
+SpecBook processing information is logged at the `info` level and its
+tracing details at the `debug` level, while the progress chatter a bare
+SpecBook run always prints is not logged at all:
 
 - `ase spec`:
   Entry point group for the specification commands. Without a
@@ -497,12 +500,11 @@ standard `ase-format-specbook.yaml` bundled with the plugin):
   `<file>:<line>:<column>: <message>` line (with *file* relative to the
   project root and *message* prefixed with `warning: ` for a diagnostic
   of `warning` severity), or, with `--verbose`, as a multi-line message
-  with the affected source snippet (colorized on a terminal);
-  `--verbose` also logs the SpecBook processing information at the
-  `info` level. The command exits with status 1 if there is any
-  diagnostic of `error` severity.
+  with the affected source snippet (colorized on a terminal). The
+  command exits with status 1 if there is any diagnostic of `error`
+  severity.
 
-- `ase spec export` \[`-o`|`--output` \[*format*`:`\]*file*\] \[...\] \[`-w`|`--watch`\] \[`-v`|`--verbose`\]:
+- `ase spec export` \[`-o`|`--output` \[*format*`:`\]*file*\] \[...\] \[`-w`|`--watch`\]:
   Export the specification Markdown files as `json`, `json5`, `yaml`,
   `toon` (the specification object model), `html` (self-contained single
   document), `pdf` (paginated print document), or `md` (normalized single
@@ -515,10 +517,9 @@ standard `ase-format-specbook.yaml` bundled with the plugin):
   not terminate after the initial export, but keeps the outputs in sync
   by re-exporting on every change of a configuration file, an artifact
   file, or one of its embedded assets; a transiently failing re-export
-  is reported at the `warning` level and leaves the watch intact. As a
+  leaves the watch intact. As a
   re-export has to land somewhere it can be picked up again, `--watch`
-  rejects the `-` standard output. With `--verbose`, the SpecBook
-  processing information is logged at the `info` level. The export fails
+  rejects the `-` standard output. The export fails
   on any lint diagnostic, so a partial or invalid specification is never
   emitted. The `pdf` format additionally requires a Chromium-class
   browser, which neither `npm install -g @rse/ase` nor `ase setup
@@ -526,19 +527,17 @@ standard `ase-format-specbook.yaml` bundled with the plugin):
   fetch the Playwright Chromium once via `npx playwright install
   chromium`. Without any such browser the export fails before the
   specification is even parsed and reports that very command; a fallback
-  onto a system-installed *Google Chrome* is logged at the `warning`
-  level, independent of `--verbose`.
+  onto a system-installed *Google Chrome* is reported in the `notices`
+  of the `ase_specbook_export` MCP tool.
 
-- `ase spec preview` \[`-a`|`--addr` *ip-addr*\] \[`-p`|`--port` *tcp-port*\] \[`-v`|`--verbose`\]:
+- `ase spec preview` \[`-a`|`--addr` *ip-addr*\] \[`-p`|`--port` *tcp-port*\]:
   Serve the HTML export of the specification Markdown files as a live
   preview on `http://<ip-addr>:<tcp-port>/` (default:
   `http://127.0.0.1:12345/`). The export is kept in sync with its
   sources exactly like under `ase spec export --watch`, and every fresh
   export is pushed into the connected browsers as an in-place document
   update. Before the first successful export, a placeholder page is
-  served instead. The command does not terminate on
-  its own; the listening URL and the browser connects and disconnects
-  are logged at the `warning` level, independent of `--verbose`.
+  served instead. The command does not terminate on its own.
 
 The following top-level command exists for exposing plugin meta files:
 
