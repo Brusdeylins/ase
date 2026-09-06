@@ -2,6 +2,33 @@
 ChangeLog
 =========
 
+0.9.67 (2026-09-06)
+-------------------
+
+-   FEATURE [docs]: Sibling projects on the website
+    Added a new "See Also the Sibling Projects" section to
+    `pages/src/components/Section-Thanks.astro`, listing *SpecBook*,
+    *MCP-to-OpenAI*, *MCP-to-Harness*, *claudeX*, and *Bash-Authorize* together
+    with their relation to *ASE*, and rendering the lightweight inline markup of
+    their notes, so the ecosystem around *ASE* becomes visible on the website.
+
+-   IMPROVEMENT [docs]: Split article work-steps in the comparison table
+    Split the single "Writing Articles" row of `pages/src/data/comparison.ts`
+    into a "Writing Articles" row (brainstorming plus challenging and
+    strengthening arguments) and a "Correcting Articles" row (shortening,
+    refining, and proofreading), and switched the "Crafting Code" row over to
+    `/ase-code-edit` and `/ase-code-craft`, so each row again covers exactly one
+    work-step.
+
+-   UPDATE [docs]: SpecBook project domain
+    Switched the *SpecBook* references in `README.md` and on the website from the
+    GitHub repository URL over to the `specbook.tools` domain and re-sorted the
+    "See Also" list accordingly.
+
+-   BUGFIX [docs]: Missing space in the comparison table
+    Added the missing space between two concatenated string fragments of the
+    "Specification First" row in `pages/src/data/comparison.ts`.
+
 0.9.66 (2026-09-06)
 -------------------
 
