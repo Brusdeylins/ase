@@ -35,7 +35,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
             <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
                 Choose the best<br/>
                 tool for the job:<br/>
-                2+5 Workflows!
+                2+6 Workflows!
             </Annotation>
             How to Use <span class="text-accent">Workflows</span>
         </h2>
@@ -75,6 +75,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
             <div class="lg:order-2 relative isolate" data-reveal="left">
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
                     ]}
@@ -105,6 +106,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
                 <SectionGlow variant="text" side="right"/>
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-code-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
                     ]}
@@ -120,8 +122,8 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
                     Quick &amp; Dirty II
                 </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
-                    The advanced quick &amp; dirty approach in
-                    <b>ASE</b>{" "} is the Quick Mode where the
+                    The advanced quick &amp; dirty approach in <b>ASE</b>{" "}
+                    is the Quick Mode where the
                     expressed intent is "grilled" and the results are
                     verified. The pro is its decent balance between
                     higher speed and good result quality, the con is
@@ -133,6 +135,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
                 <SectionGlow variant="text" side="right"/>
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-code-edit** **--grill** **--verify** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
                     ]}
@@ -162,6 +165,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
                 <SectionGlow variant="text" side="right"/>
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/plan**",
                         "Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
@@ -194,6 +198,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
             <div class="lg:order-2 relative isolate" data-reveal="left">
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-task-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
                         "Change output color to blue",
@@ -226,6 +231,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
                 <SectionGlow variant="text" side="right"/>
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-task-edit** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
                         "Change output color to blue",
@@ -260,6 +266,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
             <div class="lg:order-2 relative isolate" data-reveal="left">
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-code-craft** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
                         "**A1 (dialog selection)**",
@@ -295,6 +302,7 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
             <div class="lg:order-2 relative isolate" data-reveal="left">
                 <Terminal
                     prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-sync-reconcile** **--source** SPEC **--target** CODE,DOCS"
                     ]}

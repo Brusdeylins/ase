@@ -5,10 +5,11 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-/*  base layout for the ASE site: dark-by-default <html>, SEO head, a floating
-    header with a scroll-progress bar, a footer, and a back-to-top button with
-    a scroll-progress ring. The scroll-reveal IntersectionObserver and the
-    scroll-progress logic are vendored and adapted from Astro Rocket (MIT).  */
+/*  base layout for every page of the ASE site: dark-by-default <html>, SEO
+    head, a floating header with a scroll-progress bar, a footer, and a
+    back-to-top button with a scroll-progress ring. The scroll-reveal
+    IntersectionObserver and the scroll-progress logic are vendored and adapted
+    from Astro Rocket (MIT).  */
 
 import                    "../styles/theme.css"
 import { site }      from "../data/site.ts"
@@ -24,17 +25,22 @@ import ProgressRing  from "../components/Widget-Progress-Ring.astro"
 import Progress      from "../components/Feature-Progress.astro"
 import ClipboardCopy from "../components/Feature-Clipboard-Copy.astro"
 import ScrollReveal  from "../components/Feature-Scroll-Reveal.astro"
-import ScrollSpy     from "../components/Feature-Scroll-Spy.astro"
 import ExternalLinks from "../components/Feature-External-Links.astro"
 
 interface Props {
-    title?:       string
-    description?: string
+    title?:       string   /*  page title, prefixed onto the site title      */
+    description?: string   /*  page meta description                         */
+    pad?:         boolean  /*  pad <main> clear of the fixed header/CTA bar  */
 }
 
-const { title, description } = Astro.props
+const { title, description, pad } = Astro.props
 
-const pageTitle = title ?? site.title
+/*  the hero page brings its own top and bottom spacing, while every content
+    page has to be pushed clear of the fixed header (by the very offset the
+    former section anchors used) and of the sticky install bar.  */
+const mainClass = pad === true ? "pt-20 pb-24" : undefined
+
+const pageTitle = title !== undefined ? `${title} — ${site.title}` : site.title
 const pageDesc  = description ?? site.description
 const canonical = new URL(Astro.url.pathname, Astro.site).href
 ---
@@ -62,7 +68,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href
     <body>
         <PageHeader/>
 
-        <main>
+        <main class={mainClass}>
             <slot/>
         </main>
 
@@ -79,7 +85,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href
         <Progress/>
 
         <ScrollReveal/>
-        <ScrollSpy/>
         <ExternalLinks/>
 
         <ClipboardCopy/>

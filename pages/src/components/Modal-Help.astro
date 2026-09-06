@@ -289,7 +289,7 @@ for (const group of skillGroups)
         /*  the URL fragment "#help/<skill-id>" is the single source of truth
             for the shown man-page, which makes it shareable, bookmarkable, and
             leavable via the browser's back button. Its "/" separator keeps such
-            a route distinct from the plain section anchors ("#usage", "#setup",
+            a route distinct from the plain section ids ("#usage", "#setup",
             ...), so it never scroll-jumps the page behind the modal.  */
         const ROUTE = /^#help\/([a-z0-9_-]+)$/
 

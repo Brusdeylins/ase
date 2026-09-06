@@ -1,0 +1,19 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Setup" page: the prerequisites, the install/update/uninstall commands,
+    and the ASE configuration parameters.  */
+
+import BaseLayout   from "../layouts/BaseLayout.astro"
+import SectionSetup from "../components/Section-Setup.astro"
+import { navItem }  from "../data/nav.ts"
+
+const page = navItem("/setup/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <SectionSetup/>
+</BaseLayout>

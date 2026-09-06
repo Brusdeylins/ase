@@ -165,9 +165,10 @@ html {
         Chrome and Firefox.  */
     font-size: 20px;
     scroll-behavior: smooth;
-    /*  offset anchor jumps (nav links) by the height of the fixed header
-        plus a little breathing room, so a section's headline lands below
-        the header instead of being hidden underneath it.  */
+    /*  offset in-page anchor jumps by the height of the fixed header plus a
+        little breathing room, so a section's headline lands below the header
+        instead of being hidden underneath it. The same offset is applied as
+        the top padding of <main> in BaseLayout.  */
     scroll-padding-top: 5rem;
     color-scheme: dark;
     background: var(--background);
@@ -190,10 +191,30 @@ body {
     line-height: 1.3;
     -webkit-font-smoothing: antialiased;
     position: relative;
-    /*  also clip on the body: `overflow-x: hidden` on the root alone does not
-        reliably suppress horizontal touch panning on mobile when the body is
-        still `visible`, which let the decorative glows pan the page sideways.  */
-    overflow-x: clip;
+    /*  also clip on the body, and on both axes: `overflow-x: hidden` on the
+        root alone does not reliably suppress horizontal touch panning on mobile
+        when the body is still `visible`, which let the decorative glows pan the
+        page sideways. The glows bleed just as far vertically (the "text"
+        variant is 260% of its container tall), where the overshoot below the
+        last section would otherwise extend the scrollable area past the footer
+        into empty space.  */
+    overflow: clip;
+    /*  sticky footer: stack the page vertically over at least one full
+        viewport, so the growing <main> below pushes the footer down onto the
+        bottom edge instead of leaving it dangling right after short content.
+        The fixed header, modals, and bars are out of flow and hence untouched.
+        `dvh` follows the retracting mobile browser toolbars; the preceding
+        `vh` is the fallback for the few engines still lacking it.  */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/*  the content area absorbs all the leftover vertical space of the body (see
+    the sticky footer above), while never shrinking below its own content.  */
+main {
+    flex: 1 0 auto;
 }
 
 h1, h2, h3 {

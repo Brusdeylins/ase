@@ -30,24 +30,26 @@ interface Props {
     prefix?:   string
     title?:    string
     copy?:     boolean
-    help?:     boolean
+    helpPage?: string
     class?:    string
 }
 
-const { commands = [], tabs, prefix = "Terminal", title = "", copy = false, help = false, class: className = "" } = Astro.props
+const { commands = [], tabs, prefix = "Terminal", title = "", copy = false, helpPage, class: className = "" } = Astro.props
 
 /*  normalize both content variants into a uniform panel list: either the
     caller-supplied tabs or a single unlabeled panel from `commands`  */
 const panels = tabs ?? [ { label: "", commands } ]
 
 /*  split a command into runs, carrying per run the tint class it is rendered
-    with (empty for the plain rest). A **...** span lets callers explicitly
-    highlight arbitrary parts of a command, while a "[...]" placeholder is
-    dimmed to grey and rendered with a real ellipsis.  */
+    with (empty for the plain rest) and whether it is a **...** span. A **...**
+    span lets callers explicitly highlight arbitrary parts of a command -- and
+    is what `helpPage` turns into the man-page link -- while a "[...]"
+    placeholder is dimmed to grey and rendered with a real ellipsis.  */
 const tokenize = (cmd: string) =>
     cmd.split(/(\*\*[^*]*\*\*|\[\.\.\.\])/).filter((part) => part !== "").map((part) => ({
         text: /^\*\*[^*]*\*\*$/.test(part) ? part.slice(2, -2) : part === "[...]" ? "[…]" : part,
-        tint: /^\*\*[^*]*\*\*$/.test(part) ? "text-brand-400" : part === "[...]" ? "text-foreground-muted" : ""
+        tint: /^\*\*[^*]*\*\*$/.test(part) ? "text-brand-400" : part === "[...]" ? "text-foreground-muted" : "",
+        meta: /^\*\*[^*]*\*\*$/.test(part)
     }))
 
 /*  the raw command without the **...** highlight markers and with embedded
@@ -55,11 +57,15 @@ const tokenize = (cmd: string) =>
     single-line shell command.  */
 const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1").replace(/\n/g, " ")
 
-/*  the ASE skill id addressed by a command row: strip the leading "/" and drop
-    everything from the first option or argument onwards. Used only under the
-    `help` prop, where each row becomes a trigger for that skill's man page in
-    the help modal (wired globally by the Modal-Help component).  */
-const helpId = (cmd: string) => plain(cmd).replace(/^\//, "").split(/\s+/)[0]
+/*  the ASE skill id of a highlighted run, or "" if the run is not an ASE slash
+    command at all. Used only under the `helpPage` prop, where such a run links
+    to that skill's man page through the "#help/<skill-id>" deep link. Callers
+    also highlight options, dialog answers, and foreign commands like "/plan",
+    none of which have a man page -- hence the strict shape test. The help
+    modal sits in BaseLayout and hence exists on every page, so `helpPage` is
+    normally the route the terminal itself appears on: closing the man page
+    then returns the reader to the very page they came from.  */
+const skillId = (text: string) => (text.match(/^\/(ase-[a-z]+-[a-z]+)$/) ?? [ "", "" ])[1]
 ---
 <div class={className}>
     <div class="overflow-hidden rounded-xl border border-border-strong bg-background-elevated/60 text-[0.7875rem] leading-snug shadow-xl sm:text-[0.9rem]" data-terminal>
@@ -88,17 +94,21 @@ const helpId = (cmd: string) => plain(cmd).replace(/^\//, "").split(/\s+/)[0]
                 {panel.commands.map((cmd) => (
                     <div class="group flex items-start gap-3 font-mono tracking-[-0.03em]">
                         <span class="select-none text-brand-300">❯</span>
-                        <code
-                            class:list={[ "code-plain flex-1 text-foreground", help && "cursor-grab transition-colors hover:text-accent" ]}
-                            data-help-id={help ? helpId(cmd) : undefined}
-                        >{tokenize(cmd).map((t) => (
-                            t.text.split("\n").map((line, i) => (
+                        <code class="code-plain flex-1 text-foreground">{tokenize(cmd).map((t) => {
+                            const runs = t.text.split("\n").map((line, i) => (
                                 <>
                                     {i > 0 && <br/>}
                                     {t.tint ? <span class={t.tint}>{line}</span> : line}
                                 </>
                             ))
-                        ))}</code>
+                            /*  under `helpPage` a highlighted ASE command (and
+                                not its options and arguments) links to the man
+                                page of its skill on that page  */
+                            const id = helpPage !== undefined && t.meta ? skillId(t.text) : ""
+                            return id !== "" ?
+                                <a href={`${helpPage}#help/${id}`} class="term-help cursor-grab">{runs}</a> :
+                                runs
+                        })}</code>
                         {copy && (
                             <button
                                 type="button"
@@ -113,6 +123,22 @@ const helpId = (cmd: string) => plain(cmd).replace(/^\//, "").split(/\s+/)[0]
         ))}
     </div>
 </div>
+
+<style>
+    /*  the man-page link wrapped around a highlighted command: it must not
+        adopt the global link colour, which would override the command's own
+        tint, so it inherits the colour and marks the hover with a plain
+        underline instead. Being an unlayered, scoped rule, it outranks both
+        the global `a {}` rule and the layered Tailwind colour utilities.  */
+    .term-help {
+        color: inherit;
+        text-decoration: none;
+    }
+    .term-help:hover {
+        text-decoration: underline;
+        text-underline-offset: 0.2em;
+    }
+</style>
 
 {tabs && (
     /*  tab switching: one document-level delegated click handler (bound once,

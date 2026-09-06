@@ -1,0 +1,21 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Workflows" page: the operation modes as CLI transcripts, followed by
+    the day-in-the-life timeline putting them into a lived routine.  */
+
+import BaseLayout       from "../layouts/BaseLayout.astro"
+import SectionWorkflows from "../components/Section-Workflows.astro"
+import SectionDay       from "../components/Section-Day.astro"
+import { navItem }      from "../data/nav.ts"
+
+const page = navItem("/workflows/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <SectionWorkflows/>
+    <SectionDay/>
+</BaseLayout>

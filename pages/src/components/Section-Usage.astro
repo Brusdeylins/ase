@@ -11,8 +11,11 @@
 
 import SectionGlow     from "./Section-Glow.astro"
 import Terminal        from "./Widget-Terminal.astro"
+import Diagram         from "./Widget-Diagram.astro"
+import Annotation      from "./Widget-Annotation.astro"
 import { skillGroups } from "../data/skills.ts"
 import Compass         from "@lucide/astro/icons/compass"
+import Footprints      from "@lucide/astro/icons/footprints"
 
 /*  arrange the skill groups into the five catalog columns, where the
     last column stacks "Quick Mode" and "Sync Mode" vertically instead
@@ -25,17 +28,21 @@ const columns = [
     [ "Task Mode" ]
 ].map((labels) => labels.map((label) => skillGroups.find((group) => group.label === label)!))
 ---
-<section id="usage" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+<section id="usage" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header class="ase-section-head" data-reveal>
-        <h2 class="ase-h2">
+        <h2 class="ase-h2 relative inline-block">
+            <Annotation flat class="right-0 translate-x-1/4">
+                You bring the intent,<br/>
+                ASE brings the skills!
+            </Annotation>
             Quickly <span class="text-accent">Get Started</span>
         </h2>
         <p class="ase-lead ase-justify">
-            <b>ASE</b> is a comprehensive toolkit with 49 individual
-            skills and initially can be overhelming, as there is no
+            <b>ASE</b> is a comprehensive toolkit with 52 individual
+            skills and initially can be overhelming, as there <i>intentionally</i> is no
             pre-defined workflow with a fixed begin. Instead, <b>ASE</b>{" "}
-            keeps you in the driver's seat, but as a consequence and
-            intentionally you have to trigger the wished <b>ASE</b> actions yourself.
+            keeps you in the driver's seat, but as a consequence
+            for most tasks you have to at least trigger the wished <b>ASE</b> actions yourself.
             The following gives you a few hints on how to quickly get started.
         </p>
     </header>
@@ -61,14 +68,18 @@ const columns = [
                     Once you found the suitable skill, either excecute the
                     proposed corresponding slash commands, or use the <b><code>ase-help-skill</code></b>
                     skill to get a catalog of all available skills or show the
-                    manual page of a particular skill to find our more about the skill.
-                    Or alternatively, read the manual pages below.
+                    manual page of an individual skill to find out more about the skill.
+                    Or alternatively, read the manual pages directly below.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
                 <SectionGlow variant="text" side="right"/>
+                {/*  the man page opens on this very page, so closing it
+                     returns the reader to the terminal they came from  */}
                 <Terminal
                     prefix="Claude Code"
+                    title="Example Prompts"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-help-intent** create a \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
                         "**/ase-help-intent** find 10 new clever ideas for Software Engineering skills",
@@ -78,12 +89,38 @@ const columns = [
                 <Terminal
                     class="mt-8"
                     prefix="Claude Code"
+                    title="Example Prompts"
+                    helpPage={Astro.url.pathname}
                     commands={[
                         "**/ase-help-skill**",
                         "**/ase-help-skill** ase-meta-brainstorm",
                         "**/ase-help-skill** ase-code-edit"
                     ]}
                 />
+            </div>
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="relative isolate lg:order-2" data-reveal="left">
+                <SectionGlow variant="text" side="right" />
+                <p class="ase-eyebrow">Skills &amp; Workflows</p>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Footprints class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Step-Wise Driving,<br/>You In The Loop</span>
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    Within the above Agentic AI Levels, <b>ASE</b> provides its
+                    various skills to let the engineer trigger the
+                    next steps. Some skills are stand-alone, others
+                    are part of a particular operation mode that
+                    chains skills into a repeatable workflow.
+                    The diagram to the left gives you a compact
+                    overview of the skills and their intended
+                    operation modes.
+                </p>
+            </div>
+            <div class="lg:order-1" data-reveal="right">
+                <Diagram src="/assets/workflow.svg" label="ASE usage workflow diagram" />
             </div>
         </div>
 

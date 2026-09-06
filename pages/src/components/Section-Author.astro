@@ -9,13 +9,18 @@
     two-column row.  */
 
 import SectionGlow from "./Section-Glow.astro"
+import Annotation  from "./Widget-Annotation.astro"
 import LogoRSE     from "./Widget-Logo-RSE.astro"
 ---
-<section id="author" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+<section id="author" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <SectionGlow variant="section" side="left"/>
 
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
+            <Annotation flat class="hidden sm:block right-0 -translate-x-2/3">
+                Who is responsible?<br/>
+                What backs ASE?
+            </Annotation>
             About the <span class="text-accent">Author</span>
         </h2>
         <p class="ase-lead ase-justify">

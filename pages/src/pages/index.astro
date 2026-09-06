@@ -5,35 +5,17 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
+/*  the landing page: the full-viewport hero, the practitioner testimonials,
+    and the fit check, from which the site header leads on into the individual
+    content pages.  */
+
 import BaseLayout          from "../layouts/BaseLayout.astro"
 import Hero                from "../components/Section-Title.astro"
-import SectionFit          from "../components/Section-Fit.astro"
-import SectionHighlights   from "../components/Section-Highlights.astro"
 import SectionTestimonials from "../components/Section-Testimonials.astro"
-import SectionSetup        from "../components/Section-Setup.astro"
-import SectionUsage        from "../components/Section-Usage.astro"
-import SectionPhilosophy   from "../components/Section-Philosophy.astro"
-import SectionWorkflows    from "../components/Section-Workflows.astro"
-import SectionDay          from "../components/Section-Day.astro"
-import SectionDesign       from "../components/Section-Design.astro"
-import SectionArchitecture from "../components/Section-Architecture.astro"
-import SectionCompat       from "../components/Section-Compat.astro"
-import SectionAuthor       from "../components/Section-Author.astro"
-import SectionThanks       from "../components/Section-Thanks.astro"
+import SectionFit          from "../components/Section-Fit.astro"
 ---
 <BaseLayout>
     <Hero/>
-    <SectionFit/>
-    <SectionHighlights/>
     <SectionTestimonials/>
-    <SectionSetup/>
-    <SectionUsage/>
-    <SectionPhilosophy/>
-    <SectionWorkflows/>
-    <SectionDay/>
-    <SectionDesign/>
-    <SectionArchitecture/>
-    <SectionCompat/>
-    <SectionAuthor/>
-    <SectionThanks/>
+    <SectionFit/>
 </BaseLayout>

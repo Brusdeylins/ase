@@ -1,0 +1,19 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Architecture" page: the hooks, skills, MCP service, and CLI building
+    blocks of ASE.  */
+
+import BaseLayout          from "../layouts/BaseLayout.astro"
+import SectionArchitecture from "../components/Section-Architecture.astro"
+import { navItem }         from "../data/nav.ts"
+
+const page = navItem("/architecture/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <SectionArchitecture/>
+</BaseLayout>

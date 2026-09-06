@@ -10,6 +10,7 @@
     frame), plus footnotes and an explanatory NOTE callout.  */
 
 import SectionGlow from "./Section-Glow.astro"
+import Annotation  from "./Widget-Annotation.astro"
 
 /*  the two compatibility matrices: each row carries the product name (with an
     optional dagger marker), version, compatibility percentage, and the ASE
@@ -21,7 +22,7 @@ const harnesses = [
 ]
 
 const llms = [
-    { name: "Anthropic Claude Fable",    version: "5",     compat: "100%", goal: "primary",   primary: true,  mark: ""  },
+    { name: "Anthropic Claude Fable",    version: "5.1",   compat: "100%", goal: "primary",   primary: true,  mark: ""  },
     { name: "Anthropic Claude Opus",     version: "5",     compat: "100%", goal: "primary",   primary: true,  mark: ""  },
     { name: "Anthropic Claude Sonnet",   version: "5",     compat: "95%",  goal: "secondary", primary: false, mark: ""  },
     { name: "Anthropic Claude Haiku",    version: "4.5",   compat: "70%",  goal: "none",      primary: false, mark: ""  },
@@ -29,11 +30,16 @@ const llms = [
     { name: "Gemini Flash",              version: "3.5",   compat: "70%",  goal: "none",      primary: false, mark: ""  }
 ]
 ---
-<section id="compat" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+<section id="compat" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <SectionGlow variant="section" side="right" />
 
     <header class="ase-section-head" data-reveal>
-        <h2 class="ase-h2">
+        <h2 class="ase-h2 relative inline-block">
+            <Annotation flat class="right-0 translate-x-1/4">
+                Wanna know if your<br/>
+                tool and LLM combo<br/>
+                is supported?
+            </Annotation>
             Agent Tool and LLM <span class="text-accent">Compatibility</span>
         </h2>
         <p class="ase-lead ase-justify">

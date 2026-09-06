@@ -40,6 +40,18 @@
         will-change: opacity, transform;
     }
 
+    /*  keep the revealing elements out of the browser's scroll anchoring:
+        Chrome measures anchor candidates including their transform, so the
+        moment the observer above swaps a reveal offset for "none", the
+        anchored element appears to jump and the browser compensates by
+        scrolling the document by that very offset. Anchoring is active right
+        after a reload (but not on a fresh navigation at the top), which made
+        such a page come back at a non-zero scroll position.  */
+    [data-reveal],
+    [data-reveal-children] > * {
+        overflow-anchor: none;
+    }
+
     [data-reveal="down"]  { transform: translateY(-96px); }
     [data-reveal="left"]  { transform: translateX(96px); }
     [data-reveal="right"] { transform: translateX(-96px); }

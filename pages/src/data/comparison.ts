@@ -91,7 +91,7 @@ export const comparison: Comparison[] = [
         native:   "**Iteratively** write a **modular** spec in **ad-hoc** Markdown, " +
                   "and accept that no overview diagrams and no real export formats exist.",
         ase:      "**Iteratively** write a modular spec in **strict**, **pre-defined** Markdown, " +
-                  "then run `/ase-spec-export` to get HTML and PDF exports with automatically generated diagrams."
+                  "then run `/ase-sync-export` to get HTML and PDF exports with automatically generated diagrams."
     },
     {
         topic:    "Spec-Driven<br/>Development",

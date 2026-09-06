@@ -11,8 +11,8 @@
     bar's visibility (#sticky-cta). Each element is optional — the logic no-ops
     for any it doesn't find — so this can sit alongside either, both, or neither
     presentational component. The Sticky-CTA visibility additionally consults
-    the #setup section and the #page-footer, standing the bar down while either
-    of them is on screen.
+    the #setup section (present on the Setup page only) and the #page-footer,
+    standing the bar down while either of them is on screen.
 
     Throttled via requestAnimationFrame; vendored/adapted from Astro Rocket.  */
 ---
@@ -51,7 +51,7 @@
             if (cta && !cta.isConnected)
                 cta = null
             if (cta) {
-                /*  the sticky install bar is shown throughout the page, but
+                /*  the sticky install bar is shown throughout the site, but
                     stands down while the Setup section is on screen (where the
                     very same command is already shown in its terminal boxes)
                     and once the footer is reached (where it would optically

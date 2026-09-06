@@ -7,13 +7,13 @@
 
 /*  sticky install call-to-action: a fixed bar along the bottom viewport edge
     carrying the one-line install command, a copy button (wired globally by the
-    Clipboard-Copy component in BaseLayout), a shortcut into the Setup section,
-    and a dismiss button. Its visibility is driven by the shared scroll logic in
+    Clipboard-Copy component in BaseLayout), a shortcut to the Setup page, and
+    a dismiss button. Its visibility is driven by the shared scroll logic in
     Progress.astro, which must also be on the page.  */
 
 import LogoASE from "./Widget-Logo-ASE.astro"
 
-/*  the one-line install command — the two rows of the Setup section's "Claude"
+/*  the one-line install command — the two rows of the Setup page's "Claude"
     tab chained into a single copy-and-paste line  */
 const command = "**npm** install -g @rse/ase && **ase** setup install"
 
@@ -38,7 +38,7 @@ const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1")
 >
     <div class="mx-auto flex max-w-4xl items-center gap-3 px-6 py-2 text-[0.7875rem] leading-snug sm:text-[0.9rem]">
         {/*  leading brand block: the ASE logo plus an "Easy Setup:" label
-             echoing the heading of the Setup section this bar shortcuts to.
+             echoing the heading of the Setup page this bar shortcuts to.
              Both it and the prompt glyph are decorative, so they are dropped
              below the `sm` breakpoint, where the command needs every pixel.  */}
         <span class="hidden shrink-0 items-center gap-2 sm:flex">
@@ -56,9 +56,9 @@ const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1")
             aria-label="Copy command"
         >Copy ⧉</button>
         <a
-            href="#setup"
+            href="/setup/"
             class="cta-btn hidden shrink-0 rounded-md border border-foreground-muted/60 px-2 py-1 text-xs transition hover:border-foreground sm:inline-block"
-        >Setup ↓</a>
+        >Setup →</a>
         <button
             id="sticky-cta-dismiss"
             type="button"

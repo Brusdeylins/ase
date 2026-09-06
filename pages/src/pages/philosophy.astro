@@ -1,0 +1,19 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Philosophy" page: the Agentic AI Level model, the split into skills
+    and workflows, and the operation modes built on top of them.  */
+
+import BaseLayout        from "../layouts/BaseLayout.astro"
+import SectionPhilosophy from "../components/Section-Philosophy.astro"
+import { navItem }       from "../data/nav.ts"
+
+const page = navItem("/philosophy/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <SectionPhilosophy/>
+</BaseLayout>

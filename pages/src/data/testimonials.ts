@@ -24,24 +24,35 @@ export type Testimonial = {
 }
 
 export const testimonials: Testimonial[] = [
-    {
-        quote: "After 40 years of traditional software development, " +
-               "ASE finally allowed me to make peace with todays Agentic AI Coding era.",
+    {   quote: "ASE keeps me in the driver's seat while " +
+               "the agent does the chores.",
         name:  "Dr. Ralf S. Engelschall"
     },
     {   quote: "Thanks to Agentic AI Coding, developing software is fun again. "+
                "ASE is a great added bonus here!",
         name:  "Matthias Brusdeylins"
     },
+    {
+        quote: "After 40 years of traditional software development, " +
+               "ASE finally allowed me to make peace with todays Agentic AI Coding era.",
+        name:  "Dr. Ralf S. Engelschall"
+    },
     {   quote: "Finally, I get to work with a professional again. " +
                "ASE is that long-awaited professional.",
         name:  "Jochen Hörtreiter"
+    },
+    {
+        quote: "I put all my methodology know-how into ASE. " +
+               "Now it's your turn to leverage from it.",
+        name:  "Dr. Ralf S. Engelschall"
     },
     {   quote: "I use ASE in GitHub Copilot CLI and here especially the various " +
                "non-coding skills. They work great, even for consulting tasks!",
         name:  "Zoltan Ruzman"
     },
-    {   quote: "ASE keeps me in the driver's seat while the agent does the chores."
+    {   quote: "ASE is the swiss army knife for my " +
+               "daily tasks performed in Claude Code!",
+        name:  "Maximilian Marsch"
     }
 ]
 

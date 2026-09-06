@@ -1,0 +1,19 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Design" page: the assumptions, the design decisions derived from them,
+    and the methodology-provenance strip backing them.  */
+
+import BaseLayout    from "../layouts/BaseLayout.astro"
+import SectionDesign from "../components/Section-Design.astro"
+import { navItem }   from "../data/nav.ts"
+
+const page = navItem("/design/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <SectionDesign/>
+</BaseLayout>

@@ -1,0 +1,18 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Usage" page: the skill catalog with its man-page modal.  */
+
+import BaseLayout   from "../layouts/BaseLayout.astro"
+import SectionUsage from "../components/Section-Usage.astro"
+import { navItem }  from "../data/nav.ts"
+
+const page = navItem("/usage/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <SectionUsage/>
+</BaseLayout>

@@ -95,6 +95,16 @@ export default defineConfig({
     output: "static",
     outDir: "dst",
     site:   process.env.SITE_URL ?? "https://ase.tools",
+
+    /*  every page is emitted as "<route>/index.html" (the default "directory"
+        build format) and hence canonically addressed with a trailing slash.
+        Pinning the route matching to "always" keeps the dev and preview servers
+        from also answering the slash-less variant, so a missing slash surfaces
+        locally instead of only in production, where GitHub Pages redirects
+        "/design" to "/design/" with a 301 on its own (prerendered pages are
+        redirected by the hosting platform, not by Astro).  */
+    trailingSlash: "always",
+
     build: {
         inlineStylesheets: "never"
     },

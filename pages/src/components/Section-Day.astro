@@ -200,12 +200,9 @@ const inline = (text: string) => text
             A Day in the <span class="text-accent">Engineering Life</span>
         </h2>
         <p class="ase-lead ase-justify">
-            Features are easy to list and hard to imagine. So here is
-            an excerpt from the <b>ASE</b> feature set again &mdash;
-            this time as the working day of a single Software Engineer,
-            from the first plan of the morning to the last commit of
-            the evening. Click any command to open the man-page of its
-            skill.
+            Here is another excerpt from the <b>ASE</b> feature set again &mdash; this time as a fictive
+            working day of a single Software Engineer, from the first plan of the morning to the
+            last commit of the evening. Click any command to open the man-page of its skill.
         </p>
     </header>
 
@@ -241,7 +238,7 @@ const inline = (text: string) => text
                         </h3>
                         <p class="mt-3 text-foreground-secondary ase-justify" set:html={inline(moment.body)} />
                     </div>
-                    <Terminal class="mt-4 lg:mt-28" prefix="Claude Code" commands={moment.skills} help/>
+                    <Terminal class="mt-4 lg:mt-28" prefix="Claude Code" commands={moment.skills} helpPage="/workflows/"/>
                 </li>
             )
         })}

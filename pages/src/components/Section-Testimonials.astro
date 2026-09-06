@@ -22,28 +22,28 @@ import {
 }                       from "astro-swiper"
 ---
 {testimonials.length > 0 && (
-<section id="testimonials" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+<section id="testimonials" class="relative isolate mx-auto max-w-4xl px-6 py-12">
     <SectionGlow variant="section" side="left"/>
 
     <header class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
-            Voices from the <span class="text-accent">Practitioners</span>
+            Voices from <span class="text-accent">Practitioners</span>
         </h2>
         <p class="ase-lead ase-justify">
-            Beyond the feature list: how <b>ASE</b> holds up in the daily work
+            How <b>ASE</b> holds up in the daily work
             of the <b>Software Developers</b> and <b>Software Architects</b>{" "}
             who fold it into their own engineering practice &mdash; in their own words.
         </p>
     </header>
 
-    {/*  the pull-quote carousel: one testimonial at a time, auto-rotating
+    {/* the pull-quote carousel: one testimonial at a time, auto-rotating
         (but only while the section is actually on screen), navigable by the
         side arrows, the keyboard, and the bullets below.  */}
-    {/*  the carousel sits in the same framed box as the other content blocks
+    {/* the carousel sits in the same framed box as the other content blocks
         of the page and is kept noticeably narrower than the section itself, so
         the pull quotes wrap into several short lines instead of stretching
         across the full content width.  */}
-    <div class="mx-auto mt-12 max-w-xl overflow-hidden rounded-xl border border-border-strong p-3 shadow-xl sm:p-4" data-reveal>
+    <div class="mx-auto mt-12 max-w-xl overflow-hidden rounded-xl border border-border-strong p-3 shadow-xl sm:p-4 bg-background-elevated/60" data-reveal>
         <Swiper
             class="testimonials"
             options={{
@@ -66,7 +66,7 @@ import {
                             </p>
                             {testimonial.name && (
                                 <footer class="mt-2 text-sm sm:text-base">
-                                    <span class="text-foreground-secondary">&mdash; {testimonial.name}</span>
+                                    <span class="text-foreground-muted">&mdash; {testimonial.name}</span>
                                 </footer>
                             )}
                         </blockquote>

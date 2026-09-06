@@ -17,9 +17,14 @@ import Signal      from "@lucide/astro/icons/signal"
 import Footprints  from "@lucide/astro/icons/footprints"
 import Workflow    from "@lucide/astro/icons/workflow"
 ---
-<section id="philosophy" class="relative isolate mx-auto max-w-4xl px-6 py-8">
+<section id="philosophy" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header class="ase-section-head" data-reveal>
-        <h2 class="ase-h2">
+        <h2 class="ase-h2 relative inline-block">
+            <Annotation flat class="right-0 translate-x-1/4">
+                Delegate your work,<br/>
+                not your<br/>
+                accountability!
+            </Annotation>
             Understand Our <span class="text-accent">Philosophy</span>
         </h2>
         <p class="ase-lead ase-justify">
@@ -118,19 +123,6 @@ import Workflow    from "@lucide/astro/icons/workflow"
                     are part of a particular operation mode that
                     chains skills into a repeatable workflow.
                 </p>
-                <p class="text-foreground-secondary ase-indent-p ase-justify">
-                    Each skill is named <b><code>/ase-xxx-xxx</code></b>{" "}
-                    and most of those skills even have useful Unix-style options
-                    for adjusting their behavior. Click on the skill name
-                    in the following table to open its Unix-style man-page
-                    in an in-page popup or run <b><code>/ase-xxx-xxx --help</code></b> at run-time.
-                </p>
-                <p class="text-foreground-secondary ase-indent-p ase-justify">
-                    In case you are lost with the <b>ASE</b> skills, just
-                    tell <b><code>/ase-help-intent</code></b> your intent and it will
-                    tell you what the corresponding <b>ASE</b> skill and its
-                    options are!
-                </p>
             </div>
             <div class="lg:order-1" data-reveal="right">
                 <Diagram src="/assets/workflow.svg" label="ASE usage workflow diagram" />
@@ -162,7 +154,7 @@ import Workflow    from "@lucide/astro/icons/workflow"
                     </p>
 
                     <p class="text-foreground-secondary ase-indent-p ase-justify">
-                    <b>Task Mode</b>: The more advanced variant of the
+                    <b>Task Mode</b>: The more advanced variant of the{" "}
                     <i>Plan Mode</i>, where the user initially
                     crafts and then continuously refines a task plan.
                     The task plan has a fixed format and is persisted

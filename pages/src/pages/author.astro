@@ -1,0 +1,21 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Author" page: the author portrait and bio, followed by the
+    contributors, the supporting organizations, and the sibling projects.  */
+
+import BaseLayout    from "../layouts/BaseLayout.astro"
+import SectionAuthor from "../components/Section-Author.astro"
+import SectionThanks from "../components/Section-Thanks.astro"
+import { navItem }   from "../data/nav.ts"
+
+const page = navItem("/author/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <SectionAuthor/>
+    <SectionThanks/>
+</BaseLayout>
