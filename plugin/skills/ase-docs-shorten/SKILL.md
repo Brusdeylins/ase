@@ -301,16 +301,32 @@ than the user asked for.
             The project source artifacts are classified as a *grey box*,
             so the user does *not* want the full artifact internals
             surfaced: *suppress* the full unified diff and instead show
-            only a *condensed* one-line representation. Determine
-            <old-snippet/> as the *single-line* collapse of <old-text/>
-            (join its lines with ` ⏎ `) and <new-snippet/> as the same
-            collapse of <new-text/> (or `∅` when <new-text/> is empty
-            for a pure removal). Then report the shortening with the
-            following <template/>:
+            only a *condensed* two-line hunk. Unlike a proofreading
+            correction or a refinement, a shortening block spans whole
+            paragraphs, so both sides *MUST* be *normalized* and
+            *elided* onto *one* line each -- an unelided side-by-side
+            collapse exceeds the terminal width and wraps into an
+            unreadable run.
+
+            Determine <old-snippet/> from <old-text/> by replacing every
+            run of whitespace (line breaks included) with a *single*
+            space and trimming the result, then -- only if it is longer
+            than `100` characters -- keeping just its *first* `60` and
+            *last* `30` characters, joined by ` […] `. Determine
+            <new-snippet/> the same way from <new-text/>, or set it to
+            `∅` when <new-text/> is empty for a pure removal. Then
+            report the shortening with the following <template/>,
+            emitting both snippet lines verbatim (no wrapping, no extra
+            blank lines):
 
             <template>
 
-            <ase-tpl-bullet-normal/> **<stage/> SHORTENING** (**<block-before/>** → **<block-after/>** <unit/>, **-<block-percent/>%**): `<old-snippet/>` → `<new-snippet/>`
+            <ase-tpl-bullet-normal/> **<stage/> SHORTENING** (**<block-before/>** → **<block-after/>** <unit/>, **-<block-percent/>%**):
+
+            ```diff
+            - <old-snippet/>
+            + <new-snippet/>
+            ```
 
             </template>
 
