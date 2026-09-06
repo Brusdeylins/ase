@@ -40,6 +40,24 @@ export const comparison: Comparison[] = [
                   "`/ase-meta-steelman`, turning a fuzzy question into a **defensible verdict**."
     },
     {
+        topic:    "Writing<br/>Articles",
+        manually: "**Brainstorm** the ideas of the magazine article alone and " +
+                  "**stress-test** your own arguments in your head.",
+        native:   "Tell the agent to **ad-hoc** assist in brainstorming and " +
+                  "strengthening your arguments.",
+        ase:      "Run `/ase-meta-brainstorm` to diverge, cluster, and **distill** ideas, then " +
+                  "`/ase-meta-diaboli` and `/ase-meta-steelman` to **challenge** and **strengthen** your arguments."
+    },
+    {
+        topic:    "Correcting<br/>Articles",
+        manually: "*Trim*, *polish*, and *proofread* every sentence of the magazine article " +
+                  "manually.",
+        native:   "Let the agent **ad-hoc** check and correct the article " +
+                  "in a single, unbounded pass.",
+        ase:      "Run `/ase-docs-shorten` to hit a **target length**, `/ase-docs-refine` to tighten the " +
+                  "**wording**, and `/ase-docs-proofread` to catch the remaining **spelling and grammar** errors."
+    },
+    {
         topic:    "Analyzing<br/>Problems",
         manually: "**Browse** the code and bisect with `console.log` " +
                   "until the bug surfaces.",
@@ -54,8 +72,8 @@ export const comparison: Comparison[] = [
                   "and **hope** it's right first time.",
         native:   "Tell the agent to \"craft this\" and get a **plausible but " +
                   "unbounded** change set to review after the fact.",
-        ase:      "Run `/ase-code-craft` for a **funnel- and plan-driven** build, " +
-                  "where the agent **grills you and your plan** to kill underspecified aspects."
+        ase:      "Run `/ase-code-edit` for direct or `/ase-code-craft` for a **funnel- and plan-driven** crafting process, " +
+                  "where the agent **grills you and your intentions** to kill underspecified aspects."
     },
     {
         topic:    "Refactoring<br/>Code",
