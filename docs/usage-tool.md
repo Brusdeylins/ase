@@ -361,6 +361,24 @@ uninstalling the *ASE* tool and its companion *Anthropic Claude Code CLI* plugin
   `copilot` or `codex` fails with an error, since those agent tools have
   no scope concept.
 
+- `ase setup status`:
+  Report where *ASE* is currently registered with the agent tool,
+  rendered as a table of `KIND`, `ID`, `SCOPE`, and `STATUS`. The
+  `PLUGIN` row shows the registration scope and the enabled/disabled
+  state of the *ASE* plugin (one row per registration, or a single `not
+  installed` row); one `MCP` row per *currently registered* server of
+  the `ase setup mcp list` registry shows its registration scope, with
+  unregistered servers omitted entirely; and one `STATUSLINE` row per
+  settings file carrying a `statusLine` entry shows whether it is
+  `activated` (owned by *ASE*) or `foreign` (hand-crafted). The command
+  is purely read-only and always exits with status 0, so a missing
+  registration is reported rather than signalled through the exit code.
+  It takes no `--scope`, since it deliberately reports *all* scopes at
+  once -- that is exactly what makes an unintentionally leaked
+  registration visible. Scope information is only available for `--tool
+  claude` (and, for MCP servers, `--tool copilot`); everywhere else the
+  scope is reported as `(n/a)`.
+
 - `ase setup mcp`:
   Entry point group for managing the pre-defined *foreign MCP servers*
   that *ASE* skills can *optionally* leverage. Without a subcommand,

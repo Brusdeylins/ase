@@ -104,6 +104,7 @@ ase setup update                 # update     tool and plugin
 ase setup uninstall              # uninstall  tool and plugin
 ase setup enable                 # enable     plugin (without uninstalling)
 ase setup disable                # disable    plugin (without uninstalling)
+ase setup status                 # report     plugin, MCP server, and statusline registrations
 ase setup mcp list               # list       pre-defined foreign MCP servers
 ase setup mcp activate           # activate   foreign MCP servers (keys in ASE_MCP_KEY_<ID>)
 ase setup mcp deactivate         # deactivate foreign MCP servers
@@ -114,6 +115,8 @@ ase setup statusline deactivate  # deactivate ASE statusline
 All `ase setup` sub-commands -- except `ase setup mcp list` -- accept
 `--tool claude|copilot|codex` (default: `claude`, or `$ASE_TOOL`) and,
 for `claude` only, `--scope user|project|local` (default: `user`).
+The exception is `ase setup status`, which reports *all* scopes at once
+and hence takes no `--scope`.
 
 ## CLI Commands
 

@@ -5,6 +5,14 @@ ChangeLog
 0.9.67 (2026-09-06)
 -------------------
 
+-   FEATURE [code]: Registration status reporting
+    Added the `ase setup status` command (`ase-setup.ts`), which reports across
+    *all* scopes at once the registration scope and enabled/disabled state of the
+    *ASE* plugin, the registration scope of every currently registered MCP server
+    of the `mcpServers` registry, and the settings files carrying an `activated`
+    or `foreign` `statusLine` entry, so an unintentionally leaked registration
+    becomes visible without probing `claude mcp get` per server by hand.
+
 -   FEATURE [docs]: Sibling projects on the website
     Added a new "See Also the Sibling Projects" section to
     `pages/src/components/Section-Thanks.astro`, listing *SpecBook*,

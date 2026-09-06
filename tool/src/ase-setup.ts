@@ -304,6 +304,96 @@ export default class SetupCommand {
         return 0
     }
 
+    /*  handler for "ase setup status"  */
+    private async doStatus (tool: Tool): Promise<number> {
+        const spec = toolSpecs[tool]
+        await this.ensureTool(spec.cli)
+        this.log.write("info", `setup: status: probing ASE registrations for ${spec.label}`)
+        const table = new Table({
+            head:      [ "KIND", "ID", "SCOPE", "STATUS" ],
+            colWidths: [ 13, 34, 10, 16 ],
+            wordWrap:  true,
+            chars:     { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
+            style:     { head: [ "blue" ] }
+        })
+
+        /*  report the ASE plugin registrations, with an absent plugin
+            still rendered as an explicit row instead of being omitted  */
+        const plugins = await this.pluginStatus(tool)
+        if (plugins.length === 0)
+            table.push([ "PLUGIN", chalk.bold("ase@ase"), "(n/a)", "not installed" ])
+        else
+            for (const plugin of plugins)
+                table.push([ "PLUGIN", chalk.bold("ase@ase"), plugin.scope, plugin.status ])
+
+        /*  report the registered MCP servers, probed concurrently and
+            silently skipping every server which is not registered at all  */
+        const scopes = await Promise.all(this.mcpServers.map((handle) =>
+            this.mcpScope(tool, handle.server)))
+        for (let i = 0; i < this.mcpServers.length; i++) {
+            const scope = scopes[i]
+            if (scope === undefined)
+                continue
+            table.push([ "MCP", chalk.bold(this.mcpServers[i].server), scope, "registered" ])
+        }
+
+        /*  report the ASE statusline registrations  */
+        for (const statusline of await this.statuslineStatus(tool))
+            table.push([ "STATUSLINE", chalk.bold(statusline.file), statusline.scope, statusline.status ])
+
+        process.stdout.write(`${table.toString()}\n`)
+        return 0
+    }
+
+    /*  probe the ASE plugin registrations by scraping the human-readable
+        output of "<cli> plugin list", whose format differs per tool  */
+    private async pluginStatus (tool: Tool): Promise<{ scope: string, status: string }[]> {
+        const result = await execa(toolSpecs[tool].cli, [ "plugin", "list" ],
+            { stdio: "pipe", reject: false })
+        const lines = (result.stdout ?? "").split(/\r?\n/)
+        const entries: { scope: string, status: string }[] = []
+        if (tool === "claude") {
+            /*  the Anthropic Claude Code CLI renders one indented block per
+                plugin, carrying an explicit "Scope:" and "Status:" field  */
+            for (let i = 0; i < lines.length; i++) {
+                if (!/(^|\s)ase@ase\s*$/.test(lines[i]))
+                    continue
+                let scope  = "(unknown)"
+                let status = "(unknown)"
+                for (let j = i + 1; j < lines.length; j++) {
+                    const m = lines[j].match(/^\s+(\w+):\s*(.+?)\s*$/)
+                    if (m === null)
+                        break
+
+                    /*  strip the leading "✔"/"✘" glyph of the status value  */
+                    const value = m[2].replace(/^[^\p{L}\p{N}]+/u, "")
+                    if (m[1] === "Scope")
+                        scope = value
+                    else if (m[1] === "Status")
+                        status = value
+                }
+                entries.push({ scope, status })
+            }
+        }
+        else if (tool === "copilot") {
+            /*  the GitHub Copilot CLI renders a flat bullet list which
+                carries neither a scope nor an enabled/disabled state  */
+            for (const line of lines)
+                if (/(^|\s)ase@ase(\s|\(|$)/.test(line))
+                    entries.push({ scope: "(n/a)", status: "installed" })
+        }
+        else {
+            /*  the OpenAI Codex CLI renders a per-marketplace table whose
+                second column carries the combined installation status  */
+            for (const line of lines) {
+                const m = line.match(/^ase@ase\s+(not installed|installed(?:,\s*\w+)?)/)
+                if (m !== null && m[1] !== "not installed")
+                    entries.push({ scope: "(n/a)", status: m[1] })
+            }
+        }
+        return entries
+    }
+
     /*  handler for "ase setup mcp list"  */
     private async doMcpList (): Promise<number> {
         const table = new Table({
@@ -409,6 +499,22 @@ export default class SetupCommand {
         const result = await execa(toolSpecs[tool].cli, [ "mcp", "get", name ],
             { stdio: "ignore", reject: false })
         return result.exitCode === 0
+    }
+
+    /*  probe the registration scope of an MCP server by scraping the
+        human-readable output of "<cli> mcp get <name>"; returns "undefined"
+        for a server which is not registered with the tool at all  */
+    private async mcpScope (tool: Tool, name: string): Promise<string | undefined> {
+        const result = await execa(toolSpecs[tool].cli, [ "mcp", "get", name ],
+            { stdio: "pipe", reject: false })
+        if (result.exitCode !== 0)
+            return undefined
+
+        /*  the Anthropic Claude Code CLI reports "Scope: <scope> config (...)",
+            the GitHub Copilot CLI reports "Source: <scope>", and the
+            OpenAI Codex CLI reports no scope information at all  */
+        const m = (result.stdout ?? "").match(/^\s*(?:Scope|Source):\s*(\S+)/m)
+        return m !== null ? m[1].toLowerCase() : "(n/a)"
     }
 
     /*  register an MCP server with the tool, supporting both the "stdio"
@@ -908,6 +1014,37 @@ export default class SetupCommand {
         return 0
     }
 
+    /*  probe the ASE statusline registrations by inspecting the tool
+        settings files of all applicable installation scopes  */
+    private async statuslineStatus (tool: Tool): Promise<{ file: string, scope: string, status: string }[]> {
+        /*  the OpenAI Codex CLI has no scriptable statusline mechanism at all  */
+        if (tool === "codex")
+            return []
+        const home    = os.homedir()
+        const scopes: Scope[] = tool === "claude" ? [ "user", "project", "local" ] : [ "user" ]
+        const entries: { file: string, scope: string, status: string }[] = []
+        for (const scope of scopes) {
+            const file = this.statuslineSettingsFile(tool, scope)
+            let root: AstNode
+            try {
+                root = await this.statuslineReadAst(file)
+            }
+            catch {
+                /*  an unparsable settings file carries no usable state  */
+                continue
+            }
+            const member = this.statuslineFindMember(root)
+            if (member === undefined)
+                continue
+            entries.push({
+                file:   file.startsWith(home + path.sep) ? `~${file.slice(home.length)}` : file,
+                scope:  tool === "claude" ? scope : "(n/a)",
+                status: this.statuslineIsOwned(member) ? "activated" : "foreign"
+            })
+        }
+        return entries
+    }
+
     /*  parse and validate the --tool option  */
     private parseTool (value: string): Tool {
         if (value !== "claude" && value !== "copilot" && value !== "codex")
@@ -1002,6 +1139,15 @@ export default class SetupCommand {
             .option("-s, --scope <scope>", "target scope (\"user\", \"project\", or \"local\")", "user")
             .action(async (opts: { tool: string, scope: string }) => {
                 process.exit(await this.doToggle(this.parseTool(opts.tool), this.parseScope(opts.scope), "disable"))
+            })
+
+        /*  register CLI sub-command "ase setup status"  */
+        setupCmd
+            .command("status")
+            .description("report the ASE plugin, MCP server, and statusline registrations for a tool")
+            .option("-t, --tool <tool>",   "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
+            .action(async (opts: { tool: string }) => {
+                process.exit(await this.doStatus(this.parseTool(opts.tool)))
             })
 
         /*  register CLI sub-command "ase setup mcp"  */
