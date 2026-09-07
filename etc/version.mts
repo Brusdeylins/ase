@@ -9,7 +9,8 @@ import json   from "json-asty"
 import StdVer from "stdver"
 
 /*  determine version bumping  */
-const bump = process.argv[2] ?? "R"
+const bump = ({ major: "M", minor: "N", release: "R" } as { [ name: string ]: string })[process.argv[2] ?? "R"]
+    ?? process.argv[2] ?? "R"
 console.log(`++ bumped version part: ${bump}`)
 
 /*  find old version  */
@@ -21,7 +22,7 @@ console.log(`++ old version: ${version}`)
 
 /*  determine new version  */
 const stdver = new StdVer()
-version = stdver.modify(version, { bump })
+version = stdver.modify(version, { bump, level: 0 })
 console.log(`++ new version: ${version}`)
 
 /*  update configuration files  */
