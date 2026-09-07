@@ -30,7 +30,7 @@
         "nodemon":                          "3.1.14",
         "shx":                              "0.4.0",
 
-        "@types/node":                      "26.4.1",
+        "@types/node":                      "26.5.0",
         "@types/luxon":                     "3.7.5",
         "@types/which":                     "3.0.4",
         "@types/update-notifier":           "6.0.8",
@@ -66,7 +66,7 @@
         "ofetch":                           "1.5.1",
         "picomatch":                        "4.0.7",
         "lru-cache":                        "11.5.2",
-        "@rse/specbook":                    "1.2.7",
+        "@rse/specbook":                    "1.2.8",
         "source-code-error":                "1.2.0",
         "pure-uuid":                        "2.0.0"
     },
@@ -77,6 +77,9 @@
         "npm":                              ">=10.0.0",
         "node":                             ">=22.13.0"
     },
+    "upd": [
+        "!typescript"
+    ],
     "files": [
         "dst/**/*",
         "bin/**/*",
