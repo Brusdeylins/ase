@@ -52,6 +52,16 @@ import PenTool                 from "@lucide/astro/icons/pen-tool"
 import Sparkles                from "@lucide/astro/icons/sparkles"
 import Workflow                from "@lucide/astro/icons/workflow"
 import ClipboardCheck          from "@lucide/astro/icons/clipboard-check"
+import Blocks                  from "@lucide/astro/icons/blocks"
+import Recycle                 from "@lucide/astro/icons/recycle"
+import GitCompare              from "@lucide/astro/icons/git-compare"
+import NotebookPen             from "@lucide/astro/icons/notebook-pen"
+import RotateCcw               from "@lucide/astro/icons/rotate-ccw"
+import Shrink                  from "@lucide/astro/icons/shrink"
+import Eye                     from "@lucide/astro/icons/eye"
+import Split                   from "@lucide/astro/icons/split"
+import Hash                    from "@lucide/astro/icons/hash"
+import Trash                   from "@lucide/astro/icons/trash"
 
 export interface UseCaseStep {
     icon:        AstroComponent  /*  the Lucide icon prefixing the step heading  */
@@ -221,8 +231,8 @@ export const useCases: UseCase[] = [
         id:          "discovery",
         label:       "Discovery",
         title:       "Use Case: Discovery",
-        description: "How to make sense of an unfamiliar code base with ASE: project insight, code " +
-                     "explanations, plain-language analogies, and a dissected change set.",
+        description: "How to make sense of an unfamiliar code base with ASE: project insight, an " +
+                     "architecture review, code explanations, plain-language analogies, and a dissected change set.",
         abstract:    "Inheriting a code base means reading before writing. The running example here is " +
                      "*the hook subsystem of a repository you just cloned* — approached from the " +
                      "outside in, until its structure, its concepts, and its pending changes are clear.",
@@ -257,6 +267,17 @@ export const useCases: UseCase[] = [
                           "follows is driven by the actual structure instead of by file names.",
                 commands: [
                     "**/ase-code-insight** src/"
+                ]
+            },
+            {
+                icon:     Blocks,
+                eyebrow:  "Structure",
+                title:    "Review the Architecture",
+                body:     "The survey is deepened into an architecture review — package cohesion, " +
+                          "inter-package coupling, a rendered diagram — whose PROBLEM and TRADEOFF " +
+                          "findings tell which seams of the code base are load-bearing.",
+                commands: [
+                    "**/ase-arch-analyze** src/"
                 ]
             },
             {
@@ -447,6 +468,122 @@ export const useCases: UseCase[] = [
         ]
     },
     {
+        id:          "planning",
+        label:       "Planning",
+        title:       "Use Case: Planning",
+        description: "How to manage a persisted task plan with ASE: write, grill, reboot, and condense " +
+                     "it, dissect the epic into sub-tasks, rename and switch them, implement, and clean up.",
+        abstract:    "A plan which outlives the session is a plan you can manage. The running example " +
+                     "here is *the `auth` epic — user authentication for the REST service* — walked " +
+                     "through the whole Task Mode lifecycle, from the first draft to the deleted " +
+                     "epic, with every task skill firing along the way.",
+        steps: [
+            {
+                icon:     NotebookPen,
+                eyebrow:  "Draft",
+                title:    "Write the Plan",
+                body:     "The request becomes a persisted task plan under its own task id, and is " +
+                          "refined right away in the conversational loop — the plan is shown each " +
+                          "round, and you decide whether to keep refining or to stop.",
+                commands: [
+                    "**/ase-task-edit** auth: add user authentication to the REST service with " +
+                    "JWT access tokens, refresh tokens, and a login endpoint",
+                    "**/ase-task-edit** --plan REFINE auth: store the refresh tokens hashed, never in plain text"
+                ]
+            },
+            {
+                icon:     Funnel,
+                eyebrow:  "Pressure Test",
+                title:    "Grill the Plan",
+                body:     "The plan is interrogated round by round until every branch of the question " +
+                          "tree is resolved — and the grilling exposes that the plan was silently " +
+                          "assuming a single identity provider.",
+                commands: [
+                    "**/ase-task-grill** --rounds 3 auth"
+                ]
+            },
+            {
+                icon:     RotateCcw,
+                eyebrow:  "Fresh Start",
+                title:    "Reboot the Plan",
+                body:     "Rather than patching the accreted contradictions, the plan is re-created " +
+                          "from scratch out of its own WHAT and WHY, with the creation timestamp " +
+                          "preserved — and handed straight back to the editor for the provider decision.",
+                commands: [
+                    "**/ase-task-reboot** --next EDIT auth"
+                ]
+            },
+            {
+                icon:     Shrink,
+                eyebrow:  "Compression",
+                title:    "Condense the Wording",
+                body:     "Three rounds of refinement left the plan wordy, so its prose is compressed " +
+                          "telegrapher-like while every heading, bullet label, path, and number stays " +
+                          "exactly as it is.",
+                commands: [
+                    "**/ase-task-condense** auth"
+                ]
+            },
+            {
+                icon:     Eye,
+                eyebrow:  "Inventory",
+                title:    "List and View",
+                body:     "The persisted plans are listed with their states and timestamps, and the " +
+                          "epic is viewed in full, including its implementation draft.",
+                commands: [
+                    "**/ase-task-list** --verbose",
+                    "**/ase-task-view** --full auth"
+                ]
+            },
+            {
+                icon:     Split,
+                eyebrow:  "Epic",
+                title:    "Dissect Into Sub-Tasks",
+                body:     "The epic is too large for one commit, so it is dissected along its " +
+                          "semantics into cohesive sub-task plans — previewed first, then materialized " +
+                          "with a hint steering the cut.",
+                commands: [
+                    "**/ase-task-dissect** --dry --max-parts 3 auth",
+                    "**/ase-task-dissect** --max-parts 3 auth: tokens first, then the login endpoint, then the docs"
+                ]
+            },
+            {
+                icon:     Hash,
+                eyebrow:  "Bookkeeping",
+                title:    "Rename and Switch",
+                body:     "The derived sub-task ids are given the names the team will actually say, " +
+                          "and the session is switched to the first of them, which the statusline " +
+                          "reflects immediately.",
+                commands: [
+                    "**/ase-task-rename** auth-tokens tokens",
+                    "**/ase-task-id** tokens"
+                ]
+            },
+            {
+                icon:     PlaneTakeoff,
+                eyebrow:  "Realization",
+                title:    "Preflight, Then Implement",
+                body:     "With `tokens` being the current task, the id can be left out: the dry run " +
+                          "drafts the change set, then the implementation runs isolated in its own " +
+                          "Git worktree.",
+                commands: [
+                    "**/ase-task-preflight**",
+                    "**/ase-task-implement** --worktree"
+                ]
+            },
+            {
+                icon:     Trash,
+                eyebrow:  "Cleanup",
+                title:    "Delete the Consumed Epic",
+                body:     "Once all sub-tasks are implemented, the epic itself has served its purpose " +
+                          "and is deleted, so the task list shows only what is still open.",
+                commands: [
+                    "**/ase-task-delete** auth"
+                ]
+            }
+        ]
+    },
+    {
         id:          "coding",
         label:       "Coding",
         title:       "Use Case: Coding",
@@ -580,6 +717,76 @@ export const useCases: UseCase[] = [
                 commands: [
                     "**/ase-code-resolve** rename-bug: the statusline keeps the old task id after `ase task rename`",
                     "**/ase-task-preflight** rename-bug"
+                ]
+            }
+        ]
+    },
+    {
+        id:          "refactoring",
+        label:       "Refactoring",
+        title:       "Use Case: Refactoring",
+        description: "How to refactor with ASE: find the structural problem, choose a refactoring " +
+                     "approach, implement it behavior-preservingly, and check the diff — or do it in one shot.",
+        abstract:    "Refactoring changes structure, never behavior. The running example here is " +
+                     "*the option parsing duplicated across the CLI commands* — surfaced by an " +
+                     "architecture review, consolidated under a plan, and verified to have changed " +
+                     "nothing but the structure.",
+        steps: [
+            {
+                icon:     Blocks,
+                eyebrow:  "Structure",
+                title:    "Review the Architecture",
+                body:     "The code base is reviewed for package cohesion and inter-package coupling, " +
+                          "which reports the duplication as a persisted PROBLEM finding with an id, " +
+                          "next to an architecture diagram.",
+                commands: [
+                    "**/ase-arch-analyze** --prefix cli src/"
+                ]
+            },
+            {
+                icon:     Recycle,
+                eyebrow:  "Plan",
+                title:    "Choose the Refactoring Approach",
+                body:     "Refactoring follows its own tenets — behavior preservation, Boy Scout Rule, " +
+                          "DRY, SRP — so alternative approaches with pros and cons are proposed, you " +
+                          "pick one, and a persisted task plan is composed for it.",
+                commands: [
+                    "**/ase-code-refactor** getopt: consolidate the option parsing " +
+                    "of all CLI commands into src/ase-getopt.ts (finding cli-P1)"
+                ]
+            },
+            {
+                icon:     PlaneTakeoff,
+                eyebrow:  "Realization",
+                title:    "Preflight, Then Implement",
+                body:     "The dry run shows every call site the consolidation touches; only then " +
+                          "does the implementation run, isolated in its own Git worktree.",
+                commands: [
+                    "**/ase-task-preflight** getopt",
+                    "**/ase-task-implement** --worktree getopt"
+                ]
+            },
+            {
+                icon:     GitCompare,
+                eyebrow:  "Behavior Preservation",
+                title:    "Check the Diff Stays Pure",
+                body:     "The staged diff is retold as an intent-grouped narrative with a coherence " +
+                          "check, which is where a behavior change smuggled into a refactoring shows up.",
+                commands: [
+                    "**/ase-meta-diff** --coherence --risk"
+                ]
+            },
+            {
+                icon:     Sparkles,
+                eyebrow:  "Quick Mode",
+                title:    "Or Refactor In One Shot",
+                body:     "For a rename-sized refactoring, the plan ceremony is skipped and the change " +
+                          "applied in place; for anything in between, the fused editor refactors, " +
+                          "grills, and verifies in a single call.",
+                commands: [
+                    "**/ase-code-refactor** --direct rename parseArgs to parseOptions in src/ase-getopt.ts",
+                    "**/ase-code-edit** --mode refactor --grill --verify --worktree " +
+                    "extract the shared option table of the CLI commands into src/ase-getopt.ts"
                 ]
             }
         ]
@@ -813,6 +1020,17 @@ export const useCases: UseCase[] = [
                           "yields the concrete commands the workflow will orchestrate.",
                 commands: [
                     "**/ase-help-intent** check code, docs and diff quality before a pull request"
+                ]
+            },
+            {
+                icon:     BookOpen,
+                eyebrow:  "Manual",
+                title:    "Read the Manual Pages",
+                body:     "Before the candidates are chained, their manual pages are opened — by full " +
+                          "name or by any abbreviation — so the options the workflow will pass are " +
+                          "taken from the SYNOPSIS instead of from memory.",
+                commands: [
+                    "**/ase-help-skill** ase-code-lint"
                 ]
             },
             {
