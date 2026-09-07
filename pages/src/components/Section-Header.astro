@@ -127,11 +127,25 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
 
         /*  a group whose label is a page of its own carries a link instead of
             a toggle button, so its panel is opened by hovering alone.  */
+        const hoverable = window.matchMedia("(width >= 64rem)")
         groups.forEach(function (group) {
             const toggle = group.querySelector(".nav-group-toggle")
             if (toggle.tagName !== "BUTTON")
                 return
-            toggle.addEventListener("click", function () {
+            toggle.addEventListener("click", function (ev) {
+                /*  above the `lg` breakpoint the hover (or focus) already
+                    opened the panel, so a click has nothing to toggle: a
+                    `data-open` set here would outlive the hover and keep the
+                    panel open next to the one hovered afterwards. A pointer
+                    click merely drops the focus it left on the label, which
+                    would hold the panel open via `:focus-within` just the
+                    same, while a keyboard activation (`detail` of 0) keeps
+                    its focus.  */
+                if (hoverable.matches) {
+                    if (ev.detail > 0)
+                        toggle.blur()
+                    return
+                }
                 const open = !group.querySelector(".nav-group-menu").hasAttribute("data-open")
                 closeGroups(group)
                 setGroupOpen(group, open)
