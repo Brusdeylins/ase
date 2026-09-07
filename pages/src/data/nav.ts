@@ -9,7 +9,8 @@
     page route, so route path, nav label, browser title, and meta description
     are kept in a single place.  */
 
-import { site } from "./site.ts"
+import { site }     from "./site.ts"
+import { useCases } from "./usecases.ts"
 
 export interface NavItem {
     path:        string  /*  route path of the page (with trailing slash)  */
@@ -103,28 +104,21 @@ export const navItems: NavEntry[] = [
       page:        { path:        "/workflows/",
                      label:       "Workflows",
                      title:       "Workflows",
-                     description: "The ASE operation modes shown as concrete Claude Code CLI transcripts, " +
-                                  "followed by a day in the life of an engineer working with ASE." },
+                     description: "The ASE operation modes and the development workflows built on them, " +
+                                  "shown as concrete Claude Code CLI transcripts." },
       items: [
-          { path: "/workflows/#operation-modes",       label: "Operation Modes" },
-          { path: "/workflows/#development-workflows", label: "Development Workflows" },
-          { path: "/workflows/#engineering-session",   label: "Engineering Session"   }
+          { path: "/workflows/#operation-modes",       label: "Operation Modes"       },
+          { path: "/workflows/#development-workflows", label: "Development Workflows" }
       ] },
-    /*
-    { label:       "Use Cases",
-      items: [
-          { path:        "/usecases/technology-stack/",
-            label:       "Technology Stack",
-            title:       "Use Case: Technology Stack",
-            description: "How to establish and evolve the technology stack of a project with ASE, " +
-                         "from discovering components to reconciling the resulting artifacts." },
-          { path:        "/usecases/crafting-feature/",
-            label:       "Crafting Feature",
-            title:       "Use Case: Crafting Feature",
-            description: "How to craft a new feature with ASE, from the initial task plan over the " +
-                         "implementation to the review of the resulting change set." }
-      ] },
-    */
+    /*  the pull-down of the use cases is derived from their very own data, so
+        the pages, their order, and their metadata have a single source  */
+    { label: "Use Cases",
+      items: useCases.map((useCase) => ({
+          path:        `/usecases/${useCase.id}/`,
+          label:       useCase.label,
+          title:       useCase.title,
+          description: useCase.description
+      })) },
     { label:       "Design",
       page:        { path:        "/design/",
                      label:       "Design",

@@ -52,6 +52,17 @@ const tokenize = (cmd: string) =>
         meta: /^\*\*[^*]*\*\*$/.test(part)
     }))
 
+/*  split a plain run into its option tokens ("-x", "--xx", "--xx=value") and
+    the text between them, so an option can be kept together on one line:
+    the browser would otherwise happily break a line right after the leading
+    dashes or at any inner hyphen. Only a token opening the run or following
+    whitespace counts, so a hyphenated word like "command-line" stays what it
+    is. The capturing split yields the options at the odd indexes.  */
+const OPTION = /((?<=^|\s)--?[A-Za-z0-9][\w-]*(?:=\S+)?)/
+const options = (line: string) =>
+    line.split(OPTION).map((part, index) => ({ text: part, option: index % 2 === 1 }))
+        .filter((part) => part.text !== "")
+
 /*  the raw command without the **...** highlight markers and with embedded
     "\n" wrap points folded back to spaces, so the copied text is the actual
     single-line shell command.  */
@@ -65,7 +76,7 @@ const plain = (cmd: string) => cmd.replace(/\*\*([^*]*)\*\*/g, "$1").replace(/\n
     modal sits in BaseLayout and hence exists on every page, so `helpPage` is
     normally the route the terminal itself appears on: closing the man page
     then returns the reader to the very page they came from.  */
-const skillId = (text: string) => (text.match(/^\/(ase-[a-z]+-[a-z]+)$/) ?? [ "", "" ])[1]
+const skillId = (text: string) => (text.match(/^\/(ase-[a-z]+-[a-z0-9]+)$/) ?? [ "", "" ])[1]
 ---
 <div class={className}>
     <div class="overflow-hidden rounded-xl border border-border-strong bg-background-elevated/60 text-[0.7875rem] leading-snug shadow-xl sm:text-[0.9rem]" data-terminal>
@@ -95,10 +106,14 @@ const skillId = (text: string) => (text.match(/^\/(ase-[a-z]+-[a-z]+)$/) ?? [ ""
                     <div class="group flex items-start gap-3 font-mono tracking-[-0.03em]">
                         <span class="select-none text-brand-300">❯</span>
                         <code class="code-plain flex-1 text-foreground">{tokenize(cmd).map((t) => {
+                            /*  a plain run keeps each of its options on one
+                                line as an unbreakable unit  */
                             const runs = t.text.split("\n").map((line, i) => (
                                 <>
                                     {i > 0 && <br/>}
-                                    {t.tint ? <span class={t.tint}>{line}</span> : line}
+                                    {t.tint ? <span class={t.tint}>{line}</span> :
+                                        options(line).map((part) => part.option ?
+                                            <span class="whitespace-nowrap">{part.text}</span> : part.text)}
                                 </>
                             ))
                             /*  under `helpPage` a highlighted ASE command (and

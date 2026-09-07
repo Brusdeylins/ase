@@ -5,12 +5,11 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-/*  the "Workflows" page: the operation modes as CLI transcripts, followed by
-    the day-in-the-life timeline putting them into a lived routine.  */
+/*  the "Workflows" page: the operation modes, followed by the development
+    workflows as CLI transcripts.  */
 
 import BaseLayout       from "../layouts/BaseLayout.astro"
 import SectionWorkflows from "../components/Section-Workflows.astro"
-import SectionSession   from "../components/Section-Session.astro"
 import GlowTop          from "../components/Widget-Glow-Top.astro"
 import { navItem }      from "../data/nav.ts"
 
@@ -19,5 +18,4 @@ const page = navItem("/workflows/")
 <BaseLayout title={page.title} description={page.description} pad>
     <GlowTop/>
     <SectionWorkflows/>
-    <SectionSession/>
 </BaseLayout>

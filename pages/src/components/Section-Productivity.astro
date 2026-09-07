@@ -33,7 +33,7 @@ const here = Astro.url.pathname
 const inline = (text: string) => text
     .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
     .replace(/\*(.+?)\*/g,     "<i>$1</i>")
-    .replace(/`\/(ase-[a-z]+-[a-z]+)`/g,
+    .replace(/`\/(ase-[a-z]+-[a-z0-9]+)`/g,
              `<a href="${here}#help/$1" class="cmd-help"><code>/$1</code></a>`)
     .replace(/`(.+?)`/g,       "<code>$1</code>")
 ---

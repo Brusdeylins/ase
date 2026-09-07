@@ -1,0 +1,30 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Use Case" pages: one page per entry of `data/usecases.ts`, all sharing
+    the very same structure (header, abstract, numbered process), so they are
+    emitted from a single route instead of one near-identical file each.  */
+
+import BaseLayout        from "../../layouts/BaseLayout.astro"
+import SectionUseCase    from "../../components/Section-Usecase.astro"
+import GlowTop           from "../../components/Widget-Glow-Top.astro"
+import { useCases }      from "../../data/usecases.ts"
+import type { UseCase }  from "../../data/usecases.ts"
+
+export const getStaticPaths = () =>
+    useCases.map((useCase) => ({ params: { usecase: useCase.id }, props: { useCase } }))
+
+interface Props {
+    useCase: UseCase
+}
+
+const { useCase } = Astro.props
+---
+<BaseLayout title={useCase.title} description={useCase.description} pad>
+    <GlowTop/>
+    <SectionUseCase useCase={useCase}/>
+</BaseLayout>
