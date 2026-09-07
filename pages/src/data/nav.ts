@@ -9,6 +9,8 @@
     page route, so route path, nav label, browser title, and meta description
     are kept in a single place.  */
 
+import { site } from "./site.ts"
+
 export interface NavItem {
     path:        string  /*  route path of the page (with trailing slash)  */
     label:       string  /*  label shown in the site header navigation     */
@@ -16,19 +18,21 @@ export interface NavItem {
     description: string  /*  meta description of the page                  */
 }
 
-/*  a section of a page, addressed by the fragment of its route path
-    ("/foo/bar/#quux") and hence carrying no page metadata of its own  */
+/*  a bare link entry, carrying no page metadata of its own: either a section
+    of a page, addressed by the fragment of its route path ("/foo/bar/#quux"),
+    or an external target ("https://...")  */
 export interface NavSection {
-    path:        string  /*  route path of the section (page plus fragment)  */
-    label:       string  /*  label shown in the site header navigation       */
+    path:        string  /*  route path of the section, or external URL  */
+    label:       string  /*  label shown in the site header navigation   */
 }
 
 /*  a group of entries, shown in the site header as a single label opening a
-    pull-down menu with its members. The label is either a page of its own
-    or, with `page` left out, a bare entry which cannot be selected at all.  */
+    pull-down menu with its members. The label is either a page (or external
+    target) of its own or, with `page` left out, a bare entry which cannot be
+    selected at all.  */
 export interface NavGroup {
     label:       string                    /*  label shown in the site header navigation  */
-    page?:       NavItem                   /*  the page of the label itself, if any       */
+    page?:       NavItem | NavSection      /*  the target of the label itself, if any     */
     items:       (NavItem | NavSection)[]  /*  the entries of the pull-down menu          */
 }
 
@@ -133,23 +137,45 @@ export const navItems: NavEntry[] = [
 ]
 
 /*  the author entry, shown separately in the right-hand header group  */
-export const navAuthor: NavItem = {
-    path:        "/author/",
+export const navAuthor: NavGroup = {
     label:       "Author",
-    title:       "Author",
-    description: "About Dr. Ralf S. Engelschall, the author of ASE, plus the contributors, " +
-                 "supporting organizations, and sibling projects behind the toolkit."
+    page:        { path:        "/author/",
+                   label:       "Author",
+                   title:       "Author",
+                   description: "About Dr. Ralf S. Engelschall, the author of ASE, plus the contributors " +
+                                "and supporting organizations behind the toolkit." },
+    items: [
+        { path: "/author/#author",       label: "Author"       },
+        { path: "/author/#contributors", label: "Contributors" },
+        { path: "/author/#sponsors",     label: "Sponsors"     }
+    ]
+}
+
+/*  the project entry, shown at the very end of the right-hand header group.
+    Its label leads directly to the project repository, as does the first
+    entry of its pull-down menu.  */
+export const navProject: NavGroup = {
+    label:       "Project",
+    page:        { path:  site.repo,
+                   label: "Project" },
+    items: [
+        { path:  site.repo,
+          label: "Repository" },
+        { path:        "/project/",
+          label:       "Sibling Projects",
+          title:       "Sibling Projects",
+          description: "The sibling projects accompanying ASE, which together form a larger toolkit for " +
+                       "combining Agentic AI Coding with traditional Software Engineering." }
+    ]
 }
 
 /*  all page entries, with the grouped ones flattened into the top-level list
-    and the bare section entries of the pull-down menus left out  */
-export const navPages: NavItem[] = [
-    ...navItems.flatMap((entry) => !isNavGroup(entry) ? [ entry ] : [
-        ...(entry.page !== undefined ? [ entry.page ] : []),
+    and the bare link entries of the pull-down menus left out  */
+export const navPages: NavItem[] = [ ...navItems, navAuthor, navProject ]
+    .flatMap((entry) => !isNavGroup(entry) ? [ entry ] : [
+        ...(entry.page !== undefined && isNavPage(entry.page) ? [ entry.page ] : []),
         ...entry.items.filter(isNavPage)
-    ]),
-    navAuthor
-]
+    ])
 
 /*  look up a navigation entry by its route path  */
 export const navItem = (path: string): NavItem => {

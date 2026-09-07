@@ -7,8 +7,8 @@
 
 /*  "Thanks" sections: the individual contributors as a four-column grid of
     name plates, followed by the supporting organizations as a two-column grid
-    of logo plates and the sibling projects. The closing bottom spacing is
-    owned by the <main> element of BaseLayout.  */
+    of logo plates. The closing bottom spacing is owned by the <main> element
+    of BaseLayout.  */
 
 import GlowSide   from "./Widget-Glow-Side.astro"
 import Annotation from "./Widget-Annotation.astro"
@@ -29,25 +29,6 @@ const contributors = [
     "Linda Zeman",
 ]
 
-/*  the sibling projects ASE builds upon or belongs with (notes in the same
-    lightweight inline markup the other data modules use)  */
-const siblings = [
-    { name: "SpecBook",       href: "https://specbook.tools",                note: "Markdown-based specification -- used by `ase spec`"                          },
-    { name: "MCP-to-OpenAI",  href: "https://github.com/rse/mcp-to-openai",  note: "Gateway between MCP and OpenAI-compatible APIs -- used by `ase setup mcp`"   },
-    { name: "MCP-to-Harness", href: "https://github.com/rse/mcp-to-harness", note: "Bridge between MCP and AI agent harness CLIs -- used by `ase setup mcp`"     },
-    { name: "claudeX",        href: "https://github.com/rse/claudex",        note: "Convenience wrapper for Anthropic Claude Code CLI -- used by RSE with ASE"   },
-    { name: "Bash-Authorize", href: "https://github.com/rse/bash-authorize", note: "Pre-tool-use hook for Bash commands -- used by RSE with ASE"                 }
-]
-
-/*  render lightweight inline markup in the sibling notes: turn "**...**" into
-    <b>...</b>, "*...*" into <i>...</i>, "`...`" into <code>...</code>, and "--"
-    into an em-dash. The "**" pass runs first so the single-asterisk pass never
-    consumes a bold marker.  */
-const inline = (text: string) => text
-    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
-    .replace(/\*(.+?)\*/g,     "<i>$1</i>")
-    .replace(/`(.+?)`/g,       "<code>$1</code>")
-    .replace(/\s*--\s*/g,      " &mdash; ")
 ---
 <section id="contributors" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <GlowSide variant="section" side="right" />
@@ -107,31 +88,6 @@ const inline = (text: string) => text
                 </div>
                 <div class="mb-2">SEA Software Engineering Academy gGmbH</div>
             </div>
-        </div>
-    </div>
-</section>
-
-<section id="siblings" class="relative isolate mx-auto max-w-4xl px-6 py-8">
-    <GlowSide variant="section" side="right" />
-    <header class="ase-section-head" data-reveal>
-        <h2 class="ase-h2">
-            See Also the <span class="text-accent">Sibling Projects</span>
-        </h2>
-        <p class="ase-lead ase-justify">
-            <b>ASE</b> does not stand alone: it is accompanied by dedicated
-            sibling projects, which together form a larger toolkit for
-            combining Agentic AI Coding with traditional Software Engineering.
-        </p>
-    </header>
-
-    <div class="mt-12 w-full" data-reveal>
-        <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {siblings.map((sibling) => (
-                <a href={sibling.href} class="link-plain overflow-hidden rounded-xl border border-border-strong p-4 text-center transition hover:border-accent">
-                    <div class="text-lg font-bold text-accent">{sibling.name}</div>
-                    <div class="mt-1 text-sm text-foreground-secondary" set:html={inline(sibling.note)}/>
-                </a>
-            ))}
         </div>
     </div>
 </section>

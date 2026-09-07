@@ -9,8 +9,8 @@
     the current page via `nav-spy`/`is-active`), the GitHub link, the (hidden)
     theme switcher, and the scroll-progress bar along its bottom edge.  */
 
-import { site }                            from "../data/site.ts"
-import { navItems, navAuthor, isNavGroup } from "../data/nav.ts"
+import { navItems, navAuthor, navProject } from "../data/nav.ts"
+import NavEntry                            from "./Widget-Nav-Entry.astro"
 import LogoASE                             from "./Widget-Logo-ASE.astro"
 import LogoGitHub                          from "./Widget-Logo-GitHub.astro"
 import ThemeSwitcher                       from "./Widget-Theme-Switcher.astro"
@@ -19,17 +19,6 @@ import ProgressBar                         from "./Widget-Progress-Bar.astro"
 /*  the route path of the currently rendered page, normalized to the trailing
     slash the nav entries carry (the dev server serves them without one)  */
 const current = Astro.url.pathname.replace(/\/*$/, "/")
-
-/*  the DOM id of the pull-down panel of a navigation group  */
-const groupId = (label: string) =>
-    `nav-group-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
-
-/*  whether a route path addresses the currently rendered page. An entry
-    addressing a section of a page ("/foo/bar/#quux") is selected only while
-    that very section is the current one, which is known in the browser alone,
-    so its state is left to the `syncActive` pass of the script below.  */
-const isActive = (path: string) =>
-    !path.includes("#") && current === path
 ---
 <header class="fixed inset-x-0 top-0 z-50 border-b border-border/60">
     {/*  header background as a separate, absolutely-positioned layer rather than
@@ -69,80 +58,20 @@ const isActive = (path: string) =>
             class="link-plain nav-menu-panel absolute right-6 top-full hidden w-auto flex-col items-end gap-y-1.5 rounded-md rounded-t-none border border-border/60 p-4 shadow-lg data-[open]:flex lg:static lg:top-auto lg:flex lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-x-5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
         >
             <nav class="flex min-w-0 flex-col flex-wrap items-end gap-x-2 xl:gap-x-4 gap-y-1 text-base text-foreground-secondary lg:ml-4 lg:flex-row lg:items-center">
-                {/*  a group entry renders as a label opening the pull-down
-                     panel below it, which lists the member entries; the label
-                     is a link when the group is a page of its own and a bare
-                     toggle button otherwise -- the latter is not clickable
-                     itself and hence deliberately carries no `nav-spy` hover.
-                     A plain entry renders as the direct link to its page.  */}
-                {navItems.map((entry) => isNavGroup(entry) ?
-                    <div class="nav-group relative flex flex-col items-end lg:block">
-                        {entry.page !== undefined ?
-                            <a
-                                href={entry.page.path}
-                                data-nav-path={entry.page.path}
-                                aria-current={isActive(entry.page.path) ? "page" : undefined}
-                                class:list={[ "nav-group-toggle nav-spy relative inline-flex items-center transition-colors lg:flex",
-                                    { "is-active": isActive(entry.page.path) } ]}
-                            >
-                                {entry.label}
-                            </a> :
-                            <button
-                                type="button"
-                                aria-haspopup="true"
-                                aria-expanded="false"
-                                aria-controls={groupId(entry.label)}
-                                class:list={[ "nav-group-toggle relative inline-flex cursor-pointer items-center transition-colors lg:flex",
-                                    { "is-active": entry.items.some((item) => isActive(item.path)) } ]}
-                            >
-                                {entry.label}
-                            </button>
-                        }
-                        <div
-                            id={groupId(entry.label)}
-                            class:list={[ "nav-group-menu nav-group-panel hidden flex-col items-end gap-y-1.5 pt-1.5 lg:absolute lg:-left-3 lg:top-full lg:z-50 lg:items-start lg:gap-y-0.5 lg:rounded-md lg:rounded-tl-none lg:p-4 lg:pt-3",
-                                { "nav-group-static": entry.page !== undefined } ]}
-                        >
-                            {entry.items.map((item) =>
-                                <a
-                                    href={item.path}
-                                    data-nav-path={item.path}
-                                    aria-current={isActive(item.path) ? "page" : undefined}
-                                    class:list={[ "nav-spy whitespace-nowrap text-[0.9rem] transition-colors lg:text-base", { "is-active": isActive(item.path) } ]}
-                                >
-                                    {item.label}
-                                </a>
-                            )}
-                        </div>
-                    </div> :
-                    <a
-                        href={entry.path}
-                        data-nav-path={entry.path}
-                        aria-current={isActive(entry.path) ? "page" : undefined}
-                        class:list={[ "nav-spy transition-colors", { "is-active": isActive(entry.path) } ]}
-                    >
-                        {entry.label}
-                    </a>
+                {navItems.map((entry) =>
+                    <NavEntry entry={entry} current={current}/>
                 )}
             </nav>
             <nav class="flex flex-col flex-wrap items-end gap-x-2 xl:gap-x-4 gap-y-1 text-base text-foreground-secondary lg:flex-row lg:items-center">
-                <span class="flex items-center gap-2">
-                    <a href="https://github.com/rse" aria-label="Dr. Ralf S. Engelschall on GitHub" class="flex items-center">
-                        <img src="/assets/rse-signet.svg" alt="Dr. Ralf S. Engelschall" class="h-[1.2rem] w-auto"/>
-                    </a>
-                    <a
-                        href={navAuthor.path}
-                        data-nav-path={navAuthor.path}
-                        aria-current={isActive(navAuthor.path) ? "page" : undefined}
-                        class:list={[ "nav-spy transition-colors", { "is-active": isActive(navAuthor.path) } ]}
-                    >
-                        {navAuthor.label}
-                    </a>
-                </span>
-                <a href={site.repo} class="nav-link inline-flex items-center gap-1.5 transition-colors">
+                {/*  the author signet is part of the very entry it labels, so
+                     the box of the open pull-down surrounds both  */}
+                <NavEntry entry={navAuthor} current={current} align="right">
+                    <img src="/assets/rse-signet.svg" alt="Dr. Ralf S. Engelschall" class="h-[1.2rem] w-auto"/>
+                </NavEntry>
+                {/*  the GitHub logo is part of the very entry it labels, too  */}
+                <NavEntry entry={navProject} current={current} align="right">
                     <LogoGitHub class="h-4 w-4"/>
-                    Project
-                </a>
+                </NavEntry>
                 <ThemeSwitcher class="hidden"/>
             </nav>
         </div>

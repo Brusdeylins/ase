@@ -1,0 +1,20 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Project" page: the sibling projects accompanying ASE.  */
+
+import BaseLayout      from "../layouts/BaseLayout.astro"
+import SectionSiblings from "../components/Section-Siblings.astro"
+import GlowTop         from "../components/Widget-Glow-Top.astro"
+import { navItem }     from "../data/nav.ts"
+
+const page = navItem("/project/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <GlowTop/>
+    <SectionSiblings/>
+</BaseLayout>

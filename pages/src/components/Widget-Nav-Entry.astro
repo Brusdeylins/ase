@@ -1,0 +1,92 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  one entry of the site header navigation, shared by both header groups: a
+    group entry renders as a label opening the pull-down panel below it, which
+    lists the member entries; the label is a link when the group is a page of
+    its own and a bare toggle button otherwise -- the latter is not clickable
+    itself and hence deliberately carries no `nav-spy` hover. A plain entry
+    renders as the direct link to its page.  */
+
+import { isNavGroup } from "../data/nav.ts"
+import type { NavEntry } from "../data/nav.ts"
+
+interface Props {
+    entry:   NavEntry           /*  the navigation entry to render               */
+    current: string             /*  route path of the currently rendered page    */
+    align?:  "left" | "right"   /*  edge the pull-down panel is anchored to      */
+}
+
+const { entry, current, align } = Astro.props
+
+/*  the DOM id of the pull-down panel of a navigation group  */
+const groupId = (label: string) =>
+    `nav-group-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+
+/*  whether a route path addresses the currently rendered page. An entry
+    addressing a section of a page ("/foo/bar/#quux") is selected only while
+    that very section is the current one, which is known in the browser alone,
+    so its state is left to the `syncActive` pass of the header script.  */
+const isActive = (path: string) =>
+    !path.includes("#") && current === path
+
+/*  the panel of a right-hand entry hangs off the right edge instead, so it
+    stays inside the viewport  */
+const anchor = align === "right" ? "lg:-right-3" : "lg:-left-3"
+const corner = align === "right" ? "lg:rounded-tr-none" : "lg:rounded-tl-none"
+---
+{isNavGroup(entry) ?
+    <div class="nav-group relative flex flex-col items-end lg:block">
+        {entry.page !== undefined ?
+            <a
+                href={entry.page.path}
+                data-nav-path={entry.page.path}
+                aria-current={isActive(entry.page.path) ? "page" : undefined}
+                class:list={[ "nav-group-toggle nav-spy relative inline-flex items-center gap-2 transition-colors lg:flex",
+                    { "is-active": isActive(entry.page.path) } ]}
+            >
+                <slot/>
+                {entry.label}
+            </a> :
+            <button
+                type="button"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls={groupId(entry.label)}
+                class:list={[ "nav-group-toggle relative inline-flex cursor-pointer items-center gap-2 transition-colors lg:flex",
+                    { "is-active": entry.items.some((item) => isActive(item.path)) } ]}
+            >
+                <slot/>
+                {entry.label}
+            </button>
+        }
+        <div
+            id={groupId(entry.label)}
+            class:list={[ "nav-group-menu nav-group-panel hidden flex-col items-end gap-y-1.5 pt-1.5 lg:absolute lg:top-full lg:z-50 lg:items-start lg:gap-y-0.5 lg:rounded-md lg:p-4 lg:pt-3",
+                anchor, corner, { "nav-group-static": entry.page !== undefined } ]}
+        >
+            {entry.items.map((item) =>
+                <a
+                    href={item.path}
+                    data-nav-path={item.path}
+                    aria-current={isActive(item.path) ? "page" : undefined}
+                    class:list={[ "nav-spy whitespace-nowrap text-[0.9rem] transition-colors lg:text-base", { "is-active": isActive(item.path) } ]}
+                >
+                    {item.label}
+                </a>
+            )}
+        </div>
+    </div> :
+    <a
+        href={entry.path}
+        data-nav-path={entry.path}
+        aria-current={isActive(entry.path) ? "page" : undefined}
+        class:list={[ "nav-spy transition-colors", { "is-active": isActive(entry.path) } ]}
+    >
+        {entry.label}
+    </a>
+}
