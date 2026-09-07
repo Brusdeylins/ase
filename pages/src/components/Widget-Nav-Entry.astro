@@ -16,12 +16,17 @@ import { isNavGroup } from "../data/nav.ts"
 import type { NavEntry } from "../data/nav.ts"
 
 interface Props {
-    entry:   NavEntry           /*  the navigation entry to render               */
-    current: string             /*  route path of the currently rendered page    */
-    align?:  "left" | "right"   /*  edge the pull-down panel is anchored to      */
+    entry:        NavEntry           /*  the navigation entry to render                    */
+    current:      string             /*  route path of the currently rendered page         */
+    align?:       "left" | "right"   /*  edge the pull-down panel is anchored to           */
+    labelHidden?: boolean            /*  render the slot alone, the label as the aria one  */
 }
 
-const { entry, current, align } = Astro.props
+const { entry, current, align, labelHidden } = Astro.props
+
+/*  an entry whose label is replaced by its slot content (an icon) still has
+    to name itself to assistive technology  */
+const ariaLabel = labelHidden === true ? entry.label : undefined
 
 /*  the DOM id of the pull-down panel of a navigation group  */
 const groupId = (label: string) =>
@@ -45,23 +50,25 @@ const corner = align === "right" ? "lg:rounded-tr-none" : "lg:rounded-tl-none"
             <a
                 href={entry.page.path}
                 data-nav-path={entry.page.path}
+                aria-label={ariaLabel}
                 aria-current={isActive(entry.page.path) ? "page" : undefined}
                 class:list={[ "nav-group-toggle nav-spy relative inline-flex items-center gap-2 transition-colors lg:flex",
                     { "is-active": isActive(entry.page.path) } ]}
             >
                 <slot/>
-                {entry.label}
+                {labelHidden !== true && entry.label}
             </a> :
             <button
                 type="button"
                 aria-haspopup="true"
                 aria-expanded="false"
                 aria-controls={groupId(entry.label)}
+                aria-label={ariaLabel}
                 class:list={[ "nav-group-toggle relative inline-flex cursor-pointer items-center gap-2 transition-colors lg:flex",
                     { "is-active": entry.items.some((item) => isActive(item.path)) } ]}
             >
                 <slot/>
-                {entry.label}
+                {labelHidden !== true && entry.label}
             </button>
         }
         <div

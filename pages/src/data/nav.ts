@@ -47,18 +47,23 @@ export const isNavGroup = (entry: NavEntry): entry is NavGroup =>
 export const isNavPage = (entry: NavItem | NavSection): entry is NavItem =>
     "title" in entry
 
+/*  the home entry, shown as the leading ASE logo of the left-hand header
+    group, where it replaces the label of the entry  */
+export const navHome: NavGroup = {
+    label:       "Home",
+    page:        { path:        "/",
+                   label:       "Home",
+                   title:       "Home",
+                   description: "ASE" },
+    items: [
+        { path: "/#overview",     label: "Overview"     },
+        { path: "/#testimonials", label: "Testimonials" },
+        { path: "/#fit",          label: "Fit Check"    }
+    ]
+}
+
 /*  the main navigation entries, shown as the left-hand header group  */
 export const navItems: NavEntry[] = [
-    { label:       "Home",
-      page:        { path:        "/",
-                     label:       "Home",
-                     title:       "Home",
-                     description: "ASE" },
-      items: [
-          { path: "/#overview",     label: "Overview"     },
-          { path: "/#testimonials", label: "Testimonials" },
-          { path: "/#fit",          label: "Fit Check"    }
-      ] },
     { label:       "Highlights",
       page:        { path:        "/highlights/",
                      label:       "Highlights",
@@ -171,7 +176,7 @@ export const navProject: NavGroup = {
 
 /*  all page entries, with the grouped ones flattened into the top-level list
     and the bare link entries of the pull-down menus left out  */
-export const navPages: NavItem[] = [ ...navItems, navAuthor, navProject ]
+export const navPages: NavItem[] = [ navHome, ...navItems, navAuthor, navProject ]
     .flatMap((entry) => !isNavGroup(entry) ? [ entry ] : [
         ...(entry.page !== undefined && isNavPage(entry.page) ? [ entry.page ] : []),
         ...entry.items.filter(isNavPage)

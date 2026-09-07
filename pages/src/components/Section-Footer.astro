@@ -5,7 +5,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import QRCode from "./Widget-QR-Code.astro"
+import QRCode    from "./Widget-QR-Code.astro"
+import StickyCTA from "./Widget-Sticky-CTA.astro"
 ---
 {/*  "relative" is load-bearing: the page decorations live inside the
      "isolate" <main>, which hence paints as one unit above every plain block
@@ -13,7 +14,7 @@ import QRCode from "./Widget-QR-Code.astro"
      <GlowTop/> band bleeds past the bottom edge of <main> and would cover the
      footer. Positioning the footer lifts it back above that bleed.  */}
 <footer id="page-footer" class="relative border-t border-border/60 bg-background-secondary">
-    <div class="mx-auto flex max-w-4xl items-center gap-5 px-6 py-5 text-sm text-foreground-muted">
+    <div class="mx-auto flex max-w-4xl flex-wrap items-center gap-5 px-6 py-5 text-sm text-foreground-muted">
         {/*  QR-code trigger: opens the `#qr-modal` popup showing the QR code for
              the site URL. Opening is wired in Modal-QR.astro (which owns the
              popup and its closing). The icon sits at the accent colour and turns
@@ -35,6 +36,12 @@ import QRCode from "./Widget-QR-Code.astro"
                 Copyright &copy; 2025-2026 <a href="/author/">Dr. Ralf S. Engelschall</a><br/>
                 Licensed under <a href="https://spdx.org/licenses/Apache-2.0">Apache-2.0</a> as Open Source
             </p>
+        </div>
+
+        {/*  the install call-to-action, stacked into its standing variant, so
+             the call survives the dismissal of the sticky bar above  */}
+        <div class="ml-auto w-full max-w-xs">
+            <StickyCTA variant="block"/>
         </div>
     </div>
 </footer>
