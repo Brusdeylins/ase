@@ -97,9 +97,11 @@ export const navItems: NavEntry[] = [
                      description: "The ASE operation modes shown as concrete Claude Code CLI transcripts, " +
                                   "followed by a day in the life of an engineer working with ASE." },
       items: [
-          { path: "/workflows/#workflows", label: "Development Workflows" },
-          { path: "/workflows/#session",   label: "Engineering Session"   }
+          { path: "/workflows/#operation-modes",       label: "Operation Modes" },
+          { path: "/workflows/#development-workflows", label: "Development Workflows" },
+          { path: "/workflows/#engineering-session",   label: "Engineering Session"   }
       ] },
+    /*
     { label:       "Use Cases",
       items: [
           { path:        "/usecases/technology-stack/",
@@ -113,19 +115,16 @@ export const navItems: NavEntry[] = [
             description: "How to craft a new feature with ASE, from the initial task plan over the " +
                          "implementation to the review of the resulting change set." }
       ] },
-    { path:        "/philosophy/",
-      label:       "Philosophy",
-      title:       "Philosophy",
-      description: "The philosophy behind ASE: the Agentic AI Level model and its sweet spot, " +
-                   "the split into skills and workflows, and the resulting operation modes." },
+    */
     { label:       "Design",
       page:        { path:        "/design/",
                      label:       "Design",
                      title:       "Design Decisions",
-                     description: "The assumptions behind ASE, the four design decisions derived from them, " +
-                                  "the named Software Engineering methods ASE builds upon, and the " +
-                                  "architecture resulting from them." },
+                     description: "The philosophy behind ASE, the assumptions it is based on, the four design " +
+                                  "decisions derived from them, the named Software Engineering methods ASE " +
+                                  "builds upon, and the architecture resulting from them." },
       items: [
+          { path: "/design/#philosophy",   label: "Philosophy"   },
           { path: "/design/#assumptions",  label: "Assumptions"  },
           { path: "/design/#decisions",    label: "Decisions"    },
           { path: "/design/#methodology",  label: "Methodology"  },

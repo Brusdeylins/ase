@@ -5,21 +5,25 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-/*  "Workflows" section: eight text/terminal pairs laid out as alternating
-    two-column rows (zig-zag), each pairing a workflow description with its
-    Claude Code CLI prompt transcript in a Terminal box.  */
+/*  "Workflows" section: the operation modes text/diagram pair, followed by
+    eight text/terminal pairs laid out as alternating two-column rows
+    (zig-zag), each pairing a workflow description with its Claude Code CLI
+    prompt transcript in a Terminal box.  */
 
 import GlowSide   from "./Widget-Glow-Side.astro"
 import Terminal   from "./Widget-Terminal.astro"
+import Diagram    from "./Widget-Diagram.astro"
 import Annotation from "./Widget-Annotation.astro"
 
-/*  one icon per workflow, picked for the trait that distinguishes the workflow
+/*  the interlocking blocks for the operation modes opening the section, plus
+    one icon per workflow, picked for the trait that distinguishes the workflow
     from its neighbours: a bare chat bubble for the plain prompt, a bolt for
     speed, a double check for the added grilling and verification, a clipboard
     for the single ad-hoc plan, stacked layers for the co-existing task plans,
     a take-off for the preflight, a funnel for the Funnel Mode, and a refresh
     cycle for the round-trip reconciliation  */
 
+import Workflow      from "@lucide/astro/icons/workflow"
 import MessageSquare from "@lucide/astro/icons/message-square"
 import Zap           from "@lucide/astro/icons/zap"
 import CheckCheck    from "@lucide/astro/icons/check-check"
@@ -29,29 +33,109 @@ import PlaneTakeoff  from "@lucide/astro/icons/plane-takeoff"
 import Funnel        from "@lucide/astro/icons/funnel"
 import RefreshCw     from "@lucide/astro/icons/refresh-cw"
 ---
-<section id="workflows" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <header class="ase-section-head" data-reveal>
+<section class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
+    <header id="operation-modes" class="ase-section-head" data-reveal>
+        <h2 class="ase-h2">
+            <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                Pick the gear<br/>
+                that fits the<br/>
+                task at hand!
+            </Annotation>
+            Understand <span class="text-accent">Operation Modes</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            On top of the standard Agentic AI Coding tool modes{" "}
+            <i>Ad-Hoc Mode</i> and <i>Plan Mode</i>,{" "}
+            <b>ASE</b> adds four distinct operation modes
+            to provide even more flexibility and power.
+        </p>
+    </header>
+
+    <div class="mt-12 flex flex-col gap-12">
+        <div class="ase-grid-split">
+            <div class="relative isolate lg:order-1" data-reveal="right">
+                <GlowSide variant="text" side="left" />
+                <p class="ase-eyebrow">Operation Modes</p>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Workflow class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Advanced Operation Modes</span>
+                </h3>
+                <div class="mt-4 text-foreground-secondary">
+                    <p class="ase-justify">
+                    <b class="text-accent">Quick Mode</b>: The more advanced variant of the{" "}
+                    <i>Ad-Hoc Mode</i>, where the
+                    agent directly modifies artifacts, but where
+                    the underlying <b>ASE</b> tenets are still applied
+                    and honored and optionally the prompt and its intent
+                    can be relentlessly "grilled" as in <b>Task Mode</b>.
+                    </p>
+
+                    <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b class="text-accent">Task Mode</b>: The more advanced variant of the{" "}
+                    <i>Plan Mode</i>, where the user initially
+                    crafts and then continuously refines a task plan.
+                    The task plan has a fixed format and is persisted
+                    and hence is available across agent sessions. The
+                    most prominent feature is that the task plan can be
+                    relentlessly "grilled" to ensure that the later
+                    implementation by the AI really meets the intentions
+                    of the user.
+                    </p>
+
+                    <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b class="text-accent">Funnel Mode</b>: The even more advanced mode
+                    where the user first sketches the plan, then the
+                    agent figures out possible approaches, then the user
+                    selects one approach, then a task plan is created
+                    for this approach, and then finally this switches
+                    over to the regular <b>Task Mode</b>. The task plan
+                    has a fixed format and is persisted and hence is
+                    available across agent sessions.
+                    </p>
+
+                    <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    <b class="text-accent">Sync Mode</b>: The separated reconciliation mode
+                    where the user aligns the code and documentation
+                    to the specification and architecture ("forward
+                    engineering") or even aligns the specification and
+                    architecture to the code and documentation ("reverse
+                    engineering").
+                    </p>
+                </div>
+            </div>
+            <div class="lg:order-2 relative" data-reveal="left">
+                <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                    Get 4 new powerful<br/>
+                    operation modes in<br/>
+                    your Claude Code!
+                </Annotation>
+                <Diagram src="/assets/operation-modes.svg" label="ASE operation modes diagram" />
+            </div>
+        </div>
+    </div>
+
+    <header id="development-workflows" class="mt-16 ase-section-head" data-reveal>
         <h2 class="ase-h2">
             <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
                 Choose the best<br/>
                 tool for the job:<br/>
-                2+6 Workflows!
+                2+6 workflows!
             </Annotation>
-            How to Use <span class="text-accent">Development Workflows</span>
+            Your <span class="text-accent">Development Workflows</span>
         </h2>
         <p class="ase-lead ase-justify">
             <b>ASE</b> is based on individual skills which can both be
             sequentially triggered and partially also automatically
             chained. This way typical practical workflows can be
-            realized. The following shows typical workflows in the
+            realized. The following shows typical development workflows in the
             Agentic AI Coding tool <b>Anthropic Claude Code CLI</b>.
         </p>
         <p class="ase-indent-p text-foreground-secondary ase-justify">
-            Which workflow to choose depends on the requirements, the
+            Which development workflow to choose depends on the requirements, the
             desired pros and the acceptable cons. <b>ASE</b> does not
-            mandate a particular workflow as the particular tasks of
+            mandate a particular development workflow as the particular tasks of
             Software Engineers are too different. In practice, one needs
-            nearly all workflows, each one at a certain time.
+            nearly all development workflows, each one at a certain time.
         </p>
     </header>
 
