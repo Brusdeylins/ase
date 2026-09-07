@@ -43,11 +43,13 @@ export class Spec {
 
     /*  the ASE log level each SpecBook verbosity level maps onto: the
         "none" level carries the messages a bare SpecBook CLI run always
-        prints, which are mere progress chatter under ASE and hence are
-        not logged at all, while the regular and detailed processing
-        messages reach the info log and the tracing ones the debug log  */
-    private static logLevel: Record<VerboseLevel, LogLevel | null> = {
-        none:   null,
+        prints -- the environment notices plus the lifecycle and failure
+        reports of the long-running "watch" and "preview" loops, whose
+        loss would leave a broken observation entirely unreported -- and
+        reaches the info log like the regular and detailed processing
+        messages, while the tracing ones reach the debug log  */
+    private static logLevel: Record<VerboseLevel, LogLevel> = {
+        none:   "info",
         notice: "info",
         detail: "info",
         trace:  "debug"
@@ -63,9 +65,7 @@ export class Spec {
                 const text = renderVerbose(msg)
                 if (level === "none")
                     notices?.push(text)
-                const logLevel = Spec.logLevel[level]
-                if (logLevel !== null)
-                    log.write(logLevel, `specbook: ${cmd}: ${text}`)
+                log.write(Spec.logLevel[level], `specbook: ${cmd}: ${text}`)
             }
         })
     }
