@@ -38,7 +38,11 @@ const { class: className = "" } = Astro.props
                         <Icon class="h-4 w-4 shrink-0" stroke-width={1}/>
                         {method.name}
                     </span>
-                    <span class="mt-0.5 block text-xs leading-tight text-foreground-muted">{method.note}</span>
+                    <span class="mt-0.5 block text-xs leading-tight text-foreground-secondary">{method.note}</span>
+
+                    {/*  the link target, shown up front so the destination
+                         man-page is visible without clicking the chip  */}
+                    <span class="mt-0.5 block font-mono text-[0.65rem] leading-tight tracking-[-0.03em] text-foreground-muted transition-colors">&#8594; {method.skill}</span>
                 </button>
             )
         })}

@@ -5,16 +5,16 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-/*  "Highlights" section: the two-column USP/video list whose text and video
-    columns swap per row (zig-zag), driven by the highlights data. Each row's
-    columns reveal directionally (left/right) so the two halves converge on
-    scroll, mirrored per row via the row's `reversed` flag in Video-Row.  */
+/*  "Skill Sneak Previews" section: the two-column USP/video list whose text
+    and video columns swap per row (zig-zag), driven by the previews data. Each
+    row's columns reveal directionally (left/right) so the two halves converge
+    on scroll, mirrored per row via the row's `reversed` flag in Video-Row.  */
 
 import VideoRow         from "./Widget-Video-Row.astro"
 import Annotation       from "./Widget-Annotation.astro"
-import { highlights }   from "../data/highlights.ts"
+import { highlights }   from "../data/previews.ts"
 ---
-<section id="highlights" class="mx-auto max-w-4xl px-6 py-8">
+<section id="previews" class="mx-auto max-w-4xl px-6 py-8">
     <header class="mt-12 ase-section-head relative" data-reveal>
         <h2 class="ase-h2 relative inline-block">
             <Annotation flat class="right-0 translate-x-1/4">
@@ -22,7 +22,7 @@ import { highlights }   from "../data/highlights.ts"
                 skills in action to get<br/>
                 an early feel for ASE?
             </Annotation>
-            Boost Your Daily <span class="text-accent">Software Engineering</span>
+            Skill <span class="text-accent">Sneak Previews</span>
         </h2>
         <p class="ase-lead ase-justify">
             Pre-manufactured skills for the Agentic AI Tool that

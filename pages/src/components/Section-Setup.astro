@@ -95,7 +95,7 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
 ]
 ---
 <section id="setup" class="relative isolate mx-auto max-w-4xl px-6 py-8">
-    <header class="ase-section-head" data-reveal>
+    <header id="installation" class="ase-section-head" data-reveal>
         <h2 class="ase-h2 mt-12">
             <Annotation flat class="hidden sm:block left-[75%] -translate-x-full">
                 Execute just two<br/>
@@ -217,21 +217,22 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
 
     <div class="relative isolate">
         <GlowSide variant="section" side="right" />
-        <header class="mt-12 ase-section-head" data-reveal>
-            <h2 class="text-xl font-bold sm:text-2xl">
+        <header id="statusline" class="mt-12 ase-section-head" data-reveal>
+            <h2 class="ase-h2 mt-12">
                 Power-Up with <span class="text-accent">Custom Statusline</span>
             </h2>
+            <p class="mt-4 text-foreground-secondary ase-justify">
+                <b>ASE</b> can <i>optionally</i> configure a rich, information-dense
+                statusline for the <a href="https://claude.com/products/claude-code">Anthropic Claude Code CLI</a>{" "}
+                (or with reduced support the alternative <a href="https://github.com/features/copilot/cli">GitHub Copilot CLI</a>).
+            </p>
         </header>
 
         <div class="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-start">
             <div class="mt-6 ase-section-head" data-reveal="right">
                 <p class="text-foreground-secondary ase-justify">
-                    <b>ASE</b> can <i>optionally</i> configure a rich, information-dense
-                    statusline for the <a href="https://claude.com/products/claude-code">Anthropic Claude Code CLI</a>{" "}
-                    (or with reduced support the alternative <a href="https://github.com/features/copilot/cli">GitHub Copilot CLI</a>),
-                    rendered by the built-in <code>ase statusline</code> command.
-                </p>
-                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    The <b>ASE</b> statusline
+                    is rendered by the built-in <code>ase statusline</code> command.
                     It surfaces
                     your current user, project, task, and session, the active model, effort,
                     and thinking state, the persona, and a live context-window gauge, all
@@ -364,22 +365,28 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
 
     <div class="relative isolate">
         <GlowSide variant="section" side="left" />
-        <header class="mt-8 ase-section-head" data-reveal>
-            <h2 class="text-xl font-bold sm:text-2xl">
+        <header id="services" class="mt-8 ase-section-head" data-reveal>
+            <h2 class="ase-h2 mt-12">
                 Power-Up with <span class="text-accent">Foreign Services</span>
             </h2>
+            <p class="mt-4 text-foreground-secondary ase-justify">
+                <b>ASE</b> can <i>optionally</i> leverage additional
+                Model-Context-Protocol (MCP) servers for contacting foreign
+                LLM services, locally installed AI agent harness CLIs,
+                and Web Search servers.
+            </p>
         </header>
 
         <div class="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-start">
             <div class="mt-6 ase-section-head" data-reveal="right">
                 <p class="text-foreground-secondary ase-justify">
-                    <b>ASE</b> can <i>optionally</i> leverage additional
-                    Model-Context-Protocol (MCP) servers for contacting foreign
-                    LLM services (<b>OpenAI ChatGPT</b>, <b>Google Gemini</b>, <b>DeepSeek</b>, <b>xAI
-                    Grok</b>, <b>Alibaba Qwen</b>, or <b>Z.AI GLM</b>) via MCP-to-OpenAI servers,
-                    locally installed AI agent harness CLIs (<b>Anthropic Claude</b>, <b>OpenAI
-                    Codex</b>, or <b>GitHub Copilot</b>) via MCP-to-Harness servers,
-                    and Web Search services (<b>Brave</b>, <b>Perplexity</b>, or <b>Exa</b>) via their
+                    <b>ASE</b> supports
+                    Model-Context-Protocol (MCP) servers for contacting the foreign
+                    LLM services <b>OpenAI ChatGPT</b>, <b>Google Gemini</b>, <b>DeepSeek</b>, <b>xAI
+                    Grok</b>, <b>Alibaba Qwen</b>, or <b>Z.AI GLM</b> via MCP-to-OpenAI servers,
+                    locally installed AI agent harness CLIs <b>Anthropic Claude</b>, <b>OpenAI
+                    Codex</b>, or <b>GitHub Copilot</b> via MCP-to-Harness servers,
+                    and Web Search services <b>Brave</b>, <b>Perplexity</b>, or <b>Exa</b> via their
                     dedicated MCP servers.
                 </p>
                 <p class="text-foreground-secondary ase-indent-p ase-justify">
@@ -464,13 +471,10 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
 
     <div class="relative isolate">
         <GlowSide variant="section" side="right" />
-        <header class="mt-12 ase-section-head" data-reveal>
-            <h2 class="text-xl font-bold sm:text-2xl">
+        <header id="configuration" class="mt-12 ase-section-head" data-reveal>
+            <h2 class="ase-h2 mt-12">
                 Fine-Tune with <span class="text-accent">Configuration</span>
             </h2>
-        </header>
-
-        <div class="mt-6 ase-section-head" data-reveal="right">
             <p class="text-foreground-secondary ase-justify">
                 <b>ASE</b> is driven by a small set of configuration parameters,
                 managed with the <code>ase config</code> command and stored as YAML.
@@ -482,7 +486,7 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                 via <code>--scope</code>. The <b>Scopes</b> column below lists the
                 scopes a parameter may be <i>written</i> on.
             </p>
-        </div>
+        </header>
 
         <div class="bg-background-elevated/60 mt-6 overflow-x-auto rounded-xl border border-border-strong p-3 shadow-xl sm:p-4" data-reveal>
             <table class="w-full text-left text-xs sm:text-sm">

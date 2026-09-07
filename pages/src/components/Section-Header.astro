@@ -9,16 +9,27 @@
     the current page via `nav-spy`/`is-active`), the GitHub link, the (hidden)
     theme switcher, and the scroll-progress bar along its bottom edge.  */
 
-import { site }                from "../data/site.ts"
-import { navItems, navAuthor } from "../data/nav.ts"
-import LogoASE                 from "./Widget-Logo-ASE.astro"
-import LogoGitHub              from "./Widget-Logo-GitHub.astro"
-import ThemeSwitcher           from "./Widget-Theme-Switcher.astro"
-import ProgressBar             from "./Widget-Progress-Bar.astro"
+import { site }                            from "../data/site.ts"
+import { navItems, navAuthor, isNavGroup } from "../data/nav.ts"
+import LogoASE                             from "./Widget-Logo-ASE.astro"
+import LogoGitHub                          from "./Widget-Logo-GitHub.astro"
+import ThemeSwitcher                       from "./Widget-Theme-Switcher.astro"
+import ProgressBar                         from "./Widget-Progress-Bar.astro"
 
 /*  the route path of the currently rendered page, normalized to the trailing
     slash the nav entries carry (the dev server serves them without one)  */
 const current = Astro.url.pathname.replace(/\/*$/, "/")
+
+/*  the DOM id of the pull-down panel of a navigation group  */
+const groupId = (label: string) =>
+    `nav-group-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`
+
+/*  whether a route path addresses the currently rendered page. An entry
+    addressing a section of a page ("/foo/bar/#quux") is selected only while
+    that very section is the current one, which is known in the browser alone,
+    so its state is left to the `syncActive` pass of the script below.  */
+const isActive = (path: string) =>
+    !path.includes("#") && current === path
 ---
 <header class="fixed inset-x-0 top-0 z-50 border-b border-border/60">
     {/*  header background as a separate, absolutely-positioned layer rather than
@@ -58,13 +69,59 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
             class="link-plain nav-menu-panel absolute right-6 top-full hidden w-auto flex-col items-end gap-y-1.5 rounded-md rounded-t-none border border-border/60 p-4 shadow-lg data-[open]:flex lg:static lg:top-auto lg:flex lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:justify-between lg:gap-x-5 lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
         >
             <nav class="flex min-w-0 flex-col flex-wrap items-end gap-x-2 xl:gap-x-4 gap-y-1 text-base text-foreground-secondary lg:ml-4 lg:flex-row lg:items-center">
-                {navItems.map((item) =>
+                {/*  a group entry renders as a label opening the pull-down
+                     panel below it, which lists the member entries; the label
+                     is a link when the group is a page of its own and a bare
+                     toggle button otherwise -- the latter is not clickable
+                     itself and hence deliberately carries no `nav-spy` hover.
+                     A plain entry renders as the direct link to its page.  */}
+                {navItems.map((entry) => isNavGroup(entry) ?
+                    <div class="nav-group relative flex flex-col items-end lg:block">
+                        {entry.page !== undefined ?
+                            <a
+                                href={entry.page.path}
+                                data-nav-path={entry.page.path}
+                                aria-current={isActive(entry.page.path) ? "page" : undefined}
+                                class:list={[ "nav-group-toggle nav-spy relative inline-flex items-center transition-colors lg:flex",
+                                    { "is-active": isActive(entry.page.path) } ]}
+                            >
+                                {entry.label}
+                            </a> :
+                            <button
+                                type="button"
+                                aria-haspopup="true"
+                                aria-expanded="false"
+                                aria-controls={groupId(entry.label)}
+                                class:list={[ "nav-group-toggle relative inline-flex cursor-pointer items-center transition-colors lg:flex",
+                                    { "is-active": entry.items.some((item) => isActive(item.path)) } ]}
+                            >
+                                {entry.label}
+                            </button>
+                        }
+                        <div
+                            id={groupId(entry.label)}
+                            class:list={[ "nav-group-menu nav-group-panel hidden flex-col items-end gap-y-1.5 pt-1.5 lg:absolute lg:-left-3 lg:top-full lg:z-50 lg:items-start lg:gap-y-0.5 lg:rounded-md lg:rounded-tl-none lg:p-4 lg:pt-3",
+                                { "nav-group-static": entry.page !== undefined } ]}
+                        >
+                            {entry.items.map((item) =>
+                                <a
+                                    href={item.path}
+                                    data-nav-path={item.path}
+                                    aria-current={isActive(item.path) ? "page" : undefined}
+                                    class:list={[ "nav-spy whitespace-nowrap text-[0.9rem] transition-colors lg:text-base", { "is-active": isActive(item.path) } ]}
+                                >
+                                    {item.label}
+                                </a>
+                            )}
+                        </div>
+                    </div> :
                     <a
-                        href={item.path}
-                        aria-current={current === item.path ? "page" : undefined}
-                        class:list={[ "nav-spy transition-colors", { "is-active": current === item.path } ]}
+                        href={entry.path}
+                        data-nav-path={entry.path}
+                        aria-current={isActive(entry.path) ? "page" : undefined}
+                        class:list={[ "nav-spy transition-colors", { "is-active": isActive(entry.path) } ]}
                     >
-                        {item.label}
+                        {entry.label}
                     </a>
                 )}
             </nav>
@@ -75,8 +132,9 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
                     </a>
                     <a
                         href={navAuthor.path}
-                        aria-current={current === navAuthor.path ? "page" : undefined}
-                        class:list={[ "nav-spy transition-colors", { "is-active": current === navAuthor.path } ]}
+                        data-nav-path={navAuthor.path}
+                        aria-current={isActive(navAuthor.path) ? "page" : undefined}
+                        class:list={[ "nav-spy transition-colors", { "is-active": isActive(navAuthor.path) } ]}
                     >
                         {navAuthor.label}
                     </a>
@@ -108,16 +166,147 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
             btn.querySelector(".nav-toggle-open").classList.toggle("hidden", open)
             btn.querySelector(".nav-toggle-close").classList.toggle("hidden", !open)
         }
-        btn.addEventListener("click", function () {
-            setOpen(!menu.hasAttribute("data-open"))
-        })
-        menu.querySelectorAll("a").forEach(function (link) {
-            link.addEventListener("click", function () { setOpen(false) })
+        /*  open/close the pull-down panel of a single navigation group (above
+            the `lg` breakpoint, hovering a group opens it via CSS as well).  */
+        const groups = Array.prototype.slice.call(menu.querySelectorAll(".nav-group"))
+        const setGroupOpen = function (group, open) {
+            const toggle = group.querySelector(".nav-group-toggle")
+            const panel  = group.querySelector(".nav-group-menu")
+            if (open)
+                panel.setAttribute("data-open", "")
+            else
+                panel.removeAttribute("data-open")
+            if (toggle.tagName === "BUTTON")
+                toggle.setAttribute("aria-expanded", open ? "true" : "false")
+        }
+        const closeGroups = function (except) {
+            groups.forEach(function (group) {
+                if (group !== except)
+                    setGroupOpen(group, false)
+            })
+        }
+
+        /*  a group whose label is a page of its own carries a link instead of
+            a toggle button, so its panel is opened by hovering alone.  */
+        groups.forEach(function (group) {
+            const toggle = group.querySelector(".nav-group-toggle")
+            if (toggle.tagName !== "BUTTON")
+                return
+            toggle.addEventListener("click", function () {
+                const open = !group.querySelector(".nav-group-menu").hasAttribute("data-open")
+                closeGroups(group)
+                setGroupOpen(group, open)
+            })
         })
 
-        /*  close the open panel when clicking anywhere outside of it or the
-            toggle button (the toggle handles its own clicks above).  */
+        /*  the section entries ("/foo/bar/#quux") whose target section lives on
+            the very page shown, paired with that target element. The targets
+            are parsed after this header, so they are picked up once the whole
+            document stands.  */
+        const sections = []
+        const collectSections = function () {
+            const here = location.pathname.replace(/\/*$/, "/")
+            menu.querySelectorAll("[data-nav-path]").forEach(function (link) {
+                const path = link.getAttribute("data-nav-path")
+                const at   = path.indexOf("#")
+
+                /*  the page has to match as well: the same fragment name may
+                    well address a section on another page, too  */
+                if (at < 0 || path.slice(0, at) !== here)
+                    return
+                const el = document.getElementById(path.slice(at + 1))
+                if (el !== null)
+                    sections.push({ link: link, el: el })
+            })
+            syncActive()
+        }
+
+        /*  mark the navigation entries selected by the current viewport: an
+            entry addressing a page is selected while that page is shown, an
+            entry addressing a section while that section is the one scrolled
+            to, and a group label while it or any of its members is selected.
+            None of this is known at build-time, so the rendered state is
+            refined here and kept in sync while the page is scrolled.  */
+        const syncActive = function () {
+            const here = location.pathname.replace(/\/*$/, "/")
+
+            /*  the section scrolled to: the last one whose top edge has
+                entered the upper fifth of the viewport. The mark sits well
+                below the fixed header, so a section jumped to by its fragment
+                -- which lands at the `scroll-padding-top` of 5rem, plus its
+                own top margin -- counts as entered right away.  */
+            let entered = sections.length > 0 ? sections[0].link : null
+            sections.forEach(function (section) {
+                if (section.el.getBoundingClientRect().top <= 200)
+                    entered = section.link
+            })
+
+            menu.querySelectorAll("[data-nav-path]").forEach(function (link) {
+                const path   = link.getAttribute("data-nav-path")
+                const at     = path.indexOf("#")
+                const active = at < 0 ? here === path : link === entered
+                link.classList.toggle("is-active", active)
+                if (active)
+                    link.setAttribute("aria-current", at < 0 ? "page" : "true")
+                else
+                    link.removeAttribute("aria-current")
+            })
+            groups.forEach(function (group) {
+                const toggle = group.querySelector(".nav-group-toggle")
+                const own    = toggle.hasAttribute("data-nav-path") && toggle.classList.contains("is-active")
+                toggle.classList.toggle("is-active",
+                    own || group.querySelector(".nav-group-menu .is-active") !== null)
+            })
+        }
+        syncActive()
+        if (document.readyState === "loading")
+            document.addEventListener("DOMContentLoaded", collectSections)
+        else
+            collectSections()
+        window.addEventListener("hashchange", syncActive)
+
+        /*  follow the scrolling, coalesced into one pass per rendered frame  */
+        let pending = false
+        window.addEventListener("scroll", function () {
+            if (pending)
+                return
+            pending = true
+            window.requestAnimationFrame(function () {
+                pending = false
+                syncActive()
+            })
+        }, { passive: true })
+
+        btn.addEventListener("click", function () {
+            closeGroups()
+            setOpen(!menu.hasAttribute("data-open"))
+        })
+        /*  clicking an entry closes the navigation again. A click leaves the
+            pointer resting on the group, where the hover above the `lg`
+            breakpoint would immediately re-open the pull-down panel, so the
+            group is additionally held shut until the pointer has left it.  */
+        menu.querySelectorAll("a").forEach(function (link) {
+            link.addEventListener("click", function () {
+                const group = link.closest(".nav-group")
+                if (group !== null)
+                    group.setAttribute("data-closed", "")
+                closeGroups()
+                setOpen(false)
+            })
+        })
+        groups.forEach(function (group) {
+            group.addEventListener("pointerleave", function () {
+                group.removeAttribute("data-closed")
+            })
+        })
+
+        /*  close the open panels when clicking anywhere outside of them or the
+            toggle button (the toggles handle their own clicks above).  */
         document.addEventListener("click", function (ev) {
+            groups.forEach(function (group) {
+                if (!group.contains(ev.target))
+                    setGroupOpen(group, false)
+            })
             if (!menu.hasAttribute("data-open"))
                 return
             if (menu.contains(ev.target) || btn.contains(ev.target))
@@ -137,6 +326,29 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
         colour (white), mirroring the .nav-spy links. The `!important` beats the
         unlayered global `a {}` rule.  */
     .nav-link:hover { color: var(--foreground) !important; }
+
+    /*  the pull-down panel of a navigation group: opened by clicking its
+        label (which sets the `data-open` attribute) and, from the `lg`
+        breakpoint upwards, also by hovering or focusing the group itself.  */
+    .nav-group-menu[data-open] { display: flex; }
+
+    /*  a group whose label is a page of its own carries a link instead of a
+        toggle button, so below the `lg` breakpoint -- where hovering is no
+        option -- its members are listed permanently in the collapsed panel  */
+    @media (width < 64rem) {
+        .nav-group-menu.nav-group-static { display: flex; }
+    }
+
+    /*  the label of a bare group is a <button>, which neither matches the
+        global `a` rule nor inherits its colour, so it is given the very link
+        colour of its sibling nav entries.  */
+    .nav-group-toggle { color: var(--brand-400); }
+
+    /*  a group label adopts the foreground colour (white) exactly while it or
+        one of its pull-down members is selected. Hovering adds the colour only
+        for a label which is a page of its own, through the .nav-spy rule
+        above; a bare label carries no .nav-spy class at all.  */
+    .nav-group-toggle.is-active { color: var(--foreground); }
 
     /*  header background layer and collapsed mobile drop-down panel: the
         translucent brand gradient plus the frosted backdrop blur, kept off the
@@ -161,5 +373,55 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
             -webkit-backdrop-filter: none;
             backdrop-filter: none;
         }
+
+        /*  here a navigation group also opens on hovering or focusing it  */
+        .nav-group:hover        .nav-group-menu,
+        .nav-group:focus-within .nav-group-menu { display: flex; }
+
+        /*  the flat brand tint shared by the box of an open group label and
+            the box of its pull-down panel, so the two read as one body. It is
+            kept flat rather than a gradient, so no entry of the panel sits on
+            a brighter ground than its siblings.  */
+        .nav-group {
+            --nav-group-bg: color-mix(in oklch, color-mix(in oklch, var(--background) 55%, var(--brand-600)) 92%, transparent);
+        }
+
+        /*  the group pull-down panel takes over the very look the mobile nav
+            panel drops here. Its drop shadow is clipped away along the top
+            edge, where the label box joins it seamlessly.  */
+        .nav-group-panel {
+            background: var(--nav-group-bg);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 20px -5px rgb(0 0 0 / 0.45);
+            clip-path: inset(0 -40px -40px -40px);
+        }
+
+        /*  while its panel is open, the group label wears the very box the
+            panel wears, joined to it without a seam. It is drawn as a
+            pseudo-element bled out of the label box, so the neighbouring nav
+            entries keep their places, and its drop shadow is clipped away
+            along the bottom edge, so it never falls onto the panel below.  */
+        .nav-group:hover        .nav-group-toggle::before,
+        .nav-group:focus-within .nav-group-toggle::before,
+        .nav-group-toggle[aria-expanded="true"]::before {
+            content: "";
+            position: absolute;
+            inset: -0.5rem -0.75rem 0;
+            z-index: -1;
+            border-radius: 0.375rem 0.375rem 0 0;
+            background: var(--nav-group-bg);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 20px 0 rgb(0 0 0 / 0.45);
+            clip-path: inset(-40px -40px 0 -40px);
+        }
     }
+
+    /*  a group held shut after a click on one of its entries, until the
+        pointer has left it again. It comes last on purpose: it has to beat
+        the hover-driven opening above, which carries the very same
+        specificity, and hence wins by source order alone.  */
+    .nav-group[data-closed] .nav-group-menu           { display: none; }
+    .nav-group[data-closed] .nav-group-toggle::before { content: none; }
 </style>

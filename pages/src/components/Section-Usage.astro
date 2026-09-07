@@ -29,7 +29,7 @@ const columns = [
 ].map((labels) => labels.map((label) => skillGroups.find((group) => group.label === label)!))
 ---
 <section id="usage" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <header class="ase-section-head" data-reveal>
+    <header id="getstarted" class="ase-section-head" data-reveal>
         <h2 class="ase-h2 relative inline-block">
             <Annotation flat class="right-0 translate-x-1/4">
                 You bring the intent,<br/>
@@ -69,7 +69,7 @@ const columns = [
                     proposed corresponding slash commands, or use the <b><code>ase-help-skill</code></b>
                     skill to get a catalog of all available skills or show the
                     manual page of an individual skill to find out more about the skill.
-                    Or alternatively, read the manual pages directly below.
+                    Or alternatively, read the <a href="#deepdive">manual pages</a> directly online below.
                 </p>
             </div>
             <div class="lg:order-2 relative isolate" data-reveal="left">
@@ -98,9 +98,27 @@ const columns = [
                 />
             </div>
         </div>
+    </div>
 
+    <header id="overview" class="mt-24 ase-section-head" data-reveal>
+        <GlowSide variant="text" side="left" />
+        <h2 class="ase-h2 relative inline-block">
+            <Annotation flat class="right-0 translate-x-1/4">
+                Want an overview?<br/>
+                Check out this!
+            </Annotation>
+            Your Skill <span class="text-accent">Overview</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            <b>ASE</b> provides both stand-alone skills, which can be called at any time and fully
+            independently, and related skills, which should be called in sequence to form a
+            workflow.
+        </p>
+    </header>
+
+    <div class="mt-4 flex flex-col gap-12">
         <div class="ase-grid-split">
-            <div class="relative isolate lg:order-2" data-reveal="left">
+            <div class="relative isolate lg:order-1" data-reveal="left">
                 <GlowSide variant="text" side="right" />
                 <p class="ase-eyebrow">Skills &amp; Workflows</p>
                 <h3 class="ase-h3 flex items-start gap-2">
@@ -108,22 +126,41 @@ const columns = [
                     <span>Step-Wise Driving,<br/>You In The Loop</span>
                 </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
-                    Within the Agentic AI Levels of the Philosophy page, <b>ASE</b> provides its
+                    <b>ASE</b> provides its
                     various skills to let the engineer trigger the
                     next steps. Some skills are stand-alone, others
                     are part of a particular operation mode that
                     chains skills into a repeatable workflow.
-                    The diagram to the left gives you a compact
+                    The diagram to the right gives you a compact
                     overview of the skills and their intended
                     operation modes.
                 </p>
             </div>
-            <div class="lg:order-1" data-reveal="right">
+            <div class="lg:order-2" data-reveal="right">
                 <Diagram src="/assets/workflow.svg" label="ASE usage workflow diagram" />
             </div>
         </div>
+    </div>
 
+    <header id="deepdive" class="mt-24 ase-section-head" data-reveal>
+        <GlowSide variant="text" side="right" />
+        <h2 class="ase-h2 relative inline-block">
+            <Annotation flat class="right-0 translate-x-1/4">
+                Want more details?<br/>
+                Browse here!
+            </Annotation>
+            Your Skill <span class="text-accent">Deep-Dive</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            <b>ASE</b> provides many individual skills and each one accepts options and arguments.
+            Fortunately, they are all documented in individual Unix-style manpages you can browse
+            and search.
+        </p>
+    </header>
+
+    <div class="mt-12 flex flex-col gap-12">
         <div class="relative overflow-hidden rounded-xl border border-border-strong bg-background-elevated/60 p-6 shadow-xl sm:p-8" data-reveal>
+
             {/*  the search field and browser button share the top line of the
                  panel, above the catalog columns, the search field flush left
                  and the browser button flush right  */}

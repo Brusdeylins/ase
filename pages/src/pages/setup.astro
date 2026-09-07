@@ -6,16 +6,19 @@
 */
 
 /*  the "Setup" page: the prerequisites, the install/update/uninstall commands,
-    and the ASE configuration parameters.  */
+    the ASE configuration parameters, and the agent tool and LLM
+    compatibility.  */
 
-import BaseLayout   from "../layouts/BaseLayout.astro"
-import SectionSetup from "../components/Section-Setup.astro"
-import GlowTop      from "../components/Widget-Glow-Top.astro"
-import { navItem }  from "../data/nav.ts"
+import BaseLayout    from "../layouts/BaseLayout.astro"
+import SectionSetup  from "../components/Section-Setup.astro"
+import SectionCompat from "../components/Section-Compat.astro"
+import GlowTop       from "../components/Widget-Glow-Top.astro"
+import { navItem }   from "../data/nav.ts"
 
 const page = navItem("/setup/")
 ---
 <BaseLayout title={page.title} description={page.description} pad>
     <GlowTop/>
     <SectionSetup/>
+    <SectionCompat/>
 </BaseLayout>

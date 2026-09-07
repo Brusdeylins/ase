@@ -6,16 +6,19 @@
 */
 
 /*  the "Design" page: the assumptions, the design decisions derived from them,
-    and the methodology-provenance strip backing them.  */
+    the methodology-provenance strip backing them, and the resulting
+    architecture.  */
 
-import BaseLayout    from "../layouts/BaseLayout.astro"
-import SectionDesign from "../components/Section-Design.astro"
-import GlowTop       from "../components/Widget-Glow-Top.astro"
-import { navItem }   from "../data/nav.ts"
+import BaseLayout          from "../layouts/BaseLayout.astro"
+import SectionDesign       from "../components/Section-Design.astro"
+import SectionArchitecture from "../components/Section-Architecture.astro"
+import GlowTop             from "../components/Widget-Glow-Top.astro"
+import { navItem }         from "../data/nav.ts"
 
 const page = navItem("/design/")
 ---
 <BaseLayout title={page.title} description={page.description} pad>
     <GlowTop/>
     <SectionDesign/>
+    <SectionArchitecture/>
 </BaseLayout>

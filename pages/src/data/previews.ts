@@ -12,7 +12,7 @@
     `<video>.jpg` poster). Only the strongest USP+video pairs are surfaced
     here to keep the "Highlights" page tight and punchy.
 
-    `Section-Highlights.astro` alternates the USP/video column order per row,
+    `Section-Previews.astro` alternates the USP/video column order per row,
     so the order below is also the visual top-to-bottom order on the page.
 
     Each entry also carries the Lucide icon `Widget-Video-Row.astro` renders

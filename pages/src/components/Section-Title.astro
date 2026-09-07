@@ -44,7 +44,7 @@ const badges = [
     { href: "https://github.com/rse/ase/releases", path: "github/v/release/rse/ase?logo=github&label=project%20release", alt: "github (release)"          }
 ]
 ---
-<section class="relative isolate overflow-hidden">
+<section id="overview" class="relative isolate overflow-hidden">
     {/* hanging flag, carrying the sponsor logos as its overlay content */}
     <Flag class="absolute right-[5%] top-0 z-30 sm:right-[20%]">
         <div class="mb-2 flex flex-col items-center justify-center gap-4">
@@ -139,7 +139,7 @@ const badges = [
                 and with reduced support also for the alternative
                 tools <a href="https://github.com/features/copilot/cli">GitHub Copilot CLI</a> and{" "}
                 <a href="https://github.com/openai/codex">OpenAI Codex CLI</a>.{" "}
-                It comprises agent hooks, parametrizable agent skills, an underlying
+                It comprises agent hooks, parametrizable agent <a href="/usage/#deepdive">skills</a>, an underlying
                 Model-Context-Protocol (MCP) service, and a companion Command-Line Interface (CLI).
             </p>
 
@@ -156,9 +156,9 @@ const badges = [
                     </p>
                 </div>
                 <p class="ase-indent-p text-base sm:text-lg leading-snug text-foreground-secondary ase-justify">
-                    <b>ASE</b> incorporates reasonable methodology and automation aspects to support the
+                    <b>ASE</b> incorporates reasonable <a href="/design/#methodology">methodology</a> and automation aspects to support the
                     daily, recurring tasks of a <b>Software Developer</b> and <b>Software Architect</b>.
-                    The comprehensive functionality spans from <i>brainstorming ideas</i>, <i>searching the
+                    The <a href="/usage/#deepdive">comprehensive functionality</a> spans from <i>brainstorming ideas</i>, <i>searching the
                     Web</i>, <i>asking foreign LLMs</i>,{" "}
                     <i>discovering components</i>, through <i>evaluating alternatives</i>,{" "}
                     <i>challenging statements</i>, <i>analyzing root causes</i>,{" "}

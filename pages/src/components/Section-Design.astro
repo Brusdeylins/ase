@@ -33,7 +33,7 @@ import Command        from "@lucide/astro/icons/command"
 import FileCode       from "@lucide/astro/icons/file-code"
 ---
 <section id="design" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
-    <header class="ase-section-head" data-reveal>
+    <header id="assumptions" class="ase-section-head" data-reveal>
         <h2 class="ase-h2">
             <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
                 We put experts in<br/>
@@ -111,7 +111,11 @@ import FileCode       from "@lucide/astro/icons/file-code"
          through the wrapper, so the glow keeps its anchor.  */}
     <div class="relative mx-auto max-w-2xl">
         <GlowSide variant="section" side="right"/>
-        <header class="mt-20 ase-section-head" data-reveal>
+        <header id="decisions" class="mt-24 ase-section-head" data-reveal>
+            <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                Know what primarily<br/>
+                shaped ASE's design!
+            </Annotation>
             <h2 class="ase-h2">
                 Know Design <span class="text-accent">Decisions</span>
             </h2>
@@ -223,14 +227,18 @@ import FileCode       from "@lucide/astro/icons/file-code"
 
     <div class="relative mx-auto max-w-2xl">
         <GlowSide variant="section" side="left"/>
-        <header class="mt-20 ase-section-head" data-reveal>
+        <header id="methodology" class="mt-24 ase-section-head" data-reveal>
+            <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                Use ASE, profit from<br/>
+                proven methods!
+            </Annotation>
             <h2 class="ase-h2">
                 Trust Built-In <span class="text-accent">Methodology</span>
             </h2>
             <p class="ase-lead">
-                <b>ASE</b> bakes the following classic, well-known methods
-                directly into its skills &mdash; click any of them to open the
-                man-page of the skill implementing it:
+                One of the strenghts of <b>ASE</b> is that it bakes many classic, well-known methods
+                directly into its skills. This way the skills under the hood are rather powerful.
+                Click any of the methods to open the man-page of the skill implementing it.
             </p>
         </header>
     </div>

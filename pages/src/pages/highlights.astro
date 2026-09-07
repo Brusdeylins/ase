@@ -9,8 +9,8 @@
     USP/video list.  */
 
 import BaseLayout          from "../layouts/BaseLayout.astro"
-import SectionHighlights   from "../components/Section-Highlights.astro"
 import SectionProductivity from "../components/Section-Productivity.astro"
+import SectionPreviews     from "../components/Section-Previews.astro"
 import GlowTop             from "../components/Widget-Glow-Top.astro"
 import { navItem }         from "../data/nav.ts"
 
@@ -19,5 +19,5 @@ const page = navItem("/highlights/")
 <BaseLayout title={page.title} description={page.description} pad>
     <GlowTop/>
     <SectionProductivity/>
-    <SectionHighlights/>
+    <SectionPreviews/>
 </BaseLayout>

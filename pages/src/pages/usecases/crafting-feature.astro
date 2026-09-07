@@ -1,0 +1,21 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Use Case: Crafting Feature" page: crafting a new feature with ASE,
+    from the task plan to the review of the change set.  */
+
+import BaseLayout     from "../../layouts/BaseLayout.astro"
+import SectionUseCase from "../../components/Section-Usecases-Crafting-Feature.astro"
+import GlowTop        from "../../components/Widget-Glow-Top.astro"
+import { navItem }    from "../../data/nav.ts"
+
+const page = navItem("/usecases/crafting-feature/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <GlowTop/>
+    <SectionUseCase/>
+</BaseLayout>
