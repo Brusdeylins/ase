@@ -2,8 +2,8 @@
 ChangeLog
 =========
 
-1.0.0 (2026-09-07)
-------------------
+0.9.69 (2026-09-07)
+-------------------
 
 -   FEATURE [docs]: Use-case pages on the website
     Added the new "Use Cases" part of the website: the new single source of
