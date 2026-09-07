@@ -5,8 +5,13 @@ ChangeLog
 1.0.0 (2026-09-07)
 ------------------
 
--   BUGFIX [infr]: bugfix release procedure
-    Fix the "npm start publish" procedure
+-   BUGFIX [infr]: Release procedure of "npm start publish"
+    Fixed the `-i` option matching of the `publish` target in `etc/stx.conf`,
+    which previously matched `-b*` and hence never picked up the requested
+    version bump, and fixed the *StdVer* usage in `etc/version.mts`
+
+-   UPDATE [infr]: NPM dependencies
+    Upgraded `stdver` to 0.9.17.
 
 0.9.69 (2026-09-07)
 -------------------
