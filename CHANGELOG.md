@@ -2,6 +2,54 @@
 ChangeLog
 =========
 
+1.0.0 (2026-09-07)
+------------------
+
+-   FEATURE [docs]: Use-case pages on the website
+    Added the new "Use Cases" part of the website: the new single source of
+    truth `pages/src/data/usecases.ts` carries eleven use cases (Exploration,
+    Research, Discovery, Skeleton, Specification, Coding, Bugfixing, Linting,
+    Versioning, Writing, and Automation), each walking one running example
+    step by step through the *ASE* skills carrying it, the new
+    `Section-Usecase.astro` renders them as a numbered process, the new
+    dynamic route `pages/src/pages/usecases/[usecase].astro` emits one page per
+    use case, and the "Use Cases" pull-down of `nav.ts` is derived from the
+    very same data, so the previously parked "Technology Stack" and "Crafting
+    Feature" prototype pages and the "Engineering Session" part of the
+    "Workflows" page were dropped in favor of them. Along the way,
+    `Widget-Terminal.astro` keeps command options together on one line and
+    accepts digits in skill names.
+
+-   FEATURE [docs]: Pull-down menus in the website navigation
+    Turned the flat header navigation into groups with pull-down menus: the new
+    `NavGroup` and `NavSection` types of `pages/src/data/nav.ts` let a header
+    label open a panel listing the sections of its page (or external targets),
+    rendered by the new `Widget-Nav-Entry.astro` for both header groups. The
+    "Philosophy", "Architecture", and "Compatibility" pages were folded into
+    the "Design" and "Setup" pages as addressable sections, the new "Project"
+    group leads to the repository and the new "Sibling Projects" page (with
+    `Section-Siblings.astro` extracted from `Section-Thanks.astro`), the
+    "Author" page became a group of its own, the "Home" entry is shown as the
+    leading *ASE* logo, and `Section-Highlights.astro`/`highlights.ts` were
+    renamed to `Section-Previews.astro`/`previews.ts`.
+
+-   IMPROVEMENT [docs]: Install call-to-action in the website footer
+    Added a stacked "block" variant to `Widget-Sticky-CTA.astro` and placed it
+    into `Section-Footer.astro`, so the install call survives the dismissal
+    of the sticky bar, and reworded the "Design" page headers to "Our Design
+    Assumptions" and "Our Design Decisions".
+
+-   BUGFIX [code]: SpecBook log information no longer lost
+    Mapped the SpecBook verbosity level `none` in `ase-spec.ts` onto the info
+    log instead of dropping it, so the environment notices and the lifecycle
+    and failure reports of the long-running `watch` and `preview` loops no
+    longer leave a broken observation unreported.
+
+-   UPDATE [infr]: NPM dependencies
+    Upgraded `@rse/specbook` to 1.2.8, `@types/node` to 26.5.0, and
+    `@lucide/astro` to 1.42.0, and excluded `typescript` from the automatic
+    `upd` dependency updating in `tool/package.json` and `plugin/package.json`.
+
 0.9.68 (2026-09-06)
 -------------------
 
