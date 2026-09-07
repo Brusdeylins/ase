@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+1.0.0 (2026-09-07)
+------------------
+
+-   BUGFIX [infr]: bugfix release procedure
+    Fix the "npm start publish" procedure
+
 0.9.69 (2026-09-07)
 -------------------
 
