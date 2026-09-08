@@ -21,6 +21,7 @@
 ○   `ase-arch-discover`:   Discover Components
 
 ⎈   **SPECIFICATION**
+○   `ase-spec-activate`:   Activate Specification Know-How
 ○   `ase-spec-edit`:       Edit Specification
 
 ⎈   **CODING**

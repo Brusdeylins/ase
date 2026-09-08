@@ -416,6 +416,17 @@ export const useCases: UseCase[] = [
                      "specified, validated, reconciled with the code, and exported for the reviewers.",
         steps: [
             {
+                icon:     BookOpen,
+                eyebrow:  "Orientation",
+                title:    "Activate the Specification",
+                body:     "The SpecBook know-how — format contract, schema, and artifact set — is " +
+                          "activated first, so the existing specification can be queried in plain " +
+                          "conversation before anything is changed.",
+                commands: [
+                    "**/ase-spec-activate** what does the specification say about rate limiting so far?"
+                ]
+            },
+            {
                 icon:     Layers,
                 eyebrow:  "Foreign Input",
                 title:    "Import the Source",

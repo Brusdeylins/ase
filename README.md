@@ -177,6 +177,13 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-task-dissect`](plugin/skills/ase-task-dissect/help.md)
   `hello`
 
+- **Specification Activation**:
+  You want the SpecBook know-how -- format contract, schema, and artifact
+  set -- activated in your session, so you can query and ad-hoc edit your
+  specification in plain conversation?
+  &rarr; [`/ase-spec-activate`](plugin/skills/ase-spec-activate/help.md)
+  `which personas does the specification define?`
+
 - **Specification Editing**:
   You want your SpecBook-based specification changed straight from a
   plain description, in one shot and kept conformant to its format

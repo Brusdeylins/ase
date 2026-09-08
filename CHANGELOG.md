@@ -5,6 +5,10 @@ ChangeLog
 1.0.1 (2026-09-08)
 ------------------
 
+-   FEATURE [plugin]: Specification know-how activation
+    Added the `ase-spec-activate` skill, which activates the *SpecBook*
+    know-how in the current session.
+
 -   FEATURE [docs]: Specification workflows on the website
     Added the new "Specification Workflows" part to the "Workflows" page. The
     former "Development Workflows" part was renamed to "Coding Workflows", and

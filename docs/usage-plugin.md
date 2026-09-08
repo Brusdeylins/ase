@@ -282,6 +282,21 @@ The following ASE commands/skills exist on the documentation-level:
 
 The following ASE commands/skills exist on the specification-level:
 
+- **/ase-spec-activate** \[*query*\]:<br/>
+  Activate the know-how about the *SpecBook*-based specification (`SPEC`)
+  in the current session: load the *SpecBook* format contract, read the
+  *SpecBook* schema configuration of the project, and resolve the `SPEC`
+  artifacts, reported in a `SPEC ACTIVATED` box. Afterwards the
+  specification can be read, queried, explained, and ad-hoc edited in
+  plain conversation, kept conformant to the format contract and
+  validated via *SpecBook* linting. An optional *query* is answered
+  directly after the activation; it mainly serves the automatic
+  invocation, where the triggering request is passed through so that
+  activation and answer happen in one skill run. The model invokes this
+  skill automatically whenever the specification files are to be worked
+  with outside of the dedicated specification skills, which activate
+  the know-how implicitly.
+
 - **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--verify`|`-v`\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
   Edit the *SpecBook*-based specification (`SPEC`) directly from a
   *query* in a plan-less state machine (querying, discovering, grilling,
