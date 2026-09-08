@@ -104,11 +104,12 @@ export const navItems: NavEntry[] = [
       page:        { path:        "/workflows/",
                      label:       "Workflows",
                      title:       "Workflows",
-                     description: "The ASE operation modes and the development workflows built on them, " +
-                                  "shown as concrete Claude Code CLI transcripts." },
+                     description: "The ASE operation modes and the coding and specification workflows " +
+                                  "built on them, shown as concrete Claude Code CLI transcripts." },
       items: [
-          { path: "/workflows/#operation-modes",       label: "Operation Modes"       },
-          { path: "/workflows/#development-workflows", label: "Development Workflows" }
+          { path: "/workflows/#operation-modes",         label: "Operation Modes"         },
+          { path: "/workflows/#specification-workflows", label: "Specification Workflows" },
+          { path: "/workflows/#coding-workflows",        label: "Coding Workflows"        }
       ] },
     /*  the pull-down of the use cases is derived from their very own data, so
         the pages, their order, and their metadata have a single source  */

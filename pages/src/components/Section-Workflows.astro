@@ -21,7 +21,8 @@ import Annotation from "./Widget-Annotation.astro"
     speed, a double check for the added grilling and verification, a clipboard
     for the single ad-hoc plan, stacked layers for the co-existing task plans,
     a take-off for the preflight, a funnel for the Funnel Mode, and a refresh
-    cycle for the round-trip reconciliation  */
+    cycle for the round-trip reconciliation, a sticky note for the free-form
+    user-story card, and a checked book for the SpecBook specification model  */
 
 import Workflow      from "@lucide/astro/icons/workflow"
 import MessageSquare from "@lucide/astro/icons/message-square"
@@ -32,6 +33,8 @@ import Layers        from "@lucide/astro/icons/layers"
 import PlaneTakeoff  from "@lucide/astro/icons/plane-takeoff"
 import Funnel        from "@lucide/astro/icons/funnel"
 import RefreshCw     from "@lucide/astro/icons/refresh-cw"
+import StickyNote    from "@lucide/astro/icons/sticky-note"
+import BookCheck     from "@lucide/astro/icons/book-check"
 ---
 <section class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header id="operation-modes" class="ase-section-head" data-reveal>
@@ -113,29 +116,111 @@ import RefreshCw     from "@lucide/astro/icons/refresh-cw"
         </div>
     </div>
 
-    <header id="development-workflows" class="mt-16 ase-section-head" data-reveal>
+    <header id="specification-workflows" class="mt-16 ase-section-head" data-reveal>
+        <GlowSide variant="text" side="left" />
+        <h2 class="ase-h2">
+            <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                Model your spec,<br/>
+                for you and the AI!<br/>
+            </Annotation>
+            Your <span class="text-accent">Specification Workflows</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            <b>ASE</b> allows both agile and traditional specification.
+            For this, it allows you to use both small-scale, free-form
+            user-stories and/or large-scale, strictly structured specifications.
+            Choose the specification "weapon" which fits best for you!
+        </p>
+    </header>
+
+    <div class="mt-12 flex flex-col gap-12">
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <p class="ase-eyebrow">Free-Form User-Story</p>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <StickyNote class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    User-Story Task
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    The simple and agile approach to development is to iteratively work
+                    through many small user-stories, each specifying an individual feature.
+                    Every user-story is realized as a task in <b>ASE</b>.
+                </p>
+            </div>
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <Terminal
+                    prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
+                    commands={[
+                        "**/ase-task-edit** foo",
+                        "**/ase-task-dissect** foo: [...]",
+                        "**/ase-task-grill** foo",
+                        "**/ase-task-implement** foo"
+                    ]}
+                />
+            </div>
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <p class="ase-eyebrow">Checked Specification</p>
+                <h3 class="ase-h3 flex items-center gap-2">
+                    <BookCheck class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    Specification Model
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    The complex and traditional approach to development is to model the solution
+                    with a stricly structured and legally binding specification. Such specifications
+                    are realized as <a href="https://specbook.tools/">SpecBook</a> models in <b>ASE</b>.
+                </p>
+            </div>
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <Terminal
+                    prefix="Claude Code"
+                    helpPage={Astro.url.pathname}
+                    commands={[
+                        "**/ase-sync-import** [...]",
+                        "**/ase-spec-edit** **--grill** [...]",
+                        "**/ase-sync-export**",
+                        "**/ase-sync-reconcile** **--source** SPEC **--target** CODE,DOCS"
+                    ]}
+                />
+            </div>
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="lg:order-1" data-reveal="right">
+                <Diagram src="/assets/specbook-poster-1.png" label="SpecBook poster 1" />
+            </div>
+            <div class="lg:order-2" data-reveal="left">
+                <Diagram src="/assets/specbook-poster-2.png" label="SpecBook poster 2" />
+            </div>
+        </div>
+    </div>
+
+    <header id="coding-workflows" class="mt-16 ase-section-head" data-reveal>
         <GlowSide variant="text" side="left" />
         <h2 class="ase-h2">
             <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
                 Choose the best<br/>
                 tool for the job:<br/>
-                2+6 workflows!
+                2+6 coding workflows!
             </Annotation>
-            Your <span class="text-accent">Development Workflows</span>
+            Your <span class="text-accent">Coding Workflows</span>
         </h2>
         <p class="ase-lead ase-justify">
             <b>ASE</b> is based on individual skills which can both be
             sequentially triggered and partially also automatically
             chained. This way typical practical workflows can be
-            realized. The following shows typical development workflows in the
+            realized. The following shows typical coding workflows in the
             Agentic AI Coding tool <b>Anthropic Claude Code CLI</b>.
         </p>
         <p class="ase-indent-p text-foreground-secondary ase-justify">
-            Which development workflow to choose depends on the requirements, the
+            Which coding workflow to choose depends on the requirements, the
             desired pros and the acceptable cons. <b>ASE</b> does not
-            mandate a particular development workflow as the particular tasks of
+            mandate a particular coding workflow as the particular tasks of
             Software Engineers are too different. In practice, one needs
-            nearly all development workflows, each one at a certain time.
+            nearly all coding workflows, each one at a certain time.
         </p>
     </header>
 
