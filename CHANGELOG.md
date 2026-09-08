@@ -25,19 +25,38 @@ ChangeLog
     that the engineer stays in the driver's seat and picks the *modus
     operandi* per task, and adjusted its annotation accordingly.
 
+-   IMPROVEMENT [docs]: Testimonial rendering on the website
+    Typeset the testimonials of `Section-Testimonials.astro` as classic pull
+    quotes with a single oversized opening quotation mark.
+
+-   IMPROVEMENT [docs]: Productivity comparison arrow
+    Drew a white progression arrow across the three tool columns of the
+    "Productivity" comparison table in `Section-Productivity.astro`, pointing
+    to the most boosted column.
+
+-   IMPROVEMENT [docs]: Vertical spacing of the workflow parts
+    Widened the top margin of the "Coding Workflows" header in
+    `Section-Workflows.astro` to separate the workflow parts more clearly.
+
 -   BUGFIX [docs]: Pull-down menu double-activation
     Fixed the header navigation of `Section-Header.astro` so that above the
     `lg` breakpoint, where hover or focus already opens the pull-down panel, a
-    click no longer toggles `data-open` and hence no longer keeps a panel open
-    next to the one hovered afterwards; a pointer click just drops the focus,
-    while a keyboard activation keeps it.
+    click no longer toggles `data-open` and hence no longer keeps a panel open.
 
 -   UPDATE [docs]: Agentic AI Levels diagram
     Updated the `agentic-levels` diagram in `docs/` and the website assets.
 
+-   UPDATE [infr]: Dependencies
+    Upgraded the dependencies of `pages/`, `plugin/`, and `tool/`, especially
+    *Astro*, *marked*, *typescript-eslint*, and *eslint-markdown*.
+
 -   CLEANUP [docs]: Website component comments
     Trimmed the overlong header comments of `Feature-External-Links.astro`,
     `Feature-Progress.astro`, and `Section-Philosophy.astro`.
+
+-   CLEANUP [code]: Specification activation skill
+    Tightened the wording of the `ase-spec-activate` skill and its manual
+    page.
 
 1.0.0 (2026-09-07)
 ------------------
