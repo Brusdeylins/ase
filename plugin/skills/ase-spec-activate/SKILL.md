@@ -96,7 +96,7 @@ an ad-hoc change, and it *never* touches the artifact kinds `CODE`,
     Only output the following <template/>:
 
     <template>
-    <ase-tpl-boxed title="SpecBook" subtitle="Activation">
+    <ase-tpl-boxed title="SPEC" subtitle="ACTIVATED">
 
     **SCHEMA**: `<schema-file/>` (<schema-kind/>)
     **SPEC**:   `<ase-spec-basedir/>` (<artifact-count/> artifacts)
@@ -110,12 +110,9 @@ an ad-hoc change, and it *never* touches the artifact kinds `CODE`,
     Silently *skip* this item. Do not output anything about the skipping.
     </if>
     <else>
-    The <query/> argument *mainly* serves the *automatic* invocation of
-    this skill by the agent harness: when the user's request triggers
-    the activation, pass that request *verbatim* as <query/>, so the
-    activation and the answer happen in *one* skill run under the rules
-    below, instead of leaving the answer to the plain conversation
-    after the skill has returned.
+    The <query/> argument *mainly* serves the *automatic* invocation by
+    the agent harness, which passes the triggering user request
+    *verbatim*, so activation and answer happen in *one* skill run.
 
     Serve <query/> *ad-hoc* under the **Activated Behavior** below:
     read the `SPEC` artifacts of <artifact-files/> which are related to
@@ -123,9 +120,14 @@ an ad-hoc change, and it *never* touches the artifact kinds `CODE`,
     answer the query grounded in the specification content, citing the
     artifact file and object id of every statement you rely on. If
     <query/> asks for a change, apply it as an *ad-hoc modification*
-    according to the **Activated Behavior**. Output the answer in the
-    active persona style; this is the sole free-form output of this
-    skill.
+    according to the **Activated Behavior**. Set <answer/> to the
+    resulting answer and only output the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-normal/> **SPEC ANSWER**:
+
+    <answer/>
+    </template>
     </else>
 
 7.  **Finish:**

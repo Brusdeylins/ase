@@ -18,8 +18,8 @@ schema configuration of the project (the standard schema bundled with
 *ASE*, or the custom schema configured via `project.artifact.spec.schema`),
 and resolves the list of `SPEC` artifacts in the configured specification
 base directory. The activation is reported in a `SPEC ACTIVATED` box,
-listing the format contract, the schema file (marked `standard` or
-`custom`), the base directory, and the resolved artifact files.
+listing the schema file (marked `standard` or `custom`) and the base
+directory with the number of resolved artifacts.
 
 Once activated, the specification can be worked with *ad-hoc* in plain
 conversation for the remainder of the session: reading, querying, and
