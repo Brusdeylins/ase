@@ -61,7 +61,7 @@ const inline = (text: string) => text
                 {/*  the icon sits on its own flex line, which makes the
                      following <i> subtitle start a new line by itself and
                      so replaces the former <br/>  */}
-                <tr class="border-b border-border-strong text-accent">
+                <tr class="text-accent">
                     <th class="pb-2 pr-1 font-semibold sm:pr-2"></th>
                     <th class="pb-2 px-1 font-semibold sm:px-2">
                         <span class="flex items-center gap-1.5"><Hammer class="h-4 w-4 shrink-0" stroke-width={0.75}/>Manually:</span>
@@ -75,6 +75,26 @@ const inline = (text: string) => text
                         <span class="flex items-center gap-1.5"><Rocket class="h-4 w-4 shrink-0" stroke-width={0.75}/>Claude Code CLI + ASE:</span>
                         <i>AI Advanced</i>
                     </th>
+                </tr>
+                {/*  the progression arrow: a thin white line spanning the
+                     three tool columns, its head pointing to the boosted
+                     rightmost one. The line ends at 100% of the SVG width,
+                     the marker's reference point is its tip, so the head
+                     sits flush with the right edge of the last column.  */}
+                <tr class="border-b border-border-strong">
+                    <td class="pr-1 sm:pr-2"></td>
+                    <td colspan="3" class="pb-2 px-1 sm:px-2">
+                        <svg class="block h-3 w-full text-white" aria-hidden="true">
+                            <defs>
+                                <marker id="productivity-arrow-head" markerUnits="userSpaceOnUse"
+                                    markerWidth="12" markerHeight="12" refX="12" refY="6" orient="auto">
+                                    <path d="M0,0 L12,6 L0,12 Z" fill="currentColor"/>
+                                </marker>
+                            </defs>
+                            <line x1="0" y1="50%" x2="100%" y2="50%" stroke="currentColor" stroke-width="2"
+                                marker-end="url(#productivity-arrow-head)"/>
+                        </svg>
+                    </td>
                 </tr>
             </thead>
             <tbody>
