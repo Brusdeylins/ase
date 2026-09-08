@@ -58,17 +58,31 @@ import {
             }}
         >
             <SwiperWrapper>
+                {/*  each slide carries the quote font metrics, so its minimum
+                    height of six line-heights reserves ample room for four lines of
+                    quote text plus the author line, while the slide's flex
+                    centering keeps shorter quotes vertically centered.  */}
                 {testimonials.map((testimonial) => (
-                    <SwiperSlide class="px-10 sm:px-12">
-                        <blockquote class="text-center">
-                            <p class="text-xl italic leading-snug text-foreground sm:text-2xl">
-                                &ldquo;{testimonial.quote}&rdquo;
-                            </p>
-                            {testimonial.name && (
-                                <footer class="mt-2 text-sm sm:text-base">
-                                    <span class="text-foreground-muted">&mdash; {testimonial.name}</span>
-                                </footer>
-                            )}
+                    <SwiperSlide class="min-h-[5.5lh] px-10 text-xl leading-snug sm:px-12 sm:text-2xl">
+                        {/*  the quote is typeset as a classic pull quote: a single,
+                            oversized opening quotation mark (four times the quote
+                            font size, in the author's muted color) sits as the
+                            left column of a flex row beside the quote text, pulled
+                            up so its ink interleaves with the first line, and no
+                            closing mark is rendered. The tightened line-height
+                            keeps the mark's box from dictating the row height.  */}
+                        <blockquote class="flex w-full items-start gap-2 sm:gap-3">
+                            <span aria-hidden="true" class="mt-1 shrink-0 select-none text-[5rem] leading-[0.6] text-foreground-muted sm:text-[6rem]">&ldquo;</span>
+                            <div class="min-w-0 flex-1 text-left">
+                                <p class="italic text-foreground">
+                                    {testimonial.quote}
+                                </p>
+                                {testimonial.name && (
+                                    <footer class="mt-1 pr-[6ch] text-right text-sm sm:text-base">
+                                        <span class="text-foreground-muted">&mdash; {testimonial.name}</span>
+                                    </footer>
+                                )}
+                            </div>
                         </blockquote>
                     </SwiperSlide>
                 ))}

@@ -32,8 +32,7 @@ export const testimonials: Testimonial[] = [
                "ASE is a great added bonus here!",
         name:  "Matthias Brusdeylins"
     },
-    {
-        quote: "After 40 years of traditional software development, " +
+    {   quote: "After 40 years of traditional software development, " +
                "ASE finally allowed me to make peace with today's Agentic AI Coding era.",
         name:  "Dr. Ralf S. Engelschall"
     },
@@ -41,8 +40,7 @@ export const testimonials: Testimonial[] = [
                "ASE is that long-awaited professional.",
         name:  "Jochen Hörtreiter"
     },
-    {
-        quote: "I put all my methodology know-how into ASE. " +
+    {   quote: "I put all my methodology know-how and experience into ASE. " +
                "Now it's your turn to leverage from it.",
         name:  "Dr. Ralf S. Engelschall"
     },
