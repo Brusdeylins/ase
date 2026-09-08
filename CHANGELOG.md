@@ -6,15 +6,9 @@ ChangeLog
 ------------------
 
 -   FEATURE [docs]: Specification workflows on the website
-    Added the new "Specification Workflows" part to the "Workflows" page,
-    placed between the operation modes and the coding workflows: a free-form
-    "User-Story Task" pair (`ase-task-edit`, `ase-task-dissect`,
-    `ase-task-grill`) and a checked "Specification Model" pair
-    (`ase-sync-import`, `ase-spec-edit --grill`, `ase-sync-export`,
-    `ase-sync-reconcile`), the latter followed by the two *SpecBook* posters
-    as click-to-zoom diagrams. The former "Development Workflows" part was
-    renamed to "Coding Workflows", and the "Workflows" pull-down of `nav.ts`
-    now lists all three parts.
+    Added the new "Specification Workflows" part to the "Workflows" page. The
+    former "Development Workflows" part was renamed to "Coding Workflows", and
+    the "Workflows" pull-down of `nav.ts` now lists all three parts.
 
 -   IMPROVEMENT [docs]: Use cases cover all 52 skills
     Extended the use cases of `pages/src/data/usecases.ts` so that every one
