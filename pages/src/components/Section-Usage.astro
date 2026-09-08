@@ -16,6 +16,8 @@ import Annotation      from "./Widget-Annotation.astro"
 import { skillGroups } from "../data/skills.ts"
 import Compass         from "@lucide/astro/icons/compass"
 import Footprints      from "@lucide/astro/icons/footprints"
+import Search          from "@lucide/astro/icons/search"
+import BookOpenText    from "@lucide/astro/icons/book-open-text"
 
 /*  arrange the skill groups into the five catalog columns, where the
     third column stacks "Quick Mode" and "Sync Mode" vertically instead
@@ -165,15 +167,28 @@ const columns = [
                  panel, above the catalog columns, the search field flush left
                  and the browser button flush right  */}
             <div class="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <input
-                    type="search"
-                    data-help-search
-                    autocomplete="off"
-                    placeholder="Search all manpages…"
-                    aria-label="Search man-pages"
-                    class="w-64 rounded-lg border border-border-strong bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:border-accent focus:outline-none"
-                />
-                <button type="button" class="w-64 cursor-grab bg-accent/10 text-sm ase-btn" data-help-id={skillGroups[0].skills[0]}>
+                {/*  the magnifier sits in an own leading segment, tinted exactly
+                     like the browser button, so the border, the rounding and the
+                     focus state move from the input to the shell and both parts
+                     read as one single control. The shell itself stays
+                     transparent and only the input carries the opaque
+                     background, so the segment tint composites over the very
+                     same panel background as the button does.  */}
+                <div class="flex w-64 items-stretch overflow-hidden rounded-lg border border-border-strong focus-within:border-accent">
+                    <span class="flex items-center border-r border-border-strong bg-accent/10 px-2.5 text-foreground-muted">
+                        <Search class="h-4 w-4 shrink-0" stroke-width={1}/>
+                    </span>
+                    <input
+                        type="search"
+                        data-help-search
+                        autocomplete="off"
+                        placeholder="Search all manpages…"
+                        aria-label="Search man-pages"
+                        class="min-w-0 flex-1 bg-background px-3 py-2 text-sm text-foreground placeholder:text-foreground-muted focus:outline-none"
+                    />
+                </div>
+                <button type="button" class="flex w-64 cursor-grab items-center justify-center gap-2 bg-accent/10 text-sm ase-btn" data-help-id={skillGroups[0].skills[0]}>
+                    <BookOpenText class="h-4 w-4 shrink-0" stroke-width={1}/>
                     Open Manpage Browser
                 </button>
             </div>
