@@ -7,17 +7,7 @@
 
 /*  external-link targeting: make every off-site link ("http"/"https" target)
     open in a new browser tab, so following a reference never tears the visitor
-    out of the single-page site. Applied centrally at run-time rather than by
-    hand-annotating every <a> in the components, mirroring the purely
-    selector-driven "↗" marker in `theme.css` — both key off the very same
-    `a[href^="http"]` condition, so a link can never end up marked as external
-    but still navigating in place.
-
-    An author-supplied `target` always wins, which doubles as the per-link
-    opt-out. `rel` gains `noopener`/`noreferrer` (without dropping any existing
-    tokens): implied by modern browsers for `target="_blank"`, but still needed
-    to keep the opened page from reaching back through `window.opener` on
-    older ones.  */
+    out of the single-page site.  */
 ---
 <script is:inline>
     (function () {
