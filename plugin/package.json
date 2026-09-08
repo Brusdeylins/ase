@@ -20,7 +20,7 @@
         "markdownlint-cli2":                "0.23.2",
         "eslint":                           "10.10.0",
         "@eslint/markdown":                 "8.0.3",
-        "eslint-markdown":                  "0.14.1"
+        "eslint-markdown":                  "0.15.0"
     },
     "engines": {
         "npm":                              ">=10.0.0",
