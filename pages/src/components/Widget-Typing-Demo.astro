@@ -63,6 +63,8 @@ const { count = 0 } = Astro.props
                 "/ase-docs-distill", "--top=5 @docs/architecture.md" ],
             [   "Compare alternatives via weighted decision matrix",
                 "/ase-meta-evaluate", "Commander.js vs. Yargs vs. Optique, focus on TypeScript support, features, and popularity" ],
+            [   "Shorten article to hard target length",
+                "/ase-docs-shorten", "--chars 5000 @docs/article.md" ],
             [   "Build strongest case for thesis",
                 "/ase-meta-steelman", "--count=10 ASE is a useful Claude Code plugin" ],
             [   "Trace root cause with Five-Whys method",
@@ -71,6 +73,8 @@ const { count = 0 } = Astro.props
                 "/ase-meta-brainstorm", "--max-clarify=0 --min-ideas=20 clever and useful AI skills for software engineering" ],
             [   "Diagnose and resolve a problem",
                 "/ase-code-resolve", "unexpected service crash when agent tool is upgraded" ],
+            [   "Iteratively navigate the Web for topic proximity",
+                "/ase-meta-proximity", "REST API" ],
             [   "Search the Web for a consolidated answer",
                 "/ase-meta-search", "Who authored the ASE project?" ]
         ]
