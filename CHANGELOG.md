@@ -21,6 +21,9 @@ ChangeLog
 -   UPDATE [docs]: Workflow diagram
     Updated the `workflow` diagram in `docs/` and the website assets.
 
+-   UPDATE [infr]: NPM dependencies
+    Updated NPM dependencies in `tools/`.
+
 1.0.1 (2026-09-08)
 ------------------
 
