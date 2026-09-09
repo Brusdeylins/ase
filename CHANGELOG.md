@@ -2,6 +2,12 @@
 ChangeLog
 =========
 
+1.0.3 (2026-09-10)
+------------------
+
+-   UPDATE [infr]: NPM dependencies
+    Updated NPM dependencies: SpecBook 1.2.9
+
 1.0.2 (2026-09-10)
 ------------------
 
