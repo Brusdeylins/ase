@@ -5,6 +5,13 @@ ChangeLog
 1.0.3 (2026-09-10)
 ------------------
 
+-   FEATURE [plugin]: Reconciliation operations and dry run
+    Added the `--operation` option to the `ase-sync-reconcile` skill, which
+    restricts the target-side changes to a subset of the operations `add`,
+    `update`, and `remove` (default: `all`), and the `--dry` option, which
+    performs the reconciliation without modifying any target artifact and
+    shows the intended changes as a unified diff instead.
+
 -   UPDATE [infr]: NPM dependencies
     Updated NPM dependencies: SpecBook 1.2.9
 

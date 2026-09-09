@@ -316,7 +316,7 @@ The following ASE commands/skills exist on the specification-level:
 
 The following ASE commands/skills exist on the synchronization-level:
 
-- **/ase-sync-reconcile** \[`--bidirectional`|`-b`\] \[`--target`|`-t` *target*\] \[`--source`|`-s` *source*\] \[*hint*\]:<br/>
+- **/ase-sync-reconcile** \[`--bidirectional`|`-b`\] \[`--operation`|`-o` *op*\] \[`--dry`|`-d`\] \[`--target`|`-t` *target*\] \[`--source`|`-s` *source*\] \[*hint*\]:<br/>
   Reconcile one set of artifact kinds (the *target*) so it reflects the
   current state of another set (the *source*), reading the source
   artifacts and surgically adjusting the target artifacts. Both *target*
@@ -324,8 +324,12 @@ The following ASE commands/skills exist on the synchronization-level:
   `SPEC`, `CODE`, `DOCS`, `INFR`, and `OTHR`; when *source* is
   omitted, it defaults to all remaining kinds not present in *target*.
   With `--bidirectional`, the alignment is performed in both directions.
-  An optional *hint* narrows the scope of the reconciliation. Changed
-  `SPEC` artifacts are validated via *SpecBook* linting.
+  `--operation` restricts the applied target-side operations to a
+  comma-separated subset of `add`, `update`, and `remove` (default:
+  `all`), and `--dry` shows the intended changes as a unified diff
+  instead of applying them. An optional *hint* narrows the scope of the
+  reconciliation. Changed `SPEC` artifacts are validated via *SpecBook*
+  linting.
 
 - **/ase-sync-import** \[`--target`|`-t` *target*\] *hint*:<br/>
   Import information from foreign sources (files, URLs, or pasted text)

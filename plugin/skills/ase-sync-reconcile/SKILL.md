@@ -1,6 +1,6 @@
 ---
 name: ase-sync-reconcile
-argument-hint: "[--help|-h] [--bidirectional|-b] [--target|-t <target>[,...]] [--source|-s <source>[,...]] [<hint>]"
+argument-hint: "[--help|-h] [--bidirectional|-b] [--operation|-o <op>[,...]] [--dry|-d] [--target|-t <target>[,...]] [--source|-s <source>[,...]] [<hint>]"
 description: >
     Reconcile one set of artifact kinds (the target) to reflect the
     current state of another set of artifact kinds (the source), while
@@ -22,7 +22,7 @@ Reconcile Artifact Set to Artifact Set
 
 <expand name="getopt"
     arg1="ase-sync-reconcile"
-    arg2="--bidirectional|-b --target|-t=CODE,DOCS,INFR,OTHR --source|-s=AUTO">
+    arg2="--bidirectional|-b --operation|-o=(all|add|update|remove)... --dry|-d --target|-t=CODE,DOCS,INFR,OTHR --source|-s=AUTO">
     $ARGUMENTS
 </expand>
 
@@ -98,11 +98,29 @@ Procedure
 
         </if>
 
-    6.  Report the resolved target and source with the following <template/>:
+    6.  Treat <getopt-option-operation/> as a comma-separated list of
+        *operation tokens*. The getopt parser validates only the *first*
+        token, so you *MUST* validate each remaining token yourself
+        against the allowed set `all`, `add`, `update`, `remove`. If any
+        token is *not* in this set, bind <token/> to that offending
+        token, then only output the following <template/> and then
+        immediately *STOP* processing the entire current skill:
+
+        <template>
+        ⧉ **ASE**: ☻ skill: **ase-sync-reconcile**, ▶ ERROR: invalid `--operation` token: **<token/>**
+        </template>
+
+        Set <operations/> to `add,update,remove` if `all` is in
+        <getopt-option-operation/>, or to the given tokens otherwise.
+        Do not output anything.
+
+    7.  Report the resolved target, source, and operations with the
+        following <template/>:
 
         <template>
         <ase-tpl-bullet-signal/> **TARGET**: <target/>
         <ase-tpl-bullet-normal/> **SOURCE**: <source/>
+        <ase-tpl-bullet-normal/> **OPERATIONS**: <operations/>
         </template>
 
     </step>
@@ -176,10 +194,14 @@ Procedure
         input state actually requires, and do *not* rewrite unrelated
         parts of an output artifact.
 
-        Apply the update directly to the output artifacts via the
-        `Write`/`Edit` tools. For a `TASK` output, apply it via the
-        `ase_task_save` MCP tool instead -- *NEVER* write a task plan
-        file via `Write`/`Edit` or by executing a shell command.
+        Restrict the update to the *operations* in <operations/>, on
+        the level of both the content *inside* an output artifact and
+        whole output artifact *files*: `add` creates output content and
+        files the input warrants but the output lacks, `update` changes
+        existing output content the input contradicts, and `remove`
+        deletes output content and files the input no longer supports.
+        Whatever an *excluded* operation would have changed stays
+        silently *untouched*.
 
         For each formatted output artifact kind, strictly honor its
         format contract.
@@ -188,7 +210,29 @@ Procedure
         <timestamp-modified-old/>` line, replace this with `Modified:
         <timestamp-modified/>`.
 
-    5.  <if condition="at least one `SPEC` output artifact was changed">
+        <if condition="<getopt-option-dry/> is equal 'true'">
+
+        Do *not* modify any output artifact: you *MUST* *NOT* call
+        `Edit`, `Write`, `NotebookEdit`, `ase_task_save`, or any other
+        filesystem-modifying tool or shell command. Instead, store the
+        *complete* change set in *unified diff* format in
+        <unified-diff/>, diffing every touched file against its current
+        on-disk content and every touched `TASK` output against its
+        plan text loaded via the `ase_task_load` MCP tool, so all
+        context lines match *exactly* and the diff would apply
+        *cleanly*.
+
+        </if>
+        <else>
+
+        Apply the update directly to the output artifacts via the
+        `Write`/`Edit` tools. For a `TASK` output, apply it via the
+        `ase_task_save` MCP tool instead -- *NEVER* write a task plan
+        file via `Write`/`Edit` or by executing a shell command.
+
+        </else>
+
+    5.  <if condition="<getopt-option-dry/> is not 'true' and at least one `SPEC` output artifact was changed">
 
         Validate the specification by calling the `ase_specbook_lint()`
         tool of the `ase` MCP server and reading its returned
@@ -209,7 +253,37 @@ Procedure
 
         </if>
 
-    6.  Report the performed updates with the following <template/>, listing
+    6.  <if condition="<getopt-option-dry/> is equal 'true'">
+
+        Report the intended updates with the following <template/>.
+        Set <fence/> to a run of backtick characters *one longer* than
+        the longest backtick run occurring anywhere inside
+        <unified-diff/>, but to at least three, so a diff which itself
+        carries fenced code blocks cannot terminate the block
+        prematurely:
+
+        <template>
+        <ase-tpl-bullet-signal/> **INTENDED CHANGES** (dry run, nothing applied):
+
+        <fence/>diff
+        <unified-diff/>
+        <fence/>
+        </template>
+
+        <if condition="<unified-diff/> is empty">
+
+        Only output the following <template/>:
+
+        <template>
+        <ase-tpl-bullet-normal/> **INTENDED CHANGES**: none -- all outputs already reflect source state
+        </template>
+
+        </if>
+
+        </if>
+        <else>
+
+        Report the performed updates with the following <template/>, listing
         one bullet line per changed output file (with <file/> its
         project-relative path and <note/> an ultra-brief description of
         what was reconciled):
@@ -231,18 +305,26 @@ Procedure
 
         </if>
 
+        </else>
+
     7.  Finally, give the closing hints by expanding the following
         (which, depending on the configured <ase-guidance-level/>, may
         each expand into nothing and hence emit no output at all):
 
-        <if condition="at least one output artifact was changed">
+        <if condition="<getopt-option-dry/> is equal 'true' and <unified-diff/> is not empty">
+        <ase-tpl-hint level="normal">
+        Re-run `/ase-sync-reconcile` without `--dry` to apply the intended changes.
+        </ase-tpl-hint>
+        </if>
+
+        <if condition="<getopt-option-dry/> is not 'true' and at least one output artifact was changed">
         <ase-tpl-hint level="normal">
         Use `/ase-sync-export` to re-materialize the derived export files of the reconciled artifacts.
         </ase-tpl-hint>
         </if>
 
         <ase-tpl-hint level="verbose">
-        Use `/ase-sync-reconcile --bidirectional` to align target and source against *each other*, and a trailing `<hint>` argument to narrow the reconciliation.
+        Use `/ase-sync-reconcile --bidirectional` to align target and source against *each other*, `--operation` to restrict the applied operations, `--dry` to preview the changes as a unified diff, and a trailing `<hint>` argument to narrow the reconciliation.
         </ase-tpl-hint>
 
     </step>
