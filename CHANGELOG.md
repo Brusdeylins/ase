@@ -2,6 +2,25 @@
 ChangeLog
 =========
 
+1.0.2 (2026-09-10)
+------------------
+
+-   FEATURE [docs]: Two more skills in the typing demo
+    Added the `ase-docs-shorten` and `ase-meta-proximity` showcases to the
+    command list of `Widget-Typing-Demo.astro`.
+
+-   IMPROVEMENT [docs]: Typing demo command titles
+    Shortened and unified the command titles of `Widget-Typing-Demo.astro`
+    into terse, verb-first phrasings.
+
+-   BUGFIX [infr]: Generated plugin files missing from the NPM package
+    Removed the copied `plugin/.gitignore` in the `build-plugin` target of
+    `tool/etc/stx.conf`, as NPM otherwise silently drops the generated plugin
+    files it names from the published tarball.
+
+-   UPDATE [docs]: Workflow diagram
+    Updated the `workflow` diagram in `docs/` and the website assets.
+
 1.0.1 (2026-09-08)
 ------------------
 
