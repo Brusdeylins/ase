@@ -2,6 +2,13 @@
 ChangeLog
 =========
 
+1.0.4 (2026-09-10)
+------------------
+
+-   BUGFIX [infr]: Dropped unnecessary files in NPM distribution
+    The `plugin/node_modules` was accidentally included in the NPM distribution
+    archive of ASE and this way blew it up dramatically.
+
 1.0.3 (2026-09-10)
 ------------------
 

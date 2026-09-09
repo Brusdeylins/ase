@@ -84,6 +84,9 @@
         "dst/**/*",
         "bin/**/*",
         "plugin/**/*",
+        "!plugin/node_modules/**",
+        "!plugin/package.json",
+        "!plugin/etc/**",
         ".claude-plugin/**/*",
         "README.md"
     ],
