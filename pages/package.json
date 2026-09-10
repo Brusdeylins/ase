@@ -8,7 +8,7 @@
     "homepage":                                   "https://ase.tools",
     "type":                                       "module",
     "devDependencies": {
-        "@rse/stx":                               "1.1.6",
+        "@rse/stx":                               "1.1.7",
         "@astrojs/check":                         "0.9.10",
         "typescript":                             "6.0.3",
         "eslint":                                 "10.10.0",
@@ -28,7 +28,7 @@
         "@astro-community/astro-embed-youtube":   "0.5.10",
         "astro-robots-txt":                       "1.0.0",
         "astro-swiper":                           "2.10.0",
-        "@lucide/astro":                          "1.42.0",
+        "@lucide/astro":                          "1.44.0",
         "tailwindcss":                            "4.3.3",
         "@tailwindcss/vite":                      "4.3.3",
         "typopro-web":                            "4.2.8",

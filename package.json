@@ -14,7 +14,7 @@
         "url":                              "https://engelschall.com"
     },
     "devDependencies": {
-        "@rse/stx":                         "1.1.6",
+        "@rse/stx":                         "1.1.7",
         "json-asty":                        "1.3.4",
         "shx":                              "0.4.0",
         "stdver":                           "0.9.17",

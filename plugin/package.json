@@ -14,7 +14,7 @@
         "url":                              "https://engelschall.com"
     },
     "devDependencies": {
-        "@rse/stx":                         "1.1.6",
+        "@rse/stx":                         "1.1.7",
         "@rse/specbook":                    "1.2.9",
         "markdownlint":                     "0.41.1",
         "markdownlint-cli2":                "0.23.2",
