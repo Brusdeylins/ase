@@ -11,6 +11,9 @@ ChangeLog
     where the entry `std` names the standard schema bundled with the ASE plugin
     and every other entry is a file path relative to the project root.
 
+-   UPDATE [infr]: NPM dependencies
+    Updated NPM dependencies: SpecBook 1.2.10
+
 1.0.4 (2026-09-10)
 ------------------
 
