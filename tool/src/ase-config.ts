@@ -13,7 +13,6 @@ import { Command }                                  from "commander"
 import { Document, parseDocument, isMap, isScalar } from "yaml"
 import { execaSync }                                from "execa"
 import * as v                                       from "valibot"
-import Table                                        from "cli-table3"
 import writeFileAtomic                              from "write-file-atomic"
 import lockfile                                     from "proper-lockfile"
 import { z }                                        from "zod"
@@ -22,6 +21,7 @@ import type { McpServer }                           from "@modelcontextprotocol/
 
 import type Log                                     from "./ase-log.js"
 import { writeStdout }                              from "./ase-stdio.js"
+import { renderTable }                              from "./ase-table.js"
 
 /*  classification taxonomy  */
 export const projectClassification = {
@@ -700,16 +700,12 @@ export default class ConfigCommand {
                 const scope = parseScope(cmd.optsWithGlobals().scope as string | undefined)
                 const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
-                const table = new Table({
-                    head:  [ "KEY", "VALUE", "SCOPE" ],
-                    chars: { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
-                    style: { head: [ "blue" ] }
-                })
+                const rows: string[][] = []
                 for (const e of cfg.entries()) {
                     const val = isScalar(e.value) ? e.value.value : e.value
-                    table.push([ e.key, String(val), Config.scopeLabel(e.scope) ])
+                    rows.push([ e.key, String(val), Config.scopeLabel(e.scope) ])
                 }
-                await writeStdout(`${table.toString()}\n`)
+                await writeStdout(renderTable([ "KEY", "VALUE", "SCOPE" ], rows))
             })
 
         /*  register CLI sub-command "ase config edit"  */

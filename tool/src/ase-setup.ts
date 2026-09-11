@@ -13,7 +13,6 @@ import { Command }       from "commander"
 import { execa }         from "execa"
 import which             from "which"
 import * as dotenvx      from "@dotenvx/dotenvx"
-import Table             from "cli-table3"
 import chalk             from "chalk"
 import writeFileAtomic   from "write-file-atomic"
 import { mkdirp }        from "mkdirp"
@@ -22,6 +21,7 @@ import type { AstNode }  from "json-asty"
 
 import type Log          from "./ase-log.js"
 import Version           from "./ase-version.js"
+import { renderTable }   from "./ase-table.js"
 
 /*  type of supported tool (host) systems  */
 type Tool = "claude" | "copilot" | "codex"
@@ -309,22 +309,16 @@ export default class SetupCommand {
         const spec = toolSpecs[tool]
         await this.ensureTool(spec.cli)
         this.log.write("info", `setup: status: probing ASE registrations for ${spec.label}`)
-        const table = new Table({
-            head:      [ "KIND", "ID", "SCOPE", "STATUS" ],
-            colWidths: [ 13, 34, 10, 16 ],
-            wordWrap:  true,
-            chars:     { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
-            style:     { head: [ "blue" ] }
-        })
+        const rows: string[][] = []
 
         /*  report the ASE plugin registrations, with an absent plugin
             still rendered as an explicit row instead of being omitted  */
         const plugins = await this.pluginStatus(tool)
         if (plugins.length === 0)
-            table.push([ "PLUGIN", chalk.bold("ase@ase"), "(n/a)", "not installed" ])
+            rows.push([ "PLUGIN", chalk.bold("ase@ase"), "(n/a)", "not installed" ])
         else
             for (const plugin of plugins)
-                table.push([ "PLUGIN", chalk.bold("ase@ase"), plugin.scope, plugin.status ])
+                rows.push([ "PLUGIN", chalk.bold("ase@ase"), plugin.scope, plugin.status ])
 
         /*  report the registered MCP servers, probed concurrently and
             silently skipping every server which is not registered at all  */
@@ -334,14 +328,14 @@ export default class SetupCommand {
             const scope = scopes[i]
             if (scope === undefined)
                 continue
-            table.push([ "MCP", chalk.bold(this.mcpServers[i].server), scope, "registered" ])
+            rows.push([ "MCP", chalk.bold(this.mcpServers[i].server), scope, "registered" ])
         }
 
         /*  report the ASE statusline registrations  */
         for (const statusline of await this.statuslineStatus(tool))
-            table.push([ "STATUSLINE", chalk.bold(statusline.file), statusline.scope, statusline.status ])
+            rows.push([ "STATUSLINE", chalk.bold(statusline.file), statusline.scope, statusline.status ])
 
-        process.stdout.write(`${table.toString()}\n`)
+        process.stdout.write(renderTable([ "KIND", "ID", "SCOPE", "STATUS" ], rows))
         return 0
     }
 
@@ -396,15 +390,9 @@ export default class SetupCommand {
 
     /*  handler for "ase setup mcp list"  */
     private async doMcpList (): Promise<number> {
-        const table = new Table({
-            head:      [ "ID", "NAME", "VERS", "MCP", "KEY", "SKILLS" ],
-            colWidths: [ 16, 16, 8, 21, 17, 20 ],
-            wordWrap:  true,
-            chars:     { "mid": "", "left-mid": "", "mid-mid": "", "right-mid": "" },
-            style:     { head: [ "blue" ] }
-        })
+        const rows: string[][] = []
         for (const handle of this.mcpServers)
-            table.push([
+            rows.push([
                 chalk.bold(handle.id),
                 handle.name,
                 handle.version ?? "(unknown)",
@@ -412,7 +400,7 @@ export default class SetupCommand {
                 handle.env.join(", "),
                 handle.skills.join(", ")
             ])
-        process.stdout.write(`${table.toString()}\n`)
+        process.stdout.write(renderTable([ "ID", "NAME", "VERS", "MCP", "KEY", "SKILLS" ], rows))
         return 0
     }
 

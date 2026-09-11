@@ -11,6 +11,11 @@ ChangeLog
     where the entry `std` names the standard schema bundled with the ASE plugin
     and every other entry is a file path relative to the project root.
 
+-   BUGFIX [tool]: Terminal-width aware CLI tables
+    The tables of `ase config list`, `ase setup status`, and `ase setup mcp list`
+    no longer exceed the terminal width, as their columns are now shrunk to the
+    available width and their over-wide cells are wrapped over multiple lines.
+
 -   UPDATE [infr]: NPM dependencies
     Updated NPM dependencies: SpecBook 1.2.10
 
