@@ -16,6 +16,10 @@ ChangeLog
     no longer exceed the terminal width, as their columns are now shrunk to the
     available width and their over-wide cells are wrapped over multiple lines.
 
+-   BUGFIX [tool]: Consistent Git exclude handling of the two artifact resolvers
+    The artifact resolver now also honors the global excludes file and `info/exclude`, and
+    `ase spec` now honors the Git exclude rules at all, so both resolvers see the same files.
+
 -   UPDATE [infr]: NPM dependencies
     Updated NPM dependencies: SpecBook 1.2.10
 

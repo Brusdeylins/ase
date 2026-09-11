@@ -16,6 +16,8 @@ import type { McpServer }       from "@modelcontextprotocol/sdk/server/mcp.js"
 import type Log                 from "./ase-log.js"
 import { Config, configSchema } from "./ase-config.js"
 import { Task }                 from "./ase-task.js"
+import { Ignore }               from "./ase-ignore.js"
+import type { IgnoreRule }      from "./ase-ignore.js"
 import { writeStdout }          from "./ase-stdio.js"
 
 /*  the recognized artifact kinds, in descending precedence order;
@@ -26,9 +28,6 @@ export type ArtifactKind = (typeof artifactKinds)[number]
 /*  the four configured kinds (i.e. all kinds except the implicit "othr")  */
 const configuredKinds: ReadonlyArray<Exclude<ArtifactKind, "othr">> =
     [ "spec", "code", "docs", "infr" ]
-
-/*  a single ".gitignore" rule, pre-compiled into a picomatch matcher  */
-type IgnoreRule = { matcher: (p: string) => boolean, negated: boolean, dirOnly: boolean }
 
 /*  reusable functionality: resolve artifact kinds to project-relative
     file lists, driven by the "project.artifact.<kind>" configuration  */
@@ -41,75 +40,22 @@ export class Artifact {
         return kind as ArtifactKind
     }
 
-    /*  translate a single ".gitignore" line into a picomatch-backed rule,
-        honoring the anchored-vs-floating, directory-only, and negation
-        semantics of ".gitignore" patterns; anchored patterns resolve
-        relative to the "base" directory holding the ".gitignore"  */
-    private static compileIgnoreRule (line: string, base: string): IgnoreRule | null {
-        let pattern = line.trim()
-        if (pattern === "" || pattern.startsWith("#"))
-            return null
-        let negated = false
-        if (pattern.startsWith("!")) {
-            negated = true
-            pattern = pattern.slice(1)
-        }
-        let dirOnly = false
-        if (pattern.endsWith("/")) {
-            dirOnly = true
-            pattern = pattern.slice(0, -1)
-        }
-        const anchored = pattern.includes("/")
-        if (pattern.startsWith("/"))
-            pattern = pattern.slice(1)
-        const glob    = anchored ? (base === "" ? pattern : `${base}/${pattern}`) : `**/${pattern}`
-        const isMatch = picomatch(glob, { dot: true })
-        return { matcher: (p: string) => isMatch(p), negated, dirOnly }
-    }
-
-    /*  load the ".gitignore" rules located directly in a directory,
-        given as absolute "dir" and project-relative "relDir"  */
-    private static loadIgnoreRules (dir: string, relDir: string): IgnoreRule[] {
-        const file = path.join(dir, ".gitignore")
-        if (!fs.existsSync(file))
-            return []
-        const rules: IgnoreRule[] = []
-        for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
-            const rule = Artifact.compileIgnoreRule(line, relDir)
-            if (rule !== null)
-                rules.push(rule)
-        }
-        return rules
-    }
-
-    /*  decide whether a project-relative path is ignored by the given
-        ordered ".gitignore" rule set (last matching rule wins)  */
-    private static isIgnored (rel: string, isDir: boolean, rules: IgnoreRule[]): boolean {
-        let ignored = false
-        for (const rule of rules) {
-            if (rule.dirOnly && !isDir)
-                continue
-            if (rule.matcher(rel))
-                ignored = !rule.negated
-        }
-        return ignored
-    }
-
     /*  build the file universe by walking the project tree from the
-        project root, honoring ".gitignore" rules (root plus nested) and
-        always pruning ".git". Yields POSIX project-relative, sorted,
+        project root, honoring the Git exclude rules (the repository-wide
+        ones plus the root and nested ".gitignore" files) and always
+        pruning ".git". Yields POSIX project-relative, sorted,
         de-duplicated file paths  */
     static universe (): string[] {
         const root  = Task.projectRoot()
         const files = new Set<string>()
         const walk = (dir: string, relDir: string, inherited: IgnoreRule[]): void => {
-            const rules = [ ...inherited, ...Artifact.loadIgnoreRules(dir, relDir) ]
+            const rules = [ ...inherited, ...Ignore.rules(dir, relDir) ]
             for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
                 if (entry.name === ".git")
                     continue
                 const rel    = relDir === "" ? entry.name : `${relDir}/${entry.name}`
                 const isDir  = entry.isDirectory()
-                if (Artifact.isIgnored(rel, isDir, rules))
+                if (Ignore.matches(rel, isDir, rules))
                     continue
                 if (isDir)
                     walk(path.join(dir, entry.name), rel, rules)
@@ -117,7 +63,7 @@ export class Artifact {
                     files.add(rel)
             }
         }
-        walk(root, "", [])
+        walk(root, "", Ignore.base(root))
         return [ ...files ].sort((a, b) => a.localeCompare(b))
     }
 

@@ -98,12 +98,20 @@ export class Spec {
         return rel.replace(/\\/g, "/")
     }
 
+    /*  every specification command honors the Git exclude rules, so that
+        SpecBook resolves the very same artifact files as "ase artifact
+        list --kind spec": both consult ".gitignore", so a specification
+        the project does not track is invisible to both instead of only
+        to one of them  */
+    private static readonly gitignore = true
+
     /*  lint the specification Markdown files below the "spec" artifact
         base directory against the schema configuration  */
     static async lint (log: Log): Promise<Diagnostic[]> {
         const result = await Spec.unmarked(Spec.api(log).lint({
-            config:  Spec.configFiles(log),
-            basedir: Artifact.basedir(log, "spec")
+            config:    Spec.configFiles(log),
+            basedir:   Artifact.basedir(log, "spec"),
+            gitignore: Spec.gitignore
         }))
         return result.diagnostics.map((d) => ({ ...d, file: Spec.relativize(d.file) }))
     }
@@ -138,8 +146,9 @@ export class Spec {
         collecting the emitted environment notices if requested  */
     static export (log: Log, formats: ExportFormat[], notices?: string[]): Promise<Buffer[]> {
         return Spec.unmarked(Spec.api(log, notices).export({
-            config:  Spec.configFiles(log),
-            basedir: Artifact.basedir(log, "spec"),
+            config:    Spec.configFiles(log),
+            basedir:   Artifact.basedir(log, "spec"),
+            gitignore: Spec.gitignore,
             formats
         }))
     }
@@ -155,8 +164,9 @@ export class Spec {
         onExport: (buffers: Buffer[]) => Promise<void>
     ): Promise<void> {
         return Spec.unmarked(Spec.api(log).watch({
-            config:  Spec.configFiles(log),
-            basedir: Artifact.basedir(log, "spec"),
+            config:    Spec.configFiles(log),
+            basedir:   Artifact.basedir(log, "spec"),
+            gitignore: Spec.gitignore,
             formats,
             outputs,
             onExport
@@ -168,8 +178,9 @@ export class Spec {
         browsers as an in-place document update  */
     static preview (log: Log, addr: string, port: number): Promise<void> {
         return Spec.unmarked(Spec.api(log).preview({
-            config:  Spec.configFiles(log),
-            basedir: Artifact.basedir(log, "spec"),
+            config:    Spec.configFiles(log),
+            basedir:   Artifact.basedir(log, "spec"),
+            gitignore: Spec.gitignore,
             addr,
             port
         }))

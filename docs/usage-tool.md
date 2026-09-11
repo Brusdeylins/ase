@@ -478,7 +478,12 @@ single-file layout on first access:
 
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the
-`project.artifact.*` configuration globs:
+`project.artifact.*` configuration globs. Only the files Git tracks are
+ever resolved: the Git exclude rules -- the global excludes file
+(`core.excludesFile`, else the XDG fallback), the repository-local
+`info/exclude`, and the `.gitignore` files from the project root
+downwards, with the last matching rule winning -- prune the file universe
+before any glob is applied:
 
 - `ase artifact`:
   Entry point group for artifact resolution. Without a subcommand,
@@ -509,7 +514,10 @@ the plugin and every other entry is a file path relative to the project
 root (default: `std`). The
 SpecBook processing information is logged at the `info` level and its
 tracing details at the `debug` level, while the progress chatter a bare
-SpecBook run always prints is not logged at all:
+SpecBook run always prints is not logged at all. The Git exclude rules
+apply here exactly as they do to `ase artifact list`: an artifact file
+Git excludes from the project counts as an *absent* one, so both
+resolvers always see the very same specification:
 
 - `ase spec`:
   Entry point group for the specification commands. Without a
