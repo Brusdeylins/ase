@@ -162,8 +162,10 @@ Procedure
         by modifying the *artifacts* with a corresponding, complete
         *change set*.
 
-        Set <decisions></decisions> (empty). It collects the decisions
-        you take on your own while implementing, one entry per decision.
+        Set <decisions></decisions> (empty) and
+        <open-points></open-points> (empty). They collect, one entry
+        each, the decisions you take on your own while implementing and
+        whatever ends up waiting for the *user*.
 
         The implementation is *complete or it is not done*: you *MUST*
         *NEVER* conclude this step while any point of the task plan is
@@ -180,8 +182,11 @@ Procedure
         instead of asking the user and stopping. Only a *genuine
         blocker*, which no defensible assumption can bridge (a missing
         credential, an inaccessible external system), may leave a point
-        unimplemented; such a point *MUST* then be appended to
-        <decisions/> as well, naming what remains open and why.
+        unimplemented; append such a point to <open-points/> instead,
+        naming what remains open and why. Append to <open-points/> as
+        well whatever else now waits for the user once this run ends --
+        follow-ups you deliberately left out of scope, each with its
+        reason, and results which genuinely need their review.
 
         <if condition="<task-content/> contains an `##  IMPLEMENTATION DRAFT` section (from skill `ase-task-preflight`)">
         Take over the implementation draft of this section *1:1* as
@@ -274,12 +279,29 @@ Procedure
         </ase-tpl-hint>
         </if>
 
-    5.  <if condition="<decisions/> is not empty">
+    5.  Close the implementation with the boxed summary of what this run
+        left open and what it decided on its own. Both boxes are written
+        in the conversation language and the active persona style, list
+        *one entry per line*, and are *omitted entirely* when they carry
+        no content -- a run which implemented every point and took no
+        decision of its own outputs no box at all.
+
+        <if condition="<open-points/> is not empty">
+        Output everything which now waits for the *user* with the
+        following <template/>:
+
+        <template>
+        <ase-tpl-boxed title="OPEN POINTS">
+        ○   <open-point/>
+        </ase-tpl-boxed>
+        </template>
+        </if>
+
+        <if condition="<decisions/> is not empty">
         The run decided open questions *on the user's behalf*, so they
         *MUST* be able to revisit or overrule each of them. Output the
-        collected decisions -- one line per entry, each naming the
-        chosen option and its rationale, in the conversation language
-        and the active persona style -- with the following <template/>:
+        collected decisions -- each naming the chosen option and its
+        rationale -- directly below, with the following <template/>:
 
         <template>
         <ase-tpl-boxed title="DECISIONS">
@@ -287,10 +309,6 @@ Procedure
         </ase-tpl-boxed>
         </template>
         </if>
-        <else>
-        The run took no decisions of its own, so the box is *omitted
-        entirely*. Do not output anything.
-        </else>
 
 5.  **Decide Next Step:**
 
