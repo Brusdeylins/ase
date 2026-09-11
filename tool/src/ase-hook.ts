@@ -343,8 +343,8 @@ export default class HookCommand {
         const guidance = setting("agent.guidance", "ASE_GUIDANCE_LEVEL", "normal")
         const boxing   = setting("project.boxing", "ASE_PROJECT_BOXING", "white")
 
-        /*  determine the specification base directory and the SpecBook
-            schema configuration (empty: the bundled standard schema)  */
+        /*  determine the specification base directory and the whitespace-separated
+            list of SpecBook schema configurations (empty: the bundled standard schema)  */
         const specBasedir = String(cfg.get("project.artifact.spec.basedir") ?? "")
         const specSchema  = String(cfg.get("project.artifact.spec.schema")  ?? "")
 

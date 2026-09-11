@@ -27,18 +27,22 @@ import { writeStdout }          from "./ase-stdio.js"
     project specification, located via the "project.artifact.spec.basedir"
     and "project.artifact.spec.schema" configuration  */
 export class Spec {
-    /*  resolve the YAML schema configuration files: the configured
-        "project.artifact.spec.schema" relative to the project root, or
-        the bundled standard "ase-format-specbook.yaml" plugin meta file
-        if unset or empty  */
+    /*  resolve the YAML schema configuration files: the whitespace-separated
+        entries of the configured "project.artifact.spec.schema", merged in
+        the given order, where each entry is either the literal "std" for the
+        bundled standard "ase-format-specbook.yaml" plugin meta file or a file
+        path relative to the project root, and an unset or empty value means "std"  */
     static configFiles (log: Log): string[] {
         const cfg = new Config("config", configSchema, log)
         cfg.read()
-        const val  = cfg.get("project.artifact.spec.schema")
-        const file = val === undefined ? "" : String(isScalar(val) ? val.value : val)
-        if (file === "")
-            return [ Meta.resolve("ase-format-specbook.yaml") ]
-        return [ path.resolve(Task.projectRoot(), file) ]
+        const val     = cfg.get("project.artifact.spec.schema")
+        const list    = val === undefined ? "" : String(isScalar(val) ? val.value : val)
+        const entries = list.split(/\s+/).filter((entry) => entry !== "")
+        if (entries.length === 0)
+            entries.push("std")
+        return entries.map((entry) => entry === "std" ?
+            Meta.resolve("ase-format-specbook.yaml") :
+            path.resolve(Task.projectRoot(), entry))
     }
 
     /*  the ASE log level each SpecBook verbosity level maps onto: the
@@ -276,7 +280,9 @@ export class SpecMCP {
             description:
                 "Lint the SpecBook specification Markdown files of the project (located via the " +
                 "`project.artifact.spec.basedir` configuration) against the SpecBook YAML schema " +
-                "configuration (`project.artifact.spec.schema`, defaulting to the bundled `ase-format-specbook.yaml`). " +
+                "configuration (`project.artifact.spec.schema`, a whitespace-separated list of schema files " +
+                "merged in order, with `std` naming the bundled standard `ase-format-specbook.yaml`, " +
+                "which is also the default). " +
                 "Returns a `diagnostics` array of `{ file, line, column, severity, message }` objects (with " +
                 "project-relative `file` and a `severity` of `error` or `warning`), rendered as bullet " +
                 "points in `text`. With `verbose`, " +

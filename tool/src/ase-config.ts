@@ -217,7 +217,8 @@ const artifactSchema = v.optional(v.strictObject({
 }))
 
 /*  schema for the "spec" artifact kind, additionally carrying the
-    SpecBook YAML "schema" configuration file (empty: bundled standard)  */
+    whitespace-separated list of SpecBook YAML "schema" configuration
+    files, with "std" naming the bundled standard one (empty: "std")  */
 const artifactSpecSchema = v.optional(v.strictObject({
     basedir: v.optional(v.string()),
     files:   v.optional(v.string()),

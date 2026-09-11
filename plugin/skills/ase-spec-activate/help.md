@@ -14,12 +14,13 @@
 The `ase-spec-activate` skill activates the know-how about the
 *SpecBook*-based specification (`SPEC`) of the project in the current
 session: it loads the *SpecBook* format contract, reads the *SpecBook*
-schema configuration of the project (the standard schema bundled with
-*ASE*, or the custom schema configured via `project.artifact.spec.schema`),
-and resolves the list of `SPEC` artifacts in the configured specification
-base directory. The activation is reported in a `SPEC ACTIVATED` box,
-listing the schema file (marked `standard` or `custom`) and the base
-directory with the number of resolved artifacts.
+schema configuration of the project (the schema files configured via
+`project.artifact.spec.schema`, where the entry `std` -- also the default
+-- names the standard schema bundled with *ASE*), and resolves the list
+of `SPEC` artifacts in the configured specification base directory. The
+activation is reported in a `SPEC ACTIVATED` box, listing the schema
+files (each marked `standard` or `custom`) and the base directory with
+the number of resolved artifacts.
 
 Once activated, the specification can be worked with *ad-hoc* in plain
 conversation for the remainder of the session: reading, querying, and

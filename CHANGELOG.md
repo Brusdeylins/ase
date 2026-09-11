@@ -2,6 +2,15 @@
 ChangeLog
 =========
 
+1.0.5 (2026-09-11)
+------------------
+
+-   FEATURE [tool]: Multiple SpecBook schema configurations
+    The `project.artifact.spec.schema` configuration is now a whitespace-separated
+    list of SpecBook YAML schema configuration files, merged in the given order,
+    where the entry `std` names the standard schema bundled with the ASE plugin
+    and every other entry is a file path relative to the project root.
+
 1.0.4 (2026-09-10)
 ------------------
 

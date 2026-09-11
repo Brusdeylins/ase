@@ -60,7 +60,7 @@ The following top-level commands exist for configuration handling:
   Recognized keys are grouped under two top-level sections:
   `project.*` (project identity, classification, and artifact
   globs: `project.id`, `project.name`, `project.boxing`, and the
-  `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file) and `agent.*`
+  `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
   task identifier -- and `agent.skill`).
   All `ase config` subcommands accept a `--scope` *scope* option
@@ -502,8 +502,11 @@ kinds to project-relative file lists, driven by the
 The following top-level commands exist for linting, exporting and previewing the
 *SpecBook*-based project specification, i.e. the Markdown files below
 the `project.artifact.spec.basedir` directory, governed by the SpecBook
-YAML schema configuration `project.artifact.spec.schema` (default: the
-standard `ase-format-specbook.yaml` bundled with the plugin). The
+YAML schema configurations `project.artifact.spec.schema` -- a
+whitespace-separated list of schema files merged in order, where the
+entry `std` names the standard `ase-format-specbook.yaml` bundled with
+the plugin and every other entry is a file path relative to the project
+root (default: `std`). The
 SpecBook processing information is logged at the `info` level and its
 tracing details at the `debug` level, while the progress chatter a bare
 SpecBook run always prints is not logged at all:

@@ -67,19 +67,21 @@ an ad-hoc change, and it *never* touches the artifact kinds `CODE`,
 
 3.  **Activate Schema:**
 
-    1.  Set <schema-file/> to the path of the **SpecBook SCHEMA Model**
-        of the project (resolved as described in `ase-format-spec.md`)
-        and <schema-kind/> to `standard` for the bundled schema or
-        `custom` for a project-specific one. Do not output anything.
+    1.  Set <schema-files/> to the list of file paths constituting the
+        **SpecBook SCHEMA Model** of the project (resolved as described
+        in `ase-format-spec.md`), each annotated with `standard` for the
+        bundled schema or `custom` for a project-specific one. Do not
+        output anything.
 
-    2.  <if condition="the content of <schema-file/> was *not* already read into the current context -- neither by an earlier run of this skill nor by a dedicated specification skill">
-        Read the **SpecBook SCHEMA Model** in <schema-file/> via the
-        `Read` tool to learn the allowed object kinds, properties,
-        nestings, and value constraints. Do not output anything.
+    2.  <if condition="the content of a file of <schema-files/> was *not* already read into the current context -- neither by an earlier run of this skill nor by a dedicated specification skill">
+        Read those files of the **SpecBook SCHEMA Model** in
+        <schema-files/> via the `Read` tool to learn the allowed object
+        kinds, properties, nestings, and value constraints. Do not
+        output anything.
         </if>
         <else>
-        Do *not* read <schema-file/> again -- its content is already
-        active in the context. Do not output anything.
+        Do *not* read the files of <schema-files/> again -- their content
+        is already active in the context. Do not output anything.
         </else>
 
 4.  **Activate Artifacts:**
@@ -98,7 +100,7 @@ an ad-hoc change, and it *never* touches the artifact kinds `CODE`,
     <template>
     <ase-tpl-boxed title="SPEC" subtitle="ACTIVATED">
 
-    **SCHEMA**: `<schema-file/>` (<schema-kind/>)
+    **SCHEMA**: <schema-files/> (one `<file/>` (`standard`|`custom`) entry per line, aligned)
     **SPEC**:   `<ase-spec-basedir/>` (<artifact-count/> artifacts)
 
     </ase-tpl-boxed>

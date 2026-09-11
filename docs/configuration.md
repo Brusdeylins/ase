@@ -57,9 +57,11 @@ configurable `.basedir`/`.files`):
 
 The project *specification* is additionally controlled by:
 
--   **project.artifact.spec.schema**: the *SpecBook* YAML schema configuration file governing the
-    specification, resolved relative to the project root (default: empty). If unset or empty, the
-    standard schema configuration `ase-format-specbook.yaml` bundled with the ASE plugin is used.
+-   **project.artifact.spec.schema**: the whitespace-separated list of *SpecBook* YAML schema
+    configuration files governing the specification, merged in the given order (default: empty).
+    The entry `std` names the standard schema configuration `ase-format-specbook.yaml` bundled
+    with the ASE plugin, while every other entry is a file path resolved relative to the project
+    root. If unset or empty, the list is treated as the single entry `std`.
 
 Both `project.artifact.spec.basedir` and `project.artifact.spec.schema` are exported by the
 session-start hook as the `<ase-spec-basedir/>` and `<ase-spec-schema/>` placeholders (and as

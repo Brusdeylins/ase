@@ -4,25 +4,30 @@
 SpecBook Project Instantiation
 ==============================
 
--   The **SpecBook SCHEMA Model** of this project depends on
-    the value of the <ase-spec-schema/> placeholder (holding the
-    `project.artifact.spec.schema` configuration value):
+-   The **SpecBook SCHEMA Model** of this project depends on the value
+    of the <ase-spec-schema/> placeholder (holding the
+    `project.artifact.spec.schema` configuration value), which is a
+    *whitespace-separated list* of schema entries, merged in the given
+    order into *one* **SpecBook SCHEMA Model**:
 
     -   If <ase-spec-schema/> is *empty*:
 
-        Then the **SpecBook SCHEMA Model** is the standard YAML
-        schema configuration bundled with **ASE** in the file
-        `meta/ase-format-specbook.yaml` (relative to the plugin root),
-        which you *MUST* read via the `Read` tool before working on the
-        specification of the **SpecBook SPEC Model**.
+        Then the list is treated as the single entry `std`.
 
-    -   If <ase-spec-schema/> is *not empty*:
+    -   For each entry `std` in the list:
 
-        Then the **SpecBook SCHEMA Model** is the custom YAML schema
-        configuration of the project in the file <ase-spec-schema/>
-        (relative to the project root), which you *MUST* read via
-        the `Read` tool before working on the specification of the
-        **SpecBook SPEC Model**.
+        The entry names the standard YAML schema configuration bundled
+        with **ASE** in the file `meta/ase-format-specbook.yaml`
+        (relative to the plugin root).
+
+    -   For each *other* entry in the list:
+
+        The entry names a custom YAML schema configuration file of the
+        project (relative to the project root).
+
+    You *MUST* read all resulting schema configuration files via the
+    `Read` tool before working on the specification of the **SpecBook
+    SPEC Model**.
 
 -   The **SpecBook SPEC Model** of this project is the set of specification
     Markdown files in the directory <ase-spec-basedir/> (relative
