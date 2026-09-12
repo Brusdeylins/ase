@@ -7,7 +7,6 @@
 
 `ase-code-review`
     [`--help`|`-h`]
-    [*ref*]
 
 ##  DESCRIPTION
 
@@ -95,11 +94,10 @@ commits*. It does *not* judge code quality, and it never updates
 
 ##  ARGUMENTS
 
-The `ase-code-review` skill takes one *optional* argument:
-
--   *ref*: the scope of changes to review. When omitted, the scope is
-    the full set of uncommitted changes -- working tree, index, and
-    untracked files.
+The `ase-code-review` skill takes no arguments: its scope is always
+the full set of uncommitted changes -- working tree, index, and
+untracked files -- as only those can be staged and committed group by
+group on the current branch.
 
 ##  EXAMPLES
 
@@ -107,12 +105,6 @@ Review and curate all current uncommitted changes:
 
 ```text
 ❯ /ase-code-review
-```
-
-Review and curate the changes scoped to a reference:
-
-```text
-❯ /ase-code-review HEAD~3
 ```
 
 ##  SEE ALSO

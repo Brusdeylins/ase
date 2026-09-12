@@ -1,6 +1,6 @@
 ---
 name: ase-code-review
-argument-hint: "[--help|-h] [<ref>]"
+argument-hint: "[--help|-h]"
 description: >
     Review uncommitted changes and curate them into clean commits
     grouped by theme: hunks are grouped, staged group by group,
@@ -13,21 +13,21 @@ description: >
 user-invocable: true
 disable-model-invocation: false
 model: opus
-effort: medium
+effort: high
 allowed-tools:
     - "Skill"
     - "Agent"
-    - "Bash(git diff:* | awk:* | head:*)"
-    - "Bash(git diff:* | awk:* | tail:*)"
-    - "Bash(git diff:* | awk:* | wc:*)"
-    - "Bash(git diff:* | grep:* | head:*)"
-    - "Bash(git diff:* | grep:* | wc:*)"
-    - "Bash(git log:* | grep:* | head:*)"
-    - "Bash(git log:* | awk:* | head:*)"
-    - "Bash(cat:* | awk:* | head:*)"
-    - "Bash(cat:* | grep:* | head:*)"
-    - "Bash(awk '*)"
-    - "Bash(awk \"*)"
+    - "Read"
+    - "Grep"
+    - "Glob"
+    - "Bash(git status)"
+    - "Bash(git status *)"
+    - "Bash(git diff)"
+    - "Bash(git diff *)"
+    - "Bash(git show *)"
+    - "Bash(git log *)"
+    - "Bash(git grep *)"
+    - "Bash(git ls-files *)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -68,9 +68,8 @@ result starting with `OTHER:`, treat such a result as `CANCEL`.
 
 <objective>
 Acting as an *expert-level software developer* who *reviews and
-curates*, *group* the uncommitted changes at
-<ref><getopt-arguments/></ref> (default: working tree + index +
-untracked) into themes, let the user *confirm the grouping* from one
+curates*, *group* the uncommitted changes -- working tree, index, and
+untracked files -- into themes, let the user *confirm the grouping* from one
 compact table, then *stage* one theme at a time into the plain Git
 index -- no work branch, no stashing, no diff dumps, the user reviews
 the staged lines in their own editor -- and *commit* only what the
@@ -114,7 +113,9 @@ stay in their original form.
     `delete`, `rename`, `binary`). Renames are assigned atomically (no
     hunk-level split); binary hunks whole-file. For fine-grained
     separation within a single file, regenerate the diff with
-    `git diff --unified=0`.
+    `git diff --unified=0`; hunks taken from it are applied in 5.1
+    with `git apply --cached --unidiff-zero`, as zero-context hunks
+    are rejected without that flag.
 
     This manifest is *working state only* -- do *not* output it. If the
     surface is empty, only output the following <template/> and then
@@ -287,7 +288,8 @@ stay in their original form.
 
     5.1. *Stage* exactly this group's hunks: `git add <file>` for
          whole-file hunks and `git apply --cached <patch-subset>` for
-         partial files. Verify with `git diff --staged --name-only`
+         partial files (`--unidiff-zero` added for zero-context hunks).
+         Verify with `git diff --staged --name-only`
          that the staged set equals the group's planned file set; on a
          mismatch run `git reset`, report the mismatch, and re-enter
          STEP 4. Record the verified count as `<staged-count/>` of
@@ -380,13 +382,20 @@ stay in their original form.
              one no test covers as a `✗`. In HORIZONTAL mode this is a
              *static* falsifiability judgement and is worded as such; in
              VERTICAL mode the build transcript of 5.2 is the execution
-             evidence.
+             evidence. Tests are cited from the *working tree*, not
+             only from the staged set: under `TESTS-LAST` they sit in
+             the final group and are not yet accepted, so a `✓` that
+             cites one of them adds "noch nicht abgenommen, liegt in
+             G<n/>" -- a test that exists but awaits its own review is
+             evidence with a caveat, not a gap.
 
          Then derive the group <verdict/>: the counts of `✓`, `✗`, and
-         `?` over all files, followed by `-- ready to accept` when no
-         `✗` exists, or `-- not ready without a correction` otherwise.
-         Never soften a `✗` into prose, never average the statuses, and
-         never let a reassuring summary outrank the lines above it.
+         `?` over all files, followed by `-- not ready without a
+         correction` when any `✗` exists, by `-- ready to accept, <n/>
+         unverified` when no `✗` but at least one `?` exists, or by
+         `-- ready to accept` otherwise. Never soften a `✗` into prose,
+         never average the statuses, and never let a reassuring summary
+         outrank the lines above it.
 
     5.4. Emit the *group card* as a *boxed* card, no diff, so each
          group reads as one visually self-contained unit the user can
@@ -424,20 +433,16 @@ stay in their original form.
 
          Hints:
 
-         -   *Pre-wrap every body line at 96 columns*, breaking only at
-             word boundaries and never inside an identifier, path, or
-             quoted code. 96 is the box width (the `╭` bar spans 98
-             visible characters) minus the `│ ` prefix, so the card
-             also holds in a 100-column terminal. The agent tool wraps
-             over-long lines *without* the `│ ` prefix, which visibly
-             breaks the box -- hence the source, not the renderer, must
-             do the wrapping.
+         -   *Pre-wrap every body line at 96 columns* (box width minus
+             the `│ ` prefix), breaking only at word boundaries and
+             never inside an identifier, path, or quoted code: the
+             agent tool wraps longer lines *without* the `│ ` prefix
+             and visibly breaks the box.
          -   *Never* render the file blocks as a Markdown *list* or
-             *table*: the agent tool renders lists *tight*, dropping
-             the blank lines that separate the blocks, a table cell
-             cannot hold more than one line, and a `<br>` in a cell
-             appears *literally*. Plain lines inside the box keep their
-             soft line breaks, which is exactly what is needed here.
+             *table*: lists render *tight* (the blank lines between
+             blocks vanish), table cells are single-line, and `<br>`
+             appears literally. Plain lines inside the box keep their
+             soft line breaks.
          -   `<rationale/>` is 2-4 sentences reconstructing the goal
              this group addresses -- what problem, what outcome, what
              design choice. Anchor it in the mental model built so
@@ -532,12 +537,9 @@ stay in their original form.
                  the *current* working copy this review walks over, and
                  *no* `--loop`. State the group's theme and its files in
                  the query, so the edit stays scoped to this group.
-                 `ase-code-edit` is the right delegate because it is the
-                 *plan-less* fusion of `ase-code-craft`,
-                 `ase-code-refactor`, and `ase-code-resolve`, and its
-                 `--mode` selects their tenet sets; those three skills
-                 themselves would first compose a *task plan* and hand
-                 off, which is the wrong ceremony inside a review walk.
+                 Never delegate to `ase-code-craft`/`-refactor`/
+                 `-resolve` directly: they compose a task plan first,
+                 which is the wrong ceremony inside a review walk.
              4.  Re-ingest the affected files as in STEP 1 and rebuild
                  this group's hunk manifest: fresh hunks in the group's
                  files belong to the group. If the correction also
@@ -590,15 +592,13 @@ stay in their original form.
     Emit a concise recap:
 
     <template>
-    <ase-tpl-head title="ACCEPTANCE SUMMARY"/>
-
-    <ase-tpl-bullet-secondary/> **ACCEPTANCE SUMMARY** (<review-mode/>)
+    <ase-tpl-head title="SUMMARY" subtitle="<review-mode/>"/>
 
     <commit-table/>
 
     *Left uncommitted*: <left-uncommitted/>
 
-    <ase-tpl-foot/>
+    <ase-tpl-foot title="SUMMARY" subtitle="<review-mode/>"/>
     </template>
 
     Hints:
