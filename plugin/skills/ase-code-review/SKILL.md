@@ -344,13 +344,30 @@ stay in their original form.
              never against the changed code itself (`No
              Self-Reference`). A constraint the reviewer merely infers
              is `?`, not `✓`.
-         -   `ARCH`: boundaries, layering, dependency direction, and
-             *completeness across the diff* -- every caller and
-             implementer of a changed interface is either in this group,
-             already accepted, or the gap is named.
-         -   `CLEAN`: naming, comment placement, duplication, dead code,
-             error handling, and type safety, judged against the
-             *surrounding* code, not against a style ideal.
+         -   `ARCH`: boundaries, layering, dependency direction,
+             *interface quality*, and *completeness across the diff*.
+             Interface quality means every added or changed signature is
+             *uniform with its siblings*: the same naming scheme, the
+             same parameter order in the same logical sequence
+             (subject before qualifier, e.g. the contract before the bar
+             type, never swapped between two methods of one family), the
+             same return-type family for the same kind of answer, and
+             the same handling of absence (one sentinel, one optional,
+             not both). A family whose members disagree on any of these
+             is a `✗` that cites both signatures. Completeness means
+             every caller and implementer of a changed interface is
+             either in this group, already accepted, or the gap is
+             named.
+         -   `CLEAN`: naming, duplication, dead code, error handling,
+             type safety, and *method comments*, judged against the
+             *surrounding* code, not against a style ideal. Every added
+             or changed method, type, and non-trivial field carries a
+             comment that says *what it is for* in one to two lines --
+             at most four for a genuinely complex algorithm -- placed
+             where the surrounding code places its comments. A missing
+             comment, a comment that restates the signature ("returns
+             the value"), or one that has grown into a paragraph is a
+             `✗` that cites the line.
          -   `PERF`: hot-path allocation, complexity, helper-in-loop
              scans, lock scope, I/O amplification; a `✗` carries the
              evidence *and* the trade-off.

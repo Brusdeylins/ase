@@ -49,9 +49,12 @@ file *logically achieves* now (behavior before → after, for a colleague
 who did not write the code -- never an enumeration of methods), a
 *Touched* line naming the changed symbols as the index into the editor,
 ordered foundations-first -- and per file five *evidence* lines, one
-each for `DOMAIN`, `ARCH`, `CLEAN`, `PERF`, and `TESTS`, each worded so
-that a beginner understands what was checked, what was found, and what
-it means. Every evidence line carries one of four honest
+each for `DOMAIN`, `ARCH` (including whether added signatures are
+uniform with their siblings in naming, parameter order, return type,
+and handling of absence), `CLEAN` (including whether every added
+method carries a brief, meaningful comment), `PERF`, and `TESTS`, each
+worded so that a beginner understands what was checked, what was
+found, and what it means. Every evidence line carries one of four honest
 statuses: `✓` *shown* (a source line the reviewer read carries the
 claim verbatim, cited as `file:line` -- no citation, no `✓`), `✗` *gap*
 (the concrete spot, the exposing input, and the cheapest repair), `?`
