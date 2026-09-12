@@ -72,12 +72,15 @@ untracked) into themes, let the user *confirm the grouping* from one
 compact table, then *stage* one theme at a time into the plain Git
 index -- no work branch, no stashing, no diff dumps, the user reviews
 the staged lines in their own editor -- and *commit* only what the
-user accepts. This skill *complements* its neighbours rather than
+user accepts. Demanding a *correction* instead of an accept is a
+regular outcome of a group review: it is carried out right there by
+delegating to `ase-code-edit`, after which the group is re-staged and
+re-presented. This skill *complements* its neighbours rather than
 duplicating them: `ase-meta-diff` narrates *what changed*,
 `ase-meta-review` renders a reviewer's *judgement*,
 `ase-code-lint`/`ase-code-analyze` flag *quality/logic* problems, and
 `ase-meta-commit` crafts the *message* -- this skill *curates and
-commits*; it does *not* judge code quality.
+commits*; it does *not* judge code quality itself.
 </objective>
 
 *IMPORTANT*: Author *every* free-text output of this skill -- the
@@ -260,9 +263,10 @@ code stay in their original form.
 
     -   *Index only*: staging happens exclusively in the plain Git
         index on the *current* branch -- no work branch, no
-        `git stash`, no working-tree mutation. The user's editor keeps
-        showing staged changes and remaining unstaged changes side by
-        side at all times.
+        `git stash`, and no working-tree mutation *except* the
+        correction the user explicitly demands via `CHANGE`. The user's
+        editor keeps showing staged changes and remaining unstaged
+        changes side by side at all times.
     -   *No patch dumps*: never render raw diff text unprompted -- the
         user reviews the staged lines in their editor. The group card
         names the *changed symbols* per file, but the change bodies
@@ -373,6 +377,7 @@ code stay in their original form.
          <expand name="user-dialog">
              Group G<n/>/<group-count/>: What should happen with this group?
              ACCEPT: Commit the staged group on the current branch.
+             CHANGE: Demand a correction; the code is edited and the group re-staged.
              DISCUSS: Ask a question about this group.
              SKIP: Unstage this group and move it to the end of the queue.
              REGROUP: Unstage and recut the remaining groups.
@@ -388,12 +393,43 @@ code stay in their original form.
              with the next group at 5.1.
              </if>
 
+         -   <if condition="<result/> is `CHANGE`">
+             Demanding a correction is a *regular* review outcome, not
+             an exception -- carry it out *now*, in this review run:
+
+             1.  Take the *correction wish* from the free text
+                 accompanying the answer; when it carries none, ask the
+                 user in one sentence what has to change.
+             2.  `git reset` -- the correction must not land on top of a
+                 partially staged index. The working tree stays
+                 untouched, so nothing of the group is lost.
+             3.  Invoke `Skill(skill: "ase:ase-code-edit", args:
+                 "<correction-wish/>")` to *implement* the correction.
+                 Pass *no* `--worktree`, as the change has to land in
+                 the *current* working copy this review walks over, and
+                 *no* `--loop`. State the group's theme and its files in
+                 the query, so the edit stays scoped to this group.
+             4.  Re-ingest the affected files as in STEP 1 and rebuild
+                 this group's hunk manifest: fresh hunks in the group's
+                 files belong to the group. If the correction also
+                 touched files *outside* the group, report that in one
+                 line and add those hunks to the surface -- they are
+                 either pulled into this group when they serve its
+                 theme, or left to a later `REGROUP`.
+             5.  Continue at 5.1, so the group is re-staged, re-verified
+                 (VERTICAL), and its card re-emitted before the next
+                 decision.
+
+             Committing a *corrected* group is the user's call as
+             before; the correction alone commits nothing.
+             </if>
+
          -   <if condition="<result/> is `DISCUSS` or starts with `OTHER:`">
              Answer the question (or react to the instruction) scoped
              to this group -- review dialogue only, no code editing --
-             then re-prompt this dialog. A correction wish is *out of
-             scope*: point to `ase-code-edit`/`ase-code-resolve`, to be
-             run after the review.
+             then re-prompt this dialog. When the answer reveals that
+             the *code* has to change, do not edit anything here: point
+             at `CHANGE` and re-prompt.
              </if>
 
          -   <if condition="<result/> is `SKIP`">

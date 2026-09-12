@@ -54,9 +54,14 @@ loses its box prefix. Raw diff text is *not* dumped, as
 the staged lines are reviewed in the editor. A single *accept* then
 covers the whole group. On accept, the
 commit message is crafted via
-`ase-meta-commit` and the group is committed; *skip* unstages the
-group and defers it; *regroup* recuts the remaining groups. Nothing
-here ever discards working-tree content.
+`ase-meta-commit` and the group is committed; *change* demands a
+correction and is a regular review outcome -- the correction wish is
+implemented right away by delegating to `ase-code-edit` in the current
+working copy, after which the group is re-staged, re-verified, and
+presented again for a fresh decision; *skip* unstages the group and
+defers it; *regroup* recuts the remaining groups. Nothing here ever
+discards working-tree content, and no correction ever commits by
+itself.
 
 The skill *complements* its neighbours rather than duplicating them:
 `ase-meta-diff` narrates *what changed*, `ase-meta-review` renders a
@@ -91,5 +96,5 @@ Review and curate the changes scoped to a reference:
 ##  SEE ALSO
 
 `ase-meta-commit`, `ase-meta-diff`, `ase-meta-review`, `ase-code-lint`,
-`ase-code-analyze`, `ase-code-refactor`, `ase-code-resolve`,
-`ase-meta-changelog`.
+`ase-code-analyze`, `ase-code-edit`, `ase-code-refactor`,
+`ase-code-resolve`, `ase-meta-changelog`.
