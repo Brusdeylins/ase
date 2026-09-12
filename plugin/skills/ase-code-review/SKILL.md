@@ -403,12 +403,24 @@ code stay in their original form.
              2.  `git reset` -- the correction must not land on top of a
                  partially staged index. The working tree stays
                  untouched, so nothing of the group is lost.
-             3.  Invoke `Skill(skill: "ase:ase-code-edit", args:
-                 "<correction-wish/>")` to *implement* the correction.
+             3.  Derive the *edit mode* from the nature of the
+                 correction wish: `resolve` for wrong behavior, a bug,
+                 or a defect; `refactor` for structure, naming, or
+                 simplification at unchanged behavior; `craft` for
+                 something still missing; `auto` only when the wish
+                 stays genuinely ambiguous. Then invoke
+                 `Skill(skill: "ase:ase-code-edit", args: "--mode
+                 <edit-mode/> <correction-wish/>")` to *implement* it.
                  Pass *no* `--worktree`, as the change has to land in
                  the *current* working copy this review walks over, and
                  *no* `--loop`. State the group's theme and its files in
                  the query, so the edit stays scoped to this group.
+                 `ase-code-edit` is the right delegate because it is the
+                 *plan-less* fusion of `ase-code-craft`,
+                 `ase-code-refactor`, and `ase-code-resolve`, and its
+                 `--mode` selects their tenet sets; those three skills
+                 themselves would first compose a *task plan* and hand
+                 off, which is the wrong ceremony inside a review walk.
              4.  Re-ingest the affected files as in STEP 1 and rebuild
                  this group's hunk manifest: fresh hunks in the group's
                  files belong to the group. If the correction also

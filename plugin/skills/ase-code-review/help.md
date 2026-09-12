@@ -57,8 +57,10 @@ commit message is crafted via
 `ase-meta-commit` and the group is committed; *change* demands a
 correction and is a regular review outcome -- the correction wish is
 implemented right away by delegating to `ase-code-edit` in the current
-working copy, after which the group is re-staged, re-verified, and
-presented again for a fresh decision; *skip* unstages the group and
+working copy, with its `--mode` derived from the wish (`resolve` for a
+defect, `refactor` for structure at unchanged behavior, `craft` for
+something missing), after which the group is re-staged, re-verified,
+and presented again for a fresh decision; *skip* unstages the group and
 defers it; *regroup* recuts the remaining groups. Nothing here ever
 discards working-tree content, and no correction ever commits by
 itself.
