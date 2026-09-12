@@ -14,25 +14,26 @@
 The `ase-code-review` skill *reviews* an accumulated pile of
 *uncommitted* source code changes and *curates* them into clean,
 thematically-coherent Git commits on the *current* branch. It works
-*top-down*: it enumerates every change internally, asks for a
-*curation strategy* and the *test handling*, groups all hunks into 3-5
-*themes*, and presents the grouping as *one compact table* (theme,
-file count, added/removed lines) so the user can accept the cut or ask
-for a regroup.
+*top-down*: it enumerates every change internally, groups all hunks
+into 3-5 *themes*, and presents the grouping as *one compact table*
+(theme, file count, added/removed lines) so the user can accept the cut
+or ask for a regroup. That table is the *only* dialog before the
+per-group walk -- no mode questions are asked up front.
 
-Up front the skill asks how the changes should be curated:
+The curation modes are therefore *defaulted silently* and switched from
+that one dialog whenever the presented cut calls for it:
 
--   *HORIZONTAL* -- *theme-near groups*: hunks are grouped by topical
-    and architectural proximity for the most coherent review, and *no*
-    build is run at all during the review.
+-   *HORIZONTAL* (default) -- *theme-near groups*: hunks are grouped by
+    topical and architectural proximity for the most coherent review,
+    and *no* build is run at all during the review.
 -   *VERTICAL* -- *build-verified slices*: each group is cut as a
     build-safe vertical slice, and the project build runs before each
     accept and *gates* it. The build runs on the full working tree,
     as nothing is stashed away.
-
-It also asks whether *test* changes join their groups
-(*REVIEW-TESTS*) or are kept out and staged at the end as one
-dedicated block (*TESTS-LAST*).
+-   *TESTS-LAST* (default) -- *test* changes are kept out of the code
+    groups and staged at the end as one dedicated block, so the code
+    groups stay free of test noise; *REVIEW-TESTS* instead lets them
+    join the groups of the code they cover.
 
 Each group is then processed one at a time, ordered so that every
 group builds only on already-accepted concepts (foundations first, no
@@ -40,12 +41,15 @@ forward references): exactly the group's hunks are *staged* into the
 plain Git index -- no work branch, no `git stash`, no working-tree
 mutation -- so the user's editor (e.g. VSCode Source Control) always
 shows the staged group and the remaining unstaged changes side by
-side. The skill emits a compact *group card*: a short rationale plus
-one table with `Layer | File | ±Lines | Explanation` per staged file,
-ordered foundations-first, with the explanations written in the
-user's conversation language in simply understandable wording -- and
-deliberately *no diff*, as the staged lines are reviewed in the
-editor. A single *accept* then covers the whole group. On accept, the
+side. The skill emits a compact *group card*: a short rationale, one
+table with `Layer | File | ±Lines | Explanation` per staged file (full
+repo-relative paths, ordered foundations-first, each explanation naming
+the file's *changed symbols* and then describing the change in the
+user's conversation language in simply understandable wording), and a
+*Staged* line reporting the verified file count in the Git index and
+pointing at the editor. Raw diff text is deliberately *not* dumped, as
+the staged lines are reviewed in the editor. A single *accept* then
+covers the whole group. On accept, the
 commit message is crafted via
 `ase-meta-commit` and the group is committed; *skip* unstages the
 group and defers it; *regroup* recuts the remaining groups. Nothing

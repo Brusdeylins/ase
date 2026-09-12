@@ -56,7 +56,6 @@ Before rendering the dialog, determine from the current context the
 single *recommended* answer option and prefix its description with
 ` ⚝ **RECOMMENDATION** ⚝ - `. Exactly *one* option carries the marker.
 Unless stronger contextual evidence suggests otherwise, recommend:
-curation strategy → `HORIZONTAL`; test handling → `REVIEW-TESTS`;
 group table → `GROUPS-OK`; group decision → `ACCEPT` (but never while
 a VERTICAL build is non-green); and on a *destructive* confirmation
 always the non-destructive way out (`CANCEL`).
@@ -117,55 +116,18 @@ code stay in their original form.
 
     </step>
 
-2.  <step id="STEP 2: Choose Strategy and Test Handling">
+2.  <step id="STEP 2: Set Curation Defaults">
 
-    Let the *user interactively choose* the curation strategy. It
-    decides only whether a per-group *build* gates the accept -- the
-    build is otherwise skipped entirely:
+    Set the curation modes *silently*, without any dialog -- the review
+    starts at the grouping table, not at a series of mode questions:
 
-    <expand name="user-dialog">
-        Curation Strategy: How should the changes be curated?
-        HORIZONTAL: Theme-near groups; no build runs during the review.
-        VERTICAL: Build-verified slices — every accepted group must build green.
-    </expand>
+    -   <review-mode>HORIZONTAL</review-mode>: groups are cut by
+        *topical/architectural proximity* and *no* build is run at all.
+    -   <test-mode>TESTS-LAST</test-mode>: test hunks are kept out of
+        the code groups and form one dedicated final group.
 
-    Dispatch on the tool <result/>:
-
-    -   <if condition="<result/> is `CANCEL`">
-        Only output the following <template/> and then immediately
-        *STOP* processing the entire current skill:
-
-        <template>
-        ⧉ **ASE**: ✪ skill: **ase-code-review**, ▶ status: **review cancelled**
-        </template>
-        </if>
-
-    -   <if condition="<result/> is `VERTICAL`">
-        Set <review-mode>VERTICAL</review-mode>.
-        </if>
-
-    -   <else>
-        Set <review-mode>HORIZONTAL</review-mode>.
-        </else>
-
-    <if condition="the manifest contains at least one test file">
-    Then let the *user interactively choose* how *test* changes are
-    handled:
-
-    <expand name="user-dialog">
-        Test Handling: Should test changes be reviewed like everything else?
-        REVIEW-TESTS: Tests join their groups and are reviewed alongside the code.
-        TESTS-LAST: Keep tests out of the groups and stage them at the end as one block.
-    </expand>
-
-    Dispatch on the tool <result/>: set <test-mode>TESTS-LAST</test-mode>
-    on `TESTS-LAST`, otherwise (including `CANCEL`) set
-    <test-mode>REVIEW-TESTS</test-mode>.
-    </if>
-    <else>
-    The change set carries no test files, so this dialog is *skipped*:
-    set <test-mode>REVIEW-TESTS</test-mode> without asking.
-    </else>
+    Both modes stay *switchable* from the single STEP 4 dialog, so the
+    user reaches them exactly when they see a cut that calls for them.
 
     Hints:
 
@@ -174,13 +136,23 @@ code stay in their original form.
         the project build before the accept, *gating* it. Note that
         the build runs on the *full working tree* (nothing is stashed
         away), so unaccepted changes participate in it.
-    -   In *HORIZONTAL* mode groups are cut by *topical/architectural
-        proximity* and *no* build is run at all.
-    -   With <test-mode/> `TESTS-LAST`, every hunk in a test file (test
-        directories like `src/test/`, `tests/`, `__tests__/`, and
-        test-named files like `*Test.java`, `*.spec.ts`, `*_test.go`)
+    -   With <test-mode/> `TESTS-LAST`, every hunk in a *test file* --
+        test directories like `src/test/`, `tests/`, `__tests__/`, and
+        test-named files like `*Test.java`, `*.spec.ts`, `*_test.go` --
         goes into one dedicated final group `UPDATE(test): accompanying
-        tests`, always ordered *last*.
+        tests`, always ordered *last*, so the code groups stay free of
+        test noise and the tests are accepted as one block.
+    -   With <test-mode/> `REVIEW-TESTS`, test hunks instead join the
+        group of the code they cover, which suits a change set whose
+        tests are the actual subject of the review.
+
+    Whenever a later step *cancels* the review, only output the
+    following <template/> and then immediately *STOP* processing the
+    entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-code-review**, ▶ status: **review cancelled**
+    </template>
 
     </step>
 
@@ -231,13 +203,21 @@ code stay in their original form.
     | G<n/> | <type/>(<scope/>): <one-liner/> | <file-count/> | +<added/> | -<removed/>  |
     </template>
 
-    Then let the *user interactively choose*:
+    Then let the *user interactively choose*. This is the *only* dialog
+    before the per-group walk, so it also carries the *mode switches*:
+    offer of each mode pair only the option that switches *away* from
+    the current mode, and offer the test option only when the manifest
+    contains at least one test file:
 
     <expand name="user-dialog">
         Groups: Does this grouping fit?
         GROUPS-OK: Accept the groups and start the per-group review.
         REGROUP: Recut the groups; describe how (merge, split, move files).
         SHOW-FILES: List the files of each group first.
+        VERTICAL: Recut as build-verified slices; every accept must build green.
+        HORIZONTAL: Recut by topical proximity; no build runs during the review.
+        REVIEW-TESTS: Let the test changes join the groups of the code they cover.
+        TESTS-LAST: Keep the test changes out as one dedicated final group.
     </expand>
 
     Dispatch on the tool <result/>:
@@ -253,8 +233,18 @@ code stay in their original form.
         </if>
 
     -   <if condition="<result/> is `SHOW-FILES`">
-        Emit one line per group `G<n/>: <file-list/>` (filenames only,
-        comma-separated) and re-prompt this dialog.
+        Emit one line per group `G<n/>: <file-list/>` (full repo-relative
+        paths, comma-separated) and re-prompt this dialog.
+        </if>
+
+    -   <if condition="<result/> is `VERTICAL` or `HORIZONTAL`">
+        Set <review-mode/> to the chosen mode, re-run STEP 3 under it,
+        and re-enter this STEP 4.
+        </if>
+
+    -   <if condition="<result/> is `TESTS-LAST` or `REVIEW-TESTS`">
+        Set <test-mode/> to the chosen mode, re-run STEP 3 under it,
+        and re-enter this STEP 4.
         </if>
 
     -   <if condition="<result/> is `GROUPS-OK`">
@@ -273,9 +263,10 @@ code stay in their original form.
         `git stash`, no working-tree mutation. The user's editor keeps
         showing staged changes and remaining unstaged changes side by
         side at all times.
-    -   *No diff dumps*: never render diffs unprompted -- the user
-        reviews the staged lines in their editor. Explanations are
-        prose, not patches.
+    -   *No patch dumps*: never render raw diff text unprompted -- the
+        user reviews the staged lines in their editor. The group card
+        names the *changed symbols* per file, but the change bodies
+        stay in the editor.
     -   *Git remains with the user beyond the accept*: `ACCEPT` is the
         only operation that commits, and nothing here ever discards
         working-tree content.
@@ -288,7 +279,9 @@ code stay in their original form.
          partial files. Verify with `git diff --staged --name-only`
          that the staged set equals the group's planned file set; on a
          mismatch run `git reset`, report the mismatch, and re-enter
-         STEP 4.
+         STEP 4. Record the verified count as `<staged-count/>` of
+         `<planned-count/>` for the group card -- the user must *see*
+         that the index now holds exactly this group.
 
     5.2. <if condition="<review-mode/> is `VERTICAL`">
          *Build-verify*: discover the build command from `AGENTS.md`,
@@ -315,6 +308,8 @@ code stay in their original form.
          |-----------|--------------|-------------------|-----------------|
          | <layer/>  | `<filepath/>` | +<added/>/-<removed/> | <explanation/>  |
 
+         *Staged*: <staged-count/>/<planned-count/> files verified in the Git index -- review them in your editor (VSCode Source Control: "Staged Changes")
+
          *Build*: <build-line/>
          </template>
 
@@ -330,12 +325,19 @@ code stay in their original form.
              `service`, `adapter`, `ui`, `test`, `docs`); order the
              rows bottom-up along the layers (foundations first), so
              the table reads in comprehension order.
-         -   `<explanation/>` is 1-2 short sentences on what this
-             file's staged change does within the group -- simply
-             understandable, in the user's language.
-         -   Review the staged lines themselves in the editor
-             (VSCode Source Control shows exactly this group as
-             "Staged Changes").
+         -   `<filepath/>` is the *full repo-relative* path, never
+             elided or abbreviated -- the user has to locate the file
+             in their editor from this table alone.
+         -   `<explanation/>` starts with the *changed symbols* of this
+             file -- the added or touched functions, methods, classes,
+             types, or config keys, comma-separated in backticks --
+             followed by 1-2 short sentences on what the staged change
+             does within the group, simply understandable, in the
+             user's language. For a file without symbols (data, logs,
+             assets) the symbol part is omitted.
+         -   The *Staged* line is *mandatory*: it is the user's only
+             proof that the index matches the table, and it points them
+             at where the actual lines are reviewed.
 
     5.4. Let the *user interactively choose* (omit `ACCEPT` while a
          VERTICAL build is non-green, and offer `RETRY-BUILD` only
