@@ -296,17 +296,21 @@ code stay in their original form.
          run any build, test, or linter.
          </else>
 
-    5.3. Emit the *group card* -- one compact table, no diff, so the
-         user can give a *single* ok for the whole group:
+    5.3. Emit the *group card* -- a compact per-file list, no diff, so
+         the user can give a *single* ok for the whole group. Use a
+         *list*, never a table: the full file paths plus their
+         explanations do not fit the terminal width side by side, and a
+         table cell cannot hold the blank line that separates path from
+         prose:
 
          <template>
          <ase-tpl-bullet-secondary/> **GROUP G<n/>/<group-count/>** · <type/>(<scope/>): <one-liner/>
 
          *Why*: <rationale/>
 
-         | Layer     | File         | ±Lines            | Explanation     |
-         |-----------|--------------|-------------------|-----------------|
-         | <layer/>  | `<filepath/>` | +<added/>/-<removed/> | <explanation/>  |
+         -   `<filepath/>` · *<layer/>* · +<added/>/-<removed/>
+
+             <symbols/> -- <explanation/>
 
          *Staged*: <staged-count/>/<planned-count/> files verified in the Git index -- review them in your editor (VSCode Source Control: "Staged Changes")
 
@@ -320,23 +324,24 @@ code stay in their original form.
              design choice. Anchor it in the mental model built so
              far: connect to already *accepted* groups where they
              relate, and never lean on a not-yet-reviewed group.
-         -   One table row per staged file. `<layer/>` is the file's
+         -   One list entry per staged file. `<layer/>` is the file's
              coarse architectural layer (e.g. `interface`, `domain`,
              `service`, `adapter`, `ui`, `test`, `docs`); order the
-             rows bottom-up along the layers (foundations first), so
-             the table reads in comprehension order.
+             entries bottom-up along the layers (foundations first), so
+             the list reads in comprehension order.
          -   `<filepath/>` is the *full repo-relative* path, never
              elided or abbreviated -- the user has to locate the file
-             in their editor from this table alone.
-         -   `<explanation/>` starts with the *changed symbols* of this
-             file -- the added or touched functions, methods, classes,
-             types, or config keys, comma-separated in backticks --
-             followed by 1-2 short sentences on what the staged change
-             does within the group, simply understandable, in the
-             user's language. For a file without symbols (data, logs,
-             assets) the symbol part is omitted.
+             in their editor from this list alone.
+         -   `<symbols/>` are the file's *changed symbols* -- the added
+             or touched functions, methods, classes, types, or config
+             keys, comma-separated in backticks. For a file without
+             symbols (data, logs, assets) both `<symbols/>` and its
+             trailing `--` are omitted.
+         -   `<explanation/>` is 1-2 short sentences on what this
+             file's staged change does within the group -- simply
+             understandable, in the user's language.
          -   The *Staged* line is *mandatory*: it is the user's only
-             proof that the index matches the table, and it points them
+             proof that the index matches the list, and it points them
              at where the actual lines are reviewed.
 
     5.4. Let the *user interactively choose* (omit `ACCEPT` while a

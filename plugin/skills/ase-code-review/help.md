@@ -42,12 +42,14 @@ plain Git index -- no work branch, no `git stash`, no working-tree
 mutation -- so the user's editor (e.g. VSCode Source Control) always
 shows the staged group and the remaining unstaged changes side by
 side. The skill emits a compact *group card*: a short rationale, one
-table with `Layer | File | ±Lines | Explanation` per staged file (full
-repo-relative paths, ordered foundations-first, each explanation naming
-the file's *changed symbols* and then describing the change in the
-user's conversation language in simply understandable wording), and a
-*Staged* line reporting the verified file count in the Git index and
-pointing at the editor. Raw diff text is deliberately *not* dumped, as
+*list entry* per staged file -- its full repo-relative path, layer, and
+line counts on the entry line, then the file's *changed symbols* and a
+short description of the change below it, written in the user's
+conversation language in simply understandable wording, ordered
+foundations-first -- and a *Staged* line reporting the verified file
+count in the Git index and pointing at the editor. The per-file part is
+deliberately a list rather than a table, as full paths and explanations
+do not fit a terminal side by side. Raw diff text is *not* dumped, as
 the staged lines are reviewed in the editor. A single *accept* then
 covers the whole group. On accept, the
 commit message is crafted via
