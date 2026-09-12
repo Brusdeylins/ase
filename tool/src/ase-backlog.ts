@@ -50,7 +50,7 @@ export interface Lane {
 /*  default lane specification: every ASE task plan lifecycle state is
     grouped into exactly one board lane  */
 export const defaultLanes =
-    "Crafting=DRAFTED+REJECTED;Ready=APPROVED;Deferred=DEFERRED;" +
+    "Crafting=DRAFTED+REJECTED;Ready=APPROVED+DEFERRED;" +
     "Implementation=STARTED+BLOCKED;Code-Review=COMPLETED;Closed=CLOSED+CANCELLED"
 
 /*  a single entry of the user-scope registry of running board servers  */

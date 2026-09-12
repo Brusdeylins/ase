@@ -56,8 +56,7 @@ Procedure
         list <lanes/>. If it fails (key not set), use the default lanes:
 
         `Crafting=DRAFTED+REJECTED`,
-        `Ready=APPROVED`,
-        `Deferred=DEFERRED`,
+        `Ready=APPROVED+DEFERRED`,
         `Implementation=STARTED+BLOCKED`,
         `Code-Review=COMPLETED`,
         `Closed=CLOSED+CANCELLED`.
