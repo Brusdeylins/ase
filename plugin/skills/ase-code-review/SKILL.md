@@ -296,42 +296,64 @@ code stay in their original form.
          run any build, test, or linter.
          </else>
 
-    5.3. Emit the *group card* -- a compact per-file list, no diff, so
-         the user can give a *single* ok for the whole group. Use a
-         *list*, never a table: the full file paths plus their
-         explanations do not fit the terminal width side by side, and a
-         table cell cannot hold the blank line that separates path from
-         prose:
+    5.3. Emit the *group card* as a *boxed* card, no diff, so each
+         group reads as one visually self-contained unit the user can
+         give a *single* ok for. Every file contributes a three-line
+         block -- name with layer and line counts, its directory, then
+         what changed -- separated from the next block by a blank line.
+         Only output the following <template/>:
 
          <template>
-         <ase-tpl-bullet-secondary/> **GROUP G<n/>/<group-count/>** · <type/>(<scope/>): <one-liner/>
+         <ase-tpl-boxed title="GROUP" subtitle="G<n/>/<group-count/>">
+         **<type/>(<scope/>)**: <one-liner/>
 
          *Why*: <rationale/>
 
-         -   `<filepath/>` · *<layer/>* · +<added/>/-<removed/>
+         **<filename/>** · *<layer/>* · +<added/>/-<removed/>
+         `<dirpath/>`
+         <symbols/> -- <explanation/>
 
-             <symbols/> -- <explanation/>
-
-         *Staged*: <staged-count/>/<planned-count/> files verified in the Git index -- review them in your editor (VSCode Source Control: "Staged Changes")
+         *Staged*: <staged-count/>/<planned-count/> files verified in the Git
+         index -- review them in your editor (VSCode Source Control:
+         "Staged Changes")
 
          *Build*: <build-line/>
+         </ase-tpl-boxed>
          </template>
 
          Hints:
 
+         -   *Pre-wrap every body line at 96 columns*, breaking only at
+             word boundaries and never inside an identifier, path, or
+             quoted code. 96 is the box width (the `╭` bar spans 98
+             visible characters) minus the `│ ` prefix, so the card
+             also holds in a 100-column terminal. The agent tool wraps
+             over-long lines *without* the `│ ` prefix, which visibly
+             breaks the box -- hence the source, not the renderer, must
+             do the wrapping.
+         -   *Never* render the file blocks as a Markdown *list* or
+             *table*: the agent tool renders lists *tight*, dropping
+             the blank lines that separate the blocks, a table cell
+             cannot hold more than one line, and a `<br>` in a cell
+             appears *literally*. Plain lines inside the box keep their
+             soft line breaks, which is exactly what is needed here.
          -   `<rationale/>` is 2-4 sentences reconstructing the goal
              this group addresses -- what problem, what outcome, what
              design choice. Anchor it in the mental model built so
              far: connect to already *accepted* groups where they
              relate, and never lean on a not-yet-reviewed group.
-         -   One list entry per staged file. `<layer/>` is the file's
-             coarse architectural layer (e.g. `interface`, `domain`,
+         -   One block per staged file. `<layer/>` is the file's coarse
+             architectural layer (e.g. `interface`, `domain`,
              `service`, `adapter`, `ui`, `test`, `docs`); order the
-             entries bottom-up along the layers (foundations first), so
-             the list reads in comprehension order.
-         -   `<filepath/>` is the *full repo-relative* path, never
-             elided or abbreviated -- the user has to locate the file
-             in their editor from this list alone.
+             blocks bottom-up along the layers (foundations first), so
+             the card reads in comprehension order.
+         -   `<filename/>` is the bare file name and `<dirpath/>` the
+             *full repo-relative* directory with a trailing `/`. Split
+             this way, the name stays prominent while the path remains
+             complete: never elide or abbreviate either part, as the
+             user has to locate the file in their editor from the card
+             alone. A full path plus its metadata exceeds the box width
+             on its own, which is why it occupies two lines.
          -   `<symbols/>` are the file's *changed symbols* -- the added
              or touched functions, methods, classes, types, or config
              keys, comma-separated in backticks. For a file without
@@ -341,7 +363,7 @@ code stay in their original form.
              file's staged change does within the group -- simply
              understandable, in the user's language.
          -   The *Staged* line is *mandatory*: it is the user's only
-             proof that the index matches the list, and it points them
+             proof that the index matches the card, and it points them
              at where the actual lines are reviewed.
 
     5.4. Let the *user interactively choose* (omit `ACCEPT` while a

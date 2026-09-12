@@ -41,15 +41,16 @@ forward references): exactly the group's hunks are *staged* into the
 plain Git index -- no work branch, no `git stash`, no working-tree
 mutation -- so the user's editor (e.g. VSCode Source Control) always
 shows the staged group and the remaining unstaged changes side by
-side. The skill emits a compact *group card*: a short rationale, one
-*list entry* per staged file -- its full repo-relative path, layer, and
-line counts on the entry line, then the file's *changed symbols* and a
-short description of the change below it, written in the user's
+side. The skill emits the *group card* as a *boxed* card, so each group
+reads as one visually self-contained unit: a short rationale, then a
+three-line block per staged file -- its bare name with layer and line
+counts, its full repo-relative directory, and the file's *changed
+symbols* plus a short description of the change, written in the user's
 conversation language in simply understandable wording, ordered
-foundations-first -- and a *Staged* line reporting the verified file
-count in the Git index and pointing at the editor. The per-file part is
-deliberately a list rather than a table, as full paths and explanations
-do not fit a terminal side by side. Raw diff text is *not* dumped, as
+foundations-first -- closed by a *Staged* line reporting the verified
+file count in the Git index and pointing at the editor. Every line is
+pre-wrapped at 96 columns, the box width, so no line overflows and
+loses its box prefix. Raw diff text is *not* dumped, as
 the staged lines are reviewed in the editor. A single *accept* then
 covers the whole group. On accept, the
 commit message is crafted via
