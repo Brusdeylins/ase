@@ -76,7 +76,7 @@ visual task board:
 
 -   **project.backlog.lanes**: the board lane specification of the form
     `<lane>=<STATE>[+<STATE>...][;<lane>=...]`, grouping every task plan
-    lifecycle state into exactly one Kanban lane (default: `Crafting=DRAFTED+REJECTED;Ready=APPROVED;Deferred=DEFERRED;Implementation=STARTED+BLOCKED;Code-Review=COMPLETED;Closed=CLOSED+CANCELLED`).
+    lifecycle state into exactly one Kanban lane (default: `Crafting=DRAFTED+REJECTED;Ready=APPROVED+DEFERRED;Implementation=STARTED+BLOCKED;Code-Review=COMPLETED;Closed=CLOSED+CANCELLED`).
 
 The following configuration parameters control the agent:
 

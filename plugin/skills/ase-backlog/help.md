@@ -13,8 +13,8 @@
 The `ase-backlog` skill shows a Kanban board overview of all persisted
 task plans of the current project, grouped by their board lanes. The
 lanes group the task plan lifecycle states (see the `Status` frontmatter
-key), by default as `Crafting` (DRAFTED, REJECTED), `Ready` (APPROVED),
-`Deferred` (DEFERRED), `Implementation` (STARTED, BLOCKED),
+key), by default as `Crafting` (DRAFTED, REJECTED), `Ready` (APPROVED,
+DEFERRED), `Implementation` (STARTED, BLOCKED),
 `Code-Review` (COMPLETED), and `Closed` (CLOSED, CANCELLED). The lane
 set can be changed via the `project.backlog.lanes` configuration key.
 

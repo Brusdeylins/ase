@@ -479,8 +479,8 @@ single-file layout on first access:
 The following top-level commands exist for visualizing the persisted
 task plans on a [Backlog.md](https://github.com/MrLesk/Backlog.md)
 Kanban board. The board lanes group the task plan lifecycle states,
-by default as `Crafting` (DRAFTED, REJECTED), `Ready` (APPROVED),
-`Deferred` (DEFERRED), `Implementation` (STARTED, BLOCKED),
+by default as `Crafting` (DRAFTED, REJECTED), `Ready` (APPROVED,
+DEFERRED), `Implementation` (STARTED, BLOCKED),
 `Code-Review` (COMPLETED), and `Closed` (CLOSED, CANCELLED), and are
 configurable via the `project.backlog.lanes` configuration key (a
 `<lane>=<STATE>[+<STATE>...][;<lane>=...]` specification). The task
