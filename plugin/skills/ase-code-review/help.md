@@ -43,14 +43,28 @@ mutation -- so the user's editor (e.g. VSCode Source Control) always
 shows the staged group and the remaining unstaged changes side by
 side. The skill emits the *group card* as a *boxed* card, so each group
 reads as one visually self-contained unit: a short rationale, then a
-three-line block per staged file -- its bare name with layer and line
-counts, its full repo-relative directory, and the file's *changed
-symbols* plus a short description of the change, written in the user's
-conversation language in simply understandable wording, ordered
-foundations-first -- closed by a *Staged* line reporting the verified
-file count in the Git index and pointing at the editor. Every line is
-pre-wrapped at 96 columns, the box width, so no line overflows and
-loses its box prefix. Raw diff text is *not* dumped, as
+block per staged file -- its bare name with layer and line counts, its
+full repo-relative directory, the file's *changed symbols* plus a short
+description of the change, written in the user's conversation language
+in simply understandable wording, ordered foundations-first -- and per
+file five *evidence* lines, one each for `DOMAIN`, `ARCH`, `CLEAN`,
+`PERF`, and `TESTS`. Every evidence line carries one of four honest
+statuses: `✓` *shown* (a source line the reviewer read carries the
+claim verbatim, cited as `file:line` -- no citation, no `✓`), `✗` *gap*
+(the concrete spot, the exposing input, and the cheapest repair), `?`
+*unverified* (needs execution the current mode does not perform, or a
+source not found), or `–` *n/a*. The evidence is gathered *against* the
+change before it is written down -- the strongest reason it could be
+wrong is hunted first -- and never against the changed code itself: a
+`TESTS` `✓` names `test-file::case` and states why that case would turn
+red if the change were reverted, and every boundary partition the
+change touches without a covering test is a `✗`. A *Verdict* line sums
+the statuses honestly; a single `✗` flips the recommended answer of the
+group dialog from *accept* to *change*. The card closes with a *Staged*
+line reporting the verified file count in the Git index and pointing at
+the editor. Every line is pre-wrapped at 96 columns, the box width, so
+no line overflows and loses its box prefix. Raw diff text is *not*
+dumped, as
 the staged lines are reviewed in the editor. A single *accept* then
 covers the whole group. On accept, the
 commit message is crafted via

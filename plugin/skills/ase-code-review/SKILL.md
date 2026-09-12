@@ -57,8 +57,10 @@ single *recommended* answer option and prefix its description with
 ` ⚝ **RECOMMENDATION** ⚝ - `. Exactly *one* option carries the marker.
 Unless stronger contextual evidence suggests otherwise, recommend:
 group table → `GROUPS-OK`; group decision → `ACCEPT` (but never while
-a VERTICAL build is non-green); and on a *destructive* confirmation
-always the non-destructive way out (`CANCEL`).
+a VERTICAL build is non-green, and never while the group card's
+*Verdict* carries at least one `✗` -- then recommend `CHANGE`, as the
+evidence itself says the group is not ready); and on a *destructive*
+confirmation always the non-destructive way out (`CANCEL`).
 <expand name="custom-dialog" arg1="--other"><content/></expand>
 Where the dispatch on <result/> below carries no explicit branch for a
 result starting with `OTHER:`, treat such a result as `CANCEL`.
@@ -80,7 +82,10 @@ duplicating them: `ase-meta-diff` narrates *what changed*,
 `ase-meta-review` renders a reviewer's *judgement*,
 `ase-code-lint`/`ase-code-analyze` flag *quality/logic* problems, and
 `ase-meta-commit` crafts the *message* -- this skill *curates and
-commits*; it does *not* judge code quality itself.
+commits*. Its per-file *evidence* lines are line-cited findings that
+show whether a group is correct and complete, gathered against the
+change and stated honestly (`✓`, `✗`, `?`, `–`); they are not a
+free-floating quality verdict, which stays with the analyzers.
 </objective>
 
 *IMPORTANT*: Author *every* free-text output of this skill -- the
@@ -300,12 +305,70 @@ code stay in their original form.
          run any build, test, or linter.
          </else>
 
-    5.3. Emit the *group card* as a *boxed* card, no diff, so each
+    5.3. *Gather evidence* for every staged file -- *before* any card
+         text is authored, and *against* the change rather than for it.
+         For each of the five dimensions `DOMAIN`, `ARCH`, `CLEAN`,
+         `PERF`, and `TESTS`, first hunt for the *strongest reason the
+         change could be wrong or incomplete* in that dimension, and
+         only then record what the sources actually show. Read beyond
+         the diff: the whole file, every caller and implementer of a
+         changed symbol, adjacent comments and TODOs, the project
+         guidance files, the specification, and the existing tests.
+         Record per file and dimension one <evidence-status/> plus one
+         <evidence-text/>, where the status is exactly one of:
+
+         -   `✓` *shown*: a source line the reviewer *read* carries the
+             claim *verbatim*; the text cites it as `<file/>:<line/>`.
+             No citation, no `✓`.
+         -   `✗` *gap*: something is wrong or missing; the text names the
+             concrete spot, the input or case that exposes it, and the
+             cheapest repair (e.g. the test case to add).
+         -   `?` *unverified*: deciding it needs execution the current
+             mode does not perform, or a source that could not be
+             found; the text says which.
+         -   `–` *n/a*: the dimension does not apply to this file; the
+             text says why in a few words.
+
+         Dimension-specific rules:
+
+         -   `DOMAIN`: the claim is checked against the specification,
+             project or vendor sources, or a documented contract --
+             never against the changed code itself (`No
+             Self-Reference`). A constraint the reviewer merely infers
+             is `?`, not `✓`.
+         -   `ARCH`: boundaries, layering, dependency direction, and
+             *completeness across the diff* -- every caller and
+             implementer of a changed interface is either in this group,
+             already accepted, or the gap is named.
+         -   `CLEAN`: naming, comment placement, duplication, dead code,
+             error handling, and type safety, judged against the
+             *surrounding* code, not against a style ideal.
+         -   `PERF`: hot-path allocation, complexity, helper-in-loop
+             scans, lock scope, I/O amplification; a `✗` carries the
+             evidence *and* the trade-off.
+         -   `TESTS`: the strictest line. A `✓` names `<test-file/>::
+             <case/>` *and* states why that case would turn red if the
+             change were reverted -- a test that cannot fail is not
+             evidence. Enumerate the boundary partitions the change
+             touches (empty, zero, one, maximum, absent, duplicate,
+             concurrent, time zone or DST, failure path) and name each
+             one no test covers as a `✗`. In HORIZONTAL mode this is a
+             *static* falsifiability judgement and is worded as such; in
+             VERTICAL mode the build transcript of 5.2 is the execution
+             evidence.
+
+         Then derive the group <verdict/>: the counts of `✓`, `✗`, and
+         `?` over all files, followed by `-- ready to accept` when no
+         `✗` exists, or `-- not ready without a correction` otherwise.
+         Never soften a `✗` into prose, never average the statuses, and
+         never let a reassuring summary outrank the lines above it.
+
+    5.4. Emit the *group card* as a *boxed* card, no diff, so each
          group reads as one visually self-contained unit the user can
-         give a *single* ok for. Every file contributes a three-line
-         block -- name with layer and line counts, its directory, then
-         what changed -- separated from the next block by a blank line.
-         Only output the following <template/>:
+         give a *single* ok for. Every file contributes a block -- name
+         with layer and line counts, its directory, what changed, and
+         its evidence lines -- separated from the next block by a blank
+         line. Only output the following <template/>:
 
          <template>
          <ase-tpl-boxed title="GROUP" subtitle="G<n/>/<group-count/>">
@@ -316,6 +379,14 @@ code stay in their original form.
          **<filename/>** · *<layer/>* · +<added/>/-<removed/>
          `<dirpath/>`
          <symbols/> -- <explanation/>
+         *Evidence*:
+           <evidence-status/> DOMAIN  <evidence-text/>
+           <evidence-status/> ARCH    <evidence-text/>
+           <evidence-status/> CLEAN   <evidence-text/>
+           <evidence-status/> PERF    <evidence-text/>
+           <evidence-status/> TESTS   <evidence-text/>
+
+         *Verdict*: <verdict/>
 
          *Staged*: <staged-count/>/<planned-count/> files verified in the Git
          index -- review them in your editor (VSCode Source Control:
@@ -366,11 +437,21 @@ code stay in their original form.
          -   `<explanation/>` is 1-2 short sentences on what this
              file's staged change does within the group -- simply
              understandable, in the user's language.
+         -   The five *Evidence* lines per file are *mandatory* and
+             carry exactly the statuses and texts recorded in 5.3, in
+             the fixed order `DOMAIN`, `ARCH`, `CLEAN`, `PERF`, `TESTS`.
+             The status glyph and the padded dimension label form a
+             fixed two-column gutter; a text that exceeds the line wraps
+             onto continuation lines indented to the text column, so the
+             gutter stays readable. Cited locations stay in backticks.
+         -   The *Verdict* line is the honest sum of the evidence: it
+             is what flips the recommendation of the following dialog
+             from `ACCEPT` to `CHANGE`, so it is never dressed up.
          -   The *Staged* line is *mandatory*: it is the user's only
              proof that the index matches the card, and it points them
              at where the actual lines are reviewed.
 
-    5.4. Let the *user interactively choose* (omit `ACCEPT` while a
+    5.5. Let the *user interactively choose* (omit `ACCEPT` while a
          VERTICAL build is non-green, and offer `RETRY-BUILD` only
          then):
 
