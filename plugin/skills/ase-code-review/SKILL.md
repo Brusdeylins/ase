@@ -90,11 +90,13 @@ free-floating quality verdict, which stays with the analyzers.
 
 *IMPORTANT*: Author *every* free-text output of this skill -- the
 change intent, group one-liners, rationales, per-file explanations,
-and discussion answers -- in the *user's conversation language* (e.g.
-German when the user talks German) and in *simply understandable*
-wording, as for a colleague who did not write the code and is building
-a mental model of it. Technical identifiers, filenames, and quoted
-code stay in their original form.
+evidence texts, verdicts, and discussion answers -- in the *user's
+conversation language* (e.g. German when the user talks German) and in
+*simply understandable* wording, as for a colleague who did not write
+the code and is building a mental model of it; the evidence texts even
+for a *beginner*. Explain what is *logically achieved*, never merely
+what was edited. Technical identifiers, filenames, and quoted code
+stay in their original form.
 
 <flow>
 
@@ -315,7 +317,13 @@ code stay in their original form.
          changed symbol, adjacent comments and TODOs, the project
          guidance files, the specification, and the existing tests.
          Record per file and dimension one <evidence-status/> plus one
-         <evidence-text/>, where the status is exactly one of:
+         <evidence-text/>. The text is written for a *beginner*: in the
+         user's language, in plain words, it says what was checked,
+         what was found, and what that means for the reader -- "kein
+         Test prüft, was passiert, wenn gar keine Kursdaten da sind"
+         rather than "BOUNDARY empty-feed uncovered". Only the cited
+         identifiers and locations stay technical. The status is exactly
+         one of:
 
          -   `✓` *shown*: a source line the reviewer *read* carries the
              claim *verbatim*; the text cites it as `<file/>:<line/>`.
@@ -378,7 +386,8 @@ code stay in their original form.
 
          **<filename/>** · *<layer/>* · +<added/>/-<removed/>
          `<dirpath/>`
-         <symbols/> -- <explanation/>
+         <explanation/>
+         *Touched*: <symbols/>
          *Evidence*:
            <evidence-status/> DOMAIN  <evidence-text/>
            <evidence-status/> ARCH    <evidence-text/>
@@ -429,14 +438,24 @@ code stay in their original form.
              user has to locate the file in their editor from the card
              alone. A full path plus its metadata exceeds the box width
              on its own, which is why it occupies two lines.
-         -   `<symbols/>` are the file's *changed symbols* -- the added
-             or touched functions, methods, classes, types, or config
-             keys, comma-separated in backticks. For a file without
-             symbols (data, logs, assets) both `<symbols/>` and its
-             trailing `--` are omitted.
-         -   `<explanation/>` is 1-2 short sentences on what this
-             file's staged change does within the group -- simply
-             understandable, in the user's language.
+         -   `<explanation/>` is the *primary* text of the block: 2-3
+             plain sentences, in the user's language, telling a
+             colleague who did not write the code what this file
+             *logically achieves* now -- what it guarantees, decides, or
+             makes possible that it did not before, and why that matters
+             for the group's goal. Write it as *before → after* in terms
+             of behavior, not of code: "Bisher galt ein Fenster als
+             bedient, sobald das Skript nichts mehr las; jetzt fragt es
+             den Kalender, ob der Handelstag wirklich zu Ende ist" --
+             never "fügt drei Methoden hinzu" or a paraphrase of the
+             diff. Symbol names appear in it only where they are needed
+             to follow the thought, never as an enumeration.
+         -   `<symbols/>` on the *Touched* line are the file's changed
+             symbols -- the added or touched functions, methods,
+             classes, types, or config keys, comma-separated in
+             backticks -- as the *index* into the editor, not as the
+             explanation. For a file without symbols (data, logs,
+             assets) the whole *Touched* line is omitted.
          -   The five *Evidence* lines per file are *mandatory* and
              carry exactly the statuses and texts recorded in 5.3, in
              the fixed order `DOMAIN`, `ARCH`, `CLEAN`, `PERF`, `TESTS`.

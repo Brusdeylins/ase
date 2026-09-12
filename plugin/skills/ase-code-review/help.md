@@ -44,11 +44,14 @@ shows the staged group and the remaining unstaged changes side by
 side. The skill emits the *group card* as a *boxed* card, so each group
 reads as one visually self-contained unit: a short rationale, then a
 block per staged file -- its bare name with layer and line counts, its
-full repo-relative directory, the file's *changed symbols* plus a short
-description of the change, written in the user's conversation language
-in simply understandable wording, ordered foundations-first -- and per
-file five *evidence* lines, one each for `DOMAIN`, `ARCH`, `CLEAN`,
-`PERF`, and `TESTS`. Every evidence line carries one of four honest
+full repo-relative directory, a plain-language explanation of what the
+file *logically achieves* now (behavior before → after, for a colleague
+who did not write the code -- never an enumeration of methods), a
+*Touched* line naming the changed symbols as the index into the editor,
+ordered foundations-first -- and per file five *evidence* lines, one
+each for `DOMAIN`, `ARCH`, `CLEAN`, `PERF`, and `TESTS`, each worded so
+that a beginner understands what was checked, what was found, and what
+it means. Every evidence line carries one of four honest
 statuses: `✓` *shown* (a source line the reviewer read carries the
 claim verbatim, cited as `file:line` -- no citation, no `✓`), `✗` *gap*
 (the concrete spot, the exposing input, and the cheapest repair), `?`
