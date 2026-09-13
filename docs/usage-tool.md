@@ -333,16 +333,27 @@ uninstalling the *ASE* tool and its companion *Anthropic Claude Code CLI* plugin
   Install the *ASE Anthropic Claude Code CLI* plugin (and, in `--dev` mode, the
   local working copy of the `@rse/ase` tool instead of the published
   npm package). The default for `--dev` is taken from the
-  `ASE_SETUP_DEV` environment variable.
+  `ASE_SETUP_DEV` environment variable. For `--tool claude`, the
+  plugin-shipped output style `ase:ase-terse` is additionally selected by writing
+  `"outputStyle": "ase:ase-terse"` into the `settings.json` of the installation
+  scope, unless a foreign `outputStyle` is already selected there, which
+  is preserved with a warning. For `--tool copilot` and `--tool codex`,
+  which have no output style concept, the `ase hook session-start`
+  handler injects the identical style instructions into the session
+  context instead.
 
 - `ase setup update` \[`-f`|`--force`\] \[`-d`|`--dev`\]:
   Update the *ASE* tool and the *ASE Anthropic Claude Code CLI* plugin to their
   latest versions. With `--force`, the update is always performed
   even if already at the latest version. With `--dev`, the local
-  working copy is used instead of the remote repository.
+  working copy is used instead of the remote repository. Like
+  `install`, the output style `ase:ase-terse` is selected for `--tool claude`.
 
 - `ase setup uninstall` \[`-d`|`--dev`\]:
-  Uninstall the *ASE Anthropic Claude Code CLI* plugin and the *ASE* tool.
+  Uninstall the *ASE Anthropic Claude Code CLI* plugin and the *ASE* tool. For
+  `--tool claude`, the selection of the output style `ase:ase-terse` is removed
+  from the `settings.json` of the installation scope again, while a
+  foreign `outputStyle` is preserved with a warning.
 
 - `ase setup enable`:
   Enable the (already-installed) *ASE* plugin in the agent tool.
@@ -368,9 +379,12 @@ uninstalling the *ASE* tool and its companion *Anthropic Claude Code CLI* plugin
   state of the *ASE* plugin (one row per registration, or a single `not
   installed` row); one `MCP` row per *currently registered* server of
   the `ase setup mcp list` registry shows its registration scope, with
-  unregistered servers omitted entirely; and one `STATUSLINE` row per
-  settings file carrying a `statusLine` entry shows whether it is
-  `activated` (owned by *ASE*) or `foreign` (hand-crafted). The command
+  unregistered servers omitted entirely; one `OUTPUTSTYLE` row per
+  settings file carrying an `outputStyle` entry shows whether it is
+  `selected` (the *ASE* output style `ase:ase-terse`) or `foreign` (hand-selected);
+  and one `STATUSLINE` row per settings file carrying a `statusLine`
+  entry shows whether it is `activated` (owned by *ASE*) or `foreign`
+  (hand-crafted). The command
   is purely read-only and always exits with status 0, so a missing
   registration is reported rather than signalled through the exit code.
   It takes no `--scope`, since it deliberately reports *all* scopes at
@@ -598,7 +612,12 @@ integration:
   Handle the *Anthropic Claude Code CLI* `SessionStart` hook event. This
   subcommand is intended to be invoked by *Anthropic Claude Code CLI*
   internally as a configured hook handler only, not directly
-  by end users.
+  by end users. It injects the *ASE* constitution into the session
+  context and, for `--tool copilot` and `--tool codex` only, additionally
+  the instructions of the plugin-shipped output style `ase-terse` (with its
+  YAML frontmatter stripped), as those tools have no output style
+  concept, whereas *Anthropic Claude Code CLI* applies the plugin output
+  style natively.
 
 - `ase hook session-end`:
   Handle the *Anthropic Claude Code CLI* `SessionEnd` hook event. This

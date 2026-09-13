@@ -4,6 +4,17 @@ Usage of Plugin
 
 ![workflow](workflow.svg)
 
+### Output Style
+
+The plugin ships the output style `ase-terse` (`output-styles/ase-terse.md`), which
+lets the agent respond tersely: leading with the result, executing tools
+silently, skipping preamble, narration, and closing recaps, and
+selecting the formatting by intent. Under *Anthropic Claude Code CLI* it
+is a regular plugin output style, selected by `ase setup install` and
+switchable via `/config`. Under *GitHub Copilot CLI* and *OpenAI Codex
+CLI*, which have no output style concept, its instructions are injected
+into the session context by the session-start hook instead.
+
 ### Meta Commands
 
 The following ASE commands/skills exist on the meta-level:

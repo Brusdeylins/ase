@@ -12,7 +12,8 @@ export default defineConfig([
     {
         files: [
             "meta/*.md",
-            "skills/**/*.md"
+            "skills/**/*.md",
+            "output-styles/*.md"
         ],
         rules: {
             "md/no-double-space":     "off",

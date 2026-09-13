@@ -2,6 +2,23 @@
 ChangeLog
 =========
 
+1.0.6 (2026-09-13)
+------------------
+
+-   FEATURE [plugin]: Output style for Claude Code
+    Added the Claude Code output style `ase-terse` in `plugin/output-styles/ase-terse.md`,
+    which makes the agent respond tersely, lead with the result, execute tools
+    silently, and end without a closing recap, while keeping the built-in coding
+    instructions and the ASE persona communication style in effect.
+
+-   FEATURE [tool]: Output style integration for all agent tools
+    Under Anthropic Claude Code CLI, `ase setup install` and `ase setup update` now
+    select the plugin output style `ase:ase-terse` via `outputStyle` in the scope's `settings.json`
+    (preserving a foreign selection), `ase setup uninstall` deselects it again, and
+    `ase setup status` reports it as `OUTPUTSTYLE` rows. Under GitHub Copilot CLI and
+    OpenAI Codex CLI, which have no output style concept, the session-start hook injects
+    the identical style instructions (frontmatter stripped) into the session context.
+
 1.0.5 (2026-09-13)
 ------------------
 

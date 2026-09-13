@@ -428,16 +428,31 @@ ase setup disable   [--tool claude|copilot|codex] [--scope user|project|local]
 ### Status
 
 ```
-#   report ASE plugin, MCP server, and statusline registrations in agent tool
+#   report ASE plugin, MCP server, output style, and statusline registrations in agent tool
 ase setup status    [--tool claude|copilot|codex]
 ```
 
 The report lists, across *all* scopes at once, the registration scope
 and enabled/disabled state of the *ASE* plugin, the registration scope
-of each currently registered MCP server, and the settings files carrying
-an `activated` (*ASE*-owned) or `foreign` (hand-crafted) `statusLine`
-entry. It is read-only, takes no `--scope` (reporting every scope is the
-point), and always exits with status 0.
+of each currently registered MCP server, the settings files carrying a
+`selected` (*ASE*-owned) or `foreign` (hand-selected) `outputStyle`
+entry, and the settings files carrying an `activated` (*ASE*-owned) or
+`foreign` (hand-crafted) `statusLine` entry. It is read-only, takes no
+`--scope` (reporting every scope is the point), and always exits with
+status 0.
+
+### Output Style
+
+The *ASE* plugin ships the output style `ase:ase-terse`, which lets the agent
+respond tersely, leading with the result and skipping preamble,
+narration, and closing recaps. For `--tool claude`, `ase setup install`
+(and `ase setup update`) selects it by writing `"outputStyle": "ase:ase-terse"`
+into the `settings.json` of the given `--scope`, `ase setup uninstall`
+removes this selection again, and a hand-selected foreign `outputStyle`
+is always preserved. You can switch it at any time via `/config`. For
+`--tool copilot` and `--tool codex`, which have no output style concept,
+the identical style instructions are injected into the session context
+by the *ASE* session-start hook instead.
 
 ### Statusline
 

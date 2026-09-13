@@ -242,12 +242,14 @@ export default class HookCommand {
         const pluginRoot = this.pluginRoot(tool)
 
         /*  determine path to external files  */
-        const filePkg = path.join(pluginRoot, ".claude-plugin", "plugin.json")
-        const fileMd  = path.join(pluginRoot, "meta", "ase-constitution.md")
+        const filePkg   = path.join(pluginRoot, ".claude-plugin", "plugin.json")
+        const fileMd    = path.join(pluginRoot, "meta", "ase-constitution.md")
+        const fileStyle = path.join(pluginRoot, "output-styles", "ase-terse.md")
 
         /*  read external files  */
-        let pkg: string
-        let md:  string
+        let pkg:   string
+        let md:    string
+        let style: string
         try {
             pkg = fs.readFileSync(filePkg, "utf8")
         }
@@ -259,6 +261,12 @@ export default class HookCommand {
         }
         catch (err) {
             throw new Error(`failed to read constitution file: ${fileMd}`, { cause: err })
+        }
+        try {
+            style = fs.readFileSync(fileStyle, "utf8")
+        }
+        catch (err) {
+            throw new Error(`failed to read output style file: ${fileStyle}`, { cause: err })
         }
 
         /*  determine own version  */
@@ -396,6 +404,13 @@ export default class HookCommand {
 
         /*  expand all @<file> references manually  */
         md = this.expandReferences(md, path.dirname(fileMd))
+
+        /*  append the output style to the constitution markdown (GitHub
+            Copilot CLI and OpenAI Codex CLI only -- Anthropic Claude Code CLI
+            applies the plugin output style natively), stripping the
+            YAML frontmatter which only Anthropic Claude Code CLI understands  */
+        if (tool !== "claude")
+            md += "\n" + style.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
 
         /*  build the deterministic ASE banner (rendered directly by the
             agent harness, independent of any model decision, so it is

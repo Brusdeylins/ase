@@ -133,6 +133,9 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                 installation residue-free again at any time.
                 The <code>--tool claude</code> is the default and not necessary
                 for the mainstream tool <a href="https://claude.com/products/claude-code">Anthropic Claude Code CLI</a>.
+                The installation also selects the terse <b>ASE</b> output style <code>ase:ase-terse</code>
+                (switchable at any time via <code>/config</code>); for the alternative tools
+                its instructions are injected into the session context instead.
             </p>
             <p class="ase-indent-p text-foreground-secondary ase-justify">
                 The <code>--scope</code> option defaults to <code>user</code> (global,

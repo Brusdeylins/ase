@@ -189,6 +189,10 @@ export default class SetupCommand {
         const scopeArgs = tool === "claude" && scope !== "user" ? [ "--scope", scope ] : []
         await this.run(spec.cli, [ "plugin", "marketplace", "add", source, ...scopeArgs ])
         await this.run(spec.cli, [ "plugin", spec.pInstall, "ase@ase", ...scopeArgs ], { retries: 3 })
+
+        /*  select the plugin-shipped ASE output style (Anthropic Claude Code CLI only)  */
+        if (tool === "claude")
+            await this.outputStyleActivate(`install${dev ? "[dev]" : ""}`, scope)
         return 0
     }
 
@@ -252,6 +256,10 @@ export default class SetupCommand {
                 await this.run(spec.cli, [ "plugin", spec.pInstall, "ase@ase", ...scopeArgs ], { retries: 3 })
             }
         }
+
+        /*  select the plugin-shipped ASE output style (Anthropic Claude Code CLI only)  */
+        if (tool === "claude")
+            await this.outputStyleActivate(`update${dev ? "[dev]" : ""}`, scope)
         return 0
     }
 
@@ -286,6 +294,10 @@ export default class SetupCommand {
             "stopping potentially running ASE service")
         await this.run("ase", [ "service", "stop" ],
             { quiet: true, ignoreError: "ASE service not running" })
+
+        /*  deselect the plugin-shipped ASE output style (Anthropic Claude Code CLI only)  */
+        if (tool === "claude")
+            await this.outputStyleDeactivate(`uninstall${dev ? "[dev]" : ""}`, scope)
 
         /*  uninstall ASE plugin  */
         this.log.write("info", `setup: uninstall${dev ? "[dev]" : ""}: ` +
@@ -330,6 +342,10 @@ export default class SetupCommand {
                 continue
             rows.push([ "MCP", chalk.bold(this.mcpServers[i].server), scope, "registered" ])
         }
+
+        /*  report the ASE output style selections  */
+        for (const outputStyle of await this.outputStyleStatus(tool))
+            rows.push([ "OUTPUTSTYLE", chalk.bold(outputStyle.file), outputStyle.scope, outputStyle.status ])
 
         /*  report the ASE statusline registrations  */
         for (const statusline of await this.statuslineStatus(tool))
@@ -773,7 +789,7 @@ export default class SetupCommand {
     ]
 
     /*  resolve the tool settings file for a given installation scope  */
-    private statuslineSettingsFile (tool: Tool, scope: Scope): string {
+    private settingsFile (tool: Tool, scope: Scope): string {
         if (tool === "copilot") {
             const home = process.env.COPILOT_HOME ?? ""
             const base = home !== "" ? home : path.join(os.homedir(), ".copilot")
@@ -834,11 +850,11 @@ export default class SetupCommand {
         return false
     }
 
-    /*  locate the top-level "statusLine" member node within the root object  */
-    private statuslineFindMember (root: AstNode): AstNode | undefined {
+    /*  locate a top-level member node by key within the root object  */
+    private settingsFindMember (root: AstNode, name: string): AstNode | undefined {
         for (const m of root.query("/ member")) {
             const key = m.query("/ string [ pos() == 1 ]")[0]
-            if (key !== undefined && key.get("value") === "statusLine")
+            if (key !== undefined && key.get("value") === name)
                 return m
         }
         return undefined
@@ -873,7 +889,7 @@ export default class SetupCommand {
     }
 
     /*  normalize the previous-last member so a following ",\n    " comma reads cleanly  */
-    private statuslineMakeNonLast (member: AstNode): void {
+    private settingsMakeNonLast (member: AstNode): void {
         const val = member.query("/ * [ pos() == 2 ]")[0]
         if (val !== undefined) {
             const ep = val.get("epilog")
@@ -883,8 +899,44 @@ export default class SetupCommand {
         member.set({ epilog: ",\n    " })
     }
 
+    /*  append a member to the root object, repairing the whitespace at
+        the seam: a scalar value carries no pre-"}" newline of its own
+        (a container value carries it in its own epilog already), so the
+        root epilog has to supply it  */
+    private settingsAddMember (root: AstNode, member: AstNode, scalar: boolean): void {
+        const members = root.query("/ member")
+        if (members.length === 0)
+            root.set({ prolog: "{\n    " })
+        else
+            this.settingsMakeNonLast(members[members.length - 1]!)
+        root.set({ epilog: scalar ? "\n}\n" : "}\n" })
+        root.add(member)
+    }
+
+    /*  remove a member from the root object, repairing the whitespace at the seam  */
+    private settingsRemoveMember (root: AstNode, target: AstNode): void {
+        const members = root.query("/ member")
+        const wasLast = members[members.length - 1] === target
+        root.del(target)
+        if (wasLast) {
+            if (members.length > 1) {
+                /*  promote the new last member: strip its comma epilog and
+                    restore the pre-"}" newline into the root epilog when the
+                    new-last value is a scalar (a container value carries the
+                    newline in its own epilog already)  */
+                const newLast = members[members.length - 2]!
+                newLast.set({ epilog: undefined })
+                const val = newLast.query("/ * [ pos() == 2 ]")[0]
+                const ep  = val !== undefined ? val.get("epilog") : undefined
+                root.set({ epilog: (typeof ep === "string" && ep.endsWith("\n")) ? "}\n" : "\n}\n" })
+            }
+            else
+                root.set({ epilog: "}\n" })
+        }
+    }
+
     /*  read a settings.json file into a JSON-ASTy AST  */
-    private async statuslineReadAst (file: string): Promise<AstNode> {
+    private async settingsReadAst (file: string): Promise<AstNode> {
         let text = ""
         try {
             text = await fs.readFile(file, "utf8")
@@ -898,7 +950,7 @@ export default class SetupCommand {
     }
 
     /*  write a JSON-ASTy AST back to a settings.json file  */
-    private async statuslineWriteAst (file: string, root: AstNode): Promise<void> {
+    private async settingsWriteAst (file: string, root: AstNode): Promise<void> {
         await mkdirp(path.dirname(file))
         const text = JsonAsty.unparse(root)
         await writeFileAtomic(file, text, { encoding: "utf8" })
@@ -909,11 +961,11 @@ export default class SetupCommand {
         opts: { width: number, margin: number, padding: number, icons: boolean, labels: boolean }, format: string[]): Promise<number> {
         this.requireStatuslineTool(tool)
         this.requireStatuslineScope(tool, scope)
-        const file    = this.statuslineSettingsFile(tool, scope)
+        const file    = this.settingsFile(tool, scope)
         const command = this.statuslineCommand(tool, opts, format)
-        const root    = await this.statuslineReadAst(file)
+        const root    = await this.settingsReadAst(file)
 
-        const existing = this.statuslineFindMember(root)
+        const existing = this.settingsFindMember(root, "statusLine")
         if (existing !== undefined) {
             /*  preserve a foreign, hand-crafted statusLine: skip and warn  */
             if (!this.statuslineIsOwned(existing)) {
@@ -930,20 +982,10 @@ export default class SetupCommand {
         }
         else {
             /*  insert a fresh statusLine member  */
-            const members = root.query("/ member")
-            const member  = this.statuslineBuildMember(root, command)
-            if (members.length === 0) {
-                root.set({ prolog: "{\n    ", epilog: "}\n" })
-                root.add(member)
-            }
-            else {
-                root.set({ epilog: "}\n" })
-                this.statuslineMakeNonLast(members[members.length - 1]!)
-                root.add(member)
-            }
+            this.settingsAddMember(root, this.statuslineBuildMember(root, command), false)
             this.log.write("info", `setup: statusline: activate: adding ASE "statusLine" to ${file}`)
         }
-        await this.statuslineWriteAst(file, root)
+        await this.settingsWriteAst(file, root)
         return 0
     }
 
@@ -951,7 +993,7 @@ export default class SetupCommand {
     private async doStatuslineDeactivate (tool: Tool, scope: Scope): Promise<number> {
         this.requireStatuslineTool(tool)
         this.requireStatuslineScope(tool, scope)
-        const file = this.statuslineSettingsFile(tool, scope)
+        const file = this.settingsFile(tool, scope)
 
         /*  a missing settings file means nothing to remove  */
         try {
@@ -963,8 +1005,8 @@ export default class SetupCommand {
         }
 
         /*  read file  */
-        const root   = await this.statuslineReadAst(file)
-        const target = this.statuslineFindMember(root)
+        const root   = await this.settingsReadAst(file)
+        const target = this.settingsFindMember(root, "statusLine")
         if (target === undefined) {
             this.log.write("info", `setup: statusline: deactivate: no "statusLine" in ${file} (skipped)`)
             return 0
@@ -978,26 +1020,8 @@ export default class SetupCommand {
         }
 
         /*  remove the member and repair the whitespace at the seam  */
-        const members = root.query("/ member")
-        const wasLast = members[members.length - 1] === target
-        root.del(target)
-        if (wasLast) {
-            if (members.length > 1) {
-                /*  promote the new last member: strip its comma epilog and
-                    restore the pre-"}" newline into the root epilog when the
-                    new-last value is a scalar (a container value carries the
-                    newline in its own epilog already)  */
-                const newLast = members[members.length - 2]!
-                newLast.set({ epilog: undefined })
-                const val = newLast.query("/ * [ pos() == 2 ]")[0]
-                const ep  = val !== undefined ? val.get("epilog") : undefined
-                if (!(typeof ep === "string" && ep.endsWith("\n")))
-                    root.set({ epilog: "\n}\n" })
-            }
-            else
-                root.set({ epilog: "}\n" })
-        }
-        await this.statuslineWriteAst(file, root)
+        this.settingsRemoveMember(root, target)
+        await this.settingsWriteAst(file, root)
         this.log.write("info", `setup: statusline: deactivate: removing ASE "statusLine" from ${file}`)
         return 0
     }
@@ -1012,22 +1036,113 @@ export default class SetupCommand {
         const scopes: Scope[] = tool === "claude" ? [ "user", "project", "local" ] : [ "user" ]
         const entries: { file: string, scope: string, status: string }[] = []
         for (const scope of scopes) {
-            const file = this.statuslineSettingsFile(tool, scope)
+            const file = this.settingsFile(tool, scope)
             let root: AstNode
             try {
-                root = await this.statuslineReadAst(file)
+                root = await this.settingsReadAst(file)
             }
             catch {
                 /*  an unparsable settings file carries no usable state  */
                 continue
             }
-            const member = this.statuslineFindMember(root)
+            const member = this.settingsFindMember(root, "statusLine")
             if (member === undefined)
                 continue
             entries.push({
                 file:   file.startsWith(home + path.sep) ? `~${file.slice(home.length)}` : file,
                 scope:  tool === "claude" ? scope : "(n/a)",
                 status: this.statuslineIsOwned(member) ? "activated" : "foreign"
+            })
+        }
+        return entries
+    }
+
+    /*  determine whether an existing "outputStyle" value is owned by us  */
+    private outputStyleIsOwned (member: AstNode): boolean {
+        const val = member.query("/ string [ pos() == 2 ]")[0]
+        return val !== undefined && val.get("value") === "ase:ase-terse"
+    }
+
+    /*  build the "outputStyle" member subtree natively inside the target AST  */
+    private outputStyleBuildMember (root: AstNode): AstNode {
+        const key = root.create("string").set({ body: JSON.stringify("outputStyle"), value: "outputStyle", epilog: ": " })
+        const val = root.create("string").set({ body: JSON.stringify("ase:ase-terse"), value: "ase:ase-terse" })
+        return root.create("member").add(key, val)
+    }
+
+    /*  activate the plugin-shipped ASE output style by selecting it in
+        the settings file of the scope (Anthropic Claude Code CLI only:
+        the other tools have no output style concept, so the session-start
+        hook injects the style into their session context instead)  */
+    private async outputStyleActivate (action: string, scope: Scope): Promise<void> {
+        const file     = this.settingsFile("claude", scope)
+        const root     = await this.settingsReadAst(file)
+        const existing = this.settingsFindMember(root, "outputStyle")
+        if (existing !== undefined) {
+            /*  preserve a foreign, hand-selected outputStyle: skip and warn  */
+            if (!this.outputStyleIsOwned(existing))
+                this.log.write("warning", `setup: ${action}: a non-ASE "outputStyle" ` +
+                    `is already selected in ${file}: preserving it (skipped)`)
+            return
+        }
+        this.settingsAddMember(root, this.outputStyleBuildMember(root), true)
+        await this.settingsWriteAst(file, root)
+        this.log.write("info", `setup: ${action}: selecting ASE "outputStyle" in ${file}`)
+    }
+
+    /*  deactivate the plugin-shipped ASE output style by removing its
+        selection from the settings file of the scope (Anthropic Claude Code CLI only)  */
+    private async outputStyleDeactivate (action: string, scope: Scope): Promise<void> {
+        const file = this.settingsFile("claude", scope)
+
+        /*  a missing settings file means nothing to remove  */
+        try {
+            await fs.access(file)
+        }
+        catch {
+            return
+        }
+        const root   = await this.settingsReadAst(file)
+        const target = this.settingsFindMember(root, "outputStyle")
+        if (target === undefined)
+            return
+
+        /*  preserve a foreign, hand-selected outputStyle: skip and warn  */
+        if (!this.outputStyleIsOwned(target)) {
+            this.log.write("warning", `setup: ${action}: a non-ASE "outputStyle" ` +
+                `is selected in ${file}: preserving it (skipped)`)
+            return
+        }
+        this.settingsRemoveMember(root, target)
+        await this.settingsWriteAst(file, root)
+        this.log.write("info", `setup: ${action}: deselecting ASE "outputStyle" in ${file}`)
+    }
+
+    /*  probe the output style selections by inspecting the tool
+        settings files of all installation scopes (Anthropic Claude Code CLI only)  */
+    private async outputStyleStatus (tool: Tool): Promise<{ file: string, scope: string, status: string }[]> {
+        if (tool !== "claude")
+            return []
+        const home    = os.homedir()
+        const scopes: Scope[] = [ "user", "project", "local" ]
+        const entries: { file: string, scope: string, status: string }[] = []
+        for (const scope of scopes) {
+            const file = this.settingsFile(tool, scope)
+            let root: AstNode
+            try {
+                root = await this.settingsReadAst(file)
+            }
+            catch {
+                /*  an unparsable settings file carries no usable state  */
+                continue
+            }
+            const member = this.settingsFindMember(root, "outputStyle")
+            if (member === undefined)
+                continue
+            entries.push({
+                file:   file.startsWith(home + path.sep) ? `~${file.slice(home.length)}` : file,
+                scope,
+                status: this.outputStyleIsOwned(member) ? "selected" : "foreign"
             })
         }
         return entries
@@ -1132,7 +1247,7 @@ export default class SetupCommand {
         /*  register CLI sub-command "ase setup status"  */
         setupCmd
             .command("status")
-            .description("report the ASE plugin, MCP server, and statusline registrations for a tool")
+            .description("report the ASE plugin, MCP server, output style, and statusline registrations for a tool")
             .option("-t, --tool <tool>",   "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
             .action(async (opts: { tool: string }) => {
                 process.exit(await this.doStatus(this.parseTool(opts.tool)))
