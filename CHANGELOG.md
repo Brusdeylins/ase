@@ -26,7 +26,7 @@ ChangeLog
     `ase spec` now honors the Git exclude rules at all, so both resolvers see the same files.
 
 -   UPDATE [infr]: NPM dependencies
-    Updated NPM dependencies: SpecBook 1.2.10, STX 1.1.7, Lucide Astro 1.44.0
+    Updated NPM dependencies: SpecBook 1.2.10, STX 1.1.7, Lucide Astro 1.44.0, etc
 
 -   CLEANUP [infr]: Linting and Git ignore configuration
     Disabled the `blanks-around-headings` rule in `plugin/etc/markdownlint.yaml`
