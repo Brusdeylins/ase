@@ -15,12 +15,12 @@
     },
     "devDependencies": {
         "@rse/stx":                         "1.1.7",
-        "@rse/specbook":                    "1.2.9",
+        "@rse/specbook":                    "1.2.10",
         "markdownlint":                     "0.41.1",
         "markdownlint-cli2":                "0.23.2",
         "eslint":                           "10.10.0",
         "@eslint/markdown":                 "8.0.3",
-        "eslint-markdown":                  "0.15.0"
+        "eslint-markdown":                  "0.16.0"
     },
     "engines": {
         "npm":                              ">=10.0.0",
