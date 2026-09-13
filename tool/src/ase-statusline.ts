@@ -19,7 +19,7 @@ import { Config }                           from "./ase-config-core.js"
 import { configSchema }                     from "./ase-config-schema.js"
 import { parseScope, userStateDir }         from "./ase-config-scope.js"
 import { readStdin, writeStdout }           from "./ase-lib-stdio.js"
-import { monthCostForRender, refreshMonthCostCache } from "./ase-statusline-cost.js"
+import { monthCostForRender, refreshMonthCostCache, refreshPricesCache } from "./ase-statusline-cost.js"
 import pkg                                  from "../package.json" with { type: "json" }
 
 /*  forced-color chalk instance: stdout is a pipe under Anthropic Claude Code CLI,
@@ -112,6 +112,7 @@ interface StatuslineOpts {
     labels:           boolean
     monthCostTtl:     number
     refreshMonthCost: boolean
+    refreshPrices:    boolean
 }
 
 /*  custom argument parser for Commander: non-negative integer  */
@@ -417,6 +418,8 @@ export default class StatuslineCommand {
                 parseInteger("--month-cost-ttl"), 300)
             .option("--refresh-month-cost",
                 "(internal) recompute and cache the current-month total cost, then exit")
+            .option("--refresh-prices",
+                "(internal) download and cache the current token prices, then exit")
             .argument("[lines...]",
                 "one or more template lines with %u %p %T %s %m %e %t %O %P %h %B %L %c %C %a %r " +
                 "%S %D %W %Q %H %X %Y %b %g %G %d %M %V placeholders and <color>...</color> markup " +
@@ -428,6 +431,13 @@ export default class StatuslineCommand {
                     %Y spawns during a normal render (no stdin, no rendering)  */
                 if (opts.refreshMonthCost) {
                     refreshMonthCostCache(new Date())
+                    return
+                }
+
+                /*  internal mode: refresh the downloaded token prices and exit,
+                    as invoked by the detached background refresh at session start  */
+                if (opts.refreshPrices) {
+                    await refreshPricesCache(new Date())
                     return
                 }
 
