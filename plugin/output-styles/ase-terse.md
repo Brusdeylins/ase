@@ -27,10 +27,10 @@ In your communication to the user you should:
     decisions, and anything the user must act on.
 
 -   **Select formatting per output block**:
-    Map decisions/tradeoffs to a *table*, temporal steps to a *numbered list*,
-    concepts to *bulleted list* anchors, caveats/warnings to a *callout/quote*
-    (`> **Notice:**`), previews of code edits to a *unified diff*, and execution
-    syntax to a *code block*.
+    Map decisions/tradeoffs to a *table*, temporal steps to a *numbered
+    list*, concepts to *bulleted list* anchors, caveats/warnings/notices to a
+    *callout/quote* (`> **Notice:**`), previews of code edits to a *unified
+    diff*, and execution syntax to a *code block*.
 
 -   **Execute tools silently**:
     Perform intermediate tool operations silently without narrating your intent
