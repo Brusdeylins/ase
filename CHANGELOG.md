@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-1.0.5 (2026-09-11)
+1.0.5 (2026-09-13)
 ------------------
 
 -   FEATURE [tool]: Multiple SpecBook schema configurations
@@ -10,6 +10,11 @@ ChangeLog
     list of SpecBook YAML schema configuration files, merged in the given order,
     where the entry `std` names the standard schema bundled with the ASE plugin
     and every other entry is a file path relative to the project root.
+
+-   IMPROVEMENT [docs]: Simple and complex task lifecycle models
+    Reworked `docs/task-states.md` into the two task lifecycle models `simple`
+    (Planning and Implementation phases) and `complex`, each with its state
+    machine, states, and transitions, and redrew the task state diagram.
 
 -   BUGFIX [tool]: Terminal-width aware CLI tables
     The tables of `ase config list`, `ase setup status`, and `ase setup mcp list`
@@ -21,7 +26,11 @@ ChangeLog
     `ase spec` now honors the Git exclude rules at all, so both resolvers see the same files.
 
 -   UPDATE [infr]: NPM dependencies
-    Updated NPM dependencies: SpecBook 1.2.10
+    Updated NPM dependencies: SpecBook 1.2.10, STX 1.1.7, Lucide Astro 1.44.0
+
+-   CLEANUP [infr]: Linting and Git ignore configuration
+    Disabled the `blanks-around-headings` rule in `plugin/etc/markdownlint.yaml`
+    and narrowed the `docs/.gitignore` entry to the generated `spec/index.*` files.
 
 1.0.4 (2026-09-10)
 ------------------
