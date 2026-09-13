@@ -1,214 +1,232 @@
 
-Task States
-===========
+Task Lifecycle Models
+---------------------
 
-Every **ASE** *task plan* carries an optional `Status` frontmatter key stating its current
-*lifecycle state*. A single operation may traverse *several* transitions at once if it performs the
-corresponding stages in one go. ASE pre-defines two reusable lifecycle models.
+Every **ASE** *task* carries an optional `Status` frontmatter key, stating its current *lifecycle
+state*. When `Status` is absent, the task is in the *default* state of the selected task lifecycle
+model.
 
-Simple Task Lifecycle Model
----------------------------
+The lifecycle model is a *state machine*. Whoever sets the `Status` frontmatter key *MUST* only move
+along one of the defined state transitions, whereby a *single* operation *MAY* traverse *several*
+transitions at once if it performs the corresponding stages in one go.
+
+**ASE** pre-defines two reusable task lifecycle models. The lifecycle model of the current project
+is defined by <ase-project-task-lifecycle/>, with allowed values `simple` (default) and `complex`.
+
+### Simple Task Lifecycle Model (`simple`)
 
 The 2+4 states and the transitions between them form the following state machine which realizes a
-simple task management scheme.
+simple task management scheme based on the two phases Planning and Implementation.
 
 ```mermaid
 stateDiagram-v2
     [*]          --> PLANNING
 
-    PLANNING     --> SHELVED:        shelve
-    SHELVED      --> PLANNING:       unshelve
+    PLANNING     --> SHELVED
+    SHELVED      --> PLANNING
 
-    PLANNING     --> IMPLEMENTING:   implement
-    IMPLEMENTING --> PLANNING:       replan
-    IMPLEMENTING --> STALLED:        stall
-    STALLED      --> IMPLEMENTING:   unstall
+    PLANNING     --> IMPLEMENTING
+    IMPLEMENTING --> PLANNING
+    IMPLEMENTING --> STALLED
+    STALLED      --> IMPLEMENTING
 
-    IMPLEMENTING --> IMPLEMENTED:    finish
+    IMPLEMENTING --> IMPLEMENTED
 
-    PLANNING     --> CANCELLED:      cancel
-    SHELVED      --> CANCELLED:      cancel
-    IMPLEMENTING --> CANCELLED:      cancel
-    STALLED      --> CANCELLED:      cancel
+    PLANNING     --> CANCELLED
+    SHELVED      --> CANCELLED
+    IMPLEMENTING --> CANCELLED
+    STALLED      --> CANCELLED
 
     IMPLEMENTED  --> [*]
     CANCELLED    --> [*]
 ```
 
 ```txt
-              ●
-              │
-              ▼
-        ┏━━━━━━━━━━━━┓  shelve   ┌────────────┐
-┌──────▶┃  PLANNING  ┃──────────▶│  SHELVED   │
-│       ┃            ┃◀──────────│            │
-│       ┗━━━━━━━━━━━━┛ unshelve  └────────────┘
-│             │    │                   │
-│    implement│    └───────────────────┴───────────┐
-│             │                                    │
-│             ▼                                    │
-│replan ┏━━━━━━━━━━━━┓  stall    ┌────────────┐    │
-└───────┃IMPLEMENTING┃──────────▶│  STALLED   │    │
-        ┃            ┃◀──────────│            │    │
-        ┗━━━━━━━━━━━━┛  unstall  └────────────┘    │
-              │    │                   │           │
-        finish│    └───────────────────┴───────────┤
-              ▼                              cancel│
-        ┌────────────┐           ┌────────────┐    │
-        │IMPLEMENTED │           │ CANCELLED  │◀───┘
-        │            │           │            │
-        └────────────┘           └────────────┘
-              │                        │
-              ├────────────────────────┘
-              │
-              ▼
-              ◉
+           ●
+           │
+           ▼
+     ┏━━━━━━━━━━━━┓      ┌────────────┐
+┌───▶┃  PLANNING  ┃─────▶│  SHELVED   │
+│    ┃            ┃◀─────│            │
+│    ┗━━━━━━━━━━━━┛      └────────────┘
+│          │    │              │
+│          │    └──────────────┴───────────┐
+│          ▼                               │
+│    ┏━━━━━━━━━━━━┓      ┌────────────┐    │
+└────┃IMPLEMENTING┃─────▶│  STALLED   │    │
+     ┃            ┃◀─────│            │    │
+     ┗━━━━━━━━━━━━┛      └────────────┘    │
+           │    │              │           │
+           │    └──────────────┴───────────┤
+           ▼                               │
+     ┌────────────┐      ┌────────────┐    │
+     │IMPLEMENTED │      │ CANCELLED  │◀───┘
+     │            │      │            │
+     └────────────┘      └────────────┘
+           │                   │
+           ├───────────────────┘
+           │
+           ▼
+           ◉
 ```
 
 The 2 "activity" states express:
 
--   **PLANNING**:     task is being planned and is not yet cleared for implementation.
--   **IMPLEMENTING**: task is being implemented and is not yet completed.
+-   `PLANNING`:     task is currently in change planning       (idea to plan).
+-   `IMPLEMENTING`: task is currently in change implementation (plan to code-base).
 
 The 4 "rest" states express:
 
--   **SHELVED**:      task was shelved into backlog.
--   **STALLED**:      task stalled during implementation by an impediment.
--   **IMPLEMENTED**:  task was implemented and reached its intended outcome.
--   **CANCELLED**:    task was cancelled at any time, because it failed, was called off, or became obsolete.
+-   `SHELVED`:      task was shelved during planning into backlog.
+-   `STALLED`:      task was stalled during implementation by an impediment.
+-   `IMPLEMENTED`:  task was implemented and reached its intended outcome.
+-   `CANCELLED`:    task was cancelled at any time, because it failed, was called off, or became obsolete.
 
-Complex Task Lifecycle Model
-----------------------------
+The *default* state is the "activity" state `PLANNING`.
+
+### Complex Task Lifecycle Model (`complex`)
 
 The 4+10 states and the transitions between them form the following state machine which realizes
-a full-blown agentic development pipeline based on the four phases Planning, Implementation,
-Acceptance and Integration:
+a complex task management scheme based on the four phases Planning, Implementation, Approval and
+Integration:
 
 ```mermaid
 stateDiagram-v2
     [*]          --> DRAFTED
-    DRAFTED      --> SHELVED:      shelved
-    SHELVED      --> DRAFTED:      drafted
-    DRAFTED      --> PLANNING:     plan
-    PLANNING     --> DRAFTED:      drafted
-    PLANNING     --> SHELVED:      shelved
+    DRAFTED      --> SHELVED
+    SHELVED      --> DRAFTED
+    DRAFTED      --> PLANNING
+    PLANNING     --> DRAFTED
+    PLANNING     --> SHELVED
 
-    PLANNING     --> PLANNED:      planned
-    PLANNED      --> STALLED:      stalled
-    STALLED      --> PLANNED:      planned
-    PLANNED      --> IMPLEMENTING: implement
-    IMPLEMENTING --> PLANNED:      planned
-    IMPLEMENTING --> STALLED:      stalled
+    PLANNING     --> PLANNED
+    PLANNED      --> STALLED
+    STALLED      --> PLANNED
+    PLANNED      --> IMPLEMENTING
+    IMPLEMENTING --> PLANNED
+    IMPLEMENTING --> STALLED
 
-    IMPLEMENTING --> IMPLEMENTED:  implemented
-    IMPLEMENTED  --> DECLINED:     declined
-    DECLINED     --> IMPLEMENTED:  implemented
-    IMPLEMENTED  --> APPROVING:    approve
-    APPROVING    --> IMPLEMENTED:  implemented
-    APPROVING    --> DECLINED:     declined
+    IMPLEMENTING --> IMPLEMENTED
+    IMPLEMENTED  --> DECLINED
+    DECLINED     --> IMPLEMENTED
+    IMPLEMENTED  --> APPROVING
+    APPROVING    --> IMPLEMENTED
+    APPROVING    --> DECLINED
 
-    APPROVING    --> APPROVED:     approved
-    APPROVED     --> DEFERRED:     deferred
-    DEFERRED     --> APPROVED:     approved
-    APPROVED     --> INTEGRATING:  integrate
-    INTEGRATING  --> APPROVED:     approved
-    INTEGRATING  --> DEFERRED:     deferred
+    APPROVING    --> APPROVED
+    APPROVED     --> DEFERRED
+    DEFERRED     --> APPROVED
+    APPROVED     --> INTEGRATING
+    INTEGRATING  --> APPROVED
+    INTEGRATING  --> DEFERRED
 
-    INTEGRATING  --> INTEGRATED:   integrated
+    INTEGRATING  --> INTEGRATED
 
-    IMPLEMENTING --> DRAFTED:      drafted
-    APPROVING    --> DRAFTED:      drafted
-    APPROVING    --> PLANNED:      planned
-    INTEGRATING  --> DRAFTED:      drafted
-    INTEGRATING  --> PLANNED:      planned
+    IMPLEMENTING --> DRAFTED
+    APPROVING    --> DRAFTED
+    APPROVING    --> PLANNED
+    INTEGRATING  --> DRAFTED
+    INTEGRATING  --> PLANNED
 
-    DRAFTED      --> CANCELLED:    cancelled
-    SHELVED      --> CANCELLED:    cancelled
-    PLANNED      --> CANCELLED:    cancelled
-    STALLED      --> CANCELLED:    cancelled
-    IMPLEMENTED  --> CANCELLED:    cancelled
-    DECLINED     --> CANCELLED:    cancelled
-    APPROVED     --> CANCELLED:    cancelled
-    DEFERRED     --> CANCELLED:    cancelled
+    DRAFTED      --> CANCELLED
+    SHELVED      --> CANCELLED
+    PLANNING     --> CANCELLED
+    PLANNED      --> CANCELLED
+    STALLED      --> CANCELLED
+    IMPLEMENTING --> CANCELLED
+    IMPLEMENTED  --> CANCELLED
+    DECLINED     --> CANCELLED
+    APPROVING    --> CANCELLED
+    APPROVED     --> CANCELLED
+    DEFERRED     --> CANCELLED
+    INTEGRATING  --> CANCELLED
 
     INTEGRATED   --> [*]
     CANCELLED    --> [*]
 ```
 
 ```txt
-                     ●
-                     │
-                     ▼     ┌────────────────────────────────────┐
-              ┌──────────────┐   shelved   ┌──────────────┐     │
-    ┌────────▶│   DRAFTED    │────────────▶│   SHELVED    │─────┤
-    │ drafted │              │◀────────────│              │     │
-    │         └──────────────┘   drafted   └──────────────┘     │
-    │       plan │       ▲                        ▲ shelved     │
-    │            ▼       │ drafted                │             │
-    │         ┏━━━━━━━━━━━━━━┓                    │             │
-    │         ┃   PLANNING   ┃────────────────────┘             │
-    │         ┗━━━━━━━━━━━━━━┛                                  │
-    │                │ planned                                  │
-    │                ▼     ┌────────────────────────────────────┤
-    │         ┌──────────────┐   stalled   ┌──────────────┐     │
-    ├────────▶│   PLANNED    │────────────▶│   STALLED    │─────┤
-    │ planned │              │◀────────────│              │     │
-    │         └──────────────┘   planned   └──────────────┘     │
-    │  implement │       ▲                        ▲ stalled     │
-    │            ▼       │ planned                │             │
-    │         ┏━━━━━━━━━━━━━━┓                    │             │
-    ├─────────┃ IMPLEMENTING ┃────────────────────┘             │
-    │         ┗━━━━━━━━━━━━━━┛                                  │
-    │                │ implemented                              │
-    │                ▼     ┌────────────────────────────────────┤
-    │         ┌──────────────┐  declined   ┌──────────────┐     │
-    │         │ IMPLEMENTED  │────────────▶│   DECLINED   │─────┤
-    │         │              │◀────────────│              │     │
-    │         └──────────────┘ implemented └──────────────┘     │
-    │    approve │       ▲                        ▲ declined    │
-    │            ▼       │ implemented            │             │
-    │         ┏━━━━━━━━━━━━━━┓                    │             │
-    ├─────────┃  APPROVING   ┃────────────────────┘             │
-    │         ┗━━━━━━━━━━━━━━┛                                  │
-    │                │ approved                                 │
-    │                ▼     ┌────────────────────────────────────┤
-    │         ┌──────────────┐  deferred   ┌──────────────┐     │
-    │         │   APPROVED   │────────────▶│   DEFERRED   │─────┤
-    │         │              │◀────────────│              │     │
-    │         └──────────────┘  approved   └──────────────┘     │
-    │  integrate │       ▲ approved               ▲ deferred    │
-    │            ▼       │                        │             │
-    │         ┏━━━━━━━━━━━━━━┓                    │             │
-    └─────────┃ INTEGRATING  ┃────────────────────┘             │
-              ┗━━━━━━━━━━━━━━┛                        cancelled │
-                     │ integrated                 ┌─────────────┘
-                     ▼                            ▼
-              ┌──────────────┐             ┌──────────────┐
-              │  INTEGRATED  │             │  CANCELLED   │
-              └──────────────┘             └──────────────┘
-                     │                            │
-                     └─────────────┬──────────────┘
-                                   │
-                                   ▼
-                                   ◉
+             ●
+             │
+             │     ┌──────────────────────────────┐
+             ▼     │                              │
+      ┌──────────────┐       ┌──────────────┐     │
+┌────▶│   DRAFTED    │──────▶│   SHELVED    │─────┤
+│     │              │◀──────│              │     │
+│     └──────────────┘       └──────────────┘     │
+│        │       ▲                  ▲             │
+│        ▼       │                  │             │
+│     ┏━━━━━━━━━━━━━━┓              │             │
+│     ┃   PLANNING   ┃──────────────┘             │
+│     ┃              ┃────────────────────────────┤
+│     ┗━━━━━━━━━━━━━━┛                            │
+│            │     ┌──────────────────────────────┤
+│            ▼     │                              │
+│     ┌──────────────┐       ┌──────────────┐     │
+├────▶│   PLANNED    │──────▶│   STALLED    │─────┤
+│     │              │◀──────│              │     │
+│     └──────────────┘       └──────────────┘     │
+│        │       ▲                  ▲             │
+│        ▼       │                  │             │
+│     ┏━━━━━━━━━━━━━━┓              │             │
+├─────┃ IMPLEMENTING ┃──────────────┘             │
+│     ┃              ┃────────────────────────────┤
+│     ┗━━━━━━━━━━━━━━┛                            │
+│            │     ┌──────────────────────────────┤
+│            ▼     │                              │
+│     ┌──────────────┐       ┌──────────────┐     │
+│     │ IMPLEMENTED  │──────▶│   DECLINED   │─────┤
+│     │              │◀──────│              │     │
+│     └──────────────┘       └──────────────┘     │
+│        │       ▲                  ▲             │
+│        ▼       │                  │             │
+│     ┏━━━━━━━━━━━━━━┓              │             │
+├─────┃  APPROVING   ┃──────────────┘             │
+│     ┃              ┃────────────────────────────┤
+│     ┗━━━━━━━━━━━━━━┛                            │
+│            │     ┌──────────────────────────────┤
+│            ▼     │                              │
+│     ┌──────────────┐       ┌──────────────┐     │
+│     │   APPROVED   │──────▶│   DEFERRED   │─────┤
+│     │              │◀──────│              │     │
+│     └──────────────┘       └──────────────┘     │
+│        │       ▲                  ▲             │
+│        ▼       │                  │             │
+│     ┏━━━━━━━━━━━━━━┓              │             │
+└─────┃ INTEGRATING  ┃──────────────┘             │
+      ┃              ┃────────────────────────────┤
+      ┗━━━━━━━━━━━━━━┛                            │
+             │                                    │
+             ▼                                    │
+      ┌──────────────┐       ┌──────────────┐     │
+      │  INTEGRATED  │       │  CANCELLED   │◀────┘
+      │              │       │              │
+      └──────────────┘       └──────────────┘
+             │                      │
+             ├──────────────────────┘
+             │
+             ▼
+             ◉
 ```
 
 The 4 "activity" states express:
 
--   **PLANNING**:     task is currently in change planning       (idea to plan).
--   **IMPLEMENTING**: task is currently in change implementation (plan to change-set).
--   **APPROVING**:    task is currently in change approval       (change-set to decision).
--   **INTEGRATING**:  task is currently in change integration    (change-set to code-base).
+-   `PLANNING`:     task is currently in change planning       (idea to plan).
+-   `IMPLEMENTING`: task is currently in change implementation (plan to change-set).
+-   `APPROVING`:    task is currently in change approval       (change-set to decision).
+-   `INTEGRATING`:  task is currently in change integration    (change-set to code-base).
 
 The 10 "rest" states express:
 
--   **DRAFTED**:      task is still provisional, non-coherent and non-complete.
--   **SHELVED**:      task was shelved into backlog.
--   **PLANNED**:      task is coherent and complete and ready for implementation.
--   **STALLED**:      task stalled during implementation by an impediment.
--   **IMPLEMENTED**:  task is implemented and is ready for approval.
--   **DECLINED**:     task was declined during approval.
--   **APPROVED**:     task is approved and ready for integration.
--   **DEFERRED**:     task was deferred during integration due to release decision.
--   **INTEGRATED**:   task is integrated and reached its intended outcome.
--   **CANCELLED**:    task was cancelled at any time, because it failed, was called off, or became obsolete.
+-   `DRAFTED`:      task is still provisional, incoherent and incomplete.
+-   `SHELVED`:      task was shelved during planning into backlog.
+-   `PLANNED`:      task is coherent and complete and ready for implementation.
+-   `STALLED`:      task was stalled during implementation by an impediment.
+-   `IMPLEMENTED`:  task is implemented and is ready for approval.
+-   `DECLINED`:     task was declined during approval.
+-   `APPROVED`:     task is approved and ready for integration.
+-   `DEFERRED`:     task was deferred during integration due to release decision.
+-   `INTEGRATED`:   task is integrated and reached its intended outcome.
+-   `CANCELLED`:    task was cancelled at any time, because it failed, was called off, or became obsolete.
+
+The *default* state is the "rest" state `DRAFTED`.
