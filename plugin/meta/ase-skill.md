@@ -476,6 +476,13 @@ Template Patterns
         un-styled text <raw-title/>.
     -   Set <bar/> to the `─` character repeated exactly max(0, 67 - <raw-title-len/>)
         times -- clamped to zero so an over-long title never yields a negative count.
+    -   Pre-wrap every line of <content/> at *96 visible columns* (the box
+        width minus the `│ ` prefix, Markdown markup not counted), breaking
+        only at word boundaries and never inside an identifier, path, URL,
+        or quoted code: the agent tool wraps longer lines *without* the `│ `
+        prefix and visibly breaks the box. Indent each continuation line to
+        the text column of its first line (e.g. behind a key glyph, bullet,
+        or padded label), so gutters stay aligned.
     -   Set <body/> to <content/> with all non-empty lines prefixed with
         `│ ` and all empty lines prefixed with just `│` (so no trailing
         whitespace is produced). Do *not* prefix any line twice -- the
