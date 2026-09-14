@@ -120,12 +120,16 @@ Procedure
             arg2="<dissect-hint/>"
             arg3="<ase-task-id/>"
         >
-        the individual bullet points of the `##  CHANGES` and
-        `##  VERIFICATION` sections of the loaded plan <task-content/>
+        the individual bullet points of the `##  SPECIFICATION (WHAT)`,
+        `##  DESIGN (HOW)`, and `##  VERIFICATION (WHEN)` sections of the
+        loaded plan <task-content/>
         </expand>
 
-        Each `##  VERIFICATION` bullet point *MUST* land in the very part
-        which carries the `##  CHANGES` bullet points it verifies.
+        Each `##  DESIGN (HOW)` bullet point *MUST* land in the very part
+        which carries the `##  SPECIFICATION (WHAT)` bullet points it
+        realizes, and each `##  VERIFICATION (WHEN)` bullet point *MUST*
+        land in the very part which carries the `##  SPECIFICATION (WHAT)`
+        and `##  DESIGN (HOW)` bullet points it verifies.
 
         A *single* bullet point is *not* the smallest unit here: a bullet
         point which itself covers *multiple* domains or concerns *MAY* be
@@ -133,9 +137,9 @@ Procedure
         each of which is a complete bullet point of its own, is formed
         *exclusively* from the wording of the original bullet point, and
         is then assigned to a part like an ordinary bullet point. A split
-        `##  VERIFICATION` bullet point follows the `##  CHANGES` bullet
-        points its fragments verify, so its fragments *MAY* land in
-        *different* parts.
+        `##  DESIGN (HOW)` or `##  VERIFICATION (WHEN)` bullet point
+        follows the bullet points its fragments realize or verify, so its
+        fragments *MAY* land in *different* parts.
 
     2.  *Report the parts*:
 
@@ -204,43 +208,48 @@ Procedure
             following the plan <format/>, where:
 
             -   the <task-id/> is <part-id/>,
-            -   the <task-status/> is `DRAFTED` and the <task-properties/>
-                is `none`, as every part is a *newly created* plan,
-            -   the <task-kind/> is taken over from the epic *verbatim*,
-                or inferred from the part content if the epic carries no
-                `Kind:` key,
-            -   the <title/> is derived from the part's <scope/>,
-            -   the `##  CONTEXT` section carries a part-local
-                <summary-what/> and <summary-why/>, derived from the
-                part's own input elements plus the `##  CONTEXT` section
-                of the epic,
-            -   the `##  CHANGES` section carries *exactly* the
-                `##  CHANGES` bullet points assigned to this part,
-                keeping their original wording, and
-            -   the `##  VERIFICATION` section carries *exactly* the
-                `##  VERIFICATION` bullet points assigned to this part,
-                keeping their original wording.
+            -   the <task-status/> is the *default* state of the task
+                lifecycle model <ase-project-task-lifecycle/>, as every
+                part is a *newly created* plan,
+            -   the `Group:` key carries <ase-task-id/>, the id of the
+                epic, so all parts are grouped under it,
+            -   the `Kind:`, `Phase:`, `Tags:`, and `Branch:` keys are
+                taken over from the epic *verbatim* (the kind being
+                inferred from the part content if the epic carries no
+                `Kind:` key), while the `After:` key of a part lists the
+                parts it depends on, if any,
+            -   the <task-title/> is derived from the part's <scope/>,
+            -   the `##  SPECIFICATION (WHAT)` section carries *exactly*
+                the `DOM` and `IFC` bullet points assigned to this part,
+            -   the `##  DESIGN (HOW)` section carries *exactly* the
+                `ARC` and `IMP` bullet points assigned to this part, and
+            -   the `##  VERIFICATION (WHEN)` section carries *exactly*
+                the `REG` and `CON` bullet points assigned to this part,
+
+            all bullet points keeping their original wording, checkbox
+            state, and type, and no "backmatter" being carried over from
+            the epic.
 
             For a bullet point which was *split* into fragments, the part
-            carries *only* its own fragment: the <specification/> keeps
-            the *original* wording of the portion this fragment covers,
-            with *no* re-interpretation and *no* added scope, and the
-            `**<aspect/>**` label is *narrowed* to exactly that portion.
-            Across all parts, the fragments of a split bullet point
-            *MUST* still reproduce the original bullet point *completely*
-            and *without* duplication.
+            carries *only* its own fragment: the <text/> keeps the
+            *original* wording of the portion this fragment covers, with
+            *no* re-interpretation and *no* added scope, and the
+            `<box/> <type/>:` prefix is kept *unchanged*. Across all
+            parts, the fragments of a split bullet point *MUST* still
+            reproduce the original bullet point *completely* and
+            *without* duplication.
 
-            <if condition="<task-content/> does NOT contain a `##  VERIFICATION` section heading">
-            The epic itself deliberately *omits* the `##  VERIFICATION`
-            section, so you *MUST* omit this section (including its
-            heading) from <part-content/>, too.
+            <if condition="<task-content/> does NOT contain a `##  VERIFICATION (WHEN)` section heading">
+            The epic itself deliberately *omits* the `##  VERIFICATION
+            (WHEN)` section, so you *MUST* omit this section (including
+            its heading) from <part-content/>, too.
             </if>
-            <elseif condition="no `##  VERIFICATION` bullet point was assigned to this part">
+            <elseif condition="no `##  VERIFICATION (WHEN)` bullet point was assigned to this part">
             This part carries *no* verification of its own, so you *MUST*
-            omit the `##  VERIFICATION` section (including its heading)
-            from <part-content/>, too -- an *empty* section would violate
-            the plan <format/>, and rule 5 forbids inventing a bullet
-            point.
+            omit the `##  VERIFICATION (WHEN)` section (including its
+            heading) from <part-content/>, too -- an *empty* section
+            would violate the plan <format/>, and rule 5 forbids
+            inventing a bullet point.
             </elseif>
 
         2.  Call the `ase_task_save(id: "<part-id/>", text:

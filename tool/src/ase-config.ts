@@ -25,7 +25,8 @@ import { renderTable }                              from "./ase-table.js"
 
 /*  classification taxonomy  */
 export const projectClassification = {
-    boxing: [ "white", "grey", "black" ]
+    boxing:    [ "white", "grey", "black" ],
+    lifecycle: [ "solo", "team", "enterprise" ]
 } as const
 
 /*  agent classification taxonomy  */
@@ -55,6 +56,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.id":      "example",
         "project.name":    "Example Project",
         "project.boxing":  "white",
+        "project.task.lifecycle":        "solo",
         "project.artifact.task.basedir": ".ase/task",
         "project.artifact.task.files":   "*.md",
         "project.artifact.spec.basedir": "docs/specbook",
@@ -231,6 +233,9 @@ export const configSchema = v.nullish(v.strictObject({
         id:      v.optional(v.pipe(v.string(), v.minLength(1))),
         name:    v.optional(v.pipe(v.string(), v.minLength(1))),
         boxing:  v.optional(v.picklist(projectClassification.boxing)),
+        task: v.optional(v.strictObject({
+            lifecycle: v.optional(v.picklist(projectClassification.lifecycle))
+        })),
         artifact: v.optional(v.strictObject({
             spec: artifactSpecSchema,
             code: artifactSchema,

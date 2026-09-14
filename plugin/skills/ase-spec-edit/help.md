@@ -10,6 +10,7 @@
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
     [`--verify`|`-v`]
+    [`--branch`|`-b` *name*]
     [`--worktree`|`-w`]
     [`--loop`|`-l`]
     [*query*]
@@ -52,10 +53,13 @@ timestamp refreshed.
     (domain-specifics, must be clarified), `INTERFACE` (externally
     observable behavior or UI/API interfaces, must be clarified),
     `ARCHITECTURE` (structure, wiring, placement, or dependencies,
-    should be clarified), or `IMPLEMENTATION` (inner technical details,
-    can be clarified) -- and a 1-3 word `TOPIC` hint. The questions of a
-    round are sorted by descending focus area importance (`DOMAIN`,
-    `INTERFACE`, `ARCHITECTURE`, `IMPLEMENTATION`) and are announced
+    should be clarified), `IMPLEMENTATION` (inner technical details,
+    can be clarified), `REGRESSION` (what must not break, should be
+    clarified), or `CONFIRMATION` (what proves the specified behavior,
+    should be clarified) -- and a 1-3 word `TOPIC` hint. The questions
+    of a round are sorted by descending focus area importance
+    (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`, `IMPLEMENTATION`,
+    `REGRESSION`, `CONFIRMATION`) and are announced
     together below a `GRILLING ROUND K/L` line (the round numbering is
     omitted when only a single round is performed) as a
     `QUESTION`/`ANSWERS` table with one row per question, each row
@@ -82,14 +86,27 @@ timestamp refreshed.
     the last round are listed as `REMAINING DIAGNOSTICS`. Without
     `--verify`, strictly no validation is performed at all.
 
+-   `--branch`|`-b` *name*:
+    The Git branch the change sets land on, the plan-less counterpart
+    of the `Branch:` key of a task plan. The default `current` denotes
+    the currently checked-out branch. Any other *name* not equal to
+    the checked-out branch makes the skill *switch* the working copy
+    to that branch in place (created from `HEAD` if it does not exist
+    yet) -- but only if the working copy has *no* uncommitted changes,
+    otherwise the skill stops and touches nothing -- or, together with
+    `--worktree`, check that branch out inside the worktree.
+
 -   `--worktree`|`-w`:
     Apply the change sets inside a dedicated Git worktree (as
     `ase-task-implement --worktree`) instead of the current working
-    copy. One single worktree, named by a two-word id derived from the
-    first query, serves the whole skill run: all `--loop` iterations
-    land in it and it is left uncommitted for review. Under `--verify`,
-    the validation then runs as the `ase spec lint` command inside the
-    worktree.
+    copy. One single worktree `.ase/worktree/<id>`, named by a
+    two-word id derived from the first query, serves the whole skill
+    run: all `--loop` iterations land in it and it is left uncommitted
+    for review. The worktree carries the `--branch` branch, or -- as
+    the checked-out branch cannot be checked out a second time -- an
+    equally named branch created from `HEAD` by default. Under
+    `--verify`, the validation then runs as the `ase spec lint` command
+    inside the worktree.
 
 -   `--loop`|`-l`:
     Loop the whole state cycle: after each iteration, ask for the next
@@ -110,6 +127,7 @@ timestamp refreshed.
 -   You want `SPEC` changes without the task plan ceremony
 -   You want the query stress-tested by grilling before the spec is edited
 -   You want specification edits validated by SpecBook linting
+-   You want the change set to land on a specific Git branch
 
 ##  EXAMPLES
 

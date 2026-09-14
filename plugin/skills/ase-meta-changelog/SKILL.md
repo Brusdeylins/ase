@@ -5,6 +5,7 @@ description: >
     Update ChangeLog entries in CHANGELOG.md files
 user-invocable: true
 disable-model-invocation: false
+model: sonnet
 effort: high
 allowed-tools:
     - "Bash(git log *)"

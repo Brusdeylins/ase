@@ -139,9 +139,14 @@ The following ASE commands/skills exist on the task-level:
   argument, displays the current task id. With an argument, sets the
   task id (persisted in the session-scoped configuration).
 
-- **/ase-task-list** \[`--verbose`|`-v`\]:<br/>
+- **/ase-task-list** \[`--verbose`|`-v`\] \[`--include`|`-i` *state*\[,...\]\] \[`--exclude`|`-e` *state*\[,...\]\]:<br/>
   List all available persisted task ids. With `--verbose`, each entry is
-  annotated with its last-modification timestamp.
+  annotated with its lifecycle state and last-modification timestamp.
+  `--include` restricts the listing to the given lifecycle states of the
+  configured task lifecycle model (`project.task.lifecycle`), `--exclude`
+  removes the given states afterwards (default: `finished`). The
+  `finished` sentinel stands for the finished states of the model, the
+  `none` sentinel for no restriction.
 
 - **/ase-task-edit** \[`--plan`|`-p` *option*\] \[`--dry`|`-d`\] \[`--next`|`-n` *option*\[,...\]\] \[*id* | *id*`:` *instruction* | *instruction*\]:<br/>
   Iteratively craft and refine a named task plan through a
@@ -152,18 +157,30 @@ The following ASE commands/skills exist on the task-level:
   may be a bare *id*, an *id* with an inline *instruction*, or an
   *instruction* alone.
 
-- **/ase-task-grill** \[`--rounds`|`-r` *n*\] \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
+- **/ase-task-grill** \[`--rounds`|`-r` *n*\] \[`--focus`|`-f` *section*\[,...\]\] \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
   Relentlessly interview the user about every essential aspect of the
   task plan until a shared understanding is reached, asking up to 10
   focus-area-sorted (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`,
-  `IMPLEMENTATION`) questions sequentially, one at a time. `--rounds`
-  sets the number of grill rounds (default: `1`), each re-deriving its
-  questions from the updated plan. `--next` passes a comma-separated
-  list of pre-selected next-step tokens to chain the subsequent skill.
+  `IMPLEMENTATION`, `REGRESSION`, `CONFIRMATION`) questions
+  sequentially, one at a time. `--rounds` sets the number of grill
+  rounds (default: `1`), each
+  re-deriving its questions from the updated plan. `--focus` grills
+  only the given plan sections (`SPECIFICATION`/`SPEC`, `DESIGN`/`DES`,
+  `VERIFICATION`/`VER`, default: `all`), in the given order. `--next`
+  passes a comma-separated list of pre-selected next-step tokens to
+  chain the subsequent skill.
 
 - **/ase-task-view** \[`--full`|`-f`\] \[*id*\]:<br/>
   View the current or given task plan. With `--full`, the entire plan is
   shown without truncation.
+
+- **/ase-task-status** \[*id*`:`\] \[*status*\]:<br/>
+  Get or set the lifecycle status (`Status:` frontmatter key) of the
+  current or given task plan. Without *status*, the current status is
+  reported. With *status* (a state of the configured task lifecycle
+  model, case-insensitive), the status is set, leaving the `Modified:`
+  key alone as it tracks body changes only. A transition the model does
+  not allow is warned about, but performed nevertheless.
 
 - **/ase-task-rename** \[*old-id*\] *new-id*:<br/>
   Rename the current or given task plan to *new-id*. When *old-id* is
@@ -175,13 +192,20 @@ The following ASE commands/skills exist on the task-level:
   to chain the subsequent skill.
 
 - **/ase-task-preflight** \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
-  Preflight the implementation of the current or given task plan.
-  `--next` passes a comma-separated list of pre-selected next-step tokens
-  to chain the subsequent skill.
+  Preflight the implementation of the current or given task plan. The
+  draft is based on the branch named by the plan's `Branch:` key (or
+  `HEAD` if it does not exist yet) whenever it differs from the
+  checked-out branch. `--next` passes a comma-separated list of
+  pre-selected next-step tokens to chain the subsequent skill.
 
-- **/ase-task-implement** \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
-  Implement the current or given task plan. `--next` passes a
-  comma-separated list of pre-selected next-step tokens to chain the
+- **/ase-task-implement** \[`--next`|`-n` *option*\[,...\]\] \[`--worktree`|`-w`\] \[*id*\]:<br/>
+  Implement the current or given task plan. The plan's `Branch:` key
+  selects the branch the change set lands on: a value differing from
+  the checked-out branch switches the (clean) working copy to that
+  branch in place, or, with `--worktree`, checks it out inside the
+  dedicated Git worktree `.ase/worktree/<id>` (on an implied branch
+  `<id>` if the plan targets the checked-out branch). `--next` passes
+  a comma-separated list of pre-selected next-step tokens to chain the
   subsequent skill.
 
 - **/ase-task-condense** \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
@@ -234,19 +258,20 @@ The following ASE commands/skills exist on the code-level:
   Refactor source code. The `--auto`, `--dry`, `--direct`, `--quick`,
   `--next`, and *task-id*`:` options behave as for **/ase-code-craft**.
 
-- **/ase-code-edit** \[`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`\] \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-batch`|`-b`\] \[`--verify`|`-v`\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+- **/ase-code-edit** \[`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`\] \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--verify`|`-v`\] \[`--branch`|`-b` *name*\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
   Edit the code base directly from a *query* in a plan-less state
   machine (querying, discovering, grilling, implementing, verifying)
   which fuses **/ase-code-craft**, **/ase-code-refactor**,
   **/ase-code-resolve**, **/ase-task-grill**, and
   **/ase-task-implement**. `--mode` selects the internalized tenet set
   (`auto` infers it from the query). With `--grill`, the query is
-  grilled with `--grill-rounds` rounds of questions before implementing
-  (`--grill-batch` asks the questions of a round in one batch). With
-  `--verify`, the implementation is verified until it passes; otherwise
-  strictly no verification is performed. With `--worktree`, all change
-  sets land in one dedicated Git worktree. With `--loop`, the skill
-  repeatedly asks for the next query until the user answers `done`.
+  grilled with `--grill-rounds` rounds of questions before implementing.
+  With `--verify`, the implementation is verified until it passes;
+  otherwise strictly no verification is performed. `--branch` names the
+  branch the change sets land on, switching the (clean) working copy to
+  it in place. With `--worktree`, all change sets land in one dedicated
+  Git worktree on that branch. With `--loop`, the skill repeatedly asks
+  for the next query until the user answers `STOP SKILL`.
 
 - **/ase-code-lint** \[`--auto`|`-a`\] \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\] \[`--include`|`-i` *aspect*\[,...\]\] \[`--exclude`|`-e` *aspect*\[,...\]\] *source-reference*:<br/>
   Lint the source code in an interactive review loop. With `--auto`, the
@@ -308,7 +333,7 @@ The following ASE commands/skills exist on the specification-level:
   with outside of the dedicated specification skills, which activate
   the know-how implicitly.
 
-- **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--verify`|`-v`\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+- **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--verify`|`-v`\] \[`--branch`|`-b` *name*\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
   Edit the *SpecBook*-based specification (`SPEC`) directly from a
   *query* in a plan-less state machine (querying, discovering, grilling,
   implementing, verifying), the specification-level counterpart of
@@ -318,8 +343,10 @@ The following ASE commands/skills exist on the specification-level:
   With `--grill`, the query is grilled with `--grill-rounds` rounds of
   questions before implementing. With `--verify`, the specification is
   validated via *SpecBook* linting and the diagnostics are fixed in at
-  most three rounds; otherwise strictly no validation is performed. With
-  `--worktree`, all change sets land in one dedicated Git worktree. With
+  most three rounds; otherwise strictly no validation is performed.
+  `--branch` names the branch the change sets land on, switching the
+  (clean) working copy to it in place. With `--worktree`, all change
+  sets land in one dedicated Git worktree on that branch. With
   `--loop`, the skill repeatedly asks for the next query until the user
   answers `STOP SKILL`.
 

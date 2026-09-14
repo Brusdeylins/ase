@@ -15,17 +15,32 @@
 The `ase-task-preflight` skill performs a *preflight* (dry-run,
 test-drive) of the *implementation* of a task plan by creating a
 draft for a corresponding, complete *artifact change set* in
-*unified diff* format. The draft is appended to the task plan as
-an `IMPLEMENTATION DRAFT` section (replacing any previous draft) and
-the plan's `Properties:` frontmatter key gains the value `preflighted`.
-No source files are modified. The draft is produced under the *same
+*unified diff* format. The draft is attached to the task plan as an
+attachment block of type `text/x-diff; charset=utf-8; kind="preflight"` in the plan's
+backmatter (replacing any previous draft). The attachment carries the
+timestamps `Created:` (kept from a replaced draft) and `Modified:`
+(the current time), while the `Modified:` key of the plan frontmatter
+stays untouched, as it tracks body changes only; a draft whose
+`Modified:` later falls behind the frontmatter counts as *stale*. No
+source files are
+modified. The draft is produced under the *same
 tenets* and with the *same rigor* as a final implementation, because
 `ase-task-implement` later takes it over *1:1* after user review --
 only the actual artifact modification and the verification phase
-are deferred.
+are deferred. Bullet-points in state `[-]` (cancelled) or `[>]`
+(deferred) are *skipped* by the draft, exactly as by the final
+implementation.
+
+The draft is based on the artifact state the final implementation
+will find, mirroring the `Branch:` handling of `ase-task-implement`:
+if the plan's `Branch:` key is absent, is the literal `current`, or
+equals the checked-out branch, the *working copy* content is used;
+if it names an *existing* other branch, the content of that branch is
+used; otherwise the content of `HEAD` is used, as the branch will be
+created from there.
 
 The *kind of change* stated by the plan's `Kind:` frontmatter key
-(`CRAFTING`, `REFACTORING`, or `RESOLVING`) selects which
+(`SPECIFYING`, `CRAFTING`, `REFACTORING`, or `RESOLVING`) selects which
 *operation-specific tenet set* of the **ASE Tenets** is internalized
 before the draft is produced, in addition to the always applying
 **GENERIC TENETS**. If a plan carries no such key, the kind is

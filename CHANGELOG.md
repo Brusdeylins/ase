@@ -2,6 +2,58 @@
 ChangeLog
 =========
 
+1.1.0 (2026-09-XX)
+------------------
+
+-   FEATURE [tool]: Configurable task lifecycle model
+    The new `project.task.lifecycle` configuration selects the `solo` (default), `team`, or
+    `enterprise` lifecycle model (superseding `simple`/`complex` of 1.0), exported as
+    `<ase-project-task-lifecycle/>`, `ASE_PROJECT_TASK_LIFECYCLE`, and statusline placeholder `%L`.
+
+-   FEATURE [plugin]: Reworked task plan format
+    Task plans now carry the frontmatter keys `Type`, `Assignee`, `Group`, `Phase`, `After`, `Tags`,
+    and `Branch`, sections with `DOM`/`IFC`, `ARC`/`IMP`, `REG`/`CON` bullet-points in checkbox
+    states, and backmatter attachments (e.g. the preflight draft).
+
+-   FEATURE [plugin]: Timestamped task plan attachments and stale implementation drafts
+    Attachments carry `Created`/`Modified` keys, the frontmatter `Modified` key tracks body changes
+    only, and a draft whose `Modified` falls behind the frontmatter is *stale*: `ase-task-edit`
+    and `ase-task-view` warn about it, while `ase-task-implement` stops with an error.
+
+-   FEATURE [plugin]: Branch-driven task implementation
+    `ase-task-implement` and `ase-task-preflight` honor the `Branch:` frontmatter key by switching
+    the working copy in place (guarded against uncommitted changes) or, with `--worktree`, inside
+    `.ase/worktree/<id>`. `ase-code-edit` and `ase-spec-edit` gained the counterpart `--branch`.
+
+-   FEATURE [plugin,tool]: Task plan status get/set
+    The new `ase-task-status` skill, `ase task status` CLI sub-command, and `ase_task_status` MCP
+    tool report or set the `Status:` key of a task plan, validated against the lifecycle model.
+    `ase task save` and `ase_task_save` now also warn about unknown or unreachable states.
+
+-   FEATURE [tool]: Lifecycle-aware `ase task list` with `finished` sentinel
+    The `--include`/`--exclude` states are validated against the lifecycle model, the new
+    `finished` sentinel expands to its finished states, the default is now `--exclude finished`,
+    and a plan with an unknown `Status:` is kept in the listing (with a warning).
+
+-   FEATURE [plugin]: Section-focused task plan grilling
+    The new `--focus`/`-f` option of `ase-task-grill` grills only the given plan sections
+    (`SPEC`, `DES`, `VER`) in the given order, the `Tags:` key records each as a `grilled:<section>` tag,
+    and grilling gained the focus areas `REGRESSION` (`REG`) and `CONFIRMATION` (`CON`).
+
+-   FEATURE [plugin]: Checkbox-state aware grilling, preflight, and implementation
+    `ase-task-grill` marks unanswered bullet-points as `[?]`, resets them to `[ ]` once answered,
+    and re-asks only those of an already grilled section. `ase-task-grill`, `ase-task-preflight`,
+    and `ase-task-implement` skip `[-]` (cancelled) and `[>]` (deferred) bullet-points entirely.
+
+-   IMPROVEMENT [plugin]: Regression and confirmation grilling in `ase-spec-edit`
+    The grilling of `ase-spec-edit` now also raises `REGRESSION` (`REG`) and `CONFIRMATION`
+    (`CON`) focus area questions, aligned with `ase-code-edit`.
+
+-   BUGFIX [plugin]: Task plan kind `SPECIFYING` honored
+    `ase-task-preflight` and `ase-task-implement` now recognize the `Kind: SPECIFYING`
+    frontmatter key of a task plan and internalize the SPECIFYING TENETS, and also infer
+    `SPECIFYING` for a plan which predominantly revises the specification (`ase-common-code.md`).
+
 1.0.6 (2026-09-14)
 ------------------
 

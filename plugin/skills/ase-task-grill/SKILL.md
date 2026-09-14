@@ -1,6 +1,6 @@
 ---
 name: ase-task-grill
-argument-hint: "[--help|-h] [--rounds|-r <n>] [--next|-n <option>[,...]] [<id>]"
+argument-hint: "[--help|-h] [--rounds|-r <n>] [--focus|-f <section>[,...]] [--next|-n <option>[,...]] [<id>]"
 description: >
     Interview the user relentlessly about the task plan until reaching a
     shared understanding, resolving each branch of the question decision
@@ -22,7 +22,7 @@ Iteratively Grill a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-grill"
-    arg2="--rounds|-r=1 --next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
+    arg2="--rounds|-r=1 --focus|-f=(all|SPECIFICATION|SPEC|DESIGN|DES|VERIFICATION|VER)... --next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -61,7 +61,31 @@ Set <args>--int-reuse-task</args>.
         ⧉ **ASE**: ☻ skill: **ase-task-grill**, ▶ ERROR: invalid `--rounds` value: **<getopt-option-rounds/>**
         </template>
 
-    3.  React on task id:
+    3.  Treat <getopt-option-focus/> as a comma-separated list of
+        *section tokens*. Trim and upper-case every token, then expand
+        the abbreviations `SPEC`, `DES`, and `VER` to `SPECIFICATION`,
+        `DESIGN`, and `VERIFICATION`, and expand the sentinel `ALL`
+        (the default) to `SPECIFICATION,DESIGN,VERIFICATION`. Set
+        <sections/> to the resulting list, *keeping the given order*.
+        The getopt parser validates only the *first* token, so you
+        *MUST* validate each token yourself: if any token is *empty*,
+        *not* one of the recognized sections or abbreviations, or
+        results in a section already present in <sections/>, bind
+        <token/> to that offending token, then only output the
+        following <template/> and immediately *STOP* processing the
+        entire current skill:
+
+        <template>
+        ⧉ **ASE**: ☻ skill: **ase-task-grill**, ▶ ERROR: invalid `--focus` token: **<token/>**
+        </template>
+
+        Each section in <sections/> selects its *focus areas* of the
+        grilling: `SPECIFICATION` selects `DOMAIN` and `INTERFACE`,
+        `DESIGN` selects `ARCHITECTURE` and `IMPLEMENTATION`, and
+        `VERIFICATION` selects `REGRESSION` and `CONFIRMATION`. Do not
+        output anything.
+
+    4.  React on task id:
 
         <expand name="task-react-id" arg1="ase-task-grill"></expand>
 
@@ -76,6 +100,38 @@ Set <args>--int-reuse-task</args>.
         `ase-code-refactor`, `ase-code-craft`, or `ase-task-edit` skills
         first to create a task plan. Then immediately stop processing
         this skill.
+        </if>
+
+    3.  Determine the *grilling scope* of each section in <sections/>,
+        in order to grill an *already grilled* section again *only* where
+        questions are still *open*:
+
+        -   If the `Tags:` frontmatter key of <task-content/> carries
+            the tag `grilled:<section/>` (with <section/> being the
+            *lower-case* name of the section) and the section contains
+            *no* bullet-point in checkbox state `[?]`, the section is
+            *already grilled* and nothing is open: *remove* it from
+            <sections/> and only output the following <template/>:
+
+            <template>
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **section <section/> already grilled -- skipped**
+            </template>
+
+        -   If the `Tags:` frontmatter key carries the tag
+            `grilled:<section/>` and the section contains *at least one*
+            bullet-point in checkbox state `[?]`, *restrict* the scope of
+            the section to *exactly* these `[?]` bullet-points, so the
+            grilling re-asks only the *still open* questions.
+
+        -   Otherwise, the scope of the section is the *entire* section.
+
+        Independent of the scope, bullet-points in checkbox state `[-]`
+        (cancelled) or `[>]` (deferred) are *inert*: they are *never*
+        subject of a question and their checkbox is *never* changed.
+
+        <if condition="<sections/> is empty afterwards">
+        Skip the entire step 3 below -- the plan is *neither* updated
+        *nor* saved -- and continue directly with step 4.
         </if>
 
 3.  **Iterate Over Task Plan Aspects:**
@@ -111,14 +167,24 @@ Set <args>--int-reuse-task</args>.
             but precise decision/question <question-N/> where a shared
             understanding is required. Each question is chosen to
             resolve the open points related to the above understanding
-            of grilling, by focusing on the mentioned *Focus Areas* and
-            checking the mentioned *Indicators*.
+            of grilling, by focusing *only* on the *Focus Areas*
+            selected by <sections/> -- the *themes* of the focused
+            sections, *within* the *grilling scope* of each section as
+            determined in step 2.3, while the *entire* <task-content/>
+            stays the context -- and checking the mentioned *Indicators*.
+            For a section restricted to its `[?]` bullet-points, derive
+            the questions from *exactly* these bullet-points only. Never
+            raise a question about a `[-]` or `[>]` bullet-point.
+
+            For each question, set <items-N/> to the bullet-points of
+            <task-content/> the question is about -- possibly *none*, if
+            the question concerns an aspect the plan does not cover yet.
 
             For <question-N/> use the format `Shall...?` for
-            questions of focus area `DOMAIN` and `INTERFACE`, the format
-            `Should...?` for questions of focus area `ARCHITECTURE`,
-            and the format `May...?` for questions of focus area
-            `IMPLEMENTATION`.
+            questions of focus area `DOMAIN`, `INTERFACE`, `REGRESSION`,
+            and `CONFIRMATION`, the format `Should...?` for questions of
+            focus area `ARCHITECTURE`, and the format `May...?` for
+            questions of focus area `IMPLEMENTATION`.
 
             In every <question-N/>, encode all *literal aspects*
             -- file and directory paths, identifiers, symbols, types,
@@ -136,12 +202,14 @@ Set <args>--int-reuse-task</args>.
 
             Create a decisions/questions tree for the questions,
             capturing the dependencies between the decisions. Then
-            *sort* the questions *primarily* by descending focus area
-            order -- first all `DOMAIN`, then all `INTERFACE`, then all
-            `ARCHITECTURE`, and then all `IMPLEMENTATION` ones -- and
-            *secondarily*, within each focus area, by the decision tree
-            order, so that each decision is asked *after* the decisions
-            it depends on. Renumber <N/> according to this order,
+            *sort* the questions *primarily* by the order of their
+            sections in <sections/>, *secondarily*, within each section,
+            by descending focus area order -- `DOMAIN` before
+            `INTERFACE`, `ARCHITECTURE` before `IMPLEMENTATION`, and
+            `REGRESSION` before `CONFIRMATION` --
+            and *tertiarily*, within each focus area, by the decision
+            tree order, so that each decision is asked *after* the
+            decisions it depends on. Renumber <N/> according to this order,
             starting at `1` in *every* round, independent of the
             numbering of previous rounds. Truncate the list after a
             maximum of 10 questions and set <n/> to the number of
@@ -204,10 +272,12 @@ Set <args>--int-reuse-task</args>.
                     </template>
 
                 -   If <result/> is `SKIP GRILLING`, ask no further
-                    questions, continue with item 6 below (updating the
-                    plan with the answers gathered so far), and after
-                    item 6 skip all remaining rounds and continue with
-                    item 3.3 below.
+                    questions (the current question and all remaining
+                    questions of this round stay *unanswered*),
+                    continue with item 6 below (updating the plan with
+                    the answers gathered so far), and after item 6 skip
+                    all remaining rounds and continue with item 3.3
+                    below.
 
                 -   Otherwise, strip any leading `OTHER: ` prefix from
                     <result/> and set <answer-N/> to the remainder.
@@ -219,17 +289,43 @@ Set <args>--int-reuse-task</args>.
                 </template>
 
         6.  Update <task-content/> based on all answers <answer-N/>
-            gathered in this round. Do not output anything.
+            gathered in this round. Additionally, record the *open*
+            questions in the checkboxes of the body bullet-points,
+            changing *only* checkboxes in state `[ ]` or `[?]` and
+            leaving every `[/]`, `[x]`, `[-]`, and `[>]` checkbox
+            *untouched*:
+
+            -   For each *answered* question, set the checkbox of every
+                bullet-point in <items-N/> to `[ ]`, as the question is
+                resolved now.
+
+            -   For each *unanswered* question, set the checkbox of every
+                bullet-point in <items-N/> to `[?]`, as the question is
+                still open. If <items-N/> is *empty*, *add* a new `[?]`
+                bullet-point to the section of the question's focus area
+                <context-N-focus/>, with the corresponding <type/>, a
+                <summary/> derived from <aspect-N/>, and a <text/>
+                stating the open <question-N/>, so a later grilling can
+                re-ask it.
+
+            Do not output anything.
 
     3.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
         timestamp-created to extracted text).
         </if>
 
-    4.  *Add* the value `grilled` to the `Properties:` frontmatter key of
-        <task-content/> if it is still absent, keeping all already
-        present values and *creating* the whole key (with the single
-        value `grilled`) if the plan carries none.
+    4.  For each section in <sections/>, *set* the tag
+        `grilled:<section/>` -- with <section/> being the *lower-case*
+        name of the section (`specification`, `design`, or
+        `verification`) -- in the `Tags:` frontmatter key of
+        <task-content/>: keep an already present identical tag as is,
+        otherwise append it, keeping all other already present tags
+        (including `grilled:` tags of other sections) and *creating*
+        the whole key at its position in the key order of the plan
+        <format/> if the plan carries none. A fully grilled plan hence
+        carries the tags `grilled:specification, grilled:design,
+        grilled:verification`.
 
     5.  <expand name="task-save-content" arg1="plan updated"></expand>
 

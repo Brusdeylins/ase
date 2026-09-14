@@ -1,6 +1,6 @@
 ---
 name: ase-code-edit
-argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--verify|-v] [--worktree|-w] [--loop|-l] [<query>|<issue-id>]"
+argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--verify|-v] [--branch|-b <name>] [--worktree|-w] [--loop|-l] [<query>|<issue-id>]"
 description: >
     Edit Source Code: Use when the user wants to "edit" the code base in
     one shot from a query or a bare analyzer issue id like "P1", fusing
@@ -22,7 +22,7 @@ Edit Source Code
 
 <expand name="getopt"
     arg1="ase-code-edit"
-    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --verify|-v --worktree|-w --loop|-l">
+    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --verify|-v --branch|-b=current --worktree|-w --loop|-l">
     $ARGUMENTS
 </expand>
 
@@ -198,10 +198,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             of grilling, by focusing on the mentioned *Focus Areas*.
 
             For <question-N-text/> use the format `Shall...?` for
-            questions of focus area `DOMAIN` and `INTERFACE`, the format
-            `Should...?` for questions of focus area `ARCHITECTURE`,
-            and the format `May...?` for questions of focus area
-            `IMPLEMENTATION`.
+            questions of focus area `DOMAIN`, `INTERFACE`, `REGRESSION`,
+            and `CONFIRMATION`, the format `Should...?` for questions of
+            focus area `ARCHITECTURE`, and the format `May...?` for
+            questions of focus area `IMPLEMENTATION`.
 
             In every <question-N-text/>, encode all *literal aspects*
             -- file and directory paths, identifiers, symbols, types,
@@ -223,14 +223,17 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
             Set <context-N-id/> to `DOM` for <context-N-focus/> of
             `DOMAIN`, `IFC` for <context-N-focus/> of `INTERFACE`, `ARC`
-            for <context-N-focus/> of `ARCHITECTURE`, and `IMP` for
-            <context-N-focus/> of `IMPLEMENTATION`.
+            for <context-N-focus/> of `ARCHITECTURE`, `IMP` for
+            <context-N-focus/> of `IMPLEMENTATION`, `REG` for
+            <context-N-focus/> of `REGRESSION`, and `CON` for
+            <context-N-focus/> of `CONFIRMATION`.
 
         4.  SORT QUESTIONS:
 
             Finally, *sort* the questions by descending focus area
             order -- first all `DOMAIN`, then all `INTERFACE`, then all
-            `ARCHITECTURE`, and then all `IMPLEMENTATION` ones -- and
+            `ARCHITECTURE`, then all `IMPLEMENTATION`, then all
+            `REGRESSION`, and then all `CONFIRMATION` ones -- and
             renumber <N/> according to this order, starting at `1`.
             Truncate the list after a maximum of 10 questions and set
             <n/> to the number of remaining questions. Do not output
@@ -308,8 +311,9 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 | <question-2/> | <answer-2/> |
                 | [...]         | [...]       |
 
-                Legend: **DOM**: Domain (MUST), **IFC**: Interface (MUST), **ARC**: Architecture (SHOULD), **IMP**: Implementation (MAY)
-                        **Qn**: round-local question id, **An**: question-local answer id, ⚑: current decision state
+                Legend: **DOM**: Domain       (MUST)    **IFC**: Interface      (MUST)    **Qn**: round-local question id
+                        **ARC**: Architecture (SHOULD)  **IMP**: Implementation (MAY)     **An**: question-local answer id
+                        **REG**: Regression   (SHOULD)  **CON**: Confirmation   (SHOULD)  ⚑:  current decision state
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
@@ -370,7 +374,71 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         in the following creation and updating of code. Do not output
         anything.
 
-    2.  <if condition="<getopt-option-worktree/> is equal `true` and <worktree-dir/> is empty">
+    2.  Determine the *target branch* <target-branch/>: Determine the
+        *checked-out branch* by running the command
+        `git branch --show-current` (taken exactly as given) and
+        capturing its output into <current-branch/>. If
+        <getopt-option-branch/> is `current` or equal to
+        <current-branch/>, set <target-branch></target-branch> (empty:
+        the change set lands on the checked-out branch); otherwise set
+        <target-branch><getopt-option-branch/></target-branch>. Do not
+        output anything.
+
+    3.  <if condition="<getopt-option-worktree/> is not equal `true` and <target-branch/> is not empty">
+
+        The change set lands on a *different* branch inside the
+        *current* working copy, so the working copy is *switched* to
+        <target-branch/> in place -- which happens only *once* per
+        skill run, as afterwards the checked-out branch equals the
+        target branch.
+
+        1.  Determine the *uncommitted changes* by running the command
+            `git status --porcelain` (taken exactly as given) and
+            capturing its output. If the output is *not* empty, the
+            working copy is *dirty* and switching would drag the
+            uncommitted changes onto the other branch. Only output the
+            following <template/> and then immediately *STOP*
+            processing the entire current skill, leaving the working
+            copy *untouched*:
+
+            <template>
+            ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: working copy has uncommitted changes -- cannot switch to branch **<target-branch/>** in place
+            </template>
+
+            Directly *after* this error <template/>, and *before*
+            stopping, give the corrective hint by expanding the
+            following (which, depending on the configured
+            <ase-guidance-level/>, may expand into nothing and hence
+            emit no output at all):
+
+            <ase-tpl-hint level="minimal">
+            Commit or stash the uncommitted changes first, or use `--worktree` to edit inside an isolated worktree instead.
+            </ase-tpl-hint>
+
+        2.  Determine the *existing branches* by running the command
+            `git branch --list` (taken exactly as given) and capturing
+            its output. If the branch <target-branch/> already exists,
+            switch to it by running the command
+            `git switch "<target-branch/>"`, otherwise create it from
+            `HEAD` and switch to it by running the command
+            `git switch -c "<target-branch/>"` (each taken exactly as
+            given). If the command fails, only output the following
+            <template/> and then immediately *STOP* processing the
+            entire current skill, leaving the working copy *untouched*:
+
+            <template>
+            ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: branch **<target-branch/>** failed to switch
+            </template>
+
+        3.  Only output the following <template/>:
+
+            <template>
+            ⧉ **ASE**: ✪ skill: **ase-code-edit**, ⎇ branch: **<target-branch/>**, ▶ status: **branch switched**
+            </template>
+
+        </if>
+
+    4.  <if condition="<getopt-option-worktree/> is equal `true` and <worktree-dir/> is empty">
 
         One *single* worktree serves the whole skill run: it is created
         *once* before the first change set is applied, and all further
@@ -380,7 +448,13 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             <todo-what/>, which consists of two lower-case words
             concatenated with a `-` character. Do not output anything.
 
-        2.  Determine the *worktree directory* by calling the
+        2.  Set <worktree-branch><target-branch/></worktree-branch> if
+            <target-branch/> is not empty. Otherwise set
+            <worktree-branch><worktree-name/></worktree-branch>, as the
+            checked-out branch cannot be checked out a second time in
+            the worktree. Do not output anything.
+
+        3.  Determine the *worktree directory* by calling the
             `ase_worktree_path(id: "<worktree-name/>", create: true)`
             tool of the `ase` MCP server and capturing its output into
             <worktree-dir/>. You *MUST* *NEVER* assemble this path
@@ -392,40 +466,46 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: no Git repository or unsafe worktree directory -- cannot create worktree
             </template>
 
-        3.  Determine the *existing worktrees* and *existing branches*
+        4.  Determine the *existing worktrees* and *existing branches*
             by running the commands `git worktree list --porcelain` and
             `git branch --list` (taken exactly as given) and capturing
-            their outputs. If the worktree directory <worktree-dir/> or
-            the branch <worktree-name/> already exists, only output the
-            following <template/> and then immediately *STOP* processing
-            the entire current skill, leaving the existing worktree, its
-            branch, and the working copy *untouched*:
+            their outputs. If the branch <worktree-branch/> already
+            exists, it is *checked out* into the worktree instead of
+            being created, so set
+            <worktree-add-args>"<worktree-dir/>" "<worktree-branch/>"</worktree-add-args>;
+            otherwise it is *created* from `HEAD` together with the
+            worktree, so set
+            <worktree-add-args>-b "<worktree-branch/>" "<worktree-dir/>"</worktree-add-args>.
+            If the worktree directory <worktree-dir/> already exists,
+            only output the following <template/> and then immediately
+            *STOP* processing the entire current skill, leaving the
+            existing worktree and the working copy *untouched*:
 
             <template>
-            ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: worktree or branch **<worktree-name/>** already exists
+            ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: worktree **<worktree-name/>** already exists
             </template>
 
-        4.  Create the worktree by running the command
-            `git worktree add "<worktree-dir/>"` (taken exactly as
-            given), which creates the directory *and* -- named after its
-            last path component -- the branch <worktree-name/> from
-            `HEAD`. If this command fails, only output the following
-            <template/> and then immediately *STOP* processing the
-            entire current skill, leaving the working copy *untouched*:
+        5.  Create the worktree by running the command
+            `git worktree add <worktree-add-args/>` (taken exactly as
+            given), which creates the directory <worktree-dir/> with the
+            branch <worktree-branch/> checked out. If this command
+            fails, only output the following <template/> and then
+            immediately *STOP* processing the entire current skill,
+            leaving the working copy *untouched*:
 
             <template>
             ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: worktree **<worktree-name/>** failed to create
             </template>
 
-        5.  Only output the following <template/>:
+        6.  Only output the following <template/>:
 
             <template>
-            ⧉ **ASE**: ✪ skill: **ase-code-edit**, ◉ worktree: **.ase/worktree/<worktree-name/>**, ▶ status: **worktree created**
+            ⧉ **ASE**: ✪ skill: **ase-code-edit**, ◉ worktree: **.ase/worktree/<worktree-name/>**, ⎇ branch: **<worktree-branch/>**, ▶ status: **worktree created**
             </template>
 
         </if>
 
-    3.  Apply the edit by modifying the affected *artifacts* with a
+    5.  Apply the edit by modifying the affected *artifacts* with a
         corresponding, complete *change set*, honoring *only*
         <todo-what/> and <todo-how/> plus the information gathered in
         the *discovering* state. Also, if a `CHANGELOG.md` file exists,
@@ -441,7 +521,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         user keeps full control over the final commit.
         </if>
 
-    4.  <if condition="<issue-id/> is not empty">
+    6.  <if condition="<issue-id/> is not empty">
         Call the `ase_kv_delete(key: "ase-issue-<issue-id/>")` tool of
         the `ase` MCP server to remove the now-resolved analyzer result
         from the key/value store, then set <issue-id></issue-id> (empty),
@@ -449,7 +529,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         Do not output anything.
         </if>
 
-    5.  Output only the following <template/>. You *MUST* *NOT* output a
+    7.  Output only the following <template/>. You *MUST* *NOT* output a
         change summary, a list of modified artifacts, a rationale, or a
         unified diff of the changes -- *independent* of
         <ase-project-boxing/>, whose exposure rules are explicitly

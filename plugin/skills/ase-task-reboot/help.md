@@ -13,10 +13,23 @@
 ##  DESCRIPTION
 
 The `ase-task-reboot` skill re-creates an existing task plan *from
-scratch* by extracting the original `**WHAT**` and `**WHY**` sections
-(if present) from the current plan, using them as the new instruction,
-preserving the original creation timestamp, and writing fresh plan
-content via `ase_task_save`.
+scratch* by extracting the `DOM` and `IFC` bullet points of the
+`SPECIFICATION (WHAT)` section (if present) from the current plan,
+using them as the new instruction, re-deriving the `DESIGN (HOW)` and
+`VERIFICATION (WHEN)` sections, preserving the original creation
+timestamp, the remaining frontmatter keys, and all attachments, and
+writing fresh plan content via `ase_task_save`. As the rebooted plan
+starts its lifecycle anew, its `Status:` key is reset to the default
+state of the task lifecycle model and all `grilled:` tags are dropped
+from its `Tags:` key.
+
+A plan which does *not* follow the task format (or carries no `DOM` or
+`IFC` bullet point) is rebooted from its entire body instead: all of
+its existing content is *filed* into the `SPECIFICATION (WHAT)`,
+`DESIGN (HOW)`, and `VERIFICATION (WHEN)` sections by classifying
+each statement as a `DOM`, `IFC`, `ARC`, `IMP`, `REG`, or `CON` bullet
+point, with no statement dropped and missing bullet points derived from
+the existing content.
 
 After the reboot, the user is asked whether to stop or hand off to
 `ase-task-edit`, `ase-task-implement`, or `ase-task-preflight`,
@@ -46,8 +59,9 @@ unless `--next` pre-selects this choice.
 ##  SCENARIOS
 
 -   You want a task plan re-created from scratch
--   You want a fresh plan from the original WHAT and WHY
+-   You want a fresh plan from the original specification
 -   You want planning restarted after a plan degraded
+-   You want a free-form or legacy plan filed into the task format
 
 ##  EXAMPLES
 

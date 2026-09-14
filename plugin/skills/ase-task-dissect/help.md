@@ -22,8 +22,9 @@ it can be implemented, reviewed, and committed entirely on its own.
 
 The dissection follows a strict ruleset: at least *2* and at most
 *count* parts are derived, *every* bullet point of the epic's
-`##  CHANGES` and `##  VERIFICATION` sections is assigned to *exactly
-one* part, mutually dependent bullet points are kept together, and
+`##  SPECIFICATION (WHAT)`, `##  DESIGN (HOW)`, and
+`##  VERIFICATION (WHEN)` sections is assigned to *exactly one* part,
+mutually dependent bullet points are kept together, and
 nothing beyond the epic's own content is invented. A bullet point which
 itself covers *multiple* domains is *split* into fragments, which are
 then assigned individually -- together they still reproduce the original
@@ -42,9 +43,11 @@ never the ruleset itself.
 The derived parts are first reported as a *dissection table* (part
 number, sub-task id, scope, and rationale). Then -- unless `--dry` is
 given -- each part is materialized as its own *complete* sub-task plan
-(with its own `##  CONTEXT`, `##  CHANGES`, and `##  VERIFICATION`
-sections) and persisted under the task id `<task-id>-<feature-slug>`.
-The epic plan itself always stays *untouched*.
+(with its own `##  SPECIFICATION (WHAT)`, `##  DESIGN (HOW)`, and
+`##  VERIFICATION (WHEN)` sections, grouped under the epic via its
+`Group:` frontmatter key) and persisted under the task id
+`<task-id>-<feature-slug>`. The epic plan itself always stays
+*untouched*.
 
 ##  OPTIONS
 
@@ -56,7 +59,7 @@ The epic plan itself always stays *untouched*.
     *Report only* -- print the dissection table but create *no*
     artifacts at all, so the decision stays fully reversible. Note that
     this meaning differs from `--dry`/`-d` in `ase-code-craft`, where it
-    instead omits the `##  VERIFICATION` section of the composed plan.
+    instead omits the `##  VERIFICATION (WHEN)` section of the composed plan.
 
 -   `--force`|`-f`:
     Overwrite already existing sub-task plans. Without this option, the

@@ -19,12 +19,17 @@ through a *chat-driven loop*. The user steers each round via an
 interactive dialog that offers continued refinement, finalization, or
 hand-off to implementation or preflight.
 
-When a refinement changes the plan text while an `IMPLEMENTATION
-DRAFT` section (produced by `ase-task-preflight`) exists, that section
-became *stale* and is *removed* -- together with the `preflighted`
-value of the `Properties:` frontmatter key -- and a hint is emitted
-that `ase-task-preflight` has to be run again to re-create the draft
-for the changed plan.
+Attachments in the plan's backmatter are never removed by a refinement.
+A refinement which changes an attachment refreshes the attachment's
+`Modified:` key; a refinement which changes the plan body refreshes the
+`Modified:` key of the frontmatter (which tracks body changes only, so
+a refinement of frontmatter keys alone leaves it untouched); both use
+the same value. An implementation draft (an attachment block
+of type `text/x-diff; charset=utf-8; kind="preflight"`, produced by
+`ase-task-preflight`) whose `Modified:` key is absent or older than the
+frontmatter's is *stale*: it is reported with a warning after each
+rendering of the plan, together with a hint that `ase-task-preflight`
+has to be run again to re-create the draft for the changed plan.
 
 ##  OPTIONS
 
@@ -37,7 +42,7 @@ for the changed plan.
     ignoring *instruction* and stopping skill processing).
 
 -   `--dry`|`-d`:
-    Generate any *new* plan *without* the `##  VERIFICATION` section.
+    Generate any *new* plan *without* the `##  VERIFICATION (WHEN)` section.
     Applies only to freshly generated plans, not to existing plans
     loaded from disk. When `ase-task-implement` later applies such
     a plan, it strictly skips the entire verification phase (no

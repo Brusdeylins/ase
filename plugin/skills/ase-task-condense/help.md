@@ -16,13 +16,15 @@ The `ase-task-condense` skill *compresses* the wording of an existing
 task plan to make it require as little reading as possible, while
 keeping *all semantics fully preserved and unchanged*. It loads the
 current (or given) plan, applies a self-contained, telegrapher-like
-"remove-fluff" ruleset to the *free-text* parts only (the `**WHAT**` /
-`**WHY**` prose and each bullet's specification text), and writes the
-shorter plan back via `ase_task_save`.
+"remove-fluff" ruleset to the *free-text* parts only (the text of each
+`DOM`, `IFC`, `ARC`, `IMP`, `REG`, and `CON` bullet point), and writes
+the shorter plan back via `ase_task_save`.
 
-The plan *structure* is never altered: all headings, section markers,
-`- **<aspect>**:` bullet labels, code spans, technical terms, file
-paths, numbers, and severities are kept exactly. Only genuinely
+The plan *structure* is never altered: the frontmatter, all headings,
+the `SPECIFICATION (WHAT)`, `DESIGN (HOW)`, and `VERIFICATION (WHEN)`
+sections, the `- [ ] DOM:`-style bullet prefixes with their checkbox
+states, all attachments, code spans, technical terms, file paths,
+numbers, and severities are kept exactly. Only genuinely
 redundant bullets may be merged, and a shortening that would change
 meaning is always rejected in favor of the longer wording. The condense
 ruleset *overrides* the active session persona, so the plan is compressed

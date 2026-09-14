@@ -46,6 +46,10 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
       desc: "Transparency class of all project artifacts: white (fully transparent), " +
             "grey (partially transparent), or black (fully non-transparent). It modulates " +
             "both the work depth of the skills and the visibility of their output." },
+    { name: "project.task.lifecycle",
+      value: "solo",
+      scopes: "user, project, task, session",
+      desc: "Lifecycle of the project task plans: solo, team, or enterprise." },
     { name: "project.artifact.task.basedir",
       value: ".ase/task",
       scopes: "user, project",
@@ -349,8 +353,9 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                                 [ [ "%P", "Persona style" ],       [ "%r", "Agent lines removed" ] ],
                                 [ [ "%h", "Guidance level" ],      [ "%b", "Git branch" ] ],
                                 [ [ "%B", "Boxing transparency" ], [ "%g", "Git changes" ] ],
-                                [ [ "%c", "Context gauge" ],       [ "%G", "Untracked files" ] ],
-                                [ [ "%C", "Token count" ],         [ "%d", "Working directory" ] ],
+                                [ [ "%L", "Task lifecycle" ],      [ "%G", "Untracked files" ] ],
+                                [ [ "%c", "Context gauge" ],       [ "%d", "Working directory" ] ],
+                                [ [ "%C", "Token count" ],         [ "",   "" ] ],
                                 [ [ "%M", "Memory usage" ],        [ "",   "" ] ]
                             ].map(([ left, right ]) => (
                                 <tr class="border-b border-border/40 last:border-0">

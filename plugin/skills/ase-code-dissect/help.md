@@ -72,7 +72,7 @@ cleanly and are then reported as failed; stage everything and use
     *Report only* -- print the dissection table but create *no*
     artifacts at all, so the decision stays fully reversible. Note that
     this meaning differs from `--dry`/`-d` in `ase-code-craft`, where it
-    instead omits the `##  VERIFICATION` section of the composed plan.
+    instead omits the `##  VERIFICATION (WHEN)` section of the composed plan.
 
 -   `--force`|`-f`:
     Remove and re-create already existing worktrees and branches of the

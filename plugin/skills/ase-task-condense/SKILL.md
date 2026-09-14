@@ -88,17 +88,17 @@ Set <args></args> (set args to empty).
         and unchanged*. Honor the following ruleset *strictly*:
 
         1.  *Preserve-exactly (never alter)*: the plan <format/>
-            structure (the frontmatter block with its `Id:`, `Created:`,
-            `Modified:`, `Status:`, `Properties:`, and `Kind:` keys,
-            the headings `#`/`##`, all
-            three `##  CONTEXT`, `##  CHANGES`, and `##  VERIFICATION`
-            sections, and the `- **<aspect/>**:` bullet labels), all *code spans* and
-            code blocks, technical terms, file paths, identifiers,
-            numbers, severities (`LOW`/`MEDIUM`/`HIGH`/`ACCEPTED`), and
-            the `*<aspect/>*` emphasis highlighting convention.
+            structure (the entire frontmatter block with all of its keys,
+            the headings `#`/`##`, all three `##  SPECIFICATION (WHAT)`,
+            `##  DESIGN (HOW)`, and `##  VERIFICATION (WHEN)` sections,
+            the `-   <box/> <type/>:` bullet-point prefixes with their
+            checkbox states, and the entire "backmatter" with all of its
+            attachment blocks), all *code spans* and code blocks,
+            technical terms, file paths, identifiers, numbers,
+            severities (`LOW`/`MEDIUM`/`HIGH`/`ACCEPTED`), and the
+            `*<aspect/>*` emphasis highlighting convention.
 
-        2.  *Compress free-text only* (the `**WHAT**`/`**WHY**` prose and
-            each bullet's `<specification/>` text):
+        2.  *Compress free-text only* (each bullet-point's <text/>):
             -   *Drop* filler ("just", "really", "basically", "simply"),
                 pleasantries, and hedging ("I think", "maybe", "perhaps").
             -   *Use* shorter synonyms and common abbreviations.

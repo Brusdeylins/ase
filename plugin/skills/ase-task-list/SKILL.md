@@ -19,7 +19,7 @@ List Task Plans
 
 <expand name="getopt"
     arg1="ase-task-list"
-    arg2="--verbose|-v --include|-i=none --exclude|-e=COMPLETED,CANCELLED">
+    arg2="--verbose|-v --include|-i=none --exclude|-e=finished">
     $ARGUMENTS
 </expand>
 
@@ -31,21 +31,40 @@ Procedure
 ---------
 
 1.  Determine the *effective state set* <states/>, i.e., the lifecycle
-    states a task plan has to be in to be listed at all. For this, parse
-    <getopt-option-include/> and <getopt-option-exclude/> as
+    states a task plan has to be in to be listed at all. For this, first
+    determine the *all states* set <all-states/> and the *finished
+    states* set <finished-states/> of the task lifecycle model
+    <ase-project-task-lifecycle/> of the current project:
+
+    -   If <ase-project-task-lifecycle/> is `solo` (or absent):
+        <all-states/> is `OPEN`, `SHELVED`, `CLOSED`, and `CANCELLED`,
+        and <finished-states/> is `CLOSED` and `CANCELLED`.
+
+    -   If <ase-project-task-lifecycle/> is `team`:
+        <all-states/> is `PLANNING`, `SHELVED`, `IMPLEMENTING`,
+        `STALLED`, `IMPLEMENTED`, and `CANCELLED`, and
+        <finished-states/> is `IMPLEMENTED` and `CANCELLED`.
+
+    -   If <ase-project-task-lifecycle/> is `enterprise`:
+        <all-states/> is `DRAFTED`, `SHELVED`, `PLANNING`, `PLANNED`,
+        `STALLED`, `IMPLEMENTING`, `IMPLEMENTED`, `DECLINED`,
+        `APPROVING`, `APPROVED`, `DEFERRED`, `INTEGRATING`, `INTEGRATED`,
+        and `CANCELLED`, and <finished-states/> is `INTEGRATED` and
+        `CANCELLED`.
+
+    Then parse <getopt-option-include/> and <getopt-option-exclude/> as
     comma-separated token lists, silently dropping the `none` sentinel
-    and any empty token. If a token <token/> is *not* one of the eight
-    `Status:` values `DRAFTED`, `REJECTED`, `APPROVED`, `DEFERRED`,
-    `STARTED`, `BLOCKED`, `COMPLETED`, or `CANCELLED`, only output the
-    following <template/> and then *STOP* processing the entire current
-    skill:
+    and any empty token, and replacing the `finished` sentinel with
+    <finished-states/>. If a token <token/> is *not* one of the
+    `Status:` values in <all-states/>, only output the following
+    <template/> and then *STOP* processing the entire current skill:
 
     <template>
     ⧉ **ASE**: ✪ skill: **ase-task-list**, ▶ ERROR: invalid state: **<token/>**
     </template>
 
-    Otherwise set <states/> to *all* eight states if both lists are
-    empty, to the *include* list if only it is non-empty, to all eight
+    Otherwise set <states/> to <all-states/> if both lists are
+    empty, to the *include* list if only it is non-empty, to <all-states/>
     *minus* the *exclude* list if only it is non-empty, and to the
     *include* list *minus* the *exclude* list if both are non-empty. If
     the resulting <states/> is *empty*, only output the following
@@ -61,7 +80,7 @@ Procedure
     hence emit no output at all):
 
     <ase-tpl-hint level="minimal">
-    The `--exclude` default `COMPLETED,CANCELLED` still applies -- add `--exclude none` to reach states like `COMPLETED` via `--include`.
+    The `--exclude` default `finished` (the finished states of the task lifecycle model) still applies -- add `--exclude none` to reach finished states via `--include`.
     </ase-tpl-hint>
 
 2.  Call the `ase_task_list(verbose: <getopt-option-verbose/>)` tool from
@@ -69,10 +88,20 @@ Procedure
     `tasks` array where each entry has an `id` and a `status` field, and
     -- if <getopt-option-verbose/> is `true` -- additionally an `mtime`
     field (formatted as `YYYY-MM-DD HH:MM`). *Drop* from the `tasks`
-    array every entry whose `status` is *not* contained in <states/>. Do
-    not output anything.
+    array every entry whose `status` is contained in <all-states/> but
+    *not* in <states/>. *Keep* every entry whose `status` is *not*
+    contained in <all-states/> at all, regardless of <states/>, and
+    remember it as an *unknown-status entry*. Do not output anything.
 
-3.  If the `tasks` array is empty, output the following <template/>:
+3.  For each *unknown-status entry* of step 2, output the following
+    <template/>, where <id/> and <status/> correspond to the entry and
+    <all-states/> is rendered as a comma-separated list:
+
+    <template>
+    ⧉ **ASE**: ◉ task: **<id/>**, ▶ WARNING: unknown status **<status/>** (expected one of: <all-states/>)
+    </template>
+
+    Then, if the `tasks` array is empty, output the following <template/>:
 
     <template>
     ⧉ **ASE**: ◉ tasks: *(none)*
@@ -135,6 +164,6 @@ Procedure
     </if>
 
     <ase-tpl-hint level="verbose">
-    Use `/ase-task-list --include`/`--exclude` to narrow the listing to certain lifecycle states, e.g. `--include STARTED,BLOCKED`.
+    Use `/ase-task-list --include`/`--exclude` to narrow the listing to certain lifecycle states, e.g. `--include IMPLEMENTING,STALLED`.
     </ase-tpl-hint>
 

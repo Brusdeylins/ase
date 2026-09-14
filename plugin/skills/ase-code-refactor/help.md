@@ -36,7 +36,7 @@ entirely and applies the change set to the affected artifacts itself.
     asking the user via the interactive dialog.
 
 -   `--dry`|`-d`:
-    Compose the plan *without* the `##  VERIFICATION` section. When
+    Compose the plan *without* the `##  VERIFICATION (WHEN)` section. When
     `ase-task-implement` later applies such a plan, it strictly skips
     the entire verification phase (no build, tests, linter,
     type-checker, or program execution) once the source files have
@@ -54,7 +54,7 @@ entirely and applies the change set to the affected artifacts itself.
 -   `--quick`|`-Q`:
     Shorthand alias for `-a -d -n IMPLEMENT,DELETE`: automatically pick
     the recommended refactoring approach, compose the plan *without* the
-    `##  VERIFICATION` section, immediately hand off to `ase-task-implement`,
+    `##  VERIFICATION (WHEN)` section, immediately hand off to `ase-task-implement`,
     and finally `ase-task-delete` the now-consumed plan. This gives a
     single, fast *one-shot* refactoring mode.
 

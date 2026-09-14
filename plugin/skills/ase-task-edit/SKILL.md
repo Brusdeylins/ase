@@ -48,16 +48,15 @@ When refining the plan this way, preserve the overall structure of the
 plan and only modify what the user actually requested. Do *not* rewrite
 unrelated sections of the plan.
 
-<if condition="<task-content/> contains a `##  IMPLEMENTATION DRAFT`
-    section (from the companion skill `ase-task-preflight`) AND the
-    applied <instruction/> changed the plan text *outside* of that
-    section">
-The implementation draft was created for the *previous* plan text and
-hence is *stale* now. Remove the entire `##  IMPLEMENTATION DRAFT`
-section from <task-content/>, remove the value `preflighted` from the
-`Properties:` frontmatter key (dropping the whole key if it carries no
-values anymore), and set <draft-removed>true</draft-removed>.
-</if>
+Attachment blocks of the "backmatter" are *never* dropped by a
+refinement. Instead, *remember* every attachment block whose content the
+applied <instruction/> changed as *touched*, so its `Modified` key is
+refreshed together with the frontmatter in step 3.1. An attachment the
+<instruction/> did not change stays *verbatim* -- an implementation
+draft attachment (`Type` key value `text/x-diff; charset=utf-8;
+kind="preflight"`, from the companion skill `ase-task-preflight`) hence
+turns *stale* through a "body" change by its `Modified` key falling
+behind the frontmatter, which step 3.3 reports.
 
 Set <task-content-dirty>true</task-content-dirty>.
 </define>
@@ -70,14 +69,14 @@ the <instruction/> and all decisions you derived from the
 <instruction/>.
 
 If a `CHANGELOG.md` file exists in the project (or in any
-affected sub-package), the plan *MUST* include, as part of
-its `##  CHANGES` section, an explicit bullet point
-describing the addition of a corresponding new entry to
-that `CHANGELOG.md` file, aligned with its existing style
-and conventions.
+affected sub-package), the plan *MUST* include, as an `IMP`
+bullet-point of its `##  DESIGN (HOW)` section, an explicit
+bullet-point describing the addition of a corresponding new
+entry to that `CHANGELOG.md` file, aligned with its existing
+style and conventions.
 
 <if condition="<getopt-option-dry/> is equal `true`">
-You *MUST* completely omit the `##  VERIFICATION` section
+You *MUST* completely omit the `##  VERIFICATION (WHEN)` section
 (including its heading and all of its bullet points) from
 <task-content/>.
 </if>
@@ -214,7 +213,6 @@ Set <args></args> (set args to empty).
         </else>
 
         Set <task-content-dirty>false</task-content-dirty>.
-        Set <draft-removed>false</draft-removed>.
 
         -   If <text/> starts with `ERROR:` or `WARNING:`:
             Silently ignore the MCP error.
@@ -340,13 +338,21 @@ Set <args></args> (set args to empty).
     `PREFLIGHT`, or declines/cancels in the dialog of step 3.4:
 
     1.  *Update timestamp*:
-        <if condition="the frontmatter of <task-content/> carries a `Modified:` key AND <task-content-dirty/> is 'true'">
+        <if condition="<task-content-dirty/> is 'true'">
         Update <timestamp-modified/> with the current time in
         ISO-style format, which has to be determined by calling the
         `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
-        MCP server and using the `text` field of its response. Update
-        the `Modified: ...` frontmatter key of <task-content/> with the
-        new <timestamp-modified/> value.
+        MCP server and using the `text` field of its response. If the
+        frontmatter of <task-content/> carries a `Modified:` key *and*
+        the refinement changed the "body" (not only frontmatter keys or
+        attachments), update it with the new <timestamp-modified/>
+        value, as the key tracks "body" changes only. Then set the
+        `Modified:` key of every attachment block *touched* by the
+        refinement (see `apply-refinement`) to the very same
+        <timestamp-modified/> value -- *creating* the key at its position
+        in the key order of the plan <format/> if the block does not
+        carry it yet -- and forget the touched marks again, so a changed
+        attachment never falls behind the frontmatter.
         Do not output anything.
         </if>
 
@@ -371,18 +377,6 @@ Set <args></args> (set args to empty).
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan saved**
         </template>
-
-        <if condition="<draft-removed/> is equal `true`">
-        Directly *after* this <template/>, reset
-        <draft-removed>false</draft-removed> and give the corrective
-        hint by expanding the following (which, depending on the
-        configured <ase-guidance-level/>, may expand into nothing and
-        hence emit no output at all):
-
-        <ase-tpl-hint level="minimal">
-        The `IMPLEMENTATION DRAFT` section became stale through the plan change and was removed -- run `/ase-task-preflight` again to re-create the draft for the changed plan.
-        </ase-tpl-hint>
-        </if>
         </if>
 
     3.  *Render plan*:
@@ -399,36 +393,61 @@ Set <args></args> (set args to empty).
         both `---` delimiters and all of their keys -- and instead place
         the following column-aligned glyph lines *before* the
         `#   TASK: <title/>` heading, separated from it by an empty line,
-        omitting the line of every key absent from the frontmatter. The
-        glyph lines *MUST* stay *above* the heading, exactly where the
-        frontmatter block sits in the plan file, and *MUST NOT* be moved
-        below it. This keeps the `---` delimiters from rendering as a
-        horizontal rule plus a *setext heading*. This rewrite is
-        *display-only* and *MUST NOT* change <task-render/> or
-        <task-content/> itself:
+        omitting the line of every key absent from the frontmatter and
+        always omitting the `Type` key. The glyph lines *MUST* stay
+        *above* the heading, exactly where the frontmatter block sits in
+        the plan file, and *MUST NOT* be moved below it. This keeps the
+        `---` delimiters from rendering as a horizontal rule plus a
+        *setext heading*. This rewrite is *display-only* and *MUST NOT*
+        change <task-render/> or <task-content/> itself:
 
         <format>
-        ◉   **Id:**         <task-id/>
-        ⎈   **Created:**    <timestamp-created/>
-        ⚙   **Modified:**   <timestamp-modified/>
-        ◐   **Status:**     <task-status/>
-        ⚑   **Properties:** <task-properties/>
-        ☯   **Kind:**       <task-kind/>
+        ◉   **Id:**       <task-id/>
+        ⎈   **Created:**  <timestamp-created/>
+        ⚙   **Modified:** <timestamp-modified/>
+        ⊞   **Group:**    <task-group/>
+        ◷   **Phase:**    <task-phase/>
+        ⇢   **After:**    <task-after/>
+        ◐   **Status:**   <task-status/>
+        ☯   **Kind:**     <task-kind/>
+        ⚑   **Tags:**     <task-tags/>
+        ⎇   **Branch:**   <task-branch/>
         </format>
 
         Only output the following <template/>, so the user
         can read the plan and react to it. If <task-render/> is longer
-        than 90 lines and a `##  IMPLEMENTATION DRAFT` section (from the
-        companion skill `ase-task-preflight`) exists, replace the entire
-        content of the `##  IMPLEMENTATION DRAFT` section with `[...]`.
-        Else, do *not* truncate, summarize, or partially show the plan.
-        Use the following <template/>:
+        than 90 lines and the backmatter contains an attachment block
+        with the `Type` key value `text/x-diff; charset=utf-8; kind="preflight"` (the
+        implementation draft from the companion skill
+        `ase-task-preflight`), replace the entire payload of the `Data`
+        key of this attachment block with `[...]`. Else, do *not*
+        truncate, summarize, or partially show the plan. Use the
+        following <template/>:
 
         <template>
         <ase-tpl-head title="TASK" subtitle="<task-id/>"/>
         <task-render/>
         <ase-tpl-foot title="TASK" subtitle="<task-id/>"/>
         </template>
+
+        <if condition="the backmatter of <task-content/> contains an attachment
+            block with the `Type` key value `text/x-diff; charset=utf-8; kind="preflight"`
+            which is *stale* according to the plan <format/> (its `Modified` key
+            is absent or older than the `Modified` key of the frontmatter)">
+        Directly *after* this <template/>, only output the following
+        <template/> and then give the corrective hint by expanding the
+        subsequent construct (which, depending on the configured
+        <ase-guidance-level/>, may expand into nothing and hence emit
+        no output at all):
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ WARNING: implementation draft attachment is **stale** (older than the plan)
+        </template>
+
+        <ase-tpl-hint level="minimal">
+        Run `/ase-task-preflight` again to re-create the implementation draft for the changed plan, as `/ase-task-implement` refuses a stale draft.
+        </ase-tpl-hint>
+        </if>
 
     4.  *Determine next step*:
 

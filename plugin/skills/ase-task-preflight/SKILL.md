@@ -67,7 +67,32 @@ Procedure
 
 3.  **Create Implementation Draft:**
 
-    1.  Perform a *preflight* of the *implementation* of <task-content/> by creating a
+    1.  Determine the *draft base* <draft-base/> -- the artifact state
+        the draft is drafted against -- mirroring the branch handling
+        of the companion skill `ase-task-implement`: Set <task-branch/>
+        to the value of the `Branch:` frontmatter key of
+        <task-content/>, or to the literal `current` if the key is
+        absent. Determine the *checked-out branch* by running the
+        command `git branch --show-current` (taken exactly as given)
+        and capturing its output into <current-branch/>.
+
+        <if condition="<task-branch/> is `current` or equal to <current-branch/>">
+        The implementation lands in the current working copy, so set
+        <draft-base></draft-base> (empty): the draft is based on the
+        *working copy* content of the artifacts.
+        </if>
+        <elseif condition="the branch <task-branch/> exists according to `git branch --list`">
+        The implementation lands in a worktree of this *existing*
+        branch, so set <draft-base><task-branch/></draft-base>.
+        </elseif>
+        <else>
+        The implementation lands in a worktree of this branch *created*
+        from `HEAD`, so set <draft-base>HEAD</draft-base>.
+        </else>
+
+        Do not output anything.
+
+    2.  Perform a *preflight* of the *implementation* of <task-content/> by creating a
         draft for a corresponding, *complete artifact change set*
         which *would* fully implement the task plan <task-content/>. Store
         this artifact change set in *unified diff* format in <unified-diff/>.
@@ -77,52 +102,57 @@ Procedure
         because that skill later takes the draft over *1:1* -- the user
         is assumed to review the draft in between. Hence *read* the
         current content of *every* artifact the draft touches before
-        drafting its hunks, so all context lines match the artifacts
-        *exactly* and the diff would apply *cleanly*, and honor the
-        task plan and the internalized tenets just as the final
-        implementation would. Only the actual modification of the
-        artifacts and the verification phase are deferred to
-        `ase-task-implement`.
+        drafting its hunks -- from the working copy if <draft-base/> is
+        empty, or via `git show "<draft-base/>:<path/>"` otherwise --,
+        so all context lines match the artifacts *exactly* as the final
+        implementation will find them and the diff would apply
+        *cleanly*, and honor the task plan and the internalized tenets
+        just as the final implementation would. Only the actual
+        modification of the artifacts and the verification phase are
+        deferred to `ase-task-implement`.
 
-    2.  Append this artifact change set <unified-diff/> to the end
-        of the <task-content/> with the following <template/>. If a section
-        named `##  IMPLEMENTATION DRAFT` already exists from a
-        previous run of this skill, *replace* this entire existing
-        section.
-
-        Set <fence/> to a run of backtick characters *one longer* than
-        the longest backtick run occurring anywhere inside
-        <unified-diff/>, but to at least three, so a diff which itself
-        carries fenced code blocks (e.g. one over Markdown artifacts)
-        cannot terminate the block prematurely.
-
-        <template>
-
-        ##  IMPLEMENTATION DRAFT
-
-        <fence/>text
-        <unified-diff/>
-        <fence/>
-
-        </template>
+        You *MUST* *skip* every bullet-point of <task-content/> in
+        checkbox state `[-]` (cancelled) or `[>]` (deferred), exactly as
+        `ase-task-implement` does: the draft neither realizes its
+        <text/> nor prepares its check, and its checkbox stays
+        *untouched*. Its <text/> stays *context only*.
 
     3.  Update <timestamp-modified/> with the current time in
         ISO-style format, which has to be determined by calling the
         `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the `ase`
-        MCP server and using the `text` field of its response. Update
-        the `Modified: ...` frontmatter key of <task-content/> with the
-        new <timestamp-modified/> value, *creating* the whole key at its
-        position in the key order of the plan <format/> if the plan does
-        not carry it yet.
-        Do not output anything.
+        MCP server and using the `text` field of its response. This
+        value stamps the attachment below *only* -- the `Modified:`
+        frontmatter key tracks "body" changes and stays *untouched*, so
+        the fresh draft is *never* stale. Do not output anything.
 
-        Additionally *add* the value `preflighted` to the `Properties:`
-        frontmatter key of <task-content/> if it is still absent, keeping
-        all already present values and *creating* the whole key (with the
-        single value `preflighted`) if the plan carries none. Do not
-        output anything.
+    4.  Append this artifact change set <unified-diff/> as an
+        *attachment block* to the "backmatter" of <task-content/> with
+        the following <template/>, closely following the plan <format/>. If an
+        attachment block with the `Type` key value `text/x-diff; charset=utf-8;
+        kind="preflight"` already exists from a previous run of this skill,
+        *replace* this entire existing attachment block in place.
 
-    4.  Finally, call the `ase_task_save(id: "<ase-task-id/>",
+        Set <timestamp-attachment-created/> to the value of the `Created`
+        key of the *replaced* attachment block, so the creation time of
+        the draft survives its replacement, or to <timestamp-modified/>
+        if no such block or key exists.
+
+        Set <payload/> to <unified-diff/> with *every* line -- including
+        empty lines -- indented by *exactly* 4 spaces, so the YAML literal
+        block scalar of the `Data` key carries the diff *verbatim*. The
+        "body" keeps its trailing empty line directly before the `---`
+        line of the attachment block.
+
+        <template>
+        ---
+        Type:     text/x-diff; charset=utf-8; kind="preflight"
+        Created:  <timestamp-attachment-created/>
+        Modified: <timestamp-modified/>
+        Data:     |4+
+        <payload/>
+        </template>
+
+    5.  Finally, call the `ase_task_save(id: "<ase-task-id/>",
         text: "<task-content/>")` tool of the `ase` MCP server to save the updated
         task plan content. This `ase_task_save` MCP tool call is the
         *only* permitted way to persist the plan -- *NEVER* write the

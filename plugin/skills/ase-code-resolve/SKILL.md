@@ -240,13 +240,14 @@ resolution actually demands, and you *MUST* *NOT* call
         task plan. Store the resulting task plan in <task-content/>.
 
         If a `CHANGELOG.md` file exists in the project (or in any
-        affected sub-package), the plan *MUST* include, as part of its
-        `##  CHANGES` section, an explicit bullet point describing
-        the addition of a corresponding new entry to that `CHANGELOG.md`
-        file, aligned with its existing style and conventions.
+        affected sub-package), the plan *MUST* include, as an `IMP`
+        bullet-point of its `##  DESIGN (HOW)` section, an explicit
+        bullet-point describing the addition of a corresponding new entry
+        to that `CHANGELOG.md` file, aligned with its existing style and
+        conventions.
 
         <if condition="<getopt-option-dry/> is equal `true`">
-        You *MUST* completely omit the `##  VERIFICATION` section
+        You *MUST* completely omit the `##  VERIFICATION (WHEN)` section
         (including its heading and all of its bullet points) from
         <task-content/>.
         </if>

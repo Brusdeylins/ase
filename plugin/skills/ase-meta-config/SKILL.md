@@ -6,7 +6,7 @@ description: >
     the user/project/task/session scope chain.
     Use when the user wants to "configure" ASE, or to inspect or change a
     configuration key like `agent.persona`, `agent.guidance`, `agent.task`,
-    or `project.boxing`.
+    `project.boxing`, or `project.task.lifecycle`.
 user-invocable: true
 disable-model-invocation: false
 effort: high

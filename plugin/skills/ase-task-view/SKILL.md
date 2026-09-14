@@ -84,35 +84,53 @@ Procedure
         both `---` delimiters and all of their keys -- and instead place
         the following column-aligned glyph lines *before* the
         `#   TASK: <title/>` heading, separated from it by an empty line,
-        omitting the line of every key absent from the frontmatter. The
-        glyph lines *MUST* stay *above* the heading, exactly where the
-        frontmatter block sits in the plan file, and *MUST NOT* be moved
-        below it. This keeps the `---` delimiters from rendering as a
-        horizontal rule plus a *setext heading*. This rewrite is
-        *display-only* and *MUST NOT* change <task-content/> itself:
+        omitting the line of every key absent from the frontmatter and
+        always omitting the `Type` key. The glyph lines *MUST* stay
+        *above* the heading, exactly where the frontmatter block sits in
+        the plan file, and *MUST NOT* be moved below it. This keeps the
+        `---` delimiters from rendering as a horizontal rule plus a
+        *setext heading*. This rewrite is *display-only* and *MUST NOT*
+        change <task-content/> itself:
 
         <format>
-        ◉   **Id:**         <task-id/>
-        ⎈   **Created:**    <timestamp-created/>
-        ⚙   **Modified:**   <timestamp-modified/>
-        ◐   **Status:**     <task-status/>
-        ⚑   **Properties:** <task-properties/>
-        ☯   **Kind:**       <task-kind/>
+        ◉   **Id:**       <task-id/>
+        ⎈   **Created:**  <timestamp-created/>
+        ⚙   **Modified:** <timestamp-modified/>
+        ⊞   **Group:**    <task-group/>
+        ◷   **Phase:**    <task-phase/>
+        ⇢   **After:**    <task-after/>
+        ◐   **Status:**   <task-status/>
+        ☯   **Kind:**     <task-kind/>
+        ⚑   **Tags:**     <task-tags/>
+        ⎇   **Branch:**   <task-branch/>
         </format>
 
         *Render plan*: Only output the following <template/>. If
         <getopt-option-full/> is *not* `true`, <task-content/> is longer than
-        90 lines, and a `##  IMPLEMENTATION DRAFT` section (from the
-        companion skill `ase-task-preflight`) exists, replace the entire
-        content of the `##  IMPLEMENTATION DRAFT` section with `[...]`.
-        Else, do *not* truncate, summarize, or partially show the plan.
-        Use the following <template/>:
+        90 lines, and the backmatter contains an attachment block with the
+        `Type` key value `text/x-diff; charset=utf-8; kind="preflight"` (the implementation
+        draft from the companion skill `ase-task-preflight`), replace the
+        entire payload of the `Data` key of this attachment block with
+        `[...]`. Else, do *not* truncate, summarize, or partially show the
+        plan. Use the following <template/>:
 
         <template>
         <ase-tpl-head title="TASK" subtitle="<task-id/>"/>
         <task-content/>
         <ase-tpl-foot title="TASK" subtitle="<task-id/>"/>
         </template>
+
+        <if condition="the backmatter of <task-content/> contains an attachment
+            block with the `Type` key value `text/x-diff; charset=utf-8; kind="preflight"`
+            which is *stale*, i.e. its `Modified` key is absent or older
+            than the `Modified` key of the frontmatter">
+        Directly *after* this <template/>, only output the following
+        <template/>:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<task-id/>**, ▶ WARNING: implementation draft attachment is **stale** (older than the plan)
+        </template>
+        </if>
         </if>
 
     3.  Finally, give the closing hints by expanding the following (which,
@@ -124,9 +142,15 @@ Procedure
         Use `/ase-task-edit` or `/ase-task-grill` to refine this plan, `/ase-task-preflight` to dry-run it, and `/ase-task-implement` to realize it.
         </ase-tpl-hint>
 
-        <if condition="<getopt-option-full/> is not equal `true` and the `##  IMPLEMENTATION DRAFT` section was replaced with `[...]`">
+        <if condition="<getopt-option-full/> is not equal `true` and the payload of the implementation draft attachment block was replaced with `[...]`">
         <ase-tpl-hint level="verbose">
-        Use `/ase-task-view --full` to show the elided `IMPLEMENTATION DRAFT` section, too.
+        Use `/ase-task-view --full` to show the elided implementation draft attachment, too.
+        </ase-tpl-hint>
+        </if>
+
+        <if condition="the implementation draft attachment block was reported as *stale* above">
+        <ase-tpl-hint level="minimal">
+        Run `/ase-task-preflight` again to re-create the implementation draft for the changed plan, as `/ase-task-implement` refuses a stale draft.
         </ase-tpl-hint>
         </if>
         </if>

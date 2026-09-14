@@ -321,7 +321,7 @@ export default class StatuslineCommand {
             .option("--no-labels",
                 "disable labels in front of bold values")
             .argument("[lines...]",
-                "one or more template lines with %u %p %T %s %m %e %t %O %P %h %B %c %C %a %r " +
+                "one or more template lines with %u %p %T %s %m %e %t %O %P %h %B %L %c %C %a %r " +
                 "%S %D %W %Q %H %X %b %g %G %d %M %V placeholders and <color>...</color> markup " +
                 "(color: black, red, green, yellow, blue, magenta, cyan, white, default) " +
                 "(default: single line \"%m %e %t\")")
@@ -403,19 +403,21 @@ export default class StatuslineCommand {
                     once per run and only when first requested by a renderer (or by the
                     post-loop tmux publish for the Config cascade)  */
                 const getSession = memoize((): string => data.session_id ?? "unknown")
-                const getCfg = memoize((): { taskId: string, persona: string, guidance: string, boxing: string } => {
-                    let taskId   = process.env.ASE_TASK_ID        ?? ""
-                    let persona  = process.env.ASE_PERSONA_STYLE  ?? ""
-                    let guidance = process.env.ASE_GUIDANCE_LEVEL ?? ""
-                    let boxing   = process.env.ASE_PROJECT_BOXING ?? ""
+                const getCfg = memoize((): { taskId: string, persona: string, guidance: string, boxing: string, lifecycle: string } => {
+                    let taskId    = process.env.ASE_TASK_ID                ?? ""
+                    let persona   = process.env.ASE_PERSONA_STYLE          ?? ""
+                    let guidance  = process.env.ASE_GUIDANCE_LEVEL         ?? ""
+                    let boxing    = process.env.ASE_PROJECT_BOXING         ?? ""
+                    let lifecycle = process.env.ASE_PROJECT_TASK_LIFECYCLE ?? ""
                     try {
                         const cfg = new Config("config", configSchema, this.log,
                             parseScope(`session:${getSession()}`))
                         cfg.read("lenient")
-                        const t = String(cfg.get("agent.task")     ?? "").trim()
-                        const p = String(cfg.get("agent.persona")  ?? "").trim()
-                        const g = String(cfg.get("agent.guidance") ?? "").trim()
-                        const b = String(cfg.get("project.boxing") ?? "").trim()
+                        const t = String(cfg.get("agent.task")             ?? "").trim()
+                        const p = String(cfg.get("agent.persona")          ?? "").trim()
+                        const g = String(cfg.get("agent.guidance")         ?? "").trim()
+                        const b = String(cfg.get("project.boxing")         ?? "").trim()
+                        const l = String(cfg.get("project.task.lifecycle") ?? "").trim()
                         if (t !== "")
                             taskId = t
                         if (p !== "")
@@ -424,11 +426,13 @@ export default class StatuslineCommand {
                             guidance = g
                         if (b !== "")
                             boxing = b
+                        if (l !== "")
+                            lifecycle = l
                     }
                     catch (_e) {
                         /*  cascade unavailable; keep env-var fallbacks  */
                     }
-                    return { taskId, persona, guidance, boxing }
+                    return { taskId, persona, guidance, boxing, lifecycle }
                 })
                 const getModel = memoize((): { name: string, effort: string } => {
                     const display = data.model?.display_name ?? ""
@@ -496,6 +500,11 @@ export default class StatuslineCommand {
                         const { boxing } = getCfg()
                         if (boxing !== "")
                             emit(`${prefix("▢", "boxing")}${c.bold(boxing)}`)
+                    },
+                    L: () => {
+                        const { lifecycle } = getCfg()
+                        if (lifecycle !== "")
+                            emit(`${prefix("⟳", "lifecycle")}${c.bold(lifecycle)}`)
                     },
 
                     /*  ==== CONTEXT ====  */

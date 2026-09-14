@@ -8,6 +8,7 @@
 `ase-task-grill`
     [`--help`|`-h`]
     [`--rounds`|`-r` *n*]
+    [`--focus`|`-f` *section*[,...]]
     [`--next`|`-n` *option*[,...]]
     [*id*]
 
@@ -22,12 +23,18 @@ The skill identifies the essential aspects of the plan and raises up to
 carries a `FOCUS-AREA` -- `DOMAIN` (domain-specifics, must be
 clarified), `INTERFACE` (externally observable behavior or UI/API
 interfaces, must be clarified), `ARCHITECTURE` (structure, wiring,
-placement, or dependencies, should be clarified), or `IMPLEMENTATION`
-(inner technical details, can be clarified) -- and a 1-2 word `ASPECT`
-hint. The questions are sorted primarily by descending focus area
-importance (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`, `IMPLEMENTATION`)
-and secondarily by the decision tree of their dependencies, so each
-decision is asked after the decisions it depends on. It honors checks
+placement, or dependencies, should be clarified), `IMPLEMENTATION`
+(inner technical details, can be clarified), `REGRESSION` (what must
+not break, should be clarified), or `CONFIRMATION` (what proves the
+specified behavior, should be clarified) -- and a 1-2 word `ASPECT`
+hint. The focus areas are selected by the plan sections under focus
+(`--focus`): `SPECIFICATION` selects `DOMAIN` and `INTERFACE`, `DESIGN`
+selects `ARCHITECTURE` and `IMPLEMENTATION`, and `VERIFICATION` selects
+`REGRESSION` and `CONFIRMATION`. The questions are sorted
+primarily by the given section order, secondarily by descending focus
+area importance, and tertiarily by the decision tree of their
+dependencies, so each decision is asked after the decisions it depends
+on. It honors checks
 for *fuzzy language*, *conflicting terminology*, *conflicting code*,
 *non-concrete scenarios*, *unspecified architecture patterns*, and
 *unspecified dependencies*.
@@ -42,8 +49,21 @@ the fixed `SKIP GRILLING` option (skip the remaining questions and
 rounds, keeping the answers gathered so far), and free-text input.
 Cancelling the dialog stops the skill and leaves the plan untouched.
 Once all aspects are resolved, the plan is updated and persisted, its
-`Properties:` frontmatter key gains the value `grilled`, and the user is
-offered a hand-off to editing, implementation, or preflight.
+`Tags:` frontmatter key records each grilled section as its own tag
+`grilled:`*section* (lower-case, kept alongside the tags of previously
+grilled sections, e.g. `grilled:specification, grilled:design`), and
+the user is offered a hand-off to editing,
+implementation, or preflight.
+
+The *open* questions are recorded in the checkboxes of the plan's
+bullet-points: a bullet-point whose question stayed *unanswered*
+(because the grilling was skipped) is marked `[?]`, an unanswered
+question the plan does not cover yet is added as a new `[?]`
+bullet-point, and an *answered* question resets its bullet-points to
+`[ ]`. When a section is grilled *again* (its `grilled:`*section* tag
+is already present), only its `[?]` bullet-points are re-asked, and a
+section without any `[?]` bullet-point is skipped entirely. Bullet-points
+in state `[-]` (cancelled) or `[>]` (deferred) are never questioned.
 
 ##  OPTIONS
 
@@ -53,6 +73,16 @@ offered a hand-off to editing, implementation, or preflight.
     previous rounds, and re-derives its questions from it, forgetting
     all questions and answers of previous rounds. With more than one
     round, each round is announced as `GRILLING ROUND K/L`.
+
+-   `--focus`|`-f` *section*[,...]:
+    Grill only the given plan *section*(s), in the given order. Each
+    *section* is one of `SPECIFICATION` (abbreviated `SPEC`), `DESIGN`
+    (abbreviated `DES`), or `VERIFICATION` (abbreviated `VER`), matched
+    case-insensitively, or the sentinel `all` (default), which expands
+    to `SPECIFICATION,DESIGN,VERIFICATION`. The questions are derived
+    from the themes of the focused sections only, while the entire plan
+    stays the context, and the answers may still update any section.
+    An unknown, empty, or duplicate *section* token aborts the skill.
 
 -   `--next`|`-n` *option*[,...]:
     Automatically answer the user dialog for the next step (at the end
@@ -98,6 +128,13 @@ Grill the current task plan in two rounds:
 
 ```text
 ❯ /ase-task-grill --rounds 2
+```
+
+Grill only the `DESIGN` and then the `SPECIFICATION` section of the
+current task plan:
+
+```text
+❯ /ase-task-grill --focus DES,SPEC
 ```
 
 Grill the current task plan and then hand off to editing:

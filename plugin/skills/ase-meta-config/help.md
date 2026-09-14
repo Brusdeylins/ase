@@ -27,7 +27,7 @@ return the first value that is defined; writes are always confined to
 the strongest (target) scope of the chain.
 
 The recognized keys are grouped under `project.*` (`project.id`,
-`project.name`, `project.boxing`, and the
+`project.name`, `project.boxing`, `project.task.lifecycle`, and the
 `project.artifact.`*kind*`.{basedir,files}` globs) and `agent.*`
 (`agent.persona`, `agent.guidance`, `agent.task`, and `agent.skill`).
 Some keys are writable on selected scopes only; in particular
@@ -46,7 +46,9 @@ pyramid-structured `journalist`, the brief, factual, and abbreviating
 `project.boxing` selects the artifact transparency and is one of `white`,
 `grey`, or `black`. Setting `agent.persona`, `agent.guidance`, or
 `project.boxing` takes effect immediately, i.e. still within the running
-session.
+session. Additionally, `project.task.lifecycle` selects the task plan
+lifecycle and is one of `solo` (the default), `team`, or `enterprise`; it is
+exported at session start as `<ase-project-task-lifecycle/>`.
 
 The following *operations* exist:
 
@@ -97,7 +99,7 @@ preset-bootstrapping operation that stays a shell concern next to
 ##  SCENARIOS
 
 -   You want the ASE configuration inspected or changed
--   You want the persona, guidance, or boxing switched for a session
+-   You want the persona, guidance, boxing, or task lifecycle switched for a session
 -   You want a configuration value persisted at user or project scope
 -   You want to see which scope supplies each effective value
 
@@ -131,6 +133,12 @@ Persist the guidance level for the whole project instead:
 
 ```text
 ❯ /ase-meta-config --scope project set agent.guidance minimal
+```
+
+Persist the task lifecycle for the whole project:
+
+```text
+❯ /ase-meta-config --scope project set project.task.lifecycle team
 ```
 
 Remove a value from the user-level configuration:

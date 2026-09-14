@@ -346,10 +346,12 @@ export default class HookCommand {
             return typeof val === "string" ? val : (process.env[envVar] ?? dflt)
         }
 
-        /*  determine agent persona style, agent guidance level, and project boxing transparency  */
-        const persona  = setting("agent.persona",  "ASE_PERSONA_STYLE",  "engineer")
-        const guidance = setting("agent.guidance", "ASE_GUIDANCE_LEVEL", "normal")
-        const boxing   = setting("project.boxing", "ASE_PROJECT_BOXING", "white")
+        /*  determine agent persona style, agent guidance level, project
+            boxing transparency, and project task lifecycle  */
+        const persona   = setting("agent.persona",          "ASE_PERSONA_STYLE",          "engineer")
+        const guidance  = setting("agent.guidance",         "ASE_GUIDANCE_LEVEL",         "normal")
+        const boxing    = setting("project.boxing",         "ASE_PROJECT_BOXING",         "white")
+        const lifecycle = setting("project.task.lifecycle", "ASE_PROJECT_TASK_LIFECYCLE", "solo")
 
         /*  determine the specification base directory and the whitespace-separated
             list of SpecBook schema configurations (empty: the bundled standard schema)  */
@@ -369,6 +371,7 @@ export default class HookCommand {
                 `export ASE_USER_ID=${quote([ userId ])}\n` +
                 `export ASE_PROJECT_ID=${quote([ projectId ])}\n` +
                 `export ASE_PROJECT_BOXING=${quote([ boxing ])}\n` +
+                `export ASE_PROJECT_TASK_LIFECYCLE=${quote([ lifecycle ])}\n` +
                 `export ASE_SPEC_BASEDIR=${quote([ specBasedir ])}\n` +
                 `export ASE_SPEC_SCHEMA=${quote([ specSchema ])}\n` +
                 `export ASE_TASK_ID=${quote([ taskId ])}\n` +
@@ -394,6 +397,7 @@ export default class HookCommand {
             `<ase-user-id>${userId}</ase-user-id>\n` +
             `<ase-project-id>${projectId}</ase-project-id>\n` +
             `<ase-project-boxing>${boxing}</ase-project-boxing>\n` +
+            `<ase-project-task-lifecycle>${lifecycle}</ase-project-task-lifecycle>\n` +
             `<ase-spec-basedir>${specBasedir}</ase-spec-basedir>\n` +
             `<ase-spec-schema>${specSchema}</ase-spec-schema>\n` +
             `<ase-task-id>${taskId}</ase-task-id>\n` +

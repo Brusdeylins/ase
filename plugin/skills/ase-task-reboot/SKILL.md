@@ -27,7 +27,7 @@ Reboot a Task Plan
 
 <objective>
 *Reboot* the task plan by crafting it from scratch,
-based on the existing *WHAT* and *WHY*.
+based on the existing `SPECIFICATION (WHAT)`.
 </objective>
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
@@ -66,58 +66,88 @@ Procedure
     1.  Start with <instruction></instruction> (set instruction to empty).
         Do not output anything.
 
-    2.  <if condition="<task-content/> contains neither '-   **WHAT**:' nor '-   **WHY**:'">
-        Set <instruction><task-content/></instruction> (set instruction to task content).
+    2.  <if condition="the `##  SPECIFICATION (WHAT)` section of <task-content/> contains at least one `DOM` or `IFC` bullet-point">
+        Set <mode>structured</mode>. Extract the <text/> of *every*
+        `DOM` and `IFC` bullet-point of the `##  SPECIFICATION (WHAT)`
+        section, in their original order, each with its
+        `-   <box/> <type/>:` prefix stripped and its wording kept
+        *verbatim*. Set <instruction/> to these texts, joined by a
+        blank line (set instruction to the extracted specification).
+        The `##  DESIGN (HOW)` and `##  VERIFICATION (WHEN)` sections
+        are *deliberately* ignored, as the reboot re-derives them from
+        scratch.
         </if>
 
-    3.  <if condition="<task-content/> contains '-   **WHAT**: <text/>'">
-        Set <instruction><text/></instruction> (set instruction to extracted text).
+    3.  <if condition="<instruction/> is still empty">
+        Set <mode>unstructured</mode>. The plan does not follow the
+        <format/> (or carries no `DOM` or `IFC` bullet-point), so the
+        reboot has to *file* its entire existing content into the
+        <format/> instead. Set <instruction/> to the full previous plan
+        "body" (the second block of <task-content/>, without frontmatter
+        and backmatter), with its wording kept *verbatim*.
         </if>
 
-    4.  <if condition="<task-content/> contains '-   **WHY**: <text/>' and <instruction/> is empty">
-        Set <instruction><text/></instruction> (set instruction to extracted text).
-        </if>
-
-    5.  <if condition="<task-content/> contains '-   **WHY**: <text/>' and <instruction/> is NOT empty">
-        Set <instruction><instruction/>, BECAUSE <text/></instruction>
-        (append extracted text to instruction).
-        </if>
-
-    6.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
+    4.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
         timestamp-created to extracted text).
         </if>
 
-    7.  <if condition="<instruction/> is empty or contains only whitespace">
-        The WHAT/WHY extraction yielded no usable text (e.g. a
-        `-   **WHAT**:` line existed but captured empty text, so the
-        whole-content fallback above did not fire). Fall back to the
-        full previous plan content: set <instruction><task-content/></instruction>
-        (set instruction to task content).
-        <if condition="<instruction/> is still empty or contains only whitespace">
-            There is nothing to reboot from. Only output the following
-            <template/> and then immediately *STOP* processing the entire
-            current skill:
+    5.  <if condition="<instruction/> is empty or contains only whitespace">
+        There is nothing to reboot from. Only output the following
+        <template/> and then immediately *STOP* processing the entire
+        current skill:
 
-            <template>
-            ⧉ **ASE**: ☻ skill: **ase-task-reboot**, ▶ ERROR: empty instruction -- nothing to reboot from
-            </template>
-        </if>
+        <template>
+        ⧉ **ASE**: ☻ skill: **ase-task-reboot**, ▶ ERROR: empty instruction -- nothing to reboot from
+        </template>
         </if>
 
-    8.  Only output the following <template/> and continue processing:
+    6.  Only output the following <template/> and continue processing:
 
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
         </template>
 
-    9.  Create a new plan from scratch and store the result as
+    7.  Create a new plan from scratch and store the result as
         <task-content/> by closely following the defined plan format
         <format/> and injecting into it all the information from
         the <instruction/> and all decisions you derived from the
-        <instruction/>.
+        <instruction/>, where:
 
-    10. <expand name="task-save-content" arg1="plan rebooted"></expand>
+        -   <if condition="<mode/> is `structured`">
+            the `##  SPECIFICATION (WHAT)` section is *seeded* by the
+            extracted `DOM` and `IFC` bullet-points, re-phrased and
+            re-structured where the <instruction/> demands it, and the
+            `##  DESIGN (HOW)` and `##  VERIFICATION (WHEN)` sections
+            are *re-derived* from scratch,
+            </if>
+        -   <if condition="<mode/> is `unstructured`">
+            *all* existing content of the <instruction/> is *filed* into
+            the `##  SPECIFICATION (WHAT)`, `##  DESIGN (HOW)`, and
+            `##  VERIFICATION (WHEN)` sections: classify each existing
+            statement, prose paragraph, bullet, or list item by its
+            nature into a `DOM`, `IFC`, `ARC`, `IMP`, `REG`, or `CON`
+            bullet-point, keep its wording as *verbatim* as the
+            bullet-point <text/> conventions allow, *never* drop a
+            distinct statement, and *add* missing `DOM`/`IFC`,
+            `ARC`/`IMP`, and `REG`/`CON` bullet-points *derived* from
+            the existing content where a section would otherwise stay
+            empty,
+            </if>
+        -   every bullet-point starts in the `[ ]` todo state,
+        -   the `Status:` frontmatter key is *reset* to the *default*
+            state of the task lifecycle model
+            <ase-project-task-lifecycle/>, as the rebooted plan starts
+            its lifecycle anew,
+        -   the frontmatter keys `Group:`, `Phase:`, `After:`, `Kind:`,
+            `Tags:`, and `Branch:` are taken over from the previous plan
+            *verbatim* where present, except that all `grilled:` tags
+            are *dropped* from `Tags:` (the whole key is dropped if no
+            other tag remains), as the grilled plan content is gone, and
+        -   the entire "backmatter" of the previous plan is passed
+            through *verbatim*.
+
+    8.  <expand name="task-save-content" arg1="plan rebooted"></expand>
 
 4.  **Decide Next Step:**
 

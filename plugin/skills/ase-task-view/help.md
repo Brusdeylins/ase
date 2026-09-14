@@ -17,18 +17,26 @@ The plan is loaded via the `ase_task_load` MCP tool and shown framed
 between a `( TASK )` header and footer rule. If *id* is omitted, the
 *current* task id (inherited from the session context) is used.
 
-By default, when the plan is longer than 90 lines and contains an
-`IMPLEMENTATION DRAFT` section (produced by `ase-task-preflight`), the
-content of that section is collapsed to `[...]` to keep the view
+By default, when the plan is longer than 90 lines and its backmatter
+contains an implementation draft attachment (an attachment block of
+type `text/x-diff; charset=utf-8; kind="preflight"`, produced by `ase-task-preflight`),
+the payload of that attachment is collapsed to `[...]` to keep the view
 compact. The `--full`|`-f` option suppresses this collapsing and renders
 the plan in full, without any truncation or summarization.
+
+An implementation draft attachment whose `Modified:` key is absent or
+older than the `Modified:` key of the plan frontmatter is *stale*, as
+the plan changed after the draft was created. Such a draft is reported
+with a warning after the rendering, together with a hint that
+`ase-task-preflight` has to be run again, as `ase-task-implement`
+refuses a stale draft.
 
 ##  OPTIONS
 
 -   `--full`|`-f`:
-    Render the plan in full, without collapsing the
-    `IMPLEMENTATION DRAFT` section. By default, that section is
-    replaced with `[...]` for plans longer than 90 lines.
+    Render the plan in full, without collapsing the implementation
+    draft attachment. By default, its payload is replaced with `[...]`
+    for plans longer than 90 lines.
 
 ##  ARGUMENTS
 
@@ -56,7 +64,7 @@ View a specific task plan:
 ❯ /ase-task-view hello
 ```
 
-View a plan in full, including its `IMPLEMENTATION DRAFT` section:
+View a plan in full, including its implementation draft attachment:
 
 ```text
 ❯ /ase-task-view --full hello

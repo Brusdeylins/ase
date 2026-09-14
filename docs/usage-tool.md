@@ -59,7 +59,7 @@ The following top-level commands exist for configuration handling:
   in-memory view; on set/write, they cause a fatal error.
   Recognized keys are grouped under two top-level sections:
   `project.*` (project identity, classification, and artifact
-  globs: `project.id`, `project.name`, `project.boxing`, and the
+  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
   task identifier -- and `agent.skill`).
@@ -94,8 +94,8 @@ The following top-level commands exist for configuration handling:
   Initialize `.ase/config.yaml` with preset values. The *type* argument
   selects the preset:
   `default` (baseline: persona `engineer`, guidance `normal`,
-  boxing `white`, plus the active task `default` and the full set
-  of `project.artifact.*` globs),
+  boxing `white`, task lifecycle `solo`, plus the active task `default`
+  and the full set of `project.artifact.*` globs),
   `vibe` (persona `writer`, boxing `black`),
   `pro` (persona `engineer`, boxing `white`),
   or `industry` (persona `engineer`, boxing `grey`).
@@ -209,6 +209,7 @@ or *GitHub Copilot CLI* statusline:
   `%m` (model), `%e` (effort), `%t` (thinking), `%P` (persona,
   suppressed if empty), `%h` (guidance level, suppressed if empty),
   `%B` (project boxing transparency, suppressed if empty),
+  `%L` (project task lifecycle, suppressed if empty),
   `%c` (context-usage progress bar with a
   20-cell bar and percentage),
   `%C` (current/limit context tokens, e.g. `334k/1.0M`),
@@ -236,11 +237,11 @@ or *GitHub Copilot CLI* statusline:
   foreground color to the terminal default (no nesting); unrecognized
   color names are kept literally in the output. If no *line* arguments
   are given, a single default line `"%m %e %t"` is rendered. The active task id,
-  persona style, guidance level, and boxing transparency are resolved
-  from the *ASE* configuration cascade (with the current session id)
-  and fall back to the `ASE_TASK_ID`, `ASE_PERSONA_STYLE`,
-  `ASE_GUIDANCE_LEVEL`, and `ASE_PROJECT_BOXING` environment
-  variables. Each rendered line
+  persona style, guidance level, boxing transparency, and task lifecycle
+  are resolved from the *ASE* configuration cascade (with the current
+  session id) and fall back to the `ASE_TASK_ID`, `ASE_PERSONA_STYLE`,
+  `ASE_GUIDANCE_LEVEL`, `ASE_PROJECT_BOXING`, and
+  `ASE_PROJECT_TASK_LIFECYCLE` environment variables. Each rendered line
   is wrapped automatically when it would exceed the available width
   budget, where the budget is derived from the controlling terminal
   width (probed via `/dev/tty`) reduced by `2 *` (*margin* `+`
@@ -460,6 +461,19 @@ single-file layout on first access:
   With `--verbose`, each id is annotated with the task file's
   modification timestamp (`YYYY-MM-DD HH:MM`).
 
+- `ase task status` \[*id*\[`:`\]\] \[*status*\]:
+  Get or set the lifecycle status (`Status:` frontmatter key) of the
+  task plan with the given *id* (default: `$ASE_TASK_ID`, else
+  `default`). Without *status*, the current status is printed
+  (defaulting to the initial state of the configured task lifecycle
+  model). With *status* (a state of the model, case-insensitive), the
+  status is set (the `Modified:` key is left alone, as it tracks body
+  changes only); a status not reachable from the current one via one
+  or more transitions of the model is warned about, but set nevertheless. A
+  single bare token which is a state of the model is taken as *status*,
+  else as *id*. Exits with status 1 if no such task exists or the
+  *status* is unknown.
+
 - `ase task load` *id*:
   Load the task plan with the given *id* and write it to standard
   output. Prints nothing if the task does not exist.
@@ -471,7 +485,11 @@ single-file layout on first access:
 
 - `ase task save` *id*:
   Save the task plan with the given *id*, reading its contents from
-  standard input.
+  standard input. The `Status:` frontmatter key is checked against the
+  configured task lifecycle model: a status which is not a state of the
+  model, or which is not reachable from the previously saved status via
+  one or more transitions of the model, is warned about, but the plan
+  is saved nevertheless.
 
 - `ase task delete` *id*:
   Delete the task plan with the given *id* (removing its

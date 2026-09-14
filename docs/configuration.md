@@ -34,6 +34,16 @@ The following configuration parameters control the project:
     material findings only, and `black` yields minimal inspection with
     suppressed findings and hidden artifact internals.
 
+-   **project.task.lifecycle**: the project *task plans* follow a...
+
+    -   `solo`:       ...single-phase  lifecycle for a local solo developer (default).
+    -   `team`:       ...two-phase     lifecycle for a distributed small team.
+    -   `enterprise`: ...four-phase    lifecycle for a gated enterprise pipeline.
+
+    The lifecycle is exported by the session-start hook as the
+    `<ase-project-task-lifecycle/>` placeholder (and as the
+    `ASE_PROJECT_TASK_LIFECYCLE` environment variable).
+
 The project *artifacts* are configured per kind, each kind defined by a
 `.basedir` anchor and a `.files` miniglob spec. The `.basedir` is a
 directory resolved relative to the project root (empty means the project

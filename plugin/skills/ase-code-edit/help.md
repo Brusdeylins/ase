@@ -11,6 +11,7 @@
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
     [`--verify`|`-v`]
+    [`--branch`|`-b` *name*]
     [`--worktree`|`-w`]
     [`--loop`|`-l`]
     [*query*]
@@ -48,10 +49,13 @@ implementation until it passes). The *querying* state and every
     (domain-specifics, must be clarified), `INTERFACE` (externally
     observable behavior or UI/API interfaces, must be clarified),
     `ARCHITECTURE` (structure, wiring, placement, or dependencies,
-    should be clarified), or `IMPLEMENTATION` (inner technical details,
-    can be clarified) -- and a 1-2 word `TOPIC` hint. The questions of a
-    round are sorted by descending focus area importance (`DOMAIN`,
-    `INTERFACE`, `ARCHITECTURE`, `IMPLEMENTATION`).
+    should be clarified), `IMPLEMENTATION` (inner technical details,
+    can be clarified), `REGRESSION` (what must not break, should be
+    clarified), or `CONFIRMATION` (what proves the specified behavior,
+    should be clarified) -- and a 1-2 word `TOPIC` hint. The questions
+    of a round are sorted by descending focus area importance
+    (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`, `IMPLEMENTATION`,
+    `REGRESSION`, `CONFIRMATION`).
     All questions of a round are announced together below a
     `GRILLING ROUND K/L` line (the announcement line and round numbering
     are omitted when only a single round is performed) as an
@@ -81,12 +85,25 @@ implementation until it passes). The *querying* state and every
     until the verification passes. Without `--verify`, strictly no
     verification is performed at all.
 
+-   `--branch`|`-b` *name*:
+    The Git branch the change sets land on, the plan-less counterpart
+    of the `Branch:` key of a task plan. The default `current` denotes
+    the currently checked-out branch. Any other *name* not equal to
+    the checked-out branch makes the skill *switch* the working copy
+    to that branch in place (created from `HEAD` if it does not exist
+    yet) -- but only if the working copy has *no* uncommitted changes,
+    otherwise the skill stops and touches nothing -- or, together with
+    `--worktree`, check that branch out inside the worktree.
+
 -   `--worktree`|`-w`:
     Apply the change sets inside a dedicated Git worktree (as
     `ase-task-implement --worktree`) instead of the current working
-    copy. One single worktree, named by a two-word id derived from the
-    first query, serves the whole skill run: all `--loop` iterations
-    land in it and it is left uncommitted for review.
+    copy. One single worktree `.ase/worktree/<id>`, named by a
+    two-word id derived from the first query, serves the whole skill
+    run: all `--loop` iterations land in it and it is left uncommitted
+    for review. The worktree carries the `--branch` branch, or -- as
+    the checked-out branch cannot be checked out a second time -- an
+    equally named branch created from `HEAD` by default.
 
 -   `--loop`|`-l`:
     Loop the whole state cycle: after each iteration, ask for the next
@@ -107,6 +124,7 @@ implementation until it passes). The *querying* state and every
 -   You want an analyzer issue like `P1` fixed directly without a plan
 -   You want a quick change with optional grilling and verification
 -   You want several edits chained in a loop, optionally in a worktree
+-   You want the change set to land on a specific Git branch
 
 ##  EXAMPLES
 
@@ -126,6 +144,13 @@ Loop over multiple edits inside a dedicated Git worktree:
 
 ```text
 ❯ /ase-code-edit -l -w
+```
+
+Edit in place on the branch `feature-verbose`, switching the (clean)
+working copy to it first:
+
+```text
+❯ /ase-code-edit -b feature-verbose add a --verbose option to the CLI
 ```
 
 ##  SEE ALSO

@@ -41,6 +41,16 @@ Grill Skill Common Steps
         is realized in the code base. These aspects *CAN* be
         clarified, as they shape technical inner details only.
 
+    5.  *REGRESSION*: Aspects affecting the regression checks of
+        <arg1/>, i.e. decisions on what must *not* break. These
+        aspects *SHOULD* be clarified, as they decide when the
+        solution counts as safe.
+
+    6.  *CONFIRMATION*: Aspects affecting the confirmation checks of
+        <arg1/>, i.e. decisions on what proves the specified
+        behavior. These aspects *SHOULD* be clarified, as they
+        decide when the solution counts as complete and correct.
+
 -   SEVERITY:
 
     The *Focus Area* indicate the severity of the aspect:
@@ -49,6 +59,8 @@ Grill Skill Common Steps
     -   severity *MUST*   for *INTERFACE*      focus area
     -   severity *SHOULD* for *ARCHITECTURE*   focus area
     -   severity *MAY*    for *IMPLEMENTATION* focus area
+    -   severity *SHOULD* for *REGRESSION*     focus area
+    -   severity *SHOULD* for *CONFIRMATION*   focus area
 
 -   INDICATORS:
 

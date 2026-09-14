@@ -21,18 +21,40 @@ last-modified timestamp of each task plan are rendered as additional
 columns.
 
 The listing is restricted to an *effective state set*, derived from the
-`Status:` frontmatter key of each task plan (which defaults to `DRAFTED`
-for a plan carrying no such key): with `--include` only, exactly the
-listed states are shown; with `--exclude` only, all states except the
-listed ones; with both, the included ones minus the excluded ones. An
-unknown state, or a combination which cancels out to an empty set,
-aborts the skill with an error. By default,
-`--exclude COMPLETED,CANCELLED` is in effect, so finished and
-abandoned task plans stay out of the way. The eight states are:
+`Status:` frontmatter key of each task plan (which defaults to the
+initial state of the task lifecycle model for a plan carrying no such
+key): with `--include` only, exactly the listed states are shown; with
+`--exclude` only, all states except the listed ones; with both, the
+included ones minus the excluded ones. An unknown state, or a
+combination which cancels out to an empty set, aborts the skill with an
+error. The `finished` sentinel stands for the finished states of the
+task lifecycle model. By default, `--exclude finished` is in effect, so
+finished and abandoned task plans stay out of the way. A task plan whose
+`Status:` is not a state of the task lifecycle model at all is never
+filtered out: it is kept in the listing and reported with a warning.
+
+The states depend on the task lifecycle model configured for the
+project via `project.task.lifecycle`. The `solo` model (default) has
+the 4 states (initial: `OPEN`, finished: `CLOSED` and `CANCELLED`):
 
 ```text
-DRAFTED   APPROVED  STARTED  COMPLETED
-REJECTED  DEFERRED  BLOCKED  CANCELLED
+OPEN  SHELVED  CLOSED  CANCELLED
+```
+
+The `team` model has the 6 states (initial: `PLANNING`, finished:
+`IMPLEMENTED` and `CANCELLED`):
+
+```text
+PLANNING  SHELVED  IMPLEMENTING  STALLED  IMPLEMENTED  CANCELLED
+```
+
+The `enterprise` model has the 14 states (initial: `DRAFTED`, finished:
+`INTEGRATED` and `CANCELLED`):
+
+```text
+DRAFTED      SHELVED   PLANNING     PLANNED   STALLED
+IMPLEMENTING IMPLEMENTED DECLINED   APPROVING APPROVED
+DEFERRED     INTEGRATING INTEGRATED CANCELLED
 ```
 
 ##  OPTIONS
@@ -44,14 +66,15 @@ REJECTED  DEFERRED  BLOCKED  CANCELLED
 
 -   `--include`|`-i`=*state*[`,`...]:
     Restrict the listed task plans to the given comma-separated list of
-    lifecycle states (e.g. `STARTED,BLOCKED`). Without this option, all
-    eight states are listed. The `none` sentinel selects no state at all.
+    lifecycle states (e.g. `IMPLEMENTING,STALLED`). Without this option,
+    all states are listed. The `none` sentinel selects no state at all,
+    the `finished` sentinel selects the finished states.
 
 -   `--exclude`|`-e`=*state*[`,`...]:
     Remove the given comma-separated list of lifecycle states from the
     listed task plans. Applied *after* `--include`, so
-    `-i DRAFTED,STARTED -e STARTED` lists `DRAFTED` only. Defaults to
-    `COMPLETED,CANCELLED`; pass `--exclude none` to suppress the
+    `-i PLANNING,IMPLEMENTING -e IMPLEMENTING` lists `PLANNING` only.
+    Defaults to `finished`; pass `--exclude none` to suppress the
     default and list task plans in every state.
 
 ##  SCENARIOS
@@ -83,7 +106,7 @@ List the task ids of every task plan, including the finished ones:
 List only the task ids of the task plans currently under work:
 
 ```text
-❯ /ase-task-list --include STARTED,BLOCKED
+❯ /ase-task-list --include IMPLEMENTING,STALLED
 ```
 
 ##  SEE ALSO
