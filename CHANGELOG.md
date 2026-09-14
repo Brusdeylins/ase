@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-1.0.6 (2026-09-13)
+1.0.6 (2026-09-14)
 ------------------
 
 -   FEATURE [plugin]: Output style for Claude Code
@@ -18,6 +18,9 @@ ChangeLog
     `ase setup status` reports it as `OUTPUTSTYLE` rows. Under GitHub Copilot CLI and
     OpenAI Codex CLI, which have no output style concept, the session-start hook injects
     the identical style instructions (frontmatter stripped) into the session context.
+
+-   UPDATE [infr]: NPM dependencies
+    Updated NPM dependencies: SpecBook 1.2.13, etc.
 
 1.0.5 (2026-09-13)
 ------------------
