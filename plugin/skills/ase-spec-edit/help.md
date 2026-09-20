@@ -9,6 +9,7 @@
     [`--help`|`-h`]
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
+    [`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`]
     [`--verify`|`-v`]
     [`--branch`|`-b` *name*]
     [`--worktree`|`-w`]
@@ -74,10 +75,23 @@ timestamp refreshed.
     questions are asked at all.
 
 -   `--grill-rounds`|`-r` *n*:
-    The number of grill rounds to apply (default: `1`). Each round
-    starts from scratch from only the current WHAT and HOW parts,
+    The *maximum* number of grill rounds to apply (default: `1`). Each
+    round starts from scratch from only the current WHAT and HOW parts,
     forgetting all information of previous rounds, and closes with an
-    `EDIT TODO` box. Only effective together with `--grill`.
+    `EDIT TODO` box. The grilling stops early -- announced by a
+    `grilling finished early` status line -- once a round, even the
+    first one, finds the open points clear enough according to
+    `--grill-until`. Only effective together with `--grill`.
+
+-   `--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`:
+    Grill until at least all open points of the given severity or
+    higher are clear (default: `MUST`), where the severity follows from
+    the focus area: `MUST` (`DOMAIN`, `INTERFACE`), `SHOULD`
+    (`ARCHITECTURE`, `REGRESSION`, `CONFIRMATION`), and `MAY`
+    (`IMPLEMENTATION`). Independent of this, every open point is rated
+    with an individual impact (`HIGH`, `MEDIUM`, or `LOW`), which
+    decides which points are raised as questions and in which order
+    within a focus area. Only effective together with `--grill`.
 
 -   `--verify`|`-v`:
     Verify the edited specification by validating it via *SpecBook*

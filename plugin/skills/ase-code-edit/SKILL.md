@@ -1,6 +1,6 @@
 ---
 name: ase-code-edit
-argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--verify|-v] [--branch|-b <name>] [--worktree|-w] [--loop|-l] [<query>|<issue-id>]"
+argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--verify|-v] [--branch|-b <name>] [--worktree|-w] [--loop|-l] [<query>|<issue-id>]"
 description: >
     Edit Source Code: Use when the user wants to "edit" the code base in
     one shot from a query or a bare analyzer issue id like "P1", fusing
@@ -22,7 +22,7 @@ Edit Source Code
 
 <expand name="getopt"
     arg1="ase-code-edit"
-    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --verify|-v --branch|-b=current --worktree|-w --loop|-l">
+    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --verify|-v --branch|-b=current --worktree|-w --loop|-l">
     $ARGUMENTS
 </expand>
 
@@ -172,8 +172,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
         <expand name="grill-understanding" arg1="the edit query in <todo-what/> and <todo-how/>"></expand>
 
-    2.  Perform <getopt-option-grill-rounds/> grilling *rounds*,
-        numbered <m/> (1-<getopt-option-grill-rounds/>).
+    2.  Perform *at most* <getopt-option-grill-rounds/> grilling
+        *rounds*, numbered <m/> (1-<getopt-option-grill-rounds/>) --
+        the round count is a *maximum* only, as every round can
+        *stop* the grilling *early* in its item 3 below.
 
         For each round:
 
@@ -218,8 +220,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             For each question, determine its focus area
             <context-N-focus/> from the mentioned *Focus Areas*, a 1-3
             word hint <context-N-topic/>, describing what the question
-            is about, and a <context-N-severity/>, describing how
-            important this question is.
+            is about, a <context-N-severity/>, describing how
+            important this question is, and a <context-N-impact/> of
+            `HIGH`, `MEDIUM`, or `LOW`, rating the individual impact
+            of the question.
 
             Set <context-N-id/> to `DOM` for <context-N-focus/> of
             `DOMAIN`, `IFC` for <context-N-focus/> of `INTERFACE`, `ARC`
@@ -228,14 +232,26 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             <context-N-focus/> of `REGRESSION`, and `CON` for
             <context-N-focus/> of `CONFIRMATION`.
 
+            Finally, decide whether the grilling stops early:
+
+            <expand name="grill-stop" arg1="<getopt-option-grill-until/>" arg2="✪ skill: **ase-code-edit**"></expand>
+
+            If <grill-stop/> is `true`, skip the remaining items of
+            this round and all remaining rounds, and continue with
+            the *implementing* state.
+
         4.  SORT QUESTIONS:
 
             Finally, *sort* the questions by descending focus area
             order -- first all `DOMAIN`, then all `INTERFACE`, then all
             `ARCHITECTURE`, then all `IMPLEMENTATION`, then all
-            `REGRESSION`, and then all `CONFIRMATION` ones -- and
-            renumber <N/> according to this order, starting at `1`.
-            Truncate the list after a maximum of 10 questions and set
+            `REGRESSION`, and then all `CONFIRMATION` ones -- and,
+            within each focus area, by descending
+            <context-N-impact/>. If more than 10 questions exist,
+            drop the questions of lowest <context-N-impact/> -- within
+            equal impact the ones of lowest focus area order first --
+            until a maximum of 10 questions remains. Then renumber
+            <N/> according to the sort order, starting at `1`, and set
             <n/> to the number of remaining questions. Do not output
             anything.
 

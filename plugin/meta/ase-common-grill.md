@@ -62,6 +62,21 @@ Grill Skill Common Steps
     -   severity *SHOULD* for *REGRESSION*     focus area
     -   severity *SHOULD* for *CONFIRMATION*   focus area
 
+-   IMPACT:
+
+    Independent of its *Focus Area*, every open point carries an
+    individual *impact* rating, describing how noticeably its decision
+    shapes the solution:
+
+    -   impact *HIGH*:   the decision shapes the solution fundamentally
+    -   impact *MEDIUM*: the decision shapes the solution noticeably
+    -   impact *LOW*:    the decision shapes the solution marginally
+
+    The impact decides *which* open points are raised as questions --
+    points of higher impact first, so points of lowest impact are the
+    first ones to be dropped -- and in which *order* they are raised
+    *within* a focus area.
+
 -   INDICATORS:
 
     Check the following indicators for identifying problematic
@@ -96,6 +111,27 @@ Grill Skill Common Steps
         When the realization of functionality usually is known
         to be supported by the use of frameworks or libraries,
         but no dependencies on such solutions were mentioned.
+
+</define>
+
+<define name="grill-stop">
+
+The requested number of grilling rounds is a *maximum* only: the
+grilling *stops early* once all open points of severity <arg1/> or
+higher are clear. For this, the freshly determined questions of the
+current round are the *still open points*, ranked by their
+<context-N-severity/> in the descending order `MUST`, `SHOULD`, `MAY`.
+
+<if condition="no question has a <context-N-severity/> of <arg1/> or higher">
+Set <grill-stop>true</grill-stop> and only output the following <template/>:
+
+<template>
+⧉ **ASE**: <arg2/>, ▶ status: **grilling finished early -- all points of severity <arg1/> or higher are clear**
+</template>
+</if>
+<else>
+Set <grill-stop>false</grill-stop>. Do not output anything.
+</else>
 
 </define>
 

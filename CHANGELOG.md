@@ -5,6 +5,11 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [plugin]: Section-focused task plan grilling
+    The new `--focus`/`-f` option of `ase-task-grill` grills only the given plan sections
+    (`SPEC`, `DES`, `VER`) in the given order, the `Tags:` key records each as a `grilled:<section>` tag,
+    and grilling gained the focus areas `REGRESSION` (`REG`) and `CONFIRMATION` (`CON`).
+
 -   FEATURE [tool]: Configurable task lifecycle model
     The new `project.task.lifecycle` configuration selects the `solo` (default), `team`, or
     `enterprise` lifecycle model (superseding `simple`/`complex` of 1.0), exported as

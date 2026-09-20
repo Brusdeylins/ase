@@ -8,6 +8,7 @@
 `ase-task-grill`
     [`--help`|`-h`]
     [`--rounds`|`-r` *n*]
+    [`--until`|`-u` `MUST`|`SHOULD`|`MAY`]
     [`--focus`|`-f` *section*[,...]]
     [`--next`|`-n` *option*[,...]]
     [*id*]
@@ -32,9 +33,9 @@ hint. The focus areas are selected by the plan sections under focus
 selects `ARCHITECTURE` and `IMPLEMENTATION`, and `VERIFICATION` selects
 `REGRESSION` and `CONFIRMATION`. The questions are sorted
 primarily by the given section order, secondarily by descending focus
-area importance, and tertiarily by the decision tree of their
-dependencies, so each decision is asked after the decisions it depends
-on. It honors checks
+area importance, tertiarily by descending individual impact, and
+finally by the decision tree of their dependencies, so each decision is
+asked after the decisions it depends on. It honors checks
 for *fuzzy language*, *conflicting terminology*, *conflicting code*,
 *non-concrete scenarios*, *unspecified architecture patterns*, and
 *unspecified dependencies*.
@@ -68,11 +69,24 @@ in state `[-]` (cancelled) or `[>]` (deferred) are never questioned.
 ##  OPTIONS
 
 -   `--rounds`|`-r` *n*:
-    The number of grill rounds to apply (default: `1`). Each round
-    starts from scratch from only the current plan, as updated by all
-    previous rounds, and re-derives its questions from it, forgetting
+    The *maximum* number of grill rounds to apply (default: `1`). Each
+    round starts from scratch from only the current plan, as updated by
+    all previous rounds, and re-derives its questions from it, forgetting
     all questions and answers of previous rounds. With more than one
-    round, each round is announced as `GRILLING ROUND K/L`.
+    round, each round is announced as `GRILLING ROUND K/L`. The grilling
+    stops early -- announced by a `grilling finished early` status line
+    -- once a round, even the first one, finds the open points clear
+    enough according to `--until`.
+
+-   `--until`|`-u` `MUST`|`SHOULD`|`MAY`:
+    Grill until at least all open points of the given severity or
+    higher are clear (default: `MUST`), where the severity follows from
+    the focus area: `MUST` (`DOMAIN`, `INTERFACE`), `SHOULD`
+    (`ARCHITECTURE`, `REGRESSION`, `CONFIRMATION`), and `MAY`
+    (`IMPLEMENTATION`). Independent of this, every open point is rated
+    with an individual impact (`HIGH`, `MEDIUM`, or `LOW`), which
+    decides which points are raised as questions and in which order
+    within a focus area.
 
 -   `--focus`|`-f` *section*[,...]:
     Grill only the given plan *section*(s), in the given order. Each
