@@ -17,6 +17,7 @@ import { ofetch, FetchError } from "ofetch"
 import { isMap }              from "yaml"
 import prettyMs               from "pretty-ms"
 import * as v                 from "valibot"
+import { Tail }               from "tail"
 
 import { McpServer }                     from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
@@ -623,6 +624,37 @@ export default class ServiceCommand {
         return r.status >= 200 && r.status < 300 ? 0 : 1
     }
 
+    /*  log flow: show the (tail of the) log file and optionally follow it  */
+    private async doLog (opts: { follow?: boolean, lines?: string }): Promise<number> {
+        const ctx     = this.loadContext()
+        const logFile = path.join(ctx.aseDir, "service.log")
+        const lines   = opts.lines !== undefined ? Number(opts.lines) : null
+        if (lines !== null && (!Number.isInteger(lines) || lines < 1))
+            throw new Error(`invalid number of lines: ${opts.lines}`)
+        if (!fs.existsSync(logFile))
+            return 0
+        if (opts.follow) {
+            /*  follow until interrupted (on log trimming,
+                "tail" continues at the new end of the file)  */
+            const tail = new Tail(logFile, { nLines: lines ?? 10 })
+            tail.on("line", (line: string) => {
+                process.stdout.write(`${line}\n`)
+            })
+            return await new Promise<number>((_resolve, reject) => {
+                tail.on("error", (err: unknown) => {
+                    reject(err instanceof Error ? err : new Error(String(err)))
+                })
+            })
+        }
+        if (lines !== null) {
+            const tail = Service.readLogTail(logFile, lines)
+            process.stdout.write(tail.length > 0 ? `${tail}\n` : "")
+        }
+        else
+            process.stdout.write(fs.readFileSync(logFile))
+        return 0
+    }
+
     /*  stop flow: no-op if no port configured or connection refused  */
     private async doStop (): Promise<number> {
         const ctx = this.loadContext()
@@ -684,6 +716,16 @@ export default class ServiceCommand {
             .argument("<cmd>", "Command token to dispatch to the service")
             .action(async (cmd: string) => {
                 process.exit(await this.doSend(cmd))
+            })
+
+        /*  register CLI sub-command "ase service log"  */
+        service
+            .command("log")
+            .description("Show the log of the background service")
+            .option("-f, --follow", "keep following the log for newly appended lines")
+            .option("-n, --lines <n>", "show the last <n> lines only (default: all, or 10 with --follow)")
+            .action(async (opts: { follow?: boolean, lines?: string }) => {
+                process.exit(await this.doLog(opts))
             })
 
         /*  register CLI sub-command "ase service stop"  */

@@ -5,6 +5,11 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool]: Service log viewing
+    The new `ase service log` sub-command shows the `.ase/service.log` of the background service,
+    optionally limited to its last lines (`-n`/`--lines`) and optionally followed in the style of
+    `tail -f` (`-f`/`--follow`, based on the NPM package `tail`).
+
 -   FEATURE [plugin]: Section-focused task plan grilling
     The new `--focus`/`-f` option of `ase-task-grill` grills only the given plan sections
     (`SPEC`, `DES`, `VER`) in the given order, the `Tags:` key records each as a `grilled:<section>` tag,
