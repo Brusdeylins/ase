@@ -69,7 +69,10 @@ implementation until it passes). The *querying* state and every
     all (or a subset) of the listed aspect questions and whose only
     answer options are the fixed `STOP SKILL` (stop the skill) and
     `SKIP GRILLING` (skip the remaining grilling) ones, plus free-text
-    input. The answers are
+    input. The questions are numbered `1`, `2`, etc. and their answer
+    alternatives are lettered `A`, `B`, etc., so the free-text input can
+    cherry-pick answers with short responses matching `\d+[a-zA-Z]`
+    (like `1A 2c`), freely mixed with keyword text. The answers are
     merged back into the WHAT and HOW parts of the query. Without
     `--grill`, no questions are asked at all.
 

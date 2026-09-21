@@ -183,7 +183,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         2.  DETERMINE QUESTIONS:
 
             Determine the questions, comprised of a round-local id
-            <question-N-id/> of `Q<N/>` -- where <N/> restarts at `1`
+            <question-N-id/> of `<N/>` -- where <N/> restarts at `1`
             in *every* round, independent of the numbering of previous
             rounds --, and a very brief but precise question text
             <question-N-text/>. Each question is chosen to
@@ -255,9 +255,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             For all remaining <question-N/>, check the specification and
             your world knowledge to find *two to three* grounded answer
             alternatives <answer-N-K/> with a question-local id
-            <answer-N-K-id/> of `A<K/>` -- where <K/> restarts at `1`
-            for *every* question, independent of the numbering of other
-            questions --, a 1-3 word label <answer-N-K-label/>, and
+            <answer-N-K-id/> of the <K/>-th upper-case letter (`A`, `B`,
+            `C`) -- where <K/> restarts at `1` for *every* question,
+            independent of the numbering of other questions --, a 1-3
+            word label <answer-N-K-label/>, and
             an ultra brief description <answer-N-K-description/> of
             at most *10 words*. For the answer which reflects the
             current <todo-what/>/<todo-how/> understanding, append
@@ -318,9 +319,9 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 | <question-2/> | <answer-2/> |
                 | [...]         | [...]       |
 
-                Legend: **DOM**: Domain       (MUST)    **IFC**: Interface      (MUST)    **Qn**: round-local question id
-                        **ARC**: Architecture (SHOULD)  **IMP**: Implementation (MAY)     **An**: question-local answer id
-                        **REG**: Regression   (SHOULD)  **CON**: Confirmation   (SHOULD)  ⚑:  current decision state
+                Legend: **DOM**: Domain       (MUST)    **IFC**: Interface      (MUST)    **n**: round-local question number
+                        **ARC**: Architecture (SHOULD)  **IMP**: Implementation (MAY)     **X**: question-local answer letter
+                        **REG**: Regression   (SHOULD)  **CON**: Confirmation   (SHOULD)  ⚑: current decision state
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
@@ -328,7 +329,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 *one* free-text reply:
 
                 <expand name="custom-dialog" arg1="--other">
-                    <round-id/>: What is your (combined) answer to all (or a subset) of the above questions? (keywords or `Qn:An` references are sufficient)
+                    <round-id/>: What is your (combined) answer to all (or a subset) of the above questions? (keywords or `nX` short responses are sufficient)
                     SKIP GRILLING: skip all remaining grilling and continue with the implementation
                     STOP SKILL: stop the entire skill immediately
                 </expand>
@@ -344,6 +345,15 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             Merge all gathered answers in <result/> of the round -- the
             combined reply -- *exclusively* back into <todo-what/> and
             <todo-how/>. Do not output anything.
+
+            Within the combined reply, recognize every token matching
+            the regexp `\d+[a-zA-Z]` (like `1A`, separated by whitespace
+            or commas, and freely mixed with keyword text) as a *short
+            response*, which cherry-picks for the question with
+            <question-N-id/> equal to its number the answer with
+            <answer-N-K-id/> equal to its letter (case-insensitive). A
+            token referencing a non-existing question or answer is
+            treated as plain free text.
 
         8.  SHOW CURRENT TODO:
 

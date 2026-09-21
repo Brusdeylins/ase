@@ -45,19 +45,28 @@ ChangeLog
     `finished` sentinel expands to its finished states, the default is now `--exclude finished`,
     and a plan with an unknown `Status:` is kept in the listing (with a warning).
 
--   FEATURE [plugin]: Section-focused task plan grilling
-    The new `--focus`/`-f` option of `ase-task-grill` grills only the given plan sections
-    (`SPEC`, `DES`, `VER`) in the given order, the `Tags:` key records each as a `grilled:<section>` tag,
-    and grilling gained the focus areas `REGRESSION` (`REG`) and `CONFIRMATION` (`CON`).
-
 -   FEATURE [plugin]: Checkbox-state aware grilling, preflight, and implementation
     `ase-task-grill` marks unanswered bullet-points as `[?]`, resets them to `[ ]` once answered,
     and re-asks only those of an already grilled section. `ase-task-grill`, `ase-task-preflight`,
     and `ase-task-implement` skip `[-]` (cancelled) and `[>]` (deferred) bullet-points entirely.
 
+-   FEATURE [plugin]: Severity-bounded grilling with maximum round count
+    The round count of `ase-code-edit`/`ase-spec-edit` (`--grill-rounds`) and `ase-task-grill`
+    (`--rounds`) is now a *maximum*: the new `--grill-until`/`--until` option (`MUST`, `SHOULD`, `MAY`,
+    default `MUST`) stops the grilling early -- even in the first round, announced by a `grilling
+    finished early` status line -- once all open points of that severity or higher are clear. Every
+    open point is additionally rated by an individual impact (`HIGH`, `MEDIUM`, `LOW`), which
+    decides which points are raised and their order within a focus area.
+
 -   IMPROVEMENT [plugin]: Regression and confirmation grilling in `ase-spec-edit`
     The grilling of `ase-spec-edit` now also raises `REGRESSION` (`REG`) and `CONFIRMATION`
     (`CON`) focus area questions, aligned with `ase-code-edit`.
+
+-   IMPROVEMENT [plugin]: Shorter grilling ids and short responses in `ase-code-edit`/`ase-spec-edit`
+    The grilling questions are now numbered `1`, `2`, etc. (instead of `Q1`, `Q2`, etc.) and their
+    answer alternatives lettered `A`, `B`, etc. (instead of `A1`, `A2`, etc.), and the combined reply
+    recognizes short responses matching `\d+[a-zA-Z]` (like `1A 2c`, instead of `Qn:An`) for
+    cherry-picking answers, freely mixed with keyword text.
 
 -   BUGFIX [plugin]: Task plan kind `SPECIFYING` honored
     `ase-task-preflight` and `ase-task-implement` now recognize the `Kind: SPECIFYING`

@@ -70,9 +70,13 @@ timestamp refreshed.
     whose question asks for the combined answer to all (or a subset) of
     the listed questions and whose only answer options are the fixed
     `SKIP GRILLING` (skip the remaining grilling) and `STOP SKILL` (stop
-    the skill) ones, plus free-text input. The answers are merged back
-    into the WHAT and HOW parts of the query. Without `--grill`, no
-    questions are asked at all.
+    the skill) ones, plus free-text input. The questions are numbered
+    `1`, `2`, etc. and their answer alternatives are lettered `A`, `B`,
+    etc., so the free-text input can cherry-pick answers with short
+    responses matching `\d+[a-zA-Z]` (like `1A 2c`), freely mixed with
+    keyword text. The answers are merged back into the WHAT and HOW
+    parts of the query. Without `--grill`, no questions are asked at
+    all.
 
 -   `--grill-rounds`|`-r` *n*:
     The *maximum* number of grill rounds to apply (default: `1`). Each
