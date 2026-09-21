@@ -167,6 +167,93 @@ installation path. It therefore *MUST* strictly follow this contract:
 -   **Body**: usually the `<flow>` derived in `STEP 3` below.
     But everything is allowed here.
 
+-   **Agent Budget**: every `<agent/>` the generated skill emits *MUST*
+    carry an explicit `model` attribute and *MUST* end its body with the
+    effort line of that tier, as defined by `Agent Budget` below. An
+    `<agent/>` without a `model` attribute is a *defect* of the generated
+    skill.
+
+Agent Budget
+------------
+
+A workflow skill fans out into sub-agents and *pays* for every one of
+them. A generated skill therefore decides granularity and budget
+*together*, at *every* dispatch: cut the work as fine as it can be cut,
+then give each piece the *smallest* model and the *lowest* effort that
+can still do it correctly.
+
+-   **Never inherit**: the model the *generated skill* runs on is
+    *irrelevant* for its sub-agents. Without a `model` attribute a
+    sub-agent inherits the caller's model, which turns a mechanical step
+    into the most expensive step of the workflow.
+
+-   **Granularity**: one sub-agent per *independently decidable* unit. A
+    step whose input decomposes into genuinely independent parts becomes
+    one sub-agent per part, and their results are concatenated. A step
+    that is pure mechanics -- listing, merging, transcribing, running a
+    command -- is its own sub-agent on a cheap model, so it never rides
+    along on an expensive one. Split only where the parts really are
+    independent: a step which reasons *across* the parts is never split.
+
+-   **Model**: assess how much *judgment* the piece needs, never how
+    *important* it is:
+
+    -   `haiku`: mechanical work with a decidable right answer and no
+        design judgment -- listing, collecting, merging, transcribing,
+        mechanical renames, running a command and reporting its output.
+    -   `sonnet`: local reasoning inside one file or one obvious call
+        path -- file-local quality, rule-driven checks, surgical
+        single-site changes, wording of documentation.
+    -   `opus`: reasoning *across* files, callers, and contracts --
+        architecture and code analysis, security-relevant paths, changes
+        to an interface with callers, repair of a severe defect.
+    -   `fable`: *only* where a wrong answer would poison the entire
+        workflow and no cheaper tier can be trusted -- a whole-scope
+        closure, a final conformance pass holding everything in view.
+
+    These are *defaults*: move a dispatch *down* a tier once its actual
+    input turns out trivial, and *up* a tier once it turns out hard.
+
+-   **Effort**: the `Agent` tool has *no* effort parameter, so effort is
+    carried in the *prompt*, as the *last line* of the <agent-body/>:
+    *low* is no thinking directive at all, *medium* is `Think about
+    this.`, *high* is `Think hard about this.`, and *xhigh* is
+    `Ultrathink about this.`
+
+    Effort follows the model tier: `haiku` runs at *low*, `sonnet` and
+    `opus` at *high*, `fable` at *xhigh*. A de-escalated model lowers the
+    effort with it. `xhigh` is *not* a way to buy confidence: a step that
+    needs it is usually a step whose scope is too large, which the
+    granularity rule splits instead.
+
+    *Binding floor*: a sub-agent whose body invokes a `<skill/>` runs at
+    *at least* `high` effort, whatever its model tier -- an ASE skill is a
+    multi-step procedure with its own contract, and run at low effort it
+    returns a plausible-looking result which silently skipped half of the
+    procedure.
+
+-   **Token economy**: most tokens are spent on what flows *through* the
+    sub-agents, not on how hard they think. Every sub-agent returns
+    *exactly* the result its body specifies and *nothing else* -- no
+    prose summary, no restated file content, no narration of what it did.
+    It reads the *excerpts* a step needs, not whole files, and never
+    re-reads what a previous result already carries.
+
+-   **Internal language**: sub-agents of a workflow talk to the workflow,
+    never to the user. Every free-text field a sub-agent *returns* is
+    therefore written *telegraphically* -- drop articles, copulas,
+    hedges, and connectives, keep nouns, verbs, identifiers, and numbers.
+    Compressing the register never compresses the *evidence*: a citation
+    keeps its `<file/>:<line/>` and its verbatim proof.
+
+    This register is *forbidden* for everything which lands *in the
+    repository or in front of the user* -- comments, identifiers, test
+    names, documentation, and every `<template/>` the generated skill
+    itself renders, which stays in the conversation language and the
+    active persona style. The generated skill is the *translator*: it
+    reads telegraphic results and writes the user-facing output in normal
+    language.
+
 Procedure
 ---------
 
@@ -301,20 +388,30 @@ Procedure
         called skill would otherwise interfere with the task tracking of
         the generated workflow skill itself.
 
-    3.  For *every* `<parallel>` element which contains at least one
+    3.  Assign the *budget* of every derived `<agent/>` element, as
+        defined by `Agent Budget` above: first re-cut an action whose
+        parts are independently decidable into one `<agent/>` per part,
+        then set the `model` attribute from the judgment the piece
+        actually needs, and finally append the effort line of that tier
+        as the *last* line of its <agent-body/>. An `<agent/>` whose body
+        invokes a `<skill/>` gets at least `Think hard about this.` Add
+        to the body of every `<agent/>` which returns a result what
+        *exactly* it has to return, and that it returns nothing else.
+
+    4.  For *every* `<parallel>` element which contains at least one
         `<agent isolation="worktree">`, you *MUST* append a *dedicated*
         consolidation `<step/>` directly after the `<step/>` holding that
         `<parallel>` element, and this consolidation step *MUST* contain
         an `<agent-consolidation/>` element, so the Git WorkTrees of the
         concurrent sub-agents are merged and removed again.
 
-    4.  Determine the *options* of the generated skill: declare an option
+    5.  Determine the *options* of the generated skill: declare an option
         only when <workflow-description/> actually asks for it, and
         express it in the `--<long/>[|-<short/>][=<default/>|=(<c1/>|<c2/>|...)[...]]`
         spec syntax of the `getopt` definition, which also covers the fixed
         *choice* form and the comma-separated *list* form.
 
-    5.  Do not output anything in this STEP 3.
+    6.  Do not output anything in this STEP 3.
 
     </step>
 
@@ -324,7 +421,8 @@ Procedure
         Set <structure/> to a compact rendering of the derived workflow --
         one line per `<step/>`, prefixed with its number, and one indented
         line per contained `<parallel/>`, `<agent/>`, `<skill/>`, or
-        `<agent-consolidation/>` element -- and report it with the
+        `<agent-consolidation/>` element, every `<agent/>` line carrying
+        its assigned model and effort -- and report it with the
         following <template/>:
 
         <template>
