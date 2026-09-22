@@ -5,6 +5,17 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [plugin]: Clickable grilling table
+    In the latest grilling table redrawn by the function hooks module `ase-mods.ts`, every
+    question and every answer alternative reveals a clickable button while hovered (rendered in
+    red; at rest the styled text is shown, so bold and code styling survives). A click on a
+    question inserts its number `n` into the prompt (replacing the standalone number of another
+    question, as at most one question is selected), a click on an answer inserts its short
+    response `nX` (replacing an existing `nY` or standalone `n` of the same question in place,
+    else appending), and the pick/selection rendering (now inversed instead of red) is refreshed
+    immediately. The question numbers are right-aligned to the widest one.
+    Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`
+
 -   FEATURE [tool]: Service log viewing
     The new `ase service log` sub-command shows the `.ase/service.log` of the background service,
     optionally limited to its last lines (`-n`/`--lines`) and optionally followed in the style of

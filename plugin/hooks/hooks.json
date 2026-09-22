@@ -1,4 +1,7 @@
 {
+    "modules": [
+        "../mods/ase-mods.ts"
+    ],
     "hooks": {
         "SessionStart": [
             {
