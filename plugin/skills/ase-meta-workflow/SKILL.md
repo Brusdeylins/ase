@@ -168,10 +168,11 @@ installation path. It therefore *MUST* strictly follow this contract:
     But everything is allowed here.
 
 -   **Agent Budget**: every `<agent/>` the generated skill emits *MUST*
-    carry an explicit `model` attribute and *MUST* end its body with the
-    effort line of that tier, as defined by `Agent Budget` below. An
-    `<agent/>` without a `model` attribute is a *defect* of the generated
-    skill.
+    carry an explicit capability *tier* and *MUST* end its body with the
+    effort line of that tier, as defined by `Agent Budget` below. How the
+    tier reaches the sub-agent is dispatched on <ase-agent-tool/> there.
+    An `<agent/>` whose tier is neither carried by a `model` attribute nor
+    stated in its body is a *defect* of the generated skill.
 
 Agent Budget
 ------------
@@ -179,11 +180,11 @@ Agent Budget
 A workflow skill fans out into sub-agents and *pays* for every one of
 them. A generated skill therefore decides granularity and budget
 *together*, at *every* dispatch: cut the work as fine as it can be cut,
-then give each piece the *smallest* model and the *lowest* effort that
-can still do it correctly.
+then give each piece the *smallest* capability tier and the *lowest*
+effort that can still do it correctly.
 
 -   **Never inherit**: the model the *generated skill* runs on is
-    *irrelevant* for its sub-agents. Without a `model` attribute a
+    *irrelevant* for its sub-agents. Without an explicit tier a
     sub-agent inherits the caller's model, which turns a mechanical step
     into the most expensive step of the workflow.
 
@@ -195,24 +196,47 @@ can still do it correctly.
     along on an expensive one. Split only where the parts really are
     independent: a step which reasons *across* the parts is never split.
 
--   **Model**: assess how much *judgment* the piece needs, never how
-    *important* it is:
+-   **Tier**: assess how much *judgment* the piece needs, never how
+    *important* it is, and classify it into one of four *abstract* tiers.
+    The tiers are named by *capability*, never by a vendor model name or
+    a version, because a generated skill has to stay valid under every
+    agent tool:
 
-    -   `haiku`: mechanical work with a decidable right answer and no
-        design judgment -- listing, collecting, merging, transcribing,
+    -   `light`: mechanical work with a decidable right answer and
+        no design judgment -- listing, collecting, merging, transcribing,
         mechanical renames, running a command and reporting its output.
-    -   `sonnet`: local reasoning inside one file or one obvious call
-        path -- file-local quality, rule-driven checks, surgical
+    -   `standard`: local reasoning inside one file or one obvious
+        call path -- file-local quality, rule-driven checks, surgical
         single-site changes, wording of documentation.
-    -   `opus`: reasoning *across* files, callers, and contracts --
+    -   `deep`: reasoning *across* files, callers, and contracts --
         architecture and code analysis, security-relevant paths, changes
         to an interface with callers, repair of a severe defect.
-    -   `fable`: *only* where a wrong answer would poison the entire
+    -   `max`: *only* where a wrong answer would poison the entire
         workflow and no cheaper tier can be trusted -- a whole-scope
         closure, a final conformance pass holding everything in view.
 
     These are *defaults*: move a dispatch *down* a tier once its actual
     input turns out trivial, and *up* a tier once it turns out hard.
+
+-   **Tier mapping**: *how* a tier reaches the sub-agent is
+    *tool-specific*, because only *Anthropic Claude Code* documents a
+    fixed set of model identifiers, hence dispatch on <ase-agent-tool/>:
+
+    <if condition="<ase-agent-tool/> is `claude`">
+    Emit the `model` attribute with the documented identifier of the
+    tier: `light` is `haiku`, `standard` is `sonnet`,
+    `deep` is `opus`, and `max` is `fable`.
+    </if>
+
+    <else>
+    Emit *no* `model` attribute at all, because neither *GitHub Copilot*
+    nor *OpenAI Codex* documents which model identifiers their sub-agent
+    configuration accepts, and an invented identifier would break the
+    dispatch at run time. Instead, state the intended tier as the *first*
+    line of the <agent-body/>, in the form `Tier: <tier/>.`, so the
+    budget decision stays visible and can be bound to a concrete model in
+    the agent configuration of that tool.
+    </else>
 
 -   **Effort**: the `Agent` tool has *no* effort parameter, so effort is
     carried in the *prompt*, as the *last line* of the <agent-body/>:
@@ -220,17 +244,23 @@ can still do it correctly.
     this.`, *high* is `Think hard about this.`, and *xhigh* is
     `Ultrathink about this.`
 
-    Effort follows the model tier: `haiku` runs at *low*, `sonnet` and
-    `opus` at *high*, `fable` at *xhigh*. A de-escalated model lowers the
-    effort with it. `xhigh` is *not* a way to buy confidence: a step that
-    needs it is usually a step whose scope is too large, which the
-    granularity rule splits instead.
+    Effort follows the tier: `light` runs at *low*, `standard` and `deep`
+    at *high*, `max` at *xhigh*. A de-escalated tier lowers the effort
+    with it. *xhigh* is *not* a way to buy confidence: a step that needs
+    it is usually a step whose scope is too large, which the granularity
+    rule splits instead.
+
+    The effort line is emitted for *every* agent tool: where the tool has
+    no effort concept of its own, it still reaches the sub-agent as a
+    plain instruction, and where the tool configures effort in its agent
+    definition, the line stays consistent with it.
 
     *Binding floor*: a sub-agent whose body invokes a `<skill/>` runs at
-    *at least* `high` effort, whatever its model tier -- an ASE skill is a
-    multi-step procedure with its own contract, and run at low effort it
-    returns a plausible-looking result which silently skipped half of the
-    procedure.
+    *at least* the `standard` tier and *at least* `high` effort -- an ASE
+    skill is a multi-step procedure with its own contract, and run below
+    that it returns a plausible-looking result which silently skipped
+    half of the procedure. A `light` tier is therefore *never* combined
+    with a `<skill/>` invocation.
 
 -   **Token economy**: most tokens are spent on what flows *through* the
     sub-agents, not on how hard they think. Every sub-agent returns
@@ -391,12 +421,15 @@ Procedure
     3.  Assign the *budget* of every derived `<agent/>` element, as
         defined by `Agent Budget` above: first re-cut an action whose
         parts are independently decidable into one `<agent/>` per part,
-        then set the `model` attribute from the judgment the piece
-        actually needs, and finally append the effort line of that tier
-        as the *last* line of its <agent-body/>. An `<agent/>` whose body
-        invokes a `<skill/>` gets at least `Think hard about this.` Add
-        to the body of every `<agent/>` which returns a result what
-        *exactly* it has to return, and that it returns nothing else.
+        then determine its *tier* from the judgment the piece actually
+        needs, then carry that tier as dispatched on <ase-agent-tool/> --
+        as the `model` attribute or as the leading `Tier:` line of the
+        body -- and finally append the effort line of that tier as the
+        *last* line of its <agent-body/>. An `<agent/>` whose body invokes
+        a `<skill/>` gets at least the `standard` tier and at least
+        `Think hard about this.` Add to the body of every `<agent/>`
+        which returns a result what *exactly* it has to return, and that
+        it returns nothing else.
 
     4.  For *every* `<parallel>` element which contains at least one
         `<agent isolation="worktree">`, you *MUST* append a *dedicated*
@@ -422,7 +455,7 @@ Procedure
         one line per `<step/>`, prefixed with its number, and one indented
         line per contained `<parallel/>`, `<agent/>`, `<skill/>`, or
         `<agent-consolidation/>` element, every `<agent/>` line carrying
-        its assigned model and effort -- and report it with the
+        its assigned tier and effort -- and report it with the
         following <template/>:
 
         <template>
