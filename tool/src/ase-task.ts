@@ -178,6 +178,11 @@ export class Task {
         return path.join(Task.projectRoot(), Task.spec(log).basedir)
     }
 
+    /*  resolve the configured "files" miniglob of task storage  */
+    static files (log: Log): string {
+        return Task.spec(log).files
+    }
+
     /*  ensure a task id's "TASK-<id>.md" filename satisfies
         the configured "files" miniglob  */
     private static enforceFiles (log: Log, id: string): void {
@@ -495,6 +500,21 @@ export class Task {
         if (m === null)
             return initial
         return m[1]
+    }
+
+    /*  split a (normalized) task plan into its frontmatter keys and its
+        Markdown body (without the backmatter), for read-only consumers
+        which must not parse plans themselves; returns null if no task exists  */
+    static parts (log: Log, id: string): { keys: Map<string, string>, body: string } | null {
+        const text = Task.load(log, id)
+        if (text === "")
+            return null
+        const fm = Task.parseFront(text)
+        if (fm === null)
+            return { keys: new Map(), body: text }
+        const rest = text.slice(fm.length)
+        const end  = /^---\r?$/m.exec(rest)
+        return { keys: fm.keys, body: end === null ? rest : rest.slice(0, end.index) }
     }
 
     /*  get the lifecycle status of a task plan: the "Status:" frontmatter
