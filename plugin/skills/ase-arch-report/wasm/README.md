@@ -12,18 +12,18 @@ All ten grammars below are bundled by `tree-sitter-wasms@0.1.13`
 Versions below are the upstream grammar package versions pinned by the
 `tree-sitter-wasms@0.1.13` bundle's `package.json` `devDependencies`.
 
-| Grammar    | Version  | Source                          |
-|------------|----------|---------------------------------|
-| typescript | ^0.20.5  | `tree-sitter-wasms@0.1.13` |
-| java       | ^0.20.2  | `tree-sitter-wasms@0.1.13` |
-| javascript | ^0.20.3  | `tree-sitter-wasms@0.1.13` |
-| python     | ^0.21.0  | `tree-sitter-wasms@0.1.13` |
-| go         | ^0.20.0  | `tree-sitter-wasms@0.1.13` |
-| rust       | ^0.20.4  | `tree-sitter-wasms@0.1.13` |
-| kotlin     | ^0.3.1   | `tree-sitter-wasms@0.1.13` |
-| csharp     | ^0.20.0  | `tree-sitter-wasms@0.1.13` (upstream `tree-sitter-c-sharp`) |
-| c          | ^0.20.7  | `tree-sitter-wasms@0.1.13` |
-| cpp        | ^0.20.4  | `tree-sitter-wasms@0.1.13` |
+| Grammar    | Version | Source                                                      |
+|------------|---------|-------------------------------------------------------------|
+| typescript | ^0.20.5 | `tree-sitter-wasms@0.1.13`                                  |
+| java       | ^0.20.2 | `tree-sitter-wasms@0.1.13`                                  |
+| javascript | ^0.20.3 | `tree-sitter-wasms@0.1.13`                                  |
+| python     | ^0.21.0 | `tree-sitter-wasms@0.1.13`                                  |
+| go         | ^0.20.0 | `tree-sitter-wasms@0.1.13`                                  |
+| rust       | ^0.20.4 | `tree-sitter-wasms@0.1.13`                                  |
+| kotlin     | ^0.3.1  | `tree-sitter-wasms@0.1.13`                                  |
+| csharp     | ^0.20.0 | `tree-sitter-wasms@0.1.13` (upstream `tree-sitter-c-sharp`) |
+| c          | ^0.20.7 | `tree-sitter-wasms@0.1.13`                                  |
+| cpp        | ^0.20.4 | `tree-sitter-wasms@0.1.13`                                  |
 
 ## How to add a new grammar
 
