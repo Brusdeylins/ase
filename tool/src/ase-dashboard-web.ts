@@ -203,7 +203,8 @@ const page = `<!DOCTYPE html>
 * { box-sizing: border-box }
 [hidden] { display: none !important }
 body { margin: 0; font: 13px/1.4 "Source Sans 3", Helvetica, Arial, sans-serif; color: var(--ink); background: #f5f6f8 }
-header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #d0d5dd }
+header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #d0d5dd;
+         position: sticky; top: 0; z-index: 5 }
 .tab { border: 0; border-radius: 11px; padding: 3px 18px; background: #cfd5dd; color: var(--dark); cursor: pointer; font: inherit }
 .tab.on { background: var(--blue); color: #fff }
 .legend, .mute { color: var(--mute); font-size: 11px }
@@ -235,7 +236,8 @@ header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; back
 .num { background: #e8eef6; border: 1px solid #a9c6e3; color: var(--blue); border-radius: 4px; padding: 0 6px; font-size: 12px }
 #hscroll { display: flex; align-items: center; gap: 8px; padding: 6px 16px 0; color: var(--mute); font-size: 11px }
 #hscroll button { border: 0; background: none; cursor: pointer; color: #475467 }
-#graph svg { max-width: none }
+#graph { height: calc(100vh - 80px); overflow: auto; background: #fff; border: 1px solid #d0d5dd; border-radius: 6px }
+#graph svg { max-width: none; display: block }
 #graph .node { cursor: pointer }
 #graph .node rect { fill: #fff; stroke: #98a2b3; stroke-width: 1 }
 #graph .node text { font: 600 12.5px "Source Sans 3", Helvetica, Arial, sans-serif; fill: var(--ink) }
