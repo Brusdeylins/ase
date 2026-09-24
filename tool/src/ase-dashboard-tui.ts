@@ -152,7 +152,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
     const [ dialog,  setDialog  ] = React.useState<{ id: string, scroll: number } | null>(null)
     const first  = React.useRef(0)
     const scroll = React.useRef({ x: 0, y: 0 })
-    const places = React.useRef(new Map<string, { r: number, c: number }>())
+    const places = React.useRef(new Map<string, { r: number, c: number, top: number, bottom: number, bl: number, br: number }>())
 
     /*  follow changes of the task storage and of the lifecycle mode  */
     React.useEffect(() => {
@@ -350,11 +350,11 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
             h(Box, { key: "board", height: boardH, paddingX: 1 },
                 ...board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup(g, fit.first + i, fit.widths[i], i === fit.widths.length - 1))),
             h(Box, { key: "bar", paddingX: 1 },
-                h(Text, { color: arrows ? "yellow" : "gray", dimColor: dim }, arrows ? "◀ " : "  "),
+                h(Text, { color: arrows ? "yellow" : "gray", dimColor: dim }, arrows ? "◂ " : "  "),
                 h(Text, { color: arrows ? "cyan" : "gray", dimColor: dim }, "░".repeat(off) + "█".repeat(on)),
                 h(Text, { color: "gray", dimColor: dim }, "░".repeat(Math.max(0, track - off - on))),
                 h(Text, { color: arrows ? "yellow" : "gray", dimColor: dim },
-                    `${arrows ? " ▶" : "  "}  groups ${fit.first + 1}–${fit.last + 1} of ${total} · ` +
+                    `${arrows ? " ▸" : "  "}  groups ${fit.first + 1}–${fit.last + 1} of ${total} · ` +
                     (arrows ? "←/→ scrolls" : "all visible"))),
             h(Text, { key: "keys", color: "cyan", dimColor: dim, wrap: "truncate" },
                 " ←→ group   ↑↓ task/lane   ⏎ read   m minimize lane   c collapse group   n graph   q quit")
@@ -365,22 +365,10 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
     const renderGraph = () => {
         const card  = sel.id !== "" ? board.cards.get(sel.id) : undefined
         const art   = board.cards.size === 0 ? "(no tasks)" :
-            renderMermaidASCII(mermaidOf(board, sel.id), { paddingX: 3, paddingY: 1, boxBorderPadding: 1, colorMode: "none" })
+            renderMermaidASCII(mermaidOf(board), { paddingX: 3, paddingY: 1, boxBorderPadding: 1, colorMode: "none" })
         const lines = art.replace(/\n$/, "").split("\n")
-        const viewH = boardH
-        const viewW = innerW - 1
-        let   { x, y } = scroll.current
-        if (card !== undefined) {
-            const row = lines.findIndex((l) => l.includes(`▶ ${card.num} · ${card.id}`))
-            const col = row >= 0 ? lines[row].indexOf("▶") : 0
-            if (row >= 0) {
-                if (row < y + 1)          y = Math.max(0, row - 1)
-                if (row > y + viewH - 3)  y = row - viewH + 3
-                if (col < x)              x = Math.max(0, col - 2)
-                if (col + 24 > x + viewW) x = col + 24 - viewW
-            }
-        }
-        scroll.current = { x, y }
+        const viewH = boardH - 2
+        const viewW = innerW - 4
 
         /*  paint each node box by the tone of its task: finished tasks greyed
             out, tasks in an active lane highlighted, the selected task cyan  */
@@ -393,7 +381,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
             for (let r = 0; r < lines.length && row < 0; r++) {
                 const i = lines[r].indexOf(label)
                 const after = lines[r][i + label.length] ?? " "
-                if (i > 0 && " ▶".includes(lines[r][i - 1]) && " │".includes(after)) {
+                if (i > 0 && lines[r][i - 1] === " " && " │".includes(after)) {
                     row = r
                     col = i
                 }
@@ -413,12 +401,23 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
                 top--
             while (bottom < lines.length - 1 && lines[bottom][bl] !== "└")
                 bottom++
-            places.current.set(c.id, { r: row, c: Math.round((bl + br) / 2) })
+            places.current.set(c.id, { r: row, c: Math.round((bl + br) / 2), top, bottom, bl, br })
             const tone = c.id === sel.id ? "sel" : toneOf(board, c)
             for (let r = top; r <= bottom; r++)
                 for (let k = bl; k <= br && k < paint[r].length; k++)
                     paint[r][k] = tone
         }
+        /*  scroll the viewport so the box of the selected node stays visible  */
+        let   { x, y } = scroll.current
+        const box = places.current.get(sel.id)
+        if (box !== undefined) {
+            if (box.top < y)                   y = box.top
+            if (box.bottom > y + viewH - 1)    y = box.bottom - viewH + 1
+            if (box.bl < x)                    x = Math.max(0, box.bl - 2)
+            if (box.br > x + viewW - 1)        x = box.br - viewW + 3
+        }
+        scroll.current = { x, y }
+
         const styles: Record<string, { color?: string, bold?: boolean }> = {
             sel: { color: "cyan", bold: true }, done: { color: "gray" }, active: { color: "whiteBright", bold: true }
         }
@@ -436,7 +435,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
         const edges   = [ ...board.pred.values() ].reduce((n, ps) => n + ps.length, 0)
         const roots   = [ ...board.cards.keys() ].filter((id) => (board.pred.get(id) ?? []).length === 0).length
         return [
-            h(Box, { key: "graph", height: boardH, flexDirection: "column", paddingX: 1 },
+            h(Box, { key: "graph", height: boardH, flexDirection: "column", marginX: 1, paddingX: 1, borderStyle: "round", borderColor: "gray", borderDimColor: dim },
                 ...visible.map((segs, i) => h(Box, { key: i },
                     ...(segs.length === 0 ? [ h(Text, { key: 0 }, " ") ] : segs.map((seg, k) =>
                         h(Text, { key: k, dimColor: dim, ...(styles[seg.tone] ?? {}) }, seg.text)))))),

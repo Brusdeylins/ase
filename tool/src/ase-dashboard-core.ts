@@ -342,14 +342,14 @@ export const toneOf = (board: Board, card: Card): Tone => {
 }
 
 /*  derive the Mermaid flowchart of the dependency graph, with one node
-    per card (labelled with display number and task id, optionally marking
-    one task) and one edge per predecessor relation  */
-export const mermaidOf = (board: Board, mark = ""): string => {
+    per card (labelled with display number and task id) and one edge per
+    predecessor relation  */
+export const mermaidOf = (board: Board): string => {
     const cards = [ ...board.cards.values() ].sort((a, b) =>
         board.levels.get(a.id)! - board.levels.get(b.id)! || a.num - b.num)
     const lines = [ "flowchart LR" ]
     for (const c of cards)
-        lines.push(`    n${c.num}["${c.id === mark ? "▶ " : ""}${c.num} · ${c.id}"]`)
+        lines.push(`    n${c.num}["${c.num} · ${c.id}"]`)
     for (const c of cards)
         for (const p of board.pred.get(c.id) ?? [])
             lines.push(`    n${board.cards.get(p)!.num} --> n${c.num}`)
