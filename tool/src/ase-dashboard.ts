@@ -9,10 +9,11 @@ import { fileURLToPath }           from "node:url"
 
 import { Command, InvalidArgumentError } from "commander"
 import { execa }                   from "execa"
+import { ofetch }                  from "ofetch"
 
 import type Log                    from "./ase-log.js"
 import { Task }                    from "./ase-task.js"
-import { loadServiceContext }      from "./ase-service.js"
+import { loadServiceContext, SERVICE_HOST } from "./ase-service.js"
 import { buildBoard, resolveNumber } from "./ase-dashboard-core.js"
 import { writeStdout }             from "./ase-stdio.js"
 
@@ -58,13 +59,26 @@ const textOverview = (log: Log): string => {
 export default class DashboardCommand {
     constructor (private log: Log) {}
 
-    /*  ensure the ASE service of the project runs and return its port  */
+    /*  ensure the ASE service of the project runs and serves the dashboard,
+        restarting a service still running an older ASE without it, and
+        return its port  */
     private async servicePort (): Promise<number> {
         const entry = fileURLToPath(new URL("./ase.js", import.meta.url))
-        await execa(process.execPath, [ entry, "service", "start" ], { stdio: "ignore" })
-        const port  = loadServiceContext(this.log).port
-        if (port === null)
-            throw new Error("dashboard: ASE service did not report a port")
+        const start = async (): Promise<number> => {
+            await execa(process.execPath, [ entry, "service", "start" ], { stdio: "ignore" })
+            const port = loadServiceContext(this.log).port
+            if (port === null)
+                throw new Error("dashboard: ASE service did not report a port")
+            return port
+        }
+        const port = await start()
+        const res  = await ofetch.raw(`http://${SERVICE_HOST}:${port}/dashboard/api/ping`,
+            { ignoreResponseError: true }).catch(() => null)
+        if (res !== null && res.status === 404) {
+            this.log.write("info", "dashboard: restarting ASE service, as it runs an older ASE without dashboard")
+            await execa(process.execPath, [ entry, "service", "stop" ], { stdio: "ignore" })
+            return start()
+        }
         return port
     }
 
