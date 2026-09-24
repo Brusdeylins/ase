@@ -152,6 +152,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
     const [ dialog,  setDialog  ] = React.useState<{ id: string, scroll: number } | null>(null)
     const first  = React.useRef(0)
     const scroll = React.useRef({ x: 0, y: 0 })
+    const places = React.useRef(new Map<string, { r: number, c: number }>())
 
     /*  follow changes of the task storage and of the lifecycle mode  */
     React.useEffect(() => {
@@ -220,17 +221,29 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
             return
         }
         if (view === "graph") {
-            const card = sel.id !== "" ? board.cards.get(sel.id) : undefined
-            const idx  = card !== undefined ? nodes.indexOf(card) : -1
-            let   next: Card | undefined
-            if (key.leftArrow && card !== undefined)
-                next = board.cards.get((board.pred.get(card.id) ?? [])[0] ?? "")
-            else if (key.rightArrow && card !== undefined)
-                next = board.cards.get((board.succ.get(card.id) ?? [])[0] ?? "")
-            else if (key.upArrow)
-                next = nodes[Math.max(0, idx - 1)]
-            else if (key.downArrow)
-                next = nodes[Math.min(nodes.length - 1, idx + 1)]
+            /*  move spatially to the nearest node in the direction of the
+                arrow, as the nodes are placed on the screen, preferring nodes
+                in the same row (left/right) or column (up/down)  */
+            if (!(key.leftArrow || key.rightArrow || key.upArrow || key.downArrow))
+                return
+            const cur = places.current.get(sel.id)
+            let   next: Card | undefined = cur === undefined ? nodes[0] : undefined
+            if (cur !== undefined) {
+                let best = Infinity
+                for (const [ id, p ] of places.current) {
+                    const dr = p.r - cur.r
+                    const dc = p.c - cur.c
+                    const ok = key.rightArrow ? dc > 0 : key.leftArrow ? dc < 0 : key.downArrow ? dr > 0 : dr < 0
+                    if (id === sel.id || !ok)
+                        continue
+                    const score = key.leftArrow || key.rightArrow ?
+                        Math.abs(dc) + Math.abs(dr) * 4 : Math.abs(dr) + Math.abs(dc) / 4
+                    if (score < best) {
+                        best = score
+                        next = board.cards.get(id)
+                    }
+                }
+            }
             if (next !== undefined)
                 setSel(relocate(board, { g: sel.g, l: sel.l, id: next.id }, surface))
             return
@@ -372,6 +385,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
         /*  paint each node box by the tone of its task: finished tasks greyed
             out, tasks in an active lane highlighted, the selected task cyan  */
         const paint = lines.map((l) => new Array<string>(l.length).fill(""))
+        places.current = new Map()
         for (const c of board.cards.values()) {
             const label = `${c.num} · ${c.id}`
             let row = -1
@@ -399,6 +413,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
                 top--
             while (bottom < lines.length - 1 && lines[bottom][bl] !== "└")
                 bottom++
+            places.current.set(c.id, { r: row, c: Math.round((bl + br) / 2) })
             const tone = c.id === sel.id ? "sel" : toneOf(board, c)
             for (let r = top; r <= bottom; r++)
                 for (let k = bl; k <= br && k < paint[r].length; k++)
@@ -430,7 +445,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
                 `${(board.pred.get(card.id) ?? []).map((p) => board.cards.get(p)!.num).join(", ") || "—"} · successors: ` +
                 `${(board.succ.get(card.id) ?? []).map((s) => board.cards.get(s)!.num).join(", ") || "—"} (computed)`),
             h(Text, { key: "keys", color: "cyan", dimColor: dim, wrap: "truncate" },
-                ` ←→ along edges   ↑↓ next node   ⏎ read   l lanes   q quit   · ${board.cards.size} nodes, ` +
+                ` ↑↓←→ move   ⏎ read   l lanes   q quit   · ${board.cards.size} nodes, ` +
                 `${edges} edges, ${roots} roots${board.cyclic.size > 0 ? " · CYCLES" : ""}`)
         ]
     }
