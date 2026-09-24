@@ -291,11 +291,11 @@ or *GitHub Copilot CLI* statusline:
   `COPILOT_CONFIG_DIR`). Per logged model call, the token counts
   (uncached input, output including reasoning, cache-read, and
   5-minute / 1-hour cache-write) are multiplied by the per-model prices
-  of the *LiteLLM* price database. Once `%Y` is in use, `ase hook
-  session-start` downloads these prices in a detached background
-  process whenever the cached ones are older than a day; without a
-  download, the price snapshot bundled with *ASE* is used (see `npm
-  start prices-update`), and changed prices discard the cached figure.
+  of the *LiteLLM* price database. The background recomputation
+  downloads these prices whenever the cached ones are absent or older
+  than a day, and keeps using the cached ones while offline; until a
+  first download succeeds, `%Y` stays hidden, and changed prices
+  discard the cached figure.
   A call logged more than once - while its response streams, or after
   a session was resumed or forked - is billed only once, and a model
   absent from the prices contributes nothing.
