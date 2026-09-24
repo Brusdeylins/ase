@@ -21,7 +21,6 @@ import { parseScope, userStateDir }                       from "./ase-config-sco
 import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
 import { Task }                                           from "./ase-task.js"
 import * as TaskFormat                                    from "./ase-task-format.js"
-import { refreshPricesOnStart }                           from "./ase-statusline-cost.js"
 
 /*  type of supported tool (host) systems  */
 type Tool = "claude" | "copilot" | "codex"
@@ -344,9 +343,6 @@ export default class HookCommand {
 
         /*  garbage-collect orphaned session directories of previous agent runs  */
         this.pruneStaleSessions(sessionId)
-
-        /*  refresh the downloaded token prices of the %Y month cost in the background  */
-        refreshPricesOnStart(new Date())
 
         /*  establish config context (session-scoped only if a valid sessionId is present)  */
         const hasSession = this.isValidSessionId(sessionId)
