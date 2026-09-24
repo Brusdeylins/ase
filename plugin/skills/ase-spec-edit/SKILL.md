@@ -1,6 +1,6 @@
 ---
 name: ase-spec-edit
-argument-hint: "[--help|-h] [--grill|-g] [--grill-rounds|-r <n>] [--verify|-v] [--branch|-b <name>] [--worktree|-w] [--loop|-l] [<query>]"
+argument-hint: "[--help|-h] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--verify|-v] [--branch|-b <name>] [--worktree|-w] [--loop|-l] [<query>]"
 description: >
     Edit Specification: Use when the user wants to "edit" the
     SpecBook-based specification (SPEC) in one shot from a query, with
@@ -22,7 +22,7 @@ Edit Specification
 
 <expand name="getopt"
     arg1="ase-spec-edit"
-    arg2="--grill|-g --grill-rounds|-r=1 --verify|-v --branch|-b=current --worktree|-w --loop|-l">
+    arg2="--grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --verify|-v --branch|-b=current --worktree|-w --loop|-l">
     $ARGUMENTS
 </expand>
 
@@ -163,8 +163,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
         <expand name="grill-understanding" arg1="the edit query in <todo-what/> and <todo-how/>"></expand>
 
-    2.  Perform <getopt-option-grill-rounds/> grilling *rounds*,
-        numbered <m/> (1-<getopt-option-grill-rounds/>).
+    2.  Perform *at most* <getopt-option-grill-rounds/> grilling
+        *rounds*, numbered <m/> (1-<getopt-option-grill-rounds/>) --
+        the round count is a *maximum* only, as every round can
+        *stop* the grilling *early* in its item 3 below.
 
         For each round:
 
@@ -181,7 +183,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         2.  DETERMINE QUESTIONS:
 
             Determine the questions, comprised of a round-local id
-            <question-N-id/> of `Q<N/>` -- where <N/> restarts at `1`
+            <question-N-id/> of `<N/>` -- where <N/> restarts at `1`
             in *every* round, independent of the numbering of previous
             rounds --, and a very brief but precise question text
             <question-N-text/>. Each question is chosen to
@@ -209,8 +211,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             For each question, determine its focus area
             <context-N-focus/> from the mentioned *Focus Areas*, a 1-3
             word hint <context-N-topic/>, describing what the question
-            is about, and a <context-N-severity/>, describing how
-            important this question is.
+            is about, a <context-N-severity/>, describing how
+            important this question is, and a <context-N-impact/> of
+            `HIGH`, `MEDIUM`, or `LOW`, rating the individual impact
+            of the question.
 
             Set <context-N-id/> to `DOM` for <context-N-focus/> of
             `DOMAIN`, `IFC` for <context-N-focus/> of `INTERFACE`, `ARC`
@@ -219,14 +223,26 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             <context-N-focus/> of `REGRESSION`, and `CON` for
             <context-N-focus/> of `CONFIRMATION`.
 
+            Finally, decide whether the grilling stops early:
+
+            <expand name="grill-stop" arg1="<getopt-option-grill-until/>" arg2="✪ skill: **ase-spec-edit**"></expand>
+
+            If <grill-stop/> is `true`, skip the remaining items of
+            this round and all remaining rounds, and continue with
+            the *implementing* state.
+
         4.  SORT QUESTIONS:
 
             Finally, *sort* the questions by descending focus area
             order -- first all `DOMAIN`, then all `INTERFACE`, then all
             `ARCHITECTURE`, then all `IMPLEMENTATION`, then all
-            `REGRESSION`, and then all `CONFIRMATION` ones -- and
-            renumber <N/> according to this order, starting at `1`.
-            Truncate the list after a maximum of 10 questions and set
+            `REGRESSION`, and then all `CONFIRMATION` ones -- and,
+            within each focus area, by descending
+            <context-N-impact/>. If more than 10 questions exist,
+            drop the questions of lowest <context-N-impact/> -- within
+            equal impact the ones of lowest focus area order first --
+            until a maximum of 10 questions remains. Then renumber
+            <N/> according to the sort order, starting at `1`, and set
             <n/> to the number of remaining questions. Do not output
             anything.
 
@@ -239,9 +255,10 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             For all remaining <question-N/>, check the specification and
             your world knowledge to find *two to three* grounded answer
             alternatives <answer-N-K/> with a question-local id
-            <answer-N-K-id/> of `A<K/>` -- where <K/> restarts at `1`
-            for *every* question, independent of the numbering of other
-            questions --, a 1-3 word label <answer-N-K-label/>, and
+            <answer-N-K-id/> of the <K/>-th upper-case letter (`A`, `B`,
+            `C`) -- where <K/> restarts at `1` for *every* question,
+            independent of the numbering of other questions --, a 1-3
+            word label <answer-N-K-label/>, and
             an ultra brief description <answer-N-K-description/> of
             at most *10 words*. For the answer which reflects the
             current <todo-what/>/<todo-how/> understanding, append
@@ -302,9 +319,9 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 | <question-2/> | <answer-2/> |
                 | [...]         | [...]       |
 
-                Legend: **DOM**: Domain       (MUST)    **IFC**: Interface      (MUST)    **Qn**: round-local question id
-                        **ARC**: Architecture (SHOULD)  **IMP**: Implementation (MAY)     **An**: question-local answer id
-                        **REG**: Regression   (SHOULD)  **CON**: Confirmation   (SHOULD)  ⚑:  current decision state
+                Legend: **DOM**: Domain       (MUST)    **IFC**: Interface      (MUST)    **n**: round-local question number
+                        **ARC**: Architecture (SHOULD)  **IMP**: Implementation (MAY)     **X**: question-local answer letter
+                        **REG**: Regression   (SHOULD)  **CON**: Confirmation   (SHOULD)  ⚑: current decision state
                 </template>
 
             2.  Show a custom dialog. Its only answer options are the
@@ -312,7 +329,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
                 *one* free-text reply:
 
                 <expand name="custom-dialog" arg1="--other">
-                    <round-id/>: What is your (combined) answer to all (or a subset) of the above questions? (keywords or `Qn:An` references are sufficient)
+                    <round-id/>: What is your (combined) answer to all (or a subset) of the above questions? (keywords or `nX` short responses are sufficient)
                     SKIP GRILLING: skip all remaining grilling and continue with the implementation
                     STOP SKILL: stop the entire skill immediately
                 </expand>
@@ -328,6 +345,15 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
             Merge all gathered answers in <result/> of the round -- the
             combined reply -- *exclusively* back into <todo-what/> and
             <todo-how/>. Do not output anything.
+
+            Within the combined reply, recognize every token matching
+            the regexp `\d+[a-zA-Z]` (like `1A`, separated by whitespace
+            or commas, and freely mixed with keyword text) as a *short
+            response*, which cherry-picks for the question with
+            <question-N-id/> equal to its number the answer with
+            <answer-N-K-id/> equal to its letter (case-insensitive). A
+            token referencing a non-existing question or answer is
+            treated as plain free text.
 
         8.  SHOW CURRENT TODO:
 

@@ -158,6 +158,14 @@ The following top-level commands exist for service management:
   service via HTTP `POST /command`; if the service is not running,
   it is auto-started first.
 
+- `ase service log` [`-f`|`--follow`] [`-n`|`--lines` *n*]:
+  Show the log `.ase/service.log` of the background service. With
+  `-n`/`--lines`, only the last *n* lines are shown. With
+  `-f`/`--follow`, the last *n* lines (default: 10) are shown and
+  then, in the style of `tail -f`, all newly appended lines are
+  followed until interrupted, even once the service has stopped.
+  Exits silently with status 0 if no log file exists.
+
 - `ase service stop`:
   Stop the background service via HTTP `GET /stop`. Exits silently
   with status 0 on successful stop. If no port is configured or

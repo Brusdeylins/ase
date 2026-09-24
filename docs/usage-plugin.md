@@ -157,14 +157,16 @@ The following ASE commands/skills exist on the task-level:
   may be a bare *id*, an *id* with an inline *instruction*, or an
   *instruction* alone.
 
-- **/ase-task-grill** \[`--rounds`|`-r` *n*\] \[`--focus`|`-f` *section*\[,...\]\] \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
+- **/ase-task-grill** \[`--rounds`|`-r` *n*\] \[`--until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--focus`|`-f` *section*\[,...\]\] \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
   Relentlessly interview the user about every essential aspect of the
   task plan until a shared understanding is reached, asking up to 10
   focus-area-sorted (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`,
   `IMPLEMENTATION`, `REGRESSION`, `CONFIRMATION`) questions
-  sequentially, one at a time. `--rounds` sets the number of grill
-  rounds (default: `1`), each
-  re-deriving its questions from the updated plan. `--focus` grills
+  sequentially, one at a time. `--rounds` sets the maximum number of
+  grill rounds (default: `1`), each re-deriving its questions from the
+  updated plan, and `--until` stops the grilling early once all open
+  points of the given severity or higher are clear (default: `MUST`).
+  `--focus` grills
   only the given plan sections (`SPECIFICATION`/`SPEC`, `DESIGN`/`DES`,
   `VERIFICATION`/`VER`, default: `all`), in the given order. `--next`
   passes a comma-separated list of pre-selected next-step tokens to
@@ -258,14 +260,16 @@ The following ASE commands/skills exist on the code-level:
   Refactor source code. The `--auto`, `--dry`, `--direct`, `--quick`,
   `--next`, and *task-id*`:` options behave as for **/ase-code-craft**.
 
-- **/ase-code-edit** \[`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`\] \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--verify`|`-v`\] \[`--branch`|`-b` *name*\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+- **/ase-code-edit** \[`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`\] \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--verify`|`-v`\] \[`--branch`|`-b` *name*\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
   Edit the code base directly from a *query* in a plan-less state
   machine (querying, discovering, grilling, implementing, verifying)
   which fuses **/ase-code-craft**, **/ase-code-refactor**,
   **/ase-code-resolve**, **/ase-task-grill**, and
   **/ase-task-implement**. `--mode` selects the internalized tenet set
   (`auto` infers it from the query). With `--grill`, the query is
-  grilled with `--grill-rounds` rounds of questions before implementing.
+  grilled with at most `--grill-rounds` rounds of questions before
+  implementing, stopping early once all open points of severity
+  `--grill-until` or higher are clear (default: `MUST`).
   With `--verify`, the implementation is verified until it passes;
   otherwise strictly no verification is performed. `--branch` names the
   branch the change sets land on, switching the (clean) working copy to
@@ -333,15 +337,17 @@ The following ASE commands/skills exist on the specification-level:
   with outside of the dedicated specification skills, which activate
   the know-how implicitly.
 
-- **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--verify`|`-v`\] \[`--branch`|`-b` *name*\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+- **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--verify`|`-v`\] \[`--branch`|`-b` *name*\] \[`--worktree`|`-w`\] \[`--loop`|`-l`\] \[*query*\]:<br/>
   Edit the *SpecBook*-based specification (`SPEC`) directly from a
   *query* in a plan-less state machine (querying, discovering, grilling,
   implementing, verifying), the specification-level counterpart of
   **/ase-code-edit**. The change set stays strictly restricted to the
   `SPEC` artifacts and keeps them conformant to the *SpecBook* format
   contract, refreshing the `Modified:` timestamp of every changed file.
-  With `--grill`, the query is grilled with `--grill-rounds` rounds of
-  questions before implementing. With `--verify`, the specification is
+  With `--grill`, the query is grilled with at most `--grill-rounds`
+  rounds of questions before implementing, stopping early once all open
+  points of severity `--grill-until` or higher are clear (default:
+  `MUST`). With `--verify`, the specification is
   validated via *SpecBook* linting and the diagnostics are fixed in at
   most three rounds; otherwise strictly no validation is performed.
   `--branch` names the branch the change sets land on, switching the

@@ -1,6 +1,6 @@
 ---
 name: ase-task-grill
-argument-hint: "[--help|-h] [--rounds|-r <n>] [--focus|-f <section>[,...]] [--next|-n <option>[,...]] [<id>]"
+argument-hint: "[--help|-h] [--rounds|-r <n>] [--until|-u MUST|SHOULD|MAY] [--focus|-f <section>[,...]] [--next|-n <option>[,...]] [<id>]"
 description: >
     Interview the user relentlessly about the task plan until reaching a
     shared understanding, resolving each branch of the question decision
@@ -22,7 +22,7 @@ Iteratively Grill a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-grill"
-    arg2="--rounds|-r=1 --focus|-f=(all|SPECIFICATION|SPEC|DESIGN|DES|VERIFICATION|VER)... --next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
+    arg2="--rounds|-r=1 --until|-u=(MUST|SHOULD|MAY) --focus|-f=(all|SPECIFICATION|SPEC|DESIGN|DES|VERIFICATION|VER)... --next|-n=(none|DONE|EDIT|IMPLEMENT|PREFLIGHT)... --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -140,8 +140,10 @@ Set <args>--int-reuse-task</args>.
 
         <expand name="grill-understanding" arg1="the task plan in <task-content/>"></expand>
 
-    2.  Perform <getopt-option-rounds/> grilling *rounds*, numbered
-        <m/> (1-<getopt-option-rounds/>). Each round starts *from
+    2.  Perform *at most* <getopt-option-rounds/> grilling *rounds*,
+        numbered <m/> (1-<getopt-option-rounds/>) -- the round count is
+        a *maximum* only, as every round can *stop* the grilling *early*
+        in its item 3 below. Each round starts *from
         scratch* from *only* the *current* <task-content/> -- as
         updated by all previous rounds -- and *forgets* all questions
         and answers gathered in previous rounds.
@@ -194,9 +196,18 @@ Set <args>--int-reuse-task</args>.
         3.  DETERMINE CONTEXT:
 
             For each question, determine its focus area
-            <context-N-focus/> from the mentioned *Focus Areas*.
+            <context-N-focus/> from the mentioned *Focus Areas*, a
             <context-N-severity/>, describing how important this
-            question is.
+            question is, and a <context-N-impact/> of `HIGH`, `MEDIUM`,
+            or `LOW`, rating the individual impact of the question.
+
+            Finally, decide whether the grilling stops early:
+
+            <expand name="grill-stop" arg1="<getopt-option-until/>" arg2="◉ task: **<ase-task-id/>**"></expand>
+
+            If <grill-stop/> is `true`, skip the remaining items of
+            this round and all remaining rounds, and continue with
+            item 3.3 below.
 
         4.  SORT QUESTIONS:
 
@@ -207,12 +218,16 @@ Set <args>--int-reuse-task</args>.
             by descending focus area order -- `DOMAIN` before
             `INTERFACE`, `ARCHITECTURE` before `IMPLEMENTATION`, and
             `REGRESSION` before `CONFIRMATION` --
-            and *tertiarily*, within each focus area, by the decision
-            tree order, so that each decision is asked *after* the
-            decisions it depends on. Renumber <N/> according to this order,
-            starting at `1` in *every* round, independent of the
-            numbering of previous rounds. Truncate the list after a
-            maximum of 10 questions and set <n/> to the number of
+            *tertiarily*, within each focus area, by descending
+            <context-N-impact/>, and *finally* by the decision tree
+            order, which *overrides* the impact order wherever a
+            decision has to be asked *after* the decisions it depends
+            on. If more than 10 questions exist, drop the questions of
+            lowest <context-N-impact/> -- within equal impact the last
+            ones of the sort order first -- until a maximum of 10
+            questions remains. Then renumber <N/> according to the sort
+            order, starting at `1` in *every* round, independent of the
+            numbering of previous rounds, and set <n/> to the number of
             remaining questions. Do not output anything.
 
         5.  For each question <question-N/> in the iteration cycle <N/>,
