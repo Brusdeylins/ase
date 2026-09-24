@@ -13,7 +13,7 @@ import { renderMermaidSVG }      from "beautiful-mermaid"
 
 import type Log                  from "./ase-log.js"
 import { Task }                  from "./ase-task.js"
-import { buildBoard, mermaidOf, watchTasks, DashboardState } from "./ase-dashboard-core.js"
+import { buildBoard, mermaidOf, toneOf, watchTasks, DashboardState } from "./ase-dashboard-core.js"
 import type { Board }            from "./ase-dashboard-core.js"
 
 /*  escape a text for embedding into HTML  */
@@ -58,7 +58,7 @@ const boardJSON = (board: Board) => ({
             cards:  (board.lanes.get(l.status) ?? []).map((c) => ({ num: c.num, id: c.id, cyclic: board.cyclic.has(c.id) }))
         }))
     })),
-    nodes: [ ...board.cards.values() ].map((c) => ({ num: c.num, id: c.id, status: c.status }))
+    nodes: [ ...board.cards.values() ].map((c) => ({ num: c.num, id: c.id, status: c.status, tone: toneOf(board, c) }))
 })
 
 /*  the connected event stream clients and the shared change watcher  */
@@ -237,6 +237,10 @@ header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; back
 #hscroll button { border: 0; background: none; cursor: pointer; color: #475467 }
 #graph svg { max-width: none }
 #graph .node { cursor: pointer }
+#graph .tone-done rect { fill: #f1f3f6; stroke: #d0d5dd }
+#graph .tone-done text { fill: #98a2b3 }
+#graph .tone-active rect { fill: var(--blue-bg); stroke: var(--blue); stroke-width: 2 }
+#graph .tone-active text { fill: #1a4f85; font-weight: bold }
 #scrim { display: none; position: fixed; inset: 0; background: rgba(12,17,29,.55); z-index: 10 }
 #dlg { position: absolute; left: 50%; top: 4vh; transform: translateX(-50%); width: min(900px, 94vw); max-height: 92vh;
        display: flex; flex-direction: column; background: #fff; border: 1px solid #b7c0cc; border-radius: 10px;
@@ -332,6 +336,10 @@ function updateScroll () {
 async function renderGraph () {
     const { svg } = await api("/dashboard/api/graph")
     $("graph").innerHTML = svg || '<p class="mute">(no tasks)</p>'
+    for (const g of $("graph").querySelectorAll("g.node[data-id]")) {
+        const n = board.nodes.find((x) => "n" + x.num === g.dataset.id)
+        if (n) g.classList.add("tone-" + n.tone)
+    }
 }
 
 async function openTask (id) {

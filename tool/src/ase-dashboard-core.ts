@@ -331,6 +331,16 @@ export const buildBoard = (log: Log): Board => {
     return { mode: lifecycle.name, groups, cards, lanes, pred, succ, levels, cyclic, warnings }
 }
 
+/*  classify a card for highlighting: "done" in the final "Done" group,
+    "active" in an active lane, and "idle" in any other lane  */
+export type Tone = "done" | "active" | "idle"
+export const toneOf = (board: Board, card: Card): Tone => {
+    const last = board.groups[board.groups.length - 1]
+    if (last.lanes.some((l) => l.status === card.status))
+        return "done"
+    return board.groups.some((g) => g.lanes.some((l) => l.active && l.status === card.status)) ? "active" : "idle"
+}
+
 /*  derive the Mermaid flowchart of the dependency graph, with one node
     per card (labelled with display number and task id, optionally marking
     one task) and one edge per predecessor relation  */

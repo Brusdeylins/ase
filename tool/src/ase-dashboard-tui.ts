@@ -14,7 +14,7 @@ import { renderMermaidASCII }                 from "beautiful-mermaid"
 import type Log                               from "./ase-log.js"
 import { Task }                               from "./ase-task.js"
 import {
-    buildBoard, mermaidOf, splitHeight, watchTasks, DashboardState
+    buildBoard, mermaidOf, splitHeight, toneOf, watchTasks, DashboardState
 }                                             from "./ase-dashboard-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface } from "./ase-dashboard-core.js"
 
@@ -273,7 +273,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
     /*  render one lane  */
     const renderLane = (lane: LaneSpec, g: number, l: number, width: number, height: number) => {
         const cards   = board.lanes.get(lane.status) ?? []
-        const color   = lane.active ? "blue" : "gray"
+        const color   = lane.active ? "whiteBright" : "gray"
         const min     = surface.minimized.includes(lane.status)
         const focused = sel.g === g && sel.l === l && sel.id === ""
         const style: BoxProps["borderStyle"] = lane.dashed ? dashed : "round"
@@ -368,12 +368,63 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
             }
         }
         scroll.current = { x, y }
-        const visible = lines.slice(y, y + viewH).map((l) => l.slice(x, x + viewW))
+
+        /*  paint each node box by the tone of its task: finished tasks greyed
+            out, tasks in an active lane highlighted, the selected task cyan  */
+        const paint = lines.map((l) => new Array<string>(l.length).fill(""))
+        for (const c of board.cards.values()) {
+            const label = `${c.num} · ${c.id}`
+            let row = -1
+            let col = -1
+            for (let r = 0; r < lines.length && row < 0; r++) {
+                const i = lines[r].indexOf(label)
+                const after = lines[r][i + label.length] ?? " "
+                if (i > 0 && " ▶".includes(lines[r][i - 1]) && " │".includes(after)) {
+                    row = r
+                    col = i
+                }
+            }
+            if (row < 0)
+                continue
+            const edge = (k: number) => "│├┤┼".includes(lines[row][k] ?? "")
+            let   bl   = col - 1
+            let   br   = col + label.length
+            while (bl > 0 && !edge(bl))
+                bl--
+            while (br < lines[row].length - 1 && !edge(br))
+                br++
+            let   top    = row
+            let   bottom = row
+            while (top > 0 && lines[top][bl] !== "┌")
+                top--
+            while (bottom < lines.length - 1 && lines[bottom][bl] !== "└")
+                bottom++
+            const tone = c.id === sel.id ? "sel" : toneOf(board, c)
+            for (let r = top; r <= bottom; r++)
+                for (let k = bl; k <= br && k < paint[r].length; k++)
+                    paint[r][k] = tone
+        }
+        const styles: Record<string, { color?: string, bold?: boolean }> = {
+            sel: { color: "cyan", bold: true }, done: { color: "gray" }, active: { color: "whiteBright", bold: true }
+        }
+        const visible = lines.slice(y, y + viewH).map((l, i) => {
+            const segs = [] as { text: string, tone: string }[]
+            for (let k = x; k < Math.min(l.length, x + viewW); k++) {
+                const tone = paint[y + i][k]
+                if (segs.length > 0 && segs[segs.length - 1].tone === tone)
+                    segs[segs.length - 1].text += l[k]
+                else
+                    segs.push({ text: l[k], tone })
+            }
+            return segs
+        })
         const edges   = [ ...board.pred.values() ].reduce((n, ps) => n + ps.length, 0)
         const roots   = [ ...board.cards.keys() ].filter((id) => (board.pred.get(id) ?? []).length === 0).length
         return [
             h(Box, { key: "graph", height: boardH, flexDirection: "column", paddingX: 1 },
-                ...visible.map((l, i) => h(Text, { key: i, dimColor: dim, wrap: "truncate", color: l.includes("▶") ? "cyan" : undefined }, l))),
+                ...visible.map((segs, i) => h(Box, { key: i },
+                    ...(segs.length === 0 ? [ h(Text, { key: 0 }, " ") ] : segs.map((seg, k) =>
+                        h(Text, { key: k, dimColor: dim, ...(styles[seg.tone] ?? {}) }, seg.text)))))),
             h(Text, { key: "info", dimColor: dim, wrap: "truncate" }, card === undefined ? " " :
                 ` #${card.num} ${card.id} · ${card.status} · predecessors: ` +
                 `${(board.pred.get(card.id) ?? []).map((p) => board.cards.get(p)!.num).join(", ") || "—"} · successors: ` +
