@@ -9,14 +9,15 @@ import path                                   from "node:path"
 import React                                  from "react"
 import { render, Box, Text, useApp, useInput, useWindowSize } from "ink"
 import type { BoxProps }                      from "ink"
-import { renderMermaidASCII }                 from "beautiful-mermaid"
 
 import type Log                               from "./ase-log.js"
 import { Task }                               from "./ase-task.js"
 import {
-    buildBoard, mermaidOf, splitHeight, toneOf, watchTasks, DashboardState
+    buildBoard, splitHeight, watchTasks, DashboardState
 }                                             from "./ase-dashboard-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface } from "./ase-dashboard-core.js"
+import { layoutGraph, drawGraphText }         from "./ase-dashboard-graph.js"
+import type { GraphLayout }                   from "./ase-dashboard-graph.js"
 
 /*  shorthand for creating React elements without JSX  */
 const h = React.createElement
@@ -152,6 +153,7 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
     const [ dialog,  setDialog  ] = React.useState<{ id: string, scroll: number } | null>(null)
     const first  = React.useRef(0)
     const scroll = React.useRef({ x: 0, y: 0 })
+    const [ layout,  setLayout  ] = React.useState<GraphLayout | null>(null)
     const places = React.useRef(new Map<string, { r: number, c: number, top: number, bottom: number, bl: number, br: number }>())
 
     /*  follow changes of the task storage and of the lifecycle mode  */
@@ -169,6 +171,22 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
             stop().catch(() => {})
         }
     }, [ log, board.mode ])
+
+    /*  lay out the dependency graph whenever it is shown and the board changes  */
+    React.useEffect(() => {
+        if (view !== "graph")
+            return
+        let live = true
+        layoutGraph(board, "cell").then((g) => {
+            if (live)
+                setLayout(g)
+        }).catch((err: unknown) => {
+            log.write("warning", `dashboard: graph layout failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+        return () => {
+            live = false
+        }
+    }, [ log, board, view ])
 
     /*  keep the selection valid on every board or surface change  */
     React.useEffect(() => {
@@ -364,49 +382,20 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
     /*  render the graph view  */
     const renderGraph = () => {
         const card  = sel.id !== "" ? board.cards.get(sel.id) : undefined
-        const art   = board.cards.size === 0 ? "(no tasks)" :
-            renderMermaidASCII(mermaidOf(board), { paddingX: 3, paddingY: 1, boxBorderPadding: 1, colorMode: "none" })
-        const lines = art.replace(/\n$/, "").split("\n")
         const viewH = boardH - 2
         const viewW = innerW - 4
+        if (layout === null)
+            return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, borderStyle: "round", borderColor: "gray" },
+                h(Text, { color: "gray" }, board.cards.size === 0 ? "(no tasks)" : "laying out …")),
+            h(Text, { key: "info" }, " "), h(Text, { key: "keys" }, " ") ]
 
-        /*  paint each node box by the tone of its task: finished tasks greyed
-            out, tasks in an active lane highlighted, the selected task cyan  */
-        const paint = lines.map((l) => new Array<string>(l.length).fill(""))
+        /*  draw the ELK layout and remember the box of every node for the
+            spatial navigation and the scrolling  */
+        const { lines, tones } = drawGraphText(board, layout, sel.id)
         places.current = new Map()
-        for (const c of board.cards.values()) {
-            const label = `${c.num} · ${c.id}`
-            let row = -1
-            let col = -1
-            for (let r = 0; r < lines.length && row < 0; r++) {
-                const i = lines[r].indexOf(label)
-                const after = lines[r][i + label.length] ?? " "
-                if (i > 0 && lines[r][i - 1] === " " && " │".includes(after)) {
-                    row = r
-                    col = i
-                }
-            }
-            if (row < 0)
-                continue
-            const edge = (k: number) => "│├┤┼".includes(lines[row][k] ?? "")
-            let   bl   = col - 1
-            let   br   = col + label.length
-            while (bl > 0 && !edge(bl))
-                bl--
-            while (br < lines[row].length - 1 && !edge(br))
-                br++
-            let   top    = row
-            let   bottom = row
-            while (top > 0 && lines[top][bl] !== "┌")
-                top--
-            while (bottom < lines.length - 1 && lines[bottom][bl] !== "└")
-                bottom++
-            places.current.set(c.id, { r: row, c: Math.round((bl + br) / 2), top, bottom, bl, br })
-            const tone = c.id === sel.id ? "sel" : toneOf(board, c)
-            for (let r = top; r <= bottom; r++)
-                for (let k = bl; k <= br && k < paint[r].length; k++)
-                    paint[r][k] = tone
-        }
+        for (const n of layout.nodes.values())
+            places.current.set(n.id, { r: n.y + Math.floor(n.h / 2), c: n.x + Math.floor(n.w / 2), top: n.y, bottom: n.y + n.h - 1, bl: n.x, br: n.x + n.w - 1 })
+
         /*  scroll the viewport so the box of the selected node stays visible  */
         let   { x, y } = scroll.current
         const box = places.current.get(sel.id)
@@ -419,12 +408,13 @@ const App = ({ log, graph }: { log: Log, graph: boolean }) => {
         scroll.current = { x, y }
 
         const styles: Record<string, { color?: string, bold?: boolean }> = {
-            sel: { color: "cyan", bold: true }, done: { color: "gray" }, active: { color: "whiteBright", bold: true }
+            sel: { color: "cyan", bold: true }, done: { color: "gray" }, active: { color: "whiteBright", bold: true },
+            "edge": { color: "gray" }, "edge-sel": { color: "cyan" }
         }
         const visible = lines.slice(y, y + viewH).map((l, i) => {
             const segs = [] as { text: string, tone: string }[]
             for (let k = x; k < Math.min(l.length, x + viewW); k++) {
-                const tone = paint[y + i][k]
+                const tone = tones[y + i][k]
                 if (segs.length > 0 && segs[segs.length - 1].tone === tone)
                     segs[segs.length - 1].text += l[k]
                 else

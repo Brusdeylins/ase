@@ -341,21 +341,6 @@ export const toneOf = (board: Board, card: Card): Tone => {
     return board.groups.some((g) => g.lanes.some((l) => l.active && l.status === card.status)) ? "active" : "idle"
 }
 
-/*  derive the Mermaid flowchart of the dependency graph, with one node
-    per card (labelled with display number and task id) and one edge per
-    predecessor relation  */
-export const mermaidOf = (board: Board): string => {
-    const cards = [ ...board.cards.values() ].sort((a, b) =>
-        board.levels.get(a.id)! - board.levels.get(b.id)! || a.num - b.num)
-    const lines = [ "flowchart LR" ]
-    for (const c of cards)
-        lines.push(`    n${c.num}["${c.num} · ${c.id}"]`)
-    for (const c of cards)
-        for (const p of board.pred.get(c.id) ?? [])
-            lines.push(`    n${board.cards.get(p)!.num} --> n${c.num}`)
-    return lines.join("\n") + "\n"
-}
-
 /*  resolve a display number to its task id, or undefined if unknown  */
 export const resolveNumber = (num: number): string | undefined => {
     const numbers = DashboardState.load().numbers

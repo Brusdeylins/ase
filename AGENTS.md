@@ -35,7 +35,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `tool/src/ase-*.ts`: one module per top-level command (`setup`,
         `config`, `mcp`, `service`, `hook`, `statusline`, `task`, `artifact`,
         `spec`, `meta`, `compat`, `diagram`, `worktree`, `mint`, `metric`, `dashboard`) plus
-        its `dashboard-core`, `dashboard-tui`, and `dashboard-web` parts and support modules
+        its `dashboard-core`, `dashboard-graph`, `dashboard-tui`, and `dashboard-web` parts and support modules
         (`log`, `stdio`, `getopt`, `kv`, `markdown`, `skills`, `sleep`,
         `timestamp`, `version`)
     -   `tool/bin/ase`: the published shim, loading compiled output from `dst/`

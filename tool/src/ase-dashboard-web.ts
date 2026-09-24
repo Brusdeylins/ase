@@ -9,11 +9,11 @@ import { PassThrough }           from "node:stream"
 
 import type Hapi                 from "@hapi/hapi"
 import { Marked }                from "marked"
-import { renderMermaidSVG }      from "beautiful-mermaid"
 
 import type Log                  from "./ase-log.js"
 import { Task }                  from "./ase-task.js"
-import { buildBoard, mermaidOf, toneOf, watchTasks, DashboardState } from "./ase-dashboard-core.js"
+import { buildBoard, toneOf, watchTasks, DashboardState } from "./ase-dashboard-core.js"
+import { layoutGraph, drawGraphSVG } from "./ase-dashboard-graph.js"
 import type { Board }            from "./ase-dashboard-core.js"
 
 /*  escape a text for embedding into HTML  */
@@ -99,9 +99,9 @@ export const registerDashboardRoutes = (server: Hapi.Server, log: Log): void => 
     server.route({
         method:  "GET",
         path:    "/dashboard/api/graph",
-        handler: (_request, h) => {
+        handler: async (_request, h) => {
             const board = buildBoard(log)
-            const svg   = board.cards.size === 0 ? "" : renderMermaidSVG(mermaidOf(board))
+            const svg   = board.cards.size === 0 ? "" : drawGraphSVG(board, await layoutGraph(board, "px"))
             return h.response({ svg })
         }
     })
@@ -237,6 +237,11 @@ header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; back
 #hscroll button { border: 0; background: none; cursor: pointer; color: #475467 }
 #graph svg { max-width: none }
 #graph .node { cursor: pointer }
+#graph .node rect { fill: #fff; stroke: #98a2b3; stroke-width: 1 }
+#graph .node text { font: 600 12.5px "Source Sans 3", Helvetica, Arial, sans-serif; fill: var(--ink) }
+#graph .node:hover rect { stroke: var(--blue) }
+#graph .edge { fill: none; stroke: #98a2b3; stroke-width: 1.4 }
+#graph .arrow { fill: #98a2b3 }
 #graph .tone-done rect { fill: #f1f3f6; stroke: #d0d5dd }
 #graph .tone-done text { fill: #98a2b3 }
 #graph .tone-active rect { fill: var(--blue-bg); stroke: var(--blue); stroke-width: 2 }
