@@ -34,6 +34,39 @@ without `isolation` and with `run_in_background=false` -- so the
 `TaskCreate` and `TaskUpdate` tool calls of the called skill cannot
 interfere with the task tracking of the generated workflow skill itself.
 
+Every emitted `<agent>` carries an explicit *budget*, because a workflow
+pays for each of its sub-agents and a sub-agent without an explicit tier
+silently inherits the model of the generated skill itself -- which turns
+a mechanical step into the most expensive step of the workflow. The work is therefore cut into the finest independently
+decidable units, and each unit gets the *smallest* capability tier and
+the *lowest* effort that can still do it correctly: `light` for
+mechanical work with a decidable right answer, `standard` for local
+reasoning inside one file or call path, `deep` for reasoning across
+files, callers, and contracts, and `max` only where a wrong answer would
+poison the entire workflow. The tiers are named by capability, never by
+a vendor model name or a version, because a generated skill has to stay
+valid under every agent tool; *how* a tier reaches the sub-agent is
+therefore dispatched on the agent tool. Under *Anthropic Claude Code*
+the tier becomes the documented identifier of the `model` attribute,
+while under *GitHub Copilot* and *OpenAI Codex* no `model` attribute is
+emitted at all -- neither documents which model identifiers its
+sub-agent configuration accepts, and an invented one would break the
+dispatch at run time -- so the tier is stated as the leading `Tier:`
+line of the sub-agent prompt instead, where it stays visible and can be
+bound to a concrete model in that tool's own agent configuration. As the
+`Agent` tool has no effort parameter, the effort is
+carried as the last line of the sub-agent prompt (`Think about this.`,
+`Think hard about this.`, `Ultrathink about this.`, or nothing at all
+for low effort) and follows the tier; a sub-agent which invokes an
+ASE skill always runs at the `standard` tier and at high effort at
+least, because a multi-step skill
+procedure silently skips half of itself at low effort. Beyond the tier,
+the generated skill also budgets what flows *through* its sub-agents:
+each one is told exactly what to return and to return nothing else, and
+answers the workflow telegraphically -- while everything landing in the
+repository or in front of the user stays full prose in the conversation
+language.
+
 To keep the emitted `<skill>` invocations correct, the skill consults the
 accumulated manual pages of all ASE skills and takes every option and
 argument verbatim from them. To keep the emitted flow meaningful, it
