@@ -50,8 +50,13 @@
                             <span>{{ l.cards.length }}</span>
                         </div>
                         <div v-if="!surface.minimized.includes(l.status)" class="cards">
+                            <!--  the task carried by the keyboard, shown on top of the selected target lane  -->
+                            <div v-if="carried !== null && drag?.over === l.status" class="card held sel" :class="`tone-${carried.tone}`">
+                                <div class="cbody"><span class="cid">{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}{{ carried.title }}</div>
+                            </div>
                             <div v-for="c in l.cards" :key="c.id" class="card" draggable="true"
-                                :class="[ `tone-${c.tone}`, { dragging: drag?.id === c.id, sel: sel.id === c.id } ]" @click="sel = { g: gi, l: li, id: c.id }; openTask(c.id)"
+                                :class="[ `tone-${c.tone}`, { sel: sel.id === c.id }, carryClass(c.id) ]"
+                                @click="sel = { g: gi, l: li, id: c.id }; openTask(c.id)"
                                 @dragstart="dragStart($event, c.id, l.status, c.moves)" @dragend="dragEnd">
                                 <div class="cbody"><span class="cid">{{ c.id }}</span>{{ c.cyclic ? "⟲ " : "" }}{{ c.title }}</div>
                             </div>
@@ -441,6 +446,20 @@ const applySurface = (s: Surface) => {
 const drag = ref<{ id: string, from: string, moves?: string[], over: string | null, key?: boolean } | null>(null)
 const canDrop = (status: string) =>
     drag.value !== null && (drag.value.moves ?? board.value?.moves[drag.value.from] ?? []).includes(status)
+
+/*  the task carried by the keyboard while the selected lane is a reachable target (as then it is
+    shown on top of this lane, while a dim ghost of it stays at its original position until the drop)  */
+const carried = computed(() => {
+    const d = drag.value
+    if (d?.key !== true || d.over === null || !canDrop(d.over))
+        return null
+    return board.value?.groups.flatMap((g) => g.lanes).flatMap((l) => l.cards).find((c) => c.id === d.id) ?? null
+})
+const carryClass = (id: string) => drag.value?.id !== id ? {} : {
+    dragging: drag.value.key !== true,
+    held:     drag.value.key === true && carried.value === null,
+    ghost:    drag.value.key === true && carried.value !== null
+}
 const dropClass = (status: string) => drag.value === null ? {} : {
     target:  canDrop(status),
     over:    canDrop(status) && drag.value.over === status,

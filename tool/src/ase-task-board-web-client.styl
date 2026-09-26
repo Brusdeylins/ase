@@ -346,6 +346,25 @@ header
 #board .card.sel .cid, #graph .node.sel .cid
     background: var(--c-signal)
 
+/*  the task carried by the keyboard (like in the TUI): held with a double border
+    and the move icon, and while shown on a target lane, a dim dashed ghost at its origin  */
+#board .card.held
+    border-style: double
+    border-width: 3px
+    padding: 6px 8px
+    .cbody::before
+        content: "⇅"
+        margin-right: 6px
+        font-weight: bold
+#board .card.ghost
+    background: none
+    border-style: dashed
+    border-color: var(--c-line)
+    box-shadow: none
+    color: var(--c-line)
+    .cid
+        background: var(--c-line)
+
 /*  the horizontal scroll bar and the footer  */
 #hscroll
     display: flex
