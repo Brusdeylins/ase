@@ -328,6 +328,40 @@ type DialogArgs = {
     lines: DialogLine[], columns: number, rows: number, notice: string | null
 }
 
+/*  the segments of the dependencies row of the read dialog within its inner width:
+    predecessors on the left, successors on the right (padded in between to the
+    full width, or cut at the end if too long), with each id rendered inverse
+    with one extra space on each side and carrying the referenced task id  */
+const refSegs = (pred: string[], succ: string[], tint: (id: string) => string | undefined, innerW: number) => {
+    type Seg = { text: string, color: string | undefined, inverse: boolean, ref?: string }
+    const refs = (ids: string[]): Seg[] => ids.length === 0 ?
+        [ { text: "—", color: palette.dim, inverse: false } ] :
+        ids.flatMap((ref, i) => [
+            ...(i > 0 ? [ { text: " ", color: palette.dim, inverse: false } ] : []),
+            { text: ` ${ref} `, color: tint(ref), inverse: true, ref }
+        ])
+    const fill: Seg = { text: "", color: palette.dim, inverse: false }
+    const segs: Seg[] = [
+        { text: " predecessors: ", color: palette.dim, inverse: false },
+        ...refs(pred),
+        fill,
+        { text: "successors: ", color: palette.dim, inverse: false },
+        ...refs(succ),
+        { text: " ", color: palette.dim, inverse: false }
+    ]
+    const used = segs.reduce((n, seg) => n + seg.text.length, 0)
+    fill.text  = " ".repeat(Math.max(1, innerW - used))
+    let   room = innerW
+    for (const seg of segs) {
+        if (seg.text.length > room)
+            seg.text = room > 0 ? seg.text.slice(0, room - 1) + "…" : ""
+        room -= seg.text.length
+    }
+    if (room > 0)
+        segs[segs.length - 1].text += " ".repeat(room)
+    return segs
+}
+
 /*  render the read dialog: full height, horizontally centered, with a
     vertical scroll bar in its right border  */
 const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scroll, lines, columns, rows, notice }: DialogArgs) => {
@@ -364,34 +398,8 @@ const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scr
     const head   = title.length > leftW ? title.slice(0, Math.max(0, leftW - 1)) + "…" : title.padEnd(leftW)
     const pos    = `lines ${s + 1}–${Math.min(lines.length, s + viewH)} of ${lines.length} `
 
-    /*  the dependencies: predecessors on the left, successors on the right
-        (padded in between to the full width, or cut at the end if too long),
-        with each id rendered inverse with one extra space on each side  */
-    const refs   = (ids: string[]) => ids.length === 0 ?
-        [ { text: "—", color: palette.dim, inverse: false } ] :
-        ids.flatMap((ref, i) => [
-            ...(i > 0 ? [ { text: " ", color: palette.dim, inverse: false } ] : []),
-            { text: ` ${ref} `, color: tint(ref), inverse: true }
-        ])
-    const fill   = { text: "", color: palette.dim, inverse: false }
-    const segs   = [
-        { text: " predecessors: ", color: palette.dim, inverse: false },
-        ...refs(pred),
-        fill,
-        { text: "successors: ", color: palette.dim, inverse: false },
-        ...refs(succ),
-        { text: " ", color: palette.dim, inverse: false }
-    ]
-    const used   = segs.reduce((n, seg) => n + seg.text.length, 0)
-    fill.text    = " ".repeat(Math.max(1, innerW - used))
-    let   room   = innerW
-    for (const seg of segs) {
-        if (seg.text.length > room)
-            seg.text = room > 0 ? seg.text.slice(0, room - 1) + "…" : ""
-        room -= seg.text.length
-    }
-    if (room > 0)
-        segs[segs.length - 1].text += " ".repeat(room)
+    /*  the dependencies: predecessors on the left, successors on the right  */
+    const segs   = refSegs(pred, succ, tint, innerW)
 
     /*  the tab bar: all tabs inverse, the selected one in signal color, the others in accent color  */
     const lay    = tabLayout(tabs, first, tab, innerW)
@@ -462,11 +470,12 @@ const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scr
 /*  the rendering context of the lane view, with the currently carried
     task (if any) and the lane states it can be moved to, the groups
     whose lanes show a scroll arrow on their left or right border (or -1),
-    and the registration of the rendered card boxes for the mouse hit-testing  */
+    and the registration of the rendered card, lane, and group boxes for the mouse hit-testing  */
 type ViewCtx = {
     board: Board, surface: Surface, sel: Sel, dim: boolean, carry: Carry | null, titles: boolean, scroll: Scroll,
-    cardRef: (id: string) => (el: DOMElement | null) => void
-    laneRef: (g: number, l: number) => (el: DOMElement | null) => void
+    cardRef:  (id: string) => (el: DOMElement | null) => void
+    laneRef:  (g: number, l: number) => (el: DOMElement | null) => void
+    groupRef: (g: number) => (el: DOMElement | null) => void
 }
 type Carry   = { id: string, from: string, targets: Set<string> }
 type Scroll  = { left: number, right: number }
@@ -598,7 +607,7 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
         const label   = "▶"
         const rest    = Math.max(0, width - label.length)
         const left    = Math.floor(rest / 2)
-        return h(Box, { key: group.title, flexDirection: "column", width, marginRight: gap },
+        return h(Box, { key: group.title, ref: ctx.groupRef(g), flexDirection: "column", width, marginRight: gap },
             h(Text, { color: sel.g === g ? palette.signal : palette.normal, dimColor: dim, bold: sel.g === g, inverse: true, wrap: "truncate" },
                 " ".repeat(left) + label + " ".repeat(rest - left)),
             ...group.lanes.map((lane, l) => {
@@ -636,7 +645,7 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
     const label   = ` ▼ ${group.title} `
     const rest    = Math.max(0, width - label.length)
     const left    = Math.floor(rest / 2)
-    return h(Box, { key: group.title, flexDirection: "column", width, marginRight: gap },
+    return h(Box, { key: group.title, ref: ctx.groupRef(g), flexDirection: "column", width, marginRight: gap },
         h(Text, { color: sel.g === g ? palette.signal : palette.normal, dimColor: dim, bold: sel.g === g, inverse: true, wrap: "truncate" },
             " ".repeat(left) + label + " ".repeat(rest - left)),
         ...group.lanes.map((lane, l) => renderLane(ctx, lane, g, l, width, heights[l])))
@@ -673,17 +682,19 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
 
-    /*  the rendered card and lane boxes of the lane view, for the mouse hit-testing  */
-    const cardBoxes = React.useRef(new Map<string, DOMElement>())
-    const laneBoxes = React.useRef(new Map<string, DOMElement>())
-    const register  = (map: Map<string, DOMElement>, key: string) => (el: DOMElement | null) => {
+    /*  the rendered card, lane, and group boxes of the lane view, for the mouse hit-testing  */
+    const cardBoxes  = React.useRef(new Map<string, DOMElement>())
+    const laneBoxes  = React.useRef(new Map<string, DOMElement>())
+    const groupBoxes = React.useRef(new Map<string, DOMElement>())
+    const register   = (map: Map<string, DOMElement>, key: string) => (el: DOMElement | null) => {
         if (el !== null)
             map.set(key, el)
         else
             map.delete(key)
     }
-    const cardRef   = (id: string) => register(cardBoxes.current, id)
-    const laneRef   = (g: number, l: number) => register(laneBoxes.current, `${g}:${l}`)
+    const cardRef    = (id: string) => register(cardBoxes.current, id)
+    const laneRef    = (g: number, l: number) => register(laneBoxes.current, `${g}:${l}`)
+    const groupRef   = (g: number) => register(groupBoxes.current, String(g))
 
     /*  the rendered view value and filter field of the header, for the mouse hit-testing  */
     const headBoxes = React.useRef(new Map<string, DOMElement>())
@@ -971,7 +982,8 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
 
     /*  handle a mouse press (0-based column/row, button 0: left press,
         64/65: wheel up/down): a click opens the clicked task, while a
-        click onto its " X " closes an open task view, and the wheel scrolls it  */
+        click onto its " X " closes an open task view, a click onto a
+        predecessor/successor id jumps to its task view, and the wheel scrolls it  */
     const onMouse = (btn: number, mx: number, my: number): void => {
         if (dialog !== null) {
             /*  a click onto the tab bar (the sixth dialog row) selects the clicked
@@ -980,6 +992,18 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             const closeX = barX - 1 + dialogW - DIALOG_CLOSE
             if (btn === 0 && my === 1 && mx >= closeX && mx < closeX + 3)
                 setDialog(null)
+            else if (btn === 0 && my === 3 && mx >= barX && mx < barX + dialogW - 2) {
+                /*  a click onto a predecessor or successor id (in the fourth dialog row) jumps to its task view  */
+                let x = barX
+                for (const seg of refSegs(board.pred.get(dialog.id) ?? [], board.succ.get(dialog.id) ?? [], () => undefined, dialogW - 2)) {
+                    if (mx >= x && mx < x + seg.text.length) {
+                        if (seg.ref !== undefined && board.cards.has(seg.ref))
+                            setDialog({ id: seg.ref, tab: 0, first: 0, scrolls: {} })
+                        break
+                    }
+                    x += seg.text.length
+                }
+            }
             else if (btn === 0 && my === 5 && mx >= barX && mx < barX + dialogW - 2) {
                 const lay  = tabLayout(tabLabels, dialog.first, dialogSel, dialogW - 2)
                 const x    = mx - barX
@@ -1040,12 +1064,24 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             return
 
         /*  a click onto a lane outside its cards (and while moving a task,
-            anywhere onto a lane) just selects the lane, like PgUp/PgDn  */
+            anywhere onto a lane) selects the lane, like PgUp/PgDn, where a click
+            onto the title of a group collapses/expands the group, a click onto the
+            title of a lane minimizes/maximizes the lane, and a click onto a lane
+            of a collapsed group expands the group  */
         const card = view === "lanes" && carry === null ? boxAt(cardBoxes.current, mx, my) : undefined
         if (view === "lanes" && card === undefined) {
+            const grp = boxAt(groupBoxes.current, mx, my)
+            if (grp !== undefined && my === measureElement(groupBoxes.current.get(grp)!).y) {
+                toggle("collapsed", board.groups[Number(grp)].title)
+                return
+            }
             const at = boxAt(laneBoxes.current, mx, my)
             if (at !== undefined) {
                 const [ g, l ] = at.split(":").map(Number)
+                if (surface.collapsed.includes(board.groups[g].title))
+                    toggle("collapsed", board.groups[g].title)
+                else if (my === measureElement(laneBoxes.current.get(at)!).y + 1)
+                    toggle("minimized", board.groups[g].lanes[l].status)
                 const next = groupItems(board, g, surface).find((it) => it.l === l)
                 if (next !== undefined && !(sel.g === g && sel.l === l))
                     setSel(next)
@@ -1348,7 +1384,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         const edges  = { left: fit.first > 0 ? fit.first : -1, right: fit.last < total - 1 ? fit.last : -1 }
         return [
             h(Box, { key: "board", height: boardH, paddingX: 1 },
-                ...board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup({ board, surface, sel, dim, carry, titles: surface.titles, scroll: edges, cardRef, laneRef }, g, fit.first + i, fit.widths[i], boardH, i === fit.widths.length - 1))),
+                ...board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup({ board, surface, sel, dim, carry, titles: surface.titles, scroll: edges, cardRef, laneRef, groupRef }, g, fit.first + i, fit.widths[i], boardH, i === fit.widths.length - 1))),
             h(Box, { key: "bar", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     (arrows ? "░".repeat(off) + "█".repeat(on) + "░".repeat(Math.max(0, track - off - on)) + " · " : "") + info)),
