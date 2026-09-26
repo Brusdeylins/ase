@@ -1,0 +1,659 @@
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  emit standard CSS at-rules only (no legacy vendor prefixes)  */
+vendors = official
+
+/*  Adobe Source Sans 3 font faces (inlined by Vite as data: URIs), where
+    the semi-bold faces also serve "bold" (weight range up to 700)  */
+@font-face
+    font-family: "Source Sans 3"
+    font-style: normal
+    font-weight: normal
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-Regular.ttf.woff2") format("woff2")
+@font-face
+    font-family: "Source Sans 3"
+    font-style: italic
+    font-weight: normal
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-It.ttf.woff2") format("woff2")
+@font-face
+    font-family: "Source Sans 3"
+    font-style: normal
+    font-weight: 600 700
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-Semibold.ttf.woff2") format("woff2")
+@font-face
+    font-family: "Source Sans 3"
+    font-style: italic
+    font-weight: 600 700
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-SemiboldIt.ttf.woff2") format("woff2")
+
+/*  DejaVu Sans Mono font face for code (regular only, as the oblique
+    and bold faces are intentionally not embedded)  */
+@font-face
+    font-family: "DejaVu Sans Mono"
+    font-style: normal
+    font-weight: normal
+    src: url("../node_modules/@fontsource/dejavu-mono/files/dejavu-mono-latin-400-normal.woff2") format("woff2")
+
+/*  the semantic colors (layer 2), mapped onto the color spreads
+    "--color-<role>-{1..64}" (layer 1) of the colors stylesheet  */
+:root
+    --c-text:          var(--color-normal-21)
+    --c-text-strong:   var(--color-normal-25)
+    --c-text-soft:     var(--color-normal-29)
+    --c-paper:         var(--color-normal-64)
+    --c-shade:         var(--color-normal-13)
+    --c-mute:          var(--color-dim-35)
+    --c-line:          var(--color-dim-44)
+    --c-border-strong: var(--color-dim-52)
+    --c-border:        var(--color-dim-54)
+    --c-border-soft:   var(--color-dim-56)
+    --c-fill:          var(--color-dim-60)
+    --c-ground:        var(--color-dim-62)
+    --c-ground-light:  var(--color-dim-63)
+    --c-accent-strong: var(--color-accent-27)
+    --c-accent:        var(--color-accent-36)
+    --c-accent-line:   var(--color-accent-52)
+    --c-accent-border: var(--color-accent-54)
+    --c-accent-fill:   var(--color-accent-60)
+    --c-accent-ground: var(--color-accent-62)
+    --c-accent-paper:  var(--color-accent-64)
+    --c-signal:        var(--color-signal-42)
+    --c-signal-ground: var(--color-signal-62)
+
+/*  the base settings  */
+*
+    box-sizing: border-box
+[hidden]
+    display: none !important
+
+/*  the single fixed font size, from which all other font sizes derive (in rem units)  */
+html, body
+    font-size: 16px
+body
+    margin: 0
+    font-family: "Source Sans 3", Helvetica, Arial, sans-serif
+    line-height: 1.3
+    color: var(--c-text)
+    background: var(--c-ground)
+.spacer
+    flex: 1
+.mute
+    color: var(--c-mute)
+    font-size: 0.6875rem
+.warn
+    color: var(--c-signal)
+    font-size: 0.6875rem
+
+/*  the header  */
+header
+    display: flex
+    align-items: center
+    justify-content: center
+    flex-wrap: wrap
+    gap: 4px 16px
+    padding: 10px 16px
+    background: var(--c-paper)
+    border-bottom: 1px solid var(--c-border-soft)
+    position: sticky
+    top: 0
+    z-index: 5
+    color: var(--c-text-soft)
+
+    /*  the separators between the header elements  */
+    .sep
+        margin: 0 0.4rem
+        color: var(--c-mute)
+
+    /*  the header values in boxes, with the view as a toggle button  */
+    .val
+        display: inline-block
+        margin-left: 0.2rem
+        padding: 0 6px
+        border: 1px solid var(--c-border)
+        border-radius: 4px
+        background: var(--c-ground-light)
+        color: var(--c-text)
+        font: inherit
+        font-weight: bold
+    .toggle
+        border-color: var(--c-accent-line)
+        background: var(--c-accent-ground)
+        color: var(--c-accent-strong)
+        cursor: pointer
+        &:hover
+            border-color: var(--c-accent)
+
+/*  the lanes view  */
+#view
+    padding: 14px 16px
+#board
+    display: flex
+    gap: 12px
+    height: calc(100vh - 146px)
+    overflow-x: auto
+.group
+    display: flex
+    flex-direction: column
+    gap: 8px
+    min-width: 220px
+    flex: 1
+    &.coll
+        min-width: 36px
+        max-width: 36px
+        flex: none
+        .ghd
+            padding: 4px 0
+
+        /*  the lanes of a collapsed group as narrow boxes: arrow on top,
+            vertically written status, and number of cards at the bottom  */
+        .lane
+            align-items: center
+            gap: 6px
+            overflow: hidden
+
+            /*  the top and bottom spacing sits on the arrow and the count, as a
+                padding of the lane itself would raise its minimum height and so
+                make the weighted lane heights differ from the ones of expanded groups  */
+            > .arr
+                margin-top: 6px
+            > .cnt
+                margin-bottom: 6px
+            cursor: pointer
+            font-weight: bold
+            font-size: 0.875rem
+            background: var(--c-fill)
+            color: var(--c-text-soft)
+            &.active
+                background: var(--c-accent-fill)
+                color: var(--c-accent-strong)
+            &.done
+                color: var(--c-line)
+        .vt
+            flex: 1
+            min-height: 0
+            overflow: hidden
+            writing-mode: vertical-rl
+            text-orientation: upright
+
+            /*  tighten the vertical step between the stacked upright letters
+                (for vertical text, "line-height" only sets the column width)  */
+            letter-spacing: -0.25em
+        .cnt
+            font-weight: normal
+.ghd
+    background: var(--c-text-strong)
+    color: var(--c-paper)
+    font-weight: bold
+    font-size: 0.875rem
+    padding: 4px 12px
+    border-radius: 6px
+    cursor: pointer
+    white-space: nowrap
+    text-align: center
+
+/*  the expand/collapse arrow, pointing right (by rotating the same
+    glyph) when collapsed, to keep both arrows exactly equally sized  */
+.arr
+    display: inline-block
+    &.right
+        transform: rotate(-90deg)
+.lane
+    display: flex
+    flex-direction: column
+    min-height: 0
+    background: var(--c-ground-light)
+    border: 1px solid var(--c-border)
+    border-radius: 6px
+    &.active
+        background: var(--c-accent-ground)
+        border-color: var(--c-accent-line)
+    &.dashed
+        border-style: dashed
+    &.min
+        flex: none !important
+.lhd
+    display: flex
+    justify-content: space-between
+    padding: 4px 12px
+    background: var(--c-fill)
+    border-radius: 6px 6px 0 0
+    font-weight: bold
+    color: var(--c-text-soft)
+    cursor: pointer
+    font-size: 0.875rem
+    .active &
+        background: var(--c-accent-fill)
+        color: var(--c-accent-strong)
+
+    /*  the lanes of the "done" states with dimmed names  */
+    .done &
+        color: var(--c-line)
+.cards
+    overflow-y: auto
+    padding: 8px 10px
+    display: flex
+    flex-direction: column
+    gap: 8px
+
+/*  the task boxes (of both the lanes and the graph view), with the task id in a
+    sub-box, and the title cut onto a single line or (with titles shown) three lines  */
+.card
+    background: var(--c-paper)
+    border: 1px solid var(--c-border)
+    border-radius: 5px
+    padding: 8px 10px
+    cursor: pointer
+    overflow: hidden
+
+    /*  never shrink within a too low lane, as the lane scrolls instead  */
+    flex-shrink: 0
+    &:hover
+        border-color: var(--c-accent)
+.cbody
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+    .titles &
+        white-space: normal
+        display: -webkit-box
+        -webkit-box-orient: vertical
+        -webkit-line-clamp: 3
+        line-clamp: 3
+.cid, .ref
+    display: inline-block
+    background: var(--c-text)
+    color: var(--c-paper)
+    font-weight: bold
+    border-radius: 3px
+    padding: 0 8px
+    margin-right: 6px
+.tone-done.card, .tone-done .card
+    background: var(--c-ground)
+    color: var(--c-line)
+.tone-done .cid
+    background: var(--c-line)
+.tone-active.card, .tone-active .card
+    background: var(--c-accent-paper)
+    border-color: var(--c-accent-border)
+    color: var(--c-accent-strong)
+.tone-active.card:hover, .tone-active:hover .card
+    border-color: var(--c-accent)
+.tone-active .cid
+    background: var(--c-accent)
+
+/*  the drag & drop of task boxes: the dragged task box, the lanes it can be
+    dropped onto (filled while hovered), and the lanes it cannot be dropped onto
+    (with the lanes view id raising the specificity above the lane grounds)  */
+#board
+    .card.dragging
+        opacity: 0.4
+    .lane.target
+        border-color: var(--c-accent)
+        border-style: dashed
+    .lane.over
+        background: var(--c-accent-fill)
+    .lane.blocked
+        opacity: 0.45
+
+/*  the horizontal scroll bar and the footer  */
+#hscroll
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: 8px
+    padding: 6px 16px 0
+    color: var(--c-mute)
+    font-size: 0.8125rem
+    button
+        border: 0
+        background: none
+        cursor: pointer
+        color: var(--c-text-soft)
+footer
+    padding: 4px 16px 6px
+    text-align: center
+    color: var(--c-text-soft)
+    font-size: 0.8125rem
+
+/*  the key caps of the board footer and the dialog footer  */
+footer kbd, #dlg .dfoot kbd
+    display: inline-block
+    padding: 0 5px
+    border: 1px solid var(--c-border)
+    border-radius: 4px
+    background: var(--c-paper)
+    font: inherit
+    font-weight: bold
+
+/*  the graph view  */
+#graph
+    height: calc(100vh - 105px)
+    overflow: auto
+    background: var(--c-ground-light)
+    border: 1px solid var(--c-border-soft)
+    border-radius: 6px
+    svg
+        max-width: none
+        display: block
+    .node
+        cursor: pointer
+    .card
+        box-sizing: border-box
+        height: 100%
+    .edge
+        fill: none
+        stroke: var(--c-line)
+        stroke-width: 1.4
+    .arrow
+        fill: var(--c-line)
+
+/*  the task dialog  */
+#scrim
+    position: fixed
+    inset: 0
+    background: unquote("color-mix(in srgb, var(--c-shade) 55%, transparent)")
+    z-index: 10
+#dlg
+    position: absolute
+    left: 50%
+    top: 1.5vh
+    transform: translateX(-50%)
+    width: unquote("min(900px, 94vw)")
+    height: 97vh
+    display: flex
+    flex-direction: column
+    background: var(--c-paper)
+    border: 1px solid var(--c-border-strong)
+    border-radius: 10px
+    box-shadow: 0 8px 32px unquote("color-mix(in srgb, var(--c-shade) 18%, transparent)")
+
+    /*  the header: task id and title on the left, lane group and lane on the right  */
+    .dhd
+        display: flex
+        align-items: center
+        gap: 12px
+        padding: 4px 16px 4px 20px
+        background: var(--c-ground)
+        border-bottom: 1px solid var(--c-fill)
+        border-radius: 10px 10px 0 0
+        h1
+            flex: 1
+            min-width: 0
+            margin: 0
+            font-size: 1rem
+            white-space: nowrap
+            overflow: hidden
+            text-overflow: ellipsis
+
+            /*  the task title colored like its task box (the task id box
+                gets its color from the general task box tone rules)  */
+            color: var(--c-text)
+            &.tone-active
+                color: var(--c-accent-strong)
+            &.tone-done
+                color: var(--c-line)
+        .where
+            white-space: nowrap
+            color: var(--c-text-soft)
+            .val
+                display: inline-block
+                padding: 0 6px
+                border: 1px solid var(--c-border)
+                border-radius: 4px
+                background: var(--c-paper)
+                color: var(--c-text)
+                font-weight: bold
+
+    /*  the dependencies: predecessors on the left, successors on the right  */
+    .drefs
+        display: flex
+        justify-content: space-between
+        flex-wrap: wrap
+        gap: 6px 24px
+        padding: 4px 20px
+        background: var(--c-ground)
+        border-bottom: 1px solid var(--c-fill)
+        .mute
+            margin-right: 6px
+            font-size: 1rem
+
+    /*  the tabs: the task plan, followed by its attachments, all filled,
+        the selected one in signal color, the others in accent color  */
+    .dtabs
+        position: relative
+        display: flex
+        align-items: center
+        gap: 6px
+        padding: 4px 20px
+        background: var(--c-ground)
+        border-bottom: 1px solid var(--c-fill)
+
+        /*  the scroll arrows sit in the side paddings, so the tabs start
+            in the same left column as the other rows of the dialog  */
+        .tarr
+            position: absolute
+            top: 50%
+            transform: translateY(-50%)
+            border: 0
+            background: none
+            padding: 0
+            cursor: pointer
+            color: var(--c-mute)
+            font-size: 0.875rem
+            &:first-child
+                left: 5px
+            &:last-child
+                right: 5px
+        .tlist
+            flex: 1
+            min-width: 0
+            display: flex
+            gap: 6px
+            overflow-x: auto
+            scrollbar-width: none
+            &::-webkit-scrollbar
+                display: none
+        .tab
+            flex-shrink: 0
+            border: 1px solid var(--c-accent)
+            border-radius: 4px
+            padding: 1px 8px
+            background: var(--c-accent)
+            color: var(--c-paper)
+            font: inherit
+            font-size: 0.875rem
+            white-space: nowrap
+            cursor: pointer
+            &.sel
+                border-color: var(--c-signal)
+                background: var(--c-signal)
+                font-weight: bold
+            &:hover
+                opacity: 0.8
+
+    /*  the content: the rendered task plan or attachment of the selected tab  */
+
+    /*  the content fills the remaining height of the fixed-height dialog,
+        so the dialog keeps the same margin at the top and the bottom  */
+    #plan
+        flex: 1
+        min-height: 0
+        width: 100%
+        border: 0
+
+    /*  the footer: the key hint  */
+    .dfoot
+        padding: 6px 20px
+        background: var(--c-ground)
+        border-top: 1px solid var(--c-fill)
+        border-radius: 0 0 10px 10px
+        color: var(--c-text-soft)
+        font-size: 0.6875rem
+.close
+    border: 0
+    background: none
+    font-size: 1rem
+    cursor: pointer
+    color: var(--c-text)
+
+/*  the task id references to the predecessors and successors, filled
+    like the task id boxes: accent for active, dim for done, else default  */
+.ref
+    cursor: pointer
+    &.tone-active
+        background: var(--c-accent)
+    &.tone-done
+        background: var(--c-line)
+    &:hover
+        opacity: 0.8
+
+/*  the task plan document (shown within the task dialog): the frontmatter
+    fields, the numbered plan sections, and the attachments  */
+body.plan
+    background: var(--c-paper)
+    margin: 0
+
+    /*  the same horizontal padding as the rows of the task dialog, to align on the left  */
+    padding: 1.2rem 20px 2rem 20px
+    font-size: 1rem
+    line-height: 1.30
+    h1, h2, h3, h4
+        color: var(--c-accent)
+        line-height: 1.25
+        margin: 1.0em 0 0.5em
+    h1
+        font-size: 1.4rem
+    h2
+        font-size: 1.2rem
+    h3
+        font-size: 1.05rem
+    p, ol, ul, table, pre, blockquote
+        margin: 0 0 0.8em
+
+    /*  the list items (of loose lists, where the item texts are paragraphs) with less spacing  */
+    li > p
+        margin: 0 0 0.5em
+
+    /*  bullet lists with filled round bullets (also for the checklist items)  */
+    ul
+        list-style: disc
+        padding-left: 1rem
+
+        /*  more space between the (fixed) bullet and the item text  */
+        > li
+            padding-left: 0.5rem
+    ol
+        padding-left: 1.6rem
+    a
+        color: var(--c-accent)
+    img
+        max-width: 100%
+    hr
+        border: 0
+        border-top: 1px solid var(--c-fill)
+
+        /*  the separator between the task fields and the task plan  */
+        &.fields
+            margin: 0 0 1rem 0
+    blockquote
+        padding: 0.1em 0 0.1em 0.9em
+        border-left: 3px solid var(--c-accent-border)
+        color: var(--c-text-soft)
+    code
+        font-family: "DejaVu Sans Mono", Menlo, monospace
+        font-size: 0.9rem
+        letter-spacing: -0.015em
+        color: var(--c-accent)
+    pre.textart
+        white-space: pre
+        overflow-x: auto
+        line-height: 1.15
+        font-size: 0.9rem
+        padding: 0.6rem 0
+        code
+            font-size: 0.9rem
+            padding: 0
+
+    /*  a preflight diff: headers dimmed, inserted lines accented, removed lines signaled  */
+    pre.diff code
+        color: var(--c-text)
+        letter-spacing: -0.015em
+        line-height: 1.00
+        .head
+            color: var(--c-mute)
+        .add
+            color: var(--c-accent)
+        .del
+            color: var(--c-signal)
+    table
+        border-collapse: collapse
+        th, td
+            padding: 0.25em 0.6em
+            border: 1px solid var(--c-border-soft)
+            text-align: left
+            vertical-align: top
+        th
+            background: var(--c-ground)
+    table.fields
+        margin-bottom: 1rem
+        line-height: 1.25
+        td
+            padding: 0 1.2rem 0 0
+            border: 0
+            &.k
+                color: var(--c-mute)
+                &::after
+                    content: ":"
+    .diagram
+        overflow-x: auto
+        margin: 0 0 0.8em
+        svg
+            max-width: 100%
+            height: auto
+    .caption
+        margin-top: 0.2rem
+        color: var(--c-mute)
+        font-size: 0.85rem
+
+    /*  the checkboxes of the checklist items  */
+    .box
+        display: inline-block
+        width: 0.75em
+        height: 0.75em
+        margin-right: 0.5em
+        vertical-align: -0.05em
+        border: 1px solid var(--c-accent)
+        border-radius: 2px
+        &.done
+            background: var(--c-accent)
+        &.part
+            background: linear-gradient(90deg, var(--c-accent) 50%, var(--c-accent-ground) 50%)
+        &.todo
+            background: var(--c-accent-ground)
+
+        /*  the open, cancelled, and deferred items as regular glyphs
+            within a fixed-size box with a rounded signal border  */
+        &.open, &.cancel, &.defer
+            overflow: hidden
+            border-color: var(--c-signal)
+            background: var(--c-signal-ground)
+            color: var(--c-signal)
+            &::before
+                display: flex
+                align-items: center
+                justify-content: center
+                height: 100%
+                font-size: 0.7em
+                font-weight: bold
+                line-height: 1
+        &.open::before
+            content: "?"
+        &.cancel::before
+            content: "−"
+        &.defer::before
+            content: "→"
+

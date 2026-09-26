@@ -38,7 +38,13 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `util-mint`, `util-metric`) plus generic library modules (`lib-log`,
         `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`), the MCP-only tool modules of the
         service (`service-kv`, `service-getopt`, `service-markdown`,
-        `service-skills`, `service-sleep`, `service-timestamp`), and the task store (`task-store-server-cli` for
+        `service-skills`, `service-sleep`, `service-timestamp`),
+        the task board (`task-board` for
+        the `ase task board` CLI command plus its `task-board-core`,
+        `task-board-graph`, `task-board-tui`, and `task-board-web`
+        parts, the latter with its browser client in
+        `ase-task-board-web-client.{html,ts,vue,styl}`, a Vue application
+        bundled by Vite), and the task store (`task-store-server-cli` for
         the `ase task store` CLI wrapper, `task-store-core` for the
         transport-agnostic REST API functionality, `task-store-server-bind`
         for its HTTP and WebSocket binding,
@@ -90,12 +96,12 @@ npm start lint          # markdownlint-cli2 + eslint over meta/ and skills/
 npm start build         # lint, then regenerate skills/ase-help-intent/data.md
 
 cd tool
-npm start lint          # eslint --config etc/eslint.mjs src/*.ts
+npm start lint          # eslint over src/*.{ts,vue} + vue-tsc type-check of the web board client
 npm start build         # lint + build-cmd + build-plugin
-npm start build-cmd     # tsc --project etc/tsc.json (emits into dst/)
+npm start build-cmd     # tsc + vite build of the web board client (emits into dst/)
 npm start build-plugin  # copy ../plugin and ../.claude-plugin into the package
-npm start build-watch   # nodemon rebuild on src/**/*.ts
-npm start lint-watch    # nodemon relint on src/**/*.ts
+npm start build-watch   # nodemon rebuild on src/**/*.{ts,vue,styl,html}
+npm start lint-watch    # nodemon relint on src/**/*.{ts,vue}
 
 cd pages
 npm start lint          # astro check + eslint over src/**/*.{ts,astro}
@@ -136,7 +142,8 @@ Beyond `ase setup`, the CLI provides `ase config` (layered `user` <
 `project` < `task` < `session` configuration), `ase service` (per-project
 background HTTP service), `ase mcp` (stdio-to-service MCP bridge), `ase
 hook` (agent tool hook handlers), `ase statusline` (statusline renderer),
-`ase task` (persisted task plans), `ase artifact` (artifact kind
+`ase task` (persisted task plans, including `ase task board` for the
+interactive task board in terminal and browser), `ase artifact` (artifact kind
 resolution), `ase spec` (SpecBook specification linting, exporting, and
 previewing), and `ase util` (utility commands: `ase util meta` (plugin
 meta file output), `ase util diagram` (Mermaid rendering), `ase util

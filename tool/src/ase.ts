@@ -15,6 +15,7 @@ import ServiceCommand              from "./ase-service.js"
 import HookCommand                 from "./ase-hook.js"
 import StatuslineCommand           from "./ase-statusline.js"
 import TaskCommand                 from "./ase-task.js"
+import TaskBoardCommand            from "./ase-task-board.js"
 import ArtifactCommand             from "./ase-artifact.js"
 import SpecCommand                 from "./ase-spec.js"
 import UtilCommand                 from "./ase-util.js"
@@ -69,7 +70,8 @@ const main = async (): Promise<void> => {
     new ServiceCommand(log).register(program)
     new HookCommand(log).register(program)
     new StatuslineCommand(log).register(program)
-    new TaskCommand(log).register(program)
+    const task = new TaskCommand(log).register(program)
+    new TaskBoardCommand(log).register(task)
     new ArtifactCommand(log).register(program)
     new SpecCommand(log).register(program)
     const util = new UtilCommand().register(program)

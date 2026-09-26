@@ -732,14 +732,17 @@ export class Task {
     }
 
     /*  list the attachments of a task plan, each with its type, description,
-        and either the referenced file (relative to a local task store) or the
-        embedded data; returns an empty list if no task exists  */
-    static async attachments (log: Log, id: string): Promise<{ type: string, desc: string, file?: string, data?: string }[]> {
+        creation and modification timestamps (if any), and either the referenced
+        file (relative to a local task store) or the embedded data; returns an
+        empty list if no task exists  */
+    static async attachments (log: Log, id: string): Promise<{ type: string, desc: string, created?: string, modified?: string, file?: string, data?: string }[]> {
         Task.validateId(id)
         const plan = await Task.with(log, (client) => client.load(id))
         return (plan?.attachment ?? []).filter((a) => a.Type !== undefined).map((a) => ({
             type: a.Type,
             desc: a.Desc ?? "",
+            ...(a.Created  !== undefined ? { created:  a.Created  } : {}),
+            ...(a.Modified !== undefined ? { modified: a.Modified } : {}),
             ...(a.File !== undefined ? { file: a.File } : {}),
             ...(a.Data !== undefined ? { data: a.Data } : {})
         }))

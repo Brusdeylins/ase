@@ -1,5 +1,6 @@
 node_modules/
 .astro
+.ase/board.yaml
 .ase/service.log
 .ase/service.yaml
 .ase/sessions

@@ -5,6 +5,13 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool]: TUI and Web Task Board
+    The new `ase task board` shows all task plans live as cards in the lanes of the task lifecycle
+    model, as an interactive terminal board (plan dialog, `$EDITOR` editing, dependency graph view
+    via `--graph`, task moves via `SPACE`), as a web board served by the ASE service (`--web`, task
+    moves via drag & drop), or as plain text (`--text`). The display state persists in
+    `.ase/board.yaml`, the colors in `board.{tui,web}.color.*`, and the skill is `ase-task-board`.
+
 -   FEATURE [plugin]: Clickable grilling table
     In the latest grilling table redrawn by the function hooks module `ase-mods.ts`, every
     question and every answer alternative reveals a clickable button while hovered (rendered in

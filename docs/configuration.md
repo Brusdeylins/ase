@@ -45,9 +45,10 @@ The following configuration parameters control the project:
 
     The lifecycle is exported by the session-start hook as the
     `<ase-project-task-lifecycle/>` placeholder (and as the
-    `ASE_PROJECT_TASK_LIFECYCLE` environment variable). It is writable on
-    the `user` and `project` scopes only, as the task store follows these
-    two scopes only.
+    `ASE_PROJECT_TASK_LIFECYCLE` environment variable). The effective
+    lifecycle model also fixes the lane layout of `ase task board`, which
+    offers no lane configuration of its own. It is writable on the `user`
+    and `project` scopes only, as the task store follows these two scopes only.
 
 -   **project.task.store**: the *task store* URL the `ase task` commands
     and `ase_task_*` MCP tools forward the project *task plans* to:
@@ -144,4 +145,39 @@ The following configuration parameters control the agent:
 -   **agent.task**: the Agentic AI *task* unique id
 
 -   **agent.skill**: the Agentic AI *skill* unique id of the currently active skill
+
+The following configuration parameters control the terminal and web
+user interfaces of the task board (`ase task board`), and are writable
+on the `user` and `project` scopes only:
+
+-   **board.tui.color.{dim,normal,accent,signal}**: the colors of the
+    four color roles of the terminal board:
+
+    -   `dim`:    secondary information like borders, done tasks, and hints (default: `grey`).
+    -   `normal`: regular text, like idle tasks (default: `default`).
+    -   `accent`: active lanes and tasks, code, and done or in-progress checklist items (default: `blue`).
+    -   `signal`: the selection, warnings, status notices, and open or flagged checklist items (default: `red`).
+
+    A color is either `default` (the foreground color of the terminal),
+    a color name (like `blue` or `blueBright`), a hex value `#rrggbb`
+    (or `#rgb`), `ansi256(`*n*`)`, or `rgb(`*r*`,`*g*`,`*b*`)`. The
+    colors are read once on start of the board.
+
+-   **board.web.color.{dim,normal,accent,signal}**: the base colors of
+    the four color roles of the web board (`ase task board --web`):
+
+    -   `dim`:    borders, lane grounds, done tasks, and secondary texts (default: `grey`).
+    -   `normal`: regular text, task id boxes, and card grounds (default: `black`).
+    -   `accent`: active lanes and tasks, tabs, and chips (default: `blue`).
+    -   `signal`: warnings (default: `orange`).
+
+    A color is either `default` (the built-in base color of the role:
+    `normal` `#1a1a1a`, `dim` `#999999`, `accent` `#336699`, `signal`
+    `#b06820`), a color name (`black`, `grey`, `gray`, `brown`, `red`,
+    `orange`, `yellow`, `green`, `teal`, `cyan`, `blue`, `purple`, or
+    `magenta`), or a hex value `#rrggbb` (or `#rgb`). Each base color is
+    expanded via *MRCS* (`@rse/mrcs`) into a spread of 64 colors over the
+    entire lightness range, out of which the web board takes all its
+    colors. The `accent` color also tints the rendered task plans. The
+    colors are read on each load of the web board page.
 

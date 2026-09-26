@@ -62,7 +62,10 @@ The following top-level commands exist for configuration handling:
   globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.store`, `project.task.token` (masked as `***` by `list`), and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
-  task identifier -- and `agent.skill`).
+  task identifier -- and `agent.skill`), and `board.*`
+  (`board.tui.color.{dim,normal,accent,signal}` -- the colors of
+  the terminal task board, and `board.web.color.{dim,normal,accent,signal}`
+  -- the base colors of the web task board).
   All `ase config` subcommands accept a `--scope` *scope* option
   that selects the scope chain. The *scope* value is a
   comma-separated list of scope terms, in any order; each term
@@ -599,6 +602,40 @@ else the `token` of the per-user `store.yaml`:
 - `ase task store stop`:
   Stop the task store server.
 
+The following sub-command exists for watching, moving, and editing
+the persisted task plans of the current project:
+
+- `ase task board` \[`-g`|`--graph`\] \[`-w`|`--web`\] \[`-t`|`--text`\]:
+  Show the task board: all task plans as cards (showing the task id and,
+  behind a `▶`, the title) in the
+  lanes of the effective task lifecycle model (see `ase task lifecycle`),
+  grouped by the phases of the model plus a final `Done` group, with the
+  active lanes in blue and the parking lanes in grey. Without options,
+  the interactive terminal board is started (`--graph` starts in the
+  dependency graph view derived from the `After:` keys); lanes can be
+  minimized and groups collapsed, a card title is cut onto a single line
+  or, toggled with `t`, wrapped onto at most three lines, and a card
+  opens its plan in a full-height dialog (also by a mouse click onto the
+  card, while a click onto its ` X ` closes the dialog again, a click onto
+  a tab selects it, and the mouse wheel scrolls it; `M` disables the
+  mouse support to regain the regular text selection of the terminal).
+  `e` edits the selected task plan with `$EDITOR` (default: `vi`), a
+  draft which failed to save being offered again on the next `e`. In
+  the lanes view, `SPACE` picks up the selected task and a second `SPACE`
+  drops it onto the selected lane, changing the task status (`ESC`
+  cancels); only lanes whose state is reachable from the current state
+  in the lifecycle model accept the task. `--web` serves the web board through the ASE
+  service of the project and opens it in the browser, where a task is
+  moved by dragging its card onto a reachable lane; its minimized lanes
+  and collapsed groups are stored once per project, not per browser, so
+  all open web boards share them and pick up a change immediately.
+  A running service with other ASE code is never restarted, as
+  this would break the MCP connections of agent sessions: an older service
+  without the web board fails `--web`, a differing build is only
+  warned about. `--text` prints
+  the lane overview as plain text, which is also the fallback without an
+  interactive terminal. All views follow changes of the task plans live.
+
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the
 `project.artifact.*` configuration globs. Only the files Git tracks are
@@ -790,6 +827,19 @@ STATE FILES
   to the Git top-level directory (or the current working directory
   outside a Git repository). Each task file is owned by *ASE* and
   removed by `ase task delete` and `ase task purge`.
+
+- `<project>/.ase/board.yaml`:
+  Display state of `ase task board`: separately for the terminal and the
+  web board, the minimized lanes, the collapsed groups, and whether the
+  task titles are wrapped onto multiple lines. The web state is shared by all
+  browsers and tabs showing the web board. It never holds task content.
+
+- `<project>/.ase/.gitignore`:
+  Self-ignoring Git ignore file, created on first write of any of the
+  machine-local runtime files above (`service.yaml`, `service.log`, and
+  `board.yaml`), which it covers together with lock files and
+  `worktree/`, so they never show up as untracked files. An existing
+  file is never overwritten.
 
 HISTORY
 -------
