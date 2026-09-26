@@ -21,6 +21,7 @@ import {
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, SurfaceList } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
+import { filterBoard }                        from "./ase-task-board-filter.js"
 import { layoutGraph, drawGraphText }         from "./ase-task-board-graph.js"
 import type { GraphLayout }                   from "./ase-task-board-graph.js"
 import { Config, configSchema, tuiColorDefaults } from "./ase-config.js"
@@ -650,9 +651,15 @@ const mouseReporting = (on: boolean): void => {
 const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board }) => {
     const { exit, suspendTerminal } = useApp()
     const { columns, rows } = useWindowSize()
-    const [ board,   setBoard   ] = React.useState<Board>(initial)
+    const [ all,     setBoard   ] = React.useState<Board>(initial)
     const [ surface, setSurface ] = React.useState<Surface>(() => BoardState.load().tui)
     const [ view,    setView    ] = React.useState<"lanes" | "graph">(graph ? "graph" : "lanes")
+    const [ filter,  setFilter  ] = React.useState("")
+    const [ typing,  setTyping  ] = React.useState(false)
+
+    /*  the shown board: all tasks reduced onto the ones matching the filter
+        query (plus, in the graph view, their direct dependencies as context)  */
+    const board = React.useMemo(() => filterBoard(all, filter, view === "graph"), [ all, filter, view ])
     const [ sel,     setSel     ] = React.useState<Sel>(() => relocate(board, { g: 0, l: 0, id: "" }, surface))
     const [ dialog,  setDialog  ] = React.useState<{ id: string, tab: number, first: number, scrolls: Record<number, number> } | null>(null)
     const [ plan,    setPlan    ] = React.useState<{ id: string, parts: PlanParts } | null>(null)
@@ -677,6 +684,10 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
     }
     const cardRef   = (id: string) => register(cardBoxes.current, id)
     const laneRef   = (g: number, l: number) => register(laneBoxes.current, `${g}:${l}`)
+
+    /*  the rendered view value and filter field of the header, for the mouse hit-testing  */
+    const headBoxes = React.useRef(new Map<string, DOMElement>())
+    const headRef   = (key: "view" | "filter" | "clear") => register(headBoxes.current, key)
 
     /*  find the registered box under a (0-based) mouse position  */
     const boxAt = (map: Map<string, DOMElement>, mx: number, my: number): string | undefined => {
@@ -723,7 +734,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         return () => {
             live = false
         }
-    }, [ log, board ])
+    }, [ log, all ])
 
     /*  auto-clear a status notice after 5 seconds  */
     React.useEffect(() => {
@@ -739,11 +750,11 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
 
     /*  drop a carried task if it vanished or changed its status in the meantime  */
     React.useEffect(() => {
-        if (carry !== null && board.cards.get(carry.id)?.status !== carry.from) {
+        if (carry !== null && all.cards.get(carry.id)?.status !== carry.from) {
             setCarry(null)
             setNotice(`moving task "${carry.id}" cancelled: task changed in the meantime`)
         }
-    }, [ board, carry ])
+    }, [ all, carry ])
 
     /*  remember the box of every graph node for the spatial navigation and the scrolling  */
     const places = React.useMemo(() => {
@@ -783,7 +794,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         return () => {
             live = false
         }
-    }, [ log, board, dialogId ])
+    }, [ log, all, dialogId ])
 
     /*  fetch the file content of the attachment of the selected tab, whenever the tab is selected or the plan changes  */
     React.useEffect(() => {
@@ -987,6 +998,28 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 dialogScroll(btn === 64 ? -3 : 3)
             return
         }
+
+        /*  a click onto the view value of the header switches the view, a click
+            onto the filter field starts typing into it (unless a task is moved),
+            a click onto its clear button clears it, and any other click ends
+            typing (keeping the filter query)  */
+        const head = btn === 0 ? boxAt(headBoxes.current, mx, my) : undefined
+        if (typing && head !== "filter")
+            setTyping(false)
+        if (head === "clear") {
+            setFilter("")
+            return
+        }
+        if (head === "view") {
+            setCarry(null)
+            setView(view === "lanes" ? "graph" : "lanes")
+            return
+        }
+        if (head === "filter") {
+            if (carry === null)
+                setTyping(true)
+            return
+        }
         if ((btn === 64 || btn === 65) && view === "lanes") {
             /*  the wheel over a lane scrolls it, by stepping the selection
                 through its cards (entering the lane at its first card)  */
@@ -1064,6 +1097,22 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         if (notice !== null)
             setNotice(null)
 
+        /*  while typing into the filter field, all keys edit the filter query
+            (applied live), until ENTER keeps it or ESC clears it  */
+        if (typing && dialog === null) {
+            if (key.return)
+                setTyping(false)
+            else if (key.escape) {
+                setFilter("")
+                setTyping(false)
+            }
+            else if (key.backspace || key.delete)
+                setFilter((f) => f.slice(0, -1))
+            else if (!key.ctrl && !key.meta && !/\p{Cc}/u.test(input))
+                setFilter((f) => f + input)
+            return
+        }
+
         /*  toggle the mouse support in every view (under the kitty keyboard
             protocol, Shift+m arrives as "m" with the shift modifier)  */
         if (input === "M" || (input === "m" && key.shift)) {
@@ -1104,6 +1153,11 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         }
         if (input === "q") {
             exit()
+            return
+        }
+        if (input === "/") {
+            if (carry === null)
+                setTyping(true)
             return
         }
         if (input === "g" || input === "l") {
@@ -1275,7 +1329,8 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
     const status = h(Box, { key: "status", paddingX: 1, justifyContent: "center" },
         h(Text, { color: palette.signal, dimColor: dim, wrap: "truncate" },
             notice !== null ? sanitize(notice) :
-                carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` : " "))
+                carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` :
+                    typing ? "filtering tasks by fuzzy matched keywords (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : " "))
 
     /*  render the lane view  */
     const renderLanes = () => {
@@ -1305,7 +1360,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     `m: ${minned ? "maximize" : "minimize"} lane · c: ${folded ? "expand" : "collapse"} group · ` +
                     `t: ${surface.titles ? "collapse" : "expand"} titles · M: ${mouse ? "disable" : "enable"} mouse · ` +
-                    "g: switch to graph · q: quit"))
+                    "/: filter · g: switch to graph · q: quit"))
         ]
     }
 
@@ -1364,12 +1419,21 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     `t: ${graphTitles ? "collapse" : "expand"} titles · M: ${mouse ? "disable" : "enable"} mouse · ` +
-                    "l: switch to lanes · q: quit"))
+                    "/: filter · l: switch to lanes · q: quit"))
         ]
     }
 
+    /*  the counted tasks (without the context tasks of a filtered graph), and
+        the (inversely rendered) filter field of the header: the tail of the
+        filter query (with the cursor while typing), padded to a fixed width,
+        followed by its clear button (shown with a filter query only)  */
+    const tasks = [ ...board.cards.values() ].filter((c) => !board.context.has(c.id))
+    const field = (sanitize(filter) + (typing ? "▏" : "")).slice(-14).padEnd(14)
+
     /*  render the whole screen  */
     return h(Box, { width: columns, height: rows, flexDirection: "column" },
+        /*  the header, with the view value and the filter field in boxes of
+            their own, so that they are measurable for the mouse hit-testing  */
         h(Box, { justifyContent: "center", paddingX: 1 },
             h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" },
                 "⧉ ASE: ",
@@ -1379,22 +1443,29 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 " · mode: ",
                 h(Text, { bold: true }, board.mode),
                 " · tasks: ",
-                h(Text, { bold: true }, `${[ ...board.cards.values() ].filter((c) => toneOf(board, c) !== "done").length}/${board.cards.size}`),
-                " · view: ",
-                h(Text, { bold: true }, view))),
+                h(Text, { bold: true }, `${tasks.filter((c) => toneOf(board, c) !== "done").length}/${tasks.length}`),
+                " · view: "),
+            h(Box, { ref: headRef("view"), flexShrink: 0 },
+                h(Text, { color: palette.normal, dimColor: dim, bold: true }, view)),
+            h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" }, " · filter: "),
+            h(Box, { ref: headRef("filter"), flexShrink: 0 },
+                h(Text, { color: typing ? palette.signal : palette.normal, dimColor: dim, bold: true, inverse: true }, field)),
+            h(Box, { ref: headRef("clear"), flexShrink: 0 },
+                h(Text, { color: typing ? palette.signal : palette.normal, dimColor: dim, bold: true, inverse: true },
+                    filter !== "" ? "✕ " : "  "))),
         h(Box, { paddingX: 1 },
             h(Text, { color: palette.signal, dimColor: dim, wrap: "truncate" },
                 board.warnings.length > 0 ? `⚠ ${board.warnings.map(sanitize).join(" · ")}` : " ")),
         ...(view === "lanes" ? renderLanes() : renderGraph()),
         dialog !== null ? renderDialog({
-            card:    board.cards.get(dialog.id),
-            group:   board.groups.find((g) => g.lanes.some((l) => l.status === board.cards.get(dialog.id)?.status))?.title,
+            card:    all.cards.get(dialog.id),
+            group:   all.groups.find((g) => g.lanes.some((l) => l.status === all.cards.get(dialog.id)?.status))?.title,
             id:      dialog.id,
-            pred:    board.pred.get(dialog.id) ?? [],
-            succ:    board.succ.get(dialog.id) ?? [],
+            pred:    all.pred.get(dialog.id) ?? [],
+            succ:    all.succ.get(dialog.id) ?? [],
             tint:    (ref) => {
-                const c    = board.cards.get(ref)
-                const tone = c !== undefined ? toneOf(board, c) : "idle"
+                const c    = all.cards.get(ref)
+                const tone = c !== undefined ? toneOf(all, c) : "idle"
                 return tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
             },
             tabs:    tabLabels,

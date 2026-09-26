@@ -12,6 +12,13 @@
             <span class="sep">·</span>mode: <span class="val">{{ board?.mode }}</span>
             <span class="sep">·</span>tasks: <span class="val">{{ taskCount }}</span>
             <span class="sep">·</span>view: <button class="val toggle" title="switch view (g/l)" @click="setView(view === 'lanes' ? 'graph' : 'lanes')">{{ view }}</button>
+            <span class="sep">·</span><span class="filter">filter:
+                <span class="field">
+                    <input ref="filterEl" v-model="filter" class="val" type="text" autocomplete="off" spellcheck="false"
+                        placeholder="keywords…" title="space ANDs, comma ORs fuzzy matched keywords (/)" @keydown.esc="clearFilter" @keydown.enter="filterEl?.blur()">
+                    <button v-show="filter !== ''" class="clear" title="clear filter (ESC)" @click="clearFilter">✕</button>
+                </span>
+            </span>
         </span>
         <span class="warn">{{ warning }}</span>
     </header>
@@ -152,6 +159,9 @@ const tab         = ref(0)
 const tabDocs     = ref<Record<number, string>>({})
 const tabScroll   = reactive({ less: false, more: false })
 const tabScrolls  = new Map<number, number>()
+const filter      = ref("")
+const filterEl    = ref<HTMLInputElement | null>(null)
+let   query       = ""
 let   openId      = null as string | null
 let   openSeq     = 0
 let   reloadSeq   = 0
@@ -170,6 +180,7 @@ const warning   = computed(() => actionError.value !== null ? `⚠ ${actionError
 const hints     = computed(() => [
     { key: "Left-Click", action: view.value === "lanes" ? "view task / minimize/maximize lane / collapse/expand group" : "view task" },
     ...(view.value === "lanes" ? [ { key: "Drag & Drop", action: "move task to lane" } ] : []),
+    { key: "/",          action: "filter tasks" },
     { key: "t",          action: `${titles.value ? "collapse" : "expand"} titles` },
     view.value === "lanes" ? { key: "g", action: "switch to graph" } : { key: "l", action: "switch to lanes" },
     { key: "ESC",        action: "close task" }
@@ -194,7 +205,7 @@ watch([ board, view ], () => nextTick(updateScroll), { deep: true })
 /*  load the dependency graph (laid out by the service)  */
 const renderGraph = async () => {
     const seq = ++graphSeq
-    const res = await api<{ svg: string }>("/task-board/api/graph")
+    const res = await api<{ svg: string }>(`/task-board/api/graph?filter=${encodeURIComponent(query)}`)
     if (seq !== graphSeq)
         return
     graph.value = res.error !== undefined ? `<p class="warn">${res.error.replace(/[&<>]/g, (c) => `&#${c.charCodeAt(0)};`)}</p>` :
@@ -288,7 +299,7 @@ const updateTabScroll = () => {
 /*  (re)load the board model  */
 const reload = async () => {
     const seq  = ++reloadSeq
-    const data = await api<Board>("/task-board/api/board")
+    const data = await api<Board>(`/task-board/api/board?filter=${encodeURIComponent(query)}`)
     if (seq !== reloadSeq)
         return
     if (data.error !== undefined) {
@@ -301,6 +312,23 @@ const reload = async () => {
         await renderGraph()
     if (openId !== null)
         await openTask(openId)
+}
+
+/*  apply the filter query debounced while typing (as each change
+    re-fetches the board), or immediately when it is cleared  */
+let filterTimer: ReturnType<typeof setTimeout> | null = null
+watch(filter, (value) => {
+    if (filterTimer !== null)
+        clearTimeout(filterTimer)
+    filterTimer = setTimeout(() => {
+        filterTimer = null
+        query = value
+        reload()
+    }, value === "" ? 0 : 250)
+})
+const clearFilter = () => {
+    filter.value = ""
+    filterEl.value?.blur()
 }
 
 /*  apply a changed surface state, with the graph re-laid out if the showing of titles changed  */
@@ -401,6 +429,10 @@ onMounted(() => {
     Mousetrap.bind("t", () => { if (board.value !== null) toggle("titles", "") })
     Mousetrap.bind("g", () => { if (view.value !== "graph") setView("graph") })
     Mousetrap.bind("l", () => { if (view.value !== "lanes") setView("lanes") })
+    Mousetrap.bind("/", (ev) => {
+        ev.preventDefault()
+        filterEl.value?.focus()
+    })
     document.addEventListener("keydown", onKey)
     window.addEventListener("resize", onResize)
     ping = setInterval(() => api("/task-board/api/ping"), 60 * 1000)
@@ -413,6 +445,8 @@ onBeforeUnmount(() => {
     window.removeEventListener("resize", onResize)
     if (ping !== null)
         clearInterval(ping)
+    if (filterTimer !== null)
+        clearTimeout(filterTimer)
 })
 </script>
 

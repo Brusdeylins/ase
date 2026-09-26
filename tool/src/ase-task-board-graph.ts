@@ -160,17 +160,20 @@ export const drawGraphText = (board: Board, layout: GraphLayout, selected: strin
             chars[end.y][end.x - 1] = "►"
     }
 
-    /*  node boxes on top  */
+    /*  node boxes on top, where a context node (of a filtered graph) is dimmed and dashed  */
     for (const n of layout.nodes.values()) {
-        const tone  = n.id === selected ? "sel" : toneOf(board, board.cards.get(n.id)!)
+        const ctx   = board.context.has(n.id)
+        const tone  = n.id === selected ? "sel" : ctx ? "done" : toneOf(board, board.cards.get(n.id)!)
+        const hor   = ctx ? "╌" : "─"
+        const ver   = ctx ? "╎" : "│"
         for (let y = n.y; y < n.y + n.h && y < H; y++)
             for (let x = n.x; x < n.x + n.w && x < W; x++) {
                 const top = y === n.y
                 const bot = y === n.y + n.h - 1
                 const lft = x === n.x
                 const rgt = x === n.x + n.w - 1
-                chars[y][x] = top ? (lft ? "┌" : rgt ? "┐" : "─") :
-                    bot ? (lft ? "└" : rgt ? "┘" : "─") : (lft || rgt ? "│" : " ")
+                chars[y][x] = top ? (lft ? "┌" : rgt ? "┐" : hor) :
+                    bot ? (lft ? "└" : rgt ? "┘" : hor) : (lft || rgt ? ver : " ")
                 tones[y][x] = top || bot || lft || rgt ? `${tone}-frame` : tone
             }
         /*  the label lines, with the task id at the start of the first line
@@ -195,8 +198,9 @@ const escapeXML = (s: string): string =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 
 /*  draw a pixel-unit layout as SVG, with every node a "g.node" carrying
-    its "data-id" and tone class, for the click delegation of the page,
-    and holding the same HTML card (task id sub-box and truncated title) as the lanes  */
+    its "data-id" and tone class (plus "context" for a context node of a filtered graph),
+    for the click delegation of the page, and holding the same HTML card
+    (task id sub-box and truncated title) as the lanes  */
 export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
     const pad   = 16
     const out   = [ `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width + 2 * pad}" ` +
@@ -209,7 +213,7 @@ export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
     }
     for (const n of layout.nodes.values()) {
         const card = board.cards.get(n.id)!
-        out.push(`<g class="node tone-${toneOf(board, card)}" data-id="${escapeXML(card.id)}">` +
+        out.push(`<g class="node tone-${toneOf(board, card)}${board.context.has(card.id) ? " context" : ""}" data-id="${escapeXML(card.id)}">` +
             `<foreignObject x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}">` +
             `<div xmlns="http://www.w3.org/1999/xhtml" class="card"><div class="cbody"><span class="cid">${escapeXML(card.id)}</span>` +
             `${board.cyclic.has(card.id) ? "⟲ " : ""}${escapeXML(card.title)}</div></div></foreignObject></g>`)

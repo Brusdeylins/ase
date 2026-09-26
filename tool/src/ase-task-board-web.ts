@@ -18,6 +18,7 @@ import { Task }                  from "./ase-task.js"
 import { Config, configSchema, webColorDefaults, webColorNames } from "./ase-config.js"
 import { buildBoard, watchTasks, toneOf, BoardState, attachmentTabs, isPreflightDiff, diffTones } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
+import { filterBoard }           from "./ase-task-board-filter.js"
 import type { Board, Card }      from "./ase-task-board-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
 import pkg                       from "../package.json" with { type: "json" }
@@ -28,7 +29,7 @@ import pkg                       from "../package.json" with { type: "json" }
 export const BOARD_BUILD = (() => {
     const dir  = path.dirname(fileURLToPath(import.meta.url))
     const hash = crypto.createHash("sha1")
-    for (const f of [ "core.js", "graph.js", "web.js", "web-client.html", "web-client.css", "web-client.js" ])
+    for (const f of [ "core.js", "filter.js", "graph.js", "web.js", "web-client.html", "web-client.css", "web-client.js" ])
         hash.update(fs.readFileSync(path.join(dir, `ase-task-board-${f}`)))
     return `${pkg.version}:${hash.digest("hex")}`
 })()
@@ -316,22 +317,27 @@ const registerPageRoutes = (server: Hapi.Server, log: Log): void => {
     })
 }
 
+/*  the filter query of a request (its optional "filter" query parameter)  */
+const filterQuery = (request: Hapi.Request): string =>
+    typeof request.query.filter === "string" ? request.query.filter : ""
+
 /*  register the view routes of the web board: the board, the graph, and the tasks with their attachments  */
 const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
-    /*  the board model  */
+    /*  the board model, reduced onto the tasks matching the filter query  */
     server.route({
         method:  "GET",
         path:    "/task-board/api/board",
-        handler: guarded(async (_request, h) =>
-            h.response(boardJSON(await currentBoard(log), await Task.lifecycle(log))))
+        handler: guarded(async (request, h) =>
+            h.response(boardJSON(filterBoard(await currentBoard(log), filterQuery(request)), await Task.lifecycle(log))))
     })
 
-    /*  the dependency graph as SVG  */
+    /*  the dependency graph as SVG, reduced onto the tasks matching the
+        filter query plus their direct predecessors and successors  */
     server.route({
         method:  "GET",
         path:    "/task-board/api/graph",
-        handler: guarded(async (_request, h) => {
-            const board  = await currentBoard(log)
+        handler: guarded(async (request, h) => {
+            const board  = filterBoard(await currentBoard(log), filterQuery(request), true)
             const titles = BoardState.load().web.titles
             const svg    = board.cards.size === 0 ? "" : drawGraphSVG(board, await layoutGraph(board, "px", titles))
             return h.response({ svg })

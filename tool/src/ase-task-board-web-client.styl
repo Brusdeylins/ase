@@ -61,6 +61,7 @@ vendors = official
     --c-accent-fill:   var(--color-accent-60)
     --c-accent-ground: var(--color-accent-62)
     --c-accent-paper:  var(--color-accent-64)
+    --c-signal-strong: var(--color-signal-27)
     --c-signal:        var(--color-signal-42)
     --c-signal-ground: var(--color-signal-62)
 
@@ -120,12 +121,43 @@ header
         font: inherit
         font-weight: bold
     .toggle
-        border-color: var(--c-accent-line)
-        background: var(--c-accent-ground)
-        color: var(--c-accent-strong)
         cursor: pointer
         &:hover
-            border-color: var(--c-accent)
+            border-color: var(--c-signal)
+            background: var(--c-signal-ground)
+            color: var(--c-signal-strong)
+
+    /*  the filter input field at the end of the header, with its clear
+        button placed inside the field on its right side  */
+    .filter
+        display: inline-flex
+        align-items: center
+        gap: 4px
+        .field
+            position: relative
+            display: inline-flex
+            align-items: center
+        input
+            width: 180px
+            padding-right: 22px
+            outline: none
+            &:focus
+                border-color: var(--c-signal)
+                background: var(--c-signal-ground)
+                color: var(--c-signal-strong)
+        .clear
+            position: absolute
+            right: 4px
+            padding: 0 2px
+            border: none
+            background: none
+            color: var(--c-mute)
+            font: inherit
+            font-size: 80%
+            line-height: 1
+            cursor: pointer
+            &:hover
+                color: var(--c-signal)
 
 /*  the lanes view  */
 #view
@@ -344,6 +376,11 @@ footer kbd, #dlg .dfoot kbd
     .card
         box-sizing: border-box
         height: 100%
+
+    /*  the dependency context of a filtered graph: dimmed and dashed  */
+    .node.context .card
+        opacity: 0.5
+        border-style: dashed
     .edge
         fill: none
         stroke: var(--c-line)

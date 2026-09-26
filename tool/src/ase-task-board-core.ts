@@ -42,7 +42,8 @@ type GroupLayout = { title: string, lanes: LaneLayout[] }
 export type Card = { id: string, title: string, status: string, actual: string, after: string[], created: string }
 
 /*  the board: the lane layout of the detected lifecycle model, the cards
-    per lane in display order, the computed graph, and all diagnostics  */
+    per lane in display order, the computed graph, the cards shown as
+    dependency context only (of a filtered graph), and all diagnostics  */
 export type Board = {
     mode:     string
     groups:   GroupSpec[]
@@ -52,6 +53,7 @@ export type Board = {
     succ:     Map<string, string[]>
     levels:   Map<string, number>
     cyclic:   Set<string>
+    context:  Set<string>
     warnings: string[]
 }
 
@@ -436,7 +438,7 @@ export const buildBoard = async (log: Log): Promise<Board> => {
         for (const l of g.lanes)
             lanes.set(l.status, orderLane([ ...cards.values() ].filter((c) => c.status === l.status), pred, cyclicEdge))
 
-    return { mode: lifecycle.name, groups, cards, lanes, pred, succ, levels, cyclic, warnings }
+    return { mode: lifecycle.name, groups, cards, lanes, pred, succ, levels, cyclic, context: new Set(), warnings }
 }
 
 /*  classify a card for highlighting: "done" in a lane of a terminal state,

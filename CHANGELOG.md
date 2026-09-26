@@ -12,6 +12,13 @@ ChangeLog
     moves via drag & drop), or as plain text (`--text`). The display state persists in
     `.ase/board.yaml`, the colors in `board.{tui,web}.color.*`, and the skill is `ase-task-board`.
 
+-   FEATURE [tool]: Task Board filter
+    The terminal and web task board got a `filter:` field in their header (focused via `/`),
+    whose keywords are fuzzy matched (as in SpecBook) against the task id and title, AND-combined
+    when separated by spaces and OR-combined when separated by commas. The lanes show only the
+    matching tasks, the graph additionally shows their direct predecessors and successors dimmed
+    and dashed.
+
 -   FEATURE [plugin]: Clickable grilling table
     In the latest grilling table redrawn by the function hooks module `ase-mods.ts`, every
     question and every answer alternative reveals a clickable button while hovered (rendered in
