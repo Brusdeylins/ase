@@ -289,9 +289,11 @@ The following ASE commands/skills exist on the code-level:
   Review the uncommitted changes and curate them into clean commits:
   group all hunks into themes, stage one theme at a time into the Git
   index, explain it in a boxed group card with per-file, line-cited
-  evidence, and commit it only on the user's explicit accept. A demanded
-  correction is implemented via **/ase-code-edit**, after which the
-  group is re-staged and presented again.
+  evidence, and commit it only on the user's explicit accept. The
+  findings of a group are corrected automatically in one pass before it
+  is presented; any further demanded correction is implemented via
+  **/ase-code-edit**, after which the group is re-staged and presented
+  again.
 
 ### Documentation Commands
 
