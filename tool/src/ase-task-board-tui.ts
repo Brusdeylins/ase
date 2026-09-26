@@ -412,7 +412,7 @@ const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scr
     const free   = Math.max(0, innerW - pos.length - 1)
     const keys   = notice !== null ?
         (" " + sanitize(notice)).slice(0, free) :
-        " ←/→: tab · ↑/↓/⇈/⇊: scroll · e: edit · M: toggle mouse · ⏎/ESC: close"
+        " ←/→/⇤/⇥: tab · ↑/↓/⇈/⇊: scroll · e: edit · M: toggle mouse · ⏎/ESC: close"
 
     return h(Box, { key: "dialog", ...frame, flexDirection: "column" },
         h(Text, {},
@@ -1137,8 +1137,8 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 setDialog(null)
             else if (input === "e")
                 startEdit(dialog.id)
-            else if (key.leftArrow || key.rightArrow) {
-                const tab = Math.max(0, Math.min(tabLabels.length - 1, dialogSel + (key.leftArrow ? -1 : 1)))
+            else if (key.leftArrow || key.rightArrow || key.tab) {
+                const tab = Math.max(0, Math.min(tabLabels.length - 1, dialogSel + (key.leftArrow || (key.tab && key.shift) ? -1 : 1)))
                 setDialog({ ...dialog, tab, first: tabFirst(tabLabels, dialog.first, tab, dialogW - 4) })
             }
             else if (key.upArrow)

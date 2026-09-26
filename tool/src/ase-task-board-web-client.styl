@@ -165,7 +165,7 @@ header
 #board
     display: flex
     gap: 12px
-    height: calc(100vh - 146px)
+    height: calc(100vh - 165px)
     overflow-x: auto
 .group
     display: flex
@@ -331,6 +331,21 @@ header
     .lane.blocked
         opacity: 0.45
 
+/*  the keyboard selection (like in the TUI): the selected group header, the
+    selected lane (with a bold border), and the selected task box, all in signal color  */
+#board
+    .ghd.sel
+        background: var(--c-signal)
+    .lane.sel
+        border-color: var(--c-signal)
+        box-shadow: 0 0 0 1px var(--c-signal)
+#board .card.sel, #graph .node.sel .card
+    border-color: var(--c-signal)
+    box-shadow: 0 0 0 1px var(--c-signal)
+    color: var(--c-signal)
+#board .card.sel .cid, #graph .node.sel .cid
+    background: var(--c-signal)
+
 /*  the horizontal scroll bar and the footer  */
 #hscroll
     display: flex
@@ -363,7 +378,7 @@ footer kbd, #dlg .dfoot kbd
 
 /*  the graph view  */
 #graph
-    height: calc(100vh - 105px)
+    height: calc(100vh - 124px)
     overflow: auto
     background: var(--c-ground-light)
     border: 1px solid var(--c-border-soft)
@@ -385,6 +400,8 @@ footer kbd, #dlg .dfoot kbd
         fill: none
         stroke: var(--c-line)
         stroke-width: 1.4
+        &.sel
+            stroke: var(--c-signal)
     .arrow
         fill: var(--c-line)
 
