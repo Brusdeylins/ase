@@ -306,7 +306,8 @@ export const renderGraph = (ctx: BoardCtx) => {
     const roots   = [ ...board.cards.keys() ].filter((id) => (board.pred.get(id) ?? []).length === 0).length
     return [
         h(Box, { key: "graph", height: boardH, marginX: 1 },
-            h(Box, { paddingX: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
+            /*  a graph smaller than the viewport is centered in it  */
+            h(Box, { paddingX: 1, justifyContent: "center", alignItems: "center", ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
                 h(Box, { ref: graphView, ...cx("column") },
                     ...visible.map((segs, i) => h(Box, { key: i },
                         ...(segs.length === 0 ? [ h(Text, { key: 0 }, " ") ] : segs.map((seg, k) => {

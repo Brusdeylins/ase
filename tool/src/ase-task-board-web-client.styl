@@ -508,9 +508,14 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
     background: var(--c-ground-light)
     border: 1px solid var(--c-border-soft)
     border-radius: 6px
+
+    /*  a graph smaller than the view is centered in it (via auto margins,
+        which, unlike centering alignments, keep an overflowing graph scrollable)  */
+    display: flex
     svg
         max-width: none
         display: block
+        margin: auto
     .node
         cursor: pointer
 
