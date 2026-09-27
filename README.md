@@ -212,7 +212,7 @@ see whether **ASE** is right for you:
   `-o docs/spec.html,docs/spec.pdf`
 
 - **Task Plan Life-Cycle**:
-  You want your named, persisted task plans switched, listed, viewed,
+  You want your named, persisted task plans switched, listed, watched on a board, viewed,
   status-changed, renamed, condensed, rebooted, or deleted right from within the session?
   &rarr; [`/ase-task-id`](plugin/skills/ase-task-id/help.md),
   [`/ase-task-list`](plugin/skills/ase-task-list/help.md),
