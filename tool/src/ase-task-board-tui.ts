@@ -321,6 +321,9 @@ const DIALOG_CHROME = 10
 /*  the column offset of the " X " close button of the read dialog from its right edge  */
 const DIALOG_CLOSE  = 5
 
+/*  the maximum width of the read dialog  */
+const DIALOG_WIDTH  = 110
+
 /*  the parameters of the read dialog  */
 type DialogArgs = {
     card: Card | undefined, group: string | undefined, id: string, pred: string[], succ: string[],
@@ -365,7 +368,7 @@ const refSegs = (pred: string[], succ: string[], tint: (id: string) => string | 
 /*  render the read dialog: full height, horizontally centered, with a
     vertical scroll bar in its right border  */
 const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scroll, lines, columns, rows, notice }: DialogArgs) => {
-    const width  = Math.min(columns - 2, 100)
+    const width  = Math.min(columns - 2, DIALOG_WIDTH)
     const left   = Math.floor((columns - width) / 2)
     const bodyW  = width - 5
     const viewH  = rows - DIALOG_CHROME
@@ -420,7 +423,7 @@ const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scr
     const free   = Math.max(0, innerW - pos.length - 1)
     const keys   = notice !== null ?
         (" " + sanitize(notice)).slice(0, free) :
-        " ←/→/⇤/⇥: tab · ↑/↓/⇈/⇊: scroll · e: edit · M: toggle mouse · ⏎/ESC: close"
+        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · M: toggle mouse · ⏎/ESC: close"
 
     return h(Box, { key: "dialog", ...frame, flexDirection: "column" },
         h(Text, {},
@@ -964,7 +967,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
 
     /*  the tabs of the read dialog, the lines of its selected tab (clamped to
         the existing tabs), and the maximum scroll offset of these lines  */
-    const dialogW     = Math.min(columns - 2, 100)
+    const dialogW     = Math.min(columns - 2, DIALOG_WIDTH)
     const dialogParts = dialog !== null && plan?.id === dialog.id ? plan.parts : undefined
     const tabLabels   = dialogTabs(dialogParts)
     const dialogSel   = Math.min(dialogTab, tabLabels.length - 1)
@@ -1467,11 +1470,11 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             status,
             h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    "↑/↓/←/→: select task · ⏎: view task · e: edit task")),
+                    "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task")),
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     `t: ${graphTitles ? "collapse" : "expand"} titles · ` +
-                    "/: filter · l: switch to lanes")),
+                    "/: filter tasks · l: switch to lanes")),
             h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     `M: ${mouse ? "disable" : "enable"} mouse · q: quit`))

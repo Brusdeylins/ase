@@ -77,7 +77,7 @@
         <div class="status">{{ warning }}</div>
         <div v-for="(line, k) in hints" :key="k">
             <template v-for="(hint, i) in line" :key="hint.key">
-                <span v-if="i > 0" class="sep">·</span><kbd>{{ hint.key }}</kbd><span class="action">{{ hint.action }}</span>
+                <span v-if="i > 0" class="sep">·</span><template v-for="(key, j) in (hint.key === '/' ? [ '/' ] : hint.key.split('/'))" :key="j"><template v-if="j > 0">/</template><kbd>{{ key }}</kbd></template><span class="action">{{ hint.action }}</span>
             </template>
         </div>
     </footer>
@@ -143,10 +143,10 @@
             <div v-show="editing !== null" id="editor" ref="editorEl"></div>
 
             <!--  the footer: the key hints  -->
-            <div v-if="editing?.keymap === 'vim'" class="dfoot"><kbd>:w</kbd> saves · <kbd>:q</kbd> cancels · <kbd>:q!</kbd> discards</div>
-            <div v-else-if="editing?.keymap === 'emacs'" class="dfoot"><kbd>C-x C-s</kbd> saves · <kbd>C-x C-c</kbd> cancels</div>
-            <div v-else-if="editing !== null" class="dfoot"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> saves · <kbd>ESC</kbd> cancels</div>
-            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd> switches tab · <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd> scrolls · <kbd>e</kbd> edits · <kbd>⏎</kbd>/<kbd>ESC</kbd> closes</div>
+            <div v-if="editing?.keymap === 'vim'" class="dfoot"><kbd>:w</kbd><span class="action">saves</span><span class="sep">·</span><kbd>:q</kbd><span class="action">cancels</span><span class="sep">·</span><kbd>:q!</kbd><span class="action">discards</span></div>
+            <div v-else-if="editing?.keymap === 'emacs'" class="dfoot"><kbd>C-x C-s</kbd><span class="action">saves</span><span class="sep">·</span><kbd>C-x C-c</kbd><span class="action">cancels</span></div>
+            <div v-else-if="editing !== null" class="dfoot"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd><span class="action">saves</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
+            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></div>
         </div>
     </div>
 </template>
@@ -294,14 +294,12 @@ const hints     = computed(() => {
         { key: "Drag & Drop",   action: "directly move task" }
     ] ] : [ [
         { key: "↑/↓/←/→",       action: "select task" },
-        { key: "⏎",             action: "view task" },
-        { key: "e",             action: "edit task" },
-        { key: "Left-Click",    action: "view task" }
+        { key: "⏎/Left-Click",  action: "view task" },
+        { key: "e",             action: "edit task" }
     ], [
-        { key: "/",             action: "filter tasks" },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
-        { key: "l",             action: "switch to lanes" },
-        { key: "ESC",           action: "close task" }
+        { key: "/",             action: "filter tasks" },
+        { key: "l",             action: "switch to lanes" }
     ] ]
 })
 
