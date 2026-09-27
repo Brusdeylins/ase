@@ -42,7 +42,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         the task board (`task-board` for
         the `ase task board` CLI command plus its `task-board-core`,
         `task-board-graph`, `task-board-tui` (split into its
-        `task-board-tui-{model,control,view,popup}` parts), and `task-board-web`
+        `task-board-tui-{model,control,view,popup,style}` parts), and `task-board-web`
         parts, the latter with its browser client in
         `ase-task-board-web-client.{html,ts,vue,styl}`, a Vue application
         bundled by Vite), and the task store (`task-store-server-cli` for
@@ -55,7 +55,8 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `task-format` for the textual task format codec and the lifecycle
         models, see `docs/task-api.md`); `ase-task.ts` itself only forwards
         the `ase task` CLI and `ase_task_*` MCP tools to the task store
-        selected by `project.task.store`
+        selected by `project.task.store`, through
+        the local or remote task store clients of `ase-task-store-client.ts`
     -   `tool/bin/ase`: the published shim, loading compiled output from `dst/`
     -   `tool/plugin/` and `tool/.claude-plugin/`: build-time copies of
         `plugin/` and `.claude-plugin/` -- never edit them, they are regenerated
