@@ -41,7 +41,8 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `service-skills`, `service-sleep`, `service-timestamp`),
         the task board (`task-board` for
         the `ase task board` CLI command plus its `task-board-core`,
-        `task-board-graph`, `task-board-tui`, and `task-board-web`
+        `task-board-graph`, `task-board-tui` (split into its
+        `task-board-tui-{model,control,view,popup}` parts), and `task-board-web`
         parts, the latter with its browser client in
         `ase-task-board-web-client.{html,ts,vue,styl}`, a Vue application
         bundled by Vite), and the task store (`task-store-server-cli` for
