@@ -257,7 +257,7 @@ const relocate = (b: Board, sel: Sel, s: Surface): Sel => {
 }
 
 /*  the requests in progress (by sequence number, with their label), and the modal
-    busy popup, shown once the oldest of them lasts longer than 500ms  */
+    busy popup, shown once the oldest of them lasts longer than 800ms  */
 type BusyLabel = { text: string, id?: string, suffix?: string }
 const pending = new Map<number, BusyLabel>()
 let   pendSeq = 0
@@ -304,8 +304,8 @@ const api = async <T>(url: string, opts?: RequestInit, background = false): Prom
     if (n > 0) {
         pending.set(n, busyLabel(url, opts))
         timer = setTimeout(() => {
-            busy.value ??= { label: pending.values().next().value ?? { text: "" }, since: Date.now() - 500 }
-        }, 500)
+            busy.value ??= { label: pending.values().next().value ?? { text: "" }, since: Date.now() - 800 }
+        }, 800)
     }
     try {
         return await (await fetch(url, opts)).json()

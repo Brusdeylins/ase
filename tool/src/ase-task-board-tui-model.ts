@@ -78,6 +78,9 @@ export const transferEntries = (board: Board, cycle: TaskFormat.TaskLifecycle, c
     })))
 }
 
+/*  the duration (in ms) a task store operation has to last before the busy popup shows it  */
+export const BUSY_DELAY = 800
+
 /*  the label of a busy task store operation: its text, the optional task id
     (rendered inverse), and an optional suffix  */
 export type BusyLabel = { text: string, id?: string, suffix?: string }
@@ -117,7 +120,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     const drafts  = React.useRef(new Map<string, string>())
 
     /*  track a task store operation: once the oldest of the pending operations
-        lasts longer than 500ms, the modal busy popup shows it (with an animation tick)  */
+        lasts longer than BUSY_DELAY, the modal busy popup shows it (with an animation tick)  */
     const pending = React.useRef(new Map<number, BusyLabel>())
     const seq     = React.useRef(0)
     const [ busy,     setBusy     ] = React.useState<{ label: BusyLabel, since: number } | null>(null)
@@ -126,8 +129,8 @@ export const useBoardState = (log: Log, initial: Board) => {
         const n = ++seq.current
         pending.current.set(n, label)
         const timer = setTimeout(() => {
-            setBusy((b) => b ?? { label: pending.current.values().next().value ?? label, since: Date.now() - 500 })
-        }, 500)
+            setBusy((b) => b ?? { label: pending.current.values().next().value ?? label, since: Date.now() - BUSY_DELAY })
+        }, BUSY_DELAY)
         return op.finally(() => {
             clearTimeout(timer)
             pending.current.delete(n)

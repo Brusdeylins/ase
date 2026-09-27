@@ -53,12 +53,38 @@ const clientAsset = (ext: "html" | "css" | "js"): string => {
 const escapeHTML = (s: string): string =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 
-/*  the Markdown renderer for task plans: raw HTML is escaped instead of
+/*  the pattern of the image sources: always local ones, and with remote images also HTTPS ones  */
+const imageSource = (remote: boolean): RegExp =>
+    remote ? /^(https:|data:image\/|\.{1,2}\/|\/(?![/\\]))/ : /^(data:image\/|\.{1,2}\/|\/(?![/\\]))/
+
+/*  escape raw HTML, except (with remote images) its "<img>" tags, which are
+    re-assembled out of their harmless attributes only (as e.g. used by GitHub
+    for the images of issue comments)  */
+const rawHTML = (text: string, remote: boolean): string => {
+    if (!remote)
+        return escapeHTML(text)
+    return text.split(/(<img\b[^>]*>)/i).map((part, i) => {
+        if (i % 2 === 0)
+            return escapeHTML(part)
+        const attrs = new Map<string, string>()
+        for (const m of part.matchAll(/([a-z-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/gi))
+            attrs.set(m[1].toLowerCase(), m[2] ?? m[3] ?? m[4])
+        const src = attrs.get("src") ?? ""
+        if (!imageSource(remote).test(src))
+            return escapeHTML(attrs.get("alt") ?? "")
+        return `<img src="${escapeHTML(src)}"` + [ "alt", "title", "width", "height" ]
+            .filter((key) => attrs.has(key) && (!/^(width|height)$/.test(key) || /^\d+%?$/.test(attrs.get(key)!)))
+            .map((key) => ` ${key}="${escapeHTML(attrs.get(key)!)}"`).join("") + ">"
+    }).join("")
+}
+
+/*  the Markdown renderers for task plans: raw HTML is escaped instead of
     passed through, links are restricted to harmless schemes, images to
-    local sources, and Mermaid code blocks are rendered as diagrams
+    local sources (with remote images also to HTTPS sources, including raw
+    "<img>" tags), and Mermaid code blocks are rendered as diagrams
     ("marked" and "beautiful-mermaid" are loaded on first use only)  */
-let marked: Promise<Marked> | null = null
-const markedLoad = async (): Promise<Marked> => {
+const marked = new Map<boolean, Promise<Marked>>()
+const markedLoad = async (remote: boolean): Promise<Marked> => {
     const [ { Marked }, { renderMermaidSVG } ] = await Promise.all([
         import("marked"), import("beautiful-mermaid")
     ])
@@ -66,7 +92,7 @@ const markedLoad = async (): Promise<Marked> => {
         gfm: true,
         renderer: {
             html ({ text }) {
-                return escapeHTML(text)
+                return rawHTML(text, remote)
             },
             link ({ href, tokens }) {
                 const label = this.parser.parseInline(tokens)
@@ -74,7 +100,7 @@ const markedLoad = async (): Promise<Marked> => {
                     `<a href="${escapeHTML(href)}" target="_blank" rel="noopener">${label}</a>` : label
             },
             image ({ href, title, text }) {
-                return /^(data:image\/|\.{1,2}\/|\/(?![/\\]))/.test(href) ?
+                return imageSource(remote).test(href) ?
                     `<img src="${escapeHTML(href)}" alt="${escapeHTML(text)}"` +
                     (title ? ` title="${escapeHTML(title)}"` : "") + ">" : escapeHTML(text)
             },
@@ -93,13 +119,13 @@ const markedLoad = async (): Promise<Marked> => {
     })
 }
 
-/*  render the Markdown body of a task plan, including its title, and render
-    its checkboxes (all line rewrites skip the content of fenced code blocks), where
+/*  render the Markdown body of a task plan (optionally with remote images), including
+    its title, and render its checkboxes (all line rewrites skip the content of fenced code blocks), where
     the checkbox placeholders carry the box state name instead of the
     box character, as Markdown rendering would escape e.g. ">"  */
 const boxes: Record<string, string> = { "x": "done", "/": "part", "?": "open", "-": "cancel", ">": "defer", " ": "todo" }
 const boxChars = Object.fromEntries(Object.entries(boxes).map(([ char, state ]) => [ state, char ]))
-const renderPlan = async (body: string): Promise<string> => {
+const renderPlan = async (body: string, remote = false): Promise<string> => {
     let fence = ""
     const prepared = body.split(/\r?\n/).map((line) => {
         const outside = fence === ""
@@ -107,8 +133,9 @@ const renderPlan = async (body: string): Promise<string> => {
         return !outside || fence !== "" ? line : line
             .replace(/^(\s*(?:[-*]|\d+[.)])\s+)\[([ x/?\->])\]/, (_m, lead: string, box: string) => `${lead}⟦box:${boxes[box]}⟧`)
     }).join("\n")
-    marked ??= markedLoad()
-    const html = (await marked).parse(prepared, { async: false })
+    if (!marked.has(remote))
+        marked.set(remote, markedLoad(remote))
+    const html = (await marked.get(remote)!).parse(prepared, { async: false })
     return html.replace(/⟦box:([a-z]+)⟧/g, (_m, state: string) =>
         `<span class="box ${state}" title="[${escapeHTML(boxChars[state] ?? " ")}]"></span>`)
 }
@@ -196,7 +223,7 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
                 `<a href="${url}" target="_blank" rel="noopener">download</a>)</p>`)
     }
     if (type === "text/markdown")
-        return fieldsDocument(fields, await renderPlan(text))
+        return fieldsDocument(fields, await renderPlan(text, true))
     if (isPreflightDiff(att.type)) {
         const lines = text.split(/\r?\n/)
         const tones = diffTones(lines)
