@@ -332,7 +332,7 @@ export class Skills {
         (downloads + 1) x
         (stars + 1) x
         ([lifespan =] (updated - created)) x
-        ([recentness =] exp(-(now - updated) / halfLife))
+        ([recentness =] 0.5 ^ ((now - updated) / halfLife))
         Numeric count metrics are shifted by `+1` so that a genuine `0`
         (e.g. a real package with zero downloads or stars) contributes a
         neutral `1` instead of collapsing the entire product to zero, while
@@ -371,7 +371,7 @@ export class Skills {
             one half-life (`0.5`), a conservative midpoint that keeps the
             entry rankable without rewarding the missing date.  */
         const lifespan   = (!Number.isNaN(cMs) && !Number.isNaN(uMs)) ? Math.max(1, uMs - cMs) : 1
-        const recentness = !Number.isNaN(uMs) ? Math.exp(-Math.max(0, (now - uMs) / msPerDay) / halfLife) : 0.5
+        const recentness = !Number.isNaN(uMs) ? 0.5 ** (Math.max(0, (now - uMs) / msPerDay) / halfLife) : 0.5
         let rank = d * s * lifespan * recentness
         /*  hard, caller-tunable staleness penalty on top of the soft
             `recentness` decay: unlike the smooth exp-decay above, this is a
