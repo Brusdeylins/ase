@@ -610,7 +610,14 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
                 const count = board.lanes.get(lane.status)?.length ?? 0
                 const picked = sel.g === g && sel.l === l
                 const color  = lane.active ? palette.accent : lane.kind === "terminal" ? palette.dim : palette.normal
-                const title  = [ ...lane.status.toUpperCase() ]
+                const digits = [ ...String(count) ]
+
+                /*  the title fits between the arrow and the count, each separated
+                    by a blank line (inside the two border lines), and is cut with an ellipsis  */
+                const room   = Math.max(0, heights[l] - 2 - 1 - 1 - 1 - digits.length)
+                let title    = [ ...lane.status.toUpperCase() ]
+                if (title.length > room)
+                    title = room > 0 ? [ ...title.slice(0, room - 1), "…" ] : []
 
                 /*  the selection marks only the border (signal-colored and bold), not the text  */
                 const frame  = {
@@ -624,14 +631,15 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
                     h(Box, { key, flexShrink: 0 }, h(Text, { color, bold, dimColor: dim }, ch))
 
                 /*  the unbordered wrapper allows the scroll arrows to escape the clipping,
-                    the growing title pushes the count to the bottom and is cut first  */
+                    the growing spacer pushes the count to the bottom  */
                 return h(Box, { key: lane.status, ref: ctx.laneRef(g, l), height: heights[l], flexDirection: "column" },
                     h(Box, frame,
                         char("arrow", "▶", false),
-                        h(Box, { flexDirection: "column", alignItems: "center", flexGrow: 1, flexShrink: 1, overflow: "hidden" },
-                            ...title.map((ch, i) => char(`t${i}`, ch, true))),
+                        h(Box, { height: 1, flexShrink: 0 }),
+                        ...title.map((ch, i) => char(`t${i}`, ch, ch !== "…")),
+                        h(Box, { flexGrow: 1, minHeight: 1 }),
                         h(Box, { flexDirection: "column", alignItems: "center", flexShrink: 0 },
-                            ...[ ...String(count) ].map((ch, i) => char(`c${i}`, ch, false)))),
+                            ...digits.map((ch, i) => char(`c${i}`, ch, false)))),
                     ...scrollArrows(ctx, g, heights[l], true))
             }))
     }
