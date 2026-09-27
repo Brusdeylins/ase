@@ -112,7 +112,7 @@ const renderPlan = async (body: string): Promise<string> => {
             return [ line ]
         }
         return [ line
-            .replace(/^(\s*[-*]\s+)\[([ x/?\->])\]/, (_m, lead: string, box: string) => `${lead}⟦box:${boxes[box]}⟧`) ]
+            .replace(/^(\s*(?:[-*]|\d+[.)])\s+)\[([ x/?\->])\]/, (_m, lead: string, box: string) => `${lead}⟦box:${boxes[box]}⟧`) ]
     }).join("\n")
     marked ??= markedLoad()
     const html = (await marked).parse(prepared, { async: false })

@@ -154,7 +154,7 @@ const emphasis = (line: string): Line => {
 const wrap = (line: Line, width: number): Line[] => {
     if (line.text.length <= width)
         return [ line ]
-    const indent = /^\s*(?:[-*]\s+(?:\[.\]\s+)?)?/.exec(line.text)![0].length
+    const indent = /^\s*(?:(?:[-*]|\d+[.)])\s+(?:\[.\]\s+)?)?/.exec(line.text)![0].length
     const pad    = " ".repeat(Math.min(indent, Math.floor(width / 2)))
     const out    = [] as Line[]
     let   rest   = line
@@ -182,7 +182,7 @@ const sanitize = (text: string): string =>
     which are done, in progress, or open are accented, while checkboxes of
     items which are questioned, delegated, or dropped are signaled  */
 const checkbox = (line: Line): Line => {
-    const m = /^(\s*[-*]\s+)\[([x /?>-])\]/.exec(line.text)
+    const m = /^(\s*(?:[-*]|\d+[.)])\s+)\[([x /?>-])\]/.exec(line.text)
     if (m !== null) {
         const style = /[x/ ]/.test(m[2]) ? ACCENT : SIGNAL
         for (let k = m[1].length; k < m[1].length + 3; k++)
