@@ -652,6 +652,33 @@ const mouseReporting = (on: boolean): void => {
     process.stdout.write(on ? "\x1b[?1000h\x1b[?1006h" : "\x1b[?1006l\x1b[?1000l")
 }
 
+/*  the box of a graph node on the screen (center row/column and borders)  */
+type Place = { r: number, c: number, top: number, bottom: number, bl: number, br: number }
+
+/*  find the nearest graph node in the direction of an arrow, as the nodes are placed
+    on the screen, preferring nodes in the same row (left/right) or column (up/down)  */
+const nearestPlace = (places: Map<string, Place>, from: string, dir: "left" | "right" | "up" | "down"): string | undefined => {
+    const cur = places.get(from)
+    if (cur === undefined)
+        return undefined
+    let best = Infinity
+    let next: string | undefined
+    for (const [ id, p ] of places) {
+        const dr = p.r - cur.r
+        const dc = p.c - cur.c
+        const ok = dir === "right" ? dc > 0 : dir === "left" ? dc < 0 : dir === "down" ? dr > 0 : dr < 0
+        if (id === from || !ok)
+            continue
+        const score = dir === "left" || dir === "right" ?
+            Math.abs(dc) + Math.abs(dr) * 4 : Math.abs(dr) + Math.abs(dc) / 4
+        if (score < best) {
+            best = score
+            next = id
+        }
+    }
+    return next
+}
+
 /*  the root component of the terminal board  */
 const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board }) => {
     const { exit, suspendTerminal } = useApp()
@@ -765,7 +792,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
 
     /*  remember the box of every graph node for the spatial navigation and the scrolling  */
     const places = React.useMemo(() => {
-        const map = new Map<string, { r: number, c: number, top: number, bottom: number, bl: number, br: number }>()
+        const map = new Map<string, Place>()
         if (layout !== null)
             for (const n of layout.graph.nodes.values())
                 map.set(n.id, { r: n.y + Math.floor(n.h / 2), c: n.x + Math.floor(n.w / 2), top: n.y, bottom: n.y + n.h - 1, bl: n.x, br: n.x + n.w - 1 })
@@ -923,7 +950,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
     }, [ board, surface, view ])
 
     const headH  = 2
-    const footH  = 4
+    const footH  = 5
     const boardH = rows - headH - footH
     const innerW = columns - 2
 
@@ -991,9 +1018,9 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             else if (btn === 0 && my === 3 && mx >= barX && mx < barX + dialogW - 2) {
                 /*  a click onto a predecessor or successor id (in the fourth dialog row) jumps to its task view  */
                 let x = barX
-                for (const seg of refSegs(board.pred.get(dialog.id) ?? [], board.succ.get(dialog.id) ?? [], () => undefined, dialogW - 2)) {
+                for (const seg of refSegs(all.pred.get(dialog.id) ?? [], all.succ.get(dialog.id) ?? [], () => undefined, dialogW - 2)) {
                     if (mx >= x && mx < x + seg.text.length) {
-                        if (seg.ref !== undefined && board.cards.has(seg.ref))
+                        if (seg.ref !== undefined && all.cards.has(seg.ref))
                             setDialog({ id: seg.ref, tab: 0, first: 0, scrolls: {} })
                         break
                     }
@@ -1216,31 +1243,13 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             return
         }
         if (view === "graph") {
-            /*  move spatially to the nearest node in the direction of the
-                arrow, as the nodes are placed on the screen, preferring nodes
-                in the same row (left/right) or column (up/down)  */
-            if (!(key.leftArrow || key.rightArrow || key.upArrow || key.downArrow))
+            /*  move spatially to the nearest node in the direction of the arrow  */
+            const dir = key.leftArrow ? "left" : key.rightArrow ? "right" : key.upArrow ? "up" : key.downArrow ? "down" : null
+            if (dir === null)
                 return
-            const cur = places.get(sel.id)
-            let   next: Card | undefined = cur === undefined ? nodes[0] : undefined
-            if (cur !== undefined) {
-                let best = Infinity
-                for (const [ id, p ] of places) {
-                    const dr = p.r - cur.r
-                    const dc = p.c - cur.c
-                    const ok = key.rightArrow ? dc > 0 : key.leftArrow ? dc < 0 : key.downArrow ? dr > 0 : dr < 0
-                    if (id === sel.id || !ok)
-                        continue
-                    const score = key.leftArrow || key.rightArrow ?
-                        Math.abs(dc) + Math.abs(dr) * 4 : Math.abs(dr) + Math.abs(dc) / 4
-                    if (score < best) {
-                        best = score
-                        next = board.cards.get(id)
-                    }
-                }
-            }
-            if (next !== undefined)
-                setSel(relocate(board, { g: sel.g, l: sel.l, id: next.id }, { ...surface, minimized: [], collapsed: [] }))
+            const next = places.has(sel.id) ? nearestPlace(places, sel.id, dir) : nodes[0]?.id
+            if (next !== undefined && board.cards.has(next))
+                setSel(relocate(board, { g: sel.g, l: sel.l, id: next }, { ...surface, minimized: [], collapsed: [] }))
             return
         }
         if (key.escape && carry !== null) {
@@ -1387,12 +1396,15 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             status,
             h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: move task")),
+                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop move task")),
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     `m: ${minned ? "maximize" : "minimize"} lane · c: ${folded ? "expand" : "collapse"} group · ` +
-                    `t: ${surface.titles ? "collapse" : "expand"} titles · M: ${mouse ? "disable" : "enable"} mouse · ` +
-                    "/: filter · g: switch to graph · q: quit"))
+                    `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
+                    "/: filter tasks · g: switch to graph")),
+            h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
+                h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+                    `Left-Click: view task / minimize/maximize lane / collapse/expand group · M: ${mouse ? "disable" : "enable"} mouse · q: quit`))
         ]
     }
 
@@ -1402,7 +1414,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         if (layout === null)
             return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, borderStyle: "round", borderColor: palette.dim },
                 h(Text, { color: palette.dim }, board.cards.size === 0 ? "(no tasks)" : "laying out …")),
-            h(Text, { key: "info" }, " "), status, h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " ") ]
+            h(Text, { key: "info" }, " "), status, h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " "), h(Text, { key: "keys3" }, " ") ]
 
         /*  draw the ELK layout  */
         const { lines, tones } = drawGraphText(layout.board, layout.graph, sel.id, layout.titles)
@@ -1450,8 +1462,11 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                     "↑/↓/←/→: select task · ⏎: view task · e: edit task")),
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    `t: ${graphTitles ? "collapse" : "expand"} titles · M: ${mouse ? "disable" : "enable"} mouse · ` +
-                    "/: filter · l: switch to lanes · q: quit"))
+                    `t: ${graphTitles ? "collapse" : "expand"} titles · ` +
+                    "/: filter · l: switch to lanes")),
+            h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
+                h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+                    `M: ${mouse ? "disable" : "enable"} mouse · q: quit`))
         ]
     }
 

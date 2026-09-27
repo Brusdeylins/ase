@@ -141,7 +141,7 @@ header
             width: 180px
             padding-right: 22px
             outline: none
-            &:focus
+            &:hover, &:focus
                 border-color: var(--c-signal)
                 background: var(--c-signal-ground)
                 color: var(--c-signal-strong)
@@ -388,6 +388,15 @@ footer
         white-space: nowrap
         text-overflow: ellipsis
         color: var(--c-signal)
+
+    /*  the separators between the key hints  */
+    .sep
+        margin: 0 0.6rem
+        color: var(--c-mute)
+
+    /*  the actions after the key caps of the key hints  */
+    .action
+        margin-left: 0.4rem
 
 /*  the key caps of the board footer and the dialog footer  */
 footer kbd, #dlg .dfoot kbd

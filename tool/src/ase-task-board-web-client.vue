@@ -77,7 +77,7 @@
         <div class="status">{{ warning }}</div>
         <div v-for="(line, k) in hints" :key="k">
             <template v-for="(hint, i) in line" :key="hint.key">
-                <template v-if="i > 0"> · </template><kbd>{{ hint.key }}</kbd> {{ hint.action }}
+                <span v-if="i > 0" class="sep">·</span><kbd>{{ hint.key }}</kbd><span class="action">{{ hint.action }}</span>
             </template>
         </div>
     </footer>
@@ -282,16 +282,16 @@ const hints     = computed(() => {
         { key: "⇈/⇊/⇤/⇥",       action: "select lane" },
         { key: "⏎",             action: "view task" },
         { key: "e",             action: "edit task" },
-        { key: "SPACE",         action: "move task" },
+        { key: "SPACE",         action: "start/stop move task" }
+    ], [
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
-        { key: "c",             action: `${folded ? "expand" : "collapse"} group` }
+        { key: "c",             action: `${folded ? "expand" : "collapse"} group` },
+        { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
+        { key: "/",             action: "filter tasks" },
+        { key: "g",             action: "switch to graph" }
     ], [
         { key: "Left-Click",    action: "view task / minimize/maximize lane / collapse/expand group" },
-        { key: "Drag & Drop",   action: "move task to lane" },
-        { key: "/",             action: "filter tasks" },
-        { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
-        { key: "g",             action: "switch to graph" },
-        { key: "ESC",           action: "close task / cancel move" }
+        { key: "Drag & Drop",   action: "directly move task" }
     ] ] : [ [
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⏎",             action: "view task" },
@@ -416,7 +416,6 @@ const closeTask = () => {
     task.value = null
 }
 
-/*  the syntax highlighting of the task plan editor, on the colors of the board  */
 /*  the block cursor of the task plan editor: the character under the cursor
     (or a space at the end of a line) rendered as a filled block, except in the
     normal and visual modes of the Vim key bindings, which draw their own block cursor  */
@@ -449,6 +448,7 @@ const blockCursor = ViewPlugin.fromClass(class {
     }
 }, { decorations: (plugin) => plugin.decorations })
 
+/*  the syntax highlighting of the task plan editor, on the colors of the board  */
 const editorHighlight = HighlightStyle.define([
     { tag: tags.heading,  color: "var(--c-accent)", fontWeight: "bold" },
     { tag: [ tags.monospace, tags.link, tags.url ], color: "var(--c-accent)" },
@@ -788,54 +788,98 @@ const setView = (v: View) => {
 /*  connect to the service: change events, keyboard shortcuts, and keep-alive  */
 let events: EventSource | null = null
 let ping: ReturnType<typeof setInterval> | null = null
-const onKey = (ev: KeyboardEvent) => {
-    /*  in the task plan editor, Ctrl/Cmd+S saves (only Cmd+S under the Emacs key bindings,
-        where Ctrl+S searches) and, under the default key bindings, ESC cancels (or dismisses
-        the discard confirmation), while all other keys belong to the editor  */
-    if (editing.value !== null) {
-        const mod = editing.value.keymap === "emacs" ? ev.metaKey : ev.ctrlKey || ev.metaKey
-        if (mod && !ev.altKey && ev.key.toLowerCase() === "s") {
-            ev.preventDefault()
-            saveEdit()
-        }
-        else if (ev.key === "Escape" && editing.value.keymap === "default") {
-            if (notice.value?.kind === "discard") {
-                notice.value = null
-                editor?.focus()
-            }
-            else
-                leaveEdit(false)
-        }
-        return
-    }
 
-    /*  in the task dialog, RETURN and ESC close it, "e" edits its plan, the left/right arrows
-        switch its tab (also Tab/Shift+Tab), and the up/down arrows and PgUp/PgDn scroll its content  */
-    if (task.value !== null) {
-        const win = planEl.value?.contentWindow ?? null
-        if (ev.key === "Escape" || ev.key === "Enter")
-            closeTask()
-        else if (ev.key === "e" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
-            ev.preventDefault()
-            startEdit()
-        }
-        else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Tab") {
-            ev.preventDefault()
-            selectTab(tab.value + (ev.key === "ArrowLeft" || (ev.key === "Tab" && ev.shiftKey) ? -1 : 1))
-        }
-        else if (win !== null && (ev.key === "ArrowUp" || ev.key === "ArrowDown")) {
-            ev.preventDefault()
-            win.scrollBy({ top: ev.key === "ArrowUp" ? -40 : 40 })
-        }
-        else if (win !== null && (ev.key === "PageUp" || ev.key === "PageDown")) {
-            ev.preventDefault()
-            const page = Math.max(40, win.innerHeight - 40)
-            win.scrollBy({ top: ev.key === "PageUp" ? -page : page })
-        }
-        return
+/*  in the task plan editor, Ctrl/Cmd+S saves (only Cmd+S under the Emacs key bindings,
+    where Ctrl+S searches) and, under the default key bindings, ESC cancels (or dismisses
+    the discard confirmation), while all other keys belong to the editor  */
+const onEditorKey = (ev: KeyboardEvent, keymap: Keymap) => {
+    const mod = keymap === "emacs" ? ev.metaKey : ev.ctrlKey || ev.metaKey
+    if (mod && !ev.altKey && ev.key.toLowerCase() === "s") {
+        ev.preventDefault()
+        saveEdit()
     }
+    else if (ev.key === "Escape" && keymap === "default") {
+        if (notice.value?.kind === "discard") {
+            notice.value = null
+            editor?.focus()
+        }
+        else
+            leaveEdit(false)
+    }
+}
 
-    /*  on the board, navigate the selection like in the TUI (but not while typing the filter)  */
+/*  in the task dialog, RETURN and ESC close it, "e" edits its plan, the left/right arrows
+    switch its tab (also Tab/Shift+Tab), and the up/down arrows and PgUp/PgDn scroll its content  */
+const onDialogKey = (ev: KeyboardEvent) => {
+    const win = planEl.value?.contentWindow ?? null
+    if (ev.key === "Escape" || ev.key === "Enter")
+        closeTask()
+    else if (ev.key === "e" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        ev.preventDefault()
+        startEdit()
+    }
+    else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Tab") {
+        ev.preventDefault()
+        selectTab(tab.value + (ev.key === "ArrowLeft" || (ev.key === "Tab" && ev.shiftKey) ? -1 : 1))
+    }
+    else if (win !== null && (ev.key === "ArrowUp" || ev.key === "ArrowDown")) {
+        ev.preventDefault()
+        win.scrollBy({ top: ev.key === "ArrowUp" ? -40 : 40 })
+    }
+    else if (win !== null && (ev.key === "PageUp" || ev.key === "PageDown")) {
+        ev.preventDefault()
+        const page = Math.max(40, win.innerHeight - 40)
+        win.scrollBy({ top: ev.key === "PageUp" ? -page : page })
+    }
+}
+
+/*  move spatially to the nearest graph node in the direction of the
+    arrow, preferring nodes in the same row (left/right) or column
+    (up/down), or initially to the first node of the left-to-right layout  */
+const graphStep = (key: string, id: string): string | undefined => {
+    const places = graphPlaces()
+    const cur    = places.get(id)
+    if (cur === undefined)
+        return [ ...places ].sort(([ , p ], [ , q ]) => p.c - q.c || p.r - q.r)[0]?.[0]
+    let best = Infinity
+    let next: string | undefined
+    for (const [ other, p ] of places) {
+        const dr = p.r - cur.r
+        const dc = p.c - cur.c
+        const ok = key === "ArrowRight" ? dc > 0 : key === "ArrowLeft" ? dc < 0 : key === "ArrowDown" ? dr > 0 : dr < 0
+        if (other === id || !ok)
+            continue
+        const score = key === "ArrowLeft" || key === "ArrowRight" ?
+            Math.abs(dc) + Math.abs(dr) * 4 : Math.abs(dr) + Math.abs(dc) / 4
+        if (score < best) {
+            best = score
+            next = other
+        }
+    }
+    return next
+}
+
+/*  step through the lanes of the expanded groups row by row: first
+    left/right through the groups, then wrap into the next/previous
+    row of lanes (and at the very end/start around the board)  */
+const laneStep = (b: Board, s: Sel, surf: Surface, back: boolean): Sel | undefined => {
+    const rows  = Math.max(...b.groups.map((x) => x.lanes.length))
+    const lanes = [] as { g: number, l: number }[]
+    for (let l = 0; l < rows; l++)
+        b.groups.forEach((x, g) => {
+            if (l < x.lanes.length && !surf.collapsed.includes(x.title))
+                lanes.push({ g, l })
+        })
+    if (lanes.length === 0)
+        return undefined
+    const idx    = lanes.findIndex((p) => p.g === s.g && p.l === s.l)
+    const target = idx < 0 ? lanes[back ? lanes.length - 1 : 0] :
+        lanes[(idx + (back ? lanes.length - 1 : 1)) % lanes.length]
+    return groupItems(b, target.g, surf).find((it) => it.l === target.l)
+}
+
+/*  on the board, navigate the selection like in the TUI (but not while typing the filter)  */
+const onBoardKey = (ev: KeyboardEvent) => {
     const b = board.value
     if (b === null || b.groups.length === 0 || ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
         return
@@ -858,30 +902,9 @@ const onKey = (ev: KeyboardEvent) => {
             })
     }
     else if (view.value === "graph") {
-        /*  move spatially to the nearest node in the direction of the
-            arrow, preferring nodes in the same row (left/right) or column
-            (up/down), or initially to the first node of the left-to-right layout  */
         if (!arrow)
             return
-        const places = graphPlaces()
-        const cur    = places.get(s.id)
-        let   next   = cur === undefined ? [ ...places ].sort(([ , p ], [ , q ]) => p.c - q.c || p.r - q.r)[0]?.[0] : undefined
-        if (cur !== undefined) {
-            let best = Infinity
-            for (const [ id, p ] of places) {
-                const dr = p.r - cur.r
-                const dc = p.c - cur.c
-                const ok = ev.key === "ArrowRight" ? dc > 0 : ev.key === "ArrowLeft" ? dc < 0 : ev.key === "ArrowDown" ? dr > 0 : dr < 0
-                if (id === s.id || !ok)
-                    continue
-                const score = ev.key === "ArrowLeft" || ev.key === "ArrowRight" ?
-                    Math.abs(dc) + Math.abs(dr) * 4 : Math.abs(dr) + Math.abs(dc) / 4
-                if (score < best) {
-                    best = score
-                    next = id
-                }
-            }
-        }
+        const next = graphStep(ev.key, s.id)
         if (next !== undefined)
             sel.value = { ...s, id: next }
     }
@@ -945,28 +968,23 @@ const onKey = (ev: KeyboardEvent) => {
             sel.value = next
     }
     else if (ev.key === "Tab") {
-        /*  step through the lanes of the expanded groups row by row: first
-            left/right through the groups, then wrap into the next/previous
-            row of lanes (and at the very end/start around the board)  */
-        const rows  = Math.max(...b.groups.map((x) => x.lanes.length))
-        const lanes = [] as { g: number, l: number }[]
-        for (let l = 0; l < rows; l++)
-            b.groups.forEach((x, g) => {
-                if (l < x.lanes.length && !surf.collapsed.includes(x.title))
-                    lanes.push({ g, l })
-            })
-        if (lanes.length > 0) {
-            const idx    = lanes.findIndex((p) => p.g === s.g && p.l === s.l)
-            const target = idx < 0 ? lanes[ev.shiftKey ? lanes.length - 1 : 0] :
-                lanes[(idx + (ev.shiftKey ? lanes.length - 1 : 1)) % lanes.length]
-            const next   = groupItems(b, target.g, surf).find((it) => it.l === target.l)
-            if (next !== undefined)
-                sel.value = next
-        }
+        const next = laneStep(b, s, surf, ev.shiftKey)
+        if (next !== undefined)
+            sel.value = next
     }
     else
         return
     ev.preventDefault()
+}
+
+/*  dispatch a key to the task plan editor, the task dialog, or the board  */
+const onKey = (ev: KeyboardEvent) => {
+    if (editing.value !== null)
+        onEditorKey(ev, editing.value.keymap)
+    else if (task.value !== null)
+        onDialogKey(ev)
+    else
+        onBoardKey(ev)
 }
 const onResize = () => {
     updateScroll()
