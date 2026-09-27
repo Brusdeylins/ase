@@ -11,7 +11,7 @@
             <span class="sep">·</span>project: <span class="emph">{{ board?.project }}</span>
             <span class="sep">·</span>mode: <span class="emph">{{ board?.mode }}</span>
             <span class="sep">·</span>tasks: <span class="emph">{{ taskCount }}</span>
-            <span class="sep">·</span>view: <button class="val toggle" title="switch view (g/l)" @click="setView(view === 'lanes' ? 'graph' : 'lanes')">{{ view }}</button>
+            <span class="sep">·</span>view: <button class="val toggle" title="switch view (v)" @click="setView(view === 'lanes' ? 'graph' : 'lanes')">{{ view }}</button>
             <span class="sep">·</span><span class="filter">filter:
                 <span class="field">
                     <input ref="filterEl" v-model="filter" class="val" type="text" autocomplete="off" spellcheck="false"
@@ -150,7 +150,7 @@
             <div v-if="editing?.keymap === 'vim'" class="dfoot"><kbd>:w</kbd><span class="action">saves</span><span class="sep">·</span><kbd>:q</kbd><span class="action">cancels</span><span class="sep">·</span><kbd>:q!</kbd><span class="action">discards</span></div>
             <div v-else-if="editing?.keymap === 'emacs'" class="dfoot"><kbd>C-x C-s</kbd><span class="action">saves</span><span class="sep">·</span><kbd>C-x C-c</kbd><span class="action">cancels</span></div>
             <div v-else-if="editing !== null" class="dfoot"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd><span class="action">saves</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
-            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>D</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></div>
+            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>T</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>D</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></div>
         </div>
     </div>
 
@@ -163,6 +163,19 @@
                 <button @click="confirmDel = null">cancel</button>
             </div>
             <div class="keys"><kbd>y</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
+        </div>
+    </div>
+
+    <!--  the transfer of a task to another state: all lane states, where only the
+          current state and the states reachable from it are selectable  -->
+    <div v-if="transfer !== null" id="transfer" @click.self="cancelTransfer">
+        <div class="box">
+            <div class="ask">Transfer task <span class="cid">{{ transfer.id }}</span> to:</div>
+            <div class="states">
+                <button v-for="e in transferList" :key="e.status" :disabled="!e.ok" :class="{ sel: e.status === transfer.at }"
+                    @click="transferTo(transfer.id, e.status)">{{ e.group }} ▷ <span class="state">{{ e.status }}</span><span v-if="e.current" class="cur"> (current)</span></button>
+            </div>
+            <div class="keys"><kbd>↑</kbd>/<kbd>↓</kbd><span class="action">selects</span><span class="sep">·</span><kbd>⏎</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
         </div>
     </div>
 </template>
@@ -183,7 +196,7 @@ import { emacs, EmacsHandler }                                                  
 type Card    = { id: string, title: string, cyclic: boolean, tone: string, moves?: string[] }
 type Lane    = { status: string, active: boolean, weight: number, dashed: boolean, kind: "initial" | "regular" | "terminal", cards: Card[] }
 type Group   = { title: string, lanes: Lane[] }
-type Surface = { minimized: string[], collapsed: string[], titles: boolean, keys: boolean }
+type Surface = { view: View, minimized: string[], collapsed: string[], titles: boolean, keys: boolean }
 type Board   = { mode: string, project: string, version: string, warnings: string[], surface: Surface, moves: Record<string, string[]>, groups: Group[] }
 type Tone    = "active" | "done" | "idle"
 type Ref     = { id: string, tone: Tone }
@@ -261,6 +274,7 @@ const editorEl    = ref<HTMLElement | null>(null)
 const editing     = ref<{ id: string, orig: string, base: string, keymap: Keymap, dirty: boolean } | null>(null)
 const notice      = ref<Notice | null>(null)
 const confirmDel  = ref<string | null>(null)
+const transfer    = ref<{ id: string, at: string } | null>(null)
 let   editor      = null as EditorView | null
 const scroll      = reactive({ all: true, info: "" })
 const tab         = ref(0)
@@ -276,7 +290,7 @@ let   reloadSeq   = 0
 let   graphSeq    = 0
 
 /*  the derived values of the page  */
-const surface   = computed<Surface>(() => board.value?.surface ?? { minimized: [], collapsed: [], titles: false, keys: true })
+const surface   = computed<Surface>(() => board.value?.surface ?? { view: "lanes", minimized: [], collapsed: [], titles: false, keys: true })
 const titles    = computed(() => surface.value.titles)
 const taskCount = computed(() => {
     const cards = board.value?.groups.flatMap((g) => g.lanes).flatMap((l) => l.cards)
@@ -305,29 +319,31 @@ const hints     = computed(() => {
         { key: "⇈/⇊/⇤/⇥",       action: "select lane" },
         { key: "⏎",             action: "view task" },
         { key: "e",             action: "edit task" },
-        { key: "SPACE",         action: "start/stop move task" },
-        { key: "D",             action: "delete task" }
+        { key: "SPACE",         action: "start/stop transition task" },
+        { key: "T",             action: "transition task" }
     ], [
+        { key: "D",             action: "delete task" },
         { key: "N",             action: "new task" },
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
         { key: "c",             action: `${folded ? "expand" : "collapse"} group` },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
-        { key: "g",             action: "switch to graph" }
+        { key: "v",             action: "view graph" }
     ], [
         { key: "Left-Click",    action: "view task / minimize/maximize lane / collapse/expand group" },
-        { key: "Drag & Drop",   action: "directly move task" },
+        { key: "Drag & Drop",   action: "directly transition task" },
         { key: "?",             action: "hide key hints" }
     ] ] : [ [
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⏎/Left-Click",  action: "view task" },
         { key: "e",             action: "edit task" },
-        { key: "D",             action: "delete task" }
+        { key: "T",             action: "transition task" }
     ], [
+        { key: "D",             action: "delete task" },
         { key: "N",             action: "new task" },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
-        { key: "l",             action: "switch to lanes" },
+        { key: "v",             action: "view lanes" },
     ], [
         { key: "?",             action: "hide key hints" }
     ] ]
@@ -644,6 +660,42 @@ const deleteTask = async (id: string) => {
         closeTask()
 }
 
+/*  the entries of the transfer popup: all lane states (with their group), where only the
+    current state and the states reachable from it (from the actual status of the task,
+    if it is foreign to the model) are selectable (none if the task vanished)  */
+const transferList = computed(() => {
+    const t    = transfer.value
+    const b    = board.value
+    const lane = b?.groups.flatMap((g) => g.lanes).find((l) => l.cards.some((c) => c.id === t?.id))
+    if (t === null || b === null || lane === undefined)
+        return []
+    const moves = lane.cards.find((c) => c.id === t.id)?.moves ?? b.moves[lane.status] ?? []
+    return b.groups.flatMap((g) => g.lanes.map((l) => ({
+        group: g.title, status: l.status, current: l.status === lane.status,
+        ok:    l.status === lane.status || moves.includes(l.status)
+    })))
+})
+
+/*  open the transfer popup of a task, starting at its current state  */
+const openTransfer = (id: string) => {
+    const lane = board.value?.groups.flatMap((g) => g.lanes).find((l) => l.cards.some((c) => c.id === id))
+    if (lane !== undefined)
+        transfer.value = { id, at: lane.status }
+}
+
+/*  cancel the transfer popup  */
+const cancelTransfer = () => {
+    transfer.value = null
+}
+
+/*  transfer a task (from its popup) to a state, where its current state cancels  */
+const transferTo = (id: string, to: string) => {
+    const entry = transferList.value.find((e) => e.status === to)
+    transfer.value = null
+    if (entry !== undefined && entry.ok && !entry.current)
+        moveTask(id, to)
+}
+
 /*  restore or drop the draft of the edited task plan  */
 const restoreDraft = () => {
     if (notice.value?.kind === "draft" && editor !== null)
@@ -745,6 +797,10 @@ const reload = async () => {
         return
     }
     boardError.value = null
+
+    /*  start in the persisted view on the first load  */
+    if (board.value === null)
+        view.value = data.surface.view
     board.value = data
     if (view.value === "graph")
         await renderGraph()
@@ -854,6 +910,10 @@ watch([ board, surface, view ], () => {
         drag.value        = null
         actionError.value = `moving task "${d.id}" cancelled: task changed in the meantime`
     }
+    if (transfer.value !== null && transferList.value.length === 0) {
+        actionError.value = `transferring task "${transfer.value.id}" cancelled: task vanished in the meantime`
+        transfer.value    = null
+    }
     if (view.value === "lanes")
         sel.value = relocate(b, sel.value, surface.value)
 })
@@ -881,13 +941,19 @@ const toggle = async (list: "minimized" | "collapsed" | "titles" | "keys", entry
     applySurface(s)
 }
 
-/*  switch between the lanes and the graph view  */
+/*  switch between the lanes and the graph view, persisting it for newly opened web boards  */
 const setView = (v: View) => {
     view.value = v
     if (v === "graph") {
         drag.value = null
         renderGraph()
     }
+    api<Surface>("/task-board/api/view", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ view: v })
+    }).then((s) => {
+        if (s.error !== undefined)
+            actionError.value = s.error
+    })
 }
 
 /*  connect to the service: change events, keyboard shortcuts, and keep-alive  */
@@ -926,6 +992,10 @@ const onDialogKey = (ev: KeyboardEvent) => {
     else if (ev.key === "D" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
         ev.preventDefault()
         confirmDel.value = task.value.id
+    }
+    else if (ev.key === "T" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
+        ev.preventDefault()
+        openTransfer(task.value.id)
     }
     else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Tab") {
         ev.preventDefault()
@@ -1016,6 +1086,10 @@ const onBoardKey = (ev: KeyboardEvent) => {
         if (s.id !== "")
             confirmDel.value = s.id
     }
+    else if (ev.key === "T") {
+        if (s.id !== "" && carry === null)
+            openTransfer(s.id)
+    }
     else if (view.value === "graph") {
         if (!arrow)
             return
@@ -1102,10 +1176,33 @@ const onConfirmKey = (ev: KeyboardEvent, id: string) => {
     ev.preventDefault()
 }
 
-/*  dispatch a key to the deletion confirmation, the task plan editor, the task dialog, or the board  */
+/*  answer the transfer popup: the up/down arrows select the previous/next selectable
+    state, RETURN transfers the task to it, and ESC cancels (with every key consumed,
+    which also suppresses the single-key bindings)  */
+const onTransferKey = (ev: KeyboardEvent, t: { id: string, at: string }) => {
+    const list = transferList.value
+    if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+        const step = ev.key === "ArrowUp" ? -1 : 1
+        for (let k = list.findIndex((e) => e.status === t.at) + step; k >= 0 && k < list.length; k += step)
+            if (list[k].ok) {
+                transfer.value = { ...t, at: list[k].status }
+                nextTick(() => document.querySelector("#transfer .sel")?.scrollIntoView({ block: "nearest" }))
+                break
+            }
+    }
+    else if (ev.key === "Enter")
+        transferTo(t.id, t.at)
+    else if (ev.key === "Escape")
+        cancelTransfer()
+    ev.preventDefault()
+}
+
+/*  dispatch a key to the deletion confirmation, the transfer popup, the task plan editor, the task dialog, or the board  */
 const onKey = (ev: KeyboardEvent) => {
     if (confirmDel.value !== null)
         onConfirmKey(ev, confirmDel.value)
+    else if (transfer.value !== null)
+        onTransferKey(ev, transfer.value)
     else if (editing.value !== null)
         onEditorKey(ev, editing.value.keymap)
     else if (task.value !== null)
@@ -1123,8 +1220,7 @@ onMounted(() => {
     events.addEventListener("open", () => { if (board.value !== null) reload() })
     events.addEventListener("surface", (ev) => applySurface(JSON.parse((ev as MessageEvent).data)))
     Mousetrap.bind("t", () => { if (board.value !== null) toggle("titles", "") })
-    Mousetrap.bind("g", () => { if (view.value !== "graph") setView("graph") })
-    Mousetrap.bind("l", () => { if (view.value !== "lanes") setView("lanes") })
+    Mousetrap.bind("v", () => setView(view.value === "lanes" ? "graph" : "lanes"))
     Mousetrap.bind("?", () => { if (board.value !== null) toggle("keys", "") })
     Mousetrap.bind("/", (ev) => {
         ev.preventDefault()

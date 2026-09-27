@@ -442,8 +442,8 @@ footer
     .action
         margin-left: 0.4rem
 
-/*  the key caps of the board footer, the dialog footer, and the deletion confirmation  */
-footer kbd, #dlg .dfoot kbd, #confirm .keys kbd
+/*  the key caps of the board footer, the dialog footer, the deletion confirmation, and the transfer popup  */
+footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
     display: inline-block
     padding: 0 5px
     border: 1px solid var(--c-border)
@@ -489,8 +489,8 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd
     background: unquote("color-mix(in srgb, var(--c-shade) 55%, transparent)")
     z-index: 10
 
-/*  the confirmation of a task deletion: a small box, centered over everything  */
-#confirm
+/*  the confirmation of a task deletion and the transfer popup: a small box, centered over everything  */
+#confirm, #transfer
     position: fixed
     inset: 0
     display: flex
@@ -533,6 +533,41 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd
             color: var(--c-mute)
         .action
             margin-left: 0.4rem
+
+/*  the transfer popup: in accent color, with a scrollable list of the lane states
+    (in bold, behind their group), where the hovered and selected states change
+    only their color (to keep the width) and the unselectable states are dimmed  */
+#transfer
+    .box
+        border-color: var(--c-accent)
+    .ask
+        color: var(--c-accent)
+        .cid
+            margin-right: 0
+    .states
+        display: flex
+        flex-direction: column
+        align-self: stretch
+        max-height: 60vh
+        overflow-y: auto
+        button
+            border: none
+            padding: 2px 12px
+            background: var(--c-paper)
+            color: var(--c-text)
+            font: inherit
+            text-align: left
+            cursor: pointer
+            &:hover:enabled, &.sel
+                color: var(--c-signal)
+            &:disabled
+                color: var(--c-mute)
+                cursor: default
+        .state
+            font-weight: bold
+        .cur
+            color: var(--c-text-soft)
+            font-weight: normal
 #dlg
     position: absolute
     left: 50%

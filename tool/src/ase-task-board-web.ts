@@ -533,6 +533,19 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
         })
     })
 
+    /*  set the shown view (lanes or graph) of the web surface, as the view of newly opened web boards  */
+    server.route({
+        method:  "POST",
+        path:    "/task-board/api/view",
+        options: { payload: { parse: true, allow: "application/json" } },
+        handler: guarded(async (request, h) => {
+            const p = request.payload as { view?: unknown } | null
+            if (p === null || (p.view !== "lanes" && p.view !== "graph"))
+                return h.response({ error: "invalid view request" }).code(400)
+            return h.response((await BoardState.setView("web", p.view)).web)
+        })
+    })
+
     /*  toggle a minimized lane, a collapsed group, or the showing of task titles or key hints of the web surface  */
     server.route({
         method:  "POST",

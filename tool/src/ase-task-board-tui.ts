@@ -19,7 +19,7 @@ import {
     buildBoard, splitHeight, toneOf, watchTasks, BoardState, byCreation, cardLabel, clampLines, glueId, glueTitle,
     attachmentTabs, isPreflightDiff, diffTones, newTaskText, taskTextId, createTask, saveTask
 }                                             from "./ase-task-board-core.js"
-import type { Board, Card, GroupSpec, LaneSpec, Surface, SurfaceList } from "./ase-task-board-core.js"
+import type { Board, Card, GroupSpec, LaneSpec, Surface, SurfaceList, SurfaceView } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
 import pkg                                    from "../package.json" with { type: "json" }
 import { filterBoard }                        from "./ase-task-board-filter.js"
@@ -409,6 +409,62 @@ const renderConfirm = (id: string, yes: boolean, columns: number, rows: number) 
     h(Text, { color: palette.dim }, keys))
 }
 
+/*  the entries of the transfer popup: all lane states (with their group), where
+    only the current state and the states reachable from it are selectable  */
+type TransferEntry = { group: string, status: string, ok: boolean }
+const transferEntries = (board: Board, cycle: TaskFormat.TaskLifecycle, card: Card): TransferEntry[] =>
+    board.groups.flatMap((g) => g.lanes.map((l) => ({
+        group: g.title, status: l.status,
+        ok:    l.status === card.status || TaskFormat.checkStatus(cycle, card.actual, l.status) === ""
+    })))
+
+/*  the geometry of the transfer popup: centered on the screen, with its entries
+    (starting in its third inner row) scrolled so that the selected one stays visible  */
+const transferBox = (count: number, idx: number, columns: number, rows: number) => {
+    const width  = Math.min(columns - 2, 60)
+    const viewH  = Math.max(1, Math.min(count, rows - 8))
+    const first  = Math.max(0, Math.min(idx - Math.floor(viewH / 2), count - viewH))
+    const height = viewH + 6
+    const top    = Math.floor((rows - height) / 2)
+    return { width, height, viewH, first, top, left: Math.floor((columns - width) / 2), row: top + 3 }
+}
+
+/*  render the transfer popup of a task, in the style of the confirmation of a task
+    deletion, with the selected state marked, the current state labeled, and the
+    unselectable states dimmed  */
+const renderTransfer = (id: string, from: string, entries: TransferEntry[], at: string, columns: number, rows: number) => {
+    const idx    = entries.findIndex((e) => e.status === at)
+    const box    = transferBox(entries.length, idx, columns, rows)
+    const innerW = box.width - 2
+    const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
+
+    /*  the centered question, with the task id rendered inverse with one extra space on each side  */
+    const tid    = ` ${sanitize(id)} `.slice(0, Math.max(0, innerW - 18))
+    const qpad   = Math.max(0, Math.floor((innerW - 18 - tid.length) / 2))
+    const hint   = "↑/↓: select · ⏎: transition · ESC: cancel".slice(0, innerW)
+    const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
+    return h(Box, {
+        key: "transfer", position: "absolute", top: box.top, left: box.left,
+        width: box.width, height: box.height, flexDirection: "column", borderStyle: "round", borderColor: palette.accent
+    },
+    h(Text, { color: palette.normal, bold: true },
+        " ".repeat(qpad) + "Transfer task ",
+        h(Text, { inverse: true }, tid),
+        " to:".padEnd(Math.max(0, innerW - qpad - 14 - tid.length))),
+    blank("blank-above"),
+    ...entries.slice(box.first, box.first + box.viewH).map((e, k) => {
+        /*  the group in normal and the state in bold, cut to the inner width  */
+        const on    = box.first + k === idx
+        const head  = ` ${on ? "▶" : " "} ${e.group} ▷ `.slice(0, innerW)
+        const state = e.status.slice(0, innerW - head.length)
+        const tail  = (e.status === from ? " (current)" : "").slice(0, innerW - head.length - state.length)
+        return h(Text, { key: k, color: on ? palette.signal : e.ok ? palette.normal : palette.dim, dimColor: !e.ok },
+            head, h(Text, { bold: true }, state), tail.padEnd(innerW - head.length - state.length))
+    }),
+    blank("blank-below"),
+    h(Text, { color: palette.dim }, keys))
+}
+
 /*  render the read dialog: full height, horizontally centered, with a
     vertical scroll bar in its right border  */
 const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scroll, lines, columns, rows, notice }: DialogArgs) => {
@@ -467,7 +523,7 @@ const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scr
     const free   = Math.max(0, innerW - pos.length - 1)
     const keys   = notice !== null ?
         (" " + sanitize(notice)).slice(0, free) :
-        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · D: delete · M: toggle mouse · ⏎/ESC: close"
+        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · T: transition · D: delete · M: toggle mouse · ⏎/ESC: close"
 
     return h(Box, { key: "dialog", ...frame, flexDirection: "column" },
         h(Text, {},
@@ -735,12 +791,12 @@ const nearestPlace = (places: Map<string, Place>, from: string, dir: "left" | "r
 }
 
 /*  the root component of the terminal board  */
-const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board }) => {
+const App = ({ log, initial }: { log: Log, initial: Board }) => {
     const { exit, suspendTerminal } = useApp()
     const { columns, rows } = useWindowSize()
     const [ all,     setBoard   ] = React.useState<Board>(initial)
     const [ surface, setSurface ] = React.useState<Surface>(() => BoardState.load().tui)
-    const [ view,    setView    ] = React.useState<"lanes" | "graph">(graph ? "graph" : "lanes")
+    const [ view,    setView    ] = React.useState<SurfaceView>(() => surface.view)
     const [ filter,  setFilter  ] = React.useState("")
     const [ typing,  setTyping  ] = React.useState(false)
 
@@ -758,6 +814,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
     const [ carry,   setCarry   ] = React.useState<Carry | null>(null)
     const [ cycle,   setCycle   ] = React.useState<TaskFormat.TaskLifecycle | null>(null)
     const [ confirm, setConfirm ] = React.useState<{ id: string, yes: boolean } | null>(null)
+    const [ transfer, setTransfer ] = React.useState<{ id: string, at: string } | null>(null)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
 
@@ -826,6 +883,13 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         }
     }, [ log, all ])
 
+    /*  persist the shown view for the next start of the terminal board  */
+    React.useEffect(() => {
+        BoardState.setView("tui", view).catch((err: unknown) => {
+            log.write("warning", `board: persisting view failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }, [ log, view ])
+
     /*  auto-clear a status notice after 5 seconds  */
     React.useEffect(() => {
         if (notice === null)
@@ -845,6 +909,14 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             setNotice(`moving task "${carry.id}" cancelled: task changed in the meantime`)
         }
     }, [ all, carry ])
+
+    /*  close the transfer popup if its task vanished in the meantime  */
+    React.useEffect(() => {
+        if (transfer !== null && !all.cards.has(transfer.id)) {
+            setTransfer(null)
+            setNotice(`transferring task "${transfer.id}" cancelled: task vanished in the meantime`)
+        }
+    }, [ all, transfer ])
 
     /*  remember the box of every graph node for the spatial navigation and the scrolling  */
     const places = React.useMemo(() => {
@@ -1044,6 +1116,20 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         })
     }
 
+    /*  transfer a task (from its popup) to a state, where its current state cancels  */
+    const transferTo = (id: string, to: string): void => {
+        setTransfer(null)
+        if (to === all.cards.get(id)?.status) {
+            setNotice(`transferring task "${id}" cancelled`)
+            return
+        }
+        Task.setStatus(log, id, to).then((result) => {
+            setNotice(`task "${id}" moved from ${result.from} to ${result.to}`)
+        }).catch((err: unknown) => {
+            setNotice(`moving task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+
     /*  keep the selection valid on every board, surface, or view change
         (the graph view shows all nodes, so it ignores minimized lanes and collapsed groups)  */
     React.useEffect(() => {
@@ -1067,6 +1153,10 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         attachmentLines(dialogAtt, files.get(`${dialog.id}:${dialogSel}`), Math.max(1, dialogW - 5)) :
         planLines(dialogParts, dialog.id, Math.max(1, dialogW - 5))
     const dialogMax   = Math.max(0, dialogLines.length - (rows - DIALOG_CHROME))
+
+    /*  the entries of the transfer popup of its (still existing) task  */
+    const transferCard = transfer !== null ? all.cards.get(transfer.id) : undefined
+    const transferList = transferCard !== undefined && cycle !== null ? transferEntries(all, cycle, transferCard) : []
 
     /*  scroll the selected tab of the read dialog  */
     const dialogScroll = (delta: number) => {
@@ -1120,6 +1210,21 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 setNotice(`deleting task "${confirm.id}" cancelled`)
                 setConfirm(null)
             }
+            return
+        }
+        if (transfer !== null) {
+            /*  a click onto a selectable entry of the transfer popup transfers
+                the task to its state, while a click outside the popup cancels  */
+            const box = transferBox(transferList.length, transferList.findIndex((e) => e.status === transfer.at), columns, rows)
+            const k   = box.first + my - box.row
+            if (btn !== 0)
+                return
+            if (mx < box.left || mx >= box.left + box.width || my < box.top || my >= box.top + box.height) {
+                setNotice(`transferring task "${transfer.id}" cancelled`)
+                setTransfer(null)
+            }
+            else if (k >= box.first && k < box.first + box.viewH && transferList[k]?.ok)
+                transferTo(transfer.id, transferList[k].status)
             return
         }
         if (dialog !== null) {
@@ -1288,6 +1393,27 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             return
         }
 
+        /*  answer the transfer popup: the up/down arrows select the previous/next
+            selectable state, RETURN transfers the task to it, ESC cancels, and all
+            other keys are ignored  */
+        if (transfer !== null) {
+            if (key.upArrow || key.downArrow) {
+                const step = key.upArrow ? -1 : 1
+                for (let k = transferList.findIndex((e) => e.status === transfer.at) + step; k >= 0 && k < transferList.length; k += step)
+                    if (transferList[k].ok) {
+                        setTransfer({ ...transfer, at: transferList[k].status })
+                        break
+                    }
+            }
+            else if (key.return)
+                transferTo(transfer.id, transfer.at)
+            else if (key.escape) {
+                setNotice(`transferring task "${transfer.id}" cancelled`)
+                setTransfer(null)
+            }
+            return
+        }
+
         /*  while typing into the filter field, all keys edit the filter query
             (applied live), until ENTER keeps it or ESC clears it  */
         if (typing && dialog === null) {
@@ -1333,6 +1459,18 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             setConfirm({ id: target, yes: false })
             return
         }
+
+        /*  request the transfer of a task to another state in every view, starting
+            at its current state (under the kitty keyboard protocol, Shift+t
+            arrives as "t" with the shift modifier)  */
+        if ((input === "T" || (input === "t" && key.shift)) && target !== "" && carry === null) {
+            const card = all.cards.get(target)
+            if (cycle === null)
+                setNotice("task lifecycle model not yet loaded")
+            else if (card !== undefined)
+                setTransfer({ id: card.id, at: card.status })
+            return
+        }
         if (dialog !== null) {
             const page = Math.max(1, rows - DIALOG_CHROME - 2)
             if (key.escape || key.return)
@@ -1362,10 +1500,9 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 setTyping(true)
             return
         }
-        if (input === "g" || input === "l") {
-            if (input === "g")
-                setCarry(null)
-            setView(input === "g" ? "graph" : "lanes")
+        if (input === "v") {
+            setCarry(null)
+            setView(view === "lanes" ? "graph" : "lanes")
             return
         }
         if (key.return && sel.id !== "") {
@@ -1382,7 +1519,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 startEdit(null)
             return
         }
-        if (input === "t" || input === "?") {
+        if ((input === "t" && !key.shift) || input === "?") {
             const flag = input === "t" ? "titles" : "keys"
             BoardState.toggleFlag("tui", flag).then((state) => {
                 setSurface(state.tui)
@@ -1513,7 +1650,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         return h(Box, { width: columns, height: rows, justifyContent: "center", alignItems: "center" },
             h(Text, { color: palette.signal }, `window too small (${columns}×${rows}) — needs at least 40×16`))
 
-    const dim = dialog !== null || confirm !== null
+    const dim = dialog !== null || confirm !== null || transfer !== null
 
     /*  the status line in the last line of the screen, below the key hints, enclosed
         on its left and right side by the downward lines of the rule above it,
@@ -1551,13 +1688,13 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                     (arrows ? "░".repeat(off) + "█".repeat(on) + "░".repeat(Math.max(0, track - off - on)) + " · " : "") + info)),
             h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop move task · D: delete task")),
+                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop transition task · T: transition task")),
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    "N: new task · " +
+                    "D: delete task · N: new task · " +
                     `m: ${minned ? "maximize" : "minimize"} lane · c: ${folded ? "expand" : "collapse"} group · ` +
                     `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
-                    "/: filter tasks · g: switch to graph")),
+                    "/: filter tasks · v: view graph")),
             h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     `Left-Click: view task / minimize/maximize lane / collapse/expand group · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
@@ -1612,11 +1749,11 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                     [ "task: ", h(Text, { key: "id", bold: true }, card.id), " · status: ", h(Text, { key: "status", bold: true }, card.status) ])),
             h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task · D: delete task")),
+                    "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task · T: transition task")),
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    `N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
-                    "/: filter tasks · l: switch to lanes")),
+                    `D: delete task · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
+                    "/: filter tasks · v: view lanes")),
             h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
@@ -1688,11 +1825,13 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             rows,
             notice
         }) : null,
-        confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null)
+        confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null,
+        transfer !== null && transferCard !== undefined ?
+            renderTransfer(transfer.id, transferCard.status, transferList, transfer.at, columns, rows) : null)
 }
 
 /*  run the terminal board until the user quits  */
-export const runTUI = async (log: Log, graph: boolean): Promise<void> => {
+export const runTUI = async (log: Log): Promise<void> => {
     const initial = await buildBoard(log)
     palette = loadPalette(log)
 
@@ -1706,7 +1845,7 @@ export const runTUI = async (log: Log, graph: boolean): Promise<void> => {
     }
     process.once("exit", reset)
     try {
-        const app = render(h(App, { log, graph, initial }), { alternateScreen: true, exitOnCtrlC: true, patchConsole: true })
+        const app = render(h(App, { log, initial }), { alternateScreen: true, exitOnCtrlC: true, patchConsole: true })
         await app.waitUntilExit()
     }
     finally {

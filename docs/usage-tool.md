@@ -606,14 +606,15 @@ else the `token` of the per-user `store.yaml`:
 The following sub-command exists for watching, moving, and editing
 the persisted task plans of the current project:
 
-- `ase task board` \[`-g`|`--graph`\] \[`-w`|`--web`\] \[`-t`|`--text`\]:
+- `ase task board` \[`-w`|`--web`\] \[`-t`|`--text`\]:
   Show the task board: all task plans as cards (showing the task id and,
   behind a `▶`, the title) in the
   lanes of the effective task lifecycle model (see `ase task lifecycle`),
   grouped by the phases of the model plus a final `Done` group, with the
   active lanes in blue and the parking lanes in grey. Without options,
-  the interactive terminal board is started (`--graph` starts in the
-  dependency graph view derived from the `After:` keys); lanes can be
+  the interactive terminal board is started (in its last shown view:
+  the lanes view or the dependency graph view derived from the `After:`
+  keys, switched via `v`); lanes can be
   minimized and groups collapsed, a card title is cut onto a single line
   or, toggled with `t`, wrapped onto at most three lines, and a card
   opens its plan in a full-height dialog (also by a mouse click onto the
@@ -633,9 +634,14 @@ the persisted task plans of the current project:
   the lanes view, `SPACE` picks up the selected task and a second `SPACE`
   drops it onto the selected lane, changing the task status (`ESC`
   cancels); only lanes whose state is reachable from the current state
-  in the lifecycle model accept the task. `/` focuses the `filter:` field
+  in the lifecycle model accept the task. Alternatively, in the lanes,
+  graph, and task views, `T` transfers the selected task via a popup
+  listing all lane states (as `<group> ▷ <state>`, starting at the
+  current state), where `↑`/`↓` select one of the reachable states (the
+  others are dimmed), `⏎` (or a click onto it) moves the task, and `ESC`
+  (or a click outside) cancels. `/` focuses the `filter:` field
   of the header (also a click onto it, as a click onto the `view:` value
-  switches the view; web: `⏎` keeps,
+  or `v` switches the view; web: `⏎` keeps,
   `ESC` or `✕` clears it; terminal: `⏎` keeps,
   `ESC` clears it): its keywords are fuzzy matched against
   the task id and title, AND-combined when separated by spaces and

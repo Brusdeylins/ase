@@ -8,7 +8,7 @@ ChangeLog
 -   FEATURE [tool]: TUI and Web Task Board
     The new `ase task board` shows all task plans live as cards in the lanes of the task lifecycle
     model, as an interactive terminal board (plan dialog, `$EDITOR` editing, dependency graph view
-    via `--graph`, task moves via `SPACE`), as a web board served by the ASE service (`--web`, task
+    via `v`, task moves via `SPACE`), as a web board served by the ASE service (`--web`, task
     moves via drag & drop), or as plain text (`--text`). The display state persists in
     `.ase/board.yaml`, the colors in `board.{tui,web}.color.*`, and the skill is `ase-task-board`.
 
@@ -17,6 +17,11 @@ ChangeLog
     pre-filled task plan (all frontmatter keys, a free placeholder id, the initial state, and the
     section template), stored under the id of its `Id:` line, but never over an existing task.
     They delete the selected task via `D` (lanes, graph, and task view) after a confirmation.
+
+-   FEATURE [tool]: Task Board task transfer
+    The terminal and web task board transfer the selected task via `T` (lanes, graph, and task
+    view) through a centered popup listing all lane states, where only the states reachable in the
+    lifecycle model are selectable via the cursor keys, `RETURN` moves, and `ESC` cancels.
 
 -   FEATURE [tool]: Task Board filter
     The terminal and web task board got a `filter:` field in their header (focused via `/`),

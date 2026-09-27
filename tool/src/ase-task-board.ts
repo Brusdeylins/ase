@@ -18,9 +18,8 @@ import { writeStdout }                      from "./ase-lib-stdio.js"
 
 /*  internal command options type  */
 interface BoardOpts {
-    graph?: boolean
-    web?:   boolean
-    text?:  boolean
+    web?:  boolean
+    text?: boolean
 }
 
 /*  render the lane overview as plain text, for use without a terminal  */
@@ -98,7 +97,6 @@ export default class TaskBoardCommand {
             .command("board")
             .description("Show the task board: the lanes of the configured task lifecycle " +
                 "model and the dependency graph of the tasks, following all changes live")
-            .option("-g, --graph", "start in the dependency graph view instead of the lane view")
             .option("-w, --web", "serve the web board through the ASE service of the project " +
                 "and open it in the browser")
             .option("-t, --text", "print the lane overview as plain text and exit")
@@ -119,7 +117,7 @@ export default class TaskBoardCommand {
 
                 /*  run the interactive terminal board  */
                 const { runTUI } = await import("./ase-task-board-tui.js")
-                await runTUI(this.log, opts.graph === true)
+                await runTUI(this.log)
             })
     }
 }

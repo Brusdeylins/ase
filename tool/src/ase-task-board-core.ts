@@ -58,9 +58,10 @@ export type Board = {
     warnings: string[]
 }
 
-/*  the per-surface view state: minimized lanes, collapsed groups, and
+/*  the per-surface view state: the shown view, minimized lanes, collapsed groups, and
     whether the task titles and the key hints are shown  */
-export type Surface     = { minimized: string[], collapsed: string[], titles: boolean, keys: boolean }
+export type Surface     = { view: SurfaceView, minimized: string[], collapsed: string[], titles: boolean, keys: boolean }
+export type SurfaceView = "lanes" | "graph"
 export type SurfaceList = "minimized" | "collapsed"
 export type SurfaceFlag = "titles" | "keys"
 
@@ -135,6 +136,7 @@ export const splitHeight = (total: number, weights: number[], min = 0): number[]
 
 /*  the valibot schema of the persisted board state  */
 const surfaceSchema = v.object({
+    view:      v.optional(v.picklist([ "lanes", "graph" ]), "lanes"),
     minimized: v.optional(v.array(v.string()), []),
     collapsed: v.optional(v.array(v.string()), []),
 
@@ -144,8 +146,8 @@ const surfaceSchema = v.object({
     keys:      v.optional(v.boolean(), true)
 })
 const stateSchema = v.object({
-    tui: v.optional(surfaceSchema, { minimized: [], collapsed: [], titles: false, keys: true }),
-    web: v.optional(surfaceSchema, { minimized: [], collapsed: [], titles: false, keys: true })
+    tui: v.optional(surfaceSchema, { view: "lanes", minimized: [], collapsed: [], titles: false, keys: true }),
+    web: v.optional(surfaceSchema, { view: "lanes", minimized: [], collapsed: [], titles: false, keys: true })
 })
 
 /*  reusable functionality: the persisted per-project board state in
@@ -217,6 +219,13 @@ export class BoardState {
     static toggleFlag (surface: "tui" | "web", flag: SurfaceFlag): Promise<State> {
         return BoardState.update((state) => {
             state[surface][flag] = !state[surface][flag]
+        })
+    }
+
+    /*  set the shown view (lanes or graph)  */
+    static setView (surface: "tui" | "web", view: SurfaceView): Promise<State> {
+        return BoardState.update((state) => {
+            state[surface].view = view
         })
     }
 }
