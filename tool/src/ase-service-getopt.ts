@@ -80,6 +80,27 @@ const unquote = (s: string): string => {
     return out
 }
 
+/*  slice the verbatim trailing arguments from the raw input by skipping all
+    leading option tokens (and the separate value tokens they take), mirroring
+    the pass-through semantics of commander on the verbatim text  */
+const verbatimArgs = (input: string, flagTakesValue: Map<string, boolean>): string => {
+    const ranges = tokenizeRanges(input)
+    let idx = 0
+    while (idx < ranges.length) {
+        const tok = unquote(input.slice(ranges[idx].start, ranges[idx].end))
+        if (tok === "--") {
+            idx++
+            break
+        }
+        if (!tok.startsWith("-") || tok === "-")
+            break
+        idx++
+        if (flagTakesValue.get(tok) === true && idx < ranges.length)
+            idx++
+    }
+    return idx < ranges.length ? input.slice(ranges[idx].start) : ""
+}
+
 /*  MCP registration entry point for the option-parser tool  */
 export class GetoptMCP {
     register (mcp: McpServer): void {
@@ -101,9 +122,9 @@ export class GetoptMCP {
                 name: z.string()
                     .describe("Name of the caller (e.g. skill name), used in error messages"),
                 spec: z.string()
-                    .describe("Whitespace-separated option spec, e.g. `--foo/-f --bar --baz/-b=BAZ`"),
+                    .describe("Whitespace-separated option spec, e.g. `--foo|-f --bar --baz|-b=BAZ`"),
                 args: z.union([ z.string(), z.array(z.string()) ])
-                    .describe("Arguments to parse (string is split on whitespace)")
+                    .describe("Arguments to parse (string is split shell-like, honoring quotes)")
             }
         }, async (args) => {
             let helpText = ""
@@ -196,38 +217,9 @@ export class GetoptMCP {
                 }
 
                 /*  compute verbatim trailing argument string  */
-                let argsVerbatim = ""
-                if (argsRaw !== null) {
-                    /*  tokenize raw input into [start,end) ranges, preserving quotes  */
-                    const ranges = tokenizeRanges(argsRaw)
-
-                    /*  walk the raw ranges, consuming leading option tokens (and any
-                        separate value tokens they take) until the first positional
-                        is reached, then slice the original input from there -- this
-                        mirrors commander's pass-through semantics while staying on
-                        the verbatim text and is robust against value-consuming
-                        options and shell-operator characters in the input  */
-                    let idx = 0
-                    while (idx < ranges.length) {
-                        const tok = unquote(argsRaw.slice(ranges[idx].start, ranges[idx].end))
-                        if (tok === "--") {
-                            idx++
-                            break
-                        }
-                        if (!tok.startsWith("-") || tok === "-")
-                            break
-                        let consumesNext = false
-                        if (/^--[^=]+$/.test(tok) || /^-[^-]$/.test(tok))
-                            consumesNext = flagTakesValue.get(tok) === true
-                        idx++
-                        if (consumesNext && idx < ranges.length)
-                            idx++
-                    }
-                    if (idx < ranges.length)
-                        argsVerbatim = argsRaw.slice(ranges[idx].start)
-                }
-                else
-                    argsVerbatim = shQuote(cmd.args)
+                const argsVerbatim = argsRaw !== null ?
+                    verbatimArgs(argsRaw, flagTakesValue) :
+                    shQuote(cmd.args)
 
                 /*  build markdown info rendering of parsed options  */
                 const opts = cmd.opts()
