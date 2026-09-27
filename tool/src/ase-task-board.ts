@@ -65,7 +65,7 @@ export default class TaskBoardCommand {
             throw new Error("board: ASE service runs older ASE code without web board " +
                 "(restart it with \"ase service stop\" once no agent session uses it)")
         const data = res._data as { build?: string } | null | undefined
-        const { BOARD_BUILD } = await import("./ase-task-board-web.js")
+        const { BOARD_BUILD } = await import("./ase-task-board-web-server.js")
         if (data?.build !== BOARD_BUILD)
             this.log.write("warning", "board: ASE service runs other ASE code " +
                 "(restart it with \"ase service stop\" once no agent session uses it)")

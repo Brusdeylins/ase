@@ -453,7 +453,7 @@ export default class ServiceCommand {
         /*  serve the web board of the project (imported dynamically to keep it out of all
             other CLI commands; its rendering dependencies marked, MRCS, and ELK load on
             first request only, its board core dependencies at service startup)  */
-        const { registerBoardRoutes } = await import("./ase-task-board-web.js")
+        const { registerBoardRoutes } = await import("./ase-task-board-web-server.js")
         registerBoardRoutes(server, this.log)
 
         /*  start service  */
