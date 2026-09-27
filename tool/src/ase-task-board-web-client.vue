@@ -7,7 +7,7 @@
 <template>
     <header>
         <span>
-            ⧉ ASE: <span class="val">Task Board</span>
+            ⧉ ASE: <span class="app">Task Board</span>
             <span class="sep">·</span>project: <span class="val">{{ board?.project }}</span>
             <span class="sep">·</span>mode: <span class="val">{{ board?.mode }}</span>
             <span class="sep">·</span>tasks: <span class="val">{{ taskCount }}</span>
@@ -39,7 +39,7 @@
                     </div>
                 </div>
                 <div v-else class="group">
-                    <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr">▼</span> {{ g.title }}</div>
+                    <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr">▼</span><span class="ttl">{{ g.title }}</span></div>
                     <div v-for="(l, li) in g.lanes" :key="l.status" class="lane"
                         :class="[ { active: l.active, dashed: l.dashed, done: l.kind === 'terminal', min: surface.minimized.includes(l.status), sel: sel.g === gi && sel.l === li }, dropClass(l.status) ]"
                         :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li)"
@@ -70,7 +70,7 @@
     </div>
     <div v-show="view === 'lanes'" id="hscroll">
         <button :style="{ visibility: scroll.all ? 'hidden' : 'visible' }" @click="scrollBy(-240)">◀</button>
-        <span>{{ scroll.info }}</span>
+        <span v-if="scroll.info !== ''">{{ scroll.info }}<span class="sep">·</span>{{ scroll.all ? "all visible" : "scroll or ◀/▶" }}</span>
         <button :style="{ visibility: scroll.all ? 'hidden' : 'visible' }" @click="scrollBy(240)">▶</button>
     </div>
     <footer>
@@ -315,7 +315,7 @@ const updateScroll = () => {
         g.offsetLeft + g.offsetWidth > el.scrollLeft + 1 && g.offsetLeft < el.scrollLeft + el.clientWidth - 1)
     scroll.all  = visible.length === groups.length
     scroll.info = visible.length === 0 ? "" : `groups ${visible[0].i + 1}–${visible[visible.length - 1].i + 1} ` +
-        `of ${groups.length}${scroll.all ? " · all visible" : " · scroll or ◀/▶"}`
+        `of ${groups.length}`
 }
 const scrollBy = (left: number) =>
     boardEl.value?.scrollBy({ left, behavior: "smooth" })

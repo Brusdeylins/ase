@@ -109,6 +109,11 @@ header
         margin: 0 0.4rem
         color: var(--c-mute)
 
+    /*  the application name, emphasized but without a box  */
+    .app
+        color: var(--c-text)
+        font-weight: bold
+
     /*  the header values in boxes, with the view as a toggle button  */
     .val
         display: inline-block
@@ -165,7 +170,7 @@ header
 #board
     display: flex
     gap: 12px
-    height: calc(100vh - 182px)
+    height: calc(100vh - 176px)
     overflow-x: auto
 .group
     display: flex
@@ -226,6 +231,10 @@ header
     cursor: pointer
     white-space: nowrap
     text-align: center
+
+    /*  the group title after the expand/collapse arrow  */
+    .ttl
+        margin-left: 0.5rem
 
 /*  the expand/collapse arrow, pointing right (by rotating the same
     glyph) when collapsed, to keep both arrows exactly equally sized  */
@@ -367,7 +376,7 @@ header
     align-items: center
     justify-content: center
     gap: 8px
-    padding: 6px 16px 0
+    padding: 0 16px
     color: var(--c-mute)
     font-size: 0.8125rem
     button
@@ -375,6 +384,11 @@ header
         background: none
         cursor: pointer
         color: var(--c-text-soft)
+
+    /*  the separator between the visible groups and the scroll hint  */
+    .sep
+        margin: 0 0.6rem
+        color: var(--c-mute)
 footer
     padding: 4px 16px 6px
     text-align: center
