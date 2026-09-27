@@ -34,7 +34,10 @@ import { LocalTaskStoreClient, RemoteTaskStoreClient }    from "./ase-task-store
 type ScopedValue = { value: string, scope: string }
 
 /*  the task store specification of the current project  */
-type TaskStoreSpec = { projectId: string, projectIdExplicit: boolean, store: ScopedValue, token: ScopedValue, lifecycle: TaskFormat.TaskLifecycle }
+type TaskStoreSpec = {
+    projectId: string, projectIdExplicit: boolean, store: ScopedValue, token: ScopedValue,
+    lifecycle: TaskFormat.TaskLifecycle, idscheme: string
+}
 
 /*  reusable functionality: the task plans of the current project,
     forwarded to the task store selected by the "project.task.store"
@@ -44,8 +47,8 @@ export class Task {
     static validateId (id: string): void {
         if (typeof id !== "string" || id.length === 0)
             throw new Error("task: id must be a non-empty string")
-        if (!TaskFormat.ID_RE.test(id))
-            throw new Error("task: id must match [A-Za-z0-9_-]+")
+        if (!TaskFormat.TASK_ID_RE.test(id))
+            throw new Error("task: id must match [A-Za-z0-9#][A-Za-z0-9#_-]*")
     }
 
     /*  validate the session id to keep it safe as a config scope term  */
@@ -107,8 +110,8 @@ export class Task {
     /*  read the "project.id" of the project (defaulting to the sanitized
         basename of the project root), the "project.task.store" URL (defaulting to
         "ase:./.ase/task") and "project.task.token" (both with their
-        supplying scope), and the "project.task.lifecycle" model
-        (defaulting to "solo")  */
+        supplying scope), the "project.task.lifecycle" model (defaulting
+        to "solo"), and the "project.task.idscheme" scheme (defaulting to "slug")  */
     private static spec (log: Log): TaskStoreSpec {
         const root   = Task.projectRoot()
         const cached = Task.specCache.get(root)
@@ -146,7 +149,11 @@ export class Task {
         if (lifecycle === undefined)
             throw new Error(`task: configured "lifecycle" "${name}" must be one of: ` +
                 Object.keys(TaskFormat.taskLifecycles).join(", "))
-        const result = { projectId, projectIdExplicit: explicit !== "", store, token, lifecycle }
+        const idscheme  = read("project.task.idscheme") || "slug"
+        const error     = TaskFormat.checkIdScheme(idscheme)
+        if (error !== "")
+            throw new Error(`task: configured "project.task.idscheme": ${error}`)
+        const result = { projectId, projectIdExplicit: explicit !== "", store, token, lifecycle, idscheme }
         Task.specCache.set(root, result)
         return result
     }
@@ -176,6 +183,51 @@ export class Task {
                 Task.invalidate()
             }
             return from
+        })
+    }
+
+    /*  resolve the effective task id scheme: the configured one for a
+        local task store, the one of the registered project for a remote one  */
+    static idScheme (log: Log): Promise<string> {
+        return Task.with(log, (client) => Promise.resolve(client.idscheme))
+    }
+
+    /*  set the task id scheme of the project in the task store (for a local
+        task store via "project.task.idscheme" on scope "project"); returns the
+        previous task id scheme  */
+    static async setIdScheme (log: Log, spec: string): Promise<string> {
+        const error = TaskFormat.checkIdScheme(spec)
+        if (error !== "")
+            throw new Error(`task: ${error}`)
+        return Task.with(log, async (client) => {
+            const from = client.idscheme
+            try {
+                await client.setIdScheme(spec)
+            }
+            finally {
+                Task.invalidate()
+            }
+            return from
+        })
+    }
+
+    /*  allocate the next free task id according to the effective task id scheme,
+        derived from a title (scheme "slug") or a proposed id (scheme "any"),
+        by searching all existing task ids plus the additionally taken ones and,
+        for scheme "seq", the high-water mark of the removed and allocated ids
+        (reserving the allocated one); returns the scheme, the id, and the
+        regular expression matching the ids conforming to the scheme  */
+    static async newId (log: Log, title = "", proposal = "", taken: string[] = []): Promise<{ scheme: string, id: string, match: string }> {
+        return Task.with(log, async (client) => {
+            try {
+                const { scheme, id } = await client.newId(title, proposal, taken)
+                return { scheme, id, match: TaskFormat.parseIdScheme(scheme).match }
+            }
+            catch (err) {
+                if (err instanceof Core.Problem && err.status === 422)
+                    throw new Error(`task: ${err.message}`, { cause: err })
+                throw err
+            }
         })
     }
 
@@ -253,7 +305,7 @@ export class Task {
         (resolved relative to the project root)  */
     private static client (log: Log): TaskStoreClient {
         const spec = Task.spec(log)
-        const { projectId, store, lifecycle } = spec
+        const { projectId, store, lifecycle, idscheme } = spec
         const unsupported = () => new Error(`task: unsupported "project.task.store" URL "${store.value}" ` +
             "(expected: \"ase:<path>\", \"ase://<addr>:<port>[/<token>]\", " +
             "or \"ases://<addr>:<port>[/<token>][?insecure]\")")
@@ -281,7 +333,7 @@ export class Task {
             if (!spec.projectIdExplicit)
                 throw new Error(`task: remote task store "${url.protocol}//${url.host}" requires an explicit "project.id" ` +
                     `(set it via "ase config --scope project set project.id ${projectId}")`)
-            client = new RemoteTaskStoreClient(projectId, lifecycle, log,
+            client = new RemoteTaskStoreClient(projectId, lifecycle, idscheme, log,
                 `${secure ? "https" : "http"}://${url.hostname}:${url.port}`,
                 Task.token(log, spec, embedded, url), url.search === "?insecure")
         }
@@ -303,7 +355,7 @@ export class Task {
                     throw new Error(`task: "project.task.store" "${store.value}" on scope "${store.scope}" ` +
                         "must not escape the project root (configure it on scope \"user\" instead)")
             }
-            client = new LocalTaskStoreClient(projectId, lifecycle, basedir, log)
+            client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, basedir, log)
         }
         else
             throw unsupported()
@@ -348,14 +400,25 @@ export class Task {
 
     /*  save a task as text under the given id; throws if its "Status:"
         frontmatter key is unknown to the task lifecycle model or not
-        reachable from the previous status, and on a conditional save (with
-        an entity tag) a problem 412 if the task was changed in the meantime  */
-    static async save (log: Log, id: string, text: string, tag?: string): Promise<void> {
+        reachable from the previous status, on a conditional save (with
+        an entity tag) a problem 412 if the task was changed in the meantime,
+        and on a create-only save an error if the task already exists;
+        returns a warning (else empty) if the id does not conform to the task id scheme  */
+    static async save (log: Log, id: string, text: string, tag?: string, create = false): Promise<string> {
         if (typeof text !== "string")
             throw new Error("task: text must be a string")
         Task.validateId(id)
-        await Task.with(log, (client) =>
-            client.save(id, TaskFormat.parseTaskText(id, text, client.lifecycle), tag))
+        try {
+            return await Task.with(log, async (client) => {
+                await client.save(id, TaskFormat.parseTaskText(id, text, client.lifecycle), tag, create)
+                return TaskFormat.idWarning(client.idscheme, id)
+            })
+        }
+        catch (err: unknown) {
+            if (create && tag === undefined && err instanceof Core.Problem && err.status === 412)
+                throw new Error(`task: task "${id}" already exists`, { cause: err })
+            throw err
+        }
     }
 
     /*  delete a task by id; returns true if a task existed  */
@@ -364,14 +427,16 @@ export class Task {
         return Task.with(log, (client) => client.delete(id))
     }
 
-    /*  rename a task, rewriting its "Id:" frontmatter key; returns true
-        on success, false if the source task does not exist; throws if
-        the target id already exists  */
-    static async rename (log: Log, oldId: string, newId: string): Promise<boolean> {
+    /*  rename a task, rewriting its "Id:" frontmatter key; returns null if
+        the source task does not exist, else a warning (else empty) if the new
+        id does not conform to the task id scheme; throws if the target id
+        already exists  */
+    static async rename (log: Log, oldId: string, newId: string): Promise<string | null> {
         Task.validateId(oldId)
         Task.validateId(newId)
         try {
-            return await Task.with(log, (client) => client.patch(oldId, { id: newId })) !== null
+            return await Task.with(log, async (client) =>
+                await client.patch(oldId, { id: newId }) === null ? null : TaskFormat.idWarning(client.idscheme, newId))
         }
         catch (err: unknown) {
             if (err instanceof Core.Problem && err.status === 409)
@@ -523,8 +588,10 @@ export class Task {
         return String(isScalar(val) ? val.value : val)
     }
 
-    /*  set the active task id for a given session  */
-    static setId (log: Log, session: string, id: string): void {
+    /*  set the active task id for a given session; returns a warning (else empty)
+        if the id does not conform to the effective task id scheme of the task store
+        (an unreachable task store skips the check, as switching does not require it)  */
+    static async setId (log: Log, session: string, id: string): Promise<string> {
         Task.validateSession(session)
         Task.validateId(id)
         const scope   = parseScope(`session:${session}`)
@@ -534,6 +601,16 @@ export class Task {
             cfg.set("agent.task", id)
             cfg.write()
         })
+        let idscheme: string
+        try {
+            idscheme = await Task.idScheme(log)
+        }
+        catch (err) {
+            log.write("warning", `task: cannot check task id "${id}" against the task id scheme: ` +
+                `${err instanceof Error ? err.message : String(err)}`)
+            return ""
+        }
+        return TaskFormat.idWarning(idscheme, id)
     }
 }
 
@@ -670,12 +747,26 @@ export default class TaskCommand {
 
                 /*  on save failures, offer re-editing and never discard the edits:
                     the temporary file is kept if the user declines re-editing  */
+                let next = id
                 for (;;) {
                     try {
                         execaSync(`${editor} "${file}"`, { shell: true, stdio: "inherit" })
                         const after = fs.readFileSync(file, "utf8")
-                        if (after !== before)
-                            await Task.save(this.log, id, after)
+                        if (after !== before) {
+                            /*  a changed "Id:" key renames the task (refusing
+                                an existing target id before anything is saved)  */
+                            next = TaskFormat.taskTextId(after) || id
+                            if (next !== id) {
+                                Task.validateId(next)
+                                if (await Task.source(this.log, next) !== null)
+                                    throw new Error(`task: target id "${next}" already exists`)
+                            }
+                            let warning = await Task.save(this.log, id, after)
+                            if (next !== id)
+                                warning = await Task.rename(this.log, id, next) ?? ""
+                            if (warning !== "")
+                                this.log.write("warning", `task: ${warning}`)
+                        }
                         break
                     }
                     catch (err) {
@@ -696,7 +787,8 @@ export default class TaskCommand {
                     }
                 }
                 fs.rmSync(dir, { recursive: true, force: true })
-                this.log.write("info", `task: edited "${id}"`)
+                this.log.write("info", next !== id ?
+                    `task: edited "${id}" and renamed it to "${next}"` : `task: edited "${id}"`)
                 process.exit(0)
             })
 
@@ -705,10 +797,13 @@ export default class TaskCommand {
             .command("save")
             .description("Save a task by id, reading content from stdin " +
                 "(failing on a Status: not reachable in the task lifecycle model)")
+            .option("-c, --create", "fail if the task already exists instead of overwriting it", false)
             .argument("<id>", "Task identifier")
-            .action(async (id: string) => {
-                const text = await readStdin()
-                await Task.save(this.log, id, text)
+            .action(async (id: string, opts: { create: boolean }) => {
+                const text    = await readStdin()
+                const warning = await Task.save(this.log, id, text, undefined, opts.create)
+                if (warning !== "")
+                    this.log.write("warning", `task: ${warning}`)
                 this.log.write("info", `task: saved "${id}"`)
                 process.exit(0)
             })
@@ -734,12 +829,36 @@ export default class TaskCommand {
             .argument("<old>", "Old task identifier")
             .argument("<new>", "New task identifier")
             .action(async (oldId: string, newId: string) => {
-                const renamed = await Task.rename(this.log, oldId, newId)
-                if (renamed)
+                const warning = await Task.rename(this.log, oldId, newId)
+                if (warning !== null) {
+                    if (warning !== "")
+                        this.log.write("warning", `task: ${warning}`)
                     this.log.write("info", `task: renamed "${oldId}" to "${newId}"`)
+                }
                 else
                     this.log.write("info", `task: no task "${oldId}" to rename`)
-                process.exit(renamed ? 0 : 1)
+                process.exit(warning !== null ? 0 : 1)
+            })
+
+        /*  register CLI sub-command "ase task newid"  */
+        task
+            .command("newid")
+            .description("Print the next free task id according to the task id scheme of the project, " +
+                "determined by searching all existing task ids: for scheme \"slug\" derived from <title>, " +
+                "for scheme \"seq\" the next sequence number (reserved), and for scheme \"any\" the (made unique) " +
+                "--proposal, else derived from <title>; with --verbose additionally the scheme and " +
+                "the regular expression matching the ids conforming to the scheme")
+            .option("-p, --proposal <id>", "proposed task id (for task id scheme \"any\" only)", "")
+            .option("-t, --taken <ids>", "comma-separated task ids to consider as taken additionally", "")
+            .option("-v, --verbose", "print the scheme, the id, and the matching regular expression", false)
+            .argument("[<title>]", "Task title", "")
+            .action(async (title: string, opts: { proposal: string, taken: string, verbose: boolean }) => {
+                const taken  = opts.taken.split(",").map((id) => id.trim()).filter((id) => id !== "")
+                const result = await Task.newId(this.log, title, opts.proposal, taken)
+                if (opts.verbose)
+                    await writeStdout(`scheme: ${result.scheme}\nid:     ${result.id}\nmatch:  ${result.match}\n`)
+                else
+                    await writeStdout(`${result.id}\n`)
             })
 
         /*  register CLI sub-command "ase task purge"  */
@@ -775,6 +894,23 @@ export default class TaskCommand {
                 }
             })
 
+        /*  register CLI sub-command "ase task idscheme"  */
+        task
+            .command("idscheme")
+            .description("Get or set the task id scheme of the project: without <scheme> the effective " +
+                "scheme is printed, with <scheme> the project in the task store is switched to it " +
+                "(for a local task store by setting \"project.task.idscheme\" on scope \"project\")")
+            .argument("[<scheme>]", "Task id scheme (slug[:<words>]|seq[:<template>]|any)")
+            .action(async (scheme?: string) => {
+                if (scheme === undefined)
+                    await writeStdout(`${await Task.idScheme(this.log)}\n`)
+                else {
+                    const from = await Task.setIdScheme(this.log, scheme)
+                    this.log.write("info", `task: set task id scheme of project from "${from}" to "${scheme}"`)
+                    process.exit(0)
+                }
+            })
+
         /*  register CLI sub-command group "ase task store"  */
         new TaskStoreCommand(this.log).register(task)
 
@@ -792,6 +928,11 @@ const mcpError = (err: unknown) => {
         content: [ { type: "text" as const, text: `ERROR: ${message}` } ]
     }
 }
+
+/*  render a task id scheme warning as a trailing notice line of an MCP tool result
+    (not as "WARNING:", as callers treat such a result as a failed operation)  */
+const notice = (warning: string): string =>
+    warning !== "" ? `\nNOTICE: ${warning}` : ""
 
 /*  MCP registration entry point for task tools  */
 export class TaskMCP {
@@ -859,7 +1000,7 @@ export class TaskMCP {
                 "followed by the render form enclosed in `<task-plan-render>` delimiter lines.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 variant: z.enum([ "source", "render", "both" ]).optional()
                     .describe("returned form of the plan: `source` (authoring form, the default), " +
                         "`render` (rendering-prepared form, display only), or `both` " +
@@ -892,32 +1033,38 @@ export class TaskMCP {
                 "Persist a task as `text` under `id`. " +
                 "The `text` MUST be the *authoring* form of the plan (as returned by the " +
                 "`source` variant of `ase_task_load`) and hence MUST NOT carry any rendering " +
-                "artifacts. Overwrites any existing task for the same `id`. " +
+                "artifacts. Overwrites any existing task for the same `id`, unless `create` is `true`, " +
+                "in which case the save fails if a task with this `id` already exists (to be used on the " +
+                "first save of a task whose `id` was allocated via `ase_task_newid`). " +
                 "Returns a status `text` by default, or, if `render` is `true`, the " +
                 "*rendering-prepared* form of the just-saved plan, for display purposes only. " +
                 "The `Status:` frontmatter key of `text` is checked against the configured task " +
                 "lifecycle model: if a changed status is not a state of the model or not reachable " +
                 "from the previously saved status via one or more transitions of the state machine, " +
-                "the save fails with an error. Prefer the `ase_task_status` MCP tool for pure status changes.",
+                "the save fails with an error. Prefer the `ase_task_status` MCP tool for pure status changes. " +
+                "If `id` does not conform to the task id scheme of the project, the returned `text` " +
+                "additionally carries a trailing `NOTICE: <info>` line.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 text: z.string()
                     .describe("text content of the task, in its authoring form"),
+                create: z.boolean().optional()
+                    .describe("if true, fail if a task with `id` already exists instead of overwriting it (default: false)"),
                 render: z.boolean().optional()
                     .describe("if true, return the rendering-prepared form of the just-saved " +
                         "plan instead of a status message (default: false)")
             }
         }, async (args) => {
             try {
-                await Task.save(this.log, args.id, args.text)
+                const warning = await Task.save(this.log, args.id, args.text, undefined, args.create ?? false)
 
                 /*  return the rendering-prepared content on demand, so a caller
                     displaying the just-saved plan does not have to re-load it
                     (rendered from the stored plan, as the store normalizes the text)  */
-                const text = (args.render ?? false) ?
+                const text = ((args.render ?? false) ?
                     Markdown.prepare(await Task.load(this.log, args.id)) :
-                    `OK: saved task "${args.id}"`
+                    `OK: saved task "${args.id}"`) + notice(warning)
                 return {
                     content: [ { type: "text", text } ]
                 }
@@ -935,7 +1082,7 @@ export class TaskMCP {
                 "Returns a status `text` indicating whether a task existed and was removed.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')")
             }
         }, async (args) => {
             try {
@@ -962,15 +1109,15 @@ export class TaskMCP {
                 "Fails with an error if the target id already exists.",
             inputSchema: {
                 old: z.string()
-                    .describe("old task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("old task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 new: z.string()
-                    .describe("new task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
+                    .describe("new task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')")
             }
         }, async (args) => {
             try {
-                const renamed = await Task.rename(this.log, args.old, args.new)
-                const msg     = renamed ?
-                    `OK: renamed task "${args.old}" to "${args.new}"` :
+                const warning = await Task.rename(this.log, args.old, args.new)
+                const msg     = warning !== null ?
+                    `OK: renamed task "${args.old}" to "${args.new}"` + notice(warning) :
                     `WARNING: no task "${args.old}" to rename`
                 return {
                     content: [ { type: "text", text: msg } ]
@@ -994,7 +1141,7 @@ export class TaskMCP {
                 "reachable from the current one via one or more transitions of the state machine of the model.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 status: z.string().optional()
                     .describe("lifecycle status to set (a state of the configured task lifecycle model, " +
                         "case-insensitive); if omitted, the current status is returned")
@@ -1018,16 +1165,62 @@ export class TaskMCP {
             }
         })
 
+        /*  task id generation  */
+        mcp.registerTool("ase_task_newid", {
+            title: "ASE task id generation",
+            description:
+                "Determine the next free task id according to the task id scheme of the project " +
+                "(the `project.task.idscheme` configuration, resp. the scheme registered in the task store), " +
+                "by searching all existing task ids. The scheme is either `slug[:<words>]` (the first " +
+                "`<words>` (default: 2) words of `title`, lower-cased and joined with `-`), " +
+                "`seq[:<template>]` (the highest sequence number of all existing and ever removed ids plus one, rendered " +
+                "through the sprintf-style `<template>` like `FOO-%03d`, `#%d`, or `%d` (the default)), or " +
+                "`any` (the `proposal`, else derived from `title` like for `slug:2`). A slug or proposed id " +
+                "which is already taken gets a numeric suffix `-2`, `-3`, etc. " +
+                "Returns the `scheme`, the new `id`, and the regular expression `match` of all ids " +
+                "conforming to the scheme (for `seq` capturing the sequence number, for `slug` accepting " +
+                "the numeric suffix). For scheme `seq` the id is reserved (never handed out again), " +
+                "for the other schemes it is not, so for allocating several ids at once pass the " +
+                "already allocated ones as `taken`, and on the first save of the new task pass " +
+                "`create: true` to `ase_task_save` to detect a concurrently created task with the same id.",
+            inputSchema: {
+                title: z.string().optional()
+                    .describe("title of the new task (required for scheme `slug`, ignored for scheme `seq`)"),
+                proposal: z.string().optional()
+                    .describe("proposed task id (used for scheme `any` only)"),
+                taken: z.array(z.string()).optional()
+                    .describe("task ids to consider as taken in addition to the existing ones (default: none)")
+            },
+            outputSchema: {
+                scheme: z.string().describe("task id scheme of the project"),
+                id:     z.string().describe("next free task id"),
+                match:  z.string().describe("regular expression matching the ids conforming to the scheme")
+            }
+        }, async (args) => {
+            try {
+                const result = await Task.newId(this.log, args.title ?? "", args.proposal ?? "", args.taken ?? [])
+                return {
+                    structuredContent: result,
+                    content:           [ { type: "text", text: JSON.stringify(result) } ]
+                }
+            }
+            catch (err: unknown) {
+                return mcpError(err)
+            }
+        })
+
         /*  task id get/set  */
         mcp.registerTool("ase_task_id", {
             title: "ASE task id get/set",
             description:
                 "Get or set the active ASE task `id` for a given `session`. " +
                 "If `id` is provided, it sets the task id in the given `session`, " +
-                "otherwise it returns the current task `id` of the `session`.",
+                "otherwise it returns the current task `id` of the `session`. " +
+                "If a set `id` does not conform to the task id scheme of the project, the returned `text` " +
+                "additionally carries a trailing `NOTICE: <info>` line.",
             inputSchema: {
                 id: z.string().optional()
-                    .describe("task identifier to set (allowed characters: A-Z, a-z, 0-9, '_', '-'); " +
+                    .describe("task identifier to set (allowed characters: A-Z, a-z, 0-9, '#', '_', '-'); " +
                         "if omitted, the current task id is returned"),
                 session: z.string()
                     .describe("session identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
@@ -1035,9 +1228,9 @@ export class TaskMCP {
         }, async (args) => {
             try {
                 if (args.id !== undefined) {
-                    Task.setId(this.log, args.session, args.id)
+                    const warning = await Task.setId(this.log, args.session, args.id)
                     const msg = `OK: set agent.task to "${args.id}" ` +
-                        `for session "${args.session}"`
+                        `for session "${args.session}"` + notice(warning)
                     return {
                         content: [ { type: "text", text: msg } ]
                     }

@@ -129,7 +129,8 @@ export class TaskStoreServer {
         return value
     }
 
-    /*  the lifecycle model as exposed by the project endpoints  */
+    /*  the lifecycle model, task id scheme, and sequence number
+        high-water mark as exposed by the project endpoints  */
     private projectView (project: Core.ProjectView) {
         return {
             id: project.id,
@@ -139,7 +140,9 @@ export class TaskStoreServer {
                 initial:     project.lifecycle.initial,
                 finished:    project.lifecycle.finished,
                 transitions: project.lifecycle.transitions
-            }
+            },
+            idscheme: project.idscheme,
+            seqmark:  project.seqmark
         }
     }
 
@@ -153,7 +156,7 @@ export class TaskStoreServer {
 
     /*  deliver an event frame to the subscribers of a project, each
         restricted to the task ids it subscribed to (except for a
-        lifecycle model change, which concerns all task plans)  */
+        lifecycle model or task id scheme change, which concerns all task plans)  */
     private emit (prjId: string, frame: Core.EventFrame): void {
         const subs = this.subs.get(prjId)
         if (subs === undefined)
@@ -178,6 +181,8 @@ export class TaskStoreServer {
             }
             if (frame.lifecycle !== undefined)
                 out.lifecycle = frame.lifecycle
+            if (frame.idscheme !== undefined)
+                out.idscheme = frame.idscheme
             if (Object.keys(out).length > 0 && sub.ws.readyState === sub.ws.OPEN)
                 sub.ws.send(JSON.stringify(out))
         }
@@ -220,8 +225,8 @@ export class TaskStoreServer {
         if (list !== null) {
             tasks = new Set<string>()
             for (const id of list.split(",").map((token) => token.trim()).filter((token) => token !== "")) {
-                if (!TaskFormat.ID_RE.test(id)) {
-                    this.rejectUpgrade(socket, 422, `invalid task id "${id}" (expected: [A-Za-z0-9_-]+)`, path)
+                if (!TaskFormat.TASK_ID_RE.test(id)) {
+                    this.rejectUpgrade(socket, 422, `invalid task id "${id}" (expected: [A-Za-z0-9#][A-Za-z0-9#_-]*)`, path)
                     return
                 }
                 tasks.add(id)
@@ -357,8 +362,8 @@ export class TaskStoreServer {
 
                 /*  "If-None-Match: *" registers the project only if not yet registered  */
                 const createOnly = request.headers["if-none-match"] === "*"
-                const result = await core.projectSet(p(request).prjId,
-                    Core.isObject(payload) ? payload.lifecycle : undefined, createOnly)
+                const result = await core.projectSet(p(request).prjId, Core.isObject(payload) ?
+                    { lifecycle: payload.lifecycle, idscheme: payload.idscheme } : {}, createOnly)
                 return h.response(this.projectView(result.project)).code(result.created ? 201 : 200)
             }
         })
@@ -411,6 +416,17 @@ export class TaskStoreServer {
                 ({ purged: await core.taskPurge(p(request).prjId, this.query(request, "age")) })
         })
         this.server.route({
+            method:  "POST",
+            path:    `${P}/newid`,
+            options: json,
+            handler: async (request) => {
+                const payload = request.payload as unknown
+                if (payload !== null && payload !== undefined && !Core.isObject(payload))
+                    throw Core.problem(400, "request body has to be an object")
+                return core.taskNewId(p(request).prjId, Core.isObject(payload) ? payload : {})
+            }
+        })
+        this.server.route({
             method:  "GET",
             path:    T,
             handler: async (request, h) => {
@@ -424,10 +440,12 @@ export class TaskStoreServer {
             options: json,
             handler: async (request, h) => {
                 /*  "If-Match: <tag>" saves only if the plan is still the one with this entity tag
-                    (ignoring the content encoding suffix hapi appends to the tag of a compressed response)  */
+                    (ignoring the content encoding suffix hapi appends to the tag of a compressed response),
+                    and "If-None-Match: *" saves only if the plan does not exist yet  */
                 const tag = request.headers["if-match"]
                 return this.created(h, await core.taskSave(p(request).prjId, p(request).taskId, request.payload,
-                    typeof tag === "string" ? tag.replace(/^(?:W\/)?"(.*?)(?:-(?:gzip|deflate))?"$/, "$1") : undefined))
+                    typeof tag === "string" ? tag.replace(/^(?:W\/)?"(.*?)(?:-(?:gzip|deflate))?"$/, "$1") : undefined,
+                    request.headers["if-none-match"] === "*"))
             }
         })
         this.server.route({

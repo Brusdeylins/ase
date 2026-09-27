@@ -56,12 +56,12 @@ Procedure
         </template>
         </if>
 
-    5.  <if condition="<old/> does NOT match the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$` OR <new/> does NOT match the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`">
+    5.  <if condition="<old/> does NOT match the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$` OR <new/> does NOT match the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`">
         Only output the following <template/> and then immediately
         *STOP* processing the entire current skill:
 
         <template>
-        ⧉ **ASE**: ☻ skill: **ase-task-rename**, ▶ ERROR: invalid task id (expected `^[a-zA-Z][a-zA-Z0-9_-]*$`)
+        ⧉ **ASE**: ☻ skill: **ase-task-rename**, ▶ ERROR: invalid task id (expected `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`)
         </template>
         </if>
 
@@ -95,6 +95,14 @@ Procedure
 
             <template>
             ⧉ **ASE**: ◉ task: **<new/>**, ▶ status: **task renamed**
+            </template>
+
+            If <text/> additionally carries a line `NOTICE: <info/>`
+            (the new id does not conform to the task id scheme of the
+            project), additionally output:
+
+            <template>
+            ⧉ **ASE**: ◉ task: **<new/>**, ▶ NOTICE: <info/>
             </template>
 
     2.  <if condition="<renamed/> is `true` AND <old/> is equal <ase-task-id/>">

@@ -110,7 +110,10 @@ You *MUST* honor the following hints on this *task* format:
 
 -   The <task-id/> of the `Id` frontmatter key has to be substituted
     with the current value of <ase-task-id/> in the current session
-    context.
+    context. A task id consists of the characters `A-Z`, `a-z`, `0-9`,
+    `#`, `_`, and `-` only, and a *new* task id is always obtained via
+    the `ase_task_newid` MCP tool, which honors the task id scheme of
+    the project.
 
 -   The <timestamp-created/> of the `Created` frontmatter key is the
     timestamp when this task plan was created. The <timestamp-modified/>

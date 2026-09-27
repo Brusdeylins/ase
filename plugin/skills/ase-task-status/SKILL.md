@@ -80,12 +80,12 @@ Procedure
         </template>
         </if>
 
-    5.  <if condition="<id/> does NOT match the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`">
+    5.  <if condition="<id/> does NOT match the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`">
         Only output the following <template/> and then immediately
         *STOP* processing the entire current skill:
 
         <template>
-        ⧉ **ASE**: ☻ skill: **ase-task-status**, ▶ ERROR: invalid task id `<id/>` (expected `^[a-zA-Z][a-zA-Z0-9_-]*$`)
+        ⧉ **ASE**: ☻ skill: **ase-task-status**, ▶ ERROR: invalid task id `<id/>` (expected `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`)
         </template>
         </if>
 

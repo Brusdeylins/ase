@@ -70,7 +70,7 @@ crafting actually demands, and you *MUST* *NOT* call
 1.  <step id="STEP 1: Reason About Feature">
 
     1.  <if condition="
-            <feature/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+            <feature/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
         ">
         Set <ase-task-id><feature/></ase-task-id> (set task id to feature)
         and <feature></feature> (set feature empty), call the
@@ -85,7 +85,7 @@ crafting actually demands, and you *MUST* *NOT* call
 
     2.  <if condition="
             <feature/> has the format `<id/>: <text/>` AND
-            <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+            <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
         ">
         Set <feature><text/></feature> and
         <ase-task-id><id/></ase-task-id> and call the `ase_task_id(id:
@@ -107,11 +107,17 @@ crafting actually demands, and you *MUST* *NOT* call
             <ase-task-id/> is equal `default` and
             <feature/> is not empty
         ">
-        Set <ase-task-id/> to a unique task id, derived from <feature/>,
-        which consists of two lower-case words concatenated with a
-        `-` character. Then call the `ase_task_id(id: "<ase-task-id/>",
-        session: "<ase-session-id/>")` tool from the `ase` MCP server to
-        implicitly switch the task. Do not output anything.
+        Call the `ase_task_newid(title: "<title/>", proposal:
+        "<proposal/>")` tool from the `ase` MCP server, where <title/> is
+        a brief title summarizing <feature/> and <proposal/> is a task id
+        derived from <feature/>, which consists of two lower-case words
+        concatenated with a `-` character, and set <ase-task-id/> to the
+        `id` field of its response -- the tool derives the id according
+        to the task id scheme of the project, so you *MUST* *NEVER*
+        assemble it yourself. Then call the `ase_task_id(id:
+        "<ase-task-id/>", session: "<ase-session-id/>")` tool from the
+        `ase` MCP server to implicitly switch the task. Do not output
+        anything.
         </if>
 
     5.  Report the task and feature with the following <template/>:
@@ -245,8 +251,13 @@ crafting actually demands, and you *MUST* *NOT* call
         <timestamp-modified/>, and <task-kind/> information.
 
     3.  You then *MUST* *save* the resulting plan content with the
-        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`
-        MCP tool call only -- *NEVER* by executing a shell command.
+        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>",
+        create: <create/>)` MCP tool call only -- *NEVER* by executing
+        a shell command -- where <create/> is `true` if <ase-task-id/>
+        was allocated via `ase_task_newid` in STEP 1, else `false`. If
+        this call fails because the task already exists (a concurrent
+        session took the same id), allocate and switch to a new
+        <ase-task-id/> exactly as in STEP 1, re-insert it, and save again.
 
     4.  Output a hint with the following <template/>:
 

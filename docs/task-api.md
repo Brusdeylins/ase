@@ -156,8 +156,9 @@ working copy from the `project.id` configuration value (required
 here, as the basename of the project root would likely collide with
 unrelated projects), registering the project on first use via
 `PUT /projects/{prjId}` with `If-None-Match: *` and its
-`project.task.lifecycle`, and otherwise adopting the lifecycle model
-of the registered project (see `ase task lifecycle`). The
+`project.task.lifecycle` and `project.task.idscheme`, and otherwise adopting the
+lifecycle model and task id scheme of the registered project (see `ase
+task lifecycle` and `ase task idscheme`). The
 alternative URL form `ase:`*path* (the default `ase:./.ase/task`)
 runs the very same API functionality *in-process* on the built-in
 storage plugin in `solo` mode below *path*, without any server. The
@@ -204,9 +205,11 @@ CONVENTIONS
   configuration value); a *prjId* violating this constraint is rejected
   with `422`, an unregistered one with `404`.
 
-- **Task ids**: a task *taskId* matches `[A-Za-z0-9_-]+` and is unique
-  within its project; a *taskId* violating this constraint is rejected
-  with `422`.
+- **Task ids**: a task *taskId* matches `[A-Za-z0-9#][A-Za-z0-9#_-]*` and is unique
+  within its project (with `#` percent-encoded as `%23` in URL paths); a
+  *taskId* violating this constraint is rejected with `422`. The task id
+  *scheme* of the project is registered with it, but not enforced: the
+  client generates new ids after it and warns about non-conforming ones.
 
 - **Request bodies**: JSON, sent with `Content-Type: application/json`.
   A malformed body is rejected with `400`.
@@ -418,14 +421,18 @@ Response `200`:
 ```json
 {
     "projects": [
-        { "id": "ase",  "lifecycle": "solo" },
-        { "id": "shop", "lifecycle": "team" }
+        { "id": "ase",  "lifecycle": "solo", "idscheme": "slug", "seqmark": 0 },
+        { "id": "shop", "lifecycle": "team", "idscheme": "seq:SHOP-%d", "seqmark": 42 }
     ]
 }
 ```
 
 - `id`: the project identifier.
 - `lifecycle`: the name of the project's task lifecycle model.
+- `idscheme`: the task id scheme of the project (absent if the storage
+  plugin predates task id schemes, meaning `slug`).
+- `seqmark`: the sequence number high-water mark of the project (absent
+  if the storage plugin does not provide it, meaning `0`).
 
 An empty `projects` array is returned if no project is registered.
 
@@ -436,9 +443,9 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### GET /projects/{prjId}
 
-Get the project *prjId* and its task lifecycle model, so a client can
-validate states, derive the effective status of a plan, and expand
-the `finished` sentinel itself.
+Get the project *prjId*, its task lifecycle model, and its task id
+scheme, so a client can validate states, derive the effective status of
+a plan, expand the `finished` sentinel, and generate new task ids itself.
 
 Response `200`:
 
@@ -456,7 +463,9 @@ Response `200`:
             "CLOSED":    [],
             "CANCELLED": []
         }
-    }
+    },
+    "idscheme": "slug",
+    "seqmark":  0
 }
 ```
 
@@ -466,6 +475,13 @@ Response `200`:
 - `lifecycle.initial`: the state an absent `Status` key reads as.
 - `lifecycle.finished`: the states the `finished` sentinel expands to.
 - `lifecycle.transitions`: the allowed successor states per state.
+- `idscheme`: the task id scheme, `slug[:<words>]`, `seq[:<template>]`,
+  or `any` (see `project.task.idscheme` in `configuration.md`).
+- `seqmark`: the sequence number high-water mark: the highest sequence
+  number of all task ids conforming to a `seq` scheme which were ever
+  removed by `DELETE`, purge, or `PATCH` rename, or allocated by
+  `POST /projects/{prjId}/newid` (`0` if none), so a new id never
+  reuses such a number.
 
 Errors: `404` if no project *prjId* is registered, `422` for an
 invalid *prjId*.
@@ -478,17 +494,19 @@ curl -H "Authorization: Bearer $TOKEN" \
 ### PUT /projects/{prjId}
 
 Register the project *prjId* with the server, or change the lifecycle
-model of an already registered project. Registering is idempotent: a
-repeated `PUT` with the same lifecycle changes nothing. With the request
-header `If-None-Match: *`, the project is registered only if not yet
+model and/or task id scheme of an already registered project.
+Registering is idempotent: a repeated `PUT` with the same lifecycle and
+task id scheme changes nothing. With the request header
+`If-None-Match: *`, the project is registered only if not yet
 registered, so a client can register on first use without overriding
-the lifecycle model other clients already share.
+the lifecycle model and task id scheme other clients already share.
 
 Request body:
 
 ```json
 {
-    "lifecycle": "solo"
+    "lifecycle": "solo",
+    "idscheme":  "slug"
 }
 ```
 
@@ -501,13 +519,17 @@ Request body:
   *initial* (resp. first *finished*) state of the new model (e.g. `solo`
   → `team`: `OPEN` → `PLANNING`, `CLOSED` → `IMPLEMENTED`). A status
   which is no state of the old model is kept as-is.
+- `idscheme` (optional): the task id scheme, `slug[:<words>]`,
+  `seq[:<template>]`, or `any`. If omitted, a registered project keeps
+  its current scheme and a new project gets `slug`. Changing the scheme
+  affects newly generated task ids only.
 
 Response `201` (registered) or `200` (changed), with the same shape as
 `GET /projects/{prjId}`.
 
 Errors: `400` for a malformed body, `412` for an already registered
-project under `If-None-Match: *`, `422` for an invalid *prjId* or an
-unknown `lifecycle`.
+project under `If-None-Match: *`, `422` for an invalid *prjId*, an
+unknown `lifecycle`, or an invalid `idscheme`.
 
 ```sh
 curl -X PUT -H "Authorization: Bearer $TOKEN" \
@@ -535,8 +557,8 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 
 ### GET /projects/{prjId}/tasks
 
-List all persisted task plans of the project *prjId* in lexicographic
-*taskId* order.
+List all persisted task plans of the project *prjId* in natural
+*taskId* order (numbers ordered by their value, e.g. `FOO-2` before `FOO-10`).
 
 Query parameters:
 
@@ -618,6 +640,53 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
     "http://127.0.0.1:42042/projects/ase/tasks?age=31d"
 ```
 
+### POST /projects/{prjId}/newid
+
+Allocate the next free task id of the project *prjId* according to its
+task id scheme, considering all existing task ids plus the given taken
+ones. For a `seq` scheme, the allocated number is atomically reserved by
+raising the `seqmark` to it, so concurrent allocations never yield the
+same id. For the other schemes the id is not reserved, so the first save
+of the new task should use `PUT` with `If-None-Match: *`.
+
+Request body:
+
+```json
+{
+    "title":    "Add REST API",
+    "proposal": "rest-api",
+    "taken":    [ "add-rest" ]
+}
+```
+
+- `title` (optional): the task title, from which a `slug` id (and an
+  `any` id without `proposal`) is derived.
+- `proposal` (optional): the proposed id for an `any` scheme.
+- `taken` (optional): the task ids to consider as taken additionally.
+
+Response `200`:
+
+```json
+{
+    "scheme": "slug",
+    "id":     "add-rest-2"
+}
+```
+
+- `scheme`: the task id scheme of the project.
+- `id`: the allocated task id.
+
+Errors: `400` for a malformed body, `404` if no project *prjId* is
+registered, `422` if no id can be derived (e.g. a `slug` scheme without
+a usable `title`).
+
+```sh
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    --data '{ "title": "Add REST API" }' \
+    "http://127.0.0.1:42042/projects/ase/newid"
+```
+
 ### GET /projects/{prjId}/tasks/{taskId}
 
 Load the task plan *taskId* of the project *prjId*.
@@ -688,7 +757,9 @@ status is rejected (see *Transitions*).
 With the request header `If-Match: "<tag>"` (the `ETag` of a previous
 `GET`), the plan is saved only if the stored plan still carries this
 entity tag, i.e., was neither changed nor deleted in the meantime; the
-check and the save happen atomically.
+check and the save happen atomically. With the request header
+`If-None-Match: *`, the plan is saved only if no plan *taskId* exists
+yet (atomically, too), e.g. for the first save of a newly allocated id.
 
 Response `201` (created) or `200` (overwritten):
 
@@ -704,7 +775,8 @@ Response `201` (created) or `200` (overwritten):
 
 Errors: `400` for a malformed body or a missing `header` or
 `body` field, `404` if no project *prjId* is registered, `412` if
-the plan was changed or deleted in the meantime under `If-Match`,
+the plan was changed or deleted in the meantime under `If-Match`
+or already exists under `If-None-Match: *`,
 `422` for an invalid *taskId*, a mismatching `Type` or `Id`, a header
 value of the wrong type, an unknown or unreachable `Status`, a `body` violating
 the body structure, or an attachment violating the attachment structure.
@@ -1216,8 +1288,8 @@ handshake headers, like browsers -- in the `token` query parameter.
 Messages: the server sends one *text frame* per modifying request
 (`PUT`, `PATCH`, `POST`, or `DELETE` on a plan or one of its parts,
 or a purge), after the request has completed. Each frame carries a
-*single-line* JSON structure with at least one of the four keys
-`added`, `updated`, `deleted`, and `lifecycle` (each present only if non-empty):
+*single-line* JSON structure with at least one of the five keys
+`added`, `updated`, `deleted`, `lifecycle`, and `idscheme` (each present only if non-empty):
 
 ```json
 { "added": { "T3": { "status": "OPEN", "title": "Add Kanban board" } }, "updated": { "T1": { "status": "CLOSED", "title": "Add REST API", "parts": [ "header", "body" ] } }, "deleted": [ "T2" ] }
@@ -1237,6 +1309,10 @@ or a purge), after the request has completed. Each frame carries a
   `Status` was mapped onto the new model). It is delivered to every
   subscriber, independent of its `tasks` restriction, so a client can
   re-read the model without polling.
+- `idscheme`: the new task id scheme of the project, sent when
+  `PUT /projects/{prjId}` switches the scheme of a registered project
+  (together with `lifecycle` if both are switched), and delivered to
+  every subscriber like `lifecycle`.
 
 The keys and parts are determined by the request: a plan-level `PUT`
 reports a newly created plan under `added` and an overwritten plan
@@ -1305,7 +1381,9 @@ whatever shape suits it. The built-in plugin takes the options
 `solo`). Without `solo`, every project is stored below
 `<basedir>/<prjId>/` as `TASK-<taskId>.md` files, with the
 `PROJECT.yaml` file of a project directory serving as the project
-registry entry and carrying the lifecycle model name; unregistering a
+registry entry and carrying the lifecycle model name, the task id
+scheme, and the sequence number high-water mark (`seqmark`, only once
+non-zero); unregistering a
 project removes its `PROJECT.yaml` file, but its directory only if it
 carries no task plans any more. With `solo`,
 a *single* project is stored flat in `basedir` itself, with a single
@@ -1353,11 +1431,15 @@ export type TaskPlan        = {
     attachment: TaskAttachment[]
 }
 
-/*  a registered project: its id and the name of its task lifecycle
-    model ("solo", "team", or "enterprise")  */
+/*  a registered project: its id, the name of its task lifecycle
+    model ("solo", "team", or "enterprise"), its task id scheme
+    ("slug[:<words>]", "seq[:<template>]", or "any", absent for "slug"),
+    and the high-water mark of its sequence numbers (absent for 0)  */
 export type ProjectEntry = {
     id:        string
     lifecycle: string
+    idscheme?: string
+    seqmark?:  number
 }
 
 /*  a task plan listing entry: its id, its title (derived from the
@@ -1409,9 +1491,14 @@ export interface TaskStoragePlugin {
     /*  get a registered project, or null if not registered  */
     projectGet (prjId: string): Promise<ProjectEntry | null>
 
-    /*  register a project with the given lifecycle model name, or
-        change the lifecycle model name of a registered project  */
-    projectSet (prjId: string, lifecycle: string): Promise<WriteResult>
+    /*  register a project with the given lifecycle model name and task id
+        scheme, or change both of a registered project  */
+    projectSet (prjId: string, lifecycle: string, idscheme: string): Promise<WriteResult>
+
+    /*  optionally persist the high-water mark of the sequence numbers of a
+        registered project (the highest one ever removed or allocated), so scheme
+        "seq" never reuses the number of a deleted, purged, renamed, or allocated task  */
+    projectMark? (prjId: string, seqmark: number): Promise<void>
 
     /*  unregister a project without deleting its task plans;
         returns false if the project was not registered  */
@@ -1461,6 +1548,8 @@ The division of labor between server and plugin is:
 | Request serialization (per-project queue)         | ✓      |        |
 | Cross-process locking (optional `lock` method)    |        | ✓      |
 | Referenced file content (optional `fileRead`)     |        | ✓      |
+| Sequence number high-water mark calculation       | ✓      |        |
+| High-water mark persistence (`projectMark`)       |        | ✓      |
 | Purge by age (list plus delete)                   | ✓      |        |
 | Rename conflict detection (`409`)                 | ✓      |        |
 | Event notifications (WebSocket), incl. titles     | ✓      |        |

@@ -8,6 +8,7 @@ import * as v                    from "valibot"
 import { foregroundColorNames }  from "chalk"
 
 import type { ScopeTerm }        from "./ase-config-scope.js"
+import { checkIdScheme }         from "./ase-task-format.js"
 
 /*  classification taxonomy  */
 export const projectClassification = {
@@ -57,6 +58,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.name":    "Example Project",
         "project.boxing":  "white",
         "project.task.lifecycle":        "solo",
+        "project.task.idscheme":         "slug",
         "project.task.store":            "ase:./.ase/task",
         "project.artifact.spec.basedir": "docs/specbook",
         "project.artifact.spec.files":   "*.{md,txt,svg,png,jpg}",
@@ -93,6 +95,7 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "project.task.store":            [ "user", "project" ],
     "project.task.token":            [ "user" ],
     "project.task.lifecycle":        [ "user", "project" ],
+    "project.task.idscheme":         [ "user", "project" ],
     "project.artifact.spec.basedir": [ "user", "project" ],
     "project.artifact.spec.files":   [ "user", "project" ],
     "project.artifact.spec.schema":  [ "user", "project" ],
@@ -179,7 +182,9 @@ export const configSchema = v.nullish(v.strictObject({
         task: v.optional(v.strictObject({
             lifecycle: v.optional(v.picklist(projectClassification.lifecycle)),
             store:     v.optional(v.pipe(v.string(), v.minLength(1))),
-            token:     v.optional(v.pipe(v.string(), v.minLength(1)))
+            token:     v.optional(v.pipe(v.string(), v.minLength(1))),
+            idscheme:  v.optional(v.pipe(v.string(), v.check((s) => checkIdScheme(s) === "",
+                "expected \"slug[:<words>]\", \"seq[:<template>]\", or \"any\"")))
         })),
         artifact: v.optional(v.strictObject({
             spec: artifactSpecSchema,

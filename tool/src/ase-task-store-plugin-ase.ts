@@ -16,15 +16,17 @@ import * as TaskFormat        from "./ase-task-format.js"
 
 /*  the options of the built-in storage plugin: the base directory, the
     "solo" mode (a single project stored flat in the base directory, any
-    project id accepted) and the default lifecycle model of a project  */
+    project id accepted), and the default lifecycle model and task id
+    scheme of a project  */
 export type TaskStoragePluginOptions = {
     basedir?:   string
     solo?:      boolean
     lifecycle?: string
+    idscheme?:  string
 }
 
 /*  the task file pattern and the per-project registry file  */
-const TASK_FILE_RE = /^TASK-([A-Za-z0-9_-]+)\.md$/
+const TASK_FILE_RE = /^TASK-([A-Za-z0-9#][A-Za-z0-9#_-]*)\.md$/
 const PROJECT_FILE = "PROJECT.yaml"
 
 /*  check for the existence of a filesystem path (without blocking the event loop)  */
@@ -36,12 +38,14 @@ const exists = (p: string): Promise<boolean> =>
     flat in the base directory ("solo" mode, accepting any project id)
     or below "<basedir>/<prjId>/", with the "PROJECT.yaml" file of the
     directory serving as the project registry entry and carrying the
-    lifecycle model name  */
+    lifecycle model name, the task id scheme, and the sequence number
+    high-water mark  */
 class FileTaskStoragePlugin implements API.TaskStoragePlugin {
     readonly name = "ase"
     private basedir:   string
     private solo:      boolean
     private lifecycle: string
+    private idscheme:  string
 
     constructor (private ctx: API.TaskStorageContext) {
         const options = ctx.options as TaskStoragePluginOptions
@@ -50,8 +54,11 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         this.basedir   = path.resolve(options.basedir)
         this.solo      = options.solo === true
         this.lifecycle = typeof options.lifecycle === "string" && options.lifecycle !== "" ? options.lifecycle : "solo"
+        this.idscheme  = typeof options.idscheme  === "string" && options.idscheme  !== "" ? options.idscheme  : "slug"
         if (!Object.hasOwn(TaskFormat.taskLifecycles, this.lifecycle))
             throw new Error(`task store: plugin "ase" received unknown lifecycle model "${this.lifecycle}"`)
+        if (TaskFormat.checkIdScheme(this.idscheme) !== "")
+            throw new Error(`task store: plugin "ase" received invalid task id scheme "${this.idscheme}"`)
     }
 
     /*  the storage lifecycle (the base directory is not created upfront,
@@ -116,25 +123,40 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
     }
 
     /*  read the registry entry of a project directory: its lifecycle model
-        name and (in "solo" mode only) the id it was first registered under
-        (a malformed file falls back to the defaults and is flagged as broken)  */
-    private async projectOf (dir: string): Promise<{ id?: string, lifecycle: string, broken?: true }> {
+        name, its task id scheme, the high-water mark of its sequence numbers,
+        and (in "solo" mode only) the id it was first registered under (a
+        malformed file falls back to the defaults and is flagged as broken)  */
+    private async projectOf (dir: string): Promise<{ id?: string, lifecycle: string, idscheme: string, seqmark: number, broken?: true }> {
         const file = path.join(dir, PROJECT_FILE)
         if (!await exists(file))
-            return { lifecycle: this.lifecycle }
+            return { lifecycle: this.lifecycle, idscheme: this.idscheme, seqmark: 0 }
         const text = await fs.promises.readFile(file, "utf8")
-        let doc: { id?: unknown, lifecycle?: unknown } | null
+        let doc: { id?: unknown, lifecycle?: unknown, idscheme?: unknown, seqmark?: unknown } | null
         try {
-            doc = parseYAML(text) as { id?: unknown, lifecycle?: unknown } | null
+            doc = parseYAML(text) as { id?: unknown, lifecycle?: unknown, idscheme?: unknown, seqmark?: unknown } | null
         }
         catch (err) {
             this.ctx.log("warning", `malformed project file "${file}" ignored: ${(err as Error).message}`)
-            return { lifecycle: this.lifecycle, broken: true }
+            return { lifecycle: this.lifecycle, idscheme: this.idscheme, seqmark: 0, broken: true }
         }
         return {
             ...(typeof doc?.id === "string" && TaskFormat.ID_RE.test(doc.id) ? { id: doc.id } : {}),
-            lifecycle: typeof doc?.lifecycle === "string" && doc.lifecycle !== "" ? doc.lifecycle : this.lifecycle
+            lifecycle: typeof doc?.lifecycle === "string" && doc.lifecycle !== "" ? doc.lifecycle : this.lifecycle,
+            idscheme:  typeof doc?.idscheme  === "string" && doc.idscheme  !== "" ? doc.idscheme  : this.idscheme,
+            seqmark:   typeof doc?.seqmark  === "number" && Number.isSafeInteger(doc.seqmark) && doc.seqmark > 0 ? doc.seqmark : 0
         }
+    }
+
+    /*  write the registry entry of a project directory, where in "solo" mode the id
+        of the first registration is kept, as any project id is accepted and a
+        differing one must not cause a rewrite of the file (all strings are
+        quoted, as e.g. the task id scheme can contain "#" and ":")  */
+    private async projectWrite (dir: string, id: string, lifecycle: string, idscheme: string, seqmark: number): Promise<void> {
+        await fs.promises.mkdir(dir, { recursive: true })
+        await writeFileAtomic(path.join(dir, PROJECT_FILE),
+            (this.solo ? `id: ${JSON.stringify(id)}\n` : "") + `lifecycle: ${JSON.stringify(lifecycle)}\n` +
+            `idscheme: ${JSON.stringify(idscheme)}\n` +
+            (seqmark > 0 ? `seqmark: ${seqmark}\n` : ""), { encoding: "utf8" })
     }
 
     /*  the project registry  */
@@ -142,34 +164,38 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         const out: API.ProjectEntry[] = []
         if (this.solo) {
             if (await exists(path.join(this.basedir, PROJECT_FILE))) {
-                const { id, lifecycle } = await this.projectOf(this.basedir)
-                out.push({ id: id ?? path.basename(this.basedir), lifecycle })
+                const { id, lifecycle, idscheme, seqmark } = await this.projectOf(this.basedir)
+                out.push({ id: id ?? path.basename(this.basedir), lifecycle, idscheme, seqmark })
             }
         }
         else if (await exists(this.basedir))
             for (const entry of await fs.promises.readdir(this.basedir, { withFileTypes: true }))
-                if (entry.isDirectory() && TaskFormat.ID_RE.test(entry.name) && await exists(path.join(this.basedir, entry.name, PROJECT_FILE)))
-                    out.push({ id: entry.name, lifecycle: (await this.projectOf(path.join(this.basedir, entry.name))).lifecycle })
+                if (entry.isDirectory() && TaskFormat.ID_RE.test(entry.name) && await exists(path.join(this.basedir, entry.name, PROJECT_FILE))) {
+                    const { lifecycle, idscheme, seqmark } = await this.projectOf(path.join(this.basedir, entry.name))
+                    out.push({ id: entry.name, lifecycle, idscheme, seqmark })
+                }
         return out
     }
     async projectGet (prjId: string): Promise<API.ProjectEntry | null> {
         const dir = this.dir(prjId)
         if (!await exists(path.join(dir, PROJECT_FILE)))
             return null
-        return { id: prjId, lifecycle: (await this.projectOf(dir)).lifecycle }
+        const { lifecycle, idscheme, seqmark } = await this.projectOf(dir)
+        return { id: prjId, lifecycle, idscheme, seqmark }
     }
-    async projectSet (prjId: string, lifecycle: string): Promise<API.WriteResult> {
+    async projectSet (prjId: string, lifecycle: string, idscheme: string): Promise<API.WriteResult> {
         const dir    = this.dir(prjId)
         const result: API.WriteResult = await exists(path.join(dir, PROJECT_FILE)) ? "updated" : "created"
         const prev   = await this.projectOf(dir)
-        await fs.promises.mkdir(dir, { recursive: true })
-
-        /*  in "solo" mode keep the id of the first registration, as any project id
-            is accepted and a differing one must not cause a rewrite of the file  */
-        if (result === "created" || prev.broken || prev.lifecycle !== lifecycle)
-            await writeFileAtomic(path.join(dir, PROJECT_FILE),
-                (this.solo ? `id: "${prev.id ?? prjId}"\n` : "") + `lifecycle: ${lifecycle}\n`, { encoding: "utf8" })
+        if (result === "created" || prev.broken || prev.lifecycle !== lifecycle || prev.idscheme !== idscheme)
+            await this.projectWrite(dir, prev.id ?? prjId, lifecycle, idscheme, prev.seqmark)
         return result
+    }
+    async projectMark (prjId: string, seqmark: number): Promise<void> {
+        const dir  = this.dir(prjId)
+        const prev = await this.projectOf(dir)
+        if (seqmark !== prev.seqmark)
+            await this.projectWrite(dir, prev.id ?? prjId, prev.lifecycle, prev.idscheme, seqmark)
     }
     async projectDelete (prjId: string): Promise<boolean> {
         const dir  = this.dir(prjId)

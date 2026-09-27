@@ -73,6 +73,8 @@ export const loadTaskStoragePlugin = async (name: string | null, ctx: API.TaskSt
         throw new Error(`task store: storage plugin "${name}" provides a non-function "lock" property`)
     if (plugin.fileRead !== undefined && typeof plugin.fileRead !== "function")
         throw new Error(`task store: storage plugin "${name}" provides a non-function "fileRead" property`)
+    if (plugin.projectMark !== undefined && typeof plugin.projectMark !== "function")
+        throw new Error(`task store: storage plugin "${name}" provides a non-function "projectMark" property`)
     return plugin
 }
 
@@ -112,10 +114,15 @@ export class TaskStore {
     }
 
     /*  delegate the project registry operations  */
-    projectList   ():                                  Promise<API.ProjectEntry[]>      { return this.plugin.projectList()                 }
-    projectGet    (prjId: string):                     Promise<API.ProjectEntry | null> { return this.plugin.projectGet(prjId)             }
-    projectSet    (prjId: string, lifecycle: string):  Promise<API.WriteResult>         { return this.plugin.projectSet(prjId, lifecycle)  }
-    projectDelete (prjId: string):                     Promise<boolean>             { return this.plugin.projectDelete(prjId)          }
+    projectList   ():                                                   Promise<API.ProjectEntry[]>      { return this.plugin.projectList()                          }
+    projectGet    (prjId: string):                                      Promise<API.ProjectEntry | null> { return this.plugin.projectGet(prjId)                      }
+    projectSet    (prjId: string, lifecycle: string, idscheme: string): Promise<API.WriteResult>         { return this.plugin.projectSet(prjId, lifecycle, idscheme) }
+    projectDelete (prjId: string):                                      Promise<boolean>                 { return this.plugin.projectDelete(prjId)                   }
+
+    /*  delegate the optional high-water mark persistence (a no-op if unsupported)  */
+    projectMark (prjId: string, seqmark: number): Promise<void> {
+        return this.plugin.projectMark !== undefined ? this.plugin.projectMark(prjId, seqmark) : Promise.resolve()
+    }
 
     /*  delegate the task plan operations  */
     taskList   (prjId: string):                                 Promise<API.TaskEntry[]>      { return this.plugin.taskList(prjId)                    }

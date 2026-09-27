@@ -59,7 +59,7 @@ The following top-level commands exist for configuration handling:
   in-memory view; on set/write, they cause a fatal error.
   Recognized keys are grouped under three top-level sections:
   `project.*` (project identity, classification, and artifact
-  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.store`, `project.task.token` (masked as `***` by `list`), and the
+  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.store`, `project.task.token` (masked as `***` by `list`), and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
   task identifier -- and `agent.skill`), and `board.*`
@@ -500,7 +500,8 @@ else the `token` of the per-user `store.yaml`:
   the help text is shown and the command exits with status 1.
 
 - `ase task list` \[`-v`|`--verbose`\]:
-  List all persisted task ids in lexicographic order, one per line.
+  List all persisted task ids in natural order (numbers ordered by their
+  value, e.g. `FOO-2` before `FOO-10`), one per line.
   With `--verbose`, each id is annotated with the task plan status, its
   modification timestamp (`YYYY-MM-DD HH:MM`), and its title.
 
@@ -534,13 +535,18 @@ else the `token` of the per-user `store.yaml`:
   a temporary file, as the task store is not necessarily local. A not
   yet existing plan starts as its minimal frontmatter.
 
-- `ase task save` *id*:
+- `ase task save` \[`-c`|`--create`\] *id*:
   Save the task plan with the given *id*, reading its contents from
-  standard input. The `Status:` frontmatter key is checked against the
+  standard input. With `--create`, the save fails with exit status 1
+  if a task with *id* already exists, instead of overwriting it (for the
+  first save of a task whose *id* was obtained via `ase task newid`).
+  The `Status:` frontmatter key is checked against the
   configured task lifecycle model: a changed status which is not a state
   of the model, or which is not reachable from the previously saved
   status via one or more transitions of the model, lets the save fail
-  with exit status 1.
+  with exit status 1. An *id* not conforming to the task id scheme
+  (`project.task.idscheme`) is saved, but warned about (also on `ase task edit`
+  and `ase task rename`).
 
 - `ase task delete` *id*:
   Delete the task plan with the given *id*. Exits with status 1 if no
@@ -550,6 +556,23 @@ else the `token` of the per-user `store.yaml`:
   Rename the task plan with the given *old-id* to *new-id*, rewriting
   the `Id:` frontmatter key inside. Exits with status 1 if no such task
   existed or the target id is already in use.
+
+- `ase task newid` \[`-p`|`--proposal` *id*\] \[`-t`|`--taken` *ids*\] \[`-v`|`--verbose`\] \[*title*\]:
+  Print the next free task id according to the effective task id scheme
+  of the project (see `ase task idscheme`), determined by searching all
+  existing task ids plus the comma-separated *ids* considered as taken
+  additionally (as only a `seq` id is reserved): for `slug[:<words>]` the
+  slug of the first *words* words of *title*, for `seq[:<template>]`
+  the highest sequence number of all ids matching *template* plus one
+  (at least the high-water mark of the removed and allocated ids plus one,
+  raised to the allocated number, so the number of a deleted, purged,
+  renamed, or concurrently allocated task is never reused; ids not matching the
+  current *template*, e.g. after a template change, are ignored),
+  and for `any` the (sanitized) proposed *id*, else the slug of *title*.
+  A taken slug or proposed id gets a numeric suffix `-2`, `-3`, etc.
+  With `--verbose`, print the lines `scheme:`, `id:`, and `match:`,
+  the latter being the regular expression of all ids conforming to the
+  scheme (see `project.task.idscheme`). Quote ids containing `#` in the shell, as `#` starts a comment.
 
 - `ase task purge` \[*age*\]:
   Remove all persisted task plans whose modification time is older than
@@ -571,6 +594,17 @@ else the `token` of the per-user `store.yaml`:
   `CLOSED` → `IMPLEMENTED`). For a remote task store, a deviating
   `project.task.lifecycle` is warned about once per deviation only
   (tracked in *per-user state directory*`/task-lifecycle.json`).
+
+- `ase task idscheme` \[*scheme*\]:
+  Without *scheme*, print the effective task id scheme of the project:
+  `project.task.idscheme` for a local task store (default: `slug`), else the
+  scheme the project is registered under in the remote task store (which
+  is registered under `project.task.idscheme` on first use only). With
+  *scheme* (`slug[:<words>]`, `seq[:<template>]`, or `any`), explicitly
+  switch the project in the task store to this scheme: for a local task
+  store by setting `project.task.idscheme` on the `project` scope. Existing
+  task ids are not changed. For a remote task store, a deviating
+  `project.task.idscheme` is warned about once per deviation only.
 
 - `ase task store start` \[`-a`|`--address` *host*\] \[`-p`|`--port` *port*\]
   \[`-t`|`--token` *token*\] \[`-c`|`--cors` *origin*\] \[`-m`|`--module` *name*\]

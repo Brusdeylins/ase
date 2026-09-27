@@ -5,6 +5,14 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool,plugin]: Task id schemes
+    The new `project.task.idscheme` configuration (`ase task idscheme`) selects the scheme of new
+    task ids: `slug[:<words>]` (default), `seq[:<template>]` (e.g. `FOO-%03d`), or `any`. The new
+    `ase task newid` (MCP: `ase_task_newid`) allocates the next free id atomically, where `seq`
+    numbers are never reused. Non-conforming ids are warned about, and a create-only save
+    (`--create`) never overwrites a concurrently created task. The `ase-code-{craft,refactor,resolve}`
+    and `ase-task-dissect` skills and the task board generate new ids after the scheme.
+
 -   FEATURE [tool]: TUI and Web Task Board
     The new `ase task board` shows all task plans live as cards in the lanes of the task lifecycle
     model, as an interactive terminal board (plan dialog, `$EDITOR` editing, dependency graph view

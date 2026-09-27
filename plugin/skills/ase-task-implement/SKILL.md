@@ -171,10 +171,11 @@ Procedure
         on it, and is recorded in the plan's `Branch:` key on save. Do
         not output anything.
 
-    5.  Set <worktree-name><ase-task-id/></worktree-name>. The worktree
-        *directory* always carries the unique *task id* -- a plain
-        identifier by construction and hence directly usable as a
-        directory name --, independent of the branch checked out in it.
+    5.  Set <worktree-name/> to <ase-task-id/> with all `#` characters
+        stripped (e.g. `#42` becomes `42`). The worktree *directory*
+        always carries the unique *task id*, independent of the branch
+        checked out in it, but without `#`, as this character breaks
+        tools handling paths as URLs (Node file URLs, Vite, webpack).
         Do not output anything.
 
     6.  Determine the *worktree directory* by calling the

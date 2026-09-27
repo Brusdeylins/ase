@@ -25,15 +25,18 @@ import * as TaskFormat                                    from "./ase-task-forma
     REST API functionality on the built-in storage plugin (a local
     "ase:<path>" store) or the remote REST API (an "ase[s]://<addr>:<port>[/<token>]"
     store); a missing task plan is reported as null resp. false; the
-    effective lifecycle model is known after the opening only  */
+    effective lifecycle model and task id scheme are known after the opening only  */
 export interface TaskStoreClient {
     lifecycle: TaskFormat.TaskLifecycle
+    idscheme:  string
     setLifecycle (name: string): Promise<void>
+    setIdScheme  (spec: string): Promise<void>
     open   (): Promise<void>
     close  (): Promise<void>
+    newId  (title: string, proposal: string, taken: string[]): Promise<{ scheme: string, id: string }>
     list   (fields?: "header"): Promise<Core.TaskListEntry[]>
     load   (id: string): Promise<API.TaskPlan | null>
-    save   (id: string, plan: API.TaskPlan, tag?: string): Promise<void>
+    save   (id: string, plan: API.TaskPlan, tag?: string, create?: boolean): Promise<void>
     patch  (id: string, change: { status?: string, id?: string }): Promise<Core.TaskPatchResult | null>
     delete (id: string): Promise<boolean>
     purge  (age: string): Promise<string[]>
@@ -48,26 +51,36 @@ interface LocalTaskStoreShared {
 
 /*  the local client: the REST API functionality operating in-process
     on the built-in storage plugin in "solo" mode, with the project
-    registered under its configured lifecycle model on every open  */
+    registered under its configured lifecycle model and task id scheme on every open  */
 export class LocalTaskStoreClient implements TaskStoreClient {
     /*  the storage delegates, shared by all concurrently open clients of the
-        same store (keyed by base directory only, as the lifecycle model is
-        re-registered on every open and hence survives a switch without a
+        same store (keyed by base directory only, as the lifecycle model and task
+        id scheme are re-registered on every open and hence survive a switch without a
         second delegate), so its per-project queue serializes in-process, too  */
     private static shared = new Map<string, LocalTaskStoreShared>()
     private entry: LocalTaskStoreShared | undefined
     private core!: Core.TaskStoreCore
-    constructor (private prjId: string, public lifecycle: TaskFormat.TaskLifecycle, private basedir: string, private log: Log) {}
-    /*  switch the lifecycle model by persisting "project.task.lifecycle" on scope "project"
-        (which the local store always follows) and re-registering the project (mapping the plan states)  */
-    async setLifecycle (name: string): Promise<void> {
+    constructor (private prjId: string, public lifecycle: TaskFormat.TaskLifecycle, public idscheme: string,
+        private basedir: string, private log: Log) {}
+    /*  persist a configuration key on scope "project" (which the local store always follows)  */
+    private configure (key: string, value: string): void {
         const cfg = new Config("config", configSchema, this.log, parseScope("project"))
         cfg.lock(() => {
             cfg.read()
-            cfg.set("project.task.lifecycle", name)
+            cfg.set(key, value)
             cfg.write()
         })
-        await this.core.projectSet(this.prjId, name)
+    }
+    /*  switch the lifecycle model by persisting "project.task.lifecycle"
+        and re-registering the project (mapping the plan states)  */
+    async setLifecycle (name: string): Promise<void> {
+        this.configure("project.task.lifecycle", name)
+        await this.core.projectSet(this.prjId, { lifecycle: name })
+    }
+    /*  switch the task id scheme by persisting "project.task.idscheme" and re-registering the project  */
+    async setIdScheme (spec: string): Promise<void> {
+        this.configure("project.task.idscheme", spec)
+        this.idscheme = (await this.core.projectSet(this.prjId, { idscheme: spec })).project.idscheme
     }
     private async missing<T> (op: () => Promise<T>, fallback: T): Promise<T> {
         try {
@@ -84,7 +97,7 @@ export class LocalTaskStoreClient implements TaskStoreClient {
         if (entry === undefined) {
             const opened = (async () => {
                 const plugin = await Delegate.loadTaskStoragePlugin(Delegate.BUILTIN_PLUGIN, {
-                    options: { basedir: this.basedir, solo: true, lifecycle: this.lifecycle.name },
+                    options: { basedir: this.basedir, solo: true, lifecycle: this.lifecycle.name, idscheme: this.idscheme },
                     log:     (level, message) => this.log.write(level, `task: store: ${message}`)
                 })
                 const store = new Delegate.TaskStore(plugin)
@@ -99,7 +112,7 @@ export class LocalTaskStoreClient implements TaskStoreClient {
         this.entry = entry
         try {
             this.core = (await entry.opened).core
-            await this.core.projectSet(this.prjId, this.lifecycle.name)
+            await this.core.projectSet(this.prjId, { lifecycle: this.lifecycle.name, idscheme: this.idscheme })
         }
         catch (err: unknown) {
             await this.close()
@@ -123,8 +136,11 @@ export class LocalTaskStoreClient implements TaskStoreClient {
     load (id: string): Promise<API.TaskPlan | null> {
         return this.missing(() => this.core.taskLoad(this.prjId, id), null)
     }
-    async save (id: string, plan: API.TaskPlan, tag?: string): Promise<void> {
-        await this.core.taskSave(this.prjId, id, plan, tag)
+    async save (id: string, plan: API.TaskPlan, tag?: string, create = false): Promise<void> {
+        await this.core.taskSave(this.prjId, id, plan, tag, create)
+    }
+    newId (title: string, proposal: string, taken: string[]): Promise<{ scheme: string, id: string }> {
+        return this.core.taskNewId(this.prjId, { title, proposal, taken })
     }
     patch (id: string, change: { status?: string, id?: string }): Promise<Core.TaskPatchResult | null> {
         return this.missing(() => this.core.taskPatch(this.prjId, id, change), null)
@@ -143,23 +159,27 @@ export class LocalTaskStoreClient implements TaskStoreClient {
     }
 }
 
-/*  the project as exposed by the project endpoints of a task store server  */
-type RemoteProject = { id: string, lifecycle: { name: string } }
+/*  the project as exposed by the project endpoints of a task store server
+    (with the task id scheme and sequence number high-water mark absent on servers predating them)  */
+type RemoteProject = { id: string, lifecycle: { name: string }, idscheme?: string, seqmark?: number }
 
 /*  the remote client: the REST API of a task store server, with the
-    project registered under its configured lifecycle model on first
-    use only (afterwards adopting the lifecycle model of the registered
-    project) and every problem details response raised as an error; an
-    "insecure" client skips the TLS certificate verification  */
+    project registered under its configured lifecycle model and task id
+    scheme on first use only (afterwards adopting the lifecycle model and
+    task id scheme of the registered project) and every problem details
+    response raised as an error; an "insecure" client skips the TLS
+    certificate verification  */
 export class RemoteTaskStoreClient implements TaskStoreClient {
-    /*  the effective lifecycle models of the registered projects (TTL-bounded,
-        to spare consecutive operations the registration round-trips)  */
-    private static registered = new LRUCache<string, TaskFormat.TaskLifecycle>({ max: 16, ttl: 10 * 1000 })
+    /*  the effective lifecycle models and task id schemes of the registered projects
+        (TTL-bounded, to spare consecutive operations the registration round-trips)  */
+    private static registered = new LRUCache<string, { lifecycle: TaskFormat.TaskLifecycle, idscheme: string }>({ max: 16, ttl: 10 * 1000 })
     private dispatcher: Agent | undefined
     public  lifecycle:  TaskFormat.TaskLifecycle
-    constructor (private prjId: string, private configured: TaskFormat.TaskLifecycle, private log: Log,
-        private base: string, private token: string, private insecure: boolean) {
+    public  idscheme:   string
+    constructor (private prjId: string, private configured: TaskFormat.TaskLifecycle, private configuredIdScheme: string,
+        private log: Log, private base: string, private token: string, private insecure: boolean) {
         this.lifecycle  = configured
+        this.idscheme   = configuredIdScheme
         this.dispatcher = insecure ? new Agent({ connect: { rejectUnauthorized: false } }) : undefined
     }
     /*  perform a request: a 404 response or a tolerated error response yields
@@ -200,15 +220,20 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
     private get key (): string {
         return `${this.base}/${this.prjId}`
     }
-    /*  adopt the lifecycle model of the registered project  */
+    /*  adopt the lifecycle model and task id scheme of the registered project
+        (the configured task id scheme for a server predating task id schemes)  */
     private adopt (project: RemoteProject | null): void {
         if (project === null)
             throw new Core.Problem(404, `store "${this.base}": project "${this.prjId}" not registered`)
         const lifecycle = TaskFormat.taskLifecycles[project.lifecycle.name]
         if (lifecycle === undefined)
             throw new Error(`task: store "${this.base}" uses unknown lifecycle model "${project.lifecycle.name}"`)
+        const idscheme = project.idscheme ?? this.configuredIdScheme
+        if (TaskFormat.checkIdScheme(idscheme) !== "")
+            throw new Error(`task: store "${this.base}" uses invalid task id scheme "${idscheme}"`)
         this.lifecycle = lifecycle
-        RemoteTaskStoreClient.registered.set(this.key, lifecycle)
+        this.idscheme  = idscheme
+        RemoteTaskStoreClient.registered.set(this.key, { lifecycle, idscheme })
     }
     /*  raise a not registered project (dropping its cached registration)  */
     private unregistered (): never {
@@ -225,14 +250,15 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
     async open (): Promise<void> {
         const cached = RemoteTaskStoreClient.registered.get(this.key)
         if (cached !== undefined) {
-            this.lifecycle = cached
+            this.lifecycle = cached.lifecycle
+            this.idscheme  = cached.idscheme
             return
         }
 
-        /*  register the project only if not yet registered (via "If-None-Match: *"),
-            as the lifecycle model of a registered project is shared by all its clients  */
+        /*  register the project only if not yet registered (via "If-None-Match: *"), as the
+            lifecycle model and task id scheme of a registered project are shared by all its clients  */
         const created = await this.request<RemoteProject>("PUT", `/projects/${this.prjId}`,
-            { lifecycle: this.configured.name }, { "If-None-Match": "*" }, [ 412 ])
+            { lifecycle: this.configured.name, idscheme: this.configuredIdScheme }, { "If-None-Match": "*" }, [ 412 ])
         this.adopt(created ?? await this.request<RemoteProject>("GET", `/projects/${this.prjId}`))
         this.mismatch()
     }
@@ -240,9 +266,13 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
         this.adopt(await this.request<RemoteProject>("PUT", `/projects/${this.prjId}`, { lifecycle: name }))
         this.mismatch()
     }
+    async setIdScheme (spec: string): Promise<void> {
+        this.adopt(await this.request<RemoteProject>("PUT", `/projects/${this.prjId}`, { idscheme: spec }))
+        this.mismatch()
+    }
 
-    /*  warn about a configured lifecycle model deviating from the one of the
-        registered project, once per deviation only (persisted across processes)  */
+    /*  warn about a configured lifecycle model or task id scheme deviating from the
+        one of the registered project, once per deviation only (persisted across processes)  */
     private mismatch (): void {
         const file = path.join(userStateDir(), "task-lifecycle.json")
         let seen: Record<string, string> = {}
@@ -254,19 +284,38 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
         catch {
             /*  no (valid) state yet  */
         }
-        const pair = this.lifecycle !== this.configured ?
-            `${this.configured.name}:${this.lifecycle.name}` : undefined
-        if (seen[this.key] === pair)
-            return
-        if (pair === undefined)
-            seen = Object.fromEntries(Object.entries(seen).filter(([ key ]) => key !== this.key))
-        else {
-            seen[this.key] = pair
-            this.log.write("warning", `task: configured "project.task.lifecycle" "${this.configured.name}" ignored, ` +
-                `as store "${this.base}" uses "${this.lifecycle.name}" for project "${this.prjId}" ` +
-                `(align the configuration via "ase config --scope project set project.task.lifecycle ${this.lifecycle.name}", ` +
-                `or switch the store via "ase task lifecycle ${this.configured.name}"; reported once only)`)
+        const checks = [ {
+            key:        this.key,
+            config:     "project.task.lifecycle",
+            cmd:        "lifecycle",
+            configured: this.configured.name,
+            effective:  this.lifecycle.name
+        }, {
+            key:        `${this.key}#idscheme`,
+            config:     "project.task.idscheme",
+            cmd:        "idscheme",
+            configured: this.configuredIdScheme,
+            effective:  this.idscheme
+        } ]
+        let changed = false
+        for (const check of checks) {
+            const pair = check.effective !== check.configured ?
+                `${check.configured}:${check.effective}` : undefined
+            if (seen[check.key] === pair)
+                continue
+            changed = true
+            if (pair === undefined)
+                seen = Object.fromEntries(Object.entries(seen).filter(([ key ]) => key !== check.key))
+            else {
+                seen[check.key] = pair
+                this.log.write("warning", `task: configured "${check.config}" "${check.configured}" ignored, ` +
+                    `as store "${this.base}" uses "${check.effective}" for project "${this.prjId}" ` +
+                    `(align the configuration via "ase config --scope project set ${check.config} ${check.effective}", ` +
+                    `or switch the store via "ase task ${check.cmd} ${check.configured}"; reported once only)`)
+            }
         }
+        if (!changed)
+            return
         try {
             fs.mkdirSync(path.dirname(file), { recursive: true })
             fs.writeFileSync(file, JSON.stringify(seen, null, 4) + "\n", "utf8")
@@ -283,26 +332,46 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
         return (await this.request<{ tasks: Core.TaskListEntry[] }>("GET", url) ?? this.unregistered()).tasks
     }
     async load (id: string): Promise<API.TaskPlan | null> {
-        return this.task(await this.request<API.TaskPlan>("GET", `${this.tasks}/${id}`))
+        return this.task(await this.request<API.TaskPlan>("GET", `${this.tasks}/${encodeURIComponent(id)}`))
     }
-    async save (id: string, plan: API.TaskPlan, tag?: string): Promise<void> {
-        const result = await this.request<{ status: string }>("PUT", `${this.tasks}/${id}`, plan,
-            tag !== undefined ? { "If-Match": `"${tag}"` } : {})
+    async save (id: string, plan: API.TaskPlan, tag?: string, create = false): Promise<void> {
+        const result = await this.request<{ status: string }>("PUT", `${this.tasks}/${encodeURIComponent(id)}`, plan, {
+            ...(tag !== undefined ? { "If-Match": `"${tag}"` } : {}),
+            ...(create ? { "If-None-Match": "*" } : {})
+        })
         if (result === null)
             this.unregistered()
     }
+
+    /*  allocate the next free task id on the server, falling back to determining
+        it locally (without any reservation) on a server predating the allocation  */
+    async newId (title: string, proposal: string, taken: string[]): Promise<{ scheme: string, id: string }> {
+        const result = await this.request<{ scheme: string, id: string }>("POST", `/projects/${this.prjId}/newid`,
+            { title, proposal, taken })
+        if (result !== null)
+            return result
+        const project = await this.request<RemoteProject>("GET", `/projects/${this.prjId}`) ?? this.unregistered()
+        const spec    = project.idscheme ?? this.idscheme
+        const ids     = [ ...(await this.list()).map((item) => item.id), ...taken ]
+        try {
+            return { scheme: spec, id: TaskFormat.nextTaskId(TaskFormat.parseIdScheme(spec), ids, title, proposal, project.seqmark ?? 0) }
+        }
+        catch (err: unknown) {
+            throw new Core.Problem(422, err instanceof Error ? err.message : String(err))
+        }
+    }
     async patch (id: string, change: { status?: string, id?: string }): Promise<Core.TaskPatchResult | null> {
-        return this.task(await this.request<Core.TaskPatchResult>("PATCH", `${this.tasks}/${id}`, change))
+        return this.task(await this.request<Core.TaskPatchResult>("PATCH", `${this.tasks}/${encodeURIComponent(id)}`, change))
     }
     async delete (id: string): Promise<boolean> {
-        return await this.task(await this.request<object>("DELETE", `${this.tasks}/${id}`)) !== null
+        return await this.task(await this.request<object>("DELETE", `${this.tasks}/${encodeURIComponent(id)}`)) !== null
     }
     async purge (age: string): Promise<string[]> {
         const result = await this.request<{ purged: string[] }>("DELETE", `${this.tasks}?age=${encodeURIComponent(age)}`)
         return (result ?? this.unregistered()).purged
     }
     async content (id: string, index: number): Promise<{ type: string, content: Buffer } | null> {
-        const r = await ofetch.raw<ArrayBuffer, "arrayBuffer">(`${this.base}${this.tasks}/${id}/attachment/${index}/content`, {
+        const r = await ofetch.raw<ArrayBuffer, "arrayBuffer">(`${this.base}${this.tasks}/${encodeURIComponent(id)}/attachment/${index}/content`, {
             headers:             { Authorization: `Bearer ${this.token}` },
             responseType:        "arrayBuffer",
             dispatcher:          this.dispatcher,
@@ -343,10 +412,10 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
                 onState?.(true)
             })
             ws.on("message", (data) => {
-                /*  drop the cached lifecycle model on a lifecycle model change  */
+                /*  drop the cached registration on a lifecycle model or task id scheme change  */
                 try {
                     const frame = JSON.parse(String(data)) as Core.EventFrame
-                    if (frame.lifecycle !== undefined)
+                    if (frame.lifecycle !== undefined || frame.idscheme !== undefined)
                         RemoteTaskStoreClient.registered.delete(this.key)
                 }
                 catch {

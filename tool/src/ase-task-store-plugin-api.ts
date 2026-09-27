@@ -17,11 +17,15 @@ export type TaskPlan        = {
     attachment: TaskAttachment[]
 }
 
-/*  a registered project: its id and the name of its task lifecycle
-    model ("solo", "team", or "enterprise")  */
+/*  a registered project: its id, the name of its task lifecycle
+    model ("solo", "team", or "enterprise"), its task id scheme
+    ("slug[:<words>]", "seq[:<template>]", or "any", absent for "slug"),
+    and the high-water mark of its sequence numbers (absent for 0)  */
 export type ProjectEntry = {
     id:        string
     lifecycle: string
+    idscheme?: string
+    seqmark?:  number
 }
 
 /*  a task plan listing entry: its id, its title (derived from the
@@ -47,11 +51,12 @@ export type TaskStorageContext = {
     log:     (level: "error" | "warning" | "info" | "debug", message: string) => void
 }
 
-/*  the storage plugin: every method is asynchronous, every id was
-    already validated by the server against "[A-Za-z0-9_-]+", and
-    every method throws on an infrastructure error only (which the
-    server maps onto a "500" response) -- the "not found", "conflict",
-    and "already exists" cases are expressed through the return values  */
+/*  the storage plugin: every method is asynchronous, every id was already
+    validated by the server against "[A-Za-z0-9_-]+" (project ids) resp.
+    "[A-Za-z0-9#][A-Za-z0-9#_-]*" (task ids), and every method throws on an infrastructure
+    error only (which the server maps onto a "500" response) -- the "not
+    found", "conflict", and "already exists" cases are expressed through
+    the return values  */
 export interface TaskStoragePlugin {
     /*  the plugin name, for diagnostics  */
     readonly name: string
@@ -73,9 +78,14 @@ export interface TaskStoragePlugin {
     /*  get a registered project, or null if not registered  */
     projectGet (prjId: string): Promise<ProjectEntry | null>
 
-    /*  register a project with the given lifecycle model name, or
-        change the lifecycle model name of a registered project  */
-    projectSet (prjId: string, lifecycle: string): Promise<WriteResult>
+    /*  register a project with the given lifecycle model name and task id
+        scheme, or change both of a registered project  */
+    projectSet (prjId: string, lifecycle: string, idscheme: string): Promise<WriteResult>
+
+    /*  optionally persist the high-water mark of the sequence numbers of a
+        registered project (the highest one ever removed or allocated), so scheme
+        "seq" never reuses the number of a deleted, purged, renamed, or allocated task  */
+    projectMark? (prjId: string, seqmark: number): Promise<void>
 
     /*  unregister a project without deleting its task plans;
         returns false if the project was not registered  */

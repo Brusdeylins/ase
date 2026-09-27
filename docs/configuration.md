@@ -50,6 +50,45 @@ The following configuration parameters control the project:
     offers no lane configuration of its own. It is writable on the `user`
     and `project` scopes only, as the task store follows these two scopes only.
 
+-   **project.task.idscheme**: the project *task ids* are generated after the scheme...
+
+    -   `slug[:`*words*`]`:     ...slug of the first *words* (default: 2) title words,
+        starting with the first word beginning with a letter,
+        lower-cased and joined with `-`, like `json-export` (default).
+        Conforming ids match `^[a-z][a-z0-9]*(?:-[a-z0-9]+){0,`*words-1*`}(?:-[0-9]+)?$`.
+    -   `seq[:`*template*`]`:   ...continuously increasing sequence number, rendered through
+        the sprintf-style *template* with exactly one `%d` or `%0`*width*`d`
+        and otherwise only the characters `A-Z`, `a-z`, `#`, `_`, and `-`
+        (but not starting with `_` or `-`),
+        like `FOO-%03d` (`FOO-007`), `#%d` (`#7`), or `%d` (`7`, the default).
+        Conforming ids match `^`*prefix*`([0-9]+)`*suffix*`$` (resp. `[0-9]{`*width*`,}`).
+        **Caution:** `#` starts a comment in the shell, so a leading `#`
+        has to be quoted on the command line: `ase task view #7` silently
+        drops the id, while `ase task view "#7"` passes it.
+    -   `any`:                  ...arbitrary unique id, as proposed by the agent.
+        Conforming ids match `^[A-Za-z0-9#][A-Za-z0-9#_-]*$`.
+
+    A new id is determined by `ase task newid` resp. the `ase_task_newid`
+    MCP tool by searching all existing task ids: for `seq` the highest
+    number of all ids matching the template and of the high-water mark
+    of all ids ever removed or allocated via the task store (its `seqmark`) plus one,
+    so the number of a deleted, purged, renamed, or concurrently allocated task is never reused
+    (as ids not matching the current template are ignored, changing the
+    template, e.g. from `#%d` to `T-%03d`, continues the numbering at
+    the `seqmark` plus one instead of the highest existing number), and for `slug` and
+    `any` the slug resp. proposed id, suffixed with `-2`, `-3`, etc. if
+    already taken. Both also report the regular expression of the ids
+    conforming to the scheme. Only a `seq` id is reserved (by raising the
+    `seqmark` atomically); for the other schemes, the first save of the new
+    task should be a create-only one (`ase task save --create` resp.
+    `ase_task_save` with `create: true`), failing instead of overwriting a
+    concurrently created task with the same id. A task id consists of the
+    characters `A-Z`, `a-z`, `0-9`, `#`, `_`, and `-`, and an id not
+    conforming to the scheme is accepted, but warned about on every save,
+    rename, and switch. Like `project.task.lifecycle`, the scheme is
+    registered per project in a remote task store (see `ase task
+    idscheme`), and it is writable on the `user` and `project` scopes only.
+
 -   **project.task.store**: the *task store* URL the `ase task` commands
     and `ase_task_*` MCP tools forward the project *task plans* to:
 

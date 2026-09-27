@@ -272,7 +272,7 @@ const components = (nodes: string[], pred: Map<string, string[]>): string[][] =>
 
 /*  the neutral order of cards: by creation time, then by task id  */
 export const byCreation = (a: Card, b: Card): number =>
-    a.created.localeCompare(b.created) || a.id.localeCompare(b.id)
+    a.created.localeCompare(b.created) || TaskFormat.compareIds(a.id, b.id)
 
 /*  the label text of a card: the task id and, if existing, its title
     (made safe for the terminal) behind a filled arrow  */
@@ -374,7 +374,7 @@ const orderLane = (cards: Card[], pred: Map<string, string[]>, cyclicEdge: (a: s
             }
         }
     }
-    const rest = cards.filter((c) => !out.includes(c)).sort((a, b) => a.id.localeCompare(b.id))
+    const rest = cards.filter((c) => !out.includes(c)).sort((a, b) => TaskFormat.compareIds(a.id, b.id))
     return [ ...out, ...rest ]
 }
 
@@ -483,12 +483,11 @@ export const cardMoves = (board: Board, lifecycle: TaskLifecycle, card: Card): s
     card.actual === card.status ? undefined : reachableStates(board, lifecycle, card)
 
 /*  the pre-filled text of a new task: all frontmatter keys (the optional ones
-    empty), a free placeholder id, the initial state, and the body template of the
-    task format with a sample title, the three sections, and their placeholder items  */
-export const newTaskText = (board: Board, lifecycle: TaskLifecycle): string => {
-    let id = "new-task"
-    for (let n = 2; board.cards.has(id); n++)
-        id = `new-task-${n}`
+    empty), the next free id of the task id scheme (derived from the sample title),
+    the initial state, and the body template of the task format with a sample
+    title, the three sections, and their placeholder items  */
+export const newTaskText = async (log: Log, board: Board, lifecycle: TaskLifecycle): Promise<string> => {
+    const id  = (await Task.newId(log, "New Task", "new-task", [ ...board.cards.keys() ])).id
     const now = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
     return TaskFormat.formatTaskText({
         header: {
@@ -503,13 +502,6 @@ export const newTaskText = (board: Board, lifecycle: TaskLifecycle): string => {
     })
 }
 
-/*  the task id of a task text: the value of the "Id:" key of its frontmatter,
-    or the empty string if absent  */
-export const taskTextId = (text: string): string => {
-    const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
-    return fm === null ? "" : (/^Id:[ \t]*(.*)$/m.exec(fm[1])?.[1].trim() ?? "")
-}
-
 /*  the conflict of saving a task which was changed meanwhile, carrying
     its current entity tag, or null if it was deleted meanwhile  */
 export class TaskConflict extends Error {
@@ -521,17 +513,19 @@ export class TaskConflict extends Error {
 /*  save an edited task text (conditionally with an entity tag, throwing a
     TaskConflict on a mismatch), renaming the task if the "Id:" key of its
     frontmatter was changed (refusing an existing target id before anything
-    is saved); returns the resulting task id  */
-export const saveTask = async (log: Log, id: string, text: string, tag?: string): Promise<string> => {
-    const next = taskTextId(text) || id
+    is saved); returns the resulting task id and a warning (else empty) if
+    it does not conform to the task id scheme  */
+export const saveTask = async (log: Log, id: string, text: string, tag?: string): Promise<{ id: string, warning: string }> => {
+    const next = TaskFormat.taskTextId(text) || id
     if (next !== id) {
-        if (!TaskFormat.ID_RE.test(next))
+        if (!TaskFormat.TASK_ID_RE.test(next))
             throw new Error(`invalid task id "${next}"`)
         if (await Task.source(log, next) !== null)
             throw new Error(`task "${next}" already exists`)
     }
+    let warning: string
     try {
-        await Task.save(log, id, text, tag)
+        warning = await Task.save(log, id, text, tag)
     }
     catch (err: unknown) {
         if (err instanceof Problem && err.status === 412)
@@ -539,20 +533,21 @@ export const saveTask = async (log: Log, id: string, text: string, tag?: string)
         throw err
     }
     if (next !== id)
-        await Task.rename(log, id, next)
-    return next
+        warning = await Task.rename(log, id, next) ?? ""
+    return { id: next, warning }
 }
 
 /*  create a task from its text under a new id, refusing an existing id,
-    and dropping the frontmatter keys left without a (non-blank) value  */
-export const createTask = async (log: Log, id: string, text: string): Promise<void> => {
-    if (!TaskFormat.ID_RE.test(id))
+    and dropping the frontmatter keys left without a (non-blank) value;
+    returns a warning (else empty) if the id does not conform to the task id scheme  */
+export const createTask = async (log: Log, id: string, text: string): Promise<string> => {
+    if (!TaskFormat.TASK_ID_RE.test(id))
         throw new Error(`invalid task id "${id}"`)
     if (await Task.source(log, id) !== null)
         throw new Error(`task "${id}" already exists`)
     text = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, (fm) =>
         fm.replace(/^[A-Za-z]+:[ \t]*\r?\n/gm, ""))
-    await Task.save(log, id, text)
+    return Task.save(log, id, text, undefined, true)
 }
 
 /*  watch the configuration files of a local task store (via their existing
@@ -636,7 +631,7 @@ export const watchTasks = (log: Log, onChange: () => Promise<void> | void,
                 w = watch(dir, {
                     ignoreInitial: true,
                     depth:         0,
-                    ignored:       (file, stats) => stats?.isFile() === true && !/^TASK-[A-Za-z0-9_-]+\.md$/.test(path.basename(file))
+                    ignored:       (file, stats) => stats?.isFile() === true && !/^TASK-[A-Za-z0-9#][A-Za-z0-9#_-]*\.md$/.test(path.basename(file))
                 })
                 w.on("all", schedule)
             }

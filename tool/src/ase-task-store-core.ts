@@ -56,11 +56,12 @@ export type EventFrame = {
     updated?:   Record<string, EventEntry & { parts: string[] }>
     deleted?:   string[]
     lifecycle?: string
+    idscheme?:  string
 }
 export type EventListener = (prjId: string, frame: EventFrame) => void
 
 /*  the results of the core operations  */
-export type ProjectView     = { id: string, lifecycle: TaskFormat.TaskLifecycle }
+export type ProjectView     = { id: string, lifecycle: TaskFormat.TaskLifecycle, idscheme: string, seqmark: number }
 export type TaskListEntry   = { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader }
 export type TaskSaveResult  = { created: boolean, id: string, status: string }
 export type TaskPatchResult = { id: string, status: string, from?: string }
@@ -86,12 +87,13 @@ export class TaskStoreCore {
 
     /*  validate a project or task id  */
     private validateId (kind: "project" | "task", id: string): string {
-        if (!TaskFormat.ID_RE.test(id))
-            throw problem(422, `invalid ${kind} id "${id}" (expected: [A-Za-z0-9_-]+)`)
+        if (!(kind === "task" ? TaskFormat.TASK_ID_RE : TaskFormat.ID_RE).test(id))
+            throw problem(422, `invalid ${kind} id "${id}" (expected: [A-Za-z0-9${kind === "task" ? "#" : ""}_-]+)`)
         return id
     }
 
-    /*  resolve a registered project and its lifecycle model  */
+    /*  resolve a registered project, its lifecycle model, its task id scheme,
+        and the high-water mark of its sequence numbers  */
     private async project (prjId: string): Promise<ProjectView> {
         this.validateId("project", prjId)
         const entry = await this.store.projectGet(prjId)
@@ -100,7 +102,19 @@ export class TaskStoreCore {
         const lifecycle = Object.hasOwn(TaskFormat.taskLifecycles, entry.lifecycle) ? TaskFormat.taskLifecycles[entry.lifecycle] : undefined
         if (lifecycle === undefined)
             throw problem(500, `project "${prjId}" carries unknown lifecycle model "${entry.lifecycle}"`)
-        return { id: entry.id, lifecycle }
+        const idscheme = entry.idscheme ?? "slug"
+        if (TaskFormat.checkIdScheme(idscheme) !== "")
+            throw problem(500, `project "${prjId}" carries invalid task id scheme "${idscheme}"`)
+        return { id: entry.id, lifecycle, idscheme, seqmark: entry.seqmark ?? 0 }
+    }
+
+    /*  raise the high-water mark of the sequence numbers to the highest one of removed
+        or allocated task ids, so scheme "seq" never hands out their numbers again  */
+    private async retire (prjId: string, project: ProjectView, ids: string[]): Promise<void> {
+        const scheme  = TaskFormat.parseIdScheme(project.idscheme)
+        const seqmark = ids.reduce((max, id) => Math.max(max, TaskFormat.seqNumber(scheme, id)), project.seqmark)
+        if (seqmark > project.seqmark)
+            await this.store.projectMark(prjId, seqmark)
     }
 
     /*  load an existing task plan of a registered project  */
@@ -290,23 +304,33 @@ export class TaskStoreCore {
     async projectExists (prjId: string): Promise<boolean> {
         return TaskFormat.ID_RE.test(prjId) && await this.serialize(prjId, () => this.store.projectGet(prjId)) !== null
     }
-    /*  register a project or change its lifecycle model (without one, a registered
-        project keeps its model and a new one gets "solo"), mapping the status of
-        its plans onto a changed model; in "createOnly" mode an already
-        registered project is left alone and reported as 412  */
-    async projectSet (prjId: string, raw: unknown, createOnly = false): Promise<{ created: boolean, project: ProjectView }> {
+    /*  register a project or change its lifecycle model and/or task id scheme
+        (without one, a registered project keeps its model resp. scheme and a new
+        one gets "solo" resp. "slug"), mapping the status of its plans onto a
+        changed model; in "createOnly" mode an already registered project is
+        left alone and reported as 412  */
+    async projectSet (prjId: string, raw: { lifecycle?: unknown, idscheme?: unknown },
+        createOnly = false): Promise<{ created: boolean, project: ProjectView }> {
         this.validateId("project", prjId)
-        if (raw !== undefined && typeof raw !== "string")
+        if (raw.lifecycle !== undefined && typeof raw.lifecycle !== "string")
             throw problem(400, "\"lifecycle\" has to be a string")
+        if (raw.idscheme !== undefined && typeof raw.idscheme !== "string")
+            throw problem(400, "\"idscheme\" has to be a string")
+        const rawLifecycle = raw.lifecycle as string | undefined
+        const rawIdscheme  = raw.idscheme  as string | undefined
         return this.serialize(prjId, async () => {
             const entry = await this.store.projectGet(prjId)
             if (createOnly && entry !== null)
                 throw problem(412, `project "${prjId}" already registered`)
-            const name = raw ?? entry?.lifecycle ?? "solo"
+            const name = rawLifecycle ?? entry?.lifecycle ?? "solo"
             const lifecycle = Object.hasOwn(TaskFormat.taskLifecycles, name) ? TaskFormat.taskLifecycles[name] : undefined
             if (lifecycle === undefined)
                 throw problem(422, `unknown lifecycle model "${name}" ` +
                     `(expected one of: ${Object.keys(TaskFormat.taskLifecycles).join(", ")})`)
+            const idscheme = rawIdscheme ?? entry?.idscheme ?? "slug"
+            const error    = TaskFormat.checkIdScheme(idscheme)
+            if (error !== "")
+                throw problem(422, error)
 
             /*  map the status of the plans before switching the model, so an
                 interrupted switch can be repeated (mapped states being foreign
@@ -329,10 +353,13 @@ export class TaskStoreCore {
                     this.emitUpdated(prjId, id, plan, lifecycle, [ "header" ])
                 }
             }
-            const result = await this.store.projectSet(prjId, name)
-            if (entry !== null && entry.lifecycle !== name)
-                this.listener(prjId, { lifecycle: name })
-            return { created: result === "created", project: { id: prjId, lifecycle } }
+            const result = await this.store.projectSet(prjId, name, idscheme)
+            if (entry !== null && (entry.lifecycle !== name || (entry.idscheme ?? "slug") !== idscheme))
+                this.listener(prjId, {
+                    ...(entry.lifecycle !== name ? { lifecycle: name } : {}),
+                    ...((entry.idscheme ?? "slug") !== idscheme ? { idscheme } : {})
+                })
+            return { created: result === "created", project: { id: prjId, lifecycle, idscheme, seqmark: entry?.seqmark ?? 0 } }
         })
     }
     async projectDelete (prjId: string): Promise<void> {
@@ -351,7 +378,7 @@ export class TaskStoreCore {
             if (fields !== "none" && fields !== "header")
                 throw problem(422, `invalid "fields" value "${fields}" (expected: "header" or "none")`)
             const entries = await this.store.taskList(prjId)
-            entries.sort((a, b) => a.id.localeCompare(b.id))
+            entries.sort((a, b) => TaskFormat.compareIds(a.id, b.id))
             return entries
                 .map((entry) => ({ entry, status: TaskFormat.taskStatus(entry.header, lifecycle) }))
                 .filter(({ status }) => !lifecycle.states.includes(status) || states.includes(status))
@@ -368,7 +395,7 @@ export class TaskStoreCore {
     /*  delete all task plans last modified longer ago than "age" (e.g. "31d")  */
     async taskPurge (prjId: string, age: string | undefined): Promise<string[]> {
         return this.serialize(prjId, async () => {
-            await this.project(prjId)
+            const project = await this.project(prjId)
             const m = age !== undefined ? /^(\d+)([hdmy])$/.exec(age) : null
             if (m === null)
                 throw problem(400, "missing or malformed \"age\" (expected: <number><unit> with unit h, d, m, or y)")
@@ -380,6 +407,7 @@ export class TaskStoreCore {
                 if (entry.mtime.getTime() < cutoff)
                     if (await this.store.taskDelete(prjId, entry.id))
                         purged.push(entry.id)
+            await this.retire(prjId, project, purged)
             if (purged.length > 0)
                 this.listener(prjId, { deleted: purged })
             return purged
@@ -389,16 +417,49 @@ export class TaskStoreCore {
         return (await this.read(prjId, taskId)).plan
     }
 
+    /*  allocate the next free task id according to the task id scheme, derived
+        from a title (scheme "slug") or a proposed id (scheme "any"), considering
+        all existing ids plus the additionally taken ones; for scheme "seq" the
+        allocated number is reserved by raising the high-water mark, so a
+        concurrent allocation never yields the same id  */
+    async taskNewId (prjId: string, raw: { title?: unknown, proposal?: unknown, taken?: unknown }): Promise<{ scheme: string, id: string }> {
+        if (raw.title !== undefined && typeof raw.title !== "string")
+            throw problem(400, "\"title\" has to be a string")
+        if (raw.proposal !== undefined && typeof raw.proposal !== "string")
+            throw problem(400, "\"proposal\" has to be a string")
+        if (raw.taken !== undefined && !(Array.isArray(raw.taken) && raw.taken.every((id) => typeof id === "string")))
+            throw problem(400, "\"taken\" has to be an array of strings")
+        const title    = (raw.title    ?? "") as string
+        const proposal = (raw.proposal ?? "") as string
+        const taken    = (raw.taken    ?? []) as string[]
+        return this.serialize(prjId, async () => {
+            const project = await this.project(prjId)
+            const ids     = [ ...(await this.store.taskList(prjId)).map((entry) => entry.id), ...taken ]
+            let id: string
+            try {
+                id = TaskFormat.nextTaskId(TaskFormat.parseIdScheme(project.idscheme), ids, title, proposal, project.seqmark)
+            }
+            catch (err) {
+                throw problem(422, err instanceof Error ? err.message : String(err))
+            }
+            await this.retire(prjId, project, [ id ])
+            return { scheme: project.idscheme, id }
+        })
+    }
+
     /*  create or overwrite an entire task plan, rejecting an unreachable status,
-        and on a conditional save (with the entity tag of the plan it is based
-        on) also rejecting a plan which was changed or deleted in the meantime  */
-    async taskSave (prjId: string, taskId: string, raw: unknown, ifMatch?: string): Promise<TaskSaveResult> {
+        on a conditional save (with the entity tag of the plan it is based
+        on) also rejecting a plan which was changed or deleted in the meantime,
+        and on a create-only save also rejecting an already existing plan  */
+    async taskSave (prjId: string, taskId: string, raw: unknown, ifMatch?: string, createOnly = false): Promise<TaskSaveResult> {
         return this.serialize(prjId, async () => {
             const { lifecycle } = await this.project(prjId)
             this.validateId("task", taskId)
             const prev   = await this.store.taskLoad(prjId, taskId)
             if (ifMatch !== undefined && (prev === null || taskTag(prev) !== ifMatch))
                 throw problem(412, `task "${taskId}" was ${prev === null ? "deleted" : "changed"} meanwhile in project "${prjId}"`)
+            if (createOnly && prev !== null)
+                throw problem(412, `task "${taskId}" already exists in project "${prjId}"`)
             const plan   = this.validatePlan(taskId, raw)
             const from   = prev !== null ? TaskFormat.taskStatus(prev.header, lifecycle) : lifecycle.initial
             const status = TaskFormat.taskStatus(plan.header, lifecycle)
@@ -415,7 +476,8 @@ export class TaskStoreCore {
     /*  change the status of a task plan and/or rename it to a new id  */
     async taskPatch (prjId: string, taskId: string, raw: unknown): Promise<TaskPatchResult> {
         return this.serialize(prjId, async () => {
-            const { lifecycle } = await this.project(prjId)
+            const project   = await this.project(prjId)
+            const lifecycle = project.lifecycle
             this.validateId("task", taskId)
             if (!isObject(raw))
                 throw problem(400, "request body has to be an object")
@@ -449,6 +511,7 @@ export class TaskStoreCore {
                     throw problem(404, `no task "${taskId}" in project "${prjId}"`)
                 if (status !== null)
                     await this.store.taskSave(prjId, newId, plan)
+                await this.retire(prjId, project, [ taskId ])
                 this.listener(prjId, { deleted: [ taskId ], added: { [newId]: this.entry(plan, lifecycle) } })
             }
             else {
@@ -464,10 +527,11 @@ export class TaskStoreCore {
     }
     async taskDelete (prjId: string, taskId: string): Promise<void> {
         await this.serialize(prjId, async () => {
-            await this.project(prjId)
+            const project = await this.project(prjId)
             this.validateId("task", taskId)
             if (!await this.store.taskDelete(prjId, taskId))
                 throw problem(404, `no task "${taskId}" in project "${prjId}"`)
+            await this.retire(prjId, project, [ taskId ])
             this.listener(prjId, { deleted: [ taskId ] })
         })
     }

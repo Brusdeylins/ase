@@ -16,7 +16,7 @@ import type { DOMElement }                    from "ink"
 import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
-    buildBoard, watchTasks, BoardState, byCreation, newTaskText, taskTextId, createTask, saveTask, TaskConflict, reachableStates, toneOf
+    buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -348,13 +348,14 @@ export const useBoardState = (log: Log, initial: Board) => {
         try {
             /*  conditionally save with the entity tag, to refuse overwriting changes
                 made meanwhile by others (e.g. an agent or the web board)  */
-            const next = await saveTask(log, id, text, src.tag)
+            const { id: next, warning } = await saveTask(log, id, text, src.tag)
             drafts.current.delete(id)
             if (next !== id) {
                 setSel((s) => s.id === id ? { ...s, id: next } : s)
                 setDialog((d) => d?.id === id ? { ...d, id: next } : d)
             }
-            setNotice(next !== id ? `task "${id}" saved and renamed to "${next}"` : `task "${id}" saved`)
+            setNotice((next !== id ? `task "${id}" saved and renamed to "${next}"` : `task "${id}" saved`) +
+                (warning !== "" ? ` (${warning})` : ""))
         }
         catch (err: unknown) {
             if (err instanceof TaskConflict) {
@@ -378,19 +379,19 @@ export const useBoardState = (log: Log, initial: Board) => {
         its "Id:" key; an unchanged text creates no task, and a text which failed
         to save is kept as a draft (under the empty id) for the next new task  */
     const create = async (): Promise<void> => {
-        const orig = drafts.current.get("") ?? newTaskText(all, await Task.lifecycle(log))
+        const orig = drafts.current.get("") ?? await newTaskText(log, all, await Task.lifecycle(log))
         const text = await runEditor("new-task", orig)
         if (text === orig) {
             drafts.current.delete("")
             setNotice("new task discarded")
             return
         }
-        const id = taskTextId(text)
+        const id = TaskFormat.taskTextId(text)
         try {
-            await createTask(log, id, text)
+            const warning = await createTask(log, id, text)
             drafts.current.delete("")
             setSel((s) => ({ ...s, id }))
-            setNotice(`task "${id}" created`)
+            setNotice(`task "${id}" created` + (warning !== "" ? ` (${warning})` : ""))
         }
         catch (err: unknown) {
             drafts.current.set("", text)

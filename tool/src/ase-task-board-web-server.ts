@@ -369,7 +369,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         path:    "/task-board/api/task/{id}/source",
         handler: guarded(async (request, h) => {
             const id = String(request.params.id)
-            if (!TaskFormat.ID_RE.test(id))
+            if (!TaskFormat.TASK_ID_RE.test(id))
                 return h.response({ error: `invalid task id "${id}"` }).code(400)
             const src = await Task.source(log, id)
             if (src === null)
@@ -383,7 +383,10 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         method:  "GET",
         path:    "/task-board/api/new",
         handler: guarded(async (_request, h) =>
-            h.response({ text: newTaskText(await currentBoard(log), await Task.lifecycle(log)), keymap: editorKeymap(log) }))
+            h.response({
+                text:   await newTaskText(log, await currentBoard(log), await Task.lifecycle(log)),
+                keymap: editorKeymap(log)
+            }))
     })
 
     /*  one attachment of a task plan, rendered as a document for its tab of the task dialog  */
@@ -393,7 +396,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         handler: guarded(async (request, h) => {
             const id = String(request.params.id)
             const n  = String(request.params.n)
-            if (!TaskFormat.ID_RE.test(id))
+            if (!TaskFormat.TASK_ID_RE.test(id))
                 return h.response({ error: `invalid task id "${id}"` }).code(400)
             const doc = /^\d+$/.test(n) ? await attachmentDocument(log, id, Number(n)) : null
             if (doc === null)
@@ -409,7 +412,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         handler: guarded(async (request, h) => {
             const id = String(request.params.id)
             const n  = String(request.params.n)
-            if (!TaskFormat.ID_RE.test(id))
+            if (!TaskFormat.TASK_ID_RE.test(id))
                 return h.response({ error: `invalid task id "${id}"` }).code(400)
             const a = /^\d+$/.test(n) ? await Task.attachmentContent(log, id, Number(n)) : null
             if (a === null)
@@ -466,7 +469,7 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
             const p  = request.payload as { text?: unknown, base?: unknown } | null
             if (p === null || typeof p.text !== "string" || typeof p.base !== "string")
                 return h.response({ error: "invalid save request" }).code(400)
-            let next: string
+            let next: { id: string, warning: string }
             try {
                 next = await saveTask(log, id, p.text, p.base)
             }
@@ -475,7 +478,9 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
                     return h.response({ error: err.message, base: err.tag }).code(409)
                 return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
             }
-            return h.response({ ok: true, id: next })
+            if (next.warning !== "")
+                log.write("warning", `board: ${next.warning}`)
+            return h.response({ ok: true, id: next.id })
         })
     })
 
@@ -490,14 +495,17 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
             const p  = request.payload as { text?: unknown } | null
             if (p === null || typeof p.text !== "string")
                 return h.response({ error: "invalid create request" }).code(400)
-            if (TaskFormat.ID_RE.test(id) && await Task.source(log, id) !== null)
+            if (TaskFormat.TASK_ID_RE.test(id) && await Task.source(log, id) !== null)
                 return h.response({ error: `task "${id}" already exists` }).code(409)
+            let warning: string
             try {
-                await createTask(log, id, p.text)
+                warning = await createTask(log, id, p.text)
             }
             catch (err: unknown) {
                 return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
             }
+            if (warning !== "")
+                log.write("warning", `board: ${warning}`)
             return h.response({ ok: true })
         })
     })
@@ -508,7 +516,7 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
         path:    "/task-board/api/task/{id}",
         handler: guarded(async (request, h) => {
             const id = String(request.params.id)
-            if (!TaskFormat.ID_RE.test(id))
+            if (!TaskFormat.TASK_ID_RE.test(id))
                 return h.response({ error: `invalid task id "${id}"` }).code(400)
             if (!await Task.delete(log, id))
                 return h.response({ error: `no task "${id}"` }).code(404)

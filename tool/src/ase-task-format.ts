@@ -167,8 +167,138 @@ export const resolveStates = (lifecycle: TaskLifecycle, include: string, exclude
     return states
 }
 
-/*  the id pattern of projects, tasks, and sessions  */
-export const ID_RE = /^[A-Za-z0-9_-]+$/
+/*  the id pattern of projects and sessions, and the one of tasks
+    (additionally allowing "#", as in ids like "#42", but no leading "-" or "_")  */
+export const ID_RE      = /^[A-Za-z0-9_-]+$/
+export const TASK_ID_RE = /^[A-Za-z0-9#][A-Za-z0-9#_-]*$/
+
+/*  the reserved task id of the default task of a session  */
+export const DEFAULT_TASK_ID = "default"
+
+/*  a task id scheme (see "project.task.idscheme"): "slug[:<words>]" (the first
+    <words> words of the title, lower-cased and joined with "-", default 2),
+    "seq[:<template>]" (a sequence number rendered through a sprintf-style
+    template with exactly one "%d" or "%0<width>d", default "%d"), or "any"
+    (an arbitrary id, proposed by the caller), each with the regular expression
+    "match" of its conforming ids (for "seq" capturing the sequence number)  */
+export type TaskIdScheme = (
+    { kind: "slug", words: number } |
+    { kind: "seq", prefix: string, width: number, suffix: string } |
+    { kind: "any" }
+) & { match: string }
+
+/*  the task id scheme callbacks, each mapping the optional argument
+    <arg> of "<kind>[:<arg>]" onto the scheme or an error message  */
+const idSchemes: Record<string, (arg: string | undefined) => TaskIdScheme | string> = {
+    slug: (arg) => {
+        if (arg !== undefined && !/^\d+$/.test(arg))
+            return "word count has to be a number"
+        const words = arg !== undefined ? Number.parseInt(arg, 10) : 2
+        if (words < 1 || words > 16)
+            return "word count has to be 1-16"
+        return { kind: "slug", words, match: `^[a-z][a-z0-9]*(?:-[a-z0-9]+){0,${words - 1}}(?:-[0-9]+)?$` }
+    },
+    seq: (arg) => {
+        const m = /^((?:[A-Za-z#][A-Za-z#_-]*)?)%(?:0(\d+))?d([A-Za-z#_-]*)$/.exec(arg ?? "%d")
+        if (m === null)
+            return "template has to contain exactly one \"%d\" or \"%0<width>d\" " +
+                "and otherwise only the characters [A-Za-z#_-] (but not start with \"-\" or \"_\")"
+        const width = m[2] !== undefined ? Number.parseInt(m[2], 10) : 0
+
+        /*  prefix and suffix need no quoting, as [A-Za-z#_-] are no metacharacters  */
+        const match = `^${m[1]}([0-9]${width > 0 ? `{${width},}` : "+"})${m[3]}$`
+        return { kind: "seq", prefix: m[1], width, suffix: m[3], match }
+    },
+    any: (arg) => {
+        if (arg !== undefined)
+            return "scheme takes no argument"
+        return { kind: "any", match: TASK_ID_RE.source }
+    }
+}
+
+/*  parse a task id scheme specification  */
+export const parseIdScheme = (spec: string): TaskIdScheme => {
+    const m        = /^([a-z]+)(?::(.*))?$/.exec(spec)
+    const callback = m !== null ? idSchemes[m[1]] : undefined
+    if (m === null || callback === undefined)
+        throw new Error(`invalid task id scheme "${spec}" (expected "slug[:<words>]", "seq[:<template>]", or "any")`)
+    const scheme = callback(m[2])
+    if (typeof scheme === "string")
+        throw new Error(`invalid task id scheme "${spec}" (${scheme})`)
+    return scheme
+}
+
+/*  check a task id scheme specification: returns an error (else empty)  */
+export const checkIdScheme = (spec: string): string => {
+    try {
+        parseIdScheme(spec)
+        return ""
+    }
+    catch (err) {
+        return err instanceof Error ? err.message : String(err)
+    }
+}
+
+/*  derive a slug from a title: diacritics stripped (and "ß" expanded), lower-cased,
+    and the first <words> alphanumeric words, starting with the first word
+    beginning with a letter, joined with "-"  */
+export const slugify = (title: string, words: number): string => {
+    const list = title.normalize("NFKD").replace(/\p{M}/gu, "").replace(/ß/g, "ss").toLowerCase()
+        .split(/[^a-z0-9]+/).filter((word) => word !== "")
+    const i = list.findIndex((word) => /^[a-z]/.test(word))
+    return i < 0 ? "" : list.slice(i, i + words).join("-")
+}
+
+/*  check whether a task id conforms to a task id scheme
+    (the reserved default task id always conforms)  */
+export const idConforms = (scheme: TaskIdScheme, id: string): boolean =>
+    id === DEFAULT_TASK_ID || new RegExp(scheme.match).test(id)
+
+/*  the warning (else empty) about a task id not conforming to a task id scheme  */
+export const idWarning = (spec: string, id: string): string =>
+    idConforms(parseIdScheme(spec), id) ? "" :
+        `task id "${id}" does not conform to the task id scheme "${spec}" (see "project.task.idscheme")`
+
+/*  the sequence number of a task id conforming to a "seq" task id scheme
+    (else 0, as for all ids under any other scheme)  */
+export const seqNumber = (scheme: TaskIdScheme, id: string): number =>
+    scheme.kind === "seq" ? Number.parseInt(new RegExp(scheme.match).exec(id)?.[1] ?? "0", 10) : 0
+
+/*  determine the next free task id of a task id scheme, given all existing
+    task ids: for "seq" the highest number of all conforming ids and of the
+    high-water mark "seqmark" (of the removed ids) plus one, for "slug" the slug
+    of the title, and for "any" the proposed id (sanitized, else the slug of the
+    title), where a taken slug or id gets a numeric suffix  */
+export const nextTaskId = (scheme: TaskIdScheme, ids: string[], title = "", proposal = "", seqmark = 0): string => {
+    const taken = new Set([ ...ids, DEFAULT_TASK_ID ])
+    let base: string
+    if (scheme.kind === "seq") {
+        const n = ids.reduce((max, id) => Math.max(max, seqNumber(scheme, id)), seqmark) + 1
+        return `${scheme.prefix}${String(n).padStart(scheme.width, "0")}${scheme.suffix}`
+    }
+    else if (scheme.kind === "slug")
+        base = slugify(title, scheme.words)
+    else
+        base = proposal.trim().replace(/\s+/g, "-").replace(/[^A-Za-z0-9#_-]/g, "").replace(/^[_-]+/, "") || slugify(title, 2)
+    if (base === "")
+        throw new Error(`task id scheme "${scheme.kind}" requires a ` +
+            (scheme.kind === "any" ? "proposed id or " : "") + "title with at least one word beginning with a letter")
+    let id = base
+    for (let n = 2; taken.has(id); n++)
+        id = `${base}-${n}`
+    return id
+}
+
+/*  compare two task ids in natural order (numbers by their value)  */
+export const compareIds = (a: string, b: string): number =>
+    a.localeCompare(b, "en", { numeric: true })
+
+/*  the task id of a task text: the value of the "Id:" key of its frontmatter,
+    or the empty string if absent  */
+export const taskTextId = (text: string): string => {
+    const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
+    return fm === null ? "" : (/^Id:[ \t]*(.*)$/m.exec(fm[1])?.[1].trim() ?? "")
+}
 
 /*  the fixed value of the "Type" frontmatter key  */
 export const TASK_TYPE = "text/vnd.ase.task"
@@ -262,7 +392,7 @@ export const normalizeTaskText = (id: string, text: string, lifecycle: TaskLifec
     /*  lift the heading and the glyph header lines into their frontmatter
         keys, with the task id taken from the authoritative filename-derived id  */
     if (!/^---\r?\n/.test(text)) {
-        const heading = /^#[ \t]+TASK(?:[ \t]+[A-Za-z0-9_-]+)?[ \t]*:[ \t]*(.*)$/m.exec(text)
+        const heading = /^#[ \t]+TASK(?:[ \t]+[A-Za-z0-9#][A-Za-z0-9#_-]*)?[ \t]*:[ \t]*(.*)$/m.exec(text)
         if (heading === null)
             return text
         let body    = text.replace(heading[0], "")

@@ -91,7 +91,8 @@ delete the task plan, unless `--next` pre-selects this choice.
 
 -   `--worktree`|`-w`:
     Apply the change set inside the dedicated *Git WorkTree*
-    `.ase/worktree/<id>`, derived from the *task id*, instead of the
+    `.ase/worktree/<id>`, derived from the *task id* (with any `#`
+    stripped, e.g. `#42` becomes `42`), instead of the
     current working copy. The worktree carries the branch named by the
     plan's `Branch:` key, or an equally named branch `<id>` created
     from `HEAD` if the plan targets the checked-out branch. If the
