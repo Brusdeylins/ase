@@ -1020,8 +1020,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         predecessor/successor id jumps to its task view, and the wheel scrolls it  */
     const onMouse = (btn: number, mx: number, my: number): void => {
         if (dialog !== null) {
-            /*  a click onto the tab bar (the sixth dialog row) selects the clicked
-                tab, or the previous/next tab on a scroll arrow, but never closes  */
+            /*  a click onto the " X " of the header (the second dialog row) closes  */
             const barX   = Math.floor((columns - dialogW) / 2) + 1
             const closeX = barX - 1 + dialogW - DIALOG_CLOSE
             if (btn === 0 && my === 1 && mx >= closeX && mx < closeX + 3)
@@ -1039,6 +1038,8 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 }
             }
             else if (btn === 0 && my === 5 && mx >= barX && mx < barX + dialogW - 2) {
+                /*  a click onto the tab bar (the sixth dialog row) selects the clicked
+                    tab, or the previous/next tab on a scroll arrow, but never closes  */
                 const lay  = tabLayout(tabLabels, dialog.first, dialogSel, dialogW - 2)
                 const x    = mx - barX
                 const item = lay.items.find((it) => x >= it.x && x < it.x + it.text.length)

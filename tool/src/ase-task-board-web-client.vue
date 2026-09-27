@@ -399,7 +399,10 @@ const openTask = async (id: string) => {
     if (seq !== openSeq)
         return
     if (t.error !== undefined) {
-        closeTask()
+        if (editing.value === null)
+            closeTask()
+        else
+            notice.value = { kind: "error", message: t.error }
         return
     }
 

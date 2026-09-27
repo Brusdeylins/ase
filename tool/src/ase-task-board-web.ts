@@ -100,20 +100,12 @@ const markedLoad = async (): Promise<Marked> => {
 const boxes: Record<string, string> = { "x": "done", "/": "part", "?": "open", "-": "cancel", ">": "defer", " ": "todo" }
 const boxChars = Object.fromEntries(Object.entries(boxes).map(([ char, state ]) => [ state, char ]))
 const renderPlan = async (body: string): Promise<string> => {
-    let fence: RegExp | null = null
-    const prepared = body.split(/\r?\n/).flatMap((line) => {
-        if (fence !== null) {
-            if (fence.test(line))
-                fence = null
-            return [ line ]
-        }
-        const m = line.match(/^\s*(`{3,}|~{3,})/)
-        if (m !== null) {
-            fence = new RegExp(`^\\s*${m[1][0]}{${m[1].length},}\\s*$`)
-            return [ line ]
-        }
-        return [ line
-            .replace(/^(\s*(?:[-*]|\d+[.)])\s+)\[([ x/?\->])\]/, (_m, lead: string, box: string) => `${lead}⟦box:${boxes[box]}⟧`) ]
+    let fence = ""
+    const prepared = body.split(/\r?\n/).map((line) => {
+        const outside = fence === ""
+        fence = TaskFormat.fenceTrack(fence, line)
+        return !outside || fence !== "" ? line : line
+            .replace(/^(\s*(?:[-*]|\d+[.)])\s+)\[([ x/?\->])\]/, (_m, lead: string, box: string) => `${lead}⟦box:${boxes[box]}⟧`)
     }).join("\n")
     marked ??= markedLoad()
     const html = (await marked).parse(prepared, { async: false })
@@ -390,12 +382,8 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         path:    "/task-board/api/task/{id}/source",
         handler: guarded(async (request, h) => {
             const id = String(request.params.id)
-            try {
-                Task.validateId(id)
-            }
-            catch (err: unknown) {
-                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
-            }
+            if (!TaskFormat.ID_RE.test(id))
+                return h.response({ error: `invalid task id "${id}"` }).code(400)
             const src = await Task.source(log, id)
             if (src === null)
                 return h.response({ error: `no task "${id}"` }).code(404)
@@ -410,12 +398,8 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         handler: guarded(async (request, h) => {
             const id = String(request.params.id)
             const n  = String(request.params.n)
-            try {
-                Task.validateId(id)
-            }
-            catch (err: unknown) {
-                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
-            }
+            if (!TaskFormat.ID_RE.test(id))
+                return h.response({ error: `invalid task id "${id}"` }).code(400)
             const doc = /^\d+$/.test(n) ? await attachmentDocument(log, id, Number(n)) : null
             if (doc === null)
                 return h.response({ error: "no such attachment" }).code(404)
@@ -430,12 +414,8 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         handler: guarded(async (request, h) => {
             const id = String(request.params.id)
             const n  = String(request.params.n)
-            try {
-                Task.validateId(id)
-            }
-            catch (err: unknown) {
-                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
-            }
+            if (!TaskFormat.ID_RE.test(id))
+                return h.response({ error: `invalid task id "${id}"` }).code(400)
             const a = /^\d+$/.test(n) ? await Task.attachmentContent(log, id, Number(n)) : null
             if (a === null)
                 return h.response({ error: "no such attachment" }).code(404)
