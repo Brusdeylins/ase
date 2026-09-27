@@ -50,7 +50,7 @@
                         </div>
                         <div v-if="!surface.minimized.includes(l.status)" class="cards">
                             <!--  the task carried by the keyboard, shown on top of the selected target lane  -->
-                            <div v-if="carried !== null && drag?.over === l.status" class="card held sel" :class="`tone-${carried.tone}`">
+                            <div v-if="carried !== null && drag?.over === l.status" class="card held sel carried" :class="`tone-${carried.tone}`">
                                 <div class="cbody"><span class="cid">{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}{{ carried.title }}</div>
                             </div>
                             <div v-for="c in l.cards" :key="c.id" class="card" draggable="true"

@@ -56,6 +56,7 @@ vendors = official
     --c-ground-light:  var(--color-dim-63)
     --c-accent-strong: var(--color-accent-27)
     --c-accent:        var(--color-accent-36)
+    --c-accent-light:  var(--color-accent-44)
     --c-accent-line:   var(--color-accent-52)
     --c-accent-border: var(--color-accent-54)
     --c-accent-fill:   var(--color-accent-60)
@@ -342,6 +343,50 @@ header
     border-color: var(--c-accent)
 .tone-active .cid
     background: var(--c-accent)
+
+/*  the pulse of the task boxes of active lanes (like in the TUI), drawn as a
+    ring centered onto their top border line (instead of glyphs, whose font
+    bearings would leave gaps in the line), with a dot of pulsing size,
+    in a lighter accent color (or in signal color when selected),
+    stopped on reduced motion  */
+#board .lane.active .card:not(.ghost):not(.carried)
+    position: relative
+    overflow: visible
+    &.sel::after
+        --pulse: var(--c-signal)
+    &::after
+        --pulse: var(--c-accent-light)
+        display: block
+        position: absolute
+        top: -0.5px
+        right: 12px
+        transform: translateY(-50%)
+        width: 8px
+        height: 8px
+        border: 1.25px solid var(--pulse)
+        border-radius: 50%
+        background: var(--pulse)
+        content: ""
+        animation: pulse 2.5s step-end infinite
+
+/*  the frames of the pulse (like "pulseFrames" of the TUI: "●", "◉", "⦿", "○", "⦿", "◉"):
+    10 frames of 250ms, staying on the filled circle for the first half  */
+@keyframes pulse
+    0%
+        background: var(--pulse)
+    50%
+        background: radial-gradient(circle closest-side, var(--pulse) 60%, var(--c-accent-paper) 60%)
+    60%
+        background: radial-gradient(circle closest-side, var(--pulse) 30%, var(--c-accent-paper) 30%)
+    70%
+        background: var(--c-accent-paper)
+    80%
+        background: radial-gradient(circle closest-side, var(--pulse) 30%, var(--c-accent-paper) 30%)
+    90%
+        background: radial-gradient(circle closest-side, var(--pulse) 60%, var(--c-accent-paper) 60%)
+@media (prefers-reduced-motion: reduce)
+    #board .lane.active .card:not(.ghost):not(.carried)::after
+        animation: none
 
 /*  the drag & drop of task boxes: the dragged task box, the lanes it can be
     dropped onto (filled while hovered), and the lanes it cannot be dropped onto

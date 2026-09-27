@@ -26,6 +26,7 @@ import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
 import { fitGroups }                          from "./ase-task-board-tui-view.js"
 import { dialogTabs, planLines, attachmentLines, DIALOG_CHROME, DIALOG_WIDTH } from "./ase-task-board-tui-popup.js"
 import type { PlanParts }                     from "./ase-task-board-tui-popup.js"
+import { pulseFrames }                        from "./ase-task-board-tui-style.js"
 
 /*  the selection: group, lane, and card id ("" for a lane without card focus)  */
 export type Sel = { g: number, l: number, id: string }
@@ -522,13 +523,31 @@ export const useBoardState = (log: Log, initial: Board) => {
     /*  the board is dimmed while a dialog or popup is shown  */
     const dim = dialog !== null || confirm !== null || transfer !== null
 
+    /*  pulse the tasks of active lanes, but only while any of them is actually
+        visible, in order to not needlessly re-render the board  */
+    const pulsing = view === "lanes" && !dim
+        && board.groups.slice(fit.first, fit.last + 1).some((g) => !surface.collapsed.includes(g.title)
+            && g.lanes.some((l) => l.active && !surface.minimized.includes(l.status) && (board.lanes.get(l.status)?.length ?? 0) > 0))
+    const [ pulseTick, setPulseTick ] = React.useState(0)
+    React.useEffect(() => {
+        if (!pulsing)
+            return
+        const timer = setInterval(() => {
+            setPulseTick((n) => (n + 1) % pulseFrames.length)
+        }, 250)
+        return () => {
+            clearInterval(timer)
+        }
+    }, [ pulsing ])
+    const pulse = pulsing ? pulseTick : -1
+
     return {
         log, exit, columns, rows, all, board, surface, view, setView, filter, setFilter, typing, setTyping,
         sel, setSel, dialog, setDialog, scroll, layout, notice, setNotice, carry, setCarry, cycle,
         confirm, setConfirm, transfer, setTransfer, mouse, setMouse, opening,
         cardBoxes, laneBoxes, groupBoxes, headBoxes, cardRef, laneRef, groupRef, headRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
-        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim,
+        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse,
         toggle, toggleFlag, startEdit, remove, transferTo, drop
     }
 }

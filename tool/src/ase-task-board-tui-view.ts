@@ -12,7 +12,7 @@ import { splitHeight, toneOf, cardLabel, clampLines, glueId, glueTitle } from ".
 import type { Board, Card, GroupSpec, LaneSpec, Surface } from "./ase-task-board-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
-import { palette, dashed, dashedBold, cx, isClass } from "./ase-task-board-tui-style.js"
+import { palette, dashed, dashedBold, cx, isClass, pulseFrames } from "./ase-task-board-tui-style.js"
 
 /*  shorthand for creating React elements without JSX  */
 export const h = React.createElement
@@ -50,9 +50,10 @@ export const fitGroups = (groups: GroupSpec[], collapsed: string[], first: numbe
 /*  the rendering context of the lane view, with the currently carried
     task (if any) and the lane states it can be moved to, the groups
     whose lanes show a scroll arrow on their left or right border (or -1),
+    the current pulse frame of the tasks of active lanes (or -1),
     and the registration of the rendered card, lane, and group boxes for the mouse hit-testing  */
 type ViewCtx = {
-    board: Board, surface: Surface, sel: Sel, dim: boolean, carry: Carry | null, titles: boolean, scroll: Scroll,
+    board: Board, surface: Surface, sel: Sel, dim: boolean, carry: Carry | null, titles: boolean, scroll: Scroll, pulse: number,
     cardRef:  (id: string) => (el: DOMElement | null) => void
     laneRef:  (g: number, l: number) => (el: DOMElement | null) => void
     groupRef: (g: number) => (el: DOMElement | null) => void
@@ -156,10 +157,19 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
             borderStyle: phantom ? dashed : held ? "double" : "single", borderColor: tint, borderDimColor: dim,
             height: lines.length + 2, flexDirection: "column"
         } as const
-        return h(Box, box,
-            ...lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
-                ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, ` ${line.slice(2, to)} `),
-                    line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ]))))
+        const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
+            ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, ` ${line.slice(2, to)} `),
+                line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ])))
+        if (!lane.active || ctx.pulse < 0 || moving || phantom)
+            return h(Box, box, ...text)
+
+        /*  the tasks of active lanes pulse in their top border, which hence
+            is drawn on its own above the box without its regular top border  */
+        const [ cl, cm, cr ] = held ? [ "╔", "═", "╗" ] : [ "┌", "─", "┐" ]
+        const top     = cl + cm.repeat(Math.max(0, width - 6)) + pulseFrames[ctx.pulse] + cm + cr
+        return h(Box, { key: box.key, ref: ctx.cardRef(c.id), height: lines.length + 2, flexDirection: "column" },
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, top),
+            h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: lines.length + 1 }, ...text))
     })
 
     /*  the centered indicator of the hidden cards, pushed to the bottom of the lane by a growing spacer  */
@@ -236,7 +246,7 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
 
 /*  render the lane view  */
 export const renderLanes = (ctx: BoardCtx) => {
-    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, cardRef, laneRef, groupRef } = ctx
+    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, pulse, cardRef, laneRef, groupRef } = ctx
     const total  = board.groups.length
     const shown  = fit.last - fit.first + 1
     const arrows = shown < total
@@ -251,7 +261,7 @@ export const renderLanes = (ctx: BoardCtx) => {
     const edges  = { left: fit.first > 0 ? fit.first : -1, right: fit.last < total - 1 ? fit.last : -1 }
     return [
         h(Box, { key: "board", height: boardH, paddingX: 1 },
-            ...board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup({ board, surface, sel, dim, carry, titles: surface.titles, scroll: edges, cardRef, laneRef, groupRef }, g, fit.first + i, fit.widths[i], boardH, i === fit.widths.length - 1))),
+            ...board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup({ board, surface, sel, dim, carry, titles: surface.titles, scroll: edges, pulse, cardRef, laneRef, groupRef }, g, fit.first + i, fit.widths[i], boardH, i === fit.widths.length - 1))),
         h(Box, { key: "bar", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 (arrows ? "░".repeat(off) + "█".repeat(on) + "░".repeat(Math.max(0, track - off - on)) + " · " : "") + info)),
