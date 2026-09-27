@@ -281,6 +281,52 @@ export default class ServiceCommand {
         return loadServiceContext(this.log)
     }
 
+    /*  build a fresh MCP server instance with all registered tools  */
+    private buildMcpServer (ctx: Context & { port: number }, startTime: number): McpServer {
+        const mcp = new McpServer({ name: "ase", version: pkg.version })
+        new ServiceMCP({ projectId: ctx.projectId, port: ctx.port, startTime }).register(mcp)
+        new CompatMCP().register(mcp)
+        new DiagramMCP().register(mcp)
+        new TaskMCP(this.log).register(mcp)
+        new MarkdownMCP().register(mcp)
+        new ArtifactMCP(this.log).register(mcp)
+        new SpecMCP(this.log).register(mcp)
+        new KVMCP().register(mcp)
+        new TimestampMCP().register(mcp)
+        new SleepMCP().register(mcp)
+        new GetoptMCP().register(mcp)
+        new SkillsMCP().register(mcp)
+        new WorktreeMCP().register(mcp)
+        new MintMCP().register(mcp)
+        new MetricMCP().register(mcp)
+        new ConfigMCP(this.log).register(mcp)
+        return mcp
+    }
+
+    /*  summarize the method, tool name, and capped tool arguments of an MCP request body  */
+    private static mcpBodyInfo (body: unknown): { method: string | null, info: string } {
+        const b       = body as Record<string, unknown> | null | undefined
+        const bParams = b?.params as Record<string, unknown> | null | undefined
+        const bMethod = typeof b?.method     === "string"  ? b.method          : null
+        const bName   = typeof bParams?.name === "string"  ? bParams.name      : null
+        const bArgs   = bParams?.arguments   !== undefined ? bParams.arguments : null
+        let info      = ""
+        if (bMethod !== null) {
+            info = ` [${bMethod}]`
+            if (bName !== null) {
+                info += ` ${bName}`
+                if (bArgs !== null) {
+                    /*  cap the arguments, as payload-carrying tool calls
+                        (task plans, key/value batches, etc) would
+                        otherwise dominate the entire log file  */
+                    const args = JSON.stringify(bArgs)
+                    info += ` ${args.length > LOG_ARGS_MAX ? `${args.slice(0, LOG_ARGS_MAX)}…` : args}`
+                }
+            }
+        }
+        return { method: bMethod, info }
+    }
+
     /*  service-side: bind HAPI server until "/stop" command is received or idle timeout happens  */
     private async runService (ctx: Context & { port: number }): Promise<void> {
         /*  establish HAPI HTTP/REST service  */
@@ -307,28 +353,6 @@ export default class ServiceCommand {
             lastActivity = Date.now()
             return h.continue
         })
-
-        /*  build a fresh MCP server instance with all registered tools  */
-        const buildMcpServer = (): McpServer => {
-            const mcp = new McpServer({ name: "ase", version: pkg.version })
-            new ServiceMCP({ projectId: ctx.projectId, port: ctx.port, startTime }).register(mcp)
-            new CompatMCP().register(mcp)
-            new DiagramMCP().register(mcp)
-            new TaskMCP(this.log).register(mcp)
-            new MarkdownMCP().register(mcp)
-            new ArtifactMCP(this.log).register(mcp)
-            new SpecMCP(this.log).register(mcp)
-            new KVMCP().register(mcp)
-            new TimestampMCP().register(mcp)
-            new SleepMCP().register(mcp)
-            new GetoptMCP().register(mcp)
-            new SkillsMCP().register(mcp)
-            new WorktreeMCP().register(mcp)
-            new MintMCP().register(mcp)
-            new MetricMCP().register(mcp)
-            new ConfigMCP(this.log).register(mcp)
-            return mcp
-        }
 
         /*  listen to HTTP/REST endpoints  */
         server.route({
@@ -362,25 +386,7 @@ export default class ServiceCommand {
             }
         })
         const mcpHandler = async (request: Hapi.Request, h: Hapi.ResponseToolkit, body?: unknown) => {
-            const b       = body as Record<string, unknown> | null | undefined
-            const bParams = b?.params as Record<string, unknown> | null | undefined
-            const bMethod = typeof b?.method     === "string"  ? b.method          : null
-            const bName   = typeof bParams?.name === "string"  ? bParams.name      : null
-            const bArgs   = bParams?.arguments   !== undefined ? bParams.arguments : null
-            let bodyInfo  = ""
-            if (bMethod !== null) {
-                bodyInfo = ` [${bMethod}]`
-                if (bName !== null) {
-                    bodyInfo += ` ${bName}`
-                    if (bArgs !== null) {
-                        /*  cap the arguments, as payload-carrying tool calls
-                            (task plans, key/value batches, etc) would
-                            otherwise dominate the entire log file  */
-                        const args = JSON.stringify(bArgs)
-                        bodyInfo += ` ${args.length > LOG_ARGS_MAX ? `${args.slice(0, LOG_ARGS_MAX)}…` : args}`
-                    }
-                }
-            }
+            const { method: bMethod, info: bodyInfo } = ServiceCommand.mcpBodyInfo(body)
 
             /*  log tool calls regularly, but all remaining MCP traffic
                 (session handshakes, notifications, SSE stream opens) at
@@ -388,7 +394,7 @@ export default class ServiceCommand {
             const level = bMethod === "tools/call" ? "info" : "debug"
             this.log.write(level, `mcp: ${request.method.toUpperCase()} ${request.path}${bodyInfo}`)
             const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-            const mcp       = buildMcpServer()
+            const mcp       = this.buildMcpServer(ctx, startTime)
             request.raw.res.on("close", () => {
                 /*  "h.abandon" (see below) bypasses "onPreResponse",
                     so undo the "onRequest" accounting here instead  */
