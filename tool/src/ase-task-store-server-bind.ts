@@ -423,10 +423,11 @@ export class TaskStoreServer {
             path:    T,
             options: json,
             handler: async (request, h) => {
-                /*  "If-Match: <tag>" saves only if the plan is still the one with this entity tag  */
+                /*  "If-Match: <tag>" saves only if the plan is still the one with this entity tag
+                    (ignoring the content encoding suffix hapi appends to the tag of a compressed response)  */
                 const tag = request.headers["if-match"]
                 return this.created(h, await core.taskSave(p(request).prjId, p(request).taskId, request.payload,
-                    typeof tag === "string" ? tag.replace(/^(?:W\/)?"(.*)"$/, "$1") : undefined))
+                    typeof tag === "string" ? tag.replace(/^(?:W\/)?"(.*?)(?:-(?:gzip|deflate))?"$/, "$1") : undefined))
             }
         })
         this.server.route({
