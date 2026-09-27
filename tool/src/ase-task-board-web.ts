@@ -16,12 +16,11 @@ import type { Marked }           from "marked"
 import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import { Config, configSchema, webColorDefaults, webColorNames } from "./ase-config.js"
-import { buildBoard, watchTasks, toneOf, reachableStates, BoardState, attachmentTabs, isPreflightDiff, diffTones, newTaskText, createTask, saveTask } from "./ase-task-board-core.js"
+import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isPreflightDiff, diffTones, newTaskText, createTask, saveTask, TaskConflict } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard }           from "./ase-task-board-filter.js"
-import type { Board, Card }      from "./ase-task-board-core.js"
+import type { Board }            from "./ase-task-board-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
-import { Problem }               from "./ase-task-store-core.js"
 import pkg                       from "../package.json" with { type: "json" }
 
 /*  the build stamp of the loaded code (version and content hash of the board modules
@@ -206,22 +205,6 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
     return fieldsDocument(fields, `<pre class="textart"><code>${escapeHTML(text)}</code></pre>`)
 }
 
-/*  the lane states a task can be moved to from each lane state: all
-    states directly or indirectly reachable in the lifecycle model  */
-const boardMoves = (board: Board, lifecycle: TaskFormat.TaskLifecycle): Record<string, string[]> => {
-    const states = board.groups.flatMap((g) => g.lanes.map((l) => l.status))
-    return Object.fromEntries(states.map((from) =>
-        [ from, states.filter((to) => to !== from && TaskFormat.checkStatus(lifecycle, from, to) === "") ]))
-}
-
-/*  the lane states a task with an actual status foreign to the lifecycle
-    model can be moved to (overriding the moves of its lane state)  */
-const cardMoves = (board: Board, lifecycle: TaskFormat.TaskLifecycle, card: Card): string[] | undefined => {
-    if (card.actual === card.status)
-        return undefined
-    return reachableStates(board, lifecycle, card)
-}
-
 /*  serialize the board for the browser  */
 const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
     mode:     board.mode,
@@ -229,7 +212,7 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
     version:  pkg.version,
     warnings: board.warnings,
     surface:  BoardState.load().web,
-    moves:    boardMoves(board, lifecycle),
+    moves:    laneMoves(board, lifecycle),
     groups:   board.groups.map((g) => ({
         title: g.title,
         lanes: g.lanes.map((l) => ({
@@ -484,11 +467,8 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
                 next = await saveTask(log, id, p.text, p.base)
             }
             catch (err: unknown) {
-                if (err instanceof Problem && err.status === 412) {
-                    const src   = await Task.source(log, id)
-                    const error = `task "${id}" was ${src === null ? "deleted" : "changed"} meanwhile`
-                    return h.response({ error, base: src?.tag ?? null }).code(409)
-                }
+                if (err instanceof TaskConflict)
+                    return h.response({ error: err.message, base: err.tag }).code(409)
                 return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
             }
             return h.response({ ok: true, id: next })

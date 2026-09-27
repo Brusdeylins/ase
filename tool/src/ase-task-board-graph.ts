@@ -193,6 +193,33 @@ export const drawGraphText = (board: Board, layout: GraphLayout, selected: strin
     return { lines: chars.map((r) => r.join("")), tones }
 }
 
+/*  the box of a graph node on the screen (center row/column and borders)  */
+export type Place = { r: number, c: number, top: number, bottom: number, bl: number, br: number }
+
+/*  find the nearest graph node in the direction of an arrow, as the nodes are placed
+    on the screen, preferring nodes in the same row (left/right) or column (up/down)  */
+export const nearestPlace = (places: Map<string, Place>, from: string, dir: "left" | "right" | "up" | "down"): string | undefined => {
+    const cur = places.get(from)
+    if (cur === undefined)
+        return undefined
+    let best = Infinity
+    let next: string | undefined
+    for (const [ id, p ] of places) {
+        const dr = p.r - cur.r
+        const dc = p.c - cur.c
+        const ok = dir === "right" ? dc > 0 : dir === "left" ? dc < 0 : dir === "down" ? dr > 0 : dr < 0
+        if (id === from || !ok)
+            continue
+        const score = dir === "left" || dir === "right" ?
+            Math.abs(dc) + Math.abs(dr) * 4 : Math.abs(dr) + Math.abs(dc) / 4
+        if (score < best) {
+            best = score
+            next = id
+        }
+    }
+    return next
+}
+
 /*  escape a text for embedding into SVG  */
 const escapeXML = (s: string): string =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")

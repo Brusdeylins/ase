@@ -17,15 +17,14 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, splitHeight, toneOf, watchTasks, BoardState, byCreation, cardLabel, clampLines, glueId, glueTitle,
-    attachmentTabs, isPreflightDiff, diffTones, newTaskText, taskTextId, createTask, saveTask, reachableStates
+    attachmentTabs, isPreflightDiff, diffTones, newTaskText, taskTextId, createTask, saveTask, TaskConflict, reachableStates
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, SurfaceList, SurfaceView } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
-import { Problem }                            from "./ase-task-store-core.js"
 import pkg                                    from "../package.json" with { type: "json" }
 import { filterBoard }                        from "./ase-task-board-filter.js"
-import { layoutGraph, drawGraphText }         from "./ase-task-board-graph.js"
-import type { GraphLayout }                   from "./ase-task-board-graph.js"
+import { layoutGraph, drawGraphText, nearestPlace } from "./ase-task-board-graph.js"
+import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
 import { Config, configSchema, tuiColorDefaults } from "./ase-config.js"
 
 /*  shorthand for creating React elements without JSX  */
@@ -766,33 +765,6 @@ const mouseReporting = (on: boolean): void => {
     process.stdout.write(on ? "\x1b[?1000h\x1b[?1006h" : "\x1b[?1006l\x1b[?1000l")
 }
 
-/*  the box of a graph node on the screen (center row/column and borders)  */
-type Place = { r: number, c: number, top: number, bottom: number, bl: number, br: number }
-
-/*  find the nearest graph node in the direction of an arrow, as the nodes are placed
-    on the screen, preferring nodes in the same row (left/right) or column (up/down)  */
-const nearestPlace = (places: Map<string, Place>, from: string, dir: "left" | "right" | "up" | "down"): string | undefined => {
-    const cur = places.get(from)
-    if (cur === undefined)
-        return undefined
-    let best = Infinity
-    let next: string | undefined
-    for (const [ id, p ] of places) {
-        const dr = p.r - cur.r
-        const dc = p.c - cur.c
-        const ok = dir === "right" ? dc > 0 : dir === "left" ? dc < 0 : dir === "down" ? dr > 0 : dr < 0
-        if (id === from || !ok)
-            continue
-        const score = dir === "left" || dir === "right" ?
-            Math.abs(dc) + Math.abs(dr) * 4 : Math.abs(dr) + Math.abs(dc) / 4
-        if (score < best) {
-            best = score
-            next = id
-        }
-    }
-    return next
-}
-
 /*  the root component of the terminal board  */
 const App = ({ log, initial }: { log: Log, initial: Board }) => {
     const { exit, suspendTerminal } = useApp()
@@ -1065,8 +1037,8 @@ const App = ({ log, initial }: { log: Log, initial: Board }) => {
             setNotice(next !== id ? `task "${id}" saved and renamed to "${next}"` : `task "${id}" saved`)
         }
         catch (err: unknown) {
-            if (err instanceof Problem && err.status === 412) {
-                if (await Task.source(log, id) === null) {
+            if (err instanceof TaskConflict) {
+                if (err.tag === null) {
                     drafts.current.delete(id)
                     setNotice(`task "${id}" was deleted meanwhile (edit discarded)`)
                 }

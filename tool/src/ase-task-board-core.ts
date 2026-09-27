@@ -18,6 +18,7 @@ import * as v                    from "valibot"
 import type Log                  from "./ase-lib-log.js"
 import { ensureAseGitignore }    from "./ase-config.js"
 import { Task }                  from "./ase-task.js"
+import { Problem }               from "./ase-task-store-core.js"
 import type { TaskLifecycle }    from "./ase-task-format.js"
 import * as TaskFormat           from "./ase-task-format.js"
 
@@ -461,11 +462,25 @@ export const toneOf = (board: Board, card: Card): Tone => {
     return lane?.kind === "terminal" ? "done" : lane?.active === true ? "active" : "idle"
 }
 
-/*  the lane states a card can be moved to: all states (except its own lane state)
-    directly or indirectly reachable from its actual status in the lifecycle model  */
-export const reachableStates = (board: Board, lifecycle: TaskLifecycle, card: Card): string[] =>
+/*  the lane states (except an own lane state) directly or indirectly
+    reachable from a status in the lifecycle model  */
+const reachableFrom = (board: Board, lifecycle: TaskLifecycle, from: string, own: string): string[] =>
     board.groups.flatMap((g) => g.lanes.map((l) => l.status))
-        .filter((to) => to !== card.status && TaskFormat.checkStatus(lifecycle, card.actual, to) === "")
+        .filter((to) => to !== own && TaskFormat.checkStatus(lifecycle, from, to) === "")
+
+/*  the lane states a card can be moved to, reachable from its actual status  */
+export const reachableStates = (board: Board, lifecycle: TaskLifecycle, card: Card): string[] =>
+    reachableFrom(board, lifecycle, card.actual, card.status)
+
+/*  the lane states a task can be moved to from each lane state  */
+export const laneMoves = (board: Board, lifecycle: TaskLifecycle): Record<string, string[]> =>
+    Object.fromEntries(board.groups.flatMap((g) => g.lanes.map((l) =>
+        [ l.status, reachableFrom(board, lifecycle, l.status, l.status) ])))
+
+/*  the lane states a task with an actual status foreign to the lifecycle
+    model can be moved to (overriding the moves of its lane state)  */
+export const cardMoves = (board: Board, lifecycle: TaskLifecycle, card: Card): string[] | undefined =>
+    card.actual === card.status ? undefined : reachableStates(board, lifecycle, card)
 
 /*  the pre-filled text of a new task: all frontmatter keys (the optional ones
     empty), a free placeholder id, the initial state, and the body template of the
@@ -495,9 +510,18 @@ export const taskTextId = (text: string): string => {
     return fm === null ? "" : (/^Id:[ \t]*(.*)$/m.exec(fm[1])?.[1].trim() ?? "")
 }
 
-/*  save an edited task text (conditionally with an entity tag), renaming the task
-    if the "Id:" key of its frontmatter was changed (refusing an existing target
-    id before anything is saved); returns the resulting task id  */
+/*  the conflict of saving a task which was changed meanwhile, carrying
+    its current entity tag, or null if it was deleted meanwhile  */
+export class TaskConflict extends Error {
+    constructor (public id: string, public tag: string | null) {
+        super(`task "${id}" was ${tag === null ? "deleted" : "changed"} meanwhile`)
+    }
+}
+
+/*  save an edited task text (conditionally with an entity tag, throwing a
+    TaskConflict on a mismatch), renaming the task if the "Id:" key of its
+    frontmatter was changed (refusing an existing target id before anything
+    is saved); returns the resulting task id  */
 export const saveTask = async (log: Log, id: string, text: string, tag?: string): Promise<string> => {
     const next = taskTextId(text) || id
     if (next !== id) {
@@ -506,7 +530,14 @@ export const saveTask = async (log: Log, id: string, text: string, tag?: string)
         if (await Task.source(log, next) !== null)
             throw new Error(`task "${next}" already exists`)
     }
-    await Task.save(log, id, text, tag)
+    try {
+        await Task.save(log, id, text, tag)
+    }
+    catch (err: unknown) {
+        if (err instanceof Problem && err.status === 412)
+            throw new TaskConflict(id, (await Task.source(log, id))?.tag ?? null)
+        throw err
+    }
     if (next !== id)
         await Task.rename(log, id, next)
     return next
