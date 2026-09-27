@@ -137,39 +137,50 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
                 start--
         }
     }
-    const shown = list.slice(start, end)
     const rest  = list.length - end
-    const items = shown.map((c, i) => {
-        const moving  = carried !== undefined && start + i === 0
+
+    /*  the space left besides the fully visible cards is filled by a partially
+        visible card, cut at its top above them if scrolled, else cut at its bottom below them  */
+    const part  = start > 0 || rest > 0 ? room - 1 - sum(start, end) : 0
+    const cuts  = [
+        ...(part > 0 && start > 0 ? [ { n: start - 1, cut: "top"    as const, rows: part } ] : []),
+        ...list.slice(start, end).map((_c, i) => ({ n: start + i, cut: "none" as const, rows: heights[start + i] })),
+        ...(part > 0 && start === 0 ? [ { n: end, cut: "bottom" as const, rows: part } ] : [])
+    ]
+    const items = cuts.map(({ n, cut, rows }) => {
+        const c       = list[n]
+        const moving  = carried !== undefined && n === 0
         const phantom = moved && !moving && c.id === carry?.id
         const held    = carry?.id === c.id && !phantom
         const on      = (c.id === sel.id || moving) && !dim && !phantom
         const tone    = toneOf(board, c)
         const tint    = phantom ? palette.dim : on ? palette.signal : tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
-        const lines   = labels[start + i]
+        const lines   = labels[n]
 
         /*  the task id at the start of the first line (behind the margin and
             the placeholder) is always bold and inverse, with one column of
-            spacing on each side, directly followed by the rest of the label  */
+            spacing on each side, directly followed by the rest of the label,
+            where a partially visible card loses its cut border and text lines  */
         const to      = 2 + c.id.length
         const box     = {
             key: moving ? "moving" : c.id, ...(moving ? {} : { ref: ctx.cardRef(c.id) }),
             borderStyle: phantom ? dashed : held ? "double" : "single", borderColor: tint, borderDimColor: dim,
-            height: lines.length + 2, flexDirection: "column"
+            borderTop: cut !== "top", borderBottom: cut !== "bottom", height: rows, flexDirection: "column"
         } as const
         const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
             ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, ` ${line.slice(2, to)} `),
                 line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ])))
-        if (!lane.active || ctx.pulse < 0 || moving || phantom)
+            .slice(cut === "top" ? lines.length + 1 - rows : 0, cut === "bottom" ? rows - 1 : lines.length)
+        if (!lane.active || ctx.pulse < 0 || moving || phantom || cut === "top")
             return h(Box, box, ...text)
 
         /*  the tasks of active lanes pulse in their top border, which hence
             is drawn on its own above the box without its regular top border  */
         const [ cl, cm, cr ] = held ? [ "╔", "═", "╗" ] : [ "┌", "─", "┐" ]
         const top     = cl + cm.repeat(Math.max(0, width - 6)) + pulseFrames[ctx.pulse] + cm + cr
-        return h(Box, { key: box.key, ref: ctx.cardRef(c.id), height: lines.length + 2, flexDirection: "column" },
+        return h(Box, { key: box.key, ref: ctx.cardRef(c.id), height: rows, flexDirection: "column" },
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, top),
-            h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: lines.length + 1 }, ...text))
+            ...(rows > 1 ? [ h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: rows - 1 }, ...text) ] : []))
     })
 
     /*  the centered indicator of the hidden cards, pushed to the bottom of the lane by a growing spacer  */
