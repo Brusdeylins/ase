@@ -150,7 +150,7 @@ export default class SetupCommand {
             catch (err: unknown) {
                 if (!final) {
                     this.log.write("info",
-                        `setup: attempt ${i + 1}/${retries} failed for "${cmd} ${args.join(" ")}": retrying...`)
+                        `setup: attempt ${i + 1}/${retries} failed for "${cmd} ${argsLog.join(" ")}": retrying...`)
                     await new Promise((resolve) => setTimeout(resolve, 1000))
                     continue
                 }
@@ -174,7 +174,7 @@ export default class SetupCommand {
         }
     }
 
-    /*  handler for "ase setup install" (both tools)  */
+    /*  handler for "ase setup install" (all tools)  */
     private async doInstall (tool: Tool, dev: boolean, scope: Scope): Promise<number> {
         this.requireClaudeScope(tool, scope)
         const spec = toolSpecs[tool]
@@ -196,7 +196,7 @@ export default class SetupCommand {
         return 0
     }
 
-    /*  handler for "ase setup update" (both tools)  */
+    /*  handler for "ase setup update" (all tools)  */
     private async doUpdate (tool: Tool, force: boolean, dev: boolean, scope: Scope): Promise<number> {
         this.requireClaudeScope(tool, scope)
         const spec = toolSpecs[tool]
@@ -263,7 +263,7 @@ export default class SetupCommand {
         return 0
     }
 
-    /*  handler for "ase setup enable|disable" (both tools)  */
+    /*  handler for "ase setup enable|disable" (all tools)  */
     private async doToggle (tool: Tool, scope: Scope, action: "enable" | "disable"): Promise<number> {
         this.requireClaudeScope(tool, scope)
         const spec = toolSpecs[tool]
@@ -281,7 +281,7 @@ export default class SetupCommand {
         return 0
     }
 
-    /*  handler for "ase setup uninstall" (both tools)  */
+    /*  handler for "ase setup uninstall" (all tools)  */
     private async doUninstall (tool: Tool, dev: boolean, scope: Scope): Promise<number> {
         this.requireClaudeScope(tool, scope)
         const spec = toolSpecs[tool]
@@ -941,8 +941,10 @@ export default class SetupCommand {
         try {
             text = await fs.readFile(file, "utf8")
         }
-        catch {
+        catch (err: unknown) {
             /*  missing file: start from an empty object  */
+            if ((err as NodeJS.ErrnoException).code !== "ENOENT")
+                throw err
         }
         if (text.trim() === "")
             text = "{}"
