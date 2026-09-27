@@ -181,3 +181,10 @@ on the `user` and `project` scopes only:
     colors. The `accent` color also tints the rendered task plans. The
     colors are read on each load of the web board page.
 
+-   **board.web.editor.keymap**: the key bindings of the task plan
+    editor of the web board: `default` (the standard key bindings, where
+    `Ctrl`/`⌘`+`S` saves and `ESC` cancels), `vim` (Vim key bindings,
+    where `:w` saves, `:q` cancels, and `:q!` discards), or `emacs` (Emacs
+    key bindings, where `C-x C-s` saves and `C-x C-c` cancels). The key
+    bindings are read on each start of editing.
+
