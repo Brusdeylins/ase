@@ -282,15 +282,15 @@ export const renderLanes = (ctx: BoardCtx) => {
 
 /*  render the graph view  */
 export const renderGraph = (ctx: BoardCtx) => {
-    const { board, sel, dim, layout, boardH, x, y, viewH, viewW, graphView, graphTitles, mouse } = ctx
+    const { board, sel, dim, layout, boardH, x, y, viewH, viewW, graphView, graphTitles, mouse, pulse } = ctx
     const card = sel.id !== "" ? board.cards.get(sel.id) : undefined
     if (layout === null)
         return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, ...cx("frame", "border-dim") },
             h(Text, cx("dim"), board.cards.size === 0 ? "(no tasks)" : "laying out …")),
         h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " "), h(Text, { key: "keys3" }, " ") ]
 
-    /*  draw the ELK layout  */
-    const { lines, tones } = drawGraphText(layout.board, layout.graph, sel.id, layout.titles)
+    /*  draw the ELK layout, with the active nodes pulsing  */
+    const { lines, tones } = drawGraphText(layout.board, layout.graph, sel.id, layout.titles, pulse >= 0 ? pulseFrames[pulse] : "")
     const visible = lines.slice(y, y + viewH).map((l, i) => {
         const segs = [] as { text: string, tone: string }[]
         for (let k = x; k < Math.min(l.length, x + viewW); k++) {

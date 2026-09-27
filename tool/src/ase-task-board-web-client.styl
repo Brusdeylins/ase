@@ -344,16 +344,14 @@ header
 .tone-active .cid
     background: var(--c-accent)
 
-/*  the pulse of the task boxes of active lanes (like in the TUI), drawn as a
-    ring centered onto their top border line (instead of glyphs, whose font
+/*  the pulse of the task boxes of active lanes and of the active graph nodes (like in the TUI),
+    drawn as a ring centered onto their top border line (instead of glyphs, whose font
     bearings would leave gaps in the line), with a dot of pulsing size,
     in a lighter accent color (or in signal color when selected),
     stopped on reduced motion  */
-#board .lane.active .card:not(.ghost):not(.carried)
+#board .lane.active .card:not(.ghost):not(.carried), #graph .node.tone-active:not(.context) .card
     position: relative
     overflow: visible
-    &.sel::after
-        --pulse: var(--c-signal)
     &::after
         --pulse: var(--c-accent-light)
         display: block
@@ -368,6 +366,8 @@ header
         background: var(--pulse)
         content: ""
         animation: pulse 2.5s step-end infinite
+#board .lane.active .card.sel:not(.ghost):not(.carried)::after, #graph .node.tone-active.sel:not(.context) .card::after
+    --pulse: var(--c-signal)
 
 /*  the frames of the pulse (like "pulseFrames" of the TUI: "●", "◉", "⦿", "○", "⦿", "◉"):
     10 frames of 250ms, staying on the filled circle for the first half  */
@@ -385,7 +385,7 @@ header
     90%
         background: radial-gradient(circle closest-side, var(--pulse) 60%, var(--c-accent-paper) 60%)
 @media (prefers-reduced-motion: reduce)
-    #board .lane.active .card:not(.ghost):not(.carried)::after
+    #board .lane.active .card:not(.ghost):not(.carried)::after, #graph .node.tone-active:not(.context) .card::after
         animation: none
 
 /*  the drag & drop of task boxes: the dragged task box, the lanes it can be
@@ -513,6 +513,10 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
         display: block
     .node
         cursor: pointer
+
+        /*  do not clip the pulse of the task boxes of the active nodes  */
+        foreignObject
+            overflow: visible
     .card
         box-sizing: border-box
         height: 100%

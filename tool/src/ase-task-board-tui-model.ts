@@ -16,7 +16,7 @@ import type { DOMElement }                    from "ink"
 import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
-    buildBoard, watchTasks, BoardState, byCreation, newTaskText, taskTextId, createTask, saveTask, TaskConflict, reachableStates
+    buildBoard, watchTasks, BoardState, byCreation, newTaskText, taskTextId, createTask, saveTask, TaskConflict, reachableStates, toneOf
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -525,11 +525,14 @@ export const useBoardState = (log: Log, initial: Board) => {
     /*  the board is dimmed while a dialog or popup is shown  */
     const dim = dialog !== null || confirm !== null || transfer !== null
 
-    /*  pulse the tasks of active lanes, but only while any of them is actually
-        visible, in order to not needlessly re-render the board  */
-    const pulsing = view === "lanes" && !dim
-        && board.groups.slice(fit.first, fit.last + 1).some((g) => !surface.collapsed.includes(g.title)
-            && g.lanes.some((l) => l.active && !surface.minimized.includes(l.status) && (board.lanes.get(l.status)?.length ?? 0) > 0))
+    /*  pulse the tasks of active lanes (or the active nodes of the graph), but only while
+        any of them (or its pulse) is actually visible, in order to not needlessly re-render the board  */
+    const pulsing = !dim && (view === "lanes" ?
+        board.groups.slice(fit.first, fit.last + 1).some((g) => !surface.collapsed.includes(g.title)
+            && g.lanes.some((l) => l.active && !surface.minimized.includes(l.status) && (board.lanes.get(l.status)?.length ?? 0) > 0)) :
+        layout !== null && [ ...layout.graph.nodes.values() ].some((n) => !layout.board.context.has(n.id)
+            && toneOf(layout.board, layout.board.cards.get(n.id)!) === "active"
+            && n.y >= y && n.y < y + viewH && n.x + n.w - 3 >= x && n.x + n.w - 3 < x + viewW))
     const [ pulseTick, setPulseTick ] = React.useState(0)
     React.useEffect(() => {
         if (!pulsing)

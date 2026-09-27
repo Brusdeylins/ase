@@ -115,8 +115,9 @@ const junction: Record<number, string> = {
     character and a tone for coloring: the node tones "done", "active",
     "idle", and "sel" (selected node) with a "-frame" suffix on the box border,
     an "-id" suffix on the task id, a "-title" suffix on the rest of the label, and
-    "edge" or "edge-sel" (an edge touching the selected node)  */
-export const drawGraphText = (board: Board, layout: GraphLayout, selected: string, titles = false) => {
+    "edge" or "edge-sel" (an edge touching the selected node), with a given pulse
+    glyph (if any) in the top border of the active nodes (like in the lane view)  */
+export const drawGraphText = (board: Board, layout: GraphLayout, selected: string, titles = false, pulse = "") => {
     const W     = layout.width + 2
     const H     = layout.height + 1
     const mask  = Array.from({ length: H }, () => new Array<number>(W).fill(0))
@@ -163,7 +164,8 @@ export const drawGraphText = (board: Board, layout: GraphLayout, selected: strin
     /*  node boxes on top, where a context node (of a filtered graph) is dimmed and dashed  */
     for (const n of layout.nodes.values()) {
         const ctx   = board.context.has(n.id)
-        const tone  = n.id === selected ? "sel" : ctx ? "done" : toneOf(board, board.cards.get(n.id)!)
+        const base  = ctx ? "done" : toneOf(board, board.cards.get(n.id)!)
+        const tone  = n.id === selected ? "sel" : base
         const hor   = ctx ? "╌" : "─"
         const ver   = ctx ? "╎" : "│"
         for (let y = n.y; y < n.y + n.h && y < H; y++)
@@ -176,6 +178,9 @@ export const drawGraphText = (board: Board, layout: GraphLayout, selected: strin
                     bot ? (lft ? "└" : rgt ? "┘" : hor) : (lft || rgt ? ver : " ")
                 tones[y][x] = top || bot || lft || rgt ? `${tone}-frame` : tone
             }
+        if (pulse !== "" && base === "active")
+            chars[n.y][n.x + n.w - 3] = pulse
+
         /*  the label lines, with the task id at the start of the first line
             (behind the placeholder, and with one column of spacing on each side of it)  */
         nodeLines(board, n.id, titles, n.w).forEach((line, k) => {
