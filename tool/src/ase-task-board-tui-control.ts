@@ -398,6 +398,14 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         }
         return
     }
+    if ((key.home || key.end) && carry === null) {
+        /*  jump to the first or last item of the selected lane, scrolling it to its top or bottom  */
+        const items = groupItems(board, sel.g, surface).filter((it) => it.l === sel.l)
+        const next  = key.home ? items[0] : items[items.length - 1]
+        if (next !== undefined)
+            setSel(next)
+        return
+    }
     if ((key.upArrow || key.downArrow) && carry === null) {
         /*  within a collapsed group, the items are the lanes themselves  */
         const items = groupItems(board, sel.g, surface)
