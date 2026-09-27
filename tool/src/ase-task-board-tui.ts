@@ -580,11 +580,7 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
         return h(Box, box,
             ...lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
                 ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", bold: true, inverse: true }, ` ${line.slice(2, to)} `),
-                    line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ]))),
-
-            /*  a carried task shows the move icon in the top left of its border  */
-            ...(held ? [ h(Box, { key: "held", position: "absolute", top: -1, left: 0 },
-                h(Text, { color: tint, bold: true, dimColor: dim }, "⇅")) ] : []))
+                    line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ]))))
     })
 
     /*  the centered indicator of the hidden cards, pushed to the bottom of the lane by a growing spacer  */

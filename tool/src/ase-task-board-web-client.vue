@@ -20,7 +20,6 @@
                 </span>
             </span>
         </span>
-        <span class="warn">{{ warning }}</span>
     </header>
     <div id="view">
         <div v-show="view === 'lanes'" id="board" ref="boardEl" :class="{ titles }" @scroll="updateScroll">
@@ -75,6 +74,7 @@
         <button :style="{ visibility: scroll.all ? 'hidden' : 'visible' }" @click="scrollBy(240)">▶</button>
     </div>
     <footer>
+        <div class="status">{{ warning }}</div>
         <div v-for="(line, k) in hints" :key="k">
             <template v-for="(hint, i) in line" :key="hint.key">
                 <template v-if="i > 0"> · </template><kbd>{{ hint.key }}</kbd> {{ hint.action }}

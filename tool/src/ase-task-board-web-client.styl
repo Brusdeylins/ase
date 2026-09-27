@@ -165,7 +165,7 @@ header
 #board
     display: flex
     gap: 12px
-    height: calc(100vh - 165px)
+    height: calc(100vh - 182px)
     overflow-x: auto
 .group
     display: flex
@@ -346,16 +346,12 @@ header
 #board .card.sel .cid, #graph .node.sel .cid
     background: var(--c-signal)
 
-/*  the task carried by the keyboard (like in the TUI): held with a double border
-    and the move icon, and while shown on a target lane, a dim dashed ghost at its origin  */
+/*  the task carried by the keyboard (like in the TUI): held with a double border,
+    and while shown on a target lane, a dim dashed ghost at its origin  */
 #board .card.held
     border-style: double
     border-width: 3px
     padding: 6px 8px
-    .cbody::before
-        content: "⇅"
-        margin-right: 6px
-        font-weight: bold
 #board .card.ghost
     background: none
     border-style: dashed
@@ -385,6 +381,14 @@ footer
     color: var(--c-text-soft)
     font-size: 0.8125rem
 
+    /*  the status line, right before the key hints (keeping its height while empty)  */
+    .status
+        min-height: 1.3em
+        overflow: hidden
+        white-space: nowrap
+        text-overflow: ellipsis
+        color: var(--c-signal)
+
 /*  the key caps of the board footer and the dialog footer  */
 footer kbd, #dlg .dfoot kbd
     display: inline-block
@@ -397,7 +401,7 @@ footer kbd, #dlg .dfoot kbd
 
 /*  the graph view  */
 #graph
-    height: calc(100vh - 124px)
+    height: calc(100vh - 141px)
     overflow: auto
     background: var(--c-ground-light)
     border: 1px solid var(--c-border-soft)
