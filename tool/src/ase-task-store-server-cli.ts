@@ -539,8 +539,9 @@ export default class TaskStoreCommand {
             .option("-c, --cors <origin>", "allow cross-origin browser requests from <origin> " +
                 "(repeatable, \"*\" for any origin; default: the configured ones)",
             (value: string, previous: string[]) => [ ...previous, value ], [] as string[])
-            .option("-m, --module <name>", "storage plugin to load: \"ase\" for the built-in one, else the NPM " +
-                "package \"ase-task-store-<name>\" (default: the configured \"storage.plugin\", else \"ase\")")
+            .option("-m, --module <name>", "storage plugin to load: \"ase\" for the built-in one, \"github\" for the " +
+                "built-in GitHub Issues one, else the NPM package \"ase-task-store-<name>\" " +
+                "(default: the configured \"storage.plugin\", else \"ase\")")
             .option("-d, --basedir <dir>", "base directory of the built-in storage plugin " +
                 "(default: the configured \"storage.options.basedir\", else \"tasks\" below the per-user config dir)")
             .option("-s, --solo", "let the built-in storage plugin store a single project flat in the base " +

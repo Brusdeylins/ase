@@ -18,17 +18,23 @@ const pluginMethods = [
     "taskList", "taskLoad", "taskSave", "taskDelete", "taskRename"
 ] as const
 
-/*  the name of the built-in storage plugin  */
+/*  the name of the default built-in storage plugin, and the modules of all built-in ones  */
 export const BUILTIN_PLUGIN = "ase"
+const builtinPlugins: Record<string, string> = {
+    ase:    "./ase-task-store-plugin-ase.js",
+    github: "./ase-task-store-plugin-github.js"
+}
 
 /*  resolve a storage plugin name onto its module specifier: the name
-    "ase" (or no name) selects the built-in plugin, any other plain name
-    selects the NPM package "ase-task-store-<name>", a relative or
-    absolute path is taken as a local module, and anything else is
-    passed through as a module specifier  */
+    "ase" (or no name) selects the default built-in plugin, "github" the
+    built-in GitHub Issues plugin, any other plain name selects the NPM
+    package "ase-task-store-<name>", a relative or absolute path is taken
+    as a local module, and anything else is passed through as a module specifier  */
 export const resolveTaskStoragePlugin = (name: string | null): string => {
-    if (name === null || name === "" || name === BUILTIN_PLUGIN)
-        return new URL("./ase-task-store-plugin-ase.js", import.meta.url).href
+    if (name === null || name === "")
+        name = BUILTIN_PLUGIN
+    if (Object.hasOwn(builtinPlugins, name))
+        return new URL(builtinPlugins[name], import.meta.url).href
     if (/^[A-Za-z0-9_-]+$/.test(name))
         return `ase-task-store-${name}`
     if (name.startsWith(".") || path.isAbsolute(name))
@@ -73,6 +79,8 @@ export const loadTaskStoragePlugin = async (name: string | null, ctx: API.TaskSt
         throw new Error(`task store: storage plugin "${name}" provides a non-function "lock" property`)
     if (plugin.fileRead !== undefined && typeof plugin.fileRead !== "function")
         throw new Error(`task store: storage plugin "${name}" provides a non-function "fileRead" property`)
+    if (plugin.watch !== undefined && typeof plugin.watch !== "function")
+        throw new Error(`task store: storage plugin "${name}" provides a non-function "watch" property`)
     if (plugin.projectMark !== undefined && typeof plugin.projectMark !== "function")
         throw new Error(`task store: storage plugin "${name}" provides a non-function "projectMark" property`)
     return plugin
@@ -130,6 +138,11 @@ export class TaskStore {
     taskSave   (prjId: string, taskId: string, plan: API.TaskPlan): Promise<API.WriteResult>      { return this.plugin.taskSave(prjId, taskId, plan)      }
     taskDelete (prjId: string, taskId: string):                 Promise<boolean>          { return this.plugin.taskDelete(prjId, taskId)          }
     taskRename (prjId: string, oldId: string, newId: string):   Promise<boolean>          { return this.plugin.taskRename(prjId, oldId, newId)    }
+
+    /*  delegate the optional observation of changes made outside of the plugin (a no-op if unsupported)  */
+    watch (listener: (prjId: string, change: API.TaskChange) => void): void {
+        this.plugin.watch?.(listener)
+    }
 
     /*  delegate the optional referenced file reading (null if unsupported)  */
     get canReadFiles (): boolean { return this.plugin.fileRead !== undefined }

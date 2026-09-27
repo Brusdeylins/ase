@@ -22,9 +22,9 @@ import * as Core                                          from "./ase-task-store
 import * as TaskFormat                                    from "./ase-task-format.js"
 
 /*  the client-side view onto a task store, either the in-process
-    REST API functionality on the built-in storage plugin (a local
-    "ase:<path>" store) or the remote REST API (an "ase[s]://<addr>:<port>[/<token>]"
-    store); a missing task plan is reported as null resp. false; the
+    REST API functionality on a built-in storage plugin (a local
+    "ase:<path>" or "github:<owner>/<repo>" store) or the remote REST API (an
+    "ase[s]://<addr>:<port>[/<token>]" store); a missing task plan is reported as null resp. false; the
     effective lifecycle model and task id scheme are known after the opening only  */
 export interface TaskStoreClient {
     lifecycle: TaskFormat.TaskLifecycle
@@ -43,25 +43,31 @@ export interface TaskStoreClient {
     content (id: string, index: number): Promise<{ type: string, content: Buffer } | null>
 }
 
-/*  the opened storage delegate of a local store, shared by reference count  */
+/*  the built-in storage plugin of a local store: its name, its options,
+    and the key identifying the store (e.g. its base directory)  */
+export type LocalTaskStorage = { plugin: string, options: Record<string, unknown>, key: string }
+
+/*  the opened storage delegate of a local store, shared by reference count,
+    together with the listeners of its change events  */
 interface LocalTaskStoreShared {
-    refs:   number
-    opened: Promise<{ store: Delegate.TaskStore, core: Core.TaskStoreCore }>
+    refs:      number
+    listeners: Set<Core.EventListener>
+    opened:    Promise<{ store: Delegate.TaskStore, core: Core.TaskStoreCore }>
 }
 
 /*  the local client: the REST API functionality operating in-process
-    on the built-in storage plugin in "solo" mode, with the project
+    on a built-in storage plugin (the "ase" one in "solo" mode), with the project
     registered under its configured lifecycle model and task id scheme on every open  */
 export class LocalTaskStoreClient implements TaskStoreClient {
     /*  the storage delegates, shared by all concurrently open clients of the
-        same store (keyed by base directory only, as the lifecycle model and task
+        same store (keyed by the store only, as the lifecycle model and task
         id scheme are re-registered on every open and hence survive a switch without a
         second delegate), so its per-project queue serializes in-process, too  */
     private static shared = new Map<string, LocalTaskStoreShared>()
     private entry: LocalTaskStoreShared | undefined
     private core!: Core.TaskStoreCore
     constructor (private prjId: string, public lifecycle: TaskFormat.TaskLifecycle, public idscheme: string,
-        private basedir: string, private log: Log) {}
+        private storage: LocalTaskStorage, private log: Log) {}
     /*  persist a configuration key on scope "project" (which the local store always follows)  */
     private configure (key: string, value: string): void {
         const cfg = new Config("config", configSchema, this.log, parseScope("project"))
@@ -93,20 +99,24 @@ export class LocalTaskStoreClient implements TaskStoreClient {
         }
     }
     async open (): Promise<void> {
-        let entry = LocalTaskStoreClient.shared.get(this.basedir)
+        let entry = LocalTaskStoreClient.shared.get(this.storage.key)
         if (entry === undefined) {
+            const listeners = new Set<Core.EventListener>()
             const opened = (async () => {
-                const plugin = await Delegate.loadTaskStoragePlugin(Delegate.BUILTIN_PLUGIN, {
-                    options: { basedir: this.basedir, solo: true, lifecycle: this.lifecycle.name, idscheme: this.idscheme },
+                const plugin = await Delegate.loadTaskStoragePlugin(this.storage.plugin, {
+                    options: this.storage.options,
                     log:     (level, message) => this.log.write(level, `task: store: ${message}`)
                 })
                 const store = new Delegate.TaskStore(plugin)
-                const core  = new Core.TaskStoreCore(store)
+                const core  = new Core.TaskStoreCore(store, (prjId, frame) => {
+                    for (const listener of listeners)
+                        listener(prjId, frame)
+                })
                 await store.open()
                 return { store, core }
             })()
-            entry = { refs: 0, opened }
-            LocalTaskStoreClient.shared.set(this.basedir, entry)
+            entry = { refs: 0, listeners, opened }
+            LocalTaskStoreClient.shared.set(this.storage.key, entry)
         }
         entry.refs++
         this.entry = entry
@@ -125,8 +135,8 @@ export class LocalTaskStoreClient implements TaskStoreClient {
             return
         this.entry = undefined
         if (--entry.refs === 0) {
-            if (LocalTaskStoreClient.shared.get(this.basedir) === entry)
-                LocalTaskStoreClient.shared.delete(this.basedir)
+            if (LocalTaskStoreClient.shared.get(this.storage.key) === entry)
+                LocalTaskStoreClient.shared.delete(this.storage.key)
             await entry.opened.then((opened) => opened.store.close(), () => {})
         }
     }
@@ -156,6 +166,35 @@ export class LocalTaskStoreClient implements TaskStoreClient {
     }
     content (id: string, index: number): Promise<{ type: string, content: Buffer } | null> {
         return this.missing(() => this.core.attachmentContent(this.prjId, id, String(index)), null)
+    }
+
+    /*  subscribe to the change events of the project, i.e. the changes made
+        in-process plus the ones detected by the storage plugin itself (e.g.
+        by polling a remote storage), keeping the store opened meanwhile and
+        reporting it as connected once opened; returns a function to unsubscribe  */
+    subscribe (onChange: () => void, onState?: (connected: boolean) => void): () => void {
+        const listener: Core.EventListener = (prjId) => {
+            if (prjId === this.prjId)
+                onChange()
+        }
+        let stopped = false
+        const start = async (): Promise<void> => {
+            await this.open()
+            if (stopped)
+                await this.close()
+            else {
+                this.entry?.listeners.add(listener)
+                onState?.(true)
+            }
+        }
+        start().catch((err: unknown) => {
+            this.log.write("warning", `task: store: subscription failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+        return () => {
+            stopped = true
+            this.entry?.listeners.delete(listener)
+            this.close().catch(() => {})
+        }
     }
 }
 

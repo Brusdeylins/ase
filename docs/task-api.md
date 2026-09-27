@@ -1322,7 +1322,10 @@ reports it under `deleted`, a purge reports all purged plans under
 `deleted` in a *single* frame (no frame if nothing was purged), and a
 rename reports the *old* task id under `deleted` and the *new* task id
 under `added` (after an accompanying status change was applied). Only
-changes made through the API are reported.
+changes made through the API are reported, plus the changes a storage
+plugin detects itself through its optional `watch` method (like the
+issue changes made on GitHub, see *GitHub storage plugin* below),
+reported with all three parts under `updated`.
 
 Messages sent by the client are ignored. Ping frames are answered with
 pong frames as per RFC 6455.
@@ -1458,6 +1461,14 @@ export type TaskEntry = {
     newly created or an existing one updated  */
 export type WriteResult = "created" | "updated"
 
+/*  the task plans of a project changed outside of the plugin instance
+    (e.g. by another client of a remote storage), as detected by the plugin itself  */
+export type TaskChange = {
+    added?:   TaskEntry[]
+    updated?: TaskEntry[]
+    deleted?: string[]
+}
+
 /*  the context handed to the plugin at load time: the verbatim
     "storage.options" configuration and a logging function  */
 export type TaskStorageContext = {
@@ -1524,6 +1535,11 @@ export interface TaskStoragePlugin {
         target does not exist  */
     taskRename (prjId: string, oldId: string, newId: string): Promise<boolean>
 
+    /*  optionally observe the changes of task plans made outside of the plugin
+        instance: the listener is registered before "open" and called with the
+        changes of a project between "open" and "close"  */
+    watch? (listener: (prjId: string, change: TaskChange) => void): void
+
     /*  optionally read the content of a file referenced by the "File"
         key of an attachment, relative to the storage location of the
         project; returns null if it does not exist or escapes this location  */
@@ -1548,6 +1564,7 @@ The division of labor between server and plugin is:
 | Request serialization (per-project queue)         | ✓      |        |
 | Cross-process locking (optional `lock` method)    |        | ✓      |
 | Referenced file content (optional `fileRead`)     |        | ✓      |
+| External change detection (optional `watch`)      |        | ✓      |
 | Sequence number high-water mark calculation       | ✓      |        |
 | High-water mark persistence (`projectMark`)       |        | ✓      |
 | Purge by age (list plus delete)                   | ✓      |        |
@@ -1557,3 +1574,61 @@ The division of labor between server and plugin is:
 | Task plan persistence and modification time       |        | ✓      |
 | Task title extraction in listing                  |        | ✓      |
 | Textual task format (built-in `ase` plugin only)  |        | ✓      |
+
+GITHUB STORAGE PLUGIN
+---------------------
+
+The built-in `github` plugin (`ase-task-store-plugin-github.ts`,
+selected by `--module github` or the `github:`*owner*`/`*repo* form of
+`project.task.store`) persists the task plans as the *issues* of GitHub
+repositories, through the GitHub REST API. It takes the options `token`
+(default: `$GITHUB_TOKEN`, else `$GH_TOKEN`), `repos` (mapping each
+project id onto its *owner*`/`*repo*), and `poll` (the polling interval
+of the change detection in seconds, default `60`, `0` disables it):
+
+```yaml
+storage:
+    plugin: github
+    options:
+        token: ghp_[...]
+        repos:
+            ase: rse/ase
+```
+
+A project is registered by the label `ase:project` of its repository,
+carrying the lifecycle model and task id scheme in its description.
+The task id scheme has to be a `seq` one (like `seq:#%d`), as a task id
+*is* the issue number rendered through its template: every issue of the
+repository which is no pull request is a task plan, a new task plan can
+only be created under the id of the next issue number (which the
+allocation of a new task id always yields, as the high-water mark of
+the project is the highest issue or pull request number), and a task
+plan cannot be renamed. The task plans map onto the issues as follows:
+
+| Task plan                    | GitHub issue                                                     |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `#   TASK:` *title* heading  | issue title                                                      |
+| body (without heading)       | issue body                                                       |
+| `Status`                     | state (closed for finished states, as "not planned" for          |
+|                              | `CANCELLED`), refined by the label `ase:Status:`*state*          |
+| `Tags`                       | labels (except the reserved `ase:` ones)                         |
+| `Assignee`                   | assignee, if assignable, else the label `ase:Assignee:`*name*    |
+| `Phase`                      | milestone (created on demand)                                    |
+| `Group`                      | parent issue (sub-issues)                                        |
+| `After`                      | blocking issues ("blocked by" dependencies)                      |
+| `Created`, `Modified`        | creation and update time (read-only)                             |
+| any other key                | label `ase:`*key*`:`*value* (removed from the repository once    |
+|                              | unused)                                                          |
+| attachments                  | comments (with a hidden metadata header, the data fenced unless  |
+|                              | Markdown), where any other comment reads as a `text/markdown`    |
+|                              | attachment                                                       |
+
+A `Group` or `After` value has to reference an existing task plan of
+the same repository. Deleting a task plan *soft-deletes* its issue: it
+is closed as "not planned" and labeled `ase:deleted`, which hides it
+from the task plans. The plugin detects the changes of the issues made
+outside of it by *polling* the issues updated since the last poll,
+conditionally through the entity tag of the last poll (a `304` answer
+does not count against the rate limit), and reports them through its
+`watch` method, so they are delivered as events. Issues deleted on
+GitHub itself are not reported, as GitHub reports no deletions.

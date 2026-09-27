@@ -81,7 +81,29 @@ const KEY_RE = /^[A-Za-z]+$/
     delegating the persistence into the storage plugin behind the
     "TaskStore"; every failure is a "Problem" carrying its HTTP status  */
 export class TaskStoreCore {
-    constructor (private store: Delegate.TaskStore, private listener: EventListener = () => {}) {}
+    constructor (private store: Delegate.TaskStore, private listener: EventListener = () => {}) {
+        store.watch((prjId, change) => this.external(prjId, change))
+    }
+
+    /*  emit the changes of task plans detected by the storage plugin itself (made
+        outside of this core), serialized with the operations of the project  */
+    private external (prjId: string, change: API.TaskChange): void {
+        this.serialize(prjId, async () => {
+            const { lifecycle } = await this.project(prjId)
+            const entry = (e: API.TaskEntry): EventEntry =>
+                ({ status: TaskFormat.taskStatus(e.header, lifecycle), title: e.title })
+            const added   = change.added   ?? []
+            const updated = change.updated ?? []
+            const deleted = change.deleted ?? []
+            this.listener(prjId, {
+                ...(added.length   > 0 ? { added:   Object.fromEntries(added.map((e) => [ e.id, entry(e) ])) } : {}),
+                ...(updated.length > 0 ? { updated: Object.fromEntries(updated.map((e) => [ e.id, { ...entry(e), parts: [ "header", "body", "attachment" ] } ])) } : {}),
+                ...(deleted.length > 0 ? { deleted } : {})
+            })
+        }).catch(() => {
+            /*  a project unregistered meanwhile has nothing to notify  */
+        })
+    }
 
     /*  ==== validation helpers ====  */
 

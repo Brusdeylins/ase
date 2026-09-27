@@ -44,6 +44,14 @@ export type TaskEntry = {
     newly created or an existing one updated  */
 export type WriteResult = "created" | "updated"
 
+/*  the task plans of a project changed outside of the plugin instance
+    (e.g. by another client of a remote storage), as detected by the plugin itself  */
+export type TaskChange = {
+    added?:   TaskEntry[]
+    updated?: TaskEntry[]
+    deleted?: string[]
+}
+
 /*  the context handed to the plugin at load time: the verbatim
     "storage.options" configuration and a logging function  */
 export type TaskStorageContext = {
@@ -110,6 +118,11 @@ export interface TaskStoragePlugin {
         the source did not exist; the server guarantees that the
         target does not exist  */
     taskRename (prjId: string, oldId: string, newId: string): Promise<boolean>
+
+    /*  optionally observe the changes of task plans made outside of the plugin
+        instance: the listener is registered before "open" and called with the
+        changes of a project between "open" and "close"  */
+    watch? (listener: (prjId: string, change: TaskChange) => void): void
 
     /*  optionally read the content of a file referenced by the "File"
         key of an attachment, relative to the storage location of the

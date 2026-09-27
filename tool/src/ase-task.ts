@@ -19,13 +19,14 @@ import type { McpServer }                                 from "@modelcontextpro
 import type Log                                           from "./ase-lib-log.js"
 import { Config }                                         from "./ase-config-core.js"
 import { configSchema }                                   from "./ase-config-schema.js"
-import { parseScope }                                     from "./ase-config-scope.js"
+import { parseScope, userStateDir }                       from "./ase-config-scope.js"
 import { Markdown }                                       from "./ase-service-markdown.js"
 import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
 import TaskStoreCommand, { storeSchema }                  from "./ase-task-store-server-cli.js"
 import { urlHost }                                        from "./ase-task-store-server-bind.js"
 import * as API                                           from "./ase-task-store-plugin-api.js"
 import * as Core                                          from "./ase-task-store-core.js"
+import * as Delegate                                      from "./ase-task-store-plugin-delegate.js"
 import * as TaskFormat                                    from "./ase-task-format.js"
 import type { TaskStoreClient }                           from "./ase-task-store-client.js"
 import { LocalTaskStoreClient, RemoteTaskStoreClient }    from "./ase-task-store-client.js"
@@ -297,18 +298,49 @@ export class Task {
             "(set $ASE_TASK_STORE_TOKEN, \"project.task.token\" on scope \"user\", or \"/<token>\" in the URL)")
     }
 
+    /*  warn about task plans being sent to a GitHub repository selected on a repository-supplied
+        scope, once per project root and repository only (persisted across processes), so the
+        warning re-appears only if the repository changes  */
+    private static warnRepository (log: Log, repo: string, scope: string): void {
+        const file = path.join(userStateDir(), "task-github.json")
+        const root = Task.projectRoot()
+        let seen: Record<string, string> = {}
+        try {
+            const data: unknown = JSON.parse(fs.readFileSync(file, "utf8"))
+            if (typeof data === "object" && data !== null && !Array.isArray(data))
+                seen = data as Record<string, string>
+        }
+        catch {
+            /*  no (valid) state yet  */
+        }
+        if (seen[root] === repo)
+            return
+        log.write("warning", `task: sending task plans to GitHub repository "${repo}" selected by ` +
+            `"project.task.store" on scope "${scope}" -- verify you trust this repository ` +
+            "(reported once per repository only)")
+        seen[root] = repo
+        try {
+            fs.mkdirSync(path.dirname(file), { recursive: true })
+            fs.writeFileSync(file, JSON.stringify(seen, null, 4) + "\n", "utf8")
+        }
+        catch {
+            /*  best-effort only (the warning then repeats)  */
+        }
+    }
+
     /*  create the (unopened) client of the configured task store: the
         URL "ase://<addr>:<port>[/<token>]" selects a remote task store
         server via HTTP, "ases://<addr>:<port>[/<token>][?insecure]" via
-        HTTPS (optionally without certificate verification), and
+        HTTPS (optionally without certificate verification),
         "ase:<path>" the built-in storage plugin in-process on <path>
-        (resolved relative to the project root)  */
+        (resolved relative to the project root), and "github:<owner>/<repo>"
+        the built-in GitHub storage plugin in-process on the repository  */
     private static client (log: Log): TaskStoreClient {
         const spec = Task.spec(log)
         const { projectId, store, lifecycle, idscheme } = spec
         const unsupported = () => new Error(`task: unsupported "project.task.store" URL "${store.value}" ` +
             "(expected: \"ase:<path>\", \"ase://<addr>:<port>[/<token>]\", " +
-            "or \"ases://<addr>:<port>[/<token>][?insecure]\")")
+            "\"ases://<addr>:<port>[/<token>][?insecure]\", or \"github:<owner>/<repo>\")")
         let client: TaskStoreClient
         let m: RegExpExecArray | null
         if ((m = /^(ases?):\/\//.exec(store.value)) !== null) {
@@ -355,7 +387,25 @@ export class Task {
                     throw new Error(`task: "project.task.store" "${store.value}" on scope "${store.scope}" ` +
                         "must not escape the project root (configure it on scope \"user\" instead)")
             }
-            client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, basedir, log)
+            client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, {
+                plugin:  Delegate.BUILTIN_PLUGIN,
+                options: { basedir, solo: true, lifecycle: lifecycle.name, idscheme },
+                key:     basedir
+            }, log)
+        }
+        else if ((m = /^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/.exec(store.value)) !== null) {
+            /*  warn about task plans being sent to a repository selected on a repository-supplied
+                scope, and use the token of "project.task.token", else $GITHUB_TOKEN resp. $GH_TOKEN  */
+            if (store.scope === "project" || store.scope.startsWith("task:"))
+                Task.warnRepository(log, m[1], store.scope)
+            if (spec.token.value !== "" && spec.token.scope !== "user")
+                log.write("warning", `task: "project.task.token" found on scope "${spec.token.scope}" ` +
+                    "-- configure it on scope \"user\" only")
+            client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, {
+                plugin:  "github",
+                options: { repos: { [projectId]: m[1] }, ...(spec.token.value !== "" ? { token: spec.token.value } : {}) },
+                key:     `${store.value}#${projectId}`
+            }, log)
         }
         else
             throw unsupported()
@@ -486,12 +536,15 @@ export class Task {
     }
 
     /*  subscribe to the change events of a remote task store (reconnecting
-        automatically, and reporting each change of the connection state);
-        returns null for a local task store, whose changes have to be
-        watched via its directory (see localDir)  */
+        automatically) or an in-process GitHub one (polling), reporting each
+        change of the connection state; returns null for a local "ase:<path>"
+        task store, whose changes have to be watched via its directory (see localDir)  */
     static subscribe (log: Log, onChange: () => void, onState?: (connected: boolean) => void): (() => void) | null {
+        if (Task.localDir(log) !== null)
+            return null
         const client = Task.client(log)
-        return client instanceof RemoteTaskStoreClient ? client.subscribe(onChange, onState) : null
+        return client instanceof RemoteTaskStoreClient || client instanceof LocalTaskStoreClient ?
+            client.subscribe(onChange, onState) : null
     }
 
     /*  list all persisted tasks (see list) with their flattened header keys,
