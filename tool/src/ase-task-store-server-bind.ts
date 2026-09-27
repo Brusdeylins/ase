@@ -61,8 +61,8 @@ export class TaskStoreServer {
             routes: {
                 cors: options.cors.length === 0 ? false : {
                     origin:         options.cors,
-                    headers:        [ "Authorization", "Content-Type", "If-None-Match" ],
-                    exposedHeaders: [ "Location" ],
+                    headers:        [ "Authorization", "Content-Type", "If-None-Match", "If-Match" ],
+                    exposedHeaders: [ "Location", "ETag" ],
                     maxAge:         86400
                 }
             }
@@ -413,15 +413,21 @@ export class TaskStoreServer {
         this.server.route({
             method:  "GET",
             path:    T,
-            handler: async (request) =>
-                core.taskLoad(p(request).prjId, p(request).taskId)
+            handler: async (request, h) => {
+                const plan = await core.taskLoad(p(request).prjId, p(request).taskId)
+                return h.response(plan).etag(Core.taskTag(plan))
+            }
         })
         this.server.route({
             method:  "PUT",
             path:    T,
             options: json,
-            handler: async (request, h) =>
-                this.created(h, await core.taskSave(p(request).prjId, p(request).taskId, request.payload))
+            handler: async (request, h) => {
+                /*  "If-Match: <tag>" saves only if the plan is still the one with this entity tag  */
+                const tag = request.headers["if-match"]
+                return this.created(h, await core.taskSave(p(request).prjId, p(request).taskId, request.payload,
+                    typeof tag === "string" ? tag.replace(/^(?:W\/)?"(.*)"$/, "$1") : undefined))
+            }
         })
         this.server.route({
             method:  "PATCH",

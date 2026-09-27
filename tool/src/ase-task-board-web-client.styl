@@ -558,6 +558,79 @@ footer kbd, #dlg .dfoot kbd
         width: 100%
         border: 0
 
+    /*  the task plan editor (CodeMirror), in the code font, with the
+        same horizontal padding as the rows of the task dialog  */
+    #editor
+        flex: 1
+        min-height: 0
+        overflow: hidden
+        background: var(--c-paper)
+        .cm-editor
+            height: 100%
+            color: var(--c-text)
+            &.cm-focused
+                outline: none
+        .cm-scroller
+            font-family: "DejaVu Sans Mono", Menlo, monospace
+            font-size: 0.9rem
+            line-height: 1.3
+        .cm-content
+            padding: 1.2rem 0 2rem 0
+            caret-color: transparent
+        .cm-line
+            padding: 0 20px
+
+        /*  the cursor as a filled block in the signal color with a white character
+            (also the block cursor of the Vim key bindings), outlined only while unfocused,
+            replacing the regular line cursor  */
+        .cm-cursor
+            display: none
+        .cm-block-cursor, .cm-fat-cursor
+            background: var(--c-signal)
+            color: #ffffff !important
+            *
+                color: #ffffff !important
+        .cm-editor:not(.cm-focused)
+            .cm-block-cursor, .cm-fat-cursor
+                background: none
+                color: inherit !important
+                outline: 1px solid var(--c-signal)
+                *
+                    color: inherit !important
+        .cm-selectionBackground, &.cm-focused .cm-selectionBackground
+            background: var(--c-accent-fill)
+
+        /*  the status and command line of the Vim and Emacs key bindings  */
+        .cm-panels
+            background: var(--c-ground)
+            border-top: 1px solid var(--c-fill)
+            color: var(--c-text-soft)
+            font-family: "DejaVu Sans Mono", Menlo, monospace
+            font-size: 0.8125rem
+            padding: 0 20px
+
+    /*  the notice of the task plan editor, with its action buttons  */
+    .dnote
+        display: flex
+        align-items: center
+        gap: 8px
+        padding: 4px 20px
+        background: var(--c-signal-ground)
+        border-bottom: 1px solid var(--c-fill)
+        color: var(--c-signal)
+        font-size: 0.875rem
+        button
+            border: 1px solid var(--c-signal)
+            border-radius: 4px
+            padding: 0 8px
+            background: var(--c-paper)
+            color: var(--c-signal)
+            font: inherit
+            cursor: pointer
+            &:hover
+                background: var(--c-signal)
+                color: var(--c-paper)
+
     /*  the footer: the key hint  */
     .dfoot
         padding: 6px 20px

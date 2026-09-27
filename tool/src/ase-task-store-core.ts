@@ -4,6 +4,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
+import crypto          from "node:crypto"
+
 import { DateTime }    from "luxon"
 
 import * as API        from "./ase-task-store-plugin-api.js"
@@ -41,6 +43,11 @@ export const problemBody = (status: number, detail: string, instance: string) =>
     detail,
     instance
 })
+
+/*  the entity tag of a task plan (the SHA-1 of its text format), for
+    detecting a change in the meantime on a conditional save  */
+export const taskTag = (plan: API.TaskPlan): string =>
+    crypto.createHash("sha1").update(TaskFormat.formatTaskText(plan)).digest("hex")
 
 /*  the change events of a single modifying request  */
 export type EventEntry = { status: string, title: string }
@@ -382,13 +389,17 @@ export class TaskStoreCore {
         return (await this.read(prjId, taskId)).plan
     }
 
-    /*  create or overwrite an entire task plan, rejecting an unreachable status  */
-    async taskSave (prjId: string, taskId: string, raw: unknown): Promise<TaskSaveResult> {
+    /*  create or overwrite an entire task plan, rejecting an unreachable status,
+        and on a conditional save (with the entity tag of the plan it is based
+        on) also rejecting a plan which was changed or deleted in the meantime  */
+    async taskSave (prjId: string, taskId: string, raw: unknown, ifMatch?: string): Promise<TaskSaveResult> {
         return this.serialize(prjId, async () => {
             const { lifecycle } = await this.project(prjId)
             this.validateId("task", taskId)
-            const plan   = this.validatePlan(taskId, raw)
             const prev   = await this.store.taskLoad(prjId, taskId)
+            if (ifMatch !== undefined && (prev === null || taskTag(prev) !== ifMatch))
+                throw problem(412, `task "${taskId}" was ${prev === null ? "deleted" : "changed"} meanwhile in project "${prjId}"`)
+            const plan   = this.validatePlan(taskId, raw)
             const from   = prev !== null ? TaskFormat.taskStatus(prev.header, lifecycle) : lifecycle.initial
             const status = TaskFormat.taskStatus(plan.header, lifecycle)
             this.checkStatus(lifecycle, from, status)

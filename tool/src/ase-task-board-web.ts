@@ -21,6 +21,7 @@ import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard }           from "./ase-task-board-filter.js"
 import type { Board, Card }      from "./ase-task-board-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
+import { Problem }               from "./ase-task-store-core.js"
 import pkg                       from "../package.json" with { type: "json" }
 
 /*  the build stamp of the loaded code (version and content hash of the board modules
@@ -147,6 +148,15 @@ const colorSheet = async (bases: ColorBases): Promise<string> => {
     return ":root {\n" + colorRoles.map((role) =>
         generate(parse(`${bases[role]}+0-0/64`)).map((color, i) =>
             `    --color-${role}-${i + 1}: ${color};\n`).join("")).join("") + "}\n"
+}
+
+/*  the key bindings of the task plan editor, resolved from the
+    "board.web.editor.keymap" configuration (on each start of editing)  */
+const editorKeymap = (log: Log): "default" | "vim" | "emacs" => {
+    const cfg = new Config("config", configSchema, log)
+    cfg.read()
+    const value = cfg.get("board.web.editor.keymap")
+    return value === "vim" || value === "emacs" ? value : "default"
 }
 
 /*  render a standalone document (styled by the client stylesheet) out of
@@ -374,6 +384,25 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         })
     })
 
+    /*  one task plan as text for editing, with the entity tag it is based on and the editor key bindings  */
+    server.route({
+        method:  "GET",
+        path:    "/task-board/api/task/{id}/source",
+        handler: guarded(async (request, h) => {
+            const id = String(request.params.id)
+            try {
+                Task.validateId(id)
+            }
+            catch (err: unknown) {
+                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
+            }
+            const src = await Task.source(log, id)
+            if (src === null)
+                return h.response({ error: `no task "${id}"` }).code(404)
+            return h.response({ text: src.text, base: src.tag, keymap: editorKeymap(log) })
+        })
+    })
+
     /*  one attachment of a task plan, rendered as a document for its tab of the task dialog  */
     server.route({
         method:  "GET",
@@ -446,6 +475,33 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
             if (reason !== "")
                 return h.response({ error: `task "${p.id}": ${reason}` }).code(400)
             return h.response(await Task.setStatus(log, p.id, p.status))
+        })
+    })
+
+    /*  save an edited task plan, but only if it was not changed in the meantime
+        (answering 409 with the current entity tag, or null if deleted meanwhile),
+        and answering 400 if the text is invalid or its status is not reachable  */
+    server.route({
+        method:  "POST",
+        path:    "/task-board/api/task/{id}/source",
+        options: { payload: { parse: true, allow: "application/json" } },
+        handler: guarded(async (request, h) => {
+            const id = String(request.params.id)
+            const p  = request.payload as { text?: unknown, base?: unknown } | null
+            if (p === null || typeof p.text !== "string" || typeof p.base !== "string")
+                return h.response({ error: "invalid save request" }).code(400)
+            try {
+                await Task.save(log, id, p.text, p.base)
+            }
+            catch (err: unknown) {
+                if (err instanceof Problem && err.status === 412) {
+                    const src   = await Task.source(log, id)
+                    const error = `task "${id}" was ${src === null ? "deleted" : "changed"} meanwhile`
+                    return h.response({ error, base: src?.tag ?? null }).code(409)
+                }
+                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
+            }
+            return h.response({ ok: true })
         })
     })
 

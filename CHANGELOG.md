@@ -19,6 +19,16 @@ ChangeLog
     matching tasks, the graph additionally shows their direct predecessors and successors dimmed
     and dashed.
 
+-   FEATURE [tool]: Web Task Board task plan editing
+    The task dialog of the web task board edits the task plan via `e` or `✎` in a CodeMirror 6
+    based Markdown editor, saved via `Ctrl`/`⌘`+`S` and cancelled via `ESC` (after a confirmation
+    if changed). A save is conditional: a task plan changed or deleted meanwhile is reported, with
+    the choice to overwrite or discard, and a text which failed to save is kept as a browser draft,
+    offered for restoring on the next edit. For this, the task store REST API delivers the entity
+    tag of a task plan as `ETag` and accepts a conditional, atomic `PUT` via `If-Match` (`412`).
+    The new configuration key `board.web.editor.keymap` selects `default`, `vim`, or `emacs`
+    key bindings for the editor (Vim: `:w`/`:q`/`:q!`, Emacs: `C-x C-s`/`C-x C-c`).
+
 -   FEATURE [tool]: Web Task Board keyboard navigation
     The web task board got the keyboard navigation of the terminal board: an always present
     selection of group, lane, and task, highlighted in signal color, moved via `↑`/`↓`/`←`/`→`,

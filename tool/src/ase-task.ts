@@ -42,7 +42,7 @@ interface TaskStoreClient {
     close  (): Promise<void>
     list   (fields?: "header"): Promise<Core.TaskListEntry[]>
     load   (id: string): Promise<API.TaskPlan | null>
-    save   (id: string, plan: API.TaskPlan): Promise<void>
+    save   (id: string, plan: API.TaskPlan, tag?: string): Promise<void>
     patch  (id: string, change: { status?: string, id?: string }): Promise<Core.TaskPatchResult | null>
     delete (id: string): Promise<boolean>
     purge  (age: string): Promise<string[]>
@@ -133,8 +133,8 @@ class LocalTaskStoreClient implements TaskStoreClient {
     load (id: string): Promise<API.TaskPlan | null> {
         return this.missing(() => this.core.taskLoad(this.prjId, id), null)
     }
-    async save (id: string, plan: API.TaskPlan): Promise<void> {
-        await this.core.taskSave(this.prjId, id, plan)
+    async save (id: string, plan: API.TaskPlan, tag?: string): Promise<void> {
+        await this.core.taskSave(this.prjId, id, plan, tag)
     }
     patch (id: string, change: { status?: string, id?: string }): Promise<Core.TaskPatchResult | null> {
         return this.missing(() => this.core.taskPatch(this.prjId, id, change), null)
@@ -295,8 +295,9 @@ class RemoteTaskStoreClient implements TaskStoreClient {
     async load (id: string): Promise<API.TaskPlan | null> {
         return this.task(await this.request<API.TaskPlan>("GET", `${this.tasks}/${id}`))
     }
-    async save (id: string, plan: API.TaskPlan): Promise<void> {
-        const result = await this.request<{ status: string }>("PUT", `${this.tasks}/${id}`, plan)
+    async save (id: string, plan: API.TaskPlan, tag?: string): Promise<void> {
+        const result = await this.request<{ status: string }>("PUT", `${this.tasks}/${id}`, plan,
+            tag !== undefined ? { "If-Match": `"${tag}"` } : {})
         if (result === null)
             this.unregistered()
     }
@@ -682,15 +683,24 @@ export class Task {
         return plan === null ? "" : TaskFormat.formatTaskText(plan)
     }
 
+    /*  load a task as text together with its entity tag (for a conditional
+        save); returns null if no task exists  */
+    static async source (log: Log, id: string): Promise<{ text: string, tag: string } | null> {
+        Task.validateId(id)
+        const plan = await Task.with(log, (client) => client.load(id))
+        return plan === null ? null : { text: TaskFormat.formatTaskText(plan), tag: Core.taskTag(plan) }
+    }
+
     /*  save a task as text under the given id; throws if its "Status:"
         frontmatter key is unknown to the task lifecycle model or not
-        reachable from the previous status  */
-    static async save (log: Log, id: string, text: string): Promise<void> {
+        reachable from the previous status, and on a conditional save (with
+        an entity tag) a problem 412 if the task was changed in the meantime  */
+    static async save (log: Log, id: string, text: string, tag?: string): Promise<void> {
         if (typeof text !== "string")
             throw new Error("task: text must be a string")
         Task.validateId(id)
         await Task.with(log, (client) =>
-            client.save(id, TaskFormat.parseTaskText(id, text, client.lifecycle)))
+            client.save(id, TaskFormat.parseTaskText(id, text, client.lifecycle), tag))
     }
 
     /*  delete a task by id; returns true if a task existed  */

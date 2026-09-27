@@ -81,13 +81,14 @@
             </template>
         </div>
     </footer>
-    <div v-show="task !== null" id="scrim" @click.self="closeTask">
+    <div v-show="task !== null" id="scrim" @click.self="leaveEdit(true)">
         <div v-if="task !== null" id="dlg">
             <!--  the header: task id and title on the left, lane group and lane on the right  -->
             <div class="dhd">
                 <h1 :class="`tone-${task.tone}`"><span class="cid">{{ task.id }}</span>{{ task.title }}</h1>
                 <span class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
-                <button class="close" title="close (ESC)" @click="closeTask">✕</button>
+                <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit">✎</button>
+                <button class="close" title="close (ESC)" @click="leaveEdit(true)">✕</button>
             </div>
 
             <!--  the dependencies: predecessors on the left, successors on the right  -->
@@ -114,13 +115,38 @@
                 <button class="tarr" :style="{ visibility: tabScroll.more ? 'visible' : 'hidden' }" @click="selectTab(tab + 1)">▷</button>
             </div>
 
-            <!--  the content: the rendered task plan or attachment of the selected tab  -->
-            <iframe id="plan" ref="planEl" title="task plan"
+            <!--  the notice of the task plan editor: a restorable draft, a confirmation
+                  to discard the changes, a save conflict, or a save error  -->
+            <div v-if="notice !== null" class="dnote">
+                <template v-if="notice.kind === 'draft'">
+                    an unsaved draft of this task exists
+                    <button @click="restoreDraft">restore</button>
+                    <button @click="dropDraft">discard</button>
+                </template>
+                <template v-else-if="notice.kind === 'discard'">
+                    discard the unsaved changes?
+                    <button @click="notice.close ? closeTask() : stopEdit()">discard</button>
+                    <button @click="notice = null">keep editing</button>
+                </template>
+                <template v-else-if="notice.kind === 'conflict'">
+                    {{ notice.message }} (draft kept)
+                    <button v-if="notice.base !== null" @click="saveEdit(notice.base)">overwrite</button>
+                    <button @click="dropDraft(); stopEdit()">discard</button>
+                </template>
+                <template v-else>{{ notice.message }}</template>
+            </div>
+
+            <!--  the content: the rendered task plan or attachment of the selected tab, or the task plan editor  -->
+            <iframe v-show="editing === null" id="plan" ref="planEl" title="task plan"
                 sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                 :srcdoc="tab === 0 ? task.doc : (tabDocs[tab] ?? '')" @load="restorePlanScroll"></iframe>
+            <div v-show="editing !== null" id="editor" ref="editorEl"></div>
 
             <!--  the footer: the key hints  -->
-            <div class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd> switches tab · <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd> scrolls · <kbd>⏎</kbd>/<kbd>ESC</kbd> closes</div>
+            <div v-if="editing?.keymap === 'vim'" class="dfoot"><kbd>:w</kbd> saves · <kbd>:q</kbd> cancels · <kbd>:q!</kbd> discards</div>
+            <div v-else-if="editing?.keymap === 'emacs'" class="dfoot"><kbd>C-x C-s</kbd> saves · <kbd>C-x C-c</kbd> cancels</div>
+            <div v-else-if="editing !== null" class="dfoot"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd> saves · <kbd>ESC</kbd> cancels</div>
+            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd> switches tab · <kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd> scrolls · <kbd>e</kbd> edits · <kbd>⏎</kbd>/<kbd>ESC</kbd> closes</div>
         </div>
     </div>
 </template>
@@ -128,6 +154,14 @@
 <script setup lang="ts">
 import { ref, reactive, computed, nextTick, watch, onMounted, onBeforeUnmount } from "vue"
 import Mousetrap                                                                   from "mousetrap"
+import { EditorView, keymap, drawSelection, ViewPlugin, Decoration, WidgetType }   from "@codemirror/view"
+import { EditorState }                                                             from "@codemirror/state"
+import { defaultKeymap, history, historyKeymap, indentWithTab }                    from "@codemirror/commands"
+import { HighlightStyle, syntaxHighlighting }                                      from "@codemirror/language"
+import { markdown }                                                                from "@codemirror/lang-markdown"
+import { tags }                                                                    from "@lezer/highlight"
+import { vim, Vim, getCM }                                                         from "@replit/codemirror-vim"
+import { emacs, EmacsHandler }                                                     from "@replit/codemirror-emacs"
 
 /*  the board model and task details, as delivered by the service  */
 type Card    = { id: string, title: string, cyclic: boolean, tone: string, moves?: string[] }
@@ -139,6 +173,18 @@ type Tone    = "active" | "done" | "idle"
 type Ref     = { id: string, tone: Tone }
 type Task    = { id: string, title: string, tone: Tone, status: string, group: string, doc: string, tabs: string[], pred: Ref[], succ: Ref[] }
 type View    = "lanes" | "graph"
+
+/*  the key bindings of the task plan editor (see "board.web.editor.keymap")  */
+type Keymap  = "default" | "vim" | "emacs"
+
+/*  the notice of the task plan editor: a restorable draft, a confirmation to
+    discard the changes (before leaving the editor or also the dialog), a save
+    conflict (with the current entity tag, or null if deleted meanwhile), or a save error  */
+type Notice  =
+    { kind: "draft", draft: string } |
+    { kind: "discard", close: boolean } |
+    { kind: "conflict", message: string, base: string | null } |
+    { kind: "error", message: string }
 
 /*  the selection: group, lane, and card id ("" for a lane without card focus)  */
 type Sel     = { g: number, l: number, id: string }
@@ -195,6 +241,10 @@ const graphEl     = ref<HTMLElement | null>(null)
 const sel         = ref<Sel>({ g: 0, l: 0, id: "" })
 const planEl     = ref<HTMLIFrameElement | null>(null)
 const tabsEl      = ref<HTMLElement | null>(null)
+const editorEl    = ref<HTMLElement | null>(null)
+const editing     = ref<{ id: string, orig: string, base: string, keymap: Keymap, dirty: boolean } | null>(null)
+const notice      = ref<Notice | null>(null)
+let   editor      = null as EditorView | null
 const scroll      = reactive({ all: true, info: "" })
 const tab         = ref(0)
 const tabDocs     = ref<Record<number, string>>({})
@@ -231,6 +281,7 @@ const hints     = computed(() => {
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⇈/⇊/⇤/⇥",       action: "select lane" },
         { key: "⏎",             action: "view task" },
+        { key: "e",             action: "edit task" },
         { key: "SPACE",         action: "move task" },
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
         { key: "c",             action: `${folded ? "expand" : "collapse"} group` }
@@ -244,6 +295,7 @@ const hints     = computed(() => {
     ] ] : [ [
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⏎",             action: "view task" },
+        { key: "e",             action: "edit task" },
         { key: "Left-Click",    action: "view task" }
     ], [
         { key: "/",             action: "filter tasks" },
@@ -323,8 +375,11 @@ const keepTabScroll = () => {
 }
 
 /*  open the dialog of a task, keeping the selected tab and the scroll
-    positions of the tab documents when re-opening the same task (on changes)  */
+    positions of the tab documents when re-opening the same task (on changes),
+    but never switching away from a task whose plan is being edited  */
 const openTask = async (id: string) => {
+    if (editing.value !== null && editing.value.id !== id)
+        return
     const seq = ++openSeq
     if (openId === id)
         keepTabScroll()
@@ -355,9 +410,189 @@ const restorePlanScroll = () => {
     planEl.value?.contentWindow?.scrollTo(0, tabScrolls.get(tab.value) ?? 0)
 }
 const closeTask = () => {
+    stopEdit()
     openSeq++
     openId     = null
     task.value = null
+}
+
+/*  the syntax highlighting of the task plan editor, on the colors of the board  */
+/*  the block cursor of the task plan editor: the character under the cursor
+    (or a space at the end of a line) rendered as a filled block, except in the
+    normal and visual modes of the Vim key bindings, which draw their own block cursor  */
+class BlockCursorEnd extends WidgetType {
+    toDOM () {
+        const span = document.createElement("span")
+        span.className   = "cm-block-cursor"
+        span.textContent = " "
+        return span
+    }
+}
+const blockCursor = ViewPlugin.fromClass(class {
+    decorations = Decoration.none
+    constructor (view: EditorView) {
+        this.decorations = this.build(view)
+    }
+    update (update: { view: EditorView }) {
+        this.decorations = this.build(update.view)
+    }
+    build (view: EditorView) {
+        const vimState = getCM(view)?.state.vim as { insertMode?: boolean } | undefined
+        if (vimState !== undefined && vimState.insertMode !== true)
+            return Decoration.none
+        const head = view.state.selection.main.head
+        const line = view.state.doc.lineAt(head)
+        if (head >= line.to)
+            return Decoration.set([ Decoration.widget({ widget: new BlockCursorEnd(), side: 1 }).range(head) ])
+        const char = String.fromCodePoint(line.text.codePointAt(head - line.from)!)
+        return Decoration.set([ Decoration.mark({ class: "cm-block-cursor" }).range(head, head + char.length) ])
+    }
+}, { decorations: (plugin) => plugin.decorations })
+
+const editorHighlight = HighlightStyle.define([
+    { tag: tags.heading,  color: "var(--c-accent)", fontWeight: "bold" },
+    { tag: [ tags.monospace, tags.link, tags.url ], color: "var(--c-accent)" },
+    { tag: [ tags.processingInstruction, tags.contentSeparator, tags.labelName, tags.comment ], color: "var(--c-mute)" },
+    { tag: tags.quote,    color: "var(--c-text-soft)" },
+    { tag: tags.emphasis, fontStyle: "italic" },
+    { tag: tags.strong,   fontWeight: "bold" }
+])
+
+/*  the drafts of task plans which failed to save, kept per project and task
+    in the browser (silently skipped if the browser storage is unavailable)  */
+const draftKey = (id: string) => `ase-task-board:draft:${board.value?.project ?? ""}:${id}`
+const draftGet = (id: string): string | null => {
+    try {
+        return localStorage.getItem(draftKey(id))
+    }
+    catch (_err: unknown) {
+        return null
+    }
+}
+const draftSet = (id: string, text: string | null) => {
+    try {
+        if (text === null)
+            localStorage.removeItem(draftKey(id))
+        else
+            localStorage.setItem(draftKey(id), text)
+    }
+    catch (_err: unknown) {
+        /*  no browser storage available  */
+    }
+}
+
+/*  start editing the plan of the task of the dialog (on its task plan tab),
+    offering to restore a draft of it which failed to save earlier  */
+const startEdit = async () => {
+    if (task.value === null || editing.value !== null)
+        return
+    const id  = task.value.id
+    const src = await api<{ text: string, base: string, keymap: Keymap }>(`/task-board/api/task/${encodeURIComponent(id)}/source`)
+    if (task.value?.id !== id || editing.value !== null)
+        return
+    if (src.error !== undefined) {
+        notice.value = { kind: "error", message: src.error }
+        return
+    }
+    await selectTab(0)
+    const draft   = draftGet(id)
+    editing.value = { id, orig: src.text, base: src.base, keymap: src.keymap, dirty: false }
+    notice.value  = draft !== null && draft !== src.text ? { kind: "draft", draft } : null
+    await nextTick()
+    editor = new EditorView({
+        parent: editorEl.value!,
+        state:  EditorState.create({
+            doc: src.text,
+            extensions: [
+                /*  the optional Vim or Emacs key bindings, taking precedence over all others  */
+                ...(src.keymap === "vim" ? [ vim({ status: true }) ] : src.keymap === "emacs" ? [ emacs() ] : []),
+                history(), drawSelection(), EditorView.lineWrapping,
+                keymap.of([ ...defaultKeymap, ...historyKeymap, indentWithTab ]),
+                markdown(), syntaxHighlighting(editorHighlight), blockCursor,
+                EditorView.updateListener.of((update) => {
+                    if (update.docChanged && editing.value !== null)
+                        editing.value.dirty = update.state.doc.toString() !== editing.value.orig
+                })
+            ]
+        })
+    })
+    editor.focus()
+}
+
+/*  save the edited task plan, conditionally on the plan it is based on (or on the
+    current plan to overwrite a conflicting change), and keep a draft if this fails  */
+const saveEdit = async (base?: string) => {
+    const e = editing.value
+    if (e === null || editor === null)
+        return
+    const text = editor.state.doc.toString()
+    const res  = await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(e.id)}/source`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, base: base ?? e.base })
+    })
+    if (editing.value !== e)
+        return
+    if (res.error === undefined) {
+        draftSet(e.id, null)
+        stopEdit()
+        openTask(e.id)
+        return
+    }
+    draftSet(e.id, text)
+    const conflict = res as { error: string, base?: string | null }
+    notice.value = conflict.base !== undefined ?
+        { kind: "conflict", message: conflict.error, base: conflict.base } :
+        { kind: "error", message: `${conflict.error} (draft kept)` }
+}
+
+/*  restore or drop the draft of the edited task plan  */
+const restoreDraft = () => {
+    if (notice.value?.kind === "draft" && editor !== null)
+        editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: notice.value.draft } })
+    notice.value = null
+    editor?.focus()
+}
+const dropDraft = () => {
+    if (editing.value !== null)
+        draftSet(editing.value.id, null)
+    notice.value = null
+    editor?.focus()
+}
+
+/*  leave the editor, or the dialog (and with it the editor), after
+    a confirmation if the edited task plan was changed  */
+const leaveEdit = (close: boolean) => {
+    if (editing.value?.dirty === true)
+        notice.value = { kind: "discard", close }
+    else if (close)
+        closeTask()
+    else
+        stopEdit()
+}
+
+/*  the save and cancel commands of the Vim key bindings (":w", ":wq", and ":x" save,
+    ":q" cancels, ":q!" discards) and the Emacs key bindings ("C-x C-s" saves, "C-x C-c" cancels)  */
+Vim.defineEx("write", "w", () => { saveEdit() })
+Vim.defineEx("wq",    "wq", () => { saveEdit() })
+Vim.defineEx("xit",   "x", () => { saveEdit() })
+Vim.defineEx("quit",  "q", (_cm, params) => {
+    if (params.argString?.trimStart().startsWith("!"))
+        stopEdit()
+    else
+        leaveEdit(false)
+})
+EmacsHandler.bindKey("C-x C-s", () => {
+    saveEdit()
+    return true
+})
+EmacsHandler.bindKey("C-x C-c", () => {
+    leaveEdit(false)
+    return true
+})
+const stopEdit = () => {
+    editor?.destroy()
+    editor        = null
+    editing.value = null
+    notice.value  = null
 }
 
 /*  fetch the document of an attachment tab, or load it into the cache
@@ -377,7 +612,7 @@ const loadTab = async (n: number) => {
 
 /*  select a tab of the task dialog, scrolled into the visible part of the tab bar  */
 const selectTab = async (n: number) => {
-    if (task.value === null || n < 0 || n >= task.value.tabs.length || n === tab.value)
+    if (task.value === null || editing.value !== null || n < 0 || n >= task.value.tabs.length || n === tab.value)
         return
     keepTabScroll()
     tab.value = n
@@ -554,12 +789,36 @@ const setView = (v: View) => {
 let events: EventSource | null = null
 let ping: ReturnType<typeof setInterval> | null = null
 const onKey = (ev: KeyboardEvent) => {
-    /*  in the task dialog, RETURN and ESC close it, the left/right arrows switch
-        its tab (also Tab/Shift+Tab), and the up/down arrows and PgUp/PgDn scroll its content  */
+    /*  in the task plan editor, Ctrl/Cmd+S saves (only Cmd+S under the Emacs key bindings,
+        where Ctrl+S searches) and, under the default key bindings, ESC cancels (or dismisses
+        the discard confirmation), while all other keys belong to the editor  */
+    if (editing.value !== null) {
+        const mod = editing.value.keymap === "emacs" ? ev.metaKey : ev.ctrlKey || ev.metaKey
+        if (mod && !ev.altKey && ev.key.toLowerCase() === "s") {
+            ev.preventDefault()
+            saveEdit()
+        }
+        else if (ev.key === "Escape" && editing.value.keymap === "default") {
+            if (notice.value?.kind === "discard") {
+                notice.value = null
+                editor?.focus()
+            }
+            else
+                leaveEdit(false)
+        }
+        return
+    }
+
+    /*  in the task dialog, RETURN and ESC close it, "e" edits its plan, the left/right arrows
+        switch its tab (also Tab/Shift+Tab), and the up/down arrows and PgUp/PgDn scroll its content  */
     if (task.value !== null) {
         const win = planEl.value?.contentWindow ?? null
         if (ev.key === "Escape" || ev.key === "Enter")
             closeTask()
+        else if (ev.key === "e" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+            ev.preventDefault()
+            startEdit()
+        }
         else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Tab") {
             ev.preventDefault()
             selectTab(tab.value + (ev.key === "ArrowLeft" || (ev.key === "Tab" && ev.shiftKey) ? -1 : 1))
@@ -588,6 +847,15 @@ const onKey = (ev: KeyboardEvent) => {
     if (ev.key === "Enter") {
         if (s.id !== "")
             openTask(s.id)
+    }
+    else if (ev.key === "e") {
+        /*  open the task view of the selected task directly in the task plan editor  */
+        const id = s.id
+        if (id !== "")
+            openTask(id).then(() => {
+                if (task.value?.id === id)
+                    startEdit()
+            })
     }
     else if (view.value === "graph") {
         /*  move spatially to the nearest node in the direction of the
@@ -724,6 +992,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
     events?.close()
     Mousetrap.reset()
+    stopEdit()
     document.removeEventListener("keydown", onKey)
     window.removeEventListener("resize", onResize)
     if (ping !== null)

@@ -89,7 +89,8 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "board.web.color.dim":           webColorDefaults.dim,
         "board.web.color.normal":        webColorDefaults.normal,
         "board.web.color.accent":        webColorDefaults.accent,
-        "board.web.color.signal":        webColorDefaults.signal
+        "board.web.color.signal":        webColorDefaults.signal,
+        "board.web.editor.keymap":       "default"
     },
     industry: {
         "agent.persona":   "engineer",
@@ -131,7 +132,8 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "board.web.color.dim":           [ "user", "project" ],
     "board.web.color.normal":        [ "user", "project" ],
     "board.web.color.accent":        [ "user", "project" ],
-    "board.web.color.signal":        [ "user", "project" ]
+    "board.web.color.signal":        [ "user", "project" ],
+    "board.web.editor.keymap":       [ "user", "project" ]
 }
 
 /*  default set of scope kinds writable for any unrestricted key  */
@@ -388,6 +390,9 @@ export const configSchema = v.nullish(v.strictObject({
                 normal: webColorSchema,
                 accent: webColorSchema,
                 signal: webColorSchema
+            })),
+            editor: v.optional(v.strictObject({
+                keymap: v.optional(v.picklist([ "default", "vim", "emacs" ]))
             }))
         }))
     }))
