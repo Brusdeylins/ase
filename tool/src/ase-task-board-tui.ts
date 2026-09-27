@@ -949,7 +949,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         setSel((s) => relocate(board, s, view === "graph" ? { ...surface, minimized: [], collapsed: [] } : surface))
     }, [ board, surface, view ])
 
-    const headH  = 2
+    const headH  = 3
     const footH  = 5
     const boardH = rows - headH - footH
     const innerW = columns - 2
@@ -1493,13 +1493,16 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 h(Text, { bold: true }, `${tasks.filter((c) => toneOf(board, c) !== "done").length}/${tasks.length}`),
                 " · view: "),
             h(Box, { ref: headRef("view"), flexShrink: 0 },
-                h(Text, { color: palette.normal, dimColor: dim, bold: true }, view)),
+                h(Text, { color: palette.dim, dimColor: dim, bold: true, inverse: true }, ` ${view} `)),
             h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" }, " · filter: "),
             h(Box, { ref: headRef("filter"), flexShrink: 0 },
-                h(Text, { color: typing ? palette.signal : palette.normal, dimColor: dim, bold: true, inverse: true }, field)),
+                h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true }, field)),
             h(Box, { ref: headRef("clear"), flexShrink: 0 },
-                h(Text, { color: typing ? palette.signal : palette.normal, dimColor: dim, bold: true, inverse: true },
+                h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true },
                     filter !== "" ? "✕ " : "  "))),
+
+        /*  the horizontal rule below the header, across the full screen width  */
+        h(Text, { color: palette.dim, dimColor: dim }, "─".repeat(columns)),
         h(Box, { paddingX: 1 },
             h(Text, { color: palette.signal, dimColor: dim, wrap: "truncate" },
                 board.warnings.length > 0 ? `⚠ ${board.warnings.map(sanitize).join(" · ")}` : " ")),

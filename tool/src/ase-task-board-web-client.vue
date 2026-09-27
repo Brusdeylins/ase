@@ -7,10 +7,10 @@
 <template>
     <header>
         <span>
-            ⧉ ASE: <span class="app">Task Board</span>
-            <span class="sep">·</span>project: <span class="val">{{ board?.project }}</span>
-            <span class="sep">·</span>mode: <span class="val">{{ board?.mode }}</span>
-            <span class="sep">·</span>tasks: <span class="val">{{ taskCount }}</span>
+            ⧉ ASE: <span class="emph">Task Board</span>
+            <span class="sep">·</span>project: <span class="emph">{{ board?.project }}</span>
+            <span class="sep">·</span>mode: <span class="emph">{{ board?.mode }}</span>
+            <span class="sep">·</span>tasks: <span class="emph">{{ taskCount }}</span>
             <span class="sep">·</span>view: <button class="val toggle" title="switch view (g/l)" @click="setView(view === 'lanes' ? 'graph' : 'lanes')">{{ view }}</button>
             <span class="sep">·</span><span class="filter">filter:
                 <span class="field">
@@ -45,7 +45,7 @@
                         :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li)"
                         @dragover="dragOver($event, l.status)" @dragleave="dragLeave($event, l.status)" @drop="drop($event, l.status)">
                         <div class="lhd" @click="toggle('minimized', l.status)">
-                            <span>{{ surface.minimized.includes(l.status) ? "▶" : "▼" }} {{ l.status }}</span>
+                            <span>{{ surface.minimized.includes(l.status) ? "▶" : "▼" }}<span class="ttl">{{ l.status }}</span></span>
                             <span>{{ l.cards.length }}</span>
                         </div>
                         <div v-if="!surface.minimized.includes(l.status)" class="cards">
