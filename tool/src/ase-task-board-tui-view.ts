@@ -22,6 +22,10 @@ const GROUP_MIN  = 26
 const GROUP_COLL = 5
 const GROUP_GAP  = 1
 
+/*  layout constants of a grown lane: minimum card width, gap between cards  */
+const GRID_MIN   = 30
+const GRID_GAP   = 1
+
 /*  compute the visible group range starting at a first group, with the
     width of each visible group (collapsed groups stay narrow, expanded
     groups share the remaining width but never drop below the minimum)  */
@@ -75,9 +79,59 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
     ]
 }
 
+/*  the label lines of a card of a width: the task id (with its markers) and title,
+    cut onto a single line, or if titles are shown, wrapped onto at most
+    three lines (with an ellipsis if cut), padded by one column on each side,
+    with a placeholder column glued in front of the task id to reserve
+    the extra column of its inverse rendering, and the arrow in front of
+    the title replaced by a placeholder column glued to the title  */
+const cardLines = ({ board, titles }: ViewCtx, c: Card, width: number): string[] => {
+    const textW = Math.max(3, width - 2)
+    const marks = board.cyclic.has(c.id) ? " ⟲" : ""
+    const text  = glueId + c.id + marks + cardLabel(c).slice(c.id.length).replace(/^ ▶ /, ` ${glueTitle}`)
+    return clampLines(text, textW - 2, titles ? 3 : 1).map((line) => ` ${line}`)
+}
+
+/*  render one card of a width and height (in rows) of a lane, either regularly,
+    as the carried task on top of the selected target lane (moving), or as the
+    dim ghost of the carried task at its original position (phantom)  */
+const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], width: number, rows: number,
+    cut: "none" | "top" | "bottom", moving: boolean, phantom: boolean) => {
+    const { board, sel, dim, carry } = ctx
+    const held    = carry?.id === c.id && !phantom
+    const on      = (c.id === sel.id || moving) && !dim && !phantom
+    const tone    = toneOf(board, c)
+    const tint    = phantom ? palette.dim : on ? palette.signal : tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
+
+    /*  the task id at the start of the first line (behind the margin and
+        the placeholder) is always bold and inverse, with one column of
+        spacing on each side, directly followed by the rest of the label,
+        where a partially visible card loses its cut border and text lines  */
+    const to      = 2 + c.id.length
+    const box     = {
+        key: moving ? "moving" : c.id, ...(moving ? {} : { ref: ctx.cardRef(c.id) }),
+        borderStyle: phantom ? dashed : held ? "double" : "single", borderColor: tint, borderDimColor: dim,
+        borderTop: cut !== "top", borderBottom: cut !== "bottom", width, height: rows, flexDirection: "column"
+    } as const
+    const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
+        ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, ` ${line.slice(2, to)} `),
+            line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ])))
+        .slice(cut === "top" ? lines.length + 1 - rows : 0, cut === "bottom" ? rows - 1 : lines.length)
+    if (!lane.active || ctx.pulse < 0 || moving || phantom || cut === "top")
+        return h(Box, box, ...text)
+
+    /*  the tasks of active lanes pulse in their top border, which hence
+        is drawn on its own above the box without its regular top border  */
+    const [ cl, cm, cr ] = held ? [ "╔", "═", "╗" ] : [ "┌", "─", "┐" ]
+    const top     = cl + cm.repeat(Math.max(0, width - 4)) + pulseFrames[ctx.pulse] + cm + cr
+    return h(Box, { key: box.key, ref: ctx.cardRef(c.id), width, height: rows, flexDirection: "column" },
+        h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, top),
+        ...(rows > 1 ? [ h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: rows - 1 }, ...text) ] : []))
+}
+
 /*  render one lane of the lane view  */
 const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: number, height: number) => {
-    const { board, surface, sel, dim, carry, titles } = ctx
+    const { board, surface, sel, dim, carry } = ctx
     const cards   = board.lanes.get(lane.status) ?? []
     const color   = lane.active ? palette.accent : lane.kind === "terminal" ? palette.dim : palette.normal
     const target  = carry?.targets.has(lane.status) ?? false
@@ -96,19 +150,6 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
     if (min)
         return h(Box, { ...frame, ref: ctx.laneRef(g, l), width, height: 3, flexDirection: "column" }, head, ...scrollArrows(ctx, g, 3))
 
-    /*  the label lines of a card: the task id (with its markers) and title,
-        cut onto a single line, or if titles are shown, wrapped onto at most
-        three lines (with an ellipsis if cut), padded by one column on each side,
-        with a placeholder column glued in front of the task id to reserve
-        the extra column of its inverse rendering, and the arrow in front of
-        the title replaced by a placeholder column glued to the title  */
-    const textW = Math.max(3, width - 4)
-    const label = (c: Card): string[] => {
-        const marks = board.cyclic.has(c.id) ? " ⟲" : ""
-        const text  = glueId + c.id + marks + cardLabel(c).slice(c.id.length).replace(/^ ▶ /, ` ${glueTitle}`)
-        return clampLines(text, textW - 2, titles ? 3 : 1).map((line) => ` ${line}`)
-    }
-
     /*  while moving a task onto a reachable target lane, the carried task is
         shown on top of the selected target lane, while a dim ghost of it
         stays at its original position until the drop happens  */
@@ -119,7 +160,7 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
     /*  determine the visible cards by their actual heights, keeping the
         selected card (or the carried task instead) visible and, if not all
         cards fit, reserving one line for the indicator of the hidden cards  */
-    const labels  = list.map((c) => label(c))
+    const labels  = list.map((c) => cardLines(ctx, c, width - 2))
     const heights = labels.map((lines) => lines.length + 2)
     const sum     = (a: number, b: number) => heights.slice(a, b).reduce((n, x) => n + x, 0)
     const room    = height - 3
@@ -148,39 +189,9 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
         ...(part > 0 && start === 0 ? [ { n: end, cut: "bottom" as const, rows: part } ] : [])
     ]
     const items = cuts.map(({ n, cut, rows }) => {
-        const c       = list[n]
         const moving  = carried !== undefined && n === 0
-        const phantom = moved && !moving && c.id === carry?.id
-        const held    = carry?.id === c.id && !phantom
-        const on      = (c.id === sel.id || moving) && !dim && !phantom
-        const tone    = toneOf(board, c)
-        const tint    = phantom ? palette.dim : on ? palette.signal : tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
-        const lines   = labels[n]
-
-        /*  the task id at the start of the first line (behind the margin and
-            the placeholder) is always bold and inverse, with one column of
-            spacing on each side, directly followed by the rest of the label,
-            where a partially visible card loses its cut border and text lines  */
-        const to      = 2 + c.id.length
-        const box     = {
-            key: moving ? "moving" : c.id, ...(moving ? {} : { ref: ctx.cardRef(c.id) }),
-            borderStyle: phantom ? dashed : held ? "double" : "single", borderColor: tint, borderDimColor: dim,
-            borderTop: cut !== "top", borderBottom: cut !== "bottom", height: rows, flexDirection: "column"
-        } as const
-        const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
-            ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, ` ${line.slice(2, to)} `),
-                line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ])))
-            .slice(cut === "top" ? lines.length + 1 - rows : 0, cut === "bottom" ? rows - 1 : lines.length)
-        if (!lane.active || ctx.pulse < 0 || moving || phantom || cut === "top")
-            return h(Box, box, ...text)
-
-        /*  the tasks of active lanes pulse in their top border, which hence
-            is drawn on its own above the box without its regular top border  */
-        const [ cl, cm, cr ] = held ? [ "╔", "═", "╗" ] : [ "┌", "─", "┐" ]
-        const top     = cl + cm.repeat(Math.max(0, width - 6)) + pulseFrames[ctx.pulse] + cm + cr
-        return h(Box, { key: box.key, ref: ctx.cardRef(c.id), height: rows, flexDirection: "column" },
-            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, top),
-            ...(rows > 1 ? [ h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: rows - 1 }, ...text) ] : []))
+        const phantom = moved && !moving && list[n].id === carry?.id
+        return renderCard(ctx, lane, list[n], labels[n], width - 2, rows, cut, moving, phantom)
     })
 
     /*  the centered indicator of the hidden cards, pushed to the bottom of the lane by a growing spacer  */
@@ -190,6 +201,72 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
                 h(Text, cx("dim", dim && "dimmed"),
                     [ ...(start > 0 ? [ `△ ${start}` ] : []), ...(rest > 0 ? [ `▽ ${rest}` ] : []) ].join(" "))))
     return h(Box, { ...frame, ref: ctx.laneRef(g, l), width, height, flexDirection: "column" }, head, ...items, ...scrollArrows(ctx, g, height))
+}
+
+/*  the number of grid columns of the cards of a grown lane of a width:
+    at least four, but more if the cards then still keep their minimum width  */
+export const gridColumns = (width: number) =>
+    Math.max(4, Math.floor((width - 4 + GRID_GAP) / (GRID_MIN + GRID_GAP)))
+
+/*  render the grown lane of the lane view: all its cards in a grid of rows,
+    all cards of a row having the height of its highest card, where only
+    the rows fitting into the lane are shown, keeping the selected card visible  */
+const renderGrown = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: number, height: number) => {
+    const { board, sel, dim } = ctx
+    const cards   = board.lanes.get(lane.status) ?? []
+    const color   = lane.active ? palette.accent : lane.kind === "terminal" ? palette.dim : palette.normal
+    const style: BoxProps["borderStyle"] = lane.dashed ? dashedBold : "bold"
+    const head    = h(Box, { key: "head", justifyContent: "space-between", paddingX: 1 },
+        h(Text, { color, bold: true, dimColor: dim, wrap: "truncate" }, `◆ ${lane.status}`),
+        h(Text, { color, dimColor: dim }, String(cards.length)))
+
+    /*  the column widths, distributing the remaining width onto the first columns  */
+    const cols    = gridColumns(width)
+    const free    = width - 4 - (cols - 1) * GRID_GAP
+    const widths  = Array.from({ length: cols }, (_x, i) => Math.floor(free / cols) + (i < free % cols ? 1 : 0))
+
+    /*  determine the visible rows by their actual heights, keeping the row of
+        the selected card visible and, if not all rows fit, reserving one line
+        for the indicator of the hidden cards  */
+    const labels  = cards.map((c, i) => cardLines(ctx, c, widths[i % cols]))
+    const total   = Math.ceil(cards.length / cols)
+    const heights = Array.from({ length: total }, (_x, r) =>
+        Math.max(...labels.slice(r * cols, (r + 1) * cols).map((lines) => lines.length + 2)))
+    const sum     = (a: number, b: number) => heights.slice(a, b).reduce((n, x) => n + x, 0)
+    const room    = height - 3
+    const idx     = Math.floor(Math.max(0, cards.findIndex((c) => c.id === sel.id)) / cols)
+    let   start   = 0
+    let   end     = total
+    if (sum(0, total) > room) {
+        end = 0
+        while (end < total && sum(0, end + 1) <= room - 1)
+            end++
+        if (idx >= end) {
+            start = idx
+            end   = idx + 1
+            while (start > 0 && sum(start - 1, end) <= room - 1)
+                start--
+        }
+    }
+    const above   = start * cols
+    const below   = Math.max(0, cards.length - end * cols)
+    const items   = heights.slice(start, end).map((rows, i) => {
+        const r = start + i
+        return h(Box, { key: `row${r}`, height: rows, columnGap: GRID_GAP, paddingX: 1 },
+            ...cards.slice(r * cols, (r + 1) * cols).map((c, k) =>
+                renderCard(ctx, lane, c, labels[r * cols + k], widths[k], rows, "none", false, false)))
+    })
+
+    /*  the centered indicator of the hidden cards, pushed to the bottom of the lane by a growing spacer  */
+    if (above > 0 || below > 0)
+        items.push(h(Box, { key: "spacer", flexGrow: 1 }),
+            h(Box, { key: "more", justifyContent: "center" },
+                h(Text, cx("dim", dim && "dimmed"),
+                    [ ...(above > 0 ? [ `△ ${above}` ] : []), ...(below > 0 ? [ `▽ ${below}` ] : []) ].join(" "))))
+    return h(Box, {
+        key: lane.status, ref: ctx.laneRef(g, l), borderStyle: style, borderColor: palette.signal, borderDimColor: dim,
+        width, height, flexDirection: "column"
+    }, head, ...items)
 }
 
 /*  render one group column of the lane view  */
@@ -257,11 +334,14 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
 
 /*  render the lane view  */
 export const renderLanes = (ctx: BoardCtx) => {
-    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, pulse, cardRef, laneRef, groupRef } = ctx
+    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, pulse, grown, cardRef, laneRef, groupRef } = ctx
     const total  = board.groups.length
     const shown  = fit.last - fit.first + 1
-    const arrows = shown < total
-    const info   = `groups ${fit.first + 1}–${fit.last + 1} of ${total} · ${arrows ? "←/→ scrolls" : "all visible"}`
+    const arrows = shown < total && !grown
+    const group  = board.groups[sel.g]
+    const info   = grown ? `lane ${group.lanes[sel.l].status} of group ${group.title} grown · g shrinks` :
+        `groups ${fit.first + 1}–${fit.last + 1} of ${total} · ${arrows ? "←/→ scrolls" : "all visible"}`
+    const view   = { board, surface, sel, dim, carry, titles: surface.titles, scroll: { left: -1, right: -1 }, pulse, cardRef, laneRef, groupRef }
 
     /*  the scroll bar consumes the entire width remaining besides the info  */
     const track  = Math.max(1, columns - 2 - info.length - 3)
@@ -272,22 +352,27 @@ export const renderLanes = (ctx: BoardCtx) => {
     const edges  = { left: fit.first > 0 ? fit.first : -1, right: fit.last < total - 1 ? fit.last : -1 }
     return [
         h(Box, { key: "board", height: boardH, paddingX: 1 },
-            ...board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup({ board, surface, sel, dim, carry, titles: surface.titles, scroll: edges, pulse, cardRef, laneRef, groupRef }, g, fit.first + i, fit.widths[i], boardH, i === fit.widths.length - 1))),
+            ...(grown ? [ renderGrown(view, group.lanes[sel.l], sel.g, sel.l, columns - 2, boardH) ] :
+                board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup({ ...view, scroll: edges }, g, fit.first + i, fit.widths[i], boardH, i === fit.widths.length - 1)))),
         h(Box, { key: "bar", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 (arrows ? "░".repeat(off) + "█".repeat(on) + "░".repeat(Math.max(0, track - off - on)) + " · " : "") + info)),
         h(Box, { key: "keys1", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop transition task · T: transition task")),
+                grown ?
+                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: page/first/last task · ⏎: view task · e: edit task · SPACE: start transition task · T: transition task" :
+                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop transition task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 "D: delete task · N: new task · " +
-                `m: ${minned ? "maximize" : "minimize"} lane · c: ${folded ? "expand" : "collapse"} group · ` +
+                (grown ? "g/ESC: shrink lane · " :
+                    `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane · c: ${folded ? "expand" : "collapse"} group · `) +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
                 "/: filter tasks · v: view graph")),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `Left-Click: view task / minimize/maximize lane / collapse/expand group · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+                `Left-Click: view task / ${grown ? "shrink lane" : "minimize/maximize lane / collapse/expand group"} · ` +
+                `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 

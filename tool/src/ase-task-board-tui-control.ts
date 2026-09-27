@@ -11,6 +11,7 @@ import { reachableStates }                    from "./ase-task-board-core.js"
 import { nearestPlace }                       from "./ase-task-board-graph.js"
 import { groupItems, relocate }               from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
+import { gridColumns }                        from "./ase-task-board-tui-view.js"
 import {
     refSegs, tabFirst, tabLayout, confirmBox, transferBox, CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE
 }                                             from "./ase-task-board-tui-popup.js"
@@ -24,7 +25,7 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
         columns, rows, all, board, surface, view, setView, setFilter, typing, setTyping, sel, setSel,
         dialog, setDialog, scroll, layout, setNotice, carry, setCarry, confirm, setConfirm, transfer, setTransfer,
         opening, cardBoxes, laneBoxes, groupBoxes, headBoxes, boxAt, graphView, dialogW, tabLabels, dialogSel,
-        dialogScroll, transferList, toggle, remove, transferTo
+        dialogScroll, transferList, toggle, remove, transferTo, grown, setGrow
     } = ctx
     if (confirm !== null) {
         /*  a click onto the " delete " or " cancel " button of the deletion confirmation  */
@@ -150,6 +151,8 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
             const [ g, l ] = at.split(":").map(Number)
             if (surface.collapsed.includes(board.groups[g].title))
                 toggle("collapsed", board.groups[g].title)
+            else if (my === measureElement(laneBoxes.current.get(at)!).y + 1 && grown)
+                setGrow(false)
             else if (my === measureElement(laneBoxes.current.get(at)!).y + 1)
                 toggle("minimized", board.groups[g].lanes[l].status)
             const next = groupItems(board, g, surface).find((it) => it.l === l)
@@ -189,10 +192,10 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
 /*  handle a key press  */
 export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
-        exit, rows, all, board, surface, view, setView, setFilter, typing, setTyping, sel, setSel,
+        exit, columns, rows, all, board, surface, view, setView, setFilter, typing, setTyping, sel, setSel,
         dialog, setDialog, notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
         mouse, setMouse, places, nodes, dialogW, tabLabels, dialogSel, dialogScroll, transferList,
-        toggle, toggleFlag, startEdit, remove, transferTo, drop
+        toggle, toggleFlag, startEdit, remove, transferTo, drop, grown, setGrow, boardH
     } = ctx
     if (notice !== null)
         setNotice(null)
@@ -360,6 +363,7 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
             }
             const targets = new Set(reachableStates(board, cycle, card))
             setCarry({ id: card.id, from: card.status, targets })
+            setGrow(false)
             return
         }
 
@@ -377,6 +381,37 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
             return
         }
         drop(carry.id, to)
+        return
+    }
+    if (input === "g") {
+        /*  grow the selected lane to the full board, or shrink it back again  */
+        if (carry !== null)
+            return
+        if (!grown && (surface.collapsed.includes(board.groups[sel.g].title)
+            || surface.minimized.includes(board.groups[sel.g].lanes[sel.l].status)))
+            setNotice("only a maximized lane of an expanded group can grow")
+        else
+            setGrow(!grown)
+        return
+    }
+    if (grown) {
+        /*  within the grown lane, the arrows step through the grid of its cards,
+            PgUp/PgDn step by (roughly) the visible rows, Home/End jump to the
+            first/last card, ESC shrinks the lane, and the other lane keys are ignored  */
+        if (key.escape) {
+            setGrow(false)
+            return
+        }
+        const list = board.lanes.get(board.groups[sel.g].lanes[sel.l].status) ?? []
+        const cols = gridColumns(columns - 2)
+        const page = cols * Math.max(1, Math.floor((boardH - 4) / (surface.titles ? 5 : 3)))
+        const step = key.leftArrow ? -1 : key.rightArrow ? 1 : key.upArrow ? -cols : key.downArrow ? cols :
+            key.pageUp ? -page : key.pageDown ? page : key.home ? -list.length : key.end ? list.length : 0
+        const idx  = list.findIndex((c) => c.id === sel.id)
+        if (step === 0 || list.length === 0 || (key.upArrow && idx >= 0 && idx < cols))
+            return
+        const next = idx < 0 ? 0 : Math.max(0, Math.min(list.length - 1, idx + step))
+        setSel({ g: sel.g, l: sel.l, id: list[next].id })
         return
     }
     if (input === "m" && !key.shift) {

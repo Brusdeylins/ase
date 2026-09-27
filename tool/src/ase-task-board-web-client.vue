@@ -22,7 +22,7 @@
         </span>
     </header>
     <div id="view">
-        <div v-show="view === 'lanes'" id="board" ref="boardEl" :class="{ titles }" @scroll="updateScroll">
+        <div v-show="view === 'lanes'" id="board" ref="boardEl" :class="{ titles, grown }" @scroll="updateScroll">
             <template v-if="boardError !== null">{{ boardError }}</template>
             <template v-for="(g, gi) in board?.groups ?? []" :key="g.title">
                 <!--  render each lane of a collapsed group as a narrow box with its
@@ -38,14 +38,15 @@
                         <span class="cnt">{{ l.cards.length }}</span>
                     </div>
                 </div>
-                <div v-else class="group">
+                <!--  while a lane is grown, only it is shown (within its group), with its cards in a grid  -->
+                <div v-else class="group" :class="{ grown: grown && sel.g === gi }">
                     <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr">▼</span><span class="ttl">{{ g.title }}</span></div>
                     <div v-for="(l, li) in g.lanes" :key="l.status" class="lane" tabindex="-1"
-                        :class="[ { active: l.active, dashed: l.dashed, done: l.kind === 'terminal', min: surface.minimized.includes(l.status), sel: sel.g === gi && sel.l === li }, dropClass(l.status) ]"
+                        :class="[ { active: l.active, dashed: l.dashed, done: l.kind === 'terminal', min: surface.minimized.includes(l.status), sel: sel.g === gi && sel.l === li, grown: grown && sel.g === gi && sel.l === li }, dropClass(l.status) ]"
                         :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li)"
                         @dragover="dragOver($event, l.status)" @dragleave="dragLeave($event, l.status)" @drop="drop($event, l.status)">
-                        <div class="lhd" @click="toggle('minimized', l.status)">
-                            <span>{{ surface.minimized.includes(l.status) ? "▶" : "▼" }}<span class="ttl">{{ l.status }}</span></span>
+                        <div class="lhd" :title="grown ? 'shrink lane (g)' : ''" @click="grown ? (grow = false) : toggle('minimized', l.status)">
+                            <span>{{ grown ? "◆" : surface.minimized.includes(l.status) ? "▶" : "▼" }}<span class="ttl">{{ l.status }}</span></span>
                             <span>{{ l.cards.length }}</span>
                         </div>
                         <div v-if="!surface.minimized.includes(l.status)" class="cards" tabindex="-1">
@@ -71,10 +72,11 @@
     <!--  the horizontal scroll bar of the lanes view, resp. the info line
           of the graph view with the selected task and its status  -->
     <div id="hscroll">
-        <button :style="{ visibility: view === 'lanes' && !scroll.all ? 'visible' : 'hidden' }" @click="scrollBy(-240)">◀</button>
-        <span v-if="view === 'lanes' && scroll.info !== ''">{{ scroll.info }}<span class="sep">·</span>{{ scroll.all ? "all visible" : "scroll or ◀/▶" }}</span>
+        <button :style="{ visibility: view === 'lanes' && !scroll.all && !grown ? 'visible' : 'hidden' }" @click="scrollBy(-240)">◀</button>
+        <span v-if="grown">lane <b>{{ board?.groups[sel.g]?.lanes[sel.l]?.status }}</b> of group <b>{{ board?.groups[sel.g]?.title }}</b> grown<span class="sep">·</span>g shrinks</span>
+        <span v-else-if="view === 'lanes' && scroll.info !== ''">{{ scroll.info }}<span class="sep">·</span>{{ scroll.all ? "all visible" : "scroll or ◀/▶" }}</span>
         <span v-else-if="view === 'graph' && selStatus !== null">task: <b>{{ sel.id }}</b><span class="sep">·</span>status: <b>{{ selStatus }}</b></span>
-        <button :style="{ visibility: view === 'lanes' && !scroll.all ? 'visible' : 'hidden' }" @click="scrollBy(240)">▶</button>
+        <button :style="{ visibility: view === 'lanes' && !scroll.all && !grown ? 'visible' : 'hidden' }" @click="scrollBy(240)">▶</button>
     </div>
     <footer>
         <div v-for="(line, k) in (surface.keys ? hints : [])" :key="k">
@@ -334,6 +336,7 @@ const task        = ref<Task | null>(null)
 const boardEl     = ref<HTMLElement | null>(null)
 const graphEl     = ref<HTMLElement | null>(null)
 const sel         = ref<Sel>({ g: 0, l: 0, id: "" })
+const grow        = ref(false)
 const planEl     = ref<HTMLIFrameElement | null>(null)
 const tabsEl      = ref<HTMLElement | null>(null)
 const editorEl    = ref<HTMLElement | null>(null)
@@ -363,6 +366,19 @@ const taskCount = computed(() => {
     return cards === undefined ? "" : `${cards.filter((c) => c.tone !== "done").length}/${cards.length}`
 })
 
+/*  the selected lane is grown to the full board only while it is neither
+    minimized nor within a collapsed group (else it shrinks back for good)  */
+const growable  = computed(() => {
+    const group = board.value?.groups[sel.value.g]
+    return group !== undefined && !surface.value.collapsed.includes(group.title)
+        && !surface.value.minimized.includes(group.lanes[sel.value.l]?.status ?? "")
+})
+const grown     = computed(() => grow.value && growable.value && view.value === "lanes")
+watch(growable, (ok) => {
+    if (!ok)
+        grow.value = false
+})
+
 /*  the status of the selected task, for the info line of the graph view  */
 const selStatus = computed(() => {
     const lane = board.value?.groups.flatMap((g) => g.lanes).find((l) => l.cards.some((c) => c.id === sel.value.id))
@@ -380,7 +396,24 @@ const hints     = computed(() => {
     const group  = board.value?.groups[sel.value.g]
     const minned = surface.value.minimized.includes(group?.lanes[sel.value.l]?.status ?? "")
     const folded = surface.value.collapsed.includes(group?.title ?? "")
-    return view.value === "lanes" ? [ [
+    return grown.value ? [ [
+        { key: "↑/↓/←/→",       action: "select task" },
+        { key: "⇈/⇊/⇤/⇥",       action: "page/first/last task" },
+        { key: "⏎",             action: "view task" },
+        { key: "e",             action: "edit task" },
+        { key: "SPACE",         action: "start transition task" },
+        { key: "T",             action: "transition task" }
+    ], [
+        { key: "D",             action: "delete task" },
+        { key: "N",             action: "new task" },
+        { key: "g/ESC",         action: "shrink lane" },
+        { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
+        { key: "/",             action: "filter tasks" },
+        { key: "v",             action: "view graph" }
+    ], [
+        { key: "Left-Click",    action: "view task / shrink lane" },
+        { key: "?",             action: "hide key hints" }
+    ] ] : view.value === "lanes" ? [ [
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⇈/⇊/⇤/⇥",       action: "select lane" },
         { key: "⏎",             action: "view task" },
@@ -391,6 +424,7 @@ const hints     = computed(() => {
         { key: "D",             action: "delete task" },
         { key: "N",             action: "new task" },
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
+        { key: "g",             action: "grow lane" },
         { key: "c",             action: `${folded ? "expand" : "collapse"} group` },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
@@ -994,7 +1028,7 @@ watch([ board, surface, view ], () => {
 
 /*  follow the selection with the lane a carried task is moved onto, the
     marks in the graph, the scroll positions, and the lane focus  */
-watch([ sel, graph, view, task ], () => {
+watch([ sel, graph, view, task, grown ], () => {
     const d     = drag.value
     const group = board.value?.groups[sel.value.g]
     if (d?.key === true)
@@ -1199,6 +1233,43 @@ const onBoardKey = (ev: KeyboardEvent) => {
         if (next !== undefined)
             sel.value = { ...s, id: next }
     }
+    else if (ev.key === "g") {
+        /*  grow the selected lane to the full board, or shrink it back again  */
+        if (carry !== null)
+            return
+        if (!grown.value && !growable.value)
+            actionError.value = "only a maximized lane of an expanded group can grow"
+        else {
+            actionError.value = null
+            grow.value = !grown.value
+        }
+    }
+    else if (grown.value && ev.key !== " ") {
+        /*  within the grown lane, the arrows step through the grid of its cards (with
+            the number of grid columns taken from the rendered grid), PgUp/PgDn step by
+            the visible rows, Home/End jump to the first/last card, ESC shrinks the
+            lane, and the other lane keys are ignored  */
+        if (ev.key === "Escape") {
+            grow.value = false
+            ev.preventDefault()
+            return
+        }
+        const list  = group.lanes[s.l].cards
+        const grid  = boardEl.value?.querySelector<HTMLElement>(".lane.grown .cards") ?? null
+        const cols  = grid === null ? 4 : Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(" ").length)
+        const card  = grid?.querySelector<HTMLElement>(".card") ?? null
+        const rows  = grid === null || card === null ? 1 : Math.max(1, Math.floor(grid.clientHeight / (card.offsetHeight + 8)))
+        const page  = cols * rows
+        const idx   = list.findIndex((c) => c.id === s.id)
+        const step  = ev.key === "ArrowLeft" ? -1 : ev.key === "ArrowRight" ? 1 : ev.key === "ArrowUp" ? -cols : ev.key === "ArrowDown" ? cols :
+            ev.key === "PageUp" ? -page : ev.key === "PageDown" ? page : ev.key === "Home" ? -list.length : ev.key === "End" ? list.length : 0
+        if (step === 0)
+            return
+        if (list.length > 0 && !(ev.key === "ArrowUp" && idx >= 0 && idx < cols)) {
+            const next = idx < 0 ? 0 : Math.max(0, Math.min(list.length - 1, idx + step))
+            sel.value = { ...s, id: list[next].id }
+        }
+    }
     else if (ev.key === "Escape") {
         /*  cancel the move and return the selection to the task at its original position  */
         if (carry === null)
@@ -1214,6 +1285,7 @@ const onBoardKey = (ev: KeyboardEvent) => {
             if (card !== undefined) {
                 actionError.value = null
                 drag.value = { id: card.id, from: to, moves: card.moves, over: null, key: true }
+                grow.value = false
             }
         }
         else if (!surf.collapsed.includes(group.title)) {

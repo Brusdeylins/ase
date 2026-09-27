@@ -116,6 +116,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     const [ confirm, setConfirm ] = React.useState<{ id: string, yes: boolean } | null>(null)
     const [ transfer, setTransfer ] = React.useState<{ id: string, at: string } | null>(null)
     const [ store,   setStore   ] = React.useState<StoreState | null>(null)
+    const [ grow,    setGrow    ] = React.useState(false)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
 
@@ -510,6 +511,17 @@ export const useBoardState = (log: Log, initial: Board) => {
         setSel((s) => relocate(board, s, view === "graph" ? { ...surface, minimized: [], collapsed: [] } : surface))
     }, [ board, surface, view ])
 
+    /*  the selected lane is grown to the full board only while it is neither
+        minimized nor within a collapsed group (else it shrinks back for good)  */
+    const growable = board.groups[sel.g] !== undefined
+        && !surface.collapsed.includes(board.groups[sel.g].title)
+        && !surface.minimized.includes(board.groups[sel.g].lanes[sel.l]?.status ?? "")
+    const grown    = grow && growable
+    React.useEffect(() => {
+        if (grow && !growable)
+            setGrow(false)
+    }, [ grow, growable ])
+
     const headH  = 3
     const footH  = surface.keys ? 6 : 3
     const boardH = rows - headH - footH
@@ -573,8 +585,9 @@ export const useBoardState = (log: Log, initial: Board) => {
 
     /*  pulse the tasks of active lanes (or the active nodes of the graph), but only while
         any of them (or its pulse) is actually visible, in order to not needlessly re-render the board  */
+    const shown   = grown ? [ { ...board.groups[sel.g], lanes: [ board.groups[sel.g].lanes[sel.l] ] } ] : board.groups.slice(fit.first, fit.last + 1)
     const pulsing = !dim && (view === "lanes" ?
-        board.groups.slice(fit.first, fit.last + 1).some((g) => !surface.collapsed.includes(g.title)
+        shown.some((g) => !surface.collapsed.includes(g.title)
             && g.lanes.some((l) => l.active && !surface.minimized.includes(l.status) && (board.lanes.get(l.status)?.length ?? 0) > 0)) :
         layout !== null && [ ...layout.graph.nodes.values() ].some((n) => !layout.board.context.has(n.id)
             && toneOf(layout.board, layout.board.cards.get(n.id)!) === "active"
@@ -595,7 +608,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     return {
         log, exit, columns, rows, all, board, surface, view, setView, filter, setFilter, typing, setTyping,
         sel, setSel, dialog, setDialog, scroll, layout, notice, setNotice, carry, setCarry, cycle,
-        confirm, setConfirm, transfer, setTransfer, mouse, setMouse, opening,
+        confirm, setConfirm, transfer, setTransfer, mouse, setMouse, opening, grown, setGrow,
         cardBoxes, laneBoxes, groupBoxes, headBoxes, cardRef, laneRef, groupRef, headRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, store, busy, busyTick,

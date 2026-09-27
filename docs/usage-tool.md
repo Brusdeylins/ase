@@ -654,7 +654,10 @@ the persisted task plans of the current project:
   the interactive terminal board is started (in its last shown view:
   the lanes view or the dependency graph view derived from the `After:`
   keys, switched via `v`); lanes can be
-  minimized and groups collapsed, a card title is cut onto a single line
+  minimized and groups collapsed, the selected lane can be grown via `g`
+  to the full board, showing all its cards in a grid of at least four
+  columns (`g`, `ESC`, or a click onto its title shrinks it back again),
+  a card title is cut onto a single line
   or, toggled with `t`, wrapped onto at most three lines, and a card
   opens its plan in a full-height dialog (also by a mouse click onto the
   card, while a click onto its ` X ` closes the dialog again, a click onto
