@@ -33,8 +33,9 @@ ChangeLog
     The web task board got the keyboard navigation of the terminal board: an always present
     selection of group, lane, and task, highlighted in signal color, moved via `↑`/`↓`/`←`/`→`,
     `PgUp`/`PgDn`, and `Tab`/`Shift+Tab` (spatially via the arrows in the graph view), `RETURN`
-    to view (and close) a task (scrolled via `↑`/`↓`/`PgUp`/`PgDn`), `m`/`c` to minimize a lane or collapse a group, and `SPACE` to
-    pick up and drop a task onto another lane (cancelled via `ESC`).
+    to view (and close) a task (scrolled via `↑`/`↓`/`PgUp`/`PgDn`), `m`/`c` to minimize a lane
+    or collapse a group, and `SPACE` to pick up and drop a task onto another lane (cancelled via
+    `ESC`).
 
 -   FEATURE [plugin]: Clickable grilling table
     In the latest grilling table redrawn by the function hooks module `ase-mods.ts`, every
