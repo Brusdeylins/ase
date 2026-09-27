@@ -57,15 +57,16 @@ The following top-level commands exist for configuration handling:
   The file is validated against a schema: on read, unknown or
   invalid entries are warned about and silently dropped from the
   in-memory view; on set/write, they cause a fatal error.
-  Recognized keys are grouped under two top-level sections:
+  Recognized keys are grouped under three top-level sections:
   `project.*` (project identity, classification, and artifact
   globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.store`, `project.task.token` (masked as `***` by `list`), and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
   task identifier -- and `agent.skill`), and `board.*`
   (`board.tui.color.{dim,normal,accent,signal}` -- the colors of
-  the terminal task board, and `board.web.color.{dim,normal,accent,signal}`
-  -- the base colors of the web task board).
+  the terminal task board, `board.web.color.{dim,normal,accent,signal}`
+  -- the base colors of the web task board, and `board.web.editor.keymap`
+  -- the key bindings of its task plan editor: `default`, `vim`, or `emacs`).
   All `ase config` subcommands accept a `--scope` *scope* option
   that selects the scope chain. The *scope* value is a
   comma-separated list of scope terms, in any order; each term
@@ -624,11 +625,27 @@ the persisted task plans of the current project:
   the lanes view, `SPACE` picks up the selected task and a second `SPACE`
   drops it onto the selected lane, changing the task status (`ESC`
   cancels); only lanes whose state is reachable from the current state
-  in the lifecycle model accept the task. `--web` serves the web board through the ASE
+  in the lifecycle model accept the task. `/` focuses the `filter:` field
+  of the header (also a click onto it, as a click onto the `view:` value
+  switches the view; web: `⏎` keeps,
+  `ESC` or `✕` clears it; terminal: `⏎` keeps,
+  `ESC` clears it): its keywords are fuzzy matched against
+  the task id and title, AND-combined when separated by spaces and
+  OR-combined when separated by commas; the lanes show only the matching
+  tasks, the graph additionally their direct predecessors and successors
+  (dimmed and dashed). `--web` serves the web board through the ASE
   service of the project and opens it in the browser, where a task is
-  moved by dragging its card onto a reachable lane; its minimized lanes
+  moved by dragging its card onto a reachable lane (or, with the same
+  keyboard navigation as in the terminal, via `SPACE`); its minimized lanes
   and collapsed groups are stored once per project, not per browser, so
   all open web boards share them and pick up a change immediately.
+  In the task dialog of the web board, `e` (or `✎`) edits the task plan
+  (in the lanes and graph views, `e` opens the selected task directly for editing)
+  in a Markdown editor: `Ctrl`/`⌘`+`S` saves it, but only if the plan was
+  not changed meanwhile (else it offers to overwrite or discard), and
+  `ESC` cancels (after a confirmation if changed; with Vim or Emacs key
+  bindings via `board.web.editor.keymap`: `:w`/`:q` resp. `C-x C-s`/`C-x C-c`); a text which failed to
+  save is kept as a draft in the browser and offered on the next edit.
   A running service with other ASE code is never restarted, as
   this would break the MCP connections of agent sessions: an older service
   without the web board fails `--web`, a differing build is only
