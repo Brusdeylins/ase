@@ -461,6 +461,12 @@ export const toneOf = (board: Board, card: Card): Tone => {
     return lane?.kind === "terminal" ? "done" : lane?.active === true ? "active" : "idle"
 }
 
+/*  the lane states a card can be moved to: all states (except its own lane state)
+    directly or indirectly reachable from its actual status in the lifecycle model  */
+export const reachableStates = (board: Board, lifecycle: TaskLifecycle, card: Card): string[] =>
+    board.groups.flatMap((g) => g.lanes.map((l) => l.status))
+        .filter((to) => to !== card.status && TaskFormat.checkStatus(lifecycle, card.actual, to) === "")
+
 /*  the pre-filled text of a new task: all frontmatter keys (the optional ones
     empty), a free placeholder id, the initial state, and the body template of the
     task format with a sample title, the three sections, and their placeholder items  */

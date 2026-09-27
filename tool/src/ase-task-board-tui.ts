@@ -17,7 +17,7 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, splitHeight, toneOf, watchTasks, BoardState, byCreation, cardLabel, clampLines, glueId, glueTitle,
-    attachmentTabs, isPreflightDiff, diffTones, newTaskText, taskTextId, createTask, saveTask
+    attachmentTabs, isPreflightDiff, diffTones, newTaskText, taskTextId, createTask, saveTask, reachableStates
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, SurfaceList, SurfaceView } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -413,11 +413,13 @@ const renderConfirm = (id: string, yes: boolean, columns: number, rows: number) 
 /*  the entries of the transfer popup: all lane states (with their group), where
     only the current state and the states reachable from it are selectable  */
 type TransferEntry = { group: string, status: string, ok: boolean }
-const transferEntries = (board: Board, cycle: TaskFormat.TaskLifecycle, card: Card): TransferEntry[] =>
-    board.groups.flatMap((g) => g.lanes.map((l) => ({
+const transferEntries = (board: Board, cycle: TaskFormat.TaskLifecycle, card: Card): TransferEntry[] => {
+    const reachable = new Set(reachableStates(board, cycle, card))
+    return board.groups.flatMap((g) => g.lanes.map((l) => ({
         group: g.title, status: l.status,
-        ok:    l.status === card.status || TaskFormat.checkStatus(cycle, card.actual, l.status) === ""
+        ok:    l.status === card.status || reachable.has(l.status)
     })))
+}
 
 /*  the geometry of the transfer popup: centered on the screen, with its entries
     (starting in its third inner row) scrolled so that the selected one stays visible  */
@@ -1556,8 +1558,7 @@ const App = ({ log, initial }: { log: Log, initial: Board }) => {
                     setNotice("task lifecycle model not yet loaded")
                     return
                 }
-                const targets = new Set(board.groups.flatMap((g) => g.lanes.map((l) => l.status))
-                    .filter((s) => s !== card.status && TaskFormat.checkStatus(cycle, card.actual, s) === ""))
+                const targets = new Set(reachableStates(board, cycle, card))
                 setCarry({ id: card.id, from: card.status, targets })
                 return
             }

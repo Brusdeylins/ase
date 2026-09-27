@@ -16,7 +16,7 @@ import type { Marked }           from "marked"
 import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import { Config, configSchema, webColorDefaults, webColorNames } from "./ase-config.js"
-import { buildBoard, watchTasks, toneOf, BoardState, attachmentTabs, isPreflightDiff, diffTones, newTaskText, createTask, saveTask } from "./ase-task-board-core.js"
+import { buildBoard, watchTasks, toneOf, reachableStates, BoardState, attachmentTabs, isPreflightDiff, diffTones, newTaskText, createTask, saveTask } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard }           from "./ase-task-board-filter.js"
 import type { Board, Card }      from "./ase-task-board-core.js"
@@ -219,8 +219,7 @@ const boardMoves = (board: Board, lifecycle: TaskFormat.TaskLifecycle): Record<s
 const cardMoves = (board: Board, lifecycle: TaskFormat.TaskLifecycle, card: Card): string[] | undefined => {
     if (card.actual === card.status)
         return undefined
-    return board.groups.flatMap((g) => g.lanes.map((l) => l.status))
-        .filter((to) => to !== card.status && TaskFormat.checkStatus(lifecycle, card.actual, to) === "")
+    return reachableStates(board, lifecycle, card)
 }
 
 /*  serialize the board for the browser  */
