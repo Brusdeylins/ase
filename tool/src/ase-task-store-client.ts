@@ -321,8 +321,9 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
     /*  subscribe to the change events of the project via the WebSocket event
         endpoint, reconnecting after a connection loss or a failed handshake
         (with a change notification on reconnect, as events may have been missed,
-        incl. lifecycle model changes); returns a function to unsubscribe  */
-    subscribe (onChange: () => void): () => void {
+        incl. lifecycle model changes), reporting each change of the connection
+        state (initially disconnected); returns a function to unsubscribe  */
+    subscribe (onChange: () => void, onState?: (connected: boolean) => void): () => void {
         const url = `${this.base.replace(/^http/, "ws")}/projects/${this.prjId}/events`
         let ws:      WebSocket | null = null
         let timer:   ReturnType<typeof setTimeout> | null = null
@@ -339,6 +340,7 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
                     onChange()
                 }
                 failed = false
+                onState?.(true)
             })
             ws.on("message", (data) => {
                 /*  drop the cached lifecycle model on a lifecycle model change  */
@@ -358,8 +360,10 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
             ws.on("close", () => {
                 ws     = null
                 failed = true
-                if (!stopped)
+                if (!stopped) {
+                    onState?.(false)
                     timer = setTimeout(connect, 2000)
+                }
             })
         }
         connect()

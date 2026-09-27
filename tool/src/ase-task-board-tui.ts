@@ -24,7 +24,7 @@ import { sanitize, renderDialog, renderConfirm, renderTransfer } from "./ase-tas
 const renderScreen = (ctx: BoardCtx) => {
     const {
         columns, rows, all, board, surface, view, filter, typing, dialog, notice, carry, confirm, transfer,
-        headRef, tabLabels, dialogSel, dialogLines, transferCard, transferList, dim
+        headRef, tabLabels, dialogSel, dialogLines, transferCard, transferList, dim, store
     } = ctx
 
     /*  refuse to draw into a too small window  */
@@ -34,7 +34,8 @@ const renderScreen = (ctx: BoardCtx) => {
 
     /*  the status line in the last line of the screen, below the key hints, enclosed
         on its left and right side by the downward lines of the rule above it,
-        showing the ASE version (dimmed) while there is nothing else to report  */
+        showing the kind and connection state of the task store (a disconnected one
+        in signal color) and the ASE version (dimmed) while there is nothing else to report  */
     const report = notice !== null ? sanitize(notice) :
         carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` :
             typing ? "filtering tasks by fuzzy matched keywords (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : null
@@ -43,7 +44,9 @@ const renderScreen = (ctx: BoardCtx) => {
         h(Box, cx("grow", "bar"),
             h(Text, cx("hint", report !== null && "signal", dim && "dimmed"),
                 report ?? [ "⧉ ASE: ", h(Text, { key: "app", ...cx("bold") }, "Task Board"),
-                    " · Version: ", h(Text, { key: "version", ...cx("bold") }, `ASE ${pkg.version}`) ])),
+                    ...(store !== null ? [ " · store: ", h(Text, { key: "store", ...cx("bold") }, `${store.kind} `),
+                        h(Text, { key: "state", ...cx(!store.connected && "signal") }, store.connected ? "●" : "○") ] : []),
+                    " · version: ", h(Text, { key: "version", ...cx("bold") }, `ASE ${pkg.version}`) ])),
         h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│")))
 
     /*  the counted tasks (without the context tasks of a filtered graph), and

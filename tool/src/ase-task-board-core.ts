@@ -575,12 +575,17 @@ const watchConfigs = (log: Log, onChange: () => void): FSWatcher => {
     return watcher
 }
 
+/*  the kind of the task store and whether it is connected (always for a local one)  */
+export type StoreState = { kind: "local" | "remote", connected: boolean }
+
 /*  watch the task store for changes and invoke the callback, debounced
     and guarded against re-entrance: a local task store by watching its
     directory (resolved through the task interface, never assumed) and its
     configuration files, a remote one by subscribing to its WebSocket change
-    events (incl. lifecycle model changes); returns a function to stop watching  */
-export const watchTasks = (log: Log, onChange: () => Promise<void> | void): (() => Promise<void>) => {
+    events (incl. lifecycle model changes); reports the store state initially
+    and on each change of it; returns a function to stop watching  */
+export const watchTasks = (log: Log, onChange: () => Promise<void> | void,
+    onStore?: (state: StoreState) => void): (() => Promise<void>) => {
     const dir = Task.localDir(log)
     let watcher:     FSWatcher | null = null
     let configs:     FSWatcher | null = null
@@ -672,9 +677,15 @@ export const watchTasks = (log: Log, onChange: () => Promise<void> | void): (() 
 
         /*  the lifecycle model of a local task store follows the configuration  */
         configs = watchConfigs(log, schedule)
+        onStore?.({ kind: "local", connected: true })
     }
-    else
-        unsubscribe = Task.subscribe(log, schedule)
+    else {
+        onStore?.({ kind: "remote", connected: false })
+        unsubscribe = Task.subscribe(log, schedule, (connected) => {
+            if (!stopped)
+                onStore?.({ kind: "remote", connected })
+        })
+    }
     return async () => {
         stopped = true
         if (timer !== null)

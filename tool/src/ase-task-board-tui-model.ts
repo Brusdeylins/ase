@@ -18,7 +18,7 @@ import { Task }                               from "./ase-task.js"
 import {
     buildBoard, watchTasks, BoardState, byCreation, newTaskText, taskTextId, createTask, saveTask, TaskConflict, reachableStates
 }                                             from "./ase-task-board-core.js"
-import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView } from "./ase-task-board-core.js"
+import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
 import { filterBoard }                        from "./ase-task-board-filter.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
@@ -108,6 +108,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     const [ cycle,   setCycle   ] = React.useState<TaskFormat.TaskLifecycle | null>(null)
     const [ confirm, setConfirm ] = React.useState<{ id: string, yes: boolean } | null>(null)
     const [ transfer, setTransfer ] = React.useState<{ id: string, at: string } | null>(null)
+    const [ store,   setStore   ] = React.useState<StoreState | null>(null)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
 
@@ -220,12 +221,13 @@ export const useBoardState = (log: Log, initial: Board) => {
         return map
     }, [ layout ])
 
-    /*  follow changes of the task storage and of the lifecycle mode  */
+    /*  follow changes of the task storage and of the lifecycle mode,
+        and the kind and connection state of the task store  */
     React.useEffect(() => {
         const refresh = async () => {
             setBoard(await buildBoard(log))
         }
-        const stop = watchTasks(log, refresh)
+        const stop = watchTasks(log, refresh, setStore)
         return () => {
             stop().catch(() => {})
         }
@@ -547,7 +549,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         confirm, setConfirm, transfer, setTransfer, mouse, setMouse, opening,
         cardBoxes, laneBoxes, groupBoxes, headBoxes, cardRef, laneRef, groupRef, headRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
-        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse,
+        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, store,
         toggle, toggleFlag, startEdit, remove, transferTo, drop
     }
 }

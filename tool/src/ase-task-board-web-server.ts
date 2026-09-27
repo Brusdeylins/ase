@@ -20,7 +20,7 @@ import { configSchema, webColorDefaults, webColorNames } from "./ase-config-sche
 import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isPreflightDiff, diffTones, newTaskText, createTask, saveTask, TaskConflict } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard }           from "./ase-task-board-filter.js"
-import type { Board }            from "./ase-task-board-core.js"
+import type { Board, StoreState } from "./ase-task-board-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
 import pkg                       from "../package.json" with { type: "json" }
 
@@ -228,6 +228,9 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
 type Client = { stream: PassThrough, compressor: { flush: () => void } | null }
 const clients = new Set<Client>()
 let stopWatch: (() => Promise<void>) | null = null
+
+/*  the kind and connection state of the task store, as reported by the change watcher  */
+let storeState: StoreState | null = null
 
 /*  the memoized board, valid only while the change watcher runs  */
 let cached: Promise<Board> | null = null
@@ -564,7 +567,8 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
     })
 
     /*  the change event stream: the watcher (which also notices changes
-        of the lifecycle mode) runs only while at least one client is connected  */
+        of the lifecycle mode) runs only while at least one client is connected,
+        and every client gets the task store state on connect and on each change  */
     server.route({
         method:  "GET",
         path:    "/task-board/events",
@@ -572,13 +576,25 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
             const stream = new PassThrough()
             const client: Client = { stream, compressor: null }
 
-            /*  hapi hands a (gzip/deflate) compressor to streams providing this hook  */
-            Object.assign(stream, { setCompressor: (c: { flush: () => void }) => { client.compressor = c } })
+            /*  hapi hands a (gzip/deflate) compressor to streams providing this hook, which
+                has to be flushed once attached, as it would else hold back the initial
+                writes (and hence the opening of the stream) until the first change event  */
+            Object.assign(stream, {
+                setCompressor: (c: { flush: () => void }) => {
+                    client.compressor = c
+                    setImmediate(() => { c.flush() })
+                }
+            })
             clients.add(client)
             if (stopWatch === null) {
                 cached    = null
-                stopWatch = watchTasks(log, broadcast)
+                stopWatch = watchTasks(log, broadcast, (state) => {
+                    storeState = state
+                    emit("store", state)
+                })
             }
+            else if (storeState !== null)
+                stream.write(`event: store\ndata: ${JSON.stringify(storeState)}\n\n`)
             request.raw.req.on("close", () => {
                 clients.delete(client)
                 stream.end()
@@ -586,7 +602,8 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
                     stopWatch().catch((err: unknown) => {
                         log.write("warning", `board: stopping watcher failed: ${err instanceof Error ? err.message : String(err)}`)
                     })
-                    stopWatch = null
+                    stopWatch  = null
+                    storeState = null
                 }
             })
             stream.write(": connected\n\n")

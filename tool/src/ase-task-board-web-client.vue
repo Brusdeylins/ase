@@ -83,7 +83,7 @@
             </template>
         </div>
         <div v-if="warning !== ''" class="status">{{ warning }}</div>
-        <div v-else class="status idle"><template v-if="board !== null">⧉ ASE: <b>Task Board</b><span class="sep">·</span>Version: <b>ASE {{ board.version }}</b></template></div>
+        <div v-else class="status idle"><template v-if="board !== null">⧉ ASE: <b>Task Board</b><span class="sep">·</span>server: <b :class="{ off: !online }">{{ online ? "online" : "offline" }}</b> <span :class="{ off: !online }">{{ online ? "●" : "○" }}</span><template v-if="store !== null"><span class="sep">·</span>store: <b>{{ store.kind }}</b> <span :class="{ off: !online || !store.connected }">{{ online && store.connected ? "●" : "○" }}</span></template><span class="sep">·</span>version: <b>ASE {{ board.version }}</b></template></div>
     </footer>
     <div v-show="task !== null" id="scrim" @click.self="leaveEdit(true)">
         <div v-if="task !== null" id="dlg">
@@ -959,6 +959,34 @@ const setView = (v: View) => {
 /*  connect to the service: change events, keyboard shortcuts, and keep-alive  */
 let events: EventSource | null = null
 let ping: ReturnType<typeof setInterval> | null = null
+let retry: ReturnType<typeof setTimeout> | null = null
+
+/*  the connection state to the service (the web server), and the kind
+    and connection state of the task store, as reported by the service  */
+const online = ref(false)
+const store  = ref<{ kind: "local" | "remote", connected: boolean } | null>(null)
+
+/*  open the change event stream, which the browser re-opens itself after a
+    connection loss, except after a failed (re-)connect, where it is re-created
+    here; a re-opened stream reloads the board, as changes may have been missed  */
+const connect = () => {
+    events = new EventSource("/task-board/events")
+    events.addEventListener("open", () => {
+        online.value = true
+        if (board.value !== null)
+            reload()
+    })
+    events.addEventListener("error", () => {
+        online.value = false
+        if (events?.readyState === EventSource.CLOSED) {
+            events.close()
+            retry = setTimeout(connect, 5 * 1000)
+        }
+    })
+    events.addEventListener("change", () => reload())
+    events.addEventListener("surface", (ev) => applySurface(JSON.parse((ev as MessageEvent).data)))
+    events.addEventListener("store", (ev) => { store.value = JSON.parse((ev as MessageEvent).data) })
+}
 
 /*  in the task plan editor, Ctrl/Cmd+S saves (only Cmd+S under the Emacs key bindings,
     where Ctrl+S searches) and, under the default key bindings, ESC cancels (or dismisses
@@ -1215,10 +1243,7 @@ const onResize = () => {
     updateTabScroll()
 }
 onMounted(() => {
-    events = new EventSource("/task-board/events")
-    events.addEventListener("change", () => reload())
-    events.addEventListener("open", () => { if (board.value !== null) reload() })
-    events.addEventListener("surface", (ev) => applySurface(JSON.parse((ev as MessageEvent).data)))
+    connect()
     Mousetrap.bind("t", () => { if (board.value !== null) toggle("titles", "") })
     Mousetrap.bind("v", () => setView(view.value === "lanes" ? "graph" : "lanes"))
     Mousetrap.bind("?", () => { if (board.value !== null) toggle("keys", "") })
@@ -1228,11 +1253,18 @@ onMounted(() => {
     })
     document.addEventListener("keydown", onKey)
     window.addEventListener("resize", onResize)
-    ping = setInterval(() => api("/task-board/api/ping"), 60 * 1000)
+
+    /*  the keep-alive, which also notices a lost service while no events arrive  */
+    ping = setInterval(async () => {
+        const result = await api("/task-board/api/ping")
+        online.value = result.error === undefined && events?.readyState === EventSource.OPEN
+    }, 15 * 1000)
     reload()
 })
 onBeforeUnmount(() => {
     events?.close()
+    if (retry !== null)
+        clearTimeout(retry)
     Mousetrap.reset()
     stopEdit()
     document.removeEventListener("keydown", onKey)

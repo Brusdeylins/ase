@@ -474,9 +474,12 @@ footer
         text-overflow: ellipsis
         color: var(--c-signal)
 
-        /*  the ASE version, while there is nothing else to report  */
+        /*  the connection states and the ASE version, while there is nothing
+            else to report, with a lost connection in signal color  */
         &.idle
             color: var(--c-mute)
+            .off
+                color: var(--c-signal)
 
     /*  the separators between the key hints  */
     .sep

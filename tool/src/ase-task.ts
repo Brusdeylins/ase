@@ -421,11 +421,12 @@ export class Task {
     }
 
     /*  subscribe to the change events of a remote task store (reconnecting
-        automatically); returns null for a local task store, whose changes
-        have to be watched via its directory (see localDir)  */
-    static subscribe (log: Log, onChange: () => void): (() => void) | null {
+        automatically, and reporting each change of the connection state);
+        returns null for a local task store, whose changes have to be
+        watched via its directory (see localDir)  */
+    static subscribe (log: Log, onChange: () => void, onState?: (connected: boolean) => void): (() => void) | null {
         const client = Task.client(log)
-        return client instanceof RemoteTaskStoreClient ? client.subscribe(onChange) : null
+        return client instanceof RemoteTaskStoreClient ? client.subscribe(onChange, onState) : null
     }
 
     /*  list all persisted tasks (see list) with their flattened header keys,
