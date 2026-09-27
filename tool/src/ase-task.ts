@@ -237,11 +237,10 @@ export class Task {
         return /^(?:127(?:\.\d{1,3}){3}|\[::1\]|localhost)$/i.test(hostname)
     }
 
-    /*  resolve the base directory of a local "ase:<path>" task store,
-        for read-only consumers watching it; returns null for a remote one  */
-    static localDir (log: Log): string | null {
-        const m = /^ase:(?!\/\/)(.+)$/.exec(Task.spec(log).store.value)
-        return m === null ? null : path.resolve(Task.projectRoot(), m[1])
+    /*  determine whether the task store is a remote one (otherwise it
+        is operated in-process and follows the local configuration)  */
+    static isRemote (log: Log): boolean {
+        return /^ases?:\/\//.test(Task.spec(log).store.value)
     }
 
     /*  resolve the bearer token of a remote task store: the token embedded
@@ -535,16 +534,12 @@ export class Task {
         return Task.with(log, (client) => client.content(id, index))
     }
 
-    /*  subscribe to the change events of a remote task store (reconnecting
-        automatically) or an in-process GitHub one (polling), reporting each
-        change of the connection state; returns null for a local "ase:<path>"
-        task store, whose changes have to be watched via its directory (see localDir)  */
-    static subscribe (log: Log, onChange: () => void, onState?: (connected: boolean) => void): (() => void) | null {
-        if (Task.localDir(log) !== null)
-            return null
-        const client = Task.client(log)
-        return client instanceof RemoteTaskStoreClient || client instanceof LocalTaskStoreClient ?
-            client.subscribe(onChange, onState) : null
+    /*  subscribe to the change events of the task store: a remote one
+        (reconnecting automatically) or an in-process one (whose storage plugin
+        detects the external changes, e.g. by watching its directory or by polling),
+        reporting each change of the connection state; returns a function to unsubscribe  */
+    static subscribe (log: Log, onChange: () => void, onState?: (connected: boolean) => void): () => void {
+        return Task.client(log).subscribe(onChange, onState)
     }
 
     /*  list all persisted tasks (see list) with their flattened header keys,

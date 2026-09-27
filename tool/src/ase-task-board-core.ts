@@ -570,22 +570,20 @@ const watchConfigs = (log: Log, onChange: () => void): FSWatcher => {
     return watcher
 }
 
-/*  the kind of the task store and whether it is connected (always for a local one)  */
+/*  the kind of the task store and whether it is connected (once opened for a local one)  */
 export type StoreState = { kind: "local" | "remote", connected: boolean }
 
 /*  watch the task store for changes and invoke the callback, debounced
-    and guarded against re-entrance: a local task store by watching its
-    directory (resolved through the task interface, never assumed) and its
-    configuration files, a remote one by subscribing to its WebSocket change
-    events (incl. lifecycle model changes); reports the store state initially
-    and on each change of it; returns a function to stop watching  */
+    and guarded against re-entrance: by subscribing to the change events of
+    the task store (for an in-process one incl. the external changes its storage
+    plugin detects, plus its configuration files; for a remote one incl. the
+    lifecycle model changes); reports the store state initially and on each
+    change of it; returns a function to stop watching  */
 export const watchTasks = (log: Log, onChange: () => Promise<void> | void,
     onStore?: (state: StoreState) => void): (() => Promise<void>) => {
-    const dir = Task.localDir(log)
-    let watcher:     FSWatcher | null = null
-    let configs:     FSWatcher | null = null
-    let unsubscribe: (() => void) | null = null
-    let timer:       ReturnType<typeof setTimeout> | null = null
+    const kind: StoreState["kind"] = Task.isRemote(log) ? "remote" : "local"
+    let configs: FSWatcher | null = null
+    let timer:   ReturnType<typeof setTimeout> | null = null
     let running  = false
     let pending  = false
     let stopped  = false
@@ -619,74 +617,20 @@ export const watchTasks = (log: Log, onChange: () => Promise<void> | void,
             }
         }
     }
-    if (dir !== null) {
-        /*  watch the task directory, or, as long as it does not exist yet, its
-            nearest existing ancestor for the creation of the next path step
-            towards it, re-arming once it appears (chokidar alone misses this)  */
-        const arm = (): void => {
-            if (stopped)
-                return
-            let w: FSWatcher
-            if (fs.existsSync(dir)) {
-                w = watch(dir, {
-                    ignoreInitial: true,
-                    depth:         0,
-                    ignored:       (file, stats) => stats?.isFile() === true && !/^TASK-[A-Za-z0-9#][A-Za-z0-9#_-]*\.md$/.test(path.basename(file))
-                })
-                w.on("all", schedule)
-            }
-            else {
-                let base = path.dirname(dir)
-                while (!fs.existsSync(base) && path.dirname(base) !== base)
-                    base = path.dirname(base)
-                const next = path.join(base, path.relative(base, dir).split(path.sep)[0])
-                w = watch(base, {
-                    ignoreInitial: true,
-                    depth:         0,
-                    ignored:       (file) => file !== base && file !== next
-                })
-                const rearm = (): void => {
-                    if (watcher !== w)
-                        return
-                    watcher = null
-                    w.close().catch(() => {}).finally(() => {
-                        arm()
-                        schedule()
-                    })
-                }
-                w.on("addDir", (file) => {
-                    if (file === next)
-                        rearm()
-                })
-                w.on("ready", () => {
-                    if (fs.existsSync(next))
-                        rearm()
-                })
-            }
-            w.on("error", (err: unknown) => {
-                log.write("warning", `board: watcher: ${err instanceof Error ? err.message : String(err)}`)
-            })
-            watcher = w
-        }
-        arm()
 
-        /*  the lifecycle model of a local task store follows the configuration  */
+    /*  the lifecycle model of an in-process task store follows the configuration  */
+    if (kind === "local")
         configs = watchConfigs(log, schedule)
-        onStore?.({ kind: "local", connected: true })
-    }
-    else {
-        onStore?.({ kind: "remote", connected: false })
-        unsubscribe = Task.subscribe(log, schedule, (connected) => {
-            if (!stopped)
-                onStore?.({ kind: "remote", connected })
-        })
-    }
+    onStore?.({ kind, connected: false })
+    const unsubscribe = Task.subscribe(log, schedule, (connected) => {
+        if (!stopped)
+            onStore?.({ kind, connected })
+    })
     return async () => {
         stopped = true
         if (timer !== null)
             clearTimeout(timer)
-        unsubscribe?.()
-        await watcher?.close()
+        unsubscribe()
         await configs?.close()
     }
 }

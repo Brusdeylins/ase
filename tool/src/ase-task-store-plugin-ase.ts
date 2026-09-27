@@ -10,6 +10,8 @@ import fs                     from "node:fs"
 import { parse as parseYAML } from "yaml"
 import writeFileAtomic        from "write-file-atomic"
 import lockfile               from "proper-lockfile"
+import { watch }              from "chokidar"
+import type { FSWatcher }     from "chokidar"
 
 import * as API               from "./ase-task-store-plugin-api.js"
 import * as TaskFormat        from "./ase-task-format.js"
@@ -47,6 +49,18 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
     private lifecycle: string
     private idscheme:  string
 
+    /*  the change detection state: the listener, the directory watcher, the
+        observed projects (onto their directories), the stamps of the task plan
+        files per directory, and the debounced, non-overlapping rescanning  */
+    private listener: ((prjId: string, change: API.TaskChange) => void) | null = null
+    private watcher:  FSWatcher | null = null
+    private tracked   = new Map<string, string>()
+    private stamps    = new Map<string, Map<string, string>>()
+    private timer:    ReturnType<typeof setTimeout> | null = null
+    private watching  = false
+    private scanning  = false
+    private pending   = false
+
     constructor (private ctx: API.TaskStorageContext) {
         const options = ctx.options as TaskStoragePluginOptions
         if (typeof options.basedir !== "string" || options.basedir === "")
@@ -62,11 +76,26 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
     }
 
     /*  the storage lifecycle (the base directory is not created upfront,
-        but on demand once the first file is stored into it)  */
+        but on demand once the first file is stored into it), watching
+        the base directory for changes while opened and observed  */
     async open (): Promise<void> {
+        if (this.listener !== null) {
+            this.watching = true
+            this.arm()
+        }
         this.ctx.log("debug", `opened base directory "${this.basedir}"` + (this.solo ? " (solo mode)" : ""))
     }
-    async close (): Promise<void> {}
+    async close (): Promise<void> {
+        this.watching = false
+        if (this.timer !== null)
+            clearTimeout(this.timer)
+        this.timer = null
+        const watcher = this.watcher
+        this.watcher = null
+        await watcher?.close()
+        this.tracked.clear()
+        this.stamps.clear()
+    }
 
     /*  the directory of a project  */
     private dir (prjId: string): string {
@@ -181,6 +210,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         if (!await exists(path.join(dir, PROJECT_FILE)))
             return null
         const { lifecycle, idscheme, seqmark } = await this.projectOf(dir)
+        await this.track(prjId)
         return { id: prjId, lifecycle, idscheme, seqmark }
     }
     async projectSet (prjId: string, lifecycle: string, idscheme: string): Promise<API.WriteResult> {
@@ -189,6 +219,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         const prev   = await this.projectOf(dir)
         if (result === "created" || prev.broken || prev.lifecycle !== lifecycle || prev.idscheme !== idscheme)
             await this.projectWrite(dir, prev.id ?? prjId, lifecycle, idscheme, prev.seqmark)
+        await this.track(prjId)
         return result
     }
     async projectMark (prjId: string, seqmark: number): Promise<void> {
@@ -202,6 +233,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         const file = path.join(dir, PROJECT_FILE)
         if (!await exists(file))
             return false
+        this.untrack(prjId)
 
         /*  unregister the project, but keep its directory as long as it still carries any files  */
         await fs.promises.rm(file, { force: true })
@@ -220,6 +252,19 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         return Object.hasOwn(TaskFormat.taskLifecycles, name) ? TaskFormat.taskLifecycles[name] : TaskFormat.taskLifecycles[this.lifecycle]
     }
 
+    /*  the listing entry of a task plan file of a directory (null if missing or empty)  */
+    private async entry (dir: string, taskId: string, lifecycle: TaskFormat.TaskLifecycle): Promise<API.TaskEntry | null> {
+        const file = path.join(dir, `TASK-${taskId}.md`)
+        const st   = await fs.promises.stat(file).catch(() => null)
+        if (st === null || !st.isFile())
+            return null
+        const text = await fs.promises.readFile(file, "utf8")
+        if (text === "")
+            return null
+        const plan = TaskFormat.parseTaskText(taskId, text, lifecycle)
+        return { id: taskId, title: TaskFormat.taskTitle(plan.body), header: plan.header, mtime: st.mtime }
+    }
+
     /*  the task plans  */
     async taskList (prjId: string): Promise<API.TaskEntry[]> {
         const dir = this.dir(prjId)
@@ -231,15 +276,9 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
             const m = TASK_FILE_RE.exec(entry)
             if (m === null)
                 continue
-            const file = path.join(dir, entry)
-            const st   = await fs.promises.stat(file)
-            if (!st.isFile())
-                continue
-            const text = await fs.promises.readFile(file, "utf8")
-            if (text === "")
-                continue
-            const plan = TaskFormat.parseTaskText(m[1], text, lifecycle)
-            out.push({ id: m[1], title: TaskFormat.taskTitle(plan.body), header: plan.header, mtime: st.mtime })
+            const task = await this.entry(dir, m[1], lifecycle)
+            if (task !== null)
+                out.push(task)
         }
         return out
     }
@@ -259,6 +298,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         const result: API.WriteResult = await exists(file) ? "updated" : "created"
         await fs.promises.mkdir(path.dirname(file), { recursive: true })
         await writeFileAtomic(file, TaskFormat.formatTaskText(plan), { encoding: "utf8" })
+        await this.written(prjId, taskId)
         return result
     }
     async taskDelete (prjId: string, taskId: string): Promise<boolean> {
@@ -266,6 +306,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         if (!await exists(file))
             return false
         await fs.promises.rm(file, { force: true })
+        await this.written(prjId, taskId)
         return true
     }
     async taskRename (prjId: string, oldId: string, newId: string): Promise<boolean> {
@@ -279,6 +320,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         await fs.promises.rename(oldFile, newFile)
         const plan = TaskFormat.parseTaskText(newId, await fs.promises.readFile(newFile, "utf8"), await this.model(prjId))
         await writeFileAtomic(newFile, TaskFormat.formatTaskText(plan), { encoding: "utf8" })
+        await this.written(prjId, oldId, newId)
         return true
     }
 
@@ -292,6 +334,191 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         if (st === null || !st.isFile())
             return null
         return fs.promises.readFile(full)
+    }
+
+    /*  ==== change detection ====  */
+
+    /*  observe the changes of the task plan files made outside of this plugin instance  */
+    watch (listener: (prjId: string, change: API.TaskChange) => void): void {
+        this.listener = listener
+    }
+
+    /*  watch the base directory, or, as long as it does not exist yet, its
+        nearest existing ancestor for the creation of the next path step
+        towards it, re-arming once it appears (chokidar alone misses this)  */
+    private arm (): void {
+        if (!this.watching)
+            return
+        const dir = this.basedir
+        let w: FSWatcher
+        if (fs.existsSync(dir)) {
+            w = watch(dir, {
+                ignoreInitial: true,
+                depth:         this.solo ? 0 : 1,
+                ignored:       (file, stats) => (file !== dir && file.endsWith(".lock"))
+                    || (stats?.isFile() === true && !TASK_FILE_RE.test(path.basename(file)))
+            })
+            w.on("all", () => this.schedule())
+        }
+        else {
+            let base = path.dirname(dir)
+            while (!fs.existsSync(base) && path.dirname(base) !== base)
+                base = path.dirname(base)
+            const next = path.join(base, path.relative(base, dir).split(path.sep)[0])
+            w = watch(base, {
+                ignoreInitial: true,
+                depth:         0,
+                ignored:       (file) => file !== base && file !== next
+            })
+            const rearm = (): void => {
+                if (this.watcher !== w)
+                    return
+                this.watcher = null
+                w.close().catch(() => {}).finally(() => {
+                    this.arm()
+                    this.schedule()
+                })
+            }
+            w.on("addDir", (file) => {
+                if (file === next)
+                    rearm()
+            })
+            w.on("ready", () => {
+                if (fs.existsSync(next))
+                    rearm()
+            })
+        }
+        w.on("error", (err: unknown) => {
+            this.ctx.log("warning", `watcher: ${err instanceof Error ? err.message : String(err)}`)
+        })
+        this.watcher = w
+    }
+
+    /*  the stamp (modification time and size) of a non-empty task plan file (null if missing or empty)  */
+    private async stamp (file: string): Promise<string | null> {
+        const st = await fs.promises.stat(file).catch(() => null)
+        return st !== null && st.isFile() && st.size > 0 ? `${st.mtimeMs}:${st.size}` : null
+    }
+
+    /*  the stamps of the task plan files of a directory  */
+    private async scan (dir: string): Promise<Map<string, string>> {
+        const stamps  = new Map<string, string>()
+        const entries = await fs.promises.readdir(dir).catch((err: NodeJS.ErrnoException) => {
+            if (err.code === "ENOENT")
+                return [] as string[]
+            throw err
+        })
+        for (const entry of entries) {
+            const m = TASK_FILE_RE.exec(entry)
+            if (m === null)
+                continue
+            const stamp = await this.stamp(path.join(dir, entry))
+            if (stamp !== null)
+                stamps.set(m[1], stamp)
+        }
+        return stamps
+    }
+
+    /*  start resp. stop observing a project, taking the initial stamps of its directory  */
+    private async track (prjId: string): Promise<void> {
+        if (!this.watching || this.tracked.has(prjId))
+            return
+        const dir = this.dir(prjId)
+        this.tracked.set(prjId, dir)
+        if (!this.stamps.has(dir))
+            this.stamps.set(dir, await this.scan(dir))
+    }
+    private untrack (prjId: string): void {
+        const dir = this.tracked.get(prjId)
+        this.tracked.delete(prjId)
+        if (dir !== undefined && ![ ...this.tracked.values() ].includes(dir))
+            this.stamps.delete(dir)
+    }
+
+    /*  record the stamps of the task plan files written by this plugin instance,
+        so the change detection does not report them as external changes  */
+    private async written (prjId: string, ...taskIds: string[]): Promise<void> {
+        const stamps = this.stamps.get(this.dir(prjId))
+        if (stamps === undefined)
+            return
+        for (const taskId of taskIds) {
+            const stamp = await this.stamp(this.file(prjId, taskId))
+            if (stamp === null)
+                stamps.delete(taskId)
+            else
+                stamps.set(taskId, stamp)
+        }
+    }
+
+    /*  schedule a rescan of the observed projects, debounced  */
+    private schedule (): void {
+        if (!this.watching)
+            return
+        if (this.timer !== null)
+            clearTimeout(this.timer)
+        this.timer = setTimeout(() => {
+            this.timer = null
+            this.rescan().catch(() => {})
+        }, 100)
+        this.timer.unref()
+    }
+
+    /*  rescan the directories of the observed projects, never overlapping itself,
+        and report the task plan files whose stamps changed: as added if unknown
+        before, as deleted if gone, else as updated (to all projects of a directory)  */
+    private async rescan (): Promise<void> {
+        if (this.scanning) {
+            this.pending = true
+            return
+        }
+        this.scanning = true
+        try {
+            const dirs = new Map<string, string[]>()
+            for (const [ prjId, dir ] of this.tracked)
+                dirs.set(dir, [ ...(dirs.get(dir) ?? []), prjId ])
+            for (const [ dir, prjIds ] of dirs) {
+                try {
+                    const before = this.stamps.get(dir)
+                    if (before === undefined)
+                        continue
+                    const after     = await this.scan(dir)
+                    const lifecycle = await this.model(prjIds[0])
+                    const change    = { added: [] as API.TaskEntry[], updated: [] as API.TaskEntry[], deleted: [] as string[] }
+                    for (const [ taskId, stamp ] of after) {
+                        if (before.get(taskId) === stamp)
+                            continue
+                        const entry = await this.entry(dir, taskId, lifecycle)
+                        if (entry !== null)
+                            (before.has(taskId) ? change.updated : change.added).push(entry)
+                    }
+                    for (const taskId of before.keys())
+                        if (!after.has(taskId))
+                            change.deleted.push(taskId)
+
+                    /*  update the stamps in place (and only of the reported task plans),
+                        as the own writes meanwhile already recorded theirs  */
+                    if (!this.watching || this.stamps.get(dir) !== before)
+                        continue
+                    for (const entry of [ ...change.added, ...change.updated ])
+                        before.set(entry.id, after.get(entry.id)!)
+                    for (const taskId of change.deleted)
+                        before.delete(taskId)
+                    if (this.listener !== null && (change.added.length > 0 || change.updated.length > 0 || change.deleted.length > 0))
+                        for (const prjId of prjIds)
+                            this.listener(prjId, change)
+                }
+                catch (err: unknown) {
+                    this.ctx.log("warning", `scanning directory "${dir}" failed: ${err instanceof Error ? err.message : String(err)}`)
+                }
+            }
+        }
+        finally {
+            this.scanning = false
+            if (this.pending) {
+                this.pending = false
+                this.schedule()
+            }
+        }
     }
 }
 

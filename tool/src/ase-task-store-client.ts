@@ -41,6 +41,7 @@ export interface TaskStoreClient {
     delete (id: string): Promise<boolean>
     purge  (age: string): Promise<string[]>
     content (id: string, index: number): Promise<{ type: string, content: Buffer } | null>
+    subscribe (onChange: () => void, onState?: (connected: boolean) => void): () => void
 }
 
 /*  the built-in storage plugin of a local store: its name, its options,

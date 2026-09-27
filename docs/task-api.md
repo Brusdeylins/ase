@@ -1324,7 +1324,8 @@ rename reports the *old* task id under `deleted` and the *new* task id
 under `added` (after an accompanying status change was applied). Only
 changes made through the API are reported, plus the changes a storage
 plugin detects itself through its optional `watch` method (like the
-issue changes made on GitHub, see *GitHub storage plugin* below),
+task plan files changed directly in the base directory of the built-in
+plugin, or the issue changes made on GitHub, see *GitHub storage plugin* below),
 reported with all three parts under `updated`.
 
 Messages sent by the client are ignored. Ping frames are answered with
@@ -1400,7 +1401,11 @@ in its listing, as only the plugin knows how to obtain it efficiently: the
 built-in plugin fully parses every task plan file on listing and
 derives it from the body, which is sufficient for the typical number
 of plans, while a database plugin would extract it on save and persist
-it denormalized alongside the plan.
+it denormalized alongside the plan. The built-in plugin also implements
+the optional `watch` method: while opened, it watches its base
+directory and reports the task plan files changed outside of it (e.g.
+by an editor, a `git pull`, or another process) by comparing their
+modification time and size, ignoring its own writes.
 
 The *concurrency guarantees* are: *all* requests of a project (reads
 included) are strictly serialized in arrival order through a
