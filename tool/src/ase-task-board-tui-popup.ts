@@ -11,7 +11,7 @@ import { cardLabel, attachmentTabs, isPreflightDiff, diffTones } from "./ase-tas
 import type { Card }                          from "./ase-task-board-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
 import { palette, cx, spinnerFrames }         from "./ase-task-board-tui-style.js"
-import type { TransferEntry }                 from "./ase-task-board-tui-model.js"
+import type { TransferEntry, BusyLabel }      from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
     (bit 0: bold, bit 1: italic, bit 2: code, bit 3: accent, bit 4: signal)  */
@@ -298,19 +298,27 @@ export const renderConfirm = (id: string, yes: boolean, columns: number, rows: n
 /*  render the busy popup of a slow task store operation: a small box, centered on the
     screen, with a spinner, the operation, and its elapsed time, above an indeterminate
     progress bar with a bouncing block, with every inner cell written (with spaces)  */
-export const renderBusy = (label: string, since: number, tick: number, columns: number, rows: number) => {
+export const renderBusy = (label: BusyLabel, since: number, tick: number, columns: number, rows: number) => {
     const width  = Math.min(columns - 2, 60)
     const innerW = width - 2
     const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
-    const text   = `${spinnerFrames[tick % spinnerFrames.length]} ${sanitize(label)} (${((Date.now() - since) / 1000).toFixed(1)}s)`.slice(0, innerW)
-    const tpad   = Math.floor((innerW - text.length) / 2)
+
+    /*  the centered operation, with the task id rendered inverse with one extra space on each side  */
+    const head   = `${spinnerFrames[tick % spinnerFrames.length]} ${sanitize(label.text)}${label.id !== undefined ? " " : ""}`.slice(0, innerW)
+    const tid    = label.id !== undefined ? ` ${sanitize(label.id)} `.slice(0, innerW - head.length) : ""
+    const tail   = `${label.suffix !== undefined ? ` ${sanitize(label.suffix)}` : ""} (${((Date.now() - since) / 1000).toFixed(1)}s)`
+        .slice(0, innerW - head.length - tid.length)
+    const tpad   = Math.floor((innerW - head.length - tid.length - tail.length) / 2)
     const barW   = Math.max(1, innerW - 4)
     const size   = Math.min(8, barW)
     const span   = barW - size
     const pos    = span > 0 ? Math.abs(((2 * tick) % (2 * span)) - span) : 0
     const bar    = "▱".repeat(pos) + "▰".repeat(size) + "▱".repeat(barW - pos - size)
     return h(Box, { key: "busy", top: Math.floor((rows - 5) / 2), left: Math.floor((columns - width) / 2), width, height: 5, ...cx("popup", "border-accent") },
-        h(Text, cx("normal", "bold"), (" ".repeat(tpad) + text).padEnd(innerW)),
+        h(Text, cx("normal", "bold"),
+            " ".repeat(tpad) + head,
+            h(Text, cx("inverse"), tid),
+            tail.padEnd(innerW - tpad - head.length - tid.length)),
         blank("blank"),
         h(Text, cx("accent"), ("  " + bar).padEnd(innerW)))
 }

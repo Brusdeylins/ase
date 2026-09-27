@@ -183,7 +183,7 @@
           the operation, and its elapsed time, above an indeterminate progress bar  -->
     <div v-if="busy !== null" id="busy">
         <div class="box">
-            <div class="ask"><span class="spinner"></span>{{ busy.label }} <span class="time">({{ busyTime }})</span></div>
+            <div class="ask"><span class="spinner"></span>{{ busy.label.text }}<span v-if="busy.label.id !== undefined" class="cid">{{ busy.label.id }}</span><template v-if="busy.label.suffix !== undefined">{{ busy.label.suffix }}</template><span class="time">({{ busyTime }})</span></div>
             <div class="bar"><div class="block"></div></div>
         </div>
     </div>
@@ -258,9 +258,10 @@ const relocate = (b: Board, sel: Sel, s: Surface): Sel => {
 
 /*  the requests in progress (by sequence number, with their label), and the modal
     busy popup, shown once the oldest of them lasts longer than 500ms  */
-const pending = new Map<number, string>()
+type BusyLabel = { text: string, id?: string, suffix?: string }
+const pending = new Map<number, BusyLabel>()
 let   pendSeq = 0
-const busy    = ref<{ label: string, since: number } | null>(null)
+const busy    = ref<{ label: BusyLabel, since: number } | null>(null)
 const busyNow = ref(Date.now())
 let   busyTimer = null as ReturnType<typeof setInterval> | null
 watch(busy, (b) => {
@@ -273,21 +274,26 @@ watch(busy, (b) => {
 })
 const busyTime = computed(() => busy.value === null ? "" : `${(Math.max(0, busyNow.value - busy.value.since) / 1000).toFixed(1)}s`)
 
-/*  the label of a request to the service, for the busy popup  */
-const busyLabel = (url: string, method: string): string => {
-    const id   = /\/api\/task\/([^/?]+)/.exec(url)?.[1]
-    const task = id !== undefined ? ` task "${decodeURIComponent(id)}"` : ""
+/*  the label of a request to the service, for the busy popup: its text, the
+    optional task id (rendered inverse), and an optional suffix  */
+const busyLabel = (url: string, opts?: RequestInit): BusyLabel => {
+    const name = /\/api\/([a-z]+)/.exec(url)?.[1] ?? ""
+    if (name === "move" && typeof opts?.body === "string") {
+        const { id, status } = JSON.parse(opts.body) as { id: string, status: string }
+        return { text: "moving task", id, suffix: `to ${status}` }
+    }
     const fixed: Record<string, string> = {
         board:  "loading tasks",
         graph:  "loading graph",
-        move:   "moving task",
         new:    "preparing new task",
         toggle: "saving board state"
     }
-    const name = /\/api\/([a-z]+)/.exec(url)?.[1] ?? ""
     if (Object.hasOwn(fixed, name))
-        return fixed[name]
-    return (method === "DELETE" ? "deleting" : method !== "GET" ? "saving" : "loading") + task
+        return { text: fixed[name] }
+    const method = opts?.method ?? "GET"
+    const text   = method === "DELETE" ? "deleting" : method !== "GET" ? "saving" : "loading"
+    const id     = /\/api\/task\/([^/?]+)/.exec(url)?.[1]
+    return id !== undefined ? { text: `${text} task`, id: decodeURIComponent(id) } : { text }
 }
 
 /*  fetch a JSON response of the service (tracked for the busy popup, unless in the background)  */
@@ -296,9 +302,9 @@ const api = async <T>(url: string, opts?: RequestInit, background = false): Prom
     const n = background ? 0 : ++pendSeq
     let timer = null as ReturnType<typeof setTimeout> | null
     if (n > 0) {
-        pending.set(n, busyLabel(url, opts?.method ?? "GET"))
+        pending.set(n, busyLabel(url, opts))
         timer = setTimeout(() => {
-            busy.value ??= { label: pending.values().next().value ?? "", since: Date.now() - 500 }
+            busy.value ??= { label: pending.values().next().value ?? { text: "" }, since: Date.now() - 500 }
         }, 500)
     }
     try {

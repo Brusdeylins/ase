@@ -78,6 +78,10 @@ export const transferEntries = (board: Board, cycle: TaskFormat.TaskLifecycle, c
     })))
 }
 
+/*  the label of a busy task store operation: its text, the optional task id
+    (rendered inverse), and an optional suffix  */
+export type BusyLabel = { text: string, id?: string, suffix?: string }
+
 /*  switch the mouse click reporting of the terminal (xterm, SGR encoding) on or off  */
 export const mouseReporting = (on: boolean): void => {
     process.stdout.write(on ? "\x1b[?1000h\x1b[?1006h" : "\x1b[?1006l\x1b[?1000l")
@@ -114,11 +118,11 @@ export const useBoardState = (log: Log, initial: Board) => {
 
     /*  track a task store operation: once the oldest of the pending operations
         lasts longer than 500ms, the modal busy popup shows it (with an animation tick)  */
-    const pending = React.useRef(new Map<number, string>())
+    const pending = React.useRef(new Map<number, BusyLabel>())
     const seq     = React.useRef(0)
-    const [ busy,     setBusy     ] = React.useState<{ label: string, since: number } | null>(null)
+    const [ busy,     setBusy     ] = React.useState<{ label: BusyLabel, since: number } | null>(null)
     const [ busyTick, setBusyTick ] = React.useState(0)
-    const track = <T>(label: string, op: Promise<T>): Promise<T> => {
+    const track = <T>(label: BusyLabel, op: Promise<T>): Promise<T> => {
         const n = ++seq.current
         pending.current.set(n, label)
         const timer = setTimeout(() => {
@@ -273,7 +277,7 @@ export const useBoardState = (log: Log, initial: Board) => {
             return
         let live = true
         const load = Promise.all([ Task.parts(log, dialogId), Task.attachments(log, dialogId) ])
-        const run  = plan?.id === dialogId ? load : track(`loading task "${dialogId}"`, load)
+        const run  = plan?.id === dialogId ? load : track({ text: "loading task", id: dialogId }, load)
         run.then(([ parts, atts ]) => {
             if (live)
                 setPlan({ id: dialogId, parts: parts === null ? null : { ...parts, atts } })
@@ -297,7 +301,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         const key = `${id}:${dialogTab}`
         let live = true
         const load = Task.attachmentContent(log, id, dialogTab - 1)
-        const run  = files.has(key) ? load : track(`loading attachment of task "${id}"`, load)
+        const run  = files.has(key) ? load : track({ text: "loading attachment of task", id }, load)
         run.then((content) =>
             content?.content ?? new Error("no such attachment content")
         ).catch((err: unknown) =>
@@ -371,7 +375,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     /*  edit a task with $EDITOR; a draft which failed to save is kept and
         offered again on the next edit of the same task  */
     const edit = async (id: string): Promise<void> => {
-        const src = await track(`loading task "${id}"`, Task.source(log, id))
+        const src = await track({ text: "loading task", id }, Task.source(log, id))
         if (src === null) {
             setNotice(`task "${id}" no longer exists`)
             return
@@ -385,7 +389,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         try {
             /*  conditionally save with the entity tag, to refuse overwriting changes
                 made meanwhile by others (e.g. an agent or the web board)  */
-            const { id: next, warning } = await track(`saving task "${id}"`, saveTask(log, id, text, src.tag))
+            const { id: next, warning } = await track({ text: "saving task", id }, saveTask(log, id, text, src.tag))
             drafts.current.delete(id)
             if (next !== id) {
                 setSel((s) => s.id === id ? { ...s, id: next } : s)
@@ -416,7 +420,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         its "Id:" key; an unchanged text creates no task, and a text which failed
         to save is kept as a draft (under the empty id) for the next new task  */
     const create = async (): Promise<void> => {
-        const orig = drafts.current.get("") ?? await track<string>("preparing new task",
+        const orig = drafts.current.get("") ?? await track<string>({ text: "preparing new task" },
             Task.lifecycle(log).then((lifecycle) => newTaskText(log, all, lifecycle)))
         const text = await runEditor("new-task", orig)
         if (text === orig) {
@@ -426,7 +430,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         }
         const id = TaskFormat.taskTextId(text)
         try {
-            const warning = await track(`creating task "${id}"`, createTask(log, id, text))
+            const warning = await track({ text: "creating task", id }, createTask(log, id, text))
             drafts.current.delete("")
             setSel((s) => ({ ...s, id }))
             setNotice(`task "${id}" created` + (warning !== "" ? ` (${warning})` : ""))
@@ -442,7 +446,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     const remove = (id: string): void => {
         if (dialog?.id === id)
             setDialog(null)
-        track(`deleting task "${id}"`, Task.delete(log, id)).then((existed) => {
+        track({ text: "deleting task", id }, Task.delete(log, id)).then((existed) => {
             setNotice(existed ? `task "${id}" deleted` : `task "${id}" no longer exists`)
         }).catch((err: unknown) => {
             setNotice(`deleting task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -456,7 +460,7 @@ export const useBoardState = (log: Log, initial: Board) => {
             setNotice(`transferring task "${id}" cancelled`)
             return
         }
-        track(`moving task "${id}" to ${to}`, Task.setStatus(log, id, to)).then((result) => {
+        track({ text: "moving task", id, suffix: `to ${to}` }, Task.setStatus(log, id, to)).then((result) => {
             setNotice(`task "${id}" moved from ${result.from} to ${result.to}`)
         }).catch((err: unknown) => {
             setNotice(`moving task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -466,7 +470,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     /*  drop a carried task onto a lane state, keeping it selected  */
     const drop = (id: string, to: string): void => {
         setCarry(null)
-        track(`moving task "${id}" to ${to}`, Task.setStatus(log, id, to)).then((result) => {
+        track({ text: "moving task", id, suffix: `to ${to}` }, Task.setStatus(log, id, to)).then((result) => {
             setSel({ g: sel.g, l: sel.l, id })
             setNotice(`task "${id}" moved from ${result.from} to ${result.to}`)
         }).catch((err: unknown) => {
