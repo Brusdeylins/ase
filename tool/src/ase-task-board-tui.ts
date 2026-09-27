@@ -21,6 +21,7 @@ import {
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, SurfaceList, SurfaceView } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
+import { Problem }                            from "./ase-task-store-core.js"
 import pkg                                    from "../package.json" with { type: "json" }
 import { filterBoard }                        from "./ase-task-board-filter.js"
 import { layoutGraph, drawGraphText }         from "./ase-task-board-graph.js"
@@ -1039,33 +1040,21 @@ const App = ({ log, initial }: { log: Log, initial: Board }) => {
     /*  edit a task with $EDITOR; a draft which failed to save is kept and
         offered again on the next edit of the same task  */
     const edit = async (id: string): Promise<void> => {
-        const orig = await Task.load(log, id)
-        if (orig === "") {
+        const src = await Task.source(log, id)
+        if (src === null) {
             setNotice(`task "${id}" no longer exists`)
             return
         }
-        const text = await runEditor(id, drafts.current.get(id) ?? orig)
-        if (text === orig) {
+        const text = await runEditor(id, drafts.current.get(id) ?? src.text)
+        if (text === src.text) {
             drafts.current.delete(id)
             setNotice(`task "${id}" unchanged`)
             return
         }
-
-        /*  refuse to overwrite changes made meanwhile by others (e.g. an agent or
-            the web board), keeping the edit as a draft for the next edit  */
-        const curr = await Task.load(log, id)
-        if (curr === "") {
-            drafts.current.delete(id)
-            setNotice(`task "${id}" was deleted meanwhile (edit discarded)`)
-            return
-        }
-        else if (curr !== orig) {
-            drafts.current.set(id, text)
-            setNotice(`task "${id}" was changed meanwhile (press "e" to re-edit and overwrite)`)
-            return
-        }
         try {
-            const next = await saveTask(log, id, text)
+            /*  conditionally save with the entity tag, to refuse overwriting changes
+                made meanwhile by others (e.g. an agent or the web board)  */
+            const next = await saveTask(log, id, text, src.tag)
             drafts.current.delete(id)
             if (next !== id) {
                 setSel((s) => s.id === id ? { ...s, id: next } : s)
@@ -1074,6 +1063,17 @@ const App = ({ log, initial }: { log: Log, initial: Board }) => {
             setNotice(next !== id ? `task "${id}" saved and renamed to "${next}"` : `task "${id}" saved`)
         }
         catch (err: unknown) {
+            if (err instanceof Problem && err.status === 412) {
+                if (await Task.source(log, id) === null) {
+                    drafts.current.delete(id)
+                    setNotice(`task "${id}" was deleted meanwhile (edit discarded)`)
+                }
+                else {
+                    drafts.current.set(id, text)
+                    setNotice(`task "${id}" was changed meanwhile (press "e" to re-edit and overwrite)`)
+                }
+                return
+            }
             drafts.current.set(id, text)
             const msg = err instanceof Error ? err.message : String(err)
             setNotice(`saving task "${id}" failed: ${msg} (press "e" to re-edit)`)
