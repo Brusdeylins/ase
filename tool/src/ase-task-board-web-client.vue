@@ -29,7 +29,7 @@
                       vertically written status and number of cards (expanding the group on click)  -->
                 <div v-if="surface.collapsed.includes(g.title)" class="group coll">
                     <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr right">▼</span></div>
-                    <div v-for="(l, li) in g.lanes" :key="l.status" class="lane"
+                    <div v-for="(l, li) in g.lanes" :key="l.status" class="lane" tabindex="-1"
                         :class="[ { active: l.active, dashed: l.dashed, done: l.kind === 'terminal', sel: sel.g === gi && sel.l === li }, dropClass(l.status) ]"
                         :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li); toggle('collapsed', g.title)"
                         @dragover="dragOver($event, l.status)" @dragleave="dragLeave($event, l.status)" @drop="drop($event, l.status)">
@@ -40,7 +40,7 @@
                 </div>
                 <div v-else class="group">
                     <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr">▼</span><span class="ttl">{{ g.title }}</span></div>
-                    <div v-for="(l, li) in g.lanes" :key="l.status" class="lane"
+                    <div v-for="(l, li) in g.lanes" :key="l.status" class="lane" tabindex="-1"
                         :class="[ { active: l.active, dashed: l.dashed, done: l.kind === 'terminal', min: surface.minimized.includes(l.status), sel: sel.g === gi && sel.l === li }, dropClass(l.status) ]"
                         :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li)"
                         @dragover="dragOver($event, l.status)" @dragleave="dragLeave($event, l.status)" @drop="drop($event, l.status)">
@@ -48,7 +48,7 @@
                             <span>{{ surface.minimized.includes(l.status) ? "▶" : "▼" }}<span class="ttl">{{ l.status }}</span></span>
                             <span>{{ l.cards.length }}</span>
                         </div>
-                        <div v-if="!surface.minimized.includes(l.status)" class="cards">
+                        <div v-if="!surface.minimized.includes(l.status)" class="cards" tabindex="-1">
                             <!--  the task carried by the keyboard, shown on top of the selected target lane  -->
                             <div v-if="carried !== null && drag?.over === l.status" class="card held sel carried" :class="`tone-${carried.tone}`">
                                 <div class="cbody"><span class="cid">{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}{{ carried.title }}</div>
@@ -409,6 +409,11 @@ const showSel = () => {
         boardEl.value?.querySelector(".card.sel") ?? boardEl.value?.querySelector(".lane.sel") :
         graphEl.value?.querySelector(".node.sel .card")
     el?.scrollIntoView({ block: "nearest", inline: "nearest" })
+
+    /*  focus the selected lane, so keys like HOME/END scroll it (unless typing elsewhere)  */
+    const lane = boardEl.value?.querySelector<HTMLElement>(".lane.sel .cards") ?? boardEl.value?.querySelector<HTMLElement>(".lane.sel")
+    if (view.value === "lanes" && task.value === null && !(document.activeElement instanceof HTMLInputElement))
+        lane?.focus({ preventScroll: true })
 }
 
 /*  remember the scroll position of the document of the selected tab  */
@@ -922,8 +927,8 @@ watch([ board, surface, view ], () => {
 })
 
 /*  follow the selection with the lane a carried task is moved onto, the
-    marks in the graph, and the scroll positions  */
-watch([ sel, graph, view ], () => {
+    marks in the graph, the scroll positions, and the lane focus  */
+watch([ sel, graph, view, task ], () => {
     const d     = drag.value
     const group = board.value?.groups[sel.value.g]
     if (d?.key === true)
