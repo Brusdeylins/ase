@@ -18,13 +18,13 @@ import type { BoardCtx }                      from "./ase-task-board-tui-model.j
 import { handleMouse, handleKey }             from "./ase-task-board-tui-control.js"
 import { h, renderLanes, renderGraph }        from "./ase-task-board-tui-view.js"
 import { palette, loadPalette, cx }           from "./ase-task-board-tui-style.js"
-import { sanitize, renderDialog, renderConfirm, renderTransfer } from "./ase-task-board-tui-popup.js"
+import { sanitize, renderDialog, renderConfirm, renderTransfer, renderBusy } from "./ase-task-board-tui-popup.js"
 
 /*  render the whole screen  */
 const renderScreen = (ctx: BoardCtx) => {
     const {
         columns, rows, all, board, surface, view, filter, typing, dialog, notice, carry, confirm, transfer,
-        headRef, tabLabels, dialogSel, dialogLines, transferCard, transferList, dim, store
+        headRef, tabLabels, dialogSel, dialogLines, transferCard, transferList, dim, store, busy, busyTick
     } = ctx
 
     /*  refuse to draw into a too small window  */
@@ -119,7 +119,8 @@ const renderScreen = (ctx: BoardCtx) => {
         }) : null,
         confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null,
         transfer !== null && transferCard !== undefined ?
-            renderTransfer(transfer.id, transferCard.status, transferList, transfer.at, columns, rows) : null)
+            renderTransfer(transfer.id, transferCard.status, transferList, transfer.at, columns, rows) : null,
+        busy !== null ? renderBusy(busy.label, busy.since, busyTick, columns, rows) : null)
 }
 
 /*  the root component of the terminal board  */
@@ -131,6 +132,10 @@ const App = ({ log, initial }: { log: Log, initial: Board }) => {
         /*  ignore key releases (reported under the kitty keyboard protocol),
             as otherwise every toggling key would toggle twice  */
         if (key.eventType === "release")
+            return
+
+        /*  ignore all input while the modal busy popup is shown  */
+        if (ctx.busy !== null)
             return
 
         /*  handle a mouse report (1-based column/row, "M" for press, "m" for release)  */

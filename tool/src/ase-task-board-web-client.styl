@@ -549,7 +549,7 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
     z-index: 10
 
 /*  the confirmation of a task deletion and the transfer popup: a small box, centered over everything  */
-#confirm, #transfer
+#confirm, #transfer, #busy
     position: fixed
     inset: 0
     display: flex
@@ -627,6 +627,54 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
         .cur
             color: var(--c-text-soft)
             font-weight: normal
+
+/*  the modal busy popup: in accent color, above all other popups, with a
+    rotating spinner and an indeterminate progress bar with a bouncing block  */
+#busy
+    z-index: 30
+    cursor: progress
+    .box
+        border-color: var(--c-accent)
+        padding: 16px 24px
+    .ask
+        display: flex
+        align-items: center
+        gap: 8px
+        color: var(--c-accent)
+        .time
+            color: var(--c-text-soft)
+            font-weight: normal
+    .spinner
+        width: 12px
+        height: 12px
+        border: 2px solid var(--c-accent-line)
+        border-top-color: var(--c-accent)
+        border-radius: 50%
+        animation: busy-spin 0.8s linear infinite
+    .bar
+        position: relative
+        width: 320px
+        max-width: 70vw
+        height: 6px
+        overflow: hidden
+        border-radius: 3px
+        background: var(--c-accent-line)
+        .block
+            position: absolute
+            top: 0
+            width: 25%
+            height: 100%
+            border-radius: 3px
+            background: var(--c-accent)
+            animation: busy-bounce 1.6s ease-in-out infinite alternate
+@keyframes busy-spin
+    to
+        transform: rotate(360deg)
+@keyframes busy-bounce
+    from
+        left: 0
+    to
+        left: 75%
 #dlg
     position: absolute
     left: 50%

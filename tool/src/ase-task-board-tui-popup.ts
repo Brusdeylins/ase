@@ -10,7 +10,7 @@ import type { Task }                          from "./ase-task.js"
 import { cardLabel, attachmentTabs, isPreflightDiff, diffTones } from "./ase-task-board-core.js"
 import type { Card }                          from "./ase-task-board-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
-import { palette, cx }                        from "./ase-task-board-tui-style.js"
+import { palette, cx, spinnerFrames }         from "./ase-task-board-tui-style.js"
 import type { TransferEntry }                 from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
@@ -293,6 +293,26 @@ export const renderConfirm = (id: string, yes: boolean, columns: number, rows: n
             " ".repeat(Math.max(0, innerW - pad - 2 * CONFIRM_BUTTON - 1))),
         blank("blank-below"),
         h(Text, cx("dim"), keys))
+}
+
+/*  render the busy popup of a slow task store operation: a small box, centered on the
+    screen, with a spinner, the operation, and its elapsed time, above an indeterminate
+    progress bar with a bouncing block, with every inner cell written (with spaces)  */
+export const renderBusy = (label: string, since: number, tick: number, columns: number, rows: number) => {
+    const width  = Math.min(columns - 2, 60)
+    const innerW = width - 2
+    const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
+    const text   = `${spinnerFrames[tick % spinnerFrames.length]} ${sanitize(label)} (${((Date.now() - since) / 1000).toFixed(1)}s)`.slice(0, innerW)
+    const tpad   = Math.floor((innerW - text.length) / 2)
+    const barW   = Math.max(1, innerW - 4)
+    const size   = Math.min(8, barW)
+    const span   = barW - size
+    const pos    = span > 0 ? Math.abs(((2 * tick) % (2 * span)) - span) : 0
+    const bar    = "▱".repeat(pos) + "▰".repeat(size) + "▱".repeat(barW - pos - size)
+    return h(Box, { key: "busy", top: Math.floor((rows - 5) / 2), left: Math.floor((columns - width) / 2), width, height: 5, ...cx("popup", "border-accent") },
+        h(Text, cx("normal", "bold"), (" ".repeat(tpad) + text).padEnd(innerW)),
+        blank("blank"),
+        h(Text, cx("accent"), ("  " + bar).padEnd(innerW)))
 }
 
 /*  the geometry of the transfer popup: centered on the screen, with its entries

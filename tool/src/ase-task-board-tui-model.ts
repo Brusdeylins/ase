@@ -112,6 +112,36 @@ export const useBoardState = (log: Log, initial: Board) => {
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
 
+    /*  track a task store operation: once the oldest of the pending operations
+        lasts longer than 500ms, the modal busy popup shows it (with an animation tick)  */
+    const pending = React.useRef(new Map<number, string>())
+    const seq     = React.useRef(0)
+    const [ busy,     setBusy     ] = React.useState<{ label: string, since: number } | null>(null)
+    const [ busyTick, setBusyTick ] = React.useState(0)
+    const track = <T>(label: string, op: Promise<T>): Promise<T> => {
+        const n = ++seq.current
+        pending.current.set(n, label)
+        const timer = setTimeout(() => {
+            setBusy((b) => b ?? { label: pending.current.values().next().value ?? label, since: Date.now() - 500 })
+        }, 500)
+        return op.finally(() => {
+            clearTimeout(timer)
+            pending.current.delete(n)
+            const next = pending.current.values().next()
+            setBusy((b) => b === null || next.done === true ? null : { ...b, label: next.value })
+        })
+    }
+    React.useEffect(() => {
+        if (busy === null)
+            return
+        const timer = setInterval(() => {
+            setBusyTick((n) => n + 1)
+        }, 100)
+        return () => {
+            clearInterval(timer)
+        }
+    }, [ busy ])
+
     /*  the rendered card, lane, and group boxes of the lane view, for the mouse hit-testing  */
     const cardBoxes  = React.useRef(new Map<string, DOMElement>())
     const laneBoxes  = React.useRef(new Map<string, DOMElement>())
@@ -222,7 +252,8 @@ export const useBoardState = (log: Log, initial: Board) => {
     }, [ layout ])
 
     /*  follow changes of the task storage and of the lifecycle mode,
-        and the kind and connection state of the task store  */
+        and the kind and connection state of the task store
+        (in the background, i.e. without the busy popup)  */
     React.useEffect(() => {
         const refresh = async () => {
             setBoard(await buildBoard(log))
@@ -233,14 +264,17 @@ export const useBoardState = (log: Log, initial: Board) => {
         }
     }, [ log ])
 
-    /*  fetch the plan (with its attachments) of the read dialog whenever it is opened or the board changes  */
+    /*  fetch the plan (with its attachments) of the read dialog whenever it is opened or the board changes
+        (the latter in the background, i.e. without the busy popup)  */
     const dialogId  = dialog?.id
     const dialogTab = dialog?.tab ?? 0
     React.useEffect(() => {
         if (dialogId === undefined)
             return
         let live = true
-        Promise.all([ Task.parts(log, dialogId), Task.attachments(log, dialogId) ]).then(([ parts, atts ]) => {
+        const load = Promise.all([ Task.parts(log, dialogId), Task.attachments(log, dialogId) ])
+        const run  = plan?.id === dialogId ? load : track(`loading task "${dialogId}"`, load)
+        run.then(([ parts, atts ]) => {
             if (live)
                 setPlan({ id: dialogId, parts: parts === null ? null : { ...parts, atts } })
         }).catch((err: unknown) => {
@@ -253,7 +287,8 @@ export const useBoardState = (log: Log, initial: Board) => {
         }
     }, [ log, all, dialogId ])
 
-    /*  fetch the file content of the attachment of the selected tab, whenever the tab is selected or the plan changes  */
+    /*  fetch the file content of the attachment of the selected tab, whenever the tab is selected or the plan changes
+        (the latter in the background, i.e. without the busy popup)  */
     React.useEffect(() => {
         const parts = plan !== null && plan.id === dialogId ? plan.parts : undefined
         if (parts === undefined || parts === null || parts instanceof Error || dialogTab === 0 || parts.atts[dialogTab - 1]?.file === undefined)
@@ -261,7 +296,9 @@ export const useBoardState = (log: Log, initial: Board) => {
         const id  = plan!.id
         const key = `${id}:${dialogTab}`
         let live = true
-        Task.attachmentContent(log, id, dialogTab - 1).then((content) =>
+        const load = Task.attachmentContent(log, id, dialogTab - 1)
+        const run  = files.has(key) ? load : track(`loading attachment of task "${id}"`, load)
+        run.then((content) =>
             content?.content ?? new Error("no such attachment content")
         ).catch((err: unknown) =>
             err instanceof Error ? err : new Error(String(err))
@@ -334,7 +371,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     /*  edit a task with $EDITOR; a draft which failed to save is kept and
         offered again on the next edit of the same task  */
     const edit = async (id: string): Promise<void> => {
-        const src = await Task.source(log, id)
+        const src = await track(`loading task "${id}"`, Task.source(log, id))
         if (src === null) {
             setNotice(`task "${id}" no longer exists`)
             return
@@ -348,7 +385,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         try {
             /*  conditionally save with the entity tag, to refuse overwriting changes
                 made meanwhile by others (e.g. an agent or the web board)  */
-            const { id: next, warning } = await saveTask(log, id, text, src.tag)
+            const { id: next, warning } = await track(`saving task "${id}"`, saveTask(log, id, text, src.tag))
             drafts.current.delete(id)
             if (next !== id) {
                 setSel((s) => s.id === id ? { ...s, id: next } : s)
@@ -379,7 +416,8 @@ export const useBoardState = (log: Log, initial: Board) => {
         its "Id:" key; an unchanged text creates no task, and a text which failed
         to save is kept as a draft (under the empty id) for the next new task  */
     const create = async (): Promise<void> => {
-        const orig = drafts.current.get("") ?? await newTaskText(log, all, await Task.lifecycle(log))
+        const orig = drafts.current.get("") ?? await track<string>("preparing new task",
+            Task.lifecycle(log).then((lifecycle) => newTaskText(log, all, lifecycle)))
         const text = await runEditor("new-task", orig)
         if (text === orig) {
             drafts.current.delete("")
@@ -388,7 +426,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         }
         const id = TaskFormat.taskTextId(text)
         try {
-            const warning = await createTask(log, id, text)
+            const warning = await track(`creating task "${id}"`, createTask(log, id, text))
             drafts.current.delete("")
             setSel((s) => ({ ...s, id }))
             setNotice(`task "${id}" created` + (warning !== "" ? ` (${warning})` : ""))
@@ -404,7 +442,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     const remove = (id: string): void => {
         if (dialog?.id === id)
             setDialog(null)
-        Task.delete(log, id).then((existed) => {
+        track(`deleting task "${id}"`, Task.delete(log, id)).then((existed) => {
             setNotice(existed ? `task "${id}" deleted` : `task "${id}" no longer exists`)
         }).catch((err: unknown) => {
             setNotice(`deleting task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -418,7 +456,7 @@ export const useBoardState = (log: Log, initial: Board) => {
             setNotice(`transferring task "${id}" cancelled`)
             return
         }
-        Task.setStatus(log, id, to).then((result) => {
+        track(`moving task "${id}" to ${to}`, Task.setStatus(log, id, to)).then((result) => {
             setNotice(`task "${id}" moved from ${result.from} to ${result.to}`)
         }).catch((err: unknown) => {
             setNotice(`moving task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -428,7 +466,7 @@ export const useBoardState = (log: Log, initial: Board) => {
     /*  drop a carried task onto a lane state, keeping it selected  */
     const drop = (id: string, to: string): void => {
         setCarry(null)
-        Task.setStatus(log, id, to).then((result) => {
+        track(`moving task "${id}" to ${to}`, Task.setStatus(log, id, to)).then((result) => {
             setSel({ g: sel.g, l: sel.l, id })
             setNotice(`task "${id}" moved from ${result.from} to ${result.to}`)
         }).catch((err: unknown) => {
@@ -523,8 +561,8 @@ export const useBoardState = (log: Log, initial: Board) => {
     const nodes = [ ...board.cards.values() ].sort((a, b) =>
         board.levels.get(a.id)! - board.levels.get(b.id)! || byCreation(a, b))
 
-    /*  the board is dimmed while a dialog or popup is shown  */
-    const dim = dialog !== null || confirm !== null || transfer !== null
+    /*  the board is dimmed while a dialog or popup is shown (incl. the busy popup)  */
+    const dim = dialog !== null || confirm !== null || transfer !== null || busy !== null
 
     /*  pulse the tasks of active lanes (or the active nodes of the graph), but only while
         any of them (or its pulse) is actually visible, in order to not needlessly re-render the board  */
@@ -553,7 +591,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         confirm, setConfirm, transfer, setTransfer, mouse, setMouse, opening,
         cardBoxes, laneBoxes, groupBoxes, headBoxes, cardRef, laneRef, groupRef, headRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
-        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, store,
+        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, store, busy, busyTick,
         toggle, toggleFlag, startEdit, remove, transferTo, drop
     }
 }

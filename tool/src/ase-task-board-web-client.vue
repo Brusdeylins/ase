@@ -178,6 +178,15 @@
             <div class="keys"><kbd>↑</kbd>/<kbd>↓</kbd><span class="action">selects</span><span class="sep">·</span><kbd>⏎</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
         </div>
     </div>
+
+    <!--  the modal busy popup of a slow request to the service: a spinner,
+          the operation, and its elapsed time, above an indeterminate progress bar  -->
+    <div v-if="busy !== null" id="busy">
+        <div class="box">
+            <div class="ask"><span class="spinner"></span>{{ busy.label }} <span class="time">({{ busyTime }})</span></div>
+            <div class="bar"><div class="block"></div></div>
+        </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -247,14 +256,65 @@ const relocate = (b: Board, sel: Sel, s: Surface): Sel => {
     return items.find((it) => it.l === sel.l) ?? items[0]
 }
 
-/*  fetch a JSON response of the service  */
+/*  the requests in progress (by sequence number, with their label), and the modal
+    busy popup, shown once the oldest of them lasts longer than 500ms  */
+const pending = new Map<number, string>()
+let   pendSeq = 0
+const busy    = ref<{ label: string, since: number } | null>(null)
+const busyNow = ref(Date.now())
+let   busyTimer = null as ReturnType<typeof setInterval> | null
+watch(busy, (b) => {
+    if (b !== null && busyTimer === null)
+        busyTimer = setInterval(() => { busyNow.value = Date.now() }, 100)
+    else if (b === null && busyTimer !== null) {
+        clearInterval(busyTimer)
+        busyTimer = null
+    }
+})
+const busyTime = computed(() => busy.value === null ? "" : `${(Math.max(0, busyNow.value - busy.value.since) / 1000).toFixed(1)}s`)
+
+/*  the label of a request to the service, for the busy popup  */
+const busyLabel = (url: string, method: string): string => {
+    const id   = /\/api\/task\/([^/?]+)/.exec(url)?.[1]
+    const task = id !== undefined ? ` task "${decodeURIComponent(id)}"` : ""
+    const fixed: Record<string, string> = {
+        board:  "loading tasks",
+        graph:  "loading graph",
+        move:   "moving task",
+        new:    "preparing new task",
+        toggle: "saving board state"
+    }
+    const name = /\/api\/([a-z]+)/.exec(url)?.[1] ?? ""
+    if (Object.hasOwn(fixed, name))
+        return fixed[name]
+    return (method === "DELETE" ? "deleting" : method !== "GET" ? "saving" : "loading") + task
+}
+
+/*  fetch a JSON response of the service (tracked for the busy popup, unless in the background)  */
 type Result<T> = (T & { error?: undefined }) | { error: string }
-const api = async <T>(url: string, opts?: RequestInit): Promise<Result<T>> => {
+const api = async <T>(url: string, opts?: RequestInit, background = false): Promise<Result<T>> => {
+    const n = background ? 0 : ++pendSeq
+    let timer = null as ReturnType<typeof setTimeout> | null
+    if (n > 0) {
+        pending.set(n, busyLabel(url, opts?.method ?? "GET"))
+        timer = setTimeout(() => {
+            busy.value ??= { label: pending.values().next().value ?? "", since: Date.now() - 500 }
+        }, 500)
+    }
     try {
         return await (await fetch(url, opts)).json()
     }
     catch (err: unknown) {
         return { error: err instanceof Error ? err.message : String(err) }
+    }
+    finally {
+        if (n > 0) {
+            clearTimeout(timer!)
+            pending.delete(n)
+            const next = pending.values().next()
+            if (busy.value !== null)
+                busy.value = next.done === true ? null : { ...busy.value, label: next.value }
+        }
     }
 }
 
@@ -366,9 +426,9 @@ const scrollBy = (left: number) =>
 watch([ board, view ], () => nextTick(updateScroll), { deep: true })
 
 /*  load the dependency graph (laid out by the service)  */
-const renderGraph = async () => {
+const renderGraph = async (background = false) => {
     const seq = ++graphSeq
-    const res = await api<{ svg: string }>(`/task-board/api/graph?filter=${encodeURIComponent(query)}`)
+    const res = await api<{ svg: string }>(`/task-board/api/graph?filter=${encodeURIComponent(query)}`, undefined, background)
     if (seq !== graphSeq)
         return
     graph.value = res.error !== undefined ? `<p class="warn">${res.error.replace(/[&<>]/g, (c) => `&#${c.charCodeAt(0)};`)}</p>` :
@@ -426,7 +486,7 @@ const keepTabScroll = () => {
 /*  open the dialog of a task, keeping the selected tab and the scroll
     positions of the tab documents when re-opening the same task (on changes),
     but never switching away from a task whose plan is being edited  */
-const openTask = async (id: string) => {
+const openTask = async (id: string, background = false) => {
     if (editing.value !== null && editing.value.id !== id)
         return
     const seq = ++openSeq
@@ -437,7 +497,7 @@ const openTask = async (id: string) => {
         tabScrolls.clear()
     }
     openId = id
-    const t = await api<Task>(`/task-board/api/task/${encodeURIComponent(id)}`)
+    const t = await api<Task>(`/task-board/api/task/${encodeURIComponent(id)}`, undefined, background)
     if (seq !== openSeq)
         return
     if (t.error !== undefined) {
@@ -450,7 +510,7 @@ const openTask = async (id: string) => {
 
     /*  replace the cached attachment documents only once the selected one is re-fetched  */
     const n   = Math.min(tab.value, t.tabs.length - 1)
-    const doc = n > 0 ? await fetchTabDoc(id, n) : ""
+    const doc = n > 0 ? await fetchTabDoc(id, n, background) : ""
     if (seq !== openSeq)
         return
     tabDocs.value = n > 0 ? { [n]: doc } : {}
@@ -762,8 +822,8 @@ const stopEdit = () => {
 
 /*  fetch the document of an attachment tab, or load it into the cache
     (the task plan tab has its document already)  */
-const fetchTabDoc = async (id: string, n: number): Promise<string> => {
-    const d = await api<{ doc: string }>(`/task-board/api/task/${encodeURIComponent(id)}/attachment/${n - 1}/doc`)
+const fetchTabDoc = async (id: string, n: number, background = false): Promise<string> => {
+    const d = await api<{ doc: string }>(`/task-board/api/task/${encodeURIComponent(id)}/attachment/${n - 1}/doc`, undefined, background)
     return d.error !== undefined ? `<p class="warn">${d.error.replace(/[&<>]/g, (c) => `&#${c.charCodeAt(0)};`)}</p>` : d.doc
 }
 const loadTab = async (n: number) => {
@@ -794,10 +854,10 @@ const updateTabScroll = () => {
     tabScroll.more = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
 }
 
-/*  (re)load the board model  */
-const reload = async () => {
+/*  (re)load the board model, in the background on a change of the task store (without busy popup)  */
+const reload = async (background = false) => {
     const seq  = ++reloadSeq
-    const data = await api<Board>(`/task-board/api/board?filter=${encodeURIComponent(query)}`)
+    const data = await api<Board>(`/task-board/api/board?filter=${encodeURIComponent(query)}`, undefined, background)
     if (seq !== reloadSeq)
         return
     if (data.error !== undefined) {
@@ -811,9 +871,9 @@ const reload = async () => {
         view.value = data.surface.view
     board.value = data
     if (view.value === "graph")
-        await renderGraph()
+        await renderGraph(background)
     if (openId !== null)
-        await openTask(openId)
+        await openTask(openId, background)
 }
 
 /*  apply the filter query debounced while typing (as each change
@@ -982,7 +1042,7 @@ const connect = () => {
     events.addEventListener("open", () => {
         online.value = true
         if (board.value !== null)
-            reload()
+            reload(true)
     })
     events.addEventListener("error", () => {
         online.value = false
@@ -991,7 +1051,7 @@ const connect = () => {
             retry = setTimeout(connect, 5 * 1000)
         }
     })
-    events.addEventListener("change", () => reload())
+    events.addEventListener("change", () => reload(true))
     events.addEventListener("surface", (ev) => applySurface(JSON.parse((ev as MessageEvent).data)))
     events.addEventListener("store", (ev) => { store.value = JSON.parse((ev as MessageEvent).data) })
 }
@@ -1246,6 +1306,15 @@ const onKey = (ev: KeyboardEvent) => {
     else
         onBoardKey(ev)
 }
+
+/*  swallow all keys while the modal busy popup is shown (in the capture phase,
+    so that neither the key dispatch, the key bindings, nor the editor see them)  */
+const onBusyKey = (ev: KeyboardEvent) => {
+    if (busy.value === null)
+        return
+    ev.preventDefault()
+    ev.stopImmediatePropagation()
+}
 const onResize = () => {
     updateScroll()
     updateTabScroll()
@@ -1259,12 +1328,13 @@ onMounted(() => {
         ev.preventDefault()
         filterEl.value?.focus()
     })
+    window.addEventListener("keydown", onBusyKey, true)
     document.addEventListener("keydown", onKey)
     window.addEventListener("resize", onResize)
 
     /*  the keep-alive, which also notices a lost service while no events arrive  */
     ping = setInterval(async () => {
-        const result = await api("/task-board/api/ping")
+        const result = await api("/task-board/api/ping", undefined, true)
         online.value = result.error === undefined && events?.readyState === EventSource.OPEN
     }, 15 * 1000)
     reload()
@@ -1275,12 +1345,15 @@ onBeforeUnmount(() => {
         clearTimeout(retry)
     Mousetrap.reset()
     stopEdit()
+    window.removeEventListener("keydown", onBusyKey, true)
     document.removeEventListener("keydown", onKey)
     window.removeEventListener("resize", onResize)
     if (ping !== null)
         clearInterval(ping)
     if (filterTimer !== null)
         clearTimeout(filterTimer)
+    if (busyTimer !== null)
+        clearInterval(busyTimer)
 })
 </script>
 

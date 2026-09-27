@@ -89,6 +89,9 @@ let classes = sheet(palette)
 /*  the frames of the pulse in the top border of the tasks of active lanes  */
 export const pulseFrames = [ "●", "●", "●", "●", "●", "◉", "⦿", "○", "⦿", "◉" ]
 
+/*  the frames of the spinner of the busy popup  */
+export const spinnerFrames = [ "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" ]
+
 /*  load the palette from the configuration and derive the style sheet from it  */
 export const loadPalette = (log: Log): void => {
     const cfg = new Config("config", configSchema, log)
