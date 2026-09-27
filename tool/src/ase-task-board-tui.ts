@@ -17,10 +17,11 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, splitHeight, toneOf, watchTasks, BoardState, byCreation, cardLabel, clampLines, glueId, glueTitle,
-    attachmentTabs, isPreflightDiff, diffTones
+    attachmentTabs, isPreflightDiff, diffTones, newTaskText, taskTextId, createTask, saveTask
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, SurfaceList } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
+import pkg                                    from "../package.json" with { type: "json" }
 import { filterBoard }                        from "./ase-task-board-filter.js"
 import { layoutGraph, drawGraphText }         from "./ase-task-board-graph.js"
 import type { GraphLayout }                   from "./ase-task-board-graph.js"
@@ -365,6 +366,49 @@ const refSegs = (pred: string[], succ: string[], tint: (id: string) => string | 
     return segs
 }
 
+/*  the geometry of the confirmation of a task deletion: a small box, centered on
+    the screen, and its inverse " delete " and " cancel " buttons, centered in its
+    third inner row (as screen positions, for the mouse hit-testing)  */
+const CONFIRM_BUTTON = 8
+const confirmBox = (columns: number, rows: number) => {
+    const width = Math.min(columns - 2, 60)
+    const left  = Math.floor((columns - width) / 2)
+    const top   = Math.floor((rows - 7) / 2)
+    const pad   = Math.max(0, Math.floor((width - 2 - (2 * CONFIRM_BUTTON + 1)) / 2))
+    return { width, left, top, pad, row: top + 3, deleteX: left + 1 + pad, cancelX: left + 2 + pad + CONFIRM_BUTTON }
+}
+
+/*  render the confirmation of a task deletion, with every inner cell
+    written (with spaces) to hide the content underneath  */
+const renderConfirm = (id: string, yes: boolean, columns: number, rows: number) => {
+    const { width, left, top, pad } = confirmBox(columns, rows)
+    const innerW = width - 2
+    const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
+
+    /*  the centered question, with the task id rendered inverse with one extra space on each side  */
+    const tid    = ` ${sanitize(id)} `.slice(0, Math.max(0, innerW - 13))
+    const qpad   = Math.max(0, Math.floor((innerW - 13 - tid.length) / 2))
+    const hint   = "←/→/⇥: select · ⏎: press · y: delete · ESC: cancel".slice(0, innerW)
+    const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
+    return h(Box, {
+        key: "confirm", position: "absolute", top, left,
+        width, height: 7, flexDirection: "column", borderStyle: "round", borderColor: palette.signal
+    },
+    h(Text, { color: palette.normal, bold: true },
+        " ".repeat(qpad) + "Delete task ",
+        h(Text, { inverse: true }, tid),
+        "?".padEnd(Math.max(0, innerW - qpad - 12 - tid.length))),
+    blank("blank-above"),
+    h(Text, {},
+        " ".repeat(pad),
+        h(Text, { color: yes ? palette.signal : palette.normal, bold: true, inverse: true }, " delete "),
+        " ",
+        h(Text, { color: yes ? palette.normal : palette.signal, bold: true, inverse: true }, " cancel "),
+        " ".repeat(Math.max(0, innerW - pad - 2 * CONFIRM_BUTTON - 1))),
+    blank("blank-below"),
+    h(Text, { color: palette.dim }, keys))
+}
+
 /*  render the read dialog: full height, horizontally centered, with a
     vertical scroll bar in its right border  */
 const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scroll, lines, columns, rows, notice }: DialogArgs) => {
@@ -423,7 +467,7 @@ const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scr
     const free   = Math.max(0, innerW - pos.length - 1)
     const keys   = notice !== null ?
         (" " + sanitize(notice)).slice(0, free) :
-        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · M: toggle mouse · ⏎/ESC: close"
+        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · D: delete · M: toggle mouse · ⏎/ESC: close"
 
     return h(Box, { key: "dialog", ...frame, flexDirection: "column" },
         h(Text, {},
@@ -713,6 +757,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
     const [ notice,  setNotice  ] = React.useState<string | null>(null)
     const [ carry,   setCarry   ] = React.useState<Carry | null>(null)
     const [ cycle,   setCycle   ] = React.useState<TaskFormat.TaskLifecycle | null>(null)
+    const [ confirm, setConfirm ] = React.useState<{ id: string, yes: boolean } | null>(null)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
 
@@ -891,19 +936,13 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         })
     }
 
-    /*  edit a task with $EDITOR on a temporary file, handing the terminal
-        over to the editor; a draft which failed to save is kept and
-        offered again on the next edit of the same task  */
-    const edit = async (id: string): Promise<void> => {
-        const orig = await Task.load(log, id)
-        if (orig === "") {
-            setNotice(`task "${id}" no longer exists`)
-            return
-        }
+    /*  run $EDITOR on a text in a temporary file, handing the terminal over
+        to the editor, and return the edited text  */
+    const runEditor = async (name: string, text: string): Promise<string> => {
         const dir  = await fs.promises.mkdtemp(path.join(os.tmpdir(), "ase-task-"))
-        const file = path.join(dir, `${id}.md`)
+        const file = path.join(dir, `${name}.md`)
         try {
-            await fs.promises.writeFile(file, drafts.current.get(id) ?? orig, "utf8")
+            await fs.promises.writeFile(file, text, "utf8")
 
             /*  run $EDITOR through the shell (to support values with arguments or
                 quoting), passing the file via the environment to avoid quoting it  */
@@ -918,40 +957,91 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                     mouseReporting(mouseOn.current)
                 }
             })
-            const text = await fs.promises.readFile(file, "utf8")
-            if (text === orig) {
-                drafts.current.delete(id)
-                setNotice(`task "${id}" unchanged`)
-                return
-            }
-
-            /*  refuse to overwrite changes made meanwhile by others (e.g. an agent or
-                the web board), keeping the edit as a draft for the next edit  */
-            const curr = await Task.load(log, id)
-            if (curr === "") {
-                drafts.current.delete(id)
-                setNotice(`task "${id}" was deleted meanwhile (edit discarded)`)
-                return
-            }
-            else if (curr !== orig) {
-                drafts.current.set(id, text)
-                setNotice(`task "${id}" was changed meanwhile (press "e" to re-edit and overwrite)`)
-                return
-            }
-            try {
-                await Task.save(log, id, text)
-                drafts.current.delete(id)
-                setNotice(`task "${id}" saved`)
-            }
-            catch (err: unknown) {
-                drafts.current.set(id, text)
-                const msg = err instanceof Error ? err.message : String(err)
-                setNotice(`saving task "${id}" failed: ${msg} (press "e" to re-edit)`)
-            }
+            return await fs.promises.readFile(file, "utf8")
         }
         finally {
             await fs.promises.rm(dir, { recursive: true, force: true })
         }
+    }
+
+    /*  edit a task with $EDITOR; a draft which failed to save is kept and
+        offered again on the next edit of the same task  */
+    const edit = async (id: string): Promise<void> => {
+        const orig = await Task.load(log, id)
+        if (orig === "") {
+            setNotice(`task "${id}" no longer exists`)
+            return
+        }
+        const text = await runEditor(id, drafts.current.get(id) ?? orig)
+        if (text === orig) {
+            drafts.current.delete(id)
+            setNotice(`task "${id}" unchanged`)
+            return
+        }
+
+        /*  refuse to overwrite changes made meanwhile by others (e.g. an agent or
+            the web board), keeping the edit as a draft for the next edit  */
+        const curr = await Task.load(log, id)
+        if (curr === "") {
+            drafts.current.delete(id)
+            setNotice(`task "${id}" was deleted meanwhile (edit discarded)`)
+            return
+        }
+        else if (curr !== orig) {
+            drafts.current.set(id, text)
+            setNotice(`task "${id}" was changed meanwhile (press "e" to re-edit and overwrite)`)
+            return
+        }
+        try {
+            const next = await saveTask(log, id, text)
+            drafts.current.delete(id)
+            if (next !== id) {
+                setSel((s) => s.id === id ? { ...s, id: next } : s)
+                setDialog((d) => d?.id === id ? { ...d, id: next } : d)
+            }
+            setNotice(next !== id ? `task "${id}" saved and renamed to "${next}"` : `task "${id}" saved`)
+        }
+        catch (err: unknown) {
+            drafts.current.set(id, text)
+            const msg = err instanceof Error ? err.message : String(err)
+            setNotice(`saving task "${id}" failed: ${msg} (press "e" to re-edit)`)
+        }
+    }
+
+    /*  create a new task with $EDITOR on its pre-filled text, under the id of
+        its "Id:" key; an unchanged text creates no task, and a text which failed
+        to save is kept as a draft (under the empty id) for the next new task  */
+    const create = async (): Promise<void> => {
+        const orig = drafts.current.get("") ?? newTaskText(all, await Task.lifecycle(log))
+        const text = await runEditor("new-task", orig)
+        if (text === orig) {
+            drafts.current.delete("")
+            setNotice("new task discarded")
+            return
+        }
+        const id = taskTextId(text)
+        try {
+            await createTask(log, id, text)
+            drafts.current.delete("")
+            setSel((s) => ({ ...s, id }))
+            setNotice(`task "${id}" created`)
+        }
+        catch (err: unknown) {
+            drafts.current.set("", text)
+            const msg = err instanceof Error ? err.message : String(err)
+            setNotice(`creating task failed: ${msg} (press "N" to re-edit)`)
+        }
+    }
+
+    /*  delete a task (after its confirmation), closing its read dialog  */
+    const remove = (id: string): void => {
+        if (dialog?.id === id)
+            setDialog(null)
+        Task.delete(log, id).then((existed) => {
+            setNotice(existed ? `task "${id}" deleted` : `task "${id}" no longer exists`)
+        }).catch((err: unknown) => {
+            setNotice(`deleting task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
     }
 
     /*  keep the selection valid on every board, surface, or view change
@@ -961,7 +1051,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
     }, [ board, surface, view ])
 
     const headH  = 3
-    const footH  = 5
+    const footH  = surface.keys ? 6 : 3
     const boardH = rows - headH - footH
     const innerW = columns - 2
 
@@ -1019,6 +1109,19 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         click onto its " X " closes an open task view, a click onto a
         predecessor/successor id jumps to its task view, and the wheel scrolls it  */
     const onMouse = (btn: number, mx: number, my: number): void => {
+        if (confirm !== null) {
+            /*  a click onto the " delete " or " cancel " button of the deletion confirmation  */
+            const box = confirmBox(columns, rows)
+            if (btn === 0 && my === box.row && mx >= box.deleteX && mx < box.deleteX + CONFIRM_BUTTON) {
+                remove(confirm.id)
+                setConfirm(null)
+            }
+            else if (btn === 0 && my === box.row && mx >= box.cancelX && mx < box.cancelX + CONFIRM_BUTTON) {
+                setNotice(`deleting task "${confirm.id}" cancelled`)
+                setConfirm(null)
+            }
+            return
+        }
         if (dialog !== null) {
             /*  a click onto the " X " of the header (the second dialog row) closes  */
             const barX   = Math.floor((columns - dialogW) / 2) + 1
@@ -1168,6 +1271,23 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         if (notice !== null)
             setNotice(null)
 
+        /*  answer the confirmation of a task deletion: "y" deletes, ESC cancels, the
+            left/right arrows and TAB/Shift+TAB switch the selected button, RETURN
+            presses it, and all other keys are ignored  */
+        if (confirm !== null) {
+            if (input === "y" || (key.return && confirm.yes)) {
+                remove(confirm.id)
+                setConfirm(null)
+            }
+            else if (key.escape || key.return) {
+                setNotice(`deleting task "${confirm.id}" cancelled`)
+                setConfirm(null)
+            }
+            else if (key.leftArrow || key.rightArrow || key.tab)
+                setConfirm({ ...confirm, yes: !confirm.yes })
+            return
+        }
+
         /*  while typing into the filter field, all keys edit the filter query
             (applied live), until ENTER keeps it or ESC clears it  */
         if (typing && dialog === null) {
@@ -1191,16 +1311,27 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             setNotice(mouse ? "mouse support disabled: regular text selection available" : "mouse support enabled")
             return
         }
-        const startEdit = (id: string) => {
+
+        /*  edit an existing task, or create a new one (without id)  */
+        const startEdit = (id: string | null) => {
             if (editing.current)
                 return
             editing.current = true
             setNotice(null)
-            edit(id).catch((err: unknown) => {
-                setNotice(`editing task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+            const run = id !== null ? edit(id) : create()
+            run.catch((err: unknown) => {
+                setNotice(`${id !== null ? `editing task "${id}"` : "creating task"} failed: ${err instanceof Error ? err.message : String(err)}`)
             }).finally(() => {
                 editing.current = false
             })
+        }
+
+        /*  request the deletion of a task in every view (under the kitty keyboard
+            protocol, Shift+d arrives as "d" with the shift modifier)  */
+        const target = dialog !== null ? dialog.id : sel.id
+        if ((input === "D" || (input === "d" && key.shift)) && target !== "" && carry === null) {
+            setConfirm({ id: target, yes: false })
+            return
         }
         if (dialog !== null) {
             const page = Math.max(1, rows - DIALOG_CHROME - 2)
@@ -1246,11 +1377,17 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                 startEdit(sel.id)
             return
         }
-        if (input === "t") {
-            BoardState.toggleTitles("tui").then((state) => {
+        if (input === "N" || (input === "n" && key.shift)) {
+            if (carry === null)
+                startEdit(null)
+            return
+        }
+        if (input === "t" || input === "?") {
+            const flag = input === "t" ? "titles" : "keys"
+            BoardState.toggleFlag("tui", flag).then((state) => {
                 setSurface(state.tui)
             }).catch((err: unknown) => {
-                log.write("warning", `board: toggling titles failed: ${err instanceof Error ? err.message : String(err)}`)
+                log.write("warning", `board: toggling ${flag} failed: ${err instanceof Error ? err.message : String(err)}`)
             })
             return
         }
@@ -1376,14 +1513,21 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         return h(Box, { width: columns, height: rows, justifyContent: "center", alignItems: "center" },
             h(Text, { color: palette.signal }, `window too small (${columns}×${rows}) — needs at least 40×16`))
 
-    const dim = dialog !== null
+    const dim = dialog !== null || confirm !== null
 
-    /*  the status line of the footer, right before the key hints  */
-    const status = h(Box, { key: "status", paddingX: 1, justifyContent: "center" },
-        h(Text, { color: palette.signal, dimColor: dim, wrap: "truncate" },
-            notice !== null ? sanitize(notice) :
-                carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` :
-                    typing ? "filtering tasks by fuzzy matched keywords (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : " "))
+    /*  the status line in the last line of the screen, below the key hints, enclosed
+        on its left and right side by the downward lines of the rule above it,
+        showing the ASE version (dimmed) while there is nothing else to report  */
+    const report = notice !== null ? sanitize(notice) :
+        carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` :
+            typing ? "filtering tasks by fuzzy matched keywords (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : null
+    const status = h(Box, { key: "status", paddingX: 1 },
+        h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│")),
+        h(Box, { flexGrow: 1, justifyContent: "center", paddingX: 1 },
+            h(Text, { color: report !== null ? palette.signal : palette.dim, dimColor: dim, wrap: "truncate" },
+                report ?? [ "⧉ ASE: ", h(Text, { key: "app", bold: true }, "Task Board"),
+                    " · Version: ", h(Text, { key: "version", bold: true }, `ASE ${pkg.version}`) ])),
+        h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│")))
 
     /*  render the lane view  */
     const renderLanes = () => {
@@ -1405,18 +1549,18 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             h(Box, { key: "bar", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
                     (arrows ? "░".repeat(off) + "█".repeat(on) + "░".repeat(Math.max(0, track - off - on)) + " · " : "") + info)),
-            status,
             h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop move task")),
+                    "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop move task · D: delete task")),
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+                    "N: new task · " +
                     `m: ${minned ? "maximize" : "minimize"} lane · c: ${folded ? "expand" : "collapse"} group · ` +
                     `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
                     "/: filter tasks · g: switch to graph")),
             h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    `Left-Click: view task / minimize/maximize lane / collapse/expand group · M: ${mouse ? "disable" : "enable"} mouse · q: quit`))
+                    `Left-Click: view task / minimize/maximize lane / collapse/expand group · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
         ]
     }
 
@@ -1426,7 +1570,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
         if (layout === null)
             return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, borderStyle: "round", borderColor: palette.dim },
                 h(Text, { color: palette.dim }, board.cards.size === 0 ? "(no tasks)" : "laying out …")),
-            h(Text, { key: "info" }, " "), status, h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " "), h(Text, { key: "keys3" }, " ") ]
+            h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " "), h(Text, { key: "keys3" }, " ") ]
 
         /*  draw the ELK layout  */
         const { lines, tones } = drawGraphText(layout.board, layout.graph, sel.id, layout.titles)
@@ -1466,17 +1610,16 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             h(Box, { key: "info", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" }, card === undefined ? " " :
                     [ "task: ", h(Text, { key: "id", bold: true }, card.id), " · status: ", h(Text, { key: "status", bold: true }, card.status) ])),
-            status,
             h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task")),
+                    "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task · D: delete task")),
             h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    `t: ${graphTitles ? "collapse" : "expand"} titles · ` +
+                    `N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
                     "/: filter tasks · l: switch to lanes")),
             h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
-                    `M: ${mouse ? "disable" : "enable"} mouse · q: quit`))
+                    `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
         ]
     }
 
@@ -1489,34 +1632,42 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
 
     /*  render the whole screen  */
     return h(Box, { width: columns, height: rows, flexDirection: "column" },
-        /*  the header, with the view value and the filter field in boxes of
+        /*  the header, enclosed on its left and right side by the upward lines of
+            the rule below it, with the view value and the filter field in boxes of
             their own, so that they are measurable for the mouse hit-testing  */
-        h(Box, { justifyContent: "center", paddingX: 1 },
-            h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" },
-                "⧉ ASE: ",
-                h(Text, { bold: true }, "Task Board"),
-                " · project: ",
-                h(Text, { bold: true }, path.basename(Task.projectRoot())),
-                " · mode: ",
-                h(Text, { bold: true }, board.mode),
-                " · tasks: ",
-                h(Text, { bold: true }, `${tasks.filter((c) => toneOf(board, c) !== "done").length}/${tasks.length}`),
-                " · view: "),
-            h(Box, { ref: headRef("view"), flexShrink: 0 },
-                h(Text, { color: palette.dim, dimColor: dim, bold: true, inverse: true }, ` ${view} `)),
-            h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" }, " · filter: "),
-            h(Box, { ref: headRef("filter"), flexShrink: 0 },
-                h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true }, field)),
-            h(Box, { ref: headRef("clear"), flexShrink: 0 },
-                h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true },
-                    filter !== "" ? "✕ " : "  "))),
+        h(Box, { paddingX: 1 },
+            h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│")),
+            h(Box, { flexGrow: 1, justifyContent: "center", paddingX: 1 },
+                h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" },
+                    "⧉ ASE: ",
+                    h(Text, { bold: true }, "Task Board"),
+                    " · project: ",
+                    h(Text, { bold: true }, path.basename(Task.projectRoot())),
+                    " · mode: ",
+                    h(Text, { bold: true }, board.mode),
+                    " · tasks: ",
+                    h(Text, { bold: true }, `${tasks.filter((c) => toneOf(board, c) !== "done").length}/${tasks.length}`),
+                    " · view: "),
+                h(Box, { ref: headRef("view"), flexShrink: 0 },
+                    h(Text, { color: palette.dim, dimColor: dim, bold: true, inverse: true }, ` ${view} `)),
+                h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" }, " · filter: "),
+                h(Box, { ref: headRef("filter"), flexShrink: 0 },
+                    h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true }, field)),
+                h(Box, { ref: headRef("clear"), flexShrink: 0 },
+                    h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true },
+                        filter !== "" ? "✕ " : "  "))),
+            h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│"))),
 
-        /*  the horizontal rule below the header, across the full screen width  */
-        h(Text, { color: palette.dim, dimColor: dim }, "─".repeat(columns)),
+        /*  the horizontal rule below the header, turning upward with rounded corners at both ends  */
+        h(Text, { color: palette.dim, dimColor: dim }, " ╰" + "─".repeat(Math.max(0, columns - 4)) + "╯ "),
         h(Box, { paddingX: 1 },
             h(Text, { color: palette.signal, dimColor: dim, wrap: "truncate" },
                 board.warnings.length > 0 ? `⚠ ${board.warnings.map(sanitize).join(" · ")}` : " ")),
-        ...(view === "lanes" ? renderLanes() : renderGraph()),
+        ...(view === "lanes" ? renderLanes() : renderGraph()).filter((el) => surface.keys || !String(el.key).startsWith("keys")),
+
+        /*  the horizontal rule between the key hints and the status line, turning downward with rounded corners at both ends  */
+        h(Text, { color: palette.dim, dimColor: dim }, " ╭" + "─".repeat(Math.max(0, columns - 4)) + "╮ "),
+        status,
         dialog !== null ? renderDialog({
             card:    all.cards.get(dialog.id),
             group:   all.groups.find((g) => g.lanes.some((l) => l.status === all.cards.get(dialog.id)?.status))?.title,
@@ -1536,7 +1687,8 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
             columns,
             rows,
             notice
-        }) : null)
+        }) : null,
+        confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null)
 }
 
 /*  run the terminal board until the user quits  */

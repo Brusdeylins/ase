@@ -16,7 +16,7 @@ import type { Marked }           from "marked"
 import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import { Config, configSchema, webColorDefaults, webColorNames } from "./ase-config.js"
-import { buildBoard, watchTasks, toneOf, BoardState, attachmentTabs, isPreflightDiff, diffTones } from "./ase-task-board-core.js"
+import { buildBoard, watchTasks, toneOf, BoardState, attachmentTabs, isPreflightDiff, diffTones, newTaskText, createTask, saveTask } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard }           from "./ase-task-board-filter.js"
 import type { Board, Card }      from "./ase-task-board-core.js"
@@ -227,6 +227,7 @@ const cardMoves = (board: Board, lifecycle: TaskFormat.TaskLifecycle, card: Card
 const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
     mode:     board.mode,
     project:  path.basename(Task.projectRoot()),
+    version:  pkg.version,
     warnings: board.warnings,
     surface:  BoardState.load().web,
     moves:    boardMoves(board, lifecycle),
@@ -391,6 +392,14 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         })
     })
 
+    /*  the pre-filled text of a new task, with the editor key bindings  */
+    server.route({
+        method:  "GET",
+        path:    "/task-board/api/new",
+        handler: guarded(async (_request, h) =>
+            h.response({ text: newTaskText(await currentBoard(log), await Task.lifecycle(log)), keymap: editorKeymap(log) }))
+    })
+
     /*  one attachment of a task plan, rendered as a document for its tab of the task dialog  */
     server.route({
         method:  "GET",
@@ -460,7 +469,8 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
 
     /*  save an edited task plan, but only if it was not changed in the meantime
         (answering 409 with the current entity tag, or null if deleted meanwhile),
-        and answering 400 if the text is invalid or its status is not reachable  */
+        and answering 400 if the text is invalid or its status is not reachable;
+        a changed "Id:" key renames the task, answered with the resulting id  */
     server.route({
         method:  "POST",
         path:    "/task-board/api/task/{id}/source",
@@ -470,8 +480,9 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
             const p  = request.payload as { text?: unknown, base?: unknown } | null
             if (p === null || typeof p.text !== "string" || typeof p.base !== "string")
                 return h.response({ error: "invalid save request" }).code(400)
+            let next: string
             try {
-                await Task.save(log, id, p.text, p.base)
+                next = await saveTask(log, id, p.text, p.base)
             }
             catch (err: unknown) {
                 if (err instanceof Problem && err.status === 412) {
@@ -481,19 +492,56 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
                 }
                 return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
             }
+            return h.response({ ok: true, id: next })
+        })
+    })
+
+    /*  create a new task plan, but only if no task of its id exists yet
+        (answering 409), and answering 400 if the text or id is invalid  */
+    server.route({
+        method:  "PUT",
+        path:    "/task-board/api/task/{id}/source",
+        options: { payload: { parse: true, allow: "application/json" } },
+        handler: guarded(async (request, h) => {
+            const id = String(request.params.id)
+            const p  = request.payload as { text?: unknown } | null
+            if (p === null || typeof p.text !== "string")
+                return h.response({ error: "invalid create request" }).code(400)
+            if (TaskFormat.ID_RE.test(id) && await Task.source(log, id) !== null)
+                return h.response({ error: `task "${id}" already exists` }).code(409)
+            try {
+                await createTask(log, id, p.text)
+            }
+            catch (err: unknown) {
+                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
+            }
             return h.response({ ok: true })
         })
     })
 
-    /*  toggle a minimized lane, a collapsed group, or the showing of task titles of the web surface  */
+    /*  delete a task plan (answering 404 if it does not exist)  */
+    server.route({
+        method:  "DELETE",
+        path:    "/task-board/api/task/{id}",
+        handler: guarded(async (request, h) => {
+            const id = String(request.params.id)
+            if (!TaskFormat.ID_RE.test(id))
+                return h.response({ error: `invalid task id "${id}"` }).code(400)
+            if (!await Task.delete(log, id))
+                return h.response({ error: `no task "${id}"` }).code(404)
+            return h.response({ ok: true })
+        })
+    })
+
+    /*  toggle a minimized lane, a collapsed group, or the showing of task titles or key hints of the web surface  */
     server.route({
         method:  "POST",
         path:    "/task-board/api/toggle",
         options: { payload: { parse: true, allow: "application/json" } },
         handler: guarded(async (request, h) => {
             const p = request.payload as { list?: unknown, entry?: unknown } | null
-            if (p !== null && p.list === "titles") {
-                const surface = (await BoardState.toggleTitles("web")).web
+            if (p !== null && (p.list === "titles" || p.list === "keys")) {
+                const surface = (await BoardState.toggleFlag("web", p.list)).web
                 emit("surface", surface)
                 return h.response(surface)
             }

@@ -620,8 +620,16 @@ the persisted task plans of the current project:
   card, while a click onto its ` X ` closes the dialog again, a click onto
   a tab selects it, and the mouse wheel scrolls it; `M` disables the
   mouse support to regain the regular text selection of the terminal).
+  `?` hides and shows the key hint lines (terminal and web board, persisted).
   `e` edits the selected task plan with `$EDITOR` (default: `vi`), a
   draft which failed to save being offered again on the next `e`. In
+  the lanes and graph views, `N` creates a new task by editing a
+  pre-filled task plan (all frontmatter keys, a free placeholder id, the
+  initial state, and the section template of the task format), which is
+  stored under the id of its `Id:` line (refused for an existing id,
+  while an unchanged text creates no task at all). In the lanes, graph,
+  and task views, `D` deletes the selected task after a confirmation
+  (`y` confirms and `ESC` cancels; web: also via the `delete` and `cancel` buttons). In
   the lanes view, `SPACE` picks up the selected task and a second `SPACE`
   drops it onto the selected lane, changing the task status (`ESC`
   cancels); only lanes whose state is reachable from the current state
@@ -847,8 +855,9 @@ STATE FILES
 
 - `<project>/.ase/board.yaml`:
   Display state of `ase task board`: separately for the terminal and the
-  web board, the minimized lanes, the collapsed groups, and whether the
-  task titles are wrapped onto multiple lines. The web state is shared by all
+  web board, the minimized lanes, the collapsed groups, whether the
+  task titles are wrapped onto multiple lines, and whether the key hint
+  lines are shown. The web state is shared by all
   browsers and tabs showing the web board. It never holds task content.
 
 - `<project>/.ase/.gitignore`:

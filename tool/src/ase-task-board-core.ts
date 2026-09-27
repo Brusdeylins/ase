@@ -10,6 +10,7 @@ import fs                        from "node:fs"
 import { watch }                 from "chokidar"
 import type { FSWatcher }        from "chokidar"
 import lockfile                  from "proper-lockfile"
+import { DateTime }              from "luxon"
 import writeFileAtomic           from "write-file-atomic"
 import YAML                      from "yaml"
 import * as v                    from "valibot"
@@ -58,9 +59,10 @@ export type Board = {
 }
 
 /*  the per-surface view state: minimized lanes, collapsed groups, and
-    whether the task titles are shown  */
-export type Surface     = { minimized: string[], collapsed: string[], titles: boolean }
+    whether the task titles and the key hints are shown  */
+export type Surface     = { minimized: string[], collapsed: string[], titles: boolean, keys: boolean }
 export type SurfaceList = "minimized" | "collapsed"
+export type SurfaceFlag = "titles" | "keys"
 
 /*  the persisted board state of a project  */
 export type State = { tui: Surface, web: Surface }
@@ -138,11 +140,12 @@ const surfaceSchema = v.object({
 
     /*  (a string of an older state file maps "all" onto true, else false)  */
     titles:    v.optional(v.pipe(v.union([ v.boolean(), v.string() ]),
-        v.transform((t) => typeof t === "boolean" ? t : t === "all")), false)
+        v.transform((t) => typeof t === "boolean" ? t : t === "all")), false),
+    keys:      v.optional(v.boolean(), true)
 })
 const stateSchema = v.object({
-    tui: v.optional(surfaceSchema, { minimized: [], collapsed: [], titles: false }),
-    web: v.optional(surfaceSchema, { minimized: [], collapsed: [], titles: false })
+    tui: v.optional(surfaceSchema, { minimized: [], collapsed: [], titles: false, keys: true }),
+    web: v.optional(surfaceSchema, { minimized: [], collapsed: [], titles: false, keys: true })
 })
 
 /*  reusable functionality: the persisted per-project board state in
@@ -210,10 +213,10 @@ export class BoardState {
         })
     }
 
-    /*  toggle the showing of task titles  */
-    static toggleTitles (surface: "tui" | "web"): Promise<State> {
+    /*  toggle the showing of task titles or key hints  */
+    static toggleFlag (surface: "tui" | "web", flag: SurfaceFlag): Promise<State> {
         return BoardState.update((state) => {
-            state[surface].titles = !state[surface].titles
+            state[surface][flag] = !state[surface][flag]
         })
     }
 }
@@ -447,6 +450,63 @@ export type Tone = "done" | "active" | "idle"
 export const toneOf = (board: Board, card: Card): Tone => {
     const lane = board.groups.flatMap((g) => g.lanes).find((l) => l.status === card.status)
     return lane?.kind === "terminal" ? "done" : lane?.active === true ? "active" : "idle"
+}
+
+/*  the pre-filled text of a new task: all frontmatter keys (the optional ones
+    empty), a free placeholder id, the initial state, and the body template of the
+    task format with a sample title, the three sections, and their placeholder items  */
+export const newTaskText = (board: Board, lifecycle: TaskLifecycle): string => {
+    let id = "new-task"
+    for (let n = 2; board.cards.has(id); n++)
+        id = `new-task-${n}`
+    const now = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
+    return TaskFormat.formatTaskText({
+        header: {
+            Type: TaskFormat.TASK_TYPE, Id: id, Created: now, Modified: now, Group: "", Phase: "",
+            After: "", Status: lifecycle.initial, Assignee: "", Kind: "", Tags: "", Branch: ""
+        },
+        body: "#   TASK: New Task\n\n" +
+            "##  SPECIFICATION (WHAT)\n\n-   [ ] DOM: **[...]**: [...]\n\n-   [ ] IFC: **[...]**: [...]\n\n" +
+            "##  DESIGN (HOW)\n\n-   [ ] ARC: **[...]**: [...]\n\n-   [ ] IMP: **[...]**: [...]\n\n" +
+            "##  VERIFICATION (WHEN)\n\n-   [ ] REG: **[...]**: [...]\n\n-   [ ] CON: **[...]**: [...]\n",
+        attachment: []
+    })
+}
+
+/*  the task id of a task text: the value of the "Id:" key of its frontmatter,
+    or the empty string if absent  */
+export const taskTextId = (text: string): string => {
+    const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
+    return fm === null ? "" : (/^Id:[ \t]*(.*)$/m.exec(fm[1])?.[1].trim() ?? "")
+}
+
+/*  save an edited task text (conditionally with an entity tag), renaming the task
+    if the "Id:" key of its frontmatter was changed (refusing an existing target
+    id before anything is saved); returns the resulting task id  */
+export const saveTask = async (log: Log, id: string, text: string, tag?: string): Promise<string> => {
+    const next = taskTextId(text) || id
+    if (next !== id) {
+        if (!TaskFormat.ID_RE.test(next))
+            throw new Error(`invalid task id "${next}"`)
+        if (await Task.source(log, next) !== null)
+            throw new Error(`task "${next}" already exists`)
+    }
+    await Task.save(log, id, text, tag)
+    if (next !== id)
+        await Task.rename(log, id, next)
+    return next
+}
+
+/*  create a task from its text under a new id, refusing an existing id,
+    and dropping the frontmatter keys left without a (non-blank) value  */
+export const createTask = async (log: Log, id: string, text: string): Promise<void> => {
+    if (!TaskFormat.ID_RE.test(id))
+        throw new Error(`invalid task id "${id}"`)
+    if (await Task.source(log, id) !== null)
+        throw new Error(`task "${id}" already exists`)
+    text = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, (fm) =>
+        fm.replace(/^[A-Za-z]+:[ \t]*\r?\n/gm, ""))
+    await Task.save(log, id, text)
 }
 
 /*  watch the configuration files of a local task store (via their existing

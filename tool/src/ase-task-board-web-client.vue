@@ -77,19 +77,20 @@
         <button :style="{ visibility: view === 'lanes' && !scroll.all ? 'visible' : 'hidden' }" @click="scrollBy(240)">▶</button>
     </div>
     <footer>
-        <div class="status">{{ warning }}</div>
-        <div v-for="(line, k) in hints" :key="k">
+        <div v-for="(line, k) in (surface.keys ? hints : [])" :key="k">
             <template v-for="(hint, i) in line" :key="hint.key">
                 <span v-if="i > 0" class="sep">·</span><template v-for="(key, j) in (hint.key === '/' ? [ '/' ] : hint.key.split('/'))" :key="j"><template v-if="j > 0">/</template><kbd>{{ key }}</kbd></template><span class="action">{{ hint.action }}</span>
             </template>
         </div>
+        <div v-if="warning !== ''" class="status">{{ warning }}</div>
+        <div v-else class="status idle"><template v-if="board !== null">⧉ ASE: <b>Task Board</b><span class="sep">·</span>Version: <b>ASE {{ board.version }}</b></template></div>
     </footer>
     <div v-show="task !== null" id="scrim" @click.self="leaveEdit(true)">
         <div v-if="task !== null" id="dlg">
             <!--  the header: task id and title on the left, lane group and lane on the right  -->
             <div class="dhd">
                 <h1 :class="`tone-${task.tone}`"><span class="cid">{{ task.id }}</span>{{ task.title }}</h1>
-                <span class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
+                <span v-if="editing?.id !== ''" class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
                 <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit">✎</button>
                 <button class="close" title="close (ESC)" @click="leaveEdit(true)">✕</button>
             </div>
@@ -149,7 +150,19 @@
             <div v-if="editing?.keymap === 'vim'" class="dfoot"><kbd>:w</kbd><span class="action">saves</span><span class="sep">·</span><kbd>:q</kbd><span class="action">cancels</span><span class="sep">·</span><kbd>:q!</kbd><span class="action">discards</span></div>
             <div v-else-if="editing?.keymap === 'emacs'" class="dfoot"><kbd>C-x C-s</kbd><span class="action">saves</span><span class="sep">·</span><kbd>C-x C-c</kbd><span class="action">cancels</span></div>
             <div v-else-if="editing !== null" class="dfoot"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd><span class="action">saves</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
-            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></div>
+            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>D</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></div>
+        </div>
+    </div>
+
+    <!--  the confirmation of a task deletion  -->
+    <div v-if="confirmDel !== null" id="confirm" @click.self="confirmDel = null">
+        <div class="box">
+            <div class="ask">Delete task <span class="cid">{{ confirmDel }}</span>?</div>
+            <div class="buttons">
+                <button @click="deleteTask(confirmDel)">delete</button>
+                <button @click="confirmDel = null">cancel</button>
+            </div>
+            <div class="keys"><kbd>y</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
         </div>
     </div>
 </template>
@@ -170,8 +183,8 @@ import { emacs, EmacsHandler }                                                  
 type Card    = { id: string, title: string, cyclic: boolean, tone: string, moves?: string[] }
 type Lane    = { status: string, active: boolean, weight: number, dashed: boolean, kind: "initial" | "regular" | "terminal", cards: Card[] }
 type Group   = { title: string, lanes: Lane[] }
-type Surface = { minimized: string[], collapsed: string[], titles: boolean }
-type Board   = { mode: string, project: string, warnings: string[], surface: Surface, moves: Record<string, string[]>, groups: Group[] }
+type Surface = { minimized: string[], collapsed: string[], titles: boolean, keys: boolean }
+type Board   = { mode: string, project: string, version: string, warnings: string[], surface: Surface, moves: Record<string, string[]>, groups: Group[] }
 type Tone    = "active" | "done" | "idle"
 type Ref     = { id: string, tone: Tone }
 type Task    = { id: string, title: string, tone: Tone, status: string, group: string, doc: string, tabs: string[], pred: Ref[], succ: Ref[] }
@@ -247,6 +260,7 @@ const tabsEl      = ref<HTMLElement | null>(null)
 const editorEl    = ref<HTMLElement | null>(null)
 const editing     = ref<{ id: string, orig: string, base: string, keymap: Keymap, dirty: boolean } | null>(null)
 const notice      = ref<Notice | null>(null)
+const confirmDel  = ref<string | null>(null)
 let   editor      = null as EditorView | null
 const scroll      = reactive({ all: true, info: "" })
 const tab         = ref(0)
@@ -262,7 +276,7 @@ let   reloadSeq   = 0
 let   graphSeq    = 0
 
 /*  the derived values of the page  */
-const surface   = computed<Surface>(() => board.value?.surface ?? { minimized: [], collapsed: [], titles: false })
+const surface   = computed<Surface>(() => board.value?.surface ?? { minimized: [], collapsed: [], titles: false, keys: true })
 const titles    = computed(() => surface.value.titles)
 const taskCount = computed(() => {
     const cards = board.value?.groups.flatMap((g) => g.lanes).flatMap((l) => l.cards)
@@ -291,8 +305,10 @@ const hints     = computed(() => {
         { key: "⇈/⇊/⇤/⇥",       action: "select lane" },
         { key: "⏎",             action: "view task" },
         { key: "e",             action: "edit task" },
-        { key: "SPACE",         action: "start/stop move task" }
+        { key: "SPACE",         action: "start/stop move task" },
+        { key: "D",             action: "delete task" }
     ], [
+        { key: "N",             action: "new task" },
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
         { key: "c",             action: `${folded ? "expand" : "collapse"} group` },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
@@ -300,15 +316,20 @@ const hints     = computed(() => {
         { key: "g",             action: "switch to graph" }
     ], [
         { key: "Left-Click",    action: "view task / minimize/maximize lane / collapse/expand group" },
-        { key: "Drag & Drop",   action: "directly move task" }
+        { key: "Drag & Drop",   action: "directly move task" },
+        { key: "?",             action: "hide key hints" }
     ] ] : [ [
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⏎/Left-Click",  action: "view task" },
-        { key: "e",             action: "edit task" }
+        { key: "e",             action: "edit task" },
+        { key: "D",             action: "delete task" }
     ], [
+        { key: "N",             action: "new task" },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
-        { key: "l",             action: "switch to lanes" }
+        { key: "l",             action: "switch to lanes" },
+    ], [
+        { key: "?",             action: "hide key hints" }
     ] ]
 })
 
@@ -505,17 +526,41 @@ const startEdit = async () => {
         return
     }
     await selectTab(0)
+    await openEditor(id, src.text, src.base, src.keymap)
+}
+
+/*  start creating a new task in the task plan editor of a task dialog of its own,
+    on its pre-filled text (with the empty id marking the creation)  */
+const startNew = async () => {
+    if (task.value !== null || editing.value !== null)
+        return
+    const src = await api<{ text: string, keymap: Keymap }>("/task-board/api/new")
+    if (task.value !== null || editing.value !== null)
+        return
+    if (src.error !== undefined) {
+        actionError.value = src.error
+        return
+    }
+    actionError.value = null
+    tab.value     = 0
+    tabDocs.value = {}
+    task.value    = { id: "new", title: "New Task", tone: "idle", status: "", group: "", doc: "", tabs: [ "0 ▶ plan" ], pred: [], succ: [] }
+    await openEditor("", src.text, "", src.keymap)
+}
+
+/*  open the task plan editor on a text, offering to restore a draft of it which failed to save earlier  */
+const openEditor = async (id: string, text: string, base: string, keys: Keymap) => {
     const draft   = draftGet(id)
-    editing.value = { id, orig: src.text, base: src.base, keymap: src.keymap, dirty: false }
-    notice.value  = draft !== null && draft !== src.text ? { kind: "draft", draft } : null
+    editing.value = { id, orig: text, base, keymap: keys, dirty: false }
+    notice.value  = draft !== null && draft !== text ? { kind: "draft", draft } : null
     await nextTick()
     editor = new EditorView({
         parent: editorEl.value!,
         state:  EditorState.create({
-            doc: src.text,
+            doc: text,
             extensions: [
                 /*  the optional Vim or Emacs key bindings, taking precedence over all others  */
-                ...(src.keymap === "vim" ? [ vim({ status: true }) ] : src.keymap === "emacs" ? [ emacs() ] : []),
+                ...(keys === "vim" ? [ vim({ status: true }) ] : keys === "emacs" ? [ emacs() ] : []),
                 history(), drawSelection(), EditorView.lineWrapping,
                 keymap.of([ ...defaultKeymap, ...historyKeymap, indentWithTab ]),
                 markdown(), syntaxHighlighting(editorHighlight), blockCursor,
@@ -536,7 +581,11 @@ const saveEdit = async (base?: string) => {
     if (e === null || editor === null)
         return
     const text = editor.state.doc.toString()
-    const res  = await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(e.id)}/source`, {
+    if (e.id === "") {
+        await saveNew(e, text)
+        return
+    }
+    const res  = await api<{ ok: boolean, id: string }>(`/task-board/api/task/${encodeURIComponent(e.id)}/source`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, base: base ?? e.base })
     })
     if (editing.value !== e)
@@ -544,7 +593,14 @@ const saveEdit = async (base?: string) => {
     if (res.error === undefined) {
         draftSet(e.id, null)
         stopEdit()
-        openTask(e.id)
+        if (res.id === e.id)
+            openTask(e.id)
+        else {
+            /*  a renamed task is re-opened under its new id with the next board reload  */
+            closeTask()
+            openId    = res.id
+            sel.value = { ...sel.value, id: res.id }
+        }
         return
     }
     draftSet(e.id, text)
@@ -552,6 +608,40 @@ const saveEdit = async (base?: string) => {
     notice.value = conflict.base !== undefined ?
         { kind: "conflict", message: conflict.error, base: conflict.base } :
         { kind: "error", message: `${conflict.error} (draft kept)` }
+}
+
+/*  save a new task under the id of the "Id:" key of its frontmatter (refused
+    for an existing id), where an unchanged text creates no task, and keep a draft if this fails  */
+const saveNew = async (e: NonNullable<typeof editing.value>, text: string) => {
+    if (!e.dirty) {
+        stopEdit()
+        return
+    }
+    const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
+    const id = /^Id:[ \t]*(.*)$/m.exec(fm?.[1] ?? "")?.[1].trim() ?? ""
+    const res = id === "" ? { error: "no task id in the \"Id:\" line" } :
+        await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(id)}/source`, {
+            method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text })
+        })
+    if (editing.value !== e)
+        return
+    if (res.error === undefined) {
+        draftSet("", null)
+        stopEdit()
+        sel.value = { ...sel.value, id }
+        return
+    }
+    draftSet("", text)
+    notice.value = { kind: "error", message: `${res.error} (draft kept)` }
+}
+
+/*  delete a task (after its confirmation), closing its task dialog  */
+const deleteTask = async (id: string) => {
+    confirmDel.value = null
+    const res = await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(id)}`, { method: "DELETE" })
+    actionError.value = res.error ?? null
+    if (res.error === undefined && task.value?.id === id)
+        closeTask()
 }
 
 /*  restore or drop the draft of the edited task plan  */
@@ -599,10 +689,15 @@ EmacsHandler.bindKey("C-x C-c", () => {
     return true
 })
 const stopEdit = () => {
+    const creating = editing.value?.id === ""
     editor?.destroy()
     editor        = null
     editing.value = null
     notice.value  = null
+
+    /*  a new task has no task view to return to  */
+    if (creating)
+        task.value = null
 }
 
 /*  fetch the document of an attachment tab, or load it into the cache
@@ -773,8 +868,8 @@ watch([ sel, graph, view ], () => {
     nextTick(showSel)
 })
 
-/*  toggle a minimized lane, a collapsed group, or the showing of task titles  */
-const toggle = async (list: "minimized" | "collapsed" | "titles", entry: string) => {
+/*  toggle a minimized lane, a collapsed group, or the showing of task titles or key hints  */
+const toggle = async (list: "minimized" | "collapsed" | "titles" | "keys", entry: string) => {
     const s = await api<Surface>("/task-board/api/toggle", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ list, entry })
     })
@@ -827,6 +922,10 @@ const onDialogKey = (ev: KeyboardEvent) => {
     else if (ev.key === "e" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
         ev.preventDefault()
         startEdit()
+    }
+    else if (ev.key === "D" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
+        ev.preventDefault()
+        confirmDel.value = task.value.id
     }
     else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Tab") {
         ev.preventDefault()
@@ -911,6 +1010,12 @@ const onBoardKey = (ev: KeyboardEvent) => {
                     startEdit()
             })
     }
+    else if (ev.key === "N")
+        startNew()
+    else if (ev.key === "D") {
+        if (s.id !== "")
+            confirmDel.value = s.id
+    }
     else if (view.value === "graph") {
         if (!arrow)
             return
@@ -987,9 +1092,21 @@ const onBoardKey = (ev: KeyboardEvent) => {
     ev.preventDefault()
 }
 
-/*  dispatch a key to the task plan editor, the task dialog, or the board  */
+/*  answer the confirmation of a task deletion: "y" deletes, ESC or "n" cancels
+    (with every key consumed, which also suppresses the single-key bindings)  */
+const onConfirmKey = (ev: KeyboardEvent, id: string) => {
+    if (ev.key === "y")
+        deleteTask(id)
+    else if (ev.key === "Escape" || ev.key === "n")
+        confirmDel.value = null
+    ev.preventDefault()
+}
+
+/*  dispatch a key to the deletion confirmation, the task plan editor, the task dialog, or the board  */
 const onKey = (ev: KeyboardEvent) => {
-    if (editing.value !== null)
+    if (confirmDel.value !== null)
+        onConfirmKey(ev, confirmDel.value)
+    else if (editing.value !== null)
         onEditorKey(ev, editing.value.keymap)
     else if (task.value !== null)
         onDialogKey(ev)
@@ -1008,6 +1125,7 @@ onMounted(() => {
     Mousetrap.bind("t", () => { if (board.value !== null) toggle("titles", "") })
     Mousetrap.bind("g", () => { if (view.value !== "graph") setView("graph") })
     Mousetrap.bind("l", () => { if (view.value !== "lanes") setView("lanes") })
+    Mousetrap.bind("?", () => { if (board.value !== null) toggle("keys", "") })
     Mousetrap.bind("/", (ev) => {
         ev.preventDefault()
         filterEl.value?.focus()

@@ -12,6 +12,12 @@ ChangeLog
     moves via drag & drop), or as plain text (`--text`). The display state persists in
     `.ase/board.yaml`, the colors in `board.{tui,web}.color.*`, and the skill is `ase-task-board`.
 
+-   FEATURE [tool]: Task Board task creation and deletion
+    The terminal and web task board create a new task via `N` (lanes and graph view) by editing a
+    pre-filled task plan (all frontmatter keys, a free placeholder id, the initial state, and the
+    section template), stored under the id of its `Id:` line, but never over an existing task.
+    They delete the selected task via `D` (lanes, graph, and task view) after a confirmation.
+
 -   FEATURE [tool]: Task Board filter
     The terminal and web task board got a `filter:` field in their header (focused via `/`),
     whose keywords are fuzzy matched (as in SpecBook) against the task id and title, AND-combined
