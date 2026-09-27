@@ -8,48 +8,19 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import type Log                               from "./ase-lib-log.js"
 import { splitHeight, toneOf, cardLabel, clampLines, glueId, glueTitle } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface } from "./ase-task-board-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
-import { Config, configSchema, tuiColorDefaults } from "./ase-config.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
+import { palette, dashed, dashedBold, cx, isClass } from "./ase-task-board-tui-style.js"
 
 /*  shorthand for creating React elements without JSX  */
 export const h = React.createElement
-
-/*  the color palette of the terminal board, with the four roles dim,
-    normal, accent, and signal (undefined is the terminal foreground color),
-    configurable through the "board.tui.color.<role>" configuration keys  */
-type Palette = { dim?: string, normal?: string, accent?: string, signal?: string }
-export let palette: Palette = {}
-export const loadPalette = (log: Log): void => {
-    const cfg = new Config("config", configSchema, log)
-    cfg.read()
-    const color = (role: keyof Palette): string | undefined => {
-        const value = cfg.get(`board.tui.color.${role}`)
-        const name  = typeof value === "string" ? value : tuiColorDefaults[role]
-        return name === "default" ? undefined : name
-    }
-    palette = { dim: color("dim"), normal: color("normal"), accent: color("accent"), signal: color("signal") }
-}
 
 /*  layout constants: minimum group width, collapsed group width, gap  */
 const GROUP_MIN  = 26
 const GROUP_COLL = 5
 const GROUP_GAP  = 1
-
-/*  the dashed border of the "CANCELLED" lane  */
-const dashed: BoxProps["borderStyle"] = {
-    topLeft: "╭", top: "╌", topRight: "╮", right: "╎",
-    bottomRight: "╯", bottom: "╌", bottomLeft: "╰", left: "╎"
-}
-
-/*  the heavy variant of the dashed border, for marking a move target  */
-const dashedBold: BoxProps["borderStyle"] = {
-    topLeft: "┏", top: "╍", topRight: "┓", right: "╏",
-    bottomRight: "┛", bottom: "╍", bottomLeft: "┗", left: "╏"
-}
 
 /*  compute the visible group range starting at a first group, with the
     width of each visible group (collapsed groups stay narrow, expanded
@@ -97,9 +68,9 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
     const top = Math.max(0, Math.floor((height - 2) / 2)) + (wrapper ? 1 : 0)
     return [
         ...(scroll.left  === g ? [ h(Box, { key: "scroll-left",  position: "absolute", left:  off, top },
-            h(Text, { color: palette.dim, bold: true, dimColor: dim }, "◁")) ] : []),
+            h(Text, cx("dim", "bold", dim && "dimmed"), "◁")) ] : []),
         ...(scroll.right === g ? [ h(Box, { key: "scroll-right", position: "absolute", right: off, top },
-            h(Text, { color: palette.dim, bold: true, dimColor: dim }, "▷")) ] : [])
+            h(Text, cx("dim", "bold", dim && "dimmed"), "▷")) ] : [])
     ]
 }
 
@@ -187,7 +158,7 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
         } as const
         return h(Box, box,
             ...lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
-                ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", bold: true, inverse: true }, ` ${line.slice(2, to)} `),
+                ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, ` ${line.slice(2, to)} `),
                     line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ]))))
     })
 
@@ -195,7 +166,7 @@ const renderLane = (ctx: ViewCtx, lane: LaneSpec, g: number, l: number, width: n
     if (start > 0 || rest > 0)
         items.push(h(Box, { key: "spacer", flexGrow: 1 }),
             h(Box, { key: "more", justifyContent: "center" },
-                h(Text, { color: palette.dim, dimColor: dim },
+                h(Text, cx("dim", dim && "dimmed"),
                     [ ...(start > 0 ? [ `△ ${start}` ] : []), ...(rest > 0 ? [ `▽ ${rest}` ] : []) ].join(" "))))
     return h(Box, { ...frame, ref: ctx.laneRef(g, l), width, height, flexDirection: "column" }, head, ...items, ...scrollArrows(ctx, g, height))
 }
@@ -212,7 +183,7 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
         const rest    = Math.max(0, width - label.length)
         const left    = Math.floor(rest / 2)
         return h(Box, { key: group.title, ref: ctx.groupRef(g), flexDirection: "column", width, marginRight: gap },
-            h(Text, { color: sel.g === g ? palette.signal : palette.normal, dimColor: dim, bold: sel.g === g, inverse: true, wrap: "truncate" },
+            h(Text, cx("group-head", sel.g === g && "group-head-selected", dim && "dimmed"),
                 " ".repeat(left) + label + " ".repeat(rest - left)),
             ...group.lanes.map((lane, l) => {
                 const count = board.lanes.get(lane.status)?.length ?? 0
@@ -258,7 +229,7 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
     const rest    = Math.max(0, width - label.length)
     const left    = Math.floor(rest / 2)
     return h(Box, { key: group.title, ref: ctx.groupRef(g), flexDirection: "column", width, marginRight: gap },
-        h(Text, { color: sel.g === g ? palette.signal : palette.normal, dimColor: dim, bold: sel.g === g, inverse: true, wrap: "truncate" },
+        h(Text, cx("group-head", sel.g === g && "group-head-selected", dim && "dimmed"),
             " ".repeat(left) + label + " ".repeat(rest - left)),
         ...group.lanes.map((lane, l) => renderLane(ctx, lane, g, l, width, heights[l])))
 }
@@ -281,20 +252,20 @@ export const renderLanes = (ctx: BoardCtx) => {
     return [
         h(Box, { key: "board", height: boardH, paddingX: 1 },
             ...board.groups.slice(fit.first, fit.last + 1).map((g, i) => renderGroup({ board, surface, sel, dim, carry, titles: surface.titles, scroll: edges, cardRef, laneRef, groupRef }, g, fit.first + i, fit.widths[i], boardH, i === fit.widths.length - 1))),
-        h(Box, { key: "bar", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+        h(Box, { key: "bar", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
                 (arrows ? "░".repeat(off) + "█".repeat(on) + "░".repeat(Math.max(0, track - off - on)) + " · " : "") + info)),
-        h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+        h(Box, { key: "keys1", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
                 "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop transition task · T: transition task")),
-        h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+        h(Box, { key: "keys2", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
                 "D: delete task · N: new task · " +
                 `m: ${minned ? "maximize" : "minimize"} lane · c: ${folded ? "expand" : "collapse"} group · ` +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
                 "/: filter tasks · v: view graph")),
-        h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+        h(Box, { key: "keys3", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
                 `Left-Click: view task / minimize/maximize lane / collapse/expand group · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
@@ -304,20 +275,12 @@ export const renderGraph = (ctx: BoardCtx) => {
     const { board, sel, dim, layout, boardH, x, y, viewH, viewW, graphView, graphTitles, mouse } = ctx
     const card = sel.id !== "" ? board.cards.get(sel.id) : undefined
     if (layout === null)
-        return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, borderStyle: "round", borderColor: palette.dim },
-            h(Text, { color: palette.dim }, board.cards.size === 0 ? "(no tasks)" : "laying out …")),
+        return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, ...cx("frame", "border-dim") },
+            h(Text, cx("dim"), board.cards.size === 0 ? "(no tasks)" : "laying out …")),
         h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " "), h(Text, { key: "keys3" }, " ") ]
 
     /*  draw the ELK layout  */
     const { lines, tones } = drawGraphText(layout.board, layout.graph, sel.id, layout.titles)
-    const styles: Record<string, { color?: string, bold?: boolean, inverse?: boolean }> = {
-        sel: { color: palette.signal, bold: true }, done: { color: palette.dim }, active: { color: palette.accent },
-        "sel-frame": { color: palette.signal }, "done-frame": { color: palette.dim }, "active-frame": { color: palette.accent },
-        "sel-title": { color: palette.signal }, "done-title": { color: palette.dim }, "active-title": { color: palette.accent },
-        "sel-id": { color: palette.signal, bold: true, inverse: true }, "done-id": { color: palette.dim, bold: true, inverse: true }, "active-id": { color: palette.accent, bold: true, inverse: true },
-        idle: { color: palette.normal }, "idle-frame": { color: palette.normal }, "idle-title": { color: palette.normal }, "idle-id": { color: palette.normal, bold: true, inverse: true },
-        "edge": { color: palette.dim }, "edge-sel": { color: palette.signal }
-    }
     const visible = lines.slice(y, y + viewH).map((l, i) => {
         const segs = [] as { text: string, tone: string }[]
         for (let k = x; k < Math.min(l.length, x + viewW); k++) {
@@ -333,28 +296,30 @@ export const renderGraph = (ctx: BoardCtx) => {
     const roots   = [ ...board.cards.keys() ].filter((id) => (board.pred.get(id) ?? []).length === 0).length
     return [
         h(Box, { key: "graph", height: boardH, marginX: 1 },
-            h(Box, { flexGrow: 1, flexDirection: "column", paddingX: 1, borderStyle: "round", borderColor: palette.dim, borderDimColor: dim },
-                h(Box, { ref: graphView, flexDirection: "column" },
+            h(Box, { paddingX: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
+                h(Box, { ref: graphView, ...cx("column") },
                     ...visible.map((segs, i) => h(Box, { key: i },
-                        ...(segs.length === 0 ? [ h(Text, { key: 0 }, " ") ] : segs.map((seg, k) =>
-                            h(Text, { key: k, dimColor: dim, ...(styles[seg.tone] ?? {}) }, seg.text))))))),
+                        ...(segs.length === 0 ? [ h(Text, { key: 0 }, " ") ] : segs.map((seg, k) => {
+                            const tone = `tone-${seg.tone}`
+                            return h(Text, { key: k, ...cx(dim && "dimmed", isClass(tone) && tone) }, seg.text)
+                        })))))),
 
             /*  overlay the graph statistics onto the top-right corner of the border  */
             h(Box, { position: "absolute", top: 0, right: 2 },
-                h(Text, { color: palette.dim, dimColor: dim },
+                h(Text, cx("dim", dim && "dimmed"),
                     ` ${board.cards.size} nodes, ${edges} edges, ${roots} roots${board.cyclic.size > 0 ? ", CYCLES" : ""} `))),
-        h(Box, { key: "info", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" }, card === undefined ? " " :
-                [ "task: ", h(Text, { key: "id", bold: true }, card.id), " · status: ", h(Text, { key: "status", bold: true }, card.status) ])),
-        h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+        h(Box, { key: "info", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"), card === undefined ? " " :
+                [ "task: ", h(Text, { key: "id", ...cx("bold") }, card.id), " · status: ", h(Text, { key: "status", ...cx("bold") }, card.status) ])),
+        h(Box, { key: "keys1", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
                 "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task · T: transition task")),
-        h(Box, { key: "keys2", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+        h(Box, { key: "keys2", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
                 `D: delete task · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
                 "/: filter tasks · v: view lanes")),
-        h(Box, { key: "keys3", paddingX: 1, justifyContent: "center" },
-            h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
+        h(Box, { key: "keys3", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }

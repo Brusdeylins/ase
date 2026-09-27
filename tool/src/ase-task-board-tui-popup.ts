@@ -9,7 +9,8 @@ import { Box, Text }                          from "ink"
 import type { Task }                          from "./ase-task.js"
 import { cardLabel, attachmentTabs, isPreflightDiff, diffTones } from "./ase-task-board-core.js"
 import type { Card }                          from "./ase-task-board-core.js"
-import { h, palette }                         from "./ase-task-board-tui-view.js"
+import { h }                                  from "./ase-task-board-tui-view.js"
+import { palette, cx }                        from "./ase-task-board-tui-style.js"
 import type { TransferEntry }                 from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
@@ -278,23 +279,20 @@ export const renderConfirm = (id: string, yes: boolean, columns: number, rows: n
     const qpad   = Math.max(0, Math.floor((innerW - 13 - tid.length) / 2))
     const hint   = "←/→/⇥: select · ⏎: press · y: delete · ESC: cancel".slice(0, innerW)
     const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
-    return h(Box, {
-        key: "confirm", position: "absolute", top, left,
-        width, height: 7, flexDirection: "column", borderStyle: "round", borderColor: palette.signal
-    },
-    h(Text, { color: palette.normal, bold: true },
-        " ".repeat(qpad) + "Delete task ",
-        h(Text, { inverse: true }, tid),
-        "?".padEnd(Math.max(0, innerW - qpad - 12 - tid.length))),
-    blank("blank-above"),
-    h(Text, {},
-        " ".repeat(pad),
-        h(Text, { color: yes ? palette.signal : palette.normal, bold: true, inverse: true }, " delete "),
-        " ",
-        h(Text, { color: yes ? palette.normal : palette.signal, bold: true, inverse: true }, " cancel "),
-        " ".repeat(Math.max(0, innerW - pad - 2 * CONFIRM_BUTTON - 1))),
-    blank("blank-below"),
-    h(Text, { color: palette.dim }, keys))
+    return h(Box, { key: "confirm", top, left, width, height: 7, ...cx("popup", "border-signal") },
+        h(Text, cx("normal", "bold"),
+            " ".repeat(qpad) + "Delete task ",
+            h(Text, cx("inverse"), tid),
+            "?".padEnd(Math.max(0, innerW - qpad - 12 - tid.length))),
+        blank("blank-above"),
+        h(Text, {},
+            " ".repeat(pad),
+            h(Text, cx("button", yes && "button-active"), " delete "),
+            " ",
+            h(Text, cx("button", !yes && "button-active"), " cancel "),
+            " ".repeat(Math.max(0, innerW - pad - 2 * CONFIRM_BUTTON - 1))),
+        blank("blank-below"),
+        h(Text, cx("dim"), keys))
 }
 
 /*  the geometry of the transfer popup: centered on the screen, with its entries
@@ -322,26 +320,23 @@ export const renderTransfer = (id: string, from: string, entries: TransferEntry[
     const qpad   = Math.max(0, Math.floor((innerW - 18 - tid.length) / 2))
     const hint   = "↑/↓: select · ⏎: transition · ESC: cancel".slice(0, innerW)
     const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
-    return h(Box, {
-        key: "transfer", position: "absolute", top: box.top, left: box.left,
-        width: box.width, height: box.height, flexDirection: "column", borderStyle: "round", borderColor: palette.accent
-    },
-    h(Text, { color: palette.normal, bold: true },
-        " ".repeat(qpad) + "Transfer task ",
-        h(Text, { inverse: true }, tid),
-        " to:".padEnd(Math.max(0, innerW - qpad - 14 - tid.length))),
-    blank("blank-above"),
-    ...entries.slice(box.first, box.first + box.viewH).map((e, k) => {
-        /*  the group in normal and the state in bold, cut to the inner width  */
-        const on    = box.first + k === idx
-        const head  = ` ${on ? "▶" : " "} ${e.group} ▷ `.slice(0, innerW)
-        const state = e.status.slice(0, innerW - head.length)
-        const tail  = (e.status === from ? " (current)" : "").slice(0, innerW - head.length - state.length)
-        return h(Text, { key: k, color: on ? palette.signal : e.ok ? palette.normal : palette.dim, dimColor: !e.ok },
-            head, h(Text, { bold: true }, state), tail.padEnd(innerW - head.length - state.length))
-    }),
-    blank("blank-below"),
-    h(Text, { color: palette.dim }, keys))
+    return h(Box, { key: "transfer", top: box.top, left: box.left, width: box.width, height: box.height, ...cx("popup", "border-accent") },
+        h(Text, cx("normal", "bold"),
+            " ".repeat(qpad) + "Transfer task ",
+            h(Text, cx("inverse"), tid),
+            " to:".padEnd(Math.max(0, innerW - qpad - 14 - tid.length))),
+        blank("blank-above"),
+        ...entries.slice(box.first, box.first + box.viewH).map((e, k) => {
+            /*  the group in normal and the state in bold, cut to the inner width  */
+            const on    = box.first + k === idx
+            const head  = ` ${on ? "▶" : " "} ${e.group} ▷ `.slice(0, innerW)
+            const state = e.status.slice(0, innerW - head.length)
+            const tail  = (e.status === from ? " (current)" : "").slice(0, innerW - head.length - state.length)
+            return h(Text, { key: k, ...cx("normal", !e.ok && "dim", !e.ok && "dimmed", on && "signal") },
+                head, h(Text, cx("bold"), state), tail.padEnd(innerW - head.length - state.length))
+        }),
+        blank("blank-below"),
+        h(Text, cx("dim"), keys))
 }
 
 /*  render the read dialog: full height, horizontally centered, with a
@@ -355,7 +350,6 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
     const s      = Math.min(scroll, maxS)
     const thumbH = Math.max(1, Math.round(viewH * Math.min(1, viewH / Math.max(1, lines.length))))
     const thumbY = maxS === 0 ? 0 : Math.round((viewH - thumbH) * s / maxS)
-    const frame  = { position: "absolute", top: 0, left, width, height: rows, borderStyle: "round", borderColor: palette.dim } as const
 
     /*  without a background fill, every inner cell has to be written
         explicitly (with spaces) to hide the dimmed board underneath  */
@@ -396,7 +390,7 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
 
     /*  the horizontal separator, extended over the side borders to join them with T-glyphs  */
     const separator = (key: string) => h(Box, { key, marginLeft: -1, width, flexShrink: 0 },
-        h(Text, { color: palette.dim }, "├" + "─".repeat(innerW) + "┤"))
+        h(Text, cx("dim"), "├" + "─".repeat(innerW) + "┤"))
 
     /*  the key hints, or instead the status notice of an edit, truncated to the free width  */
     const free   = Math.max(0, innerW - pos.length - 1)
@@ -404,15 +398,15 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
         (" " + sanitize(notice)).slice(0, free) :
         " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · T: transition · D: delete · M: toggle mouse · ⏎/ESC: close"
 
-    return h(Box, { key: "dialog", ...frame, flexDirection: "column" },
+    return h(Box, { key: "dialog", top: 0, left, width, height: rows, ...cx("popup", "border-dim") },
         h(Text, {},
             " ",
-            h(Text, { color: tint(id), bold: true, inverse: true }, ` ${head.slice(0, id.length)} `),
+            h(Text, { ...cx("badge"), color: tint(id) }, ` ${head.slice(0, id.length)} `),
             h(Text, { color: tint(id) }, head.slice(id.length)),
-            h(Text, { color: palette.dim }, right.slice(0, right.length - lane.length)),
-            h(Text, { color: palette.dim, bold: true }, lane),
+            h(Text, cx("dim"), right.slice(0, right.length - lane.length)),
+            h(Text, cx("dim", "bold"), lane),
             " ",
-            h(Text, { color: palette.dim, inverse: true }, " X "),
+            h(Text, cx("dim", "inverse"), " X "),
             " "),
         separator("sep-title"),
         h(Text, {}, ...segs.map((seg, k) => h(Text, { key: k, color: seg.color, inverse: seg.inverse }, seg.text))),
@@ -441,11 +435,11 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
                     color: (run.style & (CODE | ACCENT)) !== 0 ? palette.accent : (run.style & SIGNAL) !== 0 ? palette.signal : line?.color,
                     bold: (line?.bold ?? false) || (run.style & BOLD) !== 0, italic: (run.style & ITALIC) !== 0
                 }, run.text)),
-                h(Text, { color: palette.signal }, ` ${bar}`))
+                h(Text, cx("signal"), ` ${bar}`))
         }),
         separator("sep-foot"),
         h(Box, {},
-            h(Text, { color: notice !== null ? palette.signal : palette.dim, wrap: "truncate" }, keys),
-            h(Text, { color: palette.dim, wrap: "truncate" }, pos.padStart(Math.max(0, innerW - keys.length)))))
+            h(Text, cx("hint", notice !== null && "signal"), keys),
+            h(Text, cx("hint"), pos.padStart(Math.max(0, innerW - keys.length)))))
 }
 

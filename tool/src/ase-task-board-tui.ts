@@ -16,7 +16,8 @@ import pkg                                    from "../package.json" with { type
 import { useBoardState, mouseReporting }      from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
 import { handleMouse, handleKey }             from "./ase-task-board-tui-control.js"
-import { h, palette, loadPalette, renderLanes, renderGraph } from "./ase-task-board-tui-view.js"
+import { h, renderLanes, renderGraph }        from "./ase-task-board-tui-view.js"
+import { palette, loadPalette, cx }           from "./ase-task-board-tui-style.js"
 import { sanitize, renderDialog, renderConfirm, renderTransfer } from "./ase-task-board-tui-popup.js"
 
 /*  render the whole screen  */
@@ -29,7 +30,7 @@ const renderScreen = (ctx: BoardCtx) => {
     /*  refuse to draw into a too small window  */
     if (columns < 40 || rows < 16)
         return h(Box, { width: columns, height: rows, justifyContent: "center", alignItems: "center" },
-            h(Text, { color: palette.signal }, `window too small (${columns}×${rows}) — needs at least 40×16`))
+            h(Text, cx("signal"), `window too small (${columns}×${rows}) — needs at least 40×16`))
 
     /*  the status line in the last line of the screen, below the key hints, enclosed
         on its left and right side by the downward lines of the rule above it,
@@ -38,12 +39,12 @@ const renderScreen = (ctx: BoardCtx) => {
         carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` :
             typing ? "filtering tasks by fuzzy matched keywords (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : null
     const status = h(Box, { key: "status", paddingX: 1 },
-        h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│")),
-        h(Box, { flexGrow: 1, justifyContent: "center", paddingX: 1 },
-            h(Text, { color: report !== null ? palette.signal : palette.dim, dimColor: dim, wrap: "truncate" },
-                report ?? [ "⧉ ASE: ", h(Text, { key: "app", bold: true }, "Task Board"),
-                    " · Version: ", h(Text, { key: "version", bold: true }, `ASE ${pkg.version}`) ])),
-        h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│")))
+        h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│")),
+        h(Box, cx("grow", "bar"),
+            h(Text, cx("hint", report !== null && "signal", dim && "dimmed"),
+                report ?? [ "⧉ ASE: ", h(Text, { key: "app", ...cx("bold") }, "Task Board"),
+                    " · Version: ", h(Text, { key: "version", ...cx("bold") }, `ASE ${pkg.version}`) ])),
+        h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│")))
 
     /*  the counted tasks (without the context tasks of a filtered graph), and
         the (inversely rendered) filter field of the header: the tail of the
@@ -58,37 +59,37 @@ const renderScreen = (ctx: BoardCtx) => {
             the rule below it, with the view value and the filter field in boxes of
             their own, so that they are measurable for the mouse hit-testing  */
         h(Box, { paddingX: 1 },
-            h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│")),
-            h(Box, { flexGrow: 1, justifyContent: "center", paddingX: 1 },
-                h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" },
+            h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│")),
+            h(Box, cx("grow", "bar"),
+                h(Text, cx("normal", "truncate", dim && "dimmed"),
                     "⧉ ASE: ",
-                    h(Text, { bold: true }, "Task Board"),
+                    h(Text, cx("bold"), "Task Board"),
                     " · project: ",
-                    h(Text, { bold: true }, path.basename(Task.projectRoot())),
+                    h(Text, cx("bold"), path.basename(Task.projectRoot())),
                     " · mode: ",
-                    h(Text, { bold: true }, board.mode),
+                    h(Text, cx("bold"), board.mode),
                     " · tasks: ",
-                    h(Text, { bold: true }, `${tasks.filter((c) => toneOf(board, c) !== "done").length}/${tasks.length}`),
+                    h(Text, cx("bold"), `${tasks.filter((c) => toneOf(board, c) !== "done").length}/${tasks.length}`),
                     " · view: "),
-                h(Box, { ref: headRef("view"), flexShrink: 0 },
-                    h(Text, { color: palette.dim, dimColor: dim, bold: true, inverse: true }, ` ${view} `)),
-                h(Text, { color: palette.normal, dimColor: dim, wrap: "truncate" }, " · filter: "),
-                h(Box, { ref: headRef("filter"), flexShrink: 0 },
-                    h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true }, field)),
-                h(Box, { ref: headRef("clear"), flexShrink: 0 },
-                    h(Text, { color: typing ? palette.signal : palette.dim, dimColor: dim, bold: true, inverse: true },
+                h(Box, { ref: headRef("view"), ...cx("fixed") },
+                    h(Text, cx("dim", "badge", dim && "dimmed"), ` ${view} `)),
+                h(Text, cx("normal", "truncate", dim && "dimmed"), " · filter: "),
+                h(Box, { ref: headRef("filter"), ...cx("fixed") },
+                    h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"), field)),
+                h(Box, { ref: headRef("clear"), ...cx("fixed") },
+                    h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"),
                         filter !== "" ? "✕ " : "  "))),
-            h(Box, { flexShrink: 0 }, h(Text, { color: palette.dim, dimColor: dim }, "│"))),
+            h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│"))),
 
         /*  the horizontal rule below the header, turning upward with rounded corners at both ends  */
-        h(Text, { color: palette.dim, dimColor: dim }, " ╰" + "─".repeat(Math.max(0, columns - 4)) + "╯ "),
+        h(Text, cx("dim", dim && "dimmed"), " ╰" + "─".repeat(Math.max(0, columns - 4)) + "╯ "),
         h(Box, { paddingX: 1 },
-            h(Text, { color: palette.signal, dimColor: dim, wrap: "truncate" },
+            h(Text, cx("signal", "truncate", dim && "dimmed"),
                 board.warnings.length > 0 ? `⚠ ${board.warnings.map(sanitize).join(" · ")}` : " ")),
         ...(view === "lanes" ? renderLanes(ctx) : renderGraph(ctx)).filter((el) => surface.keys || !String(el.key).startsWith("keys")),
 
         /*  the horizontal rule between the key hints and the status line, turning downward with rounded corners at both ends  */
-        h(Text, { color: palette.dim, dimColor: dim }, " ╭" + "─".repeat(Math.max(0, columns - 4)) + "╮ "),
+        h(Text, cx("dim", dim && "dimmed"), " ╭" + "─".repeat(Math.max(0, columns - 4)) + "╮ "),
         status,
         dialog !== null ? renderDialog({
             card:    all.cards.get(dialog.id),
