@@ -39,7 +39,10 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`), the parts of
         `ase setup` (`setup-common` for the shared types and sub-process
         runner, `setup-mcp` for the MCP server registry, `setup-settings`
-        for the statusline and output style settings), the MCP-only tool modules of the
+        for the statusline and output style settings), the parts of
+        `ase config` (`config-scope` for the scope chain and directory
+        resolution, `config-schema` for the schema, presets, and write
+        policies, `config-core` for the layered `Config` class), the MCP-only tool modules of the
         service (`service-kv`, `service-getopt`, `service-markdown`,
         `service-skills`, `service-sleep`, `service-timestamp`),
         the task board (`task-board` for

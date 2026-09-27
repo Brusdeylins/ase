@@ -7,7 +7,8 @@
 import type { BoxProps, TextProps }           from "ink"
 
 import type Log                               from "./ase-lib-log.js"
-import { Config, configSchema, tuiColorDefaults } from "./ase-config.js"
+import { Config }                           from "./ase-config-core.js"
+import { configSchema, tuiColorDefaults }   from "./ase-config-schema.js"
 
 /*  the color palette of the terminal board, with the four roles dim,
     normal, accent, and signal (undefined is the terminal foreground color),

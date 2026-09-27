@@ -18,7 +18,8 @@ import type { SpecBook, Diagnostic, ExportFormat, VerboseLevel } from "@rse/spec
 
 import type Log                 from "./ase-lib-log.js"
 import type { LogLevel }        from "./ase-lib-log.js"
-import { Config, configSchema } from "./ase-config.js"
+import { Config }               from "./ase-config-core.js"
+import { configSchema }         from "./ase-config-schema.js"
 import { Task }                 from "./ase-task.js"
 import { Artifact }             from "./ase-artifact.js"
 import { Meta }                 from "./ase-util-meta.js"

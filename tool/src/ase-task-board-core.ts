@@ -16,7 +16,7 @@ import YAML                      from "yaml"
 import * as v                    from "valibot"
 
 import type Log                  from "./ase-lib-log.js"
-import { ensureAseGitignore }    from "./ase-config.js"
+import { ensureAseGitignore }    from "./ase-config-scope.js"
 import { Task }                  from "./ase-task.js"
 import { Problem }               from "./ase-task-store-core.js"
 import type { TaskLifecycle }    from "./ase-task-format.js"

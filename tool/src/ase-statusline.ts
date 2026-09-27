@@ -15,7 +15,9 @@ import { Chalk }                            from "chalk"
 import type { ForegroundColorName }         from "chalk"
 
 import type Log                             from "./ase-lib-log.js"
-import { Config, configSchema, parseScope } from "./ase-config.js"
+import { Config }                           from "./ase-config-core.js"
+import { configSchema }                     from "./ase-config-schema.js"
+import { parseScope }                       from "./ase-config-scope.js"
 import { readStdin, writeStdout }           from "./ase-lib-stdio.js"
 import pkg                                  from "../package.json" with { type: "json" }
 
