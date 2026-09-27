@@ -68,10 +68,13 @@
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div v-show="view === 'graph'" id="graph" ref="graphEl" :class="{ titles }" @click="graphClick" v-html="graph"></div>
     </div>
-    <div v-show="view === 'lanes'" id="hscroll">
-        <button :style="{ visibility: scroll.all ? 'hidden' : 'visible' }" @click="scrollBy(-240)">◀</button>
-        <span v-if="scroll.info !== ''">{{ scroll.info }}<span class="sep">·</span>{{ scroll.all ? "all visible" : "scroll or ◀/▶" }}</span>
-        <button :style="{ visibility: scroll.all ? 'hidden' : 'visible' }" @click="scrollBy(240)">▶</button>
+    <!--  the horizontal scroll bar of the lanes view, resp. the info line
+          of the graph view with the selected task and its status  -->
+    <div id="hscroll">
+        <button :style="{ visibility: view === 'lanes' && !scroll.all ? 'visible' : 'hidden' }" @click="scrollBy(-240)">◀</button>
+        <span v-if="view === 'lanes' && scroll.info !== ''">{{ scroll.info }}<span class="sep">·</span>{{ scroll.all ? "all visible" : "scroll or ◀/▶" }}</span>
+        <span v-else-if="view === 'graph' && selStatus !== null">task: <b>{{ sel.id }}</b><span class="sep">·</span>status: <b>{{ selStatus }}</b></span>
+        <button :style="{ visibility: view === 'lanes' && !scroll.all ? 'visible' : 'hidden' }" @click="scrollBy(240)">▶</button>
     </div>
     <footer>
         <div class="status">{{ warning }}</div>
@@ -264,6 +267,12 @@ const titles    = computed(() => surface.value.titles)
 const taskCount = computed(() => {
     const cards = board.value?.groups.flatMap((g) => g.lanes).flatMap((l) => l.cards)
     return cards === undefined ? "" : `${cards.filter((c) => c.tone !== "done").length}/${cards.length}`
+})
+
+/*  the status of the selected task, for the info line of the graph view  */
+const selStatus = computed(() => {
+    const lane = board.value?.groups.flatMap((g) => g.lanes).find((l) => l.cards.some((c) => c.id === sel.value.id))
+    return lane?.status ?? null
 })
 
 const warning   = computed(() => {

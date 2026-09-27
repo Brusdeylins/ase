@@ -1464,9 +1464,7 @@ const App = ({ log, graph, initial }: { log: Log, graph: boolean, initial: Board
                         ` ${board.cards.size} nodes, ${edges} edges, ${roots} roots${board.cyclic.size > 0 ? ", CYCLES" : ""} `))),
             h(Box, { key: "info", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" }, card === undefined ? " " :
-                    `${card.id} · ${card.status} · predecessors: ` +
-                    `${(board.pred.get(card.id) ?? []).join(", ") || "—"} · successors: ` +
-                    `${(board.succ.get(card.id) ?? []).join(", ") || "—"} (computed)`)),
+                    [ "task: ", h(Text, { key: "id", bold: true }, card.id), " · status: ", h(Text, { key: "status", bold: true }, card.status) ])),
             status,
             h(Box, { key: "keys1", paddingX: 1, justifyContent: "center" },
                 h(Text, { color: palette.dim, dimColor: dim, wrap: "truncate" },
