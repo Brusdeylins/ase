@@ -91,7 +91,7 @@
             <div class="dhd">
                 <h1 :class="`tone-${task.tone}`"><span class="cid">{{ task.id }}</span>{{ task.title }}</h1>
                 <span v-if="editing?.id !== ''" class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
-                <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit">✎</button>
+                <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit(false)">✎</button>
                 <button class="close" title="close (ESC)" @click="leaveEdit(true)">✕</button>
             </div>
 
@@ -271,7 +271,7 @@ const sel         = ref<Sel>({ g: 0, l: 0, id: "" })
 const planEl     = ref<HTMLIFrameElement | null>(null)
 const tabsEl      = ref<HTMLElement | null>(null)
 const editorEl    = ref<HTMLElement | null>(null)
-const editing     = ref<{ id: string, orig: string, base: string, keymap: Keymap, dirty: boolean } | null>(null)
+const editing     = ref<{ id: string, orig: string, base: string, keymap: Keymap, dirty: boolean, direct: boolean } | null>(null)
 const notice      = ref<Notice | null>(null)
 const confirmDel  = ref<string | null>(null)
 const transfer    = ref<{ id: string, at: string } | null>(null)
@@ -529,8 +529,9 @@ const draftSet = (id: string, text: string | null) => {
 }
 
 /*  start editing the plan of the task of the dialog (on its task plan tab),
-    offering to restore a draft of it which failed to save earlier  */
-const startEdit = async () => {
+    offering to restore a draft of it which failed to save earlier, where an editor
+    entered directly from the board also closes the dialog when left  */
+const startEdit = async (direct = false) => {
     if (task.value === null || editing.value !== null)
         return
     const id  = task.value.id
@@ -542,7 +543,7 @@ const startEdit = async () => {
         return
     }
     await selectTab(0)
-    await openEditor(id, src.text, src.base, src.keymap)
+    await openEditor(id, src.text, src.base, src.keymap, direct)
 }
 
 /*  start creating a new task in the task plan editor of a task dialog of its own,
@@ -561,13 +562,13 @@ const startNew = async () => {
     tab.value     = 0
     tabDocs.value = {}
     task.value    = { id: "new", title: "New Task", tone: "idle", status: "", group: "", doc: "", tabs: [ "0 ▶ plan" ], pred: [], succ: [] }
-    await openEditor("", src.text, "", src.keymap)
+    await openEditor("", src.text, "", src.keymap, true)
 }
 
 /*  open the task plan editor on a text, offering to restore a draft of it which failed to save earlier  */
-const openEditor = async (id: string, text: string, base: string, keys: Keymap) => {
+const openEditor = async (id: string, text: string, base: string, keys: Keymap, direct: boolean) => {
     const draft   = draftGet(id)
-    editing.value = { id, orig: text, base, keymap: keys, dirty: false }
+    editing.value = { id, orig: text, base, keymap: keys, dirty: false, direct }
     notice.value  = draft !== null && draft !== text ? { kind: "draft", draft } : null
     await nextTick()
     editor = new EditorView({
@@ -609,12 +610,14 @@ const saveEdit = async (base?: string) => {
     if (res.error === undefined) {
         draftSet(e.id, null)
         stopEdit()
-        if (res.id === e.id)
-            openTask(e.id)
+        if (res.id === e.id) {
+            if (!e.direct)
+                openTask(e.id)
+        }
         else {
             /*  a renamed task is re-opened under its new id with the next board reload  */
             closeTask()
-            openId    = res.id
+            openId    = e.direct ? null : res.id
             sel.value = { ...sel.value, id: res.id }
         }
         return
@@ -741,15 +744,15 @@ EmacsHandler.bindKey("C-x C-c", () => {
     return true
 })
 const stopEdit = () => {
-    const creating = editing.value?.id === ""
+    const direct = editing.value?.direct === true
     editor?.destroy()
     editor        = null
     editing.value = null
     notice.value  = null
 
-    /*  a new task has no task view to return to  */
-    if (creating)
-        task.value = null
+    /*  a new task, or a task edited directly from the board, has no task view to return to  */
+    if (direct)
+        closeTask()
 }
 
 /*  fetch the document of an attachment tab, or load it into the cache
@@ -1105,7 +1108,7 @@ const onBoardKey = (ev: KeyboardEvent) => {
         if (id !== "")
             openTask(id).then(() => {
                 if (task.value?.id === id)
-                    startEdit()
+                    startEdit(true)
             })
     }
     else if (ev.key === "N")
