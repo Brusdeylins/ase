@@ -9,6 +9,7 @@ import fs              from "node:fs"
 import chalk           from "chalk"
 import { DateTime }    from "luxon"
 
+/*  the supported log levels (in ascending verbosity order) and their terminal styles  */
 const levels = [
     { name: "error",   style: chalk.red.bold },
     { name: "warning", style: chalk.yellow.bold },
@@ -16,26 +17,34 @@ const levels = [
     { name: "debug",   style: chalk.green }
 ] as const
 
+/*  name of a supported log level  */
 export type LogLevel = typeof levels[number]["name"]
 
 /*  check whether an arbitrary string is a valid log level  */
 export const isLogLevel = (level: string): level is LogLevel =>
     levels.some((l) => l.name === level)
 
+/*  logger with level-based filtering, writing to stderr ("-") or a log file  */
 export default class Log {
     private stream: fs.WriteStream | null = null
     private logLevelIdx = 0
     private deferred: string[] | null = null
+
+    /*  creation  */
     constructor (
         private _program:  string,
         private _logLevel: LogLevel,
         private _logFile:  string
     ) {}
+
+    /*  initialize the logger with the initially configured level and file  */
     async init () {
         this.logLevel(this._logLevel)
         if (this._logFile !== "-")
             this.stream = this.openStream(this._logFile)
     }
+
+    /*  open a log file stream for appending, reporting write errors on stderr  */
     private openStream (file: string): fs.WriteStream {
         const stream = fs.createWriteStream(file, { flags: "a", encoding: "utf8" })
         stream.on("error", (err) => {
@@ -43,6 +52,8 @@ export default class Log {
         })
         return stream
     }
+
+    /*  get the current log level or set a new one  */
     logLevel (level?: LogLevel): LogLevel {
         if (level === undefined)
             return this._logLevel
@@ -53,6 +64,8 @@ export default class Log {
         this.logLevelIdx = idx
         return this._logLevel
     }
+
+    /*  switch the log file ("-" for stderr), closing any previous log file stream  */
     logFile (file: string) {
         if (file === this._logFile)
             return
@@ -64,6 +77,8 @@ export default class Log {
         if (file !== "-")
             this.stream = this.openStream(file)
     }
+
+    /*  write a message on a log level, if enabled by the current log level  */
     write (level: LogLevel, msg: string) {
         const idx = levels.findIndex((l) => l.name === level)
         if (idx !== -1 && idx <= this.logLevelIdx) {
