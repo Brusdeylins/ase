@@ -731,13 +731,7 @@ export class Config {
     get (key?: string): unknown {
         if (key === undefined)
             return this.docs[this.target].doc.contents
-        const segs = this.resolveKey(key).split(".")
-        for (let i = this.docs.length - 1; i >= 0; i--) {
-            const node = this.docs[i].doc.getIn(segs)
-            if (node !== undefined)
-                return node
-        }
-        return undefined
+        return this.getScoped(key)?.value
     }
 
     /*  retrieve the effective value at a dotted key (strongest scope wins)
@@ -936,7 +930,10 @@ export default class ConfigCommand {
                 const cfg    = new Config("config", configSchema, this.log, scope)
                 fs.mkdirSync(path.dirname(cfg.filename), { recursive: true })
                 if (!fs.existsSync(cfg.filename))
-                    fs.writeFileSync(cfg.filename, "", "utf8")
+                    fs.writeFileSync(cfg.filename, "", {
+                        encoding: "utf8",
+                        mode:     scope[scope.length - 1].kind === "user" ? 0o600 : undefined
+                    })
                 const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
                 try {
                     for (;;) {
