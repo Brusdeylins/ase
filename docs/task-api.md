@@ -642,6 +642,10 @@ Response `200`: the task plan structure (see *Task plans* above):
 - `body`: the Markdown source of the plan body.
 - `attachment`: the attachments of the plan.
 
+The response carries the entity tag of the plan (the SHA-1 of its
+textual task plan format) in its `ETag` header, for a conditional
+`PUT` via `If-Match`.
+
 Errors: `404` if no project *prjId* or no task plan *taskId* exists,
 `422` for an invalid *taskId*.
 
@@ -681,6 +685,11 @@ The `Status` header key is checked against the lifecycle model:
 an unknown state or a state not reachable from the previously saved
 status is rejected (see *Transitions*).
 
+With the request header `If-Match: "<tag>"` (the `ETag` of a previous
+`GET`), the plan is saved only if the stored plan still carries this
+entity tag, i.e., was neither changed nor deleted in the meantime; the
+check and the save happen atomically.
+
 Response `201` (created) or `200` (overwritten):
 
 ```json
@@ -694,9 +703,10 @@ Response `201` (created) or `200` (overwritten):
 - `status`: the lifecycle status of the saved plan.
 
 Errors: `400` for a malformed body or a missing `header` or
-`body` field, `404` if no project *prjId* is registered, `422` for an invalid
-*taskId*, a mismatching `Type` or `Id`, a header value of the
-wrong type, an unknown or unreachable `Status`, a `body` violating
+`body` field, `404` if no project *prjId* is registered, `412` if
+the plan was changed or deleted in the meantime under `If-Match`,
+`422` for an invalid *taskId*, a mismatching `Type` or `Id`, a header
+value of the wrong type, an unknown or unreachable `Status`, a `body` violating
 the body structure, or an attachment violating the attachment structure.
 
 ```sh
