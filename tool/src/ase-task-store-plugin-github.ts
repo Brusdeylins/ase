@@ -149,10 +149,12 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
     private polling     = false
     private opened      = now()
     private polls       = new Map<string, PollState>()
-    private registry    = new LRUCache<string, { value: { lifecycle: string, idscheme: string } | null }>({ max: 64, ttl: 10 * 1000 })
-    private latest      = new Map<string, { etag: string, number: number }>()
+    private registry    = new LRUCache<string, { value: { lifecycle: string, idscheme: string } | null }>({ max: 64, ttl: 60 * 1000 })
+    private latest      = new Map<string, { etag: string, number: number, at: number }>()
     private labels      = new Map<string, Set<string>>()
     private milestones  = new Map<string, Map<string, number>>()
+    private recent      = new Map<string, Map<number, { issue: Issue, at: number }>>()
+    private loads       = new Map<string, { at: number, load: Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null> }>()
 
     constructor (private ctx: API.TaskStorageContext) {
         const options = ctx.options as TaskStoragePluginOptions
@@ -182,6 +184,12 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
                 warn:  (message: string) => ctx.log("warning", message),
                 error: (message: string) => ctx.log("error", message)
             }
+        })
+
+        /*  request the current REST API version, as the default one ("2022-11-28") is deprecated
+            (its breaking changes do not affect this plugin, as it uses "assignees" only)  */
+        this.gh.hook.before("request", (request) => {
+            request.headers["x-github-api-version"] = "2026-03-10"
         })
 
         /*  explain a denied access (but not an exceeded rate limit), as the
@@ -268,9 +276,14 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
     }
 
     /*  the highest issue or pull request number of a repository (conditionally requested)  */
-    private async latestNumber (loc: Repo): Promise<number> {
+    private async latestNumber (loc: Repo, fresh = false): Promise<number> {
         const key    = `${loc.owner}/${loc.repo}`
         const cached = this.latest.get(key)
+
+        /*  reuse a number determined within the last 2 seconds (unless a fresh one
+            is required), as every single task store operation asks for it  */
+        if (!fresh && cached !== undefined && Date.now() - cached.at < 2 * 1000)
+            return cached.number
         try {
             const r = await this.gh.request("GET /repos/{owner}/{repo}/issues", {
                 ...loc, state: "all", sort: "created", direction: "desc", per_page: 1,
@@ -278,12 +291,14 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
             })
             const number = r.data[0]?.number ?? 0
             if (r.headers.etag !== undefined)
-                this.latest.set(key, { etag: r.headers.etag, number })
+                this.latest.set(key, { etag: r.headers.etag, number, at: Date.now() })
             return number
         }
         catch (err: unknown) {
-            if (cached !== undefined && statusOf(err) === 304)
+            if (cached !== undefined && statusOf(err) === 304) {
+                cached.at = Date.now()
                 return cached.number
+            }
             throw err
         }
     }
@@ -311,14 +326,18 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
         if (TaskFormat.parseIdScheme(idscheme).kind !== "seq")
             throw new Error(`task id scheme "${idscheme}" not supported, as task ids are GitHub issue numbers ` +
                 "(use a \"seq\" task id scheme like \"seq:#%d\")")
+        /*  spare the requests of an unchanged (cached) registration, as the
+            in-process clients re-register the project on every opening  */
+        const entry = await this.registered(prjId)
+        if (entry !== null && entry.lifecycle === lifecycle && entry.idscheme === idscheme)
+            return "updated"
         const description = `lifecycle=${lifecycle} idscheme=${idscheme}`
-        const label = await found(this.gh.rest.issues.getLabel({ ...loc, name: LABEL_PROJECT }))
-        if (label === null)
+        if (entry === null)
             await this.gh.rest.issues.createLabel({ ...loc, name: LABEL_PROJECT, color: "5319e7", description })
-        else if (label.data.description !== description)
+        else
             await this.gh.rest.issues.updateLabel({ ...loc, name: LABEL_PROJECT, description })
-        this.registry.delete(prjId)
-        return label === null ? "created" : "updated"
+        this.registry.set(prjId, { value: { lifecycle, idscheme } })
+        return entry === null ? "created" : "updated"
     }
     async projectDelete (prjId: string): Promise<boolean> {
         const loc = this.repos.get(prjId)
@@ -589,26 +608,78 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
         }
     }
 
-    /*  remember the update time of an issue written by this plugin instance,
-        so the change detection does not report it as an external change  */
+    /*  remember an issue written by this plugin instance: its update time, so the change
+        detection does not report it as an external change, and the issue itself, so the
+        listings (which lag behind the writes on GitHub) show it immediately  */
     private written (prjId: string, issue: Issue): void {
         this.pollState(prjId).seen.set(issue.number, issue.updated_at)
+        this.loads.delete(`${prjId}#${issue.number}`)
+        let recent = this.recent.get(prjId)
+        if (recent === undefined) {
+            recent = new Map()
+            this.recent.set(prjId, recent)
+        }
+        recent.set(issue.number, { issue, at: Date.now() })
+    }
+
+    /*  overlay the recently written issues (of the last 60 seconds) onto a listing,
+        where the listed issue is not yet present or older  */
+    private overlay (prjId: string, issues: Issue[]): Issue[] {
+        const recent = this.recent.get(prjId)
+        if (recent === undefined)
+            return issues
+        const byNumber = new Map(issues.map((issue) => [ issue.number, issue ]))
+        for (const [ n, { issue, at } ] of recent) {
+            const listed = byNumber.get(n)
+            if (Date.now() - at > 60 * 1000)
+                recent.delete(n)
+            else if (listed === undefined || listed.updated_at < issue.updated_at)
+                byNumber.set(n, issue)
+        }
+        return [ ...byNumber.values() ]
+    }
+
+    /*  load a live issue together with its blocking issues and comments (the issue and
+        its comments in parallel), reusing a load of the last 2 seconds (dropped on any
+        own write or detected change of the issue), as e.g. the boards load the plan
+        and its attachments in separate operations  */
+    private load (prjId: string, loc: Repo, n: number): Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null> {
+        const key    = `${prjId}#${n}`
+        const cached = this.loads.get(key)
+        if (cached !== undefined && Date.now() - cached.at < 2 * 1000)
+            return cached.load
+        const load = (async () => {
+            const [ issue, comments ] = await Promise.all([
+                this.fetch(loc, n),
+                n === 0 ? [] : found(this.gh.paginate(this.gh.rest.issues.listComments,
+                    { ...loc, issue_number: n, per_page: 100 }) as Promise<Comment[]>)
+            ])
+            if (issue === null)
+                return null
+            return { issue, after: await this.blockers(loc, issue), comments: comments ?? [] }
+        })()
+        this.loads.set(key, { at: Date.now(), load })
+        load.catch(() => {
+            this.loads.delete(key)
+        })
+        return load
     }
 
     /*  ==== task plans ====  */
 
     async taskList (prjId: string): Promise<API.TaskEntry[]> {
         const { loc, lifecycle, scheme } = await this.context(prjId)
-        const issues = await this.gh.paginate(this.gh.rest.issues.listForRepo, { ...loc, state: "all", per_page: 100 }) as Issue[]
+        const issues = this.overlay(prjId,
+            await this.gh.paginate(this.gh.rest.issues.listForRepo, { ...loc, state: "all", per_page: 100 }) as Issue[])
         return Promise.all(issues.filter((issue) => live(issue))
             .map((issue) => this.entry(loc, lifecycle, scheme, issue)))
     }
     async taskLoad (prjId: string, taskId: string): Promise<API.TaskPlan | null> {
         const { loc, lifecycle, scheme } = await this.context(prjId)
-        const issue = await this.fetch(loc, numberOf(scheme, taskId))
-        if (issue === null)
+        const loaded = await this.load(prjId, loc, numberOf(scheme, taskId))
+        if (loaded === null)
             return null
-        const [ after, comments ] = await Promise.all([ this.blockers(loc, issue), this.comments(loc, issue) ])
+        const { issue, after, comments } = loaded
         return {
             header:     this.header(loc, lifecycle, scheme, issue, after),
             body:       this.body(issue),
@@ -640,7 +711,7 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
         if (issue === null) {
             /*  reject a task id deviating from the next issue number, and
                 discard an issue which lost the race for this number  */
-            const next = await this.latestNumber(loc) + 1
+            const next = await this.latestNumber(loc, true) + 1
             if (number !== next)
                 throw new Error(`task "${taskId}" cannot be created, as the next issue will be "${idOf(scheme, next)}"`)
             issue = (await this.gh.rest.issues.create({ ...loc, title, body, labels, assignees, milestone })).data as Issue
@@ -754,6 +825,7 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
                 continue
             const known = state.seen.has(issue.number)
             state.seen.set(issue.number, issue.updated_at)
+            this.loads.delete(`${prjId}#${issue.number}`)
             if (!live(issue))
                 change.deleted.push(idOf(scheme, issue.number))
             else if (!known && issue.created_at >= this.opened)
