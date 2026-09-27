@@ -114,12 +114,21 @@ The following configuration parameters control the project:
         but connecting via HTTPS, verifying the server certificate against
         the Node.js CA store (extendable via `$NODE_EXTRA_CA_CERTS`), or,
         with `?insecure`, skipping the certificate verification.
-
-    Other URL schemes (like `github:`*project*) are reserved.
+    -   `github:`*owner*`/`*repo*: the built-in GitHub storage plugin,
+        running in-process, persisting the plans as the issues of the
+        GitHub repository *owner*`/`*repo* (see *GitHub storage plugin*
+        in `task-api.md`), which requires a `seq` task id scheme in
+        `project.task.idscheme` (like `seq:#%d`), as the task ids are
+        the issue numbers. The GitHub token is `project.task.token`,
+        else `$GITHUB_TOKEN`, else `$GH_TOKEN`. On the `project` and
+        `task` scopes, the repository is warned about once per project
+        and repository (remembered in the per-user state directory as
+        `task-github.json`), i.e. again only if the repository changes.
 
 -   **project.task.token**: the bearer token of a remote task store
     server, used if the `project.task.store` URL embeds no token and
-    `$ASE_TASK_STORE_TOKEN` is not set. It is writable on the `user`
+    `$ASE_TASK_STORE_TOKEN` is not set, or the GitHub token of a
+    `github:` task store. It is writable on the `user`
     scope only (a hand-edited value on another scope is used, but warned
     about) and masked as `***` in `ase config list`.
 

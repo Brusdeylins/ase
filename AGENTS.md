@@ -58,6 +58,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `task-store-plugin-api` for the storage plugin contract, `task-store-plugin-delegate`
         for the plugin loader and the locking storage delegate,
         `task-store-plugin-ase` for the built-in file-based storage plugin,
+        `task-store-plugin-github` for the built-in GitHub Issues storage plugin,
         `task-format` for the textual task format codec and the lifecycle
         models, see `docs/task-api.md`); `ase-task.ts` itself only forwards
         the `ase task` CLI and `ase_task_*` MCP tools to the task store

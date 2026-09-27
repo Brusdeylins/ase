@@ -5,6 +5,18 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool]: GitHub Issues task store
+    The new built-in storage plugin `github` persists the task plans as the issues of a GitHub
+    repository, selected either by `ase task store start --module github` (with the repositories
+    mapped per project in `storage.options.repos`) or in-process by the `project.task.store` URL
+    `github:<owner>/<repo>`. The task id is the issue number rendered through the required `seq`
+    task id scheme, and the task plan maps as closely as possible onto the issue: title, body,
+    state (refined by an `ase:Status:<state>` label), labels (`Tags`), assignee, milestone
+    (`Phase`), parent issue (`Group`), blocking issues (`After`), and comments (attachments), with
+    all other header keys as `ase:<key>:<value>` labels. Deleting a task closes its issue as "not
+    planned". Issue changes made on GitHub are detected by conditional polling (ETag and `since`)
+    and delivered as task store events through the new optional storage plugin method `watch`.
+
 -   FEATURE [tool,plugin]: Task id schemes
     The new `project.task.idscheme` configuration (`ase task idscheme`) selects the scheme of new
     task ids: `slug[:<words>]` (default), `seq[:<template>]` (e.g. `FOO-%03d`), or `any`. The new

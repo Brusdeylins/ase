@@ -493,7 +493,11 @@ them to a remote task store server (see `task-api.md`), registering the
 bearer token is the embedded *token* (warned about if configured on the
 `project` scope), else `$ASE_TASK_STORE_TOKEN`, else the
 `project.task.token` configuration (writable on the `user` scope only),
-else the `token` of the per-user `store.yaml`:
+else the `token` of the per-user `store.yaml`. Finally,
+`github:`*owner*`/`*repo* stores the plans as the issues of a GitHub
+repository through the built-in GitHub storage plugin running
+in-process (requiring a `seq` task id scheme, with the GitHub token
+from `project.task.token`, else `$GITHUB_TOKEN`, else `$GH_TOKEN`):
 
 - `ase task`:
   Entry point group for task plan management. Without a subcommand,
@@ -617,7 +621,8 @@ else the `token` of the per-user `store.yaml`:
   persisted there),
   allowing cross-origin browser requests from *origin* (repeatable, `*`
   for any origin), and loading the storage plugin *name*: `ase` for the
-  built-in one, else the NPM package `ase-task-store-`*name* (default:
+  built-in one, `github` for the built-in GitHub Issues one (configured
+  by `storage.options`, see `task-api.md`), else the NPM package `ase-task-store-`*name* (default:
   the `storage.plugin` key of `store.yaml`, else `ase`). The built-in
   plugin stores the plans below *dir* (default: `storage.options.basedir`,
   else `tasks` below the per-user config directory), one sub-directory

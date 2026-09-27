@@ -102,7 +102,10 @@
         "source-code-error":                "1.2.0",
         "pure-uuid":                        "2.0.0",
         "ws":                               "8.21.3",
-        "@rse/mrcs":                        "0.9.2"
+        "@rse/mrcs":                        "0.9.2",
+        "@octokit/core":                    "7.0.8",
+        "@octokit/plugin-rest-endpoint-methods": "18.0.0",
+        "@octokit/plugin-paginate-rest":    "15.0.0"
     },
     "allowScripts": {
         "fsevents":                         true
