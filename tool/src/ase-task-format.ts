@@ -324,7 +324,7 @@ export const normalizeTaskText = (id: string, text: string, lifecycle: TaskLifec
 
 /*  track the fenced code block state across a body line: returns the
     opening fence, or an empty string if outside any fenced code block  */
-const fenceTrack = (fence: string, line: string): string => {
+export const fenceTrack = (fence: string, line: string): string => {
     const m = /^ {0,3}(`{3,}|~{3,})[ \t]*(.*)$/.exec(line)
     if (m !== null && fence === "")
         return m[1]

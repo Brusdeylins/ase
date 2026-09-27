@@ -49,7 +49,7 @@ export class Skills {
 
     /*  fetch the full registry packument for a single package  */
     private static async fetchPackument (name: string): Promise<{
-        version: string, time: Record<string, string>, repository: string, deps: number | "N.A."
+        version: string, created: string, updated: string, repository: string, deps: number | "N.A."
     }> {
         try {
             const pkg = await pacote.packument(name, { fullMetadata: true }) as unknown as {
@@ -73,10 +73,12 @@ export class Skills {
                     repository = r.url
                 deps = Object.keys(verEntry.dependencies ?? {}).length
             }
-            return { version, time, repository, deps }
+            const created = time.created ?? ""
+            const updated = version !== "" ? (time[version] ?? "") : ""
+            return { version, created, updated, repository, deps }
         }
         catch {
-            return { version: "", time: {}, repository: "", deps: "N.A." }
+            return { version: "", created: "", updated: "", repository: "", deps: "N.A." }
         }
     }
 
@@ -263,69 +265,33 @@ export class Skills {
         staleMonths = 18,
         smallScope  = false
     ): Promise<ComponentInfo[]> {
-        if (stack === "JavaScript" || stack === "TypeScript") {
-            /*  per package: kick off packument and downloads in parallel,
-                then stars as soon as the packument resolves; across packages
-                everything runs concurrently via Promise.all  */
-            const results = await Promise.all(components.map(async (name): Promise<ComponentInfo> => {
-                const packumentPromise = Skills.fetchPackument(name)
-                const downloadsPromise = Skills.fetchDownloads(name)
-                const starsPromise     = packumentPromise.then((p) => Skills.fetchStars(p.repository))
-                const [ p, downloads, stars ] = await Promise.all([
-                    packumentPromise, downloadsPromise, starsPromise
-                ])
-                const created = p.time.created ?? ""
-                const updated = p.version !== "" ? (p.time[p.version] ?? "") : ""
-                const rank    = Skills.computeRank(downloads, stars, created, updated, p.deps, staleMonths, smallScope)
-                return {
-                    name,
-                    version:    p.version,
-                    created,
-                    updated,
-                    repository: p.repository,
-                    stars,
-                    downloads,
-                    deps:       p.deps,
-                    rank
-                }
-            }))
-
-            /*  sort by rank in descending order (best first)  */
-            results.sort((a, b) => b.rank - a.rank)
-            return results
-        }
-        else if (stack === "Java" || stack === "Kotlin") {
-            /*  per coordinate: kick off Maven Central info and mvnrepository
-                downloads in parallel, then stars as soon as the POM-derived
-                repository is known; across coordinates everything runs
-                concurrently via Promise.all  */
-            const results = await Promise.all(components.map(async (name): Promise<ComponentInfo> => {
-                const infoPromise      = Skills.fetchMavenInfo(name)
-                const downloadsPromise = Skills.fetchMavenDownloads(name)
-                const starsPromise     = infoPromise.then((i) => Skills.fetchStars(i.repository))
-                const [ i, downloads, stars ] = await Promise.all([
-                    infoPromise, downloadsPromise, starsPromise
-                ])
-                const rank = Skills.computeRank(downloads, stars, i.created, i.updated, i.deps, staleMonths, smallScope)
-                return {
-                    name,
-                    version:    i.version,
-                    created:    i.created,
-                    updated:    i.updated,
-                    repository: i.repository,
-                    stars,
-                    downloads,
-                    deps:       i.deps,
-                    rank
-                }
-            }))
-
-            /*  sort by rank in descending order (best first)  */
-            results.sort((a, b) => b.rank - a.rank)
-            return results
-        }
-        else
+        /*  select the per-stack metadata and downloads fetchers  */
+        const fetchers =
+            stack === "JavaScript" || stack === "TypeScript" ?
+                { meta: Skills.fetchPackument, downloads: Skills.fetchDownloads } :
+                stack === "Java" || stack === "Kotlin" ?
+                    { meta: Skills.fetchMavenInfo, downloads: Skills.fetchMavenDownloads } :
+                    null
+        if (fetchers === null)
             return []
+
+        /*  per component: kick off metadata and downloads in parallel,
+            then stars as soon as the repository is known; across components
+            everything runs concurrently via Promise.all  */
+        const results = await Promise.all(components.map(async (name): Promise<ComponentInfo> => {
+            const metaPromise      = fetchers.meta(name)
+            const downloadsPromise = fetchers.downloads(name)
+            const starsPromise     = metaPromise.then((m) => Skills.fetchStars(m.repository))
+            const [ m, downloads, stars ] = await Promise.all([
+                metaPromise, downloadsPromise, starsPromise
+            ])
+            const rank = Skills.computeRank(downloads, stars, m.created, m.updated, m.deps, staleMonths, smallScope)
+            return { name, ...m, stars, downloads, rank }
+        }))
+
+        /*  sort by rank in descending order (best first)  */
+        results.sort((a, b) => b.rank - a.rank)
+        return results
     }
 
     /*  compute composite rank score from weighted metrics:

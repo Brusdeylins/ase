@@ -105,6 +105,11 @@ type ToolInput = v.InferOutput<typeof toolInputSchema>
     forever, so orphans are garbage-collected once they exceed this age  */
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 
+/*  the ASE session information determined by the session-start hook  */
+type SessionInfo = Record<"version" | "versionHint" | "pluginRoot" | "persona" | "guidance" |
+    "userId" | "projectId" | "boxing" | "lifecycle" | "specBasedir" | "specSchema" |
+    "taskId" | "sessionId" | "headless", string>
+
 /*  CLI command "ase hook"  */
 export default class HookCommand {
     constructor (private log: Log) {}
@@ -314,7 +319,7 @@ export default class HookCommand {
 
         /*  read external files  */
         const pkg   = this.readPluginFile(filePkg,   "plugin manifest")
-        let   md    = this.readPluginFile(fileMd,    "constitution file")
+        const md    = this.readPluginFile(fileMd,    "constitution file")
         const style = this.readPluginFile(fileStyle, "output style file")
 
         /*  determine own version  */
@@ -386,10 +391,28 @@ export default class HookCommand {
         /*  determine headless mode  */
         const headless = process.env.ASE_HEADLESS === "true" ? "true" : "false"
 
+        /*  publish the ASE session information and emit it as the hook output payload  */
+        const payload = this.publishSessionInfo(tool, {
+            version: versionCurrentPlugin, versionHint, pluginRoot, persona, guidance, userId, projectId,
+            boxing, lifecycle, specBasedir, specSchema, taskId, sessionId, headless
+        }, md, path.dirname(fileMd), style)
+        await writeStdout(JSON.stringify(payload))
+        return 0
+    }
+
+    /*  publish the ASE session information: export it to the shell commands and
+        render it, together with the constitution markdown, the output style, and
+        the deterministic ASE banner, into the "session-start" hook output payload  */
+    private publishSessionInfo (tool: Tool, info: SessionInfo, md: string, mdDir: string, style: string): Record<string, unknown> {
+        const {
+            version, versionHint, pluginRoot, persona, guidance, userId, projectId,
+            boxing, lifecycle, specBasedir, specSchema, taskId, sessionId, headless
+        } = info
+
         /*  provide ASE information to Anthropic Claude Code CLI shell commands
             (Anthropic Claude Code CLI only -- GitHub Copilot CLI has no equivalent mechanism)  */
         this.writeEnvFile(tool, {
-            ASE_VERSION:                versionCurrentPlugin,
+            ASE_VERSION:                version,
             ASE_PLUGIN_ROOT:            pluginRoot,
             ASE_USER_ID:                userId,
             ASE_PROJECT_ID:             projectId,
@@ -404,8 +427,8 @@ export default class HookCommand {
         })
 
         /*  prepend ASE information to constitution markdown  */
-        md =
-            `<ase-version>${versionCurrentPlugin}</ase-version>\n` +
+        let context =
+            `<ase-version>${version}</ase-version>\n` +
             `<ase-version-hint>${versionHint}</ase-version-hint>\n` +
             `<ase-plugin-root>${pluginRoot}</ase-plugin-root>\n` +
             `<ase-persona-style>${persona}</ase-persona-style>\n` +
@@ -423,14 +446,14 @@ export default class HookCommand {
             "\n" + md
 
         /*  expand all @<file> references manually  */
-        md = this.expandReferences(md, path.dirname(fileMd))
+        context = this.expandReferences(context, mdDir)
 
         /*  append the output style to the constitution markdown (GitHub
             Copilot CLI and OpenAI Codex CLI only -- Anthropic Claude Code CLI
             applies the plugin output style natively), stripping the
             YAML frontmatter which only Anthropic Claude Code CLI understands  */
         if (tool !== "claude")
-            md += "\n" + style.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
+            context += "\n" + style.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
 
         /*  build the deterministic ASE banner (rendered directly by the
             agent harness, independent of any model decision, so it is
@@ -440,7 +463,7 @@ export default class HookCommand {
             the trailing help hint is emitted only if the guidance level asks for it  */
         const banner =
             "\n" +
-            `\n⧉ ASE: ⎈ version: ${versionCurrentPlugin}${versionHint !== "" ? " " + versionHint.replace(/\*/g, "") : ""}` +
+            `\n⧉ ASE: ⎈ version: ${version}${versionHint !== "" ? " " + versionHint.replace(/\*/g, "") : ""}` +
             `\n⧉ ASE: ※ user: ${userId}, ⚑ project: ${projectId}` +
             `\n⧉ ASE: ◉ task: ${taskId}, ⏻ session: ${sessionId}` +
             `\n⧉ ASE: ☯ persona: ${persona}, ▶ guidance: ${guidance}, ▢ boxing: ${boxing}` +
@@ -456,10 +479,10 @@ export default class HookCommand {
         const payload: Record<string, unknown> = tool !== "copilot" ? {
             "hookSpecificOutput": {
                 "hookEventName":     "SessionStart",
-                "additionalContext": md
+                "additionalContext": context
             }
         } : {
-            "additionalContext": md
+            "additionalContext": context
         }
 
         /*  attach the deterministic banner as a top-level "systemMessage"
@@ -469,9 +492,7 @@ export default class HookCommand {
             by letting the model emit the banner itself)  */
         if ((tool === "claude" || tool === "codex") && headless !== "true" && guidance !== "none")
             payload.systemMessage = banner
-
-        await writeStdout(JSON.stringify(payload))
-        return 0
+        return payload
     }
 
     /*  publish the agent activity marker to tmux as a per-pane user

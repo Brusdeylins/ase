@@ -92,9 +92,14 @@ export class Markdown {
         let j   = 0
         while (j < text.length) {
             const ch = text[j]
-            if (ch !== "`") {
+            if (ch === "\\" && text[j + 1] === "`") {
                 /*  literal backslash-escaped backtick *outside* any span
                     is left verbatim for later scanning  */
+                pre += "\\`"
+                j += 2
+                continue
+            }
+            if (ch !== "`") {
                 pre += ch
                 j++
                 continue
@@ -142,9 +147,15 @@ export class Markdown {
                 inner += c
                 k++
             }
-            if (!closed || !escaped) {
-                /*  not an escaped-backtick span: emit the opening run
-                    verbatim and continue scanning from just after it  */
+            if (closed && !escaped) {
+                /*  regular span: emit it verbatim and continue after it  */
+                pre += text.slice(j, k + open)
+                j = k + open
+                continue
+            }
+            if (!closed) {
+                /*  unmatched opening run: emit it verbatim and continue
+                    scanning from just after it  */
                 pre += "`".repeat(open)
                 j += open
                 continue

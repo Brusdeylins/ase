@@ -926,7 +926,9 @@ export default class ConfigCommand {
             .description("edit configuration file with $EDITOR")
             .action(async (_opts: unknown, cmd: Command) => {
                 const scope  = parseScope(cmd.optsWithGlobals().scope as string | undefined)
-                const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
+                const editor = [ process.env.VISUAL, process.env.EDITOR ]
+                    .find((e) => e !== undefined && e.trim() !== "") ?? "vi"
+                const [ editorCmd, ...editorArgs ] = editor.trim().split(/\s+/)
                 const cfg    = new Config("config", configSchema, this.log, scope)
                 fs.mkdirSync(path.dirname(cfg.filename), { recursive: true })
                 if (!fs.existsSync(cfg.filename))
@@ -937,7 +939,7 @@ export default class ConfigCommand {
                 const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
                 try {
                     for (;;) {
-                        execaSync(editor, [ cfg.filename ], { stdio: "inherit" })
+                        execaSync(editorCmd, [ ...editorArgs, cfg.filename ], { stdio: "inherit" })
                         try {
                             cfg.read("strict")
                             break

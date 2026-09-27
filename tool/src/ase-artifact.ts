@@ -105,8 +105,8 @@ export class Artifact {
         for a single kind; "basedir" is project-root-relative (POSIX,
         "" ≡ project root) and "files" resolves relative to "basedir"  */
     private static spec (cfg: Config, kind: Exclude<ArtifactKind, "othr">): { basedir: string, files: string } {
-        const basedir = Artifact.configString(cfg, `project.artifact.${kind}.basedir`)
-            .replace(/\\/g, "/").replace(/^\/+|\/+$/g, "")
+        const basedir = path.posix.normalize(Artifact.configString(cfg, `project.artifact.${kind}.basedir`)
+            .replace(/\\/g, "/")).replace(/^\/+|\/+$/g, "")
             .replace(/^\.$/, "")
         if (basedir.split("/").includes(".."))
             throw new Error(`artifact: configured "basedir" "${basedir}" must not escape the project root`)

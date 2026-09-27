@@ -101,6 +101,57 @@ const verbatimArgs = (input: string, flagTakesValue: Map<string, boolean>): stri
     return idx < ranges.length ? input.slice(ranges[idx].start) : ""
 }
 
+/*  convert a dashed long option name into its camel-cased commander key  */
+const camelKey = (long: string) => long.replace(/-(.)/g, (_, c: string) => c.toUpperCase())
+
+/*  parse the options specification into commander options, plus the
+    information needed for list validation and verbatim argument slicing  */
+const parseSpec = (spec: string) => {
+    const tokens         = spec.split(/\s+/).filter((e) => e.length > 0)
+    const re             = /^--([A-Za-z][A-Za-z0-9-]*)(?:\|-([A-Za-z]))?(?:=(\((.*)\)(\.\.\.)?|.*))?$/
+    const internals      = new Set<string>()
+    const flagTakesValue = new Map<string, boolean>()
+    const options:  Option[] = []
+    const listOpts: Array<{ long: string, choices: string[] }> = []
+    for (const tok of tokens) {
+        const m = re.exec(tok)
+        if (m === null)
+            throw new Error(`invalid spec token "${tok}"`)
+        const long       = m[1]
+        const short      = m[2] ?? null
+        const valuePart  = m[3] ?? null
+        const choicePart = m[4] ?? null
+        const listMarker = m[5] ?? null
+        const takesValue = valuePart !== null
+        const choices    = choicePart !== null ? choicePart.split("|") : null
+        const isList     = listMarker !== null
+        const dflt       = choices !== null ? choices[0] : valuePart
+        flagTakesValue.set(`--${long}`, takesValue)
+        if (short !== null)
+            flagTakesValue.set(`-${short}`, takesValue)
+        const head       = short !== null ? `-${short}, --${long}` : `--${long}`
+        const flags      = takesValue ? `${head} <value>` : head
+        const opt        = new Option(flags)
+        if (takesValue) {
+            if (choices !== null && !isList)
+                opt.choices(choices)
+            opt.default(dflt)
+        }
+        else
+            opt.default(false)
+        if (choices !== null && isList)
+            listOpts.push({ long, choices })
+        if (long.startsWith("int-")) {
+            /*  internal option: hide from usage help and remember
+                its camel-cased key for the info rendering  */
+            opt.hideHelp()
+            internals.add(camelKey(long))
+        }
+        options.push(opt)
+    }
+    return { options, internals, flagTakesValue, listOpts }
+}
+
 /*  MCP registration entry point for the option-parser tool  */
 export class GetoptMCP {
     register (mcp: McpServer): void {
@@ -132,11 +183,11 @@ export class GetoptMCP {
                 /*  normalize args  */
                 const argsRaw    = typeof args.args === "string" ? args.args : null
                 const argsVec    = typeof args.args === "string" ?
-                    shParse(args.args)
-                        .map((e) => typeof e === "string" ? e :
-                            (e !== null && typeof e === "object" && "op" in e && e.op === "glob" ?
-                                (e as { pattern: string }).pattern : null))
-                        .filter((e): e is string => e !== null) :
+                    shParse(args.args, (key) => `$${key}`)
+                        .flatMap((e) => typeof e === "string" ? [ e ] :
+                            "pattern" in e ? [ e.pattern ] :
+                                "op" in e ? [ e.op ] :
+                                    `#${e.comment}`.split(/\s+/).filter((s) => s.length > 0)) :
                     args.args
 
                 /*  build a fresh commander program  */
@@ -150,49 +201,10 @@ export class GetoptMCP {
                         writeErr: () => {}
                     })
 
-                /*  tokenize spec and add one option per token  */
-                const tokens    = args.spec.split(/\s+/).filter((e) => e.length > 0)
-                const re        = /^--([A-Za-z][A-Za-z0-9-]*)(?:\|-([A-Za-z]))?(?:=(\((.*)\)(\.\.\.)?|.*))?$/
-                const camelKey  = (long: string) => long.replace(/-(.)/g, (_, c: string) => c.toUpperCase())
-                const internals = new Set<string>()
-                const flagTakesValue = new Map<string, boolean>()
-                const listOpts: Array<{ long: string, choices: string[] }> = []
-                for (const tok of tokens) {
-                    const m = re.exec(tok)
-                    if (m === null)
-                        throw new Error(`invalid spec token "${tok}"`)
-                    const long       = m[1]
-                    const short      = m[2] ?? null
-                    const valuePart  = m[3] ?? null
-                    const choicePart = m[4] ?? null
-                    const listMarker = m[5] ?? null
-                    const takesValue = valuePart !== null
-                    const choices    = choicePart !== null ? choicePart.split("|") : null
-                    const isList     = listMarker !== null
-                    const dflt       = choices !== null ? choices[0] : valuePart
-                    flagTakesValue.set(`--${long}`, takesValue)
-                    if (short !== null)
-                        flagTakesValue.set(`-${short}`, takesValue)
-                    const head       = short !== null ? `-${short}, --${long}` : `--${long}`
-                    const flags      = takesValue ? `${head} <value>` : head
-                    const opt        = new Option(flags)
-                    if (takesValue) {
-                        if (choices !== null && !isList)
-                            opt.choices(choices)
-                        opt.default(dflt)
-                    }
-                    else
-                        opt.default(false)
-                    if (choices !== null && isList)
-                        listOpts.push({ long, choices })
-                    if (long.startsWith("int-")) {
-                        /*  internal option: hide from usage help and remember
-                            its camel-cased key for the info rendering below  */
-                        opt.hideHelp()
-                        internals.add(camelKey(long))
-                    }
+                /*  parse spec and add its options  */
+                const { options, internals, flagTakesValue, listOpts } = parseSpec(args.spec)
+                for (const opt of options)
                     cmd.addOption(opt)
-                }
 
                 /*  parse args  */
                 cmd.parse(argsVec, { from: "user" })

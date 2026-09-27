@@ -413,21 +413,13 @@ export default class StatuslineCommand {
                         const cfg = new Config("config", configSchema, this.log,
                             parseScope(`session:${getSession()}`))
                         cfg.read("lenient")
-                        const t = String(cfg.get("agent.task")             ?? "").trim()
-                        const p = String(cfg.get("agent.persona")          ?? "").trim()
-                        const g = String(cfg.get("agent.guidance")         ?? "").trim()
-                        const b = String(cfg.get("project.boxing")         ?? "").trim()
-                        const l = String(cfg.get("project.task.lifecycle") ?? "").trim()
-                        if (t !== "")
-                            taskId = t
-                        if (p !== "")
-                            persona = p
-                        if (g !== "")
-                            guidance = g
-                        if (b !== "")
-                            boxing = b
-                        if (l !== "")
-                            lifecycle = l
+                        const get = (key: string, fallback: string): string =>
+                            String(cfg.get(key) ?? "").trim() || fallback
+                        taskId    = get("agent.task",             taskId)
+                        persona   = get("agent.persona",          persona)
+                        guidance  = get("agent.guidance",         guidance)
+                        boxing    = get("project.boxing",         boxing)
+                        lifecycle = get("project.task.lifecycle", lifecycle)
                     }
                     catch (_e) {
                         /*  cascade unavailable; keep env-var fallbacks  */
@@ -447,6 +439,13 @@ export default class StatuslineCommand {
                 const getGit = memoize(() => probeGit(data.workspace?.current_dir ?? ""))
                 const getMem = memoize(() => probeMemory())
 
+                /*  render a configuration value (if non-empty) with its icon and label  */
+                const cfgValue = (key: keyof ReturnType<typeof getCfg>, icon: string, label: string) => () => {
+                    const value = getCfg()[key]
+                    if (value !== "")
+                        emit(`${prefix(icon, label)}${c.bold(value)}`)
+                }
+
                 /*  identifier to renderer map: each callback fetches its own information
                     directly from data (or via the lazy helpers above for shared values)  */
                 const renderers: Record<string, () => void> = {
@@ -459,11 +458,7 @@ export default class StatuslineCommand {
                         const dir = path.basename(data.workspace?.current_dir ?? "")
                         emit(`${prefix("⚑", "project")}${c.bold(dir)}`)
                     },
-                    T: () => {
-                        const { taskId } = getCfg()
-                        if (taskId !== "")
-                            emit(`${prefix("◉", "task")}${c.bold(taskId)}`)
-                    },
+                    T: cfgValue("taskId", "◉", "task"),
                     s: () => emit(`${prefix("⏻", "session")}${c.bold(getSession())}`),
 
                     /*  ==== MODEL ====  */
@@ -486,26 +481,10 @@ export default class StatuslineCommand {
                         if (styleName !== "")
                             emit(`${prefix("≡", "style")}${c.bold(styleName)}`)
                     },
-                    P: () => {
-                        const { persona } = getCfg()
-                        if (persona !== "")
-                            emit(`${prefix("☯", "persona")}${c.bold(persona)}`)
-                    },
-                    h: () => {
-                        const { guidance } = getCfg()
-                        if (guidance !== "")
-                            emit(`${prefix("▶", "guidance")}${c.bold(guidance)}`)
-                    },
-                    B: () => {
-                        const { boxing } = getCfg()
-                        if (boxing !== "")
-                            emit(`${prefix("▢", "boxing")}${c.bold(boxing)}`)
-                    },
-                    L: () => {
-                        const { lifecycle } = getCfg()
-                        if (lifecycle !== "")
-                            emit(`${prefix("⟳", "lifecycle")}${c.bold(lifecycle)}`)
-                    },
+                    P: cfgValue("persona",   "☯", "persona"),
+                    h: cfgValue("guidance",  "▶", "guidance"),
+                    B: cfgValue("boxing",    "▢", "boxing"),
+                    L: cfgValue("lifecycle", "⟳", "lifecycle"),
 
                     /*  ==== CONTEXT ====  */
                     c: () => {
