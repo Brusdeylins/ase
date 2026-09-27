@@ -89,8 +89,10 @@ let classes = sheet(palette)
 /*  the frames of the pulse in the top border of the tasks of active lanes  */
 export const pulseFrames = [ "●", "●", "●", "●", "●", "◉", "⦿", "○", "⦿", "◉" ]
 
-/*  the frames of the spinner of the busy popup  */
+/*  the frames of the spinner of the busy popup, and the left eighth blocks
+    (by number of filled eighths) of its progress bar  */
 export const spinnerFrames = [ "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" ]
+export const eighths       = [ " ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█" ]
 
 /*  load the palette from the configuration and derive the style sheet from it  */
 export const loadPalette = (log: Log): void => {

@@ -10,7 +10,7 @@ import type { Task }                          from "./ase-task.js"
 import { cardLabel, attachmentTabs, isPreflightDiff, diffTones } from "./ase-task-board-core.js"
 import type { Card }                          from "./ase-task-board-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
-import { palette, cx, spinnerFrames }         from "./ase-task-board-tui-style.js"
+import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.js"
 import type { TransferEntry, BusyLabel }      from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
@@ -299,28 +299,54 @@ export const renderConfirm = (id: string, yes: boolean, columns: number, rows: n
     screen, with a spinner, the operation, and its elapsed time, above an indeterminate
     progress bar with a bouncing block, with every inner cell written (with spaces)  */
 export const renderBusy = (label: BusyLabel, since: number, tick: number, columns: number, rows: number) => {
-    const width  = Math.min(columns - 2, 60)
+    const width  = Math.min(columns - 2, 50)
     const innerW = width - 2
     const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
 
     /*  the centered operation, with the task id rendered inverse with one extra space on each side  */
-    const head   = `${spinnerFrames[tick % spinnerFrames.length]} ${sanitize(label.text)}${label.id !== undefined ? " " : ""}`.slice(0, innerW)
+    const head   = `${spinnerFrames[Math.floor(tick / 2) % spinnerFrames.length]} ${sanitize(label.text)}${label.id !== undefined ? " " : ""}`.slice(0, innerW)
     const tid    = label.id !== undefined ? ` ${sanitize(label.id)} `.slice(0, innerW - head.length) : ""
-    const tail   = `${label.suffix !== undefined ? ` ${sanitize(label.suffix)}` : ""} (${((Date.now() - since) / 1000).toFixed(1)}s)`
-        .slice(0, innerW - head.length - tid.length)
-    const tpad   = Math.floor((innerW - head.length - tid.length - tail.length) / 2)
+    const tail   = (label.suffix !== undefined ? ` ${sanitize(label.suffix)}` : "").slice(0, innerW - head.length - tid.length)
+    const time   = ` (${((Date.now() - since) / 1000).toFixed(1)}s)`.slice(0, innerW - head.length - tid.length - tail.length)
+    const used   = head.length + tid.length + tail.length + time.length
+    const tpad   = Math.floor((innerW - used) / 2)
+
+    /*  the progress bar: a block swiping back and forth (eased, one sweep per 1.6s at a
+        50ms tick) in accent color inside a rounded box in accent color, positioned in
+        eighth cells via the left eighth blocks, which at the leading edge of the block
+        are drawn inverse, as there are no right eighth blocks  */
     const barW   = Math.max(1, innerW - 4)
-    const size   = Math.min(8, barW)
-    const span   = barW - size
-    const pos    = span > 0 ? Math.abs(((2 * tick) % (2 * span)) - span) : 0
-    const bar    = "▱".repeat(pos) + "▰".repeat(size) + "▱".repeat(barW - pos - size)
-    return h(Box, { key: "busy", top: Math.floor((rows - 5) / 2), left: Math.floor((columns - width) / 2), width, height: 5, ...cx("popup", "border-accent") },
-        h(Text, cx("normal", "bold"),
-            " ".repeat(tpad) + head,
-            h(Text, cx("inverse"), tid),
-            tail.padEnd(innerW - tpad - head.length - tid.length)),
-        blank("blank"),
-        h(Text, cx("accent"), ("  " + bar).padEnd(innerW)))
+    const from   = Math.round((barW - Math.min(8, barW)) * 8 * (1 - Math.cos(Math.PI * (tick % 64) / 32)) / 2)
+    const to     = from + Math.min(8, barW) * 8
+    const segs   = [] as { text: string, inverse: boolean }[]
+    for (let i = 0; i < barW; i++) {
+        const lo  = 8 * i
+        const seg = to <= lo || from >= lo + 8 ? { text: " ",                inverse: false } :
+            from <= lo && to >= lo + 8         ? { text: "█",                inverse: false } :
+                from > lo                      ? { text: eighths[from - lo], inverse: true  } :
+                    { text: eighths[to - lo], inverse: false }
+        const last = segs[segs.length - 1]
+        if (last !== undefined && (seg.text === " " || seg.text === "█") && last.text.endsWith(seg.text) && !last.inverse)
+            last.text += seg.text
+        else
+            segs.push(seg)
+    }
+    const side = h(Text, {}, " \n \n ")
+    return h(Box, { key: "busy", top: Math.floor((rows - 8) / 2), left: Math.floor((columns - width) / 2), width, height: 8, ...cx("popup", "border-dim") },
+        /*  the parts as siblings (not nested), as a nested text cannot undo the bold and color of its parent  */
+        h(Box, { flexDirection: "row" },
+            h(Text, cx("accent", "bold"), " ".repeat(tpad) + head),
+            h(Text, cx("accent", "bold", "inverse"), tid),
+            h(Text, cx("accent", "bold"), tail),
+            h(Text, cx("normal"), time.padEnd(innerW - tpad - used + time.length))),
+        blank("blank-above"),
+        h(Box, { flexDirection: "row" },
+            side,
+            h(Box, { width: innerW - 2, height: 3, ...cx("frame", "border-accent") },
+                h(Text, cx("accent"),
+                    ...segs.map((seg, k) => h(Text, { key: k, ...cx(seg.inverse && "inverse") }, seg.text)))),
+            side),
+        blank("blank-below"))
 }
 
 /*  the geometry of the transfer popup: centered on the screen, with its entries
@@ -348,7 +374,7 @@ export const renderTransfer = (id: string, from: string, entries: TransferEntry[
     const qpad   = Math.max(0, Math.floor((innerW - 18 - tid.length) / 2))
     const hint   = "↑/↓: select · ⏎: transition · ESC: cancel".slice(0, innerW)
     const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
-    return h(Box, { key: "transfer", top: box.top, left: box.left, width: box.width, height: box.height, ...cx("popup", "border-accent") },
+    return h(Box, { key: "transfer", top: box.top, left: box.left, width: box.width, height: box.height, ...cx("popup", "border-dim") },
         h(Text, cx("normal", "bold"),
             " ".repeat(qpad) + "Transfer task ",
             h(Text, cx("inverse"), tid),

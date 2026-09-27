@@ -140,7 +140,7 @@ export const useBoardState = (log: Log, initial: Board) => {
             return
         const timer = setInterval(() => {
             setBusyTick((n) => n + 1)
-        }, 100)
+        }, 50)
         return () => {
             clearInterval(timer)
         }
