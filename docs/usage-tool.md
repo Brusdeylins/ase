@@ -664,6 +664,8 @@ the persisted task plans of the current project:
   a tab selects it, and the mouse wheel scrolls it; `M` disables the
   mouse support to regain the regular text selection of the terminal).
   `?` hides and shows the key hint lines (terminal and web board, persisted).
+  In the graph view, `s` hides and shows the standalone tasks, i.e., the
+  tasks without any predecessors and successors (persisted).
   `e` edits the selected task plan with `$EDITOR` (default: `vi`), a
   draft which failed to save being offered again on the next `e`. In
   the lanes and graph views, `N` creates a new task by editing a
@@ -904,8 +906,9 @@ STATE FILES
 - `<project>/.ase/board.yaml`:
   Display state of `ase task board`: separately for the terminal and the
   web board, the minimized lanes, the collapsed groups, whether the
-  task titles are wrapped onto multiple lines, and whether the key hint
-  lines are shown. The web state is shared by all
+  task titles are wrapped onto multiple lines, whether the key hint
+  lines are shown, and whether the graph shows the standalone tasks.
+  The web state is shared by all
   browsers and tabs showing the web board. It never holds task content.
 
 - `<project>/.ase/.gitignore`:

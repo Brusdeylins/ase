@@ -20,7 +20,7 @@ import {
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
-import { filterBoard }                        from "./ase-task-board-filter.js"
+import { filterBoard, dropStandalone }        from "./ase-task-board-filter.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
 import { fitGroups }                          from "./ase-task-board-tui-view.js"
@@ -101,8 +101,12 @@ export const useBoardState = (log: Log, initial: Board) => {
     const [ typing,  setTyping  ] = React.useState(false)
 
     /*  the shown board: all tasks reduced onto the ones matching the filter
-        query (plus, in the graph view, their direct dependencies as context)  */
-    const board = React.useMemo(() => filterBoard(all, filter, view === "graph"), [ all, filter, view ])
+        query (plus, in the graph view, their direct dependencies as context,
+        and optionally without the standalone tasks)  */
+    const board = React.useMemo(() => {
+        const found = filterBoard(all, filter, view === "graph")
+        return view === "graph" && !surface.standalone ? dropStandalone(found) : found
+    }, [ all, filter, view, surface.standalone ])
     const [ sel,     setSel     ] = React.useState<Sel>(() => relocate(board, { g: 0, l: 0, id: "" }, surface))
     const [ dialog,  setDialog  ] = React.useState<{ id: string, tab: number, first: number, scrolls: Record<number, number> } | null>(null)
     const [ plan,    setPlan    ] = React.useState<{ id: string, parts: PlanParts } | null>(null)
@@ -496,7 +500,7 @@ export const useBoardState = (log: Log, initial: Board) => {
         })
     }
 
-    /*  toggle a flag (task titles or key hints) of the TUI surface  */
+    /*  toggle a flag (task titles, key hints, or standalone tasks) of the TUI surface  */
     const toggleFlag = (flag: SurfaceFlag): void => {
         BoardState.toggleFlag("tui", flag).then((state) => {
             setSurface(state.tui)

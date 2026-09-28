@@ -189,16 +189,13 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     }
 }
 
-/*  handle a key press  */
-export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
+/*  handle a key press onto the deletion confirmation, the transfer
+    popup, or the filter field (outside of the read dialog)  */
+const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
-        exit, columns, rows, all, board, surface, view, setView, setFilter, typing, setTyping, sel, setSel,
-        dialog, setDialog, notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
-        mouse, setMouse, places, nodes, dialogW, tabLabels, dialogSel, dialogScroll, transferList,
-        toggle, toggleFlag, startEdit, remove, transferTo, drop, grown, setGrow, boardH
+        dialog, setFilter, typing, setTyping, setNotice, confirm, setConfirm,
+        transfer, setTransfer, transferList, remove, transferTo
     } = ctx
-    if (notice !== null)
-        setNotice(null)
 
     /*  answer the confirmation of a task deletion: "y" deletes, ESC cancels, the
         left/right arrows and TAB/Shift+TAB switch the selected button, RETURN
@@ -251,98 +248,34 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
             setFilter((f) => f.slice(0, -1))
         else if (!key.ctrl && !key.meta && !/\p{Cc}/u.test(input))
             setFilter((f) => f + input)
-        return
     }
+}
 
-    /*  toggle the mouse support in every view (under the kitty keyboard
-        protocol, Shift+m arrives as "m" with the shift modifier)  */
-    if (input === "M" || (input === "m" && key.shift)) {
-        setMouse(!mouse)
-        setNotice(mouse ? "mouse support disabled: regular text selection available" : "mouse support enabled")
-        return
+/*  handle a key press within the read dialog  */
+const handleDialogKey = (ctx: BoardCtx, dialog: NonNullable<BoardCtx["dialog"]>, input: string, key: Key): void => {
+    const { rows, setDialog, dialogW, tabLabels, dialogSel, dialogScroll, startEdit } = ctx
+    const page = Math.max(1, rows - DIALOG_CHROME - 2)
+    if (key.escape || key.return)
+        setDialog(null)
+    else if (input === "e")
+        startEdit(dialog.id)
+    else if (key.leftArrow || key.rightArrow || key.tab) {
+        const tab = Math.max(0, Math.min(tabLabels.length - 1, dialogSel + (key.leftArrow || (key.tab && key.shift) ? -1 : 1)))
+        setDialog({ ...dialog, tab, first: tabFirst(tabLabels, dialog.first, tab, dialogW - 4) })
     }
+    else if (key.upArrow)
+        dialogScroll(-1)
+    else if (key.downArrow)
+        dialogScroll(1)
+    else if (key.pageUp)
+        dialogScroll(-page)
+    else if (key.pageDown)
+        dialogScroll(page)
+}
 
-    /*  request the deletion of a task in every view (under the kitty keyboard
-        protocol, Shift+d arrives as "d" with the shift modifier)  */
-    const target = dialog !== null ? dialog.id : sel.id
-    if ((input === "D" || (input === "d" && key.shift)) && target !== "" && carry === null) {
-        setConfirm({ id: target, yes: false })
-        return
-    }
-
-    /*  request the transfer of a task to another state in every view, starting
-        at its current state (under the kitty keyboard protocol, Shift+t
-        arrives as "t" with the shift modifier)  */
-    if ((input === "T" || (input === "t" && key.shift)) && target !== "" && carry === null) {
-        const card = all.cards.get(target)
-        if (cycle === null)
-            setNotice("task lifecycle model not yet loaded")
-        else if (card !== undefined)
-            setTransfer({ id: card.id, at: card.status })
-        return
-    }
-    if (dialog !== null) {
-        const page = Math.max(1, rows - DIALOG_CHROME - 2)
-        if (key.escape || key.return)
-            setDialog(null)
-        else if (input === "e")
-            startEdit(dialog.id)
-        else if (key.leftArrow || key.rightArrow || key.tab) {
-            const tab = Math.max(0, Math.min(tabLabels.length - 1, dialogSel + (key.leftArrow || (key.tab && key.shift) ? -1 : 1)))
-            setDialog({ ...dialog, tab, first: tabFirst(tabLabels, dialog.first, tab, dialogW - 4) })
-        }
-        else if (key.upArrow)
-            dialogScroll(-1)
-        else if (key.downArrow)
-            dialogScroll(1)
-        else if (key.pageUp)
-            dialogScroll(-page)
-        else if (key.pageDown)
-            dialogScroll(page)
-        return
-    }
-    if (input === "q") {
-        exit()
-        return
-    }
-    if (input === "/") {
-        if (carry === null)
-            setTyping(true)
-        return
-    }
-    if (input === "v") {
-        setCarry(null)
-        setView(view === "lanes" ? "graph" : "lanes")
-        return
-    }
-    if (key.return && sel.id !== "") {
-        setDialog({ id: sel.id, tab: 0, first: 0, scrolls: {} })
-        return
-    }
-    if (input === "e") {
-        if (sel.id !== "")
-            startEdit(sel.id)
-        return
-    }
-    if (input === "N" || (input === "n" && key.shift)) {
-        if (carry === null)
-            startEdit(null)
-        return
-    }
-    if ((input === "t" && !key.shift) || input === "?") {
-        toggleFlag(input === "t" ? "titles" : "keys")
-        return
-    }
-    if (view === "graph") {
-        /*  move spatially to the nearest node in the direction of the arrow  */
-        const dir = key.leftArrow ? "left" : key.rightArrow ? "right" : key.upArrow ? "up" : key.downArrow ? "down" : null
-        if (dir === null)
-            return
-        const next = places.has(sel.id) ? nearestPlace(places, sel.id, dir) : nodes[0]?.id
-        if (next !== undefined && board.cards.has(next))
-            setSel(relocate(board, { g: sel.g, l: sel.l, id: next }, { ...surface, minimized: [], collapsed: [] }))
-        return
-    }
+/*  handle a key press within the lane view: moving and growing, else navigating  */
+const handleLaneKey = (ctx: BoardCtx, input: string, key: Key): void => {
+    const { columns, board, surface, sel, setSel, setNotice, carry, setCarry, cycle, drop, grown, setGrow, boardH } = ctx
     if (key.escape && carry !== null) {
         /*  cancel the move and return the selection to the task at its original position  */
         setCarry(null)
@@ -414,6 +347,12 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         setSel({ g: sel.g, l: sel.l, id: list[next].id })
         return
     }
+    handleNavKey(ctx, input, key)
+}
+
+/*  handle a key press navigating the lanes and groups of the lane view  */
+const handleNavKey = (ctx: BoardCtx, input: string, key: Key): void => {
+    const { board, surface, sel, setSel, carry, toggle } = ctx
     if (input === "m" && !key.shift) {
         if (surface.collapsed.includes(board.groups[sel.g].title))
             return
@@ -480,5 +419,101 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         if (next !== undefined)
             setSel(next)
     }
+}
+
+/*  handle a key press  */
+export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
+    const {
+        exit, all, board, surface, view, setView, typing, setTyping, sel, setSel, dialog, setDialog,
+        notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
+        mouse, setMouse, places, nodes, toggleFlag, startEdit
+    } = ctx
+    if (notice !== null)
+        setNotice(null)
+
+    /*  answer the deletion confirmation, the transfer popup, or the filter field  */
+    if (confirm !== null || transfer !== null || (typing && dialog === null)) {
+        handlePopupKey(ctx, input, key)
+        return
+    }
+
+    /*  toggle the mouse support in every view (under the kitty keyboard
+        protocol, Shift+m arrives as "m" with the shift modifier)  */
+    if (input === "M" || (input === "m" && key.shift)) {
+        setMouse(!mouse)
+        setNotice(mouse ? "mouse support disabled: regular text selection available" : "mouse support enabled")
+        return
+    }
+
+    /*  request the deletion of a task in every view (under the kitty keyboard
+        protocol, Shift+d arrives as "d" with the shift modifier)  */
+    const target = dialog !== null ? dialog.id : sel.id
+    if ((input === "D" || (input === "d" && key.shift)) && target !== "" && carry === null) {
+        setConfirm({ id: target, yes: false })
+        return
+    }
+
+    /*  request the transfer of a task to another state in every view, starting
+        at its current state (under the kitty keyboard protocol, Shift+t
+        arrives as "t" with the shift modifier)  */
+    if ((input === "T" || (input === "t" && key.shift)) && target !== "" && carry === null) {
+        const card = all.cards.get(target)
+        if (cycle === null)
+            setNotice("task lifecycle model not yet loaded")
+        else if (card !== undefined)
+            setTransfer({ id: card.id, at: card.status })
+        return
+    }
+    if (dialog !== null) {
+        handleDialogKey(ctx, dialog, input, key)
+        return
+    }
+    if (input === "q") {
+        exit()
+        return
+    }
+    if (input === "/") {
+        if (carry === null)
+            setTyping(true)
+        return
+    }
+    if (input === "v") {
+        setCarry(null)
+        setView(view === "lanes" ? "graph" : "lanes")
+        return
+    }
+    if (key.return && sel.id !== "") {
+        setDialog({ id: sel.id, tab: 0, first: 0, scrolls: {} })
+        return
+    }
+    if (input === "e") {
+        if (sel.id !== "")
+            startEdit(sel.id)
+        return
+    }
+    if (input === "N" || (input === "n" && key.shift)) {
+        if (carry === null)
+            startEdit(null)
+        return
+    }
+    if ((input === "t" && !key.shift) || input === "?") {
+        toggleFlag(input === "t" ? "titles" : "keys")
+        return
+    }
+    if (input === "s" && view === "graph") {
+        toggleFlag("standalone")
+        return
+    }
+    if (view === "graph") {
+        /*  move spatially to the nearest node in the direction of the arrow  */
+        const dir = key.leftArrow ? "left" : key.rightArrow ? "right" : key.upArrow ? "up" : key.downArrow ? "down" : null
+        if (dir === null)
+            return
+        const next = places.has(sel.id) ? nearestPlace(places, sel.id, dir) : nodes[0]?.id
+        if (next !== undefined && board.cards.has(next))
+            setSel(relocate(board, { g: sel.g, l: sel.l, id: next }, { ...surface, minimized: [], collapsed: [] }))
+        return
+    }
+    handleLaneKey(ctx, input, key)
 }
 
