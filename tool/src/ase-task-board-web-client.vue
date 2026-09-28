@@ -1127,7 +1127,7 @@ const setView = (v: View) => {
     })
 }
 
-/*  connect to the service: change events, keyboard shortcuts, and keep-alive  */
+/*  the connection to the service: change event stream, keep-alive timer, and reconnect timer  */
 let events: EventSource | null = null
 let ping: ReturnType<typeof setInterval> | null = null
 let retry: ReturnType<typeof setTimeout> | null = null
@@ -1178,8 +1178,9 @@ const onEditorKey = (ev: KeyboardEvent, keymap: Keymap) => {
     }
 }
 
-/*  in the task dialog, RETURN and ESC close it, "e" edits its plan, the left/right arrows
-    switch its tab (also Tab/Shift+Tab), and the up/down arrows and PgUp/PgDn scroll its content  */
+/*  in the task dialog, RETURN and ESC close it, "e" edits its plan, "D" deletes and "T" transitions
+    its task, the left/right arrows (also Tab/Shift+Tab) switch its tab, and the up/down arrows
+    and PgUp/PgDn scroll its content  */
 const onDialogKey = (ev: KeyboardEvent) => {
     const win = planEl.value?.contentWindow ?? null
     if (ev.key === "Escape" || ev.key === "Enter")

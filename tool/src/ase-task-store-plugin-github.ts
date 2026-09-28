@@ -108,7 +108,8 @@ const labelNames = (issue: Issue): string[] =>
 const live = (issue: Issue): boolean =>
     (issue.pull_request === undefined || issue.pull_request === null) && !labelNames(issue).includes(LABEL_DELETED)
 
-/*  the issue number an API URL of the given repository refers to (else null)  */
+/*  whether an owner/repo pair denotes the given repository, the parent issue number
+    of an issue within it (else null), and whether an issue belongs to it  */
 const sameRepo = (loc: Repo, owner: string, repo: string): boolean =>
     owner.toLowerCase() === loc.owner.toLowerCase() && repo.toLowerCase() === loc.repo.toLowerCase()
 const parentOf = (loc: Repo, issue: Issue): number | null => {
@@ -170,8 +171,8 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
             this.repos.set(prjId, { owner: m[1], repo: m[2] })
         }
         this.poll = options.poll ?? 60
-        if (typeof this.poll !== "number" || !Number.isFinite(this.poll) || this.poll < 0)
-            throw new Error("task store: plugin \"github\" requires a non-negative \"poll\" interval")
+        if (typeof this.poll !== "number" || !Number.isFinite(this.poll) || (this.poll !== 0 && (this.poll < 1 || this.poll > 86400)))
+            throw new Error("task store: plugin \"github\" requires a \"poll\" interval of 0 (disabled) resp. 1 to 86400 seconds")
 
         /*  route the diagnostics of Octokit into the log, as the standard
             output may carry a protocol (like the one of an MCP server)  */
@@ -833,7 +834,7 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
             else
                 change.updated.push(await this.entry(loc, lifecycle, scheme, issue))
         }
-        if (change.added.length > 0 || change.updated.length > 0 || change.deleted.length > 0)
+        if (this.timer !== null && (change.added.length > 0 || change.updated.length > 0 || change.deleted.length > 0))
             listener(prjId, change)
     }
 }

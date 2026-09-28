@@ -222,6 +222,15 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
         this.idscheme   = configuredIdScheme
         this.dispatcher = insecure ? new Agent({ connect: { rejectUnauthorized: false } }) : undefined
     }
+    /*  raise a failed connection as an unreachable store error,
+        reporting the innermost cause (like "connect ECONNREFUSED")  */
+    private unreachable (err: unknown): never {
+        let cause = err
+        while (cause instanceof Error && cause.cause instanceof Error)
+            cause = cause.cause
+        const reason = cause instanceof Error ? cause.message : String(cause)
+        throw new Error(`task: store "${this.base}" unreachable: ${reason}`, { cause: err })
+    }
     /*  perform a request: a 404 response or a tolerated error response yields
         a null result, any other error response is raised as a problem carrying
         its status, and a failed connection is raised as an unreachable store error  */
@@ -238,14 +247,7 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
             dispatcher:          this.dispatcher,
             signal:              AbortSignal.timeout(10000),
             ignoreResponseError: true
-        }).catch((err: unknown) => {
-            /*  report the innermost cause (like "connect ECONNREFUSED")  */
-            let cause = err
-            while (cause instanceof Error && cause.cause instanceof Error)
-                cause = cause.cause
-            const reason = cause instanceof Error ? cause.message : String(cause)
-            throw new Error(`task: store "${this.base}" unreachable: ${reason}`, { cause: err })
-        })
+        }).catch((err: unknown) => this.unreachable(err))
         if (r.status === 404 || tolerated.includes(r.status))
             return null
         if (r.status < 200 || r.status >= 300) {
@@ -417,11 +419,9 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
             dispatcher:          this.dispatcher,
             signal:              AbortSignal.timeout(10000),
             ignoreResponseError: true
-        }).catch((err: unknown) => {
-            throw new Error(`task: store "${this.base}" unreachable: ${err instanceof Error ? err.message : String(err)}`, { cause: err })
-        })
+        }).catch((err: unknown) => this.unreachable(err))
         if (r.status === 404)
-            return null
+            return this.task<{ type: string, content: Buffer }>(null)
         if (r.status < 200 || r.status >= 300)
             throw new Core.Problem(r.status, `store "${this.base}": HTTP ${r.status}`)
         return { type: r.headers.get("content-type") ?? "application/octet-stream", content: Buffer.from(r._data ?? new ArrayBuffer(0)) }
