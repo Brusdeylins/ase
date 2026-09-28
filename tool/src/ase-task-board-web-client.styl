@@ -524,13 +524,21 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
     background: var(--c-ground-light)
     border: 1px solid var(--c-border-soft)
     border-radius: 6px
+    cursor: grab
+
+    /*  the background is dragged for scrolling  */
+    &.panning
+        cursor: grabbing
+        user-select: none
 
     /*  a graph smaller than the view is centered in it (via auto margins,
-        which, unlike centering alignments, keep an overflowing graph scrollable)  */
+        which, unlike centering alignments, keep an overflowing graph scrollable),
+        and a larger graph is never shrunk (it is zoomed explicitly only)  */
     display: flex
     svg
         max-width: none
         display: block
+        flex-shrink: 0
         margin: auto
     .node
         cursor: pointer
