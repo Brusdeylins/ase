@@ -178,6 +178,13 @@ ChangeLog
     `~/.local/state/ase`) on Linux. Additionally, a `.ase` directory in the home directory no longer
     makes the home directory a project root. A stale `~/.ase` can be removed.
 
+-   IMPROVEMENT [tool]: Lazy loading of the CLI command modules
+    The `ase` CLI no longer imports the modules of all top-level commands at startup, but only
+    the module of the actually addressed command (plus those of its addressed sub-commands),
+    determined by scanning the command line before parsing it (a help request or an unknown
+    command still loads all of them, for the complete command overview). A plain `ase -V` this
+    way loads 15 instead of 2337 modules, so the startup overhead of about three seconds is gone.
+
 -   BUGFIX [plugin]: Task plan kind `SPECIFYING` honored
     `ase-task-preflight` and `ase-task-implement` now recognize the `Kind: SPECIFYING`
     frontmatter key of a task plan and internalize the SPECIFYING TENETS, and also infer
