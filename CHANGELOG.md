@@ -188,6 +188,12 @@ ChangeLog
     instead of a per-tool declaration, so the object-shaped `toolArgs` of the GitHub Copilot
     CLI is parsed again and its `bash`, `Skill`, `Read`, and `Edit` auto-approvals work.
 
+-   BUGFIX [infr]: Windows-portable plugin `build` target
+    Replaced the Unix-only `build` task body of `plugin/etc/stx.conf` (`ls`, `grep`, `sed`, a
+    `for`/`$(...)` subshell) with an embedded Node.js script (`{js}`, as already used by
+    `lint-types`), so generating `skills/ase-help-intent/data.md` and
+    `meta/ase-format-specbook.{md,yaml}` also works on Windows.
+
 1.0.6 (2026-09-14)
 ------------------
 
