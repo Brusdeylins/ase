@@ -22,12 +22,14 @@ const pluginMethods = [
 export const BUILTIN_PLUGIN = "ase"
 const builtinPlugins: Record<string, string> = {
     ase:    "./ase-task-store-plugin-ase.js",
-    github: "./ase-task-store-plugin-github.js"
+    github: "./ase-task-store-plugin-github.js",
+    gitlab: "./ase-task-store-plugin-gitlab.js",
+    gitea:  "./ase-task-store-plugin-gitea.js"
 }
 
 /*  resolve a storage plugin name onto its module specifier: the name
-    "ase" (or no name) selects the default built-in plugin, "github" the
-    built-in GitHub Issues plugin, any other plain name selects the NPM
+    "ase" (or no name) selects the default built-in plugin, "github", "gitlab", resp. "gitea"
+    the built-in GitHub, GitLab, resp. Gitea Issues plugin, any other plain name selects the NPM
     package "ase-task-store-<name>", a relative or absolute path is taken
     as a local module, and anything else is passed through as a module specifier  */
 export const resolveTaskStoragePlugin = (name: string | null): string => {

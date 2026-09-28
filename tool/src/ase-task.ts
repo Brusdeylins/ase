@@ -297,11 +297,11 @@ export class Task {
             "(set $ASE_TASK_STORE_TOKEN, \"project.task.token\" on scope \"user\", or \"/<token>\" in the URL)")
     }
 
-    /*  warn about task plans being sent to a GitHub repository selected on a repository-supplied
-        scope, once per project root and repository only (persisted across processes), so the
-        warning re-appears only if the repository changes  */
-    private static warnRepository (log: Log, repo: string, scope: string): void {
-        const file = path.join(userStateDir(), "task-github.json")
+    /*  warn about task plans being sent to a GitHub/Gitea repository resp. GitLab project selected on a
+        repository-supplied scope, once per project root and repository only (persisted across
+        processes), so the warning re-appears only if the repository changes  */
+    private static warnRepository (log: Log, plugin: string, repo: string, scope: string): void {
+        const file = path.join(userStateDir(), `task-${plugin}.json`)
         const root = Task.projectRoot()
         let seen: Record<string, string> = {}
         try {
@@ -314,7 +314,9 @@ export class Task {
         }
         if (seen[root] === repo)
             return
-        log.write("warning", `task: sending task plans to GitHub repository "${repo}" selected by ` +
+        log.write("warning", `task: sending task plans to ${plugin === "gitlab" ? "GitLab project" :
+            plugin === "gitea" ? "Gitea repository" : "GitHub repository"} ` +
+            `"${repo}" selected by ` +
             `"project.task.store" on scope "${scope}" -- verify you trust this repository ` +
             "(reported once per repository only)")
         seen[root] = repo
@@ -332,14 +334,23 @@ export class Task {
         server via HTTP, "ases://<addr>:<port>[/<token>][?insecure]" via
         HTTPS (optionally without certificate verification),
         "ase:<path>" the built-in storage plugin in-process on <path>
-        (resolved relative to the project root), and "github:<owner>/<repo>"
-        the built-in GitHub storage plugin in-process on the repository  */
+        (resolved relative to the project root), "github:<owner>/<repo>" resp.
+        "github+http[s]://<host>/<owner>/<repo>" the built-in GitHub storage plugin
+        in-process on the repository (of GitHub resp. the given instance),
+        "gitlab:[//<host>/]<namespace>/<project>" resp. "gitlab+http[s]://<host>/<namespace>/<project>"
+        the built-in GitLab storage plugin in-process on the project (of the default resp. given
+        instance), and
+        "gitea+http[s]://<host>/<owner>/<repo>" the built-in Gitea storage plugin
+        in-process on the repository of the given instance  */
     private static client (log: Log): TaskStoreClient {
         const spec = Task.spec(log)
         const { projectId, store, lifecycle, idscheme } = spec
         const unsupported = () => new Error(`task: unsupported "project.task.store" URL "${store.value}" ` +
             "(expected: \"ase:<path>\", \"ase://<addr>:<port>[/<token>]\", " +
-            "\"ases://<addr>:<port>[/<token>][?insecure]\", or \"github:<owner>/<repo>\")")
+            "\"ases://<addr>:<port>[/<token>][?insecure]\", \"github:<owner>/<repo>\", " +
+            "\"github+http[s]://<host>/<owner>/<repo>\", " +
+            "\"gitlab:[//<host>/]<namespace>/<project>\", \"gitlab+http[s]://<host>/<namespace>/<project>\", " +
+            "or \"gitea+http[s]://<host>/<owner>/<repo>\")")
         let client: TaskStoreClient
         let m: RegExpExecArray | null
         if ((m = /^(ases?):\/\//.exec(store.value)) !== null) {
@@ -392,18 +403,29 @@ export class Task {
                 key:     basedir
             }, log)
         }
-        else if ((m = /^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/.exec(store.value)) !== null) {
+        else if ((m = /^(github):()([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/.exec(store.value)) !== null
+            || (m = /^(github)\+(https?:\/\/[A-Za-z0-9.-]+(?::\d+)?)\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/.exec(store.value)) !== null
+            || (m = /^(gitlab):(?:\/\/([A-Za-z0-9.-]+(?::\d+)?)\/)?([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+)$/.exec(store.value)) !== null
+            || (m = /^(gitlab)\+(https?:\/\/[A-Za-z0-9.-]+(?::\d+)?)\/([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+)$/.exec(store.value)) !== null
+            || (m = /^(gitea)\+(https?:\/\/[A-Za-z0-9.-]+(?::\d+)?)\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/.exec(store.value)) !== null) {
             /*  warn about task plans being sent to a repository selected on a repository-supplied
-                scope, and use the token of "project.task.token", else $GITHUB_TOKEN resp. $GH_TOKEN  */
+                scope, and use the token of "project.task.token", else $GITHUB_TOKEN resp. $GH_TOKEN
+                (GitHub), $GITLAB_TOKEN (GitLab), or $GITEA_TOKEN (Gitea), and the given host (or
+                the given base URL of the "+http[s]" forms), else $GITLAB_HOST (GitLab)  */
+            const [ , plugin, host, repo ] = m
             if (store.scope === "project" || store.scope.startsWith("task:"))
-                Task.warnRepository(log, m[1], store.scope)
+                Task.warnRepository(log, plugin, host ? `${host}/${repo}` : repo, store.scope)
             if (spec.token.value !== "" && spec.token.scope !== "user")
                 log.write("warning", `task: "project.task.token" found on scope "${spec.token.scope}" ` +
                     "-- configure it on scope \"user\" only")
             client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, {
-                plugin:  "github",
-                options: { repos: { [projectId]: m[1] }, ...(spec.token.value !== "" ? { token: spec.token.value } : {}) },
-                key:     `${store.value}#${projectId}`
+                plugin,
+                options: {
+                    repos: { [projectId]: repo },
+                    ...(host ? { url: /^https?:\/\//.test(host) ? host : `https://${host}` } : {}),
+                    ...(spec.token.value !== "" ? { token: spec.token.value } : {})
+                },
+                key: `${store.value}#${projectId}`
             }, log)
         }
         else

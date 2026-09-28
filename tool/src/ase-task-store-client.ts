@@ -23,7 +23,8 @@ import * as TaskFormat                                    from "./ase-task-forma
 
 /*  the client-side view onto a task store, either the in-process
     REST API functionality on a built-in storage plugin (a local
-    "ase:<path>" or "github:<owner>/<repo>" store) or the remote REST API (an
+    "ase:<path>", "github:<owner>/<repo>", "github+http[s]://<host>/<owner>/<repo>", "gitlab:[//<host>/]<namespace>/<project>",
+    "gitlab+http[s]://<host>/<namespace>/<project>", or "gitea+http[s]://<host>/<owner>/<repo>" store) or the remote REST API (an
     "ase[s]://<addr>:<port>[/<token>]" store); a missing task plan is reported as null resp. false; the
     effective lifecycle model and task id scheme are known after the opening only  */
 export interface TaskStoreClient {
