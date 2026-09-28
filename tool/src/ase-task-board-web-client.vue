@@ -1459,6 +1459,16 @@ const onResize = () => {
     updateScroll()
     updateTabScroll()
 }
+
+/*  keep the pulses of all task boxes in sync, by pinning every newly started
+    pulse animation onto the common origin of the document timeline  */
+const onAnimationStart = (ev: AnimationEvent) => {
+    if (ev.animationName !== "pulse")
+        return
+    for (const anim of document.getAnimations())
+        if (anim instanceof CSSAnimation && anim.animationName === "pulse" && anim.startTime !== 0)
+            anim.startTime = 0
+}
 onMounted(() => {
     connect()
     Mousetrap.bind("t", () => { if (board.value !== null) toggle("titles", "") })
@@ -1480,6 +1490,7 @@ onMounted(() => {
     window.addEventListener("keydown", onBusyKey, true)
     document.addEventListener("keydown", onKey)
     window.addEventListener("resize", onResize)
+    document.addEventListener("animationstart", onAnimationStart)
 
     /*  the keep-alive, which also notices a lost service while no events arrive  */
     ping = setInterval(async () => {
@@ -1497,6 +1508,7 @@ onBeforeUnmount(() => {
     window.removeEventListener("keydown", onBusyKey, true)
     document.removeEventListener("keydown", onKey)
     window.removeEventListener("resize", onResize)
+    document.removeEventListener("animationstart", onAnimationStart)
     if (ping !== null)
         clearInterval(ping)
     if (filterTimer !== null)
