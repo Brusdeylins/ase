@@ -534,6 +534,14 @@ export class Task {
         return Task.with(log, (client) => client.content(id, index))
     }
 
+    /*  add an attachment to a task plan, or on "append" extend the "Data" of its
+        last attachment with the same "Type" (see "POST {task}/attachment");
+        returns false if no task exists  */
+    static async attach (log: Log, id: string, attachment: API.TaskAttachment, append = false): Promise<boolean> {
+        Task.validateId(id)
+        return Task.with(log, (client) => client.attach(id, attachment, append))
+    }
+
     /*  subscribe to the change events of the task store: a remote one
         (reconnecting automatically) or an in-process one (whose storage plugin
         detects the external changes, e.g. by watching its directory or by polling),

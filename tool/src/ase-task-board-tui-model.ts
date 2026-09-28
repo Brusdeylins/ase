@@ -90,6 +90,70 @@ export const mouseReporting = (on: boolean): void => {
     process.stdout.write(on ? "\x1b[?1000h\x1b[?1006h" : "\x1b[?1006l\x1b[?1000l")
 }
 
+/*  track the task store operations: once the oldest of the pending operations
+    lasts longer than BUSY_DELAY, the modal busy popup shows it (with an animation tick)  */
+const useBusy = () => {
+    const pending = React.useRef(new Map<number, BusyLabel>())
+    const seq     = React.useRef(0)
+    const [ busy,     setBusy     ] = React.useState<{ label: BusyLabel, since: number } | null>(null)
+    const [ busyTick, setBusyTick ] = React.useState(0)
+    const track = <T>(label: BusyLabel, op: Promise<T>): Promise<T> => {
+        const n = ++seq.current
+        pending.current.set(n, label)
+        const timer = setTimeout(() => {
+            setBusy((b) => b ?? { label: pending.current.values().next().value ?? label, since: Date.now() - BUSY_DELAY })
+        }, BUSY_DELAY)
+        return op.finally(() => {
+            clearTimeout(timer)
+            pending.current.delete(n)
+            const next = pending.current.values().next()
+            setBusy((b) => b === null || next.done === true ? null : { ...b, label: next.value })
+        })
+    }
+    React.useEffect(() => {
+        if (busy === null)
+            return
+        const timer = setInterval(() => {
+            setBusyTick((n) => n + 1)
+        }, 50)
+        return () => {
+            clearInterval(timer)
+        }
+    }, [ busy ])
+    return { busy, busyTick, track }
+}
+
+/*  the rendered boxes for the mouse hit-testing: the card, lane, and group boxes of the
+    lane view, the view value and filter field of the header, and the graph viewport content  */
+const useHitBoxes = () => {
+    const cardBoxes  = React.useRef(new Map<string, DOMElement>())
+    const laneBoxes  = React.useRef(new Map<string, DOMElement>())
+    const groupBoxes = React.useRef(new Map<string, DOMElement>())
+    const headBoxes  = React.useRef(new Map<string, DOMElement>())
+    const graphView  = React.useRef<DOMElement | null>(null)
+    const register   = (map: Map<string, DOMElement>, key: string) => (el: DOMElement | null) => {
+        if (el !== null)
+            map.set(key, el)
+        else
+            map.delete(key)
+    }
+    const cardRef    = (id: string) => register(cardBoxes.current, id)
+    const laneRef    = (g: number, l: number) => register(laneBoxes.current, `${g}:${l}`)
+    const groupRef   = (g: number) => register(groupBoxes.current, String(g))
+    const headRef    = (key: "view" | "filter" | "clear") => register(headBoxes.current, key)
+    return { cardBoxes, laneBoxes, groupBoxes, headBoxes, graphView, cardRef, laneRef, groupRef, headRef }
+}
+
+/*  find the registered box under a (0-based) mouse position  */
+const boxAt = (map: Map<string, DOMElement>, mx: number, my: number): string | undefined => {
+    for (const [ key, el ] of map) {
+        const m = measureElement(el)
+        if (mx >= m.x && mx < m.x + m.width && my >= m.y && my < m.y + m.height)
+            return key
+    }
+    return undefined
+}
+
 /*  the state of the terminal board: all state, the derived values, and the actions  */
 export const useBoardState = (log: Log, initial: Board) => {
     const { exit, suspendTerminal } = useApp()
@@ -124,66 +188,11 @@ export const useBoardState = (log: Log, initial: Board) => {
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
 
-    /*  track a task store operation: once the oldest of the pending operations
-        lasts longer than BUSY_DELAY, the modal busy popup shows it (with an animation tick)  */
-    const pending = React.useRef(new Map<number, BusyLabel>())
-    const seq     = React.useRef(0)
-    const [ busy,     setBusy     ] = React.useState<{ label: BusyLabel, since: number } | null>(null)
-    const [ busyTick, setBusyTick ] = React.useState(0)
-    const track = <T>(label: BusyLabel, op: Promise<T>): Promise<T> => {
-        const n = ++seq.current
-        pending.current.set(n, label)
-        const timer = setTimeout(() => {
-            setBusy((b) => b ?? { label: pending.current.values().next().value ?? label, since: Date.now() - BUSY_DELAY })
-        }, BUSY_DELAY)
-        return op.finally(() => {
-            clearTimeout(timer)
-            pending.current.delete(n)
-            const next = pending.current.values().next()
-            setBusy((b) => b === null || next.done === true ? null : { ...b, label: next.value })
-        })
-    }
-    React.useEffect(() => {
-        if (busy === null)
-            return
-        const timer = setInterval(() => {
-            setBusyTick((n) => n + 1)
-        }, 50)
-        return () => {
-            clearInterval(timer)
-        }
-    }, [ busy ])
+    /*  the busy popup of slow task store operations  */
+    const { busy, busyTick, track } = useBusy()
 
-    /*  the rendered card, lane, and group boxes of the lane view, for the mouse hit-testing  */
-    const cardBoxes  = React.useRef(new Map<string, DOMElement>())
-    const laneBoxes  = React.useRef(new Map<string, DOMElement>())
-    const groupBoxes = React.useRef(new Map<string, DOMElement>())
-    const register   = (map: Map<string, DOMElement>, key: string) => (el: DOMElement | null) => {
-        if (el !== null)
-            map.set(key, el)
-        else
-            map.delete(key)
-    }
-    const cardRef    = (id: string) => register(cardBoxes.current, id)
-    const laneRef    = (g: number, l: number) => register(laneBoxes.current, `${g}:${l}`)
-    const groupRef   = (g: number) => register(groupBoxes.current, String(g))
-
-    /*  the rendered view value and filter field of the header, for the mouse hit-testing  */
-    const headBoxes = React.useRef(new Map<string, DOMElement>())
-    const headRef   = (key: "view" | "filter" | "clear") => register(headBoxes.current, key)
-
-    /*  find the registered box under a (0-based) mouse position  */
-    const boxAt = (map: Map<string, DOMElement>, mx: number, my: number): string | undefined => {
-        for (const [ key, el ] of map) {
-            const m = measureElement(el)
-            if (mx >= m.x && mx < m.x + m.width && my >= m.y && my < m.y + m.height)
-                return key
-        }
-        return undefined
-    }
-
-    /*  the rendered graph viewport content, for the mouse hit-testing  */
-    const graphView = React.useRef<DOMElement | null>(null)
+    /*  the rendered boxes for the mouse hit-testing  */
+    const { cardBoxes, laneBoxes, groupBoxes, headBoxes, graphView, cardRef, laneRef, groupRef, headRef } = useHitBoxes()
 
     /*  report mouse clicks while the board runs and mouse support is enabled
         (disabling it gives the regular text selection of the terminal back)  */
@@ -302,13 +311,17 @@ export const useBoardState = (log: Log, initial: Board) => {
     /*  fetch the file content of the attachment of the selected tab, whenever the tab is selected or the plan changes
         (the latter in the background, i.e. without the busy popup)  */
     React.useEffect(() => {
-        const parts = plan !== null && plan.id === dialogId ? plan.parts : undefined
-        if (parts === undefined || parts === null || parts instanceof Error || dialogTab === 0 || parts.atts[dialogTab - 1]?.file === undefined)
+        if (plan === null || plan.id !== dialogId)
             return
-        const id  = plan!.id
-        const key = `${id}:${dialogTab}`
+        const { id, parts } = plan
+        if (parts === undefined || parts === null || parts instanceof Error)
+            return
+        const tab = Math.min(dialogTab, parts.atts.length)
+        if (tab === 0 || parts.atts[tab - 1].file === undefined)
+            return
+        const key = `${id}:${tab}`
         let live = true
-        const load = Task.attachmentContent(log, id, dialogTab - 1)
+        const load = Task.attachmentContent(log, id, tab - 1)
         const run  = files.has(key) ? load : track({ text: "loading attachment of task", id }, load)
         run.then((content) =>
             content?.content ?? new Error("no such attachment content")

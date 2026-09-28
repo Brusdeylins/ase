@@ -16,16 +16,12 @@ import {
     refSegs, tabFirst, tabLayout, confirmBox, transferBox, CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE
 }                                             from "./ase-task-board-tui-popup.js"
 
-/*  handle a mouse press (0-based column/row, button 0: left press,
-    64/65: wheel up/down): a click opens the clicked task, while a
-    click onto its " X " closes an open task view, a click onto a
-    predecessor/successor id jumps to its task view, and the wheel scrolls it  */
-export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): void => {
+/*  handle a mouse press onto the deletion confirmation, the transfer popup,
+    or the read dialog, returning whether one of them was open  */
+const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): boolean => {
     const {
-        columns, rows, all, board, surface, view, setView, setFilter, typing, setTyping, sel, setSel,
-        dialog, setDialog, scroll, layout, setNotice, carry, setCarry, confirm, setConfirm, transfer, setTransfer,
-        opening, cardBoxes, laneBoxes, groupBoxes, headBoxes, boxAt, graphView, dialogW, tabLabels, dialogSel,
-        dialogScroll, transferList, toggle, remove, transferTo, grown, setGrow
+        columns, rows, all, dialog, setDialog, setNotice, confirm, setConfirm, transfer, setTransfer,
+        dialogW, tabLabels, dialogSel, dialogScroll, transferList, remove, transferTo
     } = ctx
     if (confirm !== null) {
         /*  a click onto the " delete " or " cancel " button of the deletion confirmation  */
@@ -38,7 +34,7 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
             setNotice(`deleting task "${confirm.id}" cancelled`)
             setConfirm(null)
         }
-        return
+        return true
     }
     if (transfer !== null) {
         /*  a click onto a selectable entry of the transfer popup transfers
@@ -46,14 +42,14 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
         const box = transferBox(transferList.length, transferList.findIndex((e) => e.status === transfer.at), columns, rows)
         const k   = box.first + my - box.row
         if (btn !== 0)
-            return
+            return true
         if (mx < box.left || mx >= box.left + box.width || my < box.top || my >= box.top + box.height) {
             setNotice(`transferring task "${transfer.id}" cancelled`)
             setTransfer(null)
         }
         else if (k >= box.first && k < box.first + box.viewH && transferList[k]?.ok)
             transferTo(transfer.id, transferList[k].status)
-        return
+        return true
     }
     if (dialog !== null) {
         /*  a click onto the " X " of the header (the second dialog row) closes  */
@@ -91,8 +87,22 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
         }
         else if (btn === 64 || btn === 65)
             dialogScroll(btn === 64 ? -3 : 3)
-        return
+        return true
     }
+    return false
+}
+
+/*  handle a mouse press (0-based column/row, button 0: left press,
+    64/65: wheel up/down): a click opens the clicked task, while a
+    click onto its " X " closes an open task view, a click onto a
+    predecessor/successor id jumps to its task view, and the wheel scrolls it  */
+export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): void => {
+    const {
+        board, surface, view, setView, setFilter, typing, setTyping, sel, setSel, setDialog, scroll, layout,
+        carry, setCarry, opening, cardBoxes, laneBoxes, groupBoxes, headBoxes, boxAt, graphView, toggle, grown, setGrow
+    } = ctx
+    if (handlePopupMouse(ctx, btn, mx, my))
+        return
 
     /*  a click onto the view value of the header switches the view, a click
         onto the filter field starts typing into it (unless a task is moved),

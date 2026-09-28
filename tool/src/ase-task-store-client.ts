@@ -41,6 +41,7 @@ export interface TaskStoreClient {
     delete (id: string): Promise<boolean>
     purge  (age: string): Promise<string[]>
     content (id: string, index: number): Promise<{ type: string, content: Buffer } | null>
+    attach (id: string, attachment: API.TaskAttachment, append?: boolean): Promise<boolean>
     subscribe (onChange: () => void, onState?: (connected: boolean) => void): () => void
 }
 
@@ -167,6 +168,12 @@ export class LocalTaskStoreClient implements TaskStoreClient {
     }
     content (id: string, index: number): Promise<{ type: string, content: Buffer } | null> {
         return this.missing(() => this.core.attachmentContent(this.prjId, id, String(index)), null)
+    }
+    attach (id: string, attachment: API.TaskAttachment, append = false): Promise<boolean> {
+        return this.missing(async () => {
+            await this.core.attachmentAdd(this.prjId, id, attachment, append)
+            return true
+        }, false)
     }
 
     /*  subscribe to the change events of the project, i.e. the changes made
@@ -411,6 +418,10 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
     async purge (age: string): Promise<string[]> {
         const result = await this.request<{ purged: string[] }>("DELETE", `${this.tasks}?age=${encodeURIComponent(age)}`)
         return (result ?? this.unregistered()).purged
+    }
+    async attach (id: string, attachment: API.TaskAttachment, append = false): Promise<boolean> {
+        return await this.task(await this.request<object>("POST",
+            `${this.tasks}/${encodeURIComponent(id)}/attachment${append ? "?append=true" : ""}`, attachment)) !== null
     }
     async content (id: string, index: number): Promise<{ type: string, content: Buffer } | null> {
         const r = await ofetch.raw<ArrayBuffer, "arrayBuffer">(`${this.base}${this.tasks}/${encodeURIComponent(id)}/attachment/${index}/content`, {

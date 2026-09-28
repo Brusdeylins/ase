@@ -1475,7 +1475,7 @@ onMounted(() => {
     connect()
     Mousetrap.bind("t", () => { if (board.value !== null) toggle("titles", "") })
     Mousetrap.bind("s", () => { if (board.value !== null && view.value === "graph" && task.value === null) toggle("standalone", "") })
-    Mousetrap.bind("v", () => setView(view.value === "lanes" ? "graph" : "lanes"))
+    Mousetrap.bind("v", () => { if (task.value === null) setView(view.value === "lanes" ? "graph" : "lanes") })
     Mousetrap.bind("?", () => { if (board.value !== null) toggle("keys", "") })
     Mousetrap.bind("0", () => {
         if (view.value !== "graph" || task.value !== null)
@@ -1487,6 +1487,8 @@ onMounted(() => {
     Mousetrap.bind([ "+", "=" ], () => { if (view.value === "graph" && task.value === null) zoomBy(1.25) })
     Mousetrap.bind("-", () => { if (view.value === "graph" && task.value === null) zoomBy(1 / 1.25) })
     Mousetrap.bind("/", (ev) => {
+        if (task.value !== null)
+            return
         ev.preventDefault()
         filterEl.value?.focus()
     })
