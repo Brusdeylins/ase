@@ -75,14 +75,9 @@ export const loadTaskStoragePlugin = async (name: string | null, ctx: API.TaskSt
     for (const method of pluginMethods)
         if (typeof plugin[method] !== "function")
             throw new Error(`task store: storage plugin "${name}" lacks the "${method}" method`)
-    if (plugin.lock !== undefined && typeof plugin.lock !== "function")
-        throw new Error(`task store: storage plugin "${name}" provides a non-function "lock" property`)
-    if (plugin.fileRead !== undefined && typeof plugin.fileRead !== "function")
-        throw new Error(`task store: storage plugin "${name}" provides a non-function "fileRead" property`)
-    if (plugin.watch !== undefined && typeof plugin.watch !== "function")
-        throw new Error(`task store: storage plugin "${name}" provides a non-function "watch" property`)
-    if (plugin.projectMark !== undefined && typeof plugin.projectMark !== "function")
-        throw new Error(`task store: storage plugin "${name}" provides a non-function "projectMark" property`)
+    for (const method of [ "lock", "fileRead", "watch", "projectMark" ] as const)
+        if (plugin[method] !== undefined && typeof plugin[method] !== "function")
+            throw new Error(`task store: storage plugin "${name}" provides a non-function "${method}" property`)
     return plugin
 }
 

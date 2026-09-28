@@ -154,7 +154,7 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
     private labels      = new Map<string, Set<string>>()
     private milestones  = new Map<string, Map<string, number>>()
     private recent      = new Map<string, Map<number, { issue: Issue, at: number }>>()
-    private loads       = new Map<string, { at: number, load: Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null> }>()
+    private loads       = new LRUCache<string, Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null>>({ max: 256, ttl: 2 * 1000 })
 
     constructor (private ctx: API.TaskStorageContext) {
         const options = ctx.options as TaskStoragePluginOptions
@@ -646,8 +646,8 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
     private load (prjId: string, loc: Repo, n: number): Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null> {
         const key    = `${prjId}#${n}`
         const cached = this.loads.get(key)
-        if (cached !== undefined && Date.now() - cached.at < 2 * 1000)
-            return cached.load
+        if (cached !== undefined)
+            return cached
         const load = (async () => {
             const [ issue, comments ] = await Promise.all([
                 this.fetch(loc, n),
@@ -658,7 +658,7 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
                 return null
             return { issue, after: await this.blockers(loc, issue), comments: comments ?? [] }
         })()
-        this.loads.set(key, { at: Date.now(), load })
+        this.loads.set(key, load)
         load.catch(() => {
             this.loads.delete(key)
         })

@@ -666,6 +666,63 @@ export class Task {
 export default class TaskCommand {
     constructor (private log: Log) {}
 
+    /*  edit a task by id with $EDITOR, renaming it on a changed "Id:" key  */
+    private async edit (id: string): Promise<void> {
+        /*  round-trip the plan through a temporary file, as the
+            task store is not necessarily a local file  */
+        Task.validateId(id)
+        const before = await Task.load(this.log, id) || Task.format(Task.minimal(id))
+        const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
+        const dir    = fs.mkdtempSync(path.join(os.tmpdir(), "ase-task-"))
+        const file   = path.join(dir, `${id}.md`)
+        fs.writeFileSync(file, before, "utf8")
+
+        /*  on save failures, offer re-editing and never discard the edits:
+            the temporary file is kept if the user declines re-editing  */
+        let next = id
+        for (;;) {
+            try {
+                execaSync(`${editor} "${file}"`, { shell: true, stdio: "inherit" })
+                const after = fs.readFileSync(file, "utf8")
+                if (after !== before) {
+                    /*  a changed "Id:" key renames the task (refusing
+                        an existing target id before anything is saved)  */
+                    next = TaskFormat.taskTextId(after) || id
+                    if (next !== id) {
+                        Task.validateId(next)
+                        if (await Task.source(this.log, next) !== null)
+                            throw new Error(`task: target id "${next}" already exists`)
+                    }
+                    let warning = await Task.save(this.log, id, after)
+                    if (next !== id)
+                        warning = await Task.rename(this.log, id, next) ?? ""
+                    if (warning !== "")
+                        this.log.write("warning", `task: ${warning}`)
+                }
+                break
+            }
+            catch (err) {
+                const msg = err instanceof Error ? err.message : String(err)
+                this.log.write("error", msg)
+                let ans = "n"
+                if (process.stdin.isTTY) {
+                    const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
+                    try {
+                        ans = (await rl.question("re-edit? [Y/n] ")).trim().toLowerCase()
+                    }
+                    finally {
+                        rl.close()
+                    }
+                }
+                if (ans === "n" || ans === "no")
+                    throw new Error(`task: edits of "${id}" not saved, but kept in "${file}"`, { cause: err })
+            }
+        }
+        fs.rmSync(dir, { recursive: true, force: true })
+        this.log.write("info", next !== id ?
+            `task: edited "${id}" and renamed it to "${next}"` : `task: edited "${id}"`)
+    }
+
     /*  register commands  */
     register (program: Command): Command {
         /*  register CLI top-level command "ase task"  */
@@ -784,59 +841,7 @@ export default class TaskCommand {
             .description("Edit a task by id with $EDITOR")
             .argument("<id>", "Task identifier")
             .action(async (id: string) => {
-                /*  round-trip the plan through a temporary file, as the
-                    task store is not necessarily a local file  */
-                Task.validateId(id)
-                const before = await Task.load(this.log, id) || Task.format(Task.minimal(id))
-                const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
-                const dir    = fs.mkdtempSync(path.join(os.tmpdir(), "ase-task-"))
-                const file   = path.join(dir, `${id}.md`)
-                fs.writeFileSync(file, before, "utf8")
-
-                /*  on save failures, offer re-editing and never discard the edits:
-                    the temporary file is kept if the user declines re-editing  */
-                let next = id
-                for (;;) {
-                    try {
-                        execaSync(`${editor} "${file}"`, { shell: true, stdio: "inherit" })
-                        const after = fs.readFileSync(file, "utf8")
-                        if (after !== before) {
-                            /*  a changed "Id:" key renames the task (refusing
-                                an existing target id before anything is saved)  */
-                            next = TaskFormat.taskTextId(after) || id
-                            if (next !== id) {
-                                Task.validateId(next)
-                                if (await Task.source(this.log, next) !== null)
-                                    throw new Error(`task: target id "${next}" already exists`)
-                            }
-                            let warning = await Task.save(this.log, id, after)
-                            if (next !== id)
-                                warning = await Task.rename(this.log, id, next) ?? ""
-                            if (warning !== "")
-                                this.log.write("warning", `task: ${warning}`)
-                        }
-                        break
-                    }
-                    catch (err) {
-                        const msg = err instanceof Error ? err.message : String(err)
-                        this.log.write("error", msg)
-                        let ans = "n"
-                        if (process.stdin.isTTY) {
-                            const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
-                            try {
-                                ans = (await rl.question("re-edit? [Y/n] ")).trim().toLowerCase()
-                            }
-                            finally {
-                                rl.close()
-                            }
-                        }
-                        if (ans === "n" || ans === "no")
-                            throw new Error(`task: edits of "${id}" not saved, but kept in "${file}"`, { cause: err })
-                    }
-                }
-                fs.rmSync(dir, { recursive: true, force: true })
-                this.log.write("info", next !== id ?
-                    `task: edited "${id}" and renamed it to "${next}"` : `task: edited "${id}"`)
+                await this.edit(id)
                 process.exit(0)
             })
 
