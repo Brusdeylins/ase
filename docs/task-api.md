@@ -1095,10 +1095,16 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 Append an attachment to the task plan.
 
-Request body: an attachment object (see *Task plans* above).
+Query parameter:
 
-Response `201` with a `Location` header pointing to the new
-attachment:
+- `append` (optional): with `true` and a request body carrying `Data`,
+  the `Data` of the *last* attachment with exactly the same `Type` (and
+  a `Data` key) is extended by the given `Data` instead, with all other
+  given keys except `Created` taken over; without such an attachment,
+  the attachment is appended as usual.
+
+Response `201` (or `200` if an existing attachment was extended) with
+a `Location` header pointing to the new (or extended) attachment:
 
 ```json
 {
