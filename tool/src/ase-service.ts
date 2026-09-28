@@ -22,24 +22,27 @@ import { Tail }               from "tail"
 import { McpServer }                     from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js"
 
-import { Config, configSchema, ConfigMCP } from "./ase-config.js"
-import type Log                          from "./ase-log.js"
-import { isLogLevel }                    from "./ase-log.js"
-import type { LogLevel }                 from "./ase-log.js"
-import { CompatMCP }                     from "./ase-compat.js"
-import { DiagramMCP }                    from "./ase-diagram.js"
-import { TaskMCP }                       from "./ase-task.js"
-import { MarkdownMCP }                   from "./ase-markdown.js"
+import { ConfigMCP }                     from "./ase-config.js"
+import { Config }                        from "./ase-config-core.js"
+import { configSchema }                  from "./ase-config-schema.js"
+import { ensureAseGitignore }            from "./ase-config-scope.js"
+import type Log                          from "./ase-lib-log.js"
+import { isLogLevel }                    from "./ase-lib-log.js"
+import type { LogLevel }                 from "./ase-lib-log.js"
+import { CompatMCP }                     from "./ase-util-compat.js"
+import { DiagramMCP }                    from "./ase-util-diagram.js"
+import { Task, TaskMCP }                 from "./ase-task.js"
+import { MarkdownMCP }                   from "./ase-service-markdown.js"
 import { ArtifactMCP }                   from "./ase-artifact.js"
 import { SpecMCP }                       from "./ase-spec.js"
-import { KVMCP }                         from "./ase-kv.js"
-import { TimestampMCP }                  from "./ase-timestamp.js"
-import { SleepMCP }                      from "./ase-sleep.js"
-import { GetoptMCP }                     from "./ase-getopt.js"
-import { SkillsMCP }                     from "./ase-skills.js"
-import { WorktreeMCP }                   from "./ase-worktree.js"
-import { MintMCP }                       from "./ase-mint.js"
-import { MetricMCP }                     from "./ase-metric.js"
+import { KVMCP }                         from "./ase-service-kv.js"
+import { TimestampMCP }                  from "./ase-service-timestamp.js"
+import { SleepMCP }                      from "./ase-service-sleep.js"
+import { GetoptMCP }                     from "./ase-service-getopt.js"
+import { SkillsMCP }                     from "./ase-service-skills.js"
+import { WorktreeMCP }                   from "./ase-util-worktree.js"
+import { MintMCP }                       from "./ase-util-mint.js"
+import { MetricMCP }                     from "./ase-util-metric.js"
 import pkg                               from "../package.json" with { type: "json" }
 
 /*  shared service host  */
@@ -112,7 +115,7 @@ export const loadServiceContext = (log: Log): Context => {
     svc.read()
 
     /*  determine project id  */
-    const projectId = (cfg.get("project.id") as string | null | undefined) ?? path.basename(process.cwd())
+    const projectId = (cfg.get("project.id") as string | null | undefined) || Task.projectIdOf(Task.projectRoot())
 
     /*  determine service port  */
     const port      = (svc.get("port")       as number | null | undefined) ?? null
@@ -152,6 +155,7 @@ export class Service {
 
     /*  persist an allocated port into ".ase/service.yaml"  */
     static persistPort (svc: Config, port: number): void {
+        ensureAseGitignore(path.dirname(svc.filename))
         svc.lock(() => {
             svc.read()
             svc.set("port", port)
@@ -192,6 +196,7 @@ export class Service {
     /*  spawn the current executable detached as a background service  */
     static spawnDetached (aseDir: string, port: number, logLevel: LogLevel): { child: ChildProcess, logFile: string } {
         fs.mkdirSync(aseDir, { recursive: true })
+        ensureAseGitignore(aseDir)
         const logFile = path.join(aseDir, "service.log")
 
         /*  trim the log before handing it to the service, as the detached
@@ -278,6 +283,52 @@ export default class ServiceCommand {
         return loadServiceContext(this.log)
     }
 
+    /*  build a fresh MCP server instance with all registered tools  */
+    private buildMcpServer (ctx: Context & { port: number }, startTime: number): McpServer {
+        const mcp = new McpServer({ name: "ase", version: pkg.version })
+        new ServiceMCP({ projectId: ctx.projectId, port: ctx.port, startTime }).register(mcp)
+        new CompatMCP().register(mcp)
+        new DiagramMCP().register(mcp)
+        new TaskMCP(this.log).register(mcp)
+        new MarkdownMCP().register(mcp)
+        new ArtifactMCP(this.log).register(mcp)
+        new SpecMCP(this.log).register(mcp)
+        new KVMCP().register(mcp)
+        new TimestampMCP().register(mcp)
+        new SleepMCP().register(mcp)
+        new GetoptMCP().register(mcp)
+        new SkillsMCP().register(mcp)
+        new WorktreeMCP().register(mcp)
+        new MintMCP().register(mcp)
+        new MetricMCP().register(mcp)
+        new ConfigMCP(this.log).register(mcp)
+        return mcp
+    }
+
+    /*  summarize the method, tool name, and capped tool arguments of an MCP request body  */
+    private static mcpBodyInfo (body: unknown): { method: string | null, info: string } {
+        const b       = body as Record<string, unknown> | null | undefined
+        const bParams = b?.params as Record<string, unknown> | null | undefined
+        const bMethod = typeof b?.method     === "string"  ? b.method          : null
+        const bName   = typeof bParams?.name === "string"  ? bParams.name      : null
+        const bArgs   = bParams?.arguments   !== undefined ? bParams.arguments : null
+        let info      = ""
+        if (bMethod !== null) {
+            info = ` [${bMethod}]`
+            if (bName !== null) {
+                info += ` ${bName}`
+                if (bArgs !== null) {
+                    /*  cap the arguments, as payload-carrying tool calls
+                        (task plans, key/value batches, etc) would
+                        otherwise dominate the entire log file  */
+                    const args = JSON.stringify(bArgs)
+                    info += ` ${args.length > LOG_ARGS_MAX ? `${args.slice(0, LOG_ARGS_MAX)}…` : args}`
+                }
+            }
+        }
+        return { method: bMethod, info }
+    }
+
     /*  service-side: bind HAPI server until "/stop" command is received or idle timeout happens  */
     private async runService (ctx: Context & { port: number }): Promise<void> {
         /*  establish HAPI HTTP/REST service  */
@@ -288,9 +339,15 @@ export default class ServiceCommand {
         let lastActivity = Date.now()
         let inFlight     = 0
         let stopping     = false
-        server.ext("onRequest", (_request, h) => {
+
+        /*  accept only loopback "Host" headers, to defeat DNS rebinding attacks from browser pages  */
+        const allowedHosts = new Set([ `${HOST}:${ctx.port}`, `localhost:${ctx.port}` ])
+        server.ext("onRequest", (request, h) => {
             inFlight++
             lastActivity = Date.now()
+            const host = ((request.headers.host as string | undefined) ?? "").toLowerCase()
+            if (!allowedHosts.has(host))
+                return h.response({ error: "invalid Host header" }).code(421).takeover()
             return h.continue
         })
         server.ext("onPreResponse", (_request, h) => {
@@ -298,28 +355,6 @@ export default class ServiceCommand {
             lastActivity = Date.now()
             return h.continue
         })
-
-        /*  build a fresh MCP server instance with all registered tools  */
-        const buildMcpServer = (): McpServer => {
-            const mcp = new McpServer({ name: "ase", version: pkg.version })
-            new ServiceMCP({ projectId: ctx.projectId, port: ctx.port, startTime }).register(mcp)
-            new CompatMCP().register(mcp)
-            new DiagramMCP().register(mcp)
-            new TaskMCP(this.log).register(mcp)
-            new MarkdownMCP().register(mcp)
-            new ArtifactMCP(this.log).register(mcp)
-            new SpecMCP(this.log).register(mcp)
-            new KVMCP().register(mcp)
-            new TimestampMCP().register(mcp)
-            new SleepMCP().register(mcp)
-            new GetoptMCP().register(mcp)
-            new SkillsMCP().register(mcp)
-            new WorktreeMCP().register(mcp)
-            new MintMCP().register(mcp)
-            new MetricMCP().register(mcp)
-            new ConfigMCP(this.log).register(mcp)
-            return mcp
-        }
 
         /*  listen to HTTP/REST endpoints  */
         server.route({
@@ -330,9 +365,14 @@ export default class ServiceCommand {
             }
         })
         server.route({
-            method:  "GET",
+            method:  "POST",
             path:    "/stop",
-            handler: (_request, h) => {
+            handler: (request, h) => {
+                /*  require a JSON content type, as browsers cannot send it cross-origin
+                    without a CORS preflight (which this service never grants)  */
+                const ct = ((request.headers["content-type"] as string | undefined) ?? "").toLowerCase()
+                if (!ct.startsWith("application/json"))
+                    return h.response({ error: "unsupported media type" }).code(415)
                 this.log.write("info", "service: stop requested")
                 setImmediate(async () => {
                     try {
@@ -348,25 +388,7 @@ export default class ServiceCommand {
             }
         })
         const mcpHandler = async (request: Hapi.Request, h: Hapi.ResponseToolkit, body?: unknown) => {
-            const b       = body as Record<string, unknown> | null | undefined
-            const bParams = b?.params as Record<string, unknown> | null | undefined
-            const bMethod = typeof b?.method     === "string"  ? b.method          : null
-            const bName   = typeof bParams?.name === "string"  ? bParams.name      : null
-            const bArgs   = bParams?.arguments   !== undefined ? bParams.arguments : null
-            let bodyInfo  = ""
-            if (bMethod !== null) {
-                bodyInfo = ` [${bMethod}]`
-                if (bName !== null) {
-                    bodyInfo += ` ${bName}`
-                    if (bArgs !== null) {
-                        /*  cap the arguments, as payload-carrying tool calls
-                            (task plans, key/value batches, etc) would
-                            otherwise dominate the entire log file  */
-                        const args = JSON.stringify(bArgs)
-                        bodyInfo += ` ${args.length > LOG_ARGS_MAX ? `${args.slice(0, LOG_ARGS_MAX)}…` : args}`
-                    }
-                }
-            }
+            const { method: bMethod, info: bodyInfo } = ServiceCommand.mcpBodyInfo(body)
 
             /*  log tool calls regularly, but all remaining MCP traffic
                 (session handshakes, notifications, SSE stream opens) at
@@ -374,7 +396,7 @@ export default class ServiceCommand {
             const level = bMethod === "tools/call" ? "info" : "debug"
             this.log.write(level, `mcp: ${request.method.toUpperCase()} ${request.path}${bodyInfo}`)
             const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-            const mcp       = buildMcpServer()
+            const mcp       = this.buildMcpServer(ctx, startTime)
             request.raw.res.on("close", () => {
                 /*  "h.abandon" (see below) bypasses "onPreResponse",
                     so undo the "onRequest" accounting here instead  */
@@ -429,6 +451,12 @@ export default class ServiceCommand {
                 return h.response({ error: "unknown command", command: cmd }).code(400)
             }
         })
+
+        /*  serve the web board of the project (imported dynamically to keep it out of all
+            other CLI commands; its rendering dependencies marked, MRCS, and ELK load on
+            first request only, its board core dependencies at service startup)  */
+        const { registerBoardRoutes } = await import("./ase-task-board-web-server.js")
+        registerBoardRoutes(server, this.log)
 
         /*  start service  */
         try {
@@ -673,7 +701,9 @@ export default class ServiceCommand {
             return 0
         }
         const r = await ofetch.raw(`http://${HOST}:${ctx.port}/stop`, {
-            method:              "GET",
+            method:              "POST",
+            headers:             { "Content-Type": "application/json" },
+            body:                {},
             signal:              AbortSignal.timeout(5000),
             ignoreResponseError: true
         })

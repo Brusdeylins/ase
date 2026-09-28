@@ -5,6 +5,69 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool]: GitHub Issues task store
+    The new built-in storage plugin `github` persists the task plans as the issues of a GitHub
+    repository, selected either by `ase task store start --module github` (with the repositories
+    mapped per project in `storage.options.repos`) or in-process by the `project.task.store` URL
+    `github:<owner>/<repo>`. The task id is the issue number rendered through the required `seq`
+    task id scheme, and the task plan maps as closely as possible onto the issue: title, body,
+    state (refined by an `ase:Status:<state>` label), labels (`Tags`), assignee, milestone
+    (`Phase`), parent issue (`Group`), blocking issues (`After`), and comments (attachments), with
+    all other header keys as `ase:<key>:<value>` labels. Deleting a task closes its issue as "not
+    planned". Issue changes made on GitHub are detected by conditional polling (ETag and `since`)
+    and delivered as task store events through the new optional storage plugin method `watch`.
+
+-   FEATURE [tool,plugin]: Task id schemes
+    The new `project.task.idscheme` configuration (`ase task idscheme`) selects the scheme of new
+    task ids: `slug[:<words>]` (default), `seq[:<template>]` (e.g. `FOO-%03d`), or `any`. The new
+    `ase task newid` (MCP: `ase_task_newid`) allocates the next free id atomically, where `seq`
+    numbers are never reused. Non-conforming ids are warned about, and a create-only save
+    (`--create`) never overwrites a concurrently created task. The `ase-code-{craft,refactor,resolve}`
+    and `ase-task-dissect` skills and the task board generate new ids after the scheme.
+
+-   FEATURE [tool]: TUI and Web Task Board
+    The new `ase task board` shows all task plans live as cards in the lanes of the task lifecycle
+    model, as an interactive terminal board (plan dialog, `$EDITOR` editing, dependency graph view
+    via `v`, task moves via `SPACE`), as a web board served by the ASE service (`--web`, task
+    moves via drag & drop), or as plain text (`--text`). The display state persists in
+    `.ase/board.yaml`, the colors in `board.{tui,web}.color.*`, and the skill is `ase-task-board`.
+
+-   FEATURE [tool]: Task Board task creation and deletion
+    The terminal and web task board create a new task via `N` (lanes and graph view) by editing a
+    pre-filled task plan (all frontmatter keys, a free placeholder id, the initial state, and the
+    section template), stored under the id of its `Id:` line, but never over an existing task.
+    They delete the selected task via `D` (lanes, graph, and task view) after a confirmation.
+
+-   FEATURE [tool]: Task Board task transfer
+    The terminal and web task board transfer the selected task via `T` (lanes, graph, and task
+    view) through a centered popup listing all lane states, where only the states reachable in the
+    lifecycle model are selectable via the cursor keys, `RETURN` moves, and `ESC` cancels.
+
+-   FEATURE [tool]: Task Board filter
+    The terminal and web task board got a `filter:` field in their header (focused via `/`),
+    whose keywords are fuzzy matched (as in SpecBook) against the task id and title, AND-combined
+    when separated by spaces and OR-combined when separated by commas. The lanes show only the
+    matching tasks, the graph additionally shows their direct predecessors and successors dimmed
+    and dashed.
+
+-   FEATURE [tool]: Web Task Board task plan editing
+    The task dialog of the web task board edits the task plan via `e` or `✎` in a CodeMirror 6
+    based Markdown editor, saved via `Ctrl`/`⌘`+`S` and cancelled via `ESC` (after a confirmation
+    if changed). A save is conditional: a task plan changed or deleted meanwhile is reported, with
+    the choice to overwrite or discard, and a text which failed to save is kept as a browser draft,
+    offered for restoring on the next edit. For this, the task store REST API delivers the entity
+    tag of a task plan as `ETag` and accepts a conditional, atomic `PUT` via `If-Match` (`412`).
+    The new configuration key `board.web.editor.keymap` selects `default`, `vim`, or `emacs`
+    key bindings for the editor (Vim: `:w`/`:q`/`:q!`, Emacs: `C-x C-s`/`C-x C-c`).
+
+-   FEATURE [tool]: Web Task Board keyboard navigation
+    The web task board got the keyboard navigation of the terminal board: an always present
+    selection of group, lane, and task, highlighted in signal color, moved via `↑`/`↓`/`←`/`→`,
+    `PgUp`/`PgDn`, and `Tab`/`Shift+Tab` (spatially via the arrows in the graph view), `RETURN`
+    to view (and close) a task (scrolled via `↑`/`↓`/`PgUp`/`PgDn`), `m`/`c` to minimize a lane
+    or collapse a group, and `SPACE` to pick up and drop a task onto another lane (cancelled via
+    `ESC`).
+
 -   FEATURE [plugin]: Clickable grilling table
     In the latest grilling table redrawn by the function hooks module `ase-mods.ts`, every
     question and every answer alternative reveals a clickable button while hovered (rendered in
@@ -16,10 +79,39 @@ ChangeLog
     immediately. The question numbers are right-aligned to the widest one.
     Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`
 
+-   REFACTOR [tool]: Utility command group
+    The utility commands `ase meta`, `ase compat`, `ase diagram`, `ase worktree`, `ase mint`, and
+    `ase metric` moved below the new top-level command `ase util` (e.g. `ase util meta`), so
+    skills generated by `ase-meta-workflow` now load meta files via `ase util meta` and are allowed
+    `Bash(ase util meta *)`. This is an incompatible change for existing user skills.
+
 -   FEATURE [tool]: Service log viewing
     The new `ase service log` sub-command shows the `.ase/service.log` of the background service,
     optionally limited to its last lines (`-n`/`--lines`) and optionally followed in the style of
     `tail -f` (`-f`/`--follow`, based on the NPM package `tail`).
+
+-   FEATURE [tool]: Task store server with REST API and storage plugins
+    The new `ase task store` server serves the task plans of all registered projects through the
+    REST API of `docs/task-api.md` (bearer token, CORS, WebSocket change events, optional HTTPS via
+    `--tls-cert`/`--tls-key`) and persists them through a storage plugin: the built-in `ase` plugin
+    or an NPM package `ase-task-store-<name>`. Requests are serialized per project, and the `ase`
+    plugin locks cross-process (`proper-lockfile`), writes atomically (`write-file-atomic`), and
+    creates its directory on first save only, so service, CLI, and server can share one directory.
+
+-   FEATURE [tool]: Configurable task store
+    The new `project.task.store` URL selects the task plan location: `ase:<path>` (default
+    `ase:./.ase/task`, confined to the project root on `project`/`task` scope) runs the built-in
+    plugin in-process, `ase[s]://<addr>:<port>[/<token>][?insecure]` forwards to a remote server via
+    HTTP(S). The token alternatively comes from `$ASE_TASK_STORE_TOKEN`, the new user-scoped
+    `project.task.token`, or `store.yaml`. A remote store requires an explicit `project.id` and keeps
+    its registered lifecycle model, changed only via the new `ase task lifecycle [<name>]` (mapping
+    existing `Status` values). `project.artifact.task.{basedir,files}` were removed and are migrated
+    in place, and the legacy pre-1.0 task file migration was dropped.
+
+-   FEATURE [tool]: Task view command and task listing titles
+    The new `ase task view <id>` shows a task plan in `$PAGER` (default `more`) when on a terminal,
+    `$PAGER` and `$EDITOR` are run through the shell (supporting `less -R`), `ase task edit` works
+    on a temporary file, and `ase task list -v`/`ase_task_list` also report the task title.
 
 -   FEATURE [plugin]: Section-focused task plan grilling
     The new `--focus`/`-f` option of `ase-task-grill` grills only the given plan sections
@@ -49,7 +141,7 @@ ChangeLog
 -   FEATURE [plugin,tool]: Task plan status get/set
     The new `ase-task-status` skill, `ase task status` CLI sub-command, and `ase_task_status` MCP
     tool report or set the `Status:` key of a task plan, validated against the lifecycle model.
-    `ase task save` and `ase_task_save` now also warn about unknown or unreachable states.
+    `ase task save` and `ase_task_save` now also reject unknown or unreachable states.
 
 -   FEATURE [tool]: Lifecycle-aware `ase task list` with `finished` sentinel
     The `--include`/`--exclude` states are validated against the lifecycle model, the new
@@ -78,6 +170,13 @@ ChangeLog
     answer alternatives lettered `A`, `B`, etc. (instead of `A1`, `A2`, etc.), and the combined reply
     recognizes short responses matching `\d+[a-zA-Z]` (like `1A 2c`, instead of `Qn:An`) for
     cherry-picking answers, freely mixed with keyword text.
+
+-   IMPROVEMENT [tool]: Per-OS user state directory instead of `~/.ase`
+    The per-user state (session configurations and `task-lifecycle.json`) moved from `~/.ase` to
+    the per-OS state directory: `~/Library/Application Support/ase` on macOS (next to the user
+    configuration), `%LOCALAPPDATA%\ase` on Windows, and `$XDG_STATE_HOME/ase` (or
+    `~/.local/state/ase`) on Linux. Additionally, a `.ase` directory in the home directory no longer
+    makes the home directory a project root. A stale `~/.ase` can be removed.
 
 -   BUGFIX [plugin]: Task plan kind `SPECIFYING` honored
     `ase-task-preflight` and `ase-task-implement` now recognize the `Kind: SPECIFYING`

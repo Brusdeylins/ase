@@ -50,7 +50,7 @@ Procedure
     2.  React on the task id:
 
         <if condition="
-            <instruction/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*:?$`
+            <instruction/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*:?$`
         ">
         The lone token is the *task id* (with an optional and ignored
         trailing `:`), never a hint. Set
@@ -68,7 +68,7 @@ Procedure
 
         <elseif condition="
             <instruction/> has the format `<id/>: <text/>` where
-            <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+            <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
         ">
         Set <instruction><text/></instruction> (set instruction to
         text) and <ase-task-id><id/></ase-task-id> (set task id to
@@ -141,7 +141,17 @@ Procedure
         follows the bullet points its fragments realize or verify, so its
         fragments *MAY* land in *different* parts.
 
-    2.  *Report the parts*:
+    2.  *Identify the parts* according to the task id scheme of the
+        project: for *every* part in <parts/>, in their derived order,
+        call the `ase_task_newid(title: "<scope/>", proposal:
+        "<part-id/>", taken: [ <previous/> ])` tool of the `ase` MCP
+        server, where <previous/> lists the already re-identified
+        <part-id/> of all preceding parts (as the tool reserves ids for
+        scheme `seq` only), and replace the <part-id/> of the part with the `id` field
+        of its response -- you *MUST* *NEVER* assemble such an id
+        yourself. Do not output anything related to these MCP tool calls.
+
+    3.  *Report the parts*:
 
         <expand name="dissect-report" arg1="<ase-task-id/>"></expand>
 
@@ -253,10 +263,14 @@ Procedure
             </elseif>
 
         2.  Call the `ase_task_save(id: "<part-id/>", text:
-            "<part-content/>")` tool of the `ase` MCP server to persist
+            "<part-content/>", create: true)` tool of the `ase` MCP server to persist
             the sub-task plan -- this MCP tool call is the *only*
             permitted way to persist it, *NEVER* write the plan file
-            via `Write`/`Edit` or by executing a shell command. Do not
+            via `Write`/`Edit` or by executing a shell command. If this
+            call fails because the task already exists (a concurrent
+            session took the same id), re-identify this part as in step
+            3.2, replace its <part-id/> in <part-content/>, and save
+            again. Do not
             output anything related to this MCP tool call except the
             following <template/>:
 

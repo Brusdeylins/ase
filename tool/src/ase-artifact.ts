@@ -13,12 +13,13 @@ import { isScalar }             from "yaml"
 import { z }                    from "zod"
 import type { McpServer }       from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import type Log                 from "./ase-log.js"
-import { Config, configSchema } from "./ase-config.js"
+import type Log                 from "./ase-lib-log.js"
+import { Config }               from "./ase-config-core.js"
+import { configSchema }         from "./ase-config-schema.js"
 import { Task }                 from "./ase-task.js"
-import { Ignore }               from "./ase-ignore.js"
-import type { IgnoreRule }      from "./ase-ignore.js"
-import { writeStdout }          from "./ase-stdio.js"
+import { Ignore }               from "./ase-lib-ignore.js"
+import type { IgnoreRule }      from "./ase-lib-ignore.js"
+import { writeStdout }          from "./ase-lib-stdio.js"
 
 /*  the recognized artifact kinds, in descending precedence order;
     "othr" is the implicit catch-all and is always resolved last  */
@@ -105,8 +106,8 @@ export class Artifact {
         for a single kind; "basedir" is project-root-relative (POSIX,
         "" ≡ project root) and "files" resolves relative to "basedir"  */
     private static spec (cfg: Config, kind: Exclude<ArtifactKind, "othr">): { basedir: string, files: string } {
-        const basedir = Artifact.configString(cfg, `project.artifact.${kind}.basedir`)
-            .replace(/\\/g, "/").replace(/^\/+|\/+$/g, "")
+        const basedir = path.posix.normalize(Artifact.configString(cfg, `project.artifact.${kind}.basedir`)
+            .replace(/\\/g, "/")).replace(/^\/+|\/+$/g, "")
             .replace(/^\.$/, "")
         if (basedir.split("/").includes(".."))
             throw new Error(`artifact: configured "basedir" "${basedir}" must not escape the project root`)

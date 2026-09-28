@@ -13,7 +13,7 @@ import { z }             from "zod"
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import { writeStdout }   from "./ase-stdio.js"
+import { writeStdout }   from "./ase-lib-stdio.js"
 
 /*  the repository-root-relative path components of the base directory
     which holds all ASE-managed Git worktrees  */
@@ -99,11 +99,11 @@ export class Worktree {
     }
 }
 
-/*  CLI command "ase worktree"  */
+/*  CLI command "ase util worktree"  */
 export default class WorktreeCommand {
     /*  register commands  */
     register (program: Command): void {
-        /*  register CLI top-level command "ase worktree"  */
+        /*  register CLI sub-command "ase util worktree"  */
         const worktree = program
             .command("worktree")
             .description("Safely resolve the ASE worktree directories under <repo-root>/.ase/worktree")
@@ -112,7 +112,7 @@ export default class WorktreeCommand {
                 process.exit(1)
             })
 
-        /*  register CLI sub-command "ase worktree base"  */
+        /*  register CLI sub-sub-command "ase util worktree base"  */
         worktree
             .command("base")
             .description("Print the validated base directory holding all ASE worktrees")
@@ -121,7 +121,7 @@ export default class WorktreeCommand {
                 await writeStdout(`${Worktree.baseDir(opts.create ?? false)}\n`)
             })
 
-        /*  register CLI sub-command "ase worktree path"  */
+        /*  register CLI sub-sub-command "ase util worktree path"  */
         worktree
             .command("path")
             .description("Print the validated worktree directory of a single <id>")

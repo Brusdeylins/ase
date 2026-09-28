@@ -6,8 +6,8 @@
 */
 
 import { Command, CommanderError, Option } from "commander"
-import Log                         from "./ase-log.js"
-import type { LogLevel }           from "./ase-log.js"
+import Log                         from "./ase-lib-log.js"
+import type { LogLevel }           from "./ase-lib-log.js"
 import SetupCommand                from "./ase-setup.js"
 import ConfigCommand               from "./ase-config.js"
 import MCPCommand                  from "./ase-mcp.js"
@@ -15,14 +15,16 @@ import ServiceCommand              from "./ase-service.js"
 import HookCommand                 from "./ase-hook.js"
 import StatuslineCommand           from "./ase-statusline.js"
 import TaskCommand                 from "./ase-task.js"
+import TaskBoardCommand            from "./ase-task-board.js"
 import ArtifactCommand             from "./ase-artifact.js"
 import SpecCommand                 from "./ase-spec.js"
-import MetaCommand                 from "./ase-meta.js"
-import CompatCommand               from "./ase-compat.js"
-import DiagramCommand              from "./ase-diagram.js"
-import WorktreeCommand             from "./ase-worktree.js"
-import MintCommand                 from "./ase-mint.js"
-import MetricCommand               from "./ase-metric.js"
+import UtilCommand                 from "./ase-util.js"
+import MetaCommand                 from "./ase-util-meta.js"
+import CompatCommand               from "./ase-util-compat.js"
+import DiagramCommand              from "./ase-util-diagram.js"
+import WorktreeCommand             from "./ase-util-worktree.js"
+import MintCommand                 from "./ase-util-mint.js"
+import MetricCommand               from "./ase-util-metric.js"
 import pkg                         from "../package.json" with { type: "json" }
 
 /*  type of top-level (global) options  */
@@ -68,15 +70,17 @@ const main = async (): Promise<void> => {
     new ServiceCommand(log).register(program)
     new HookCommand(log).register(program)
     new StatuslineCommand(log).register(program)
-    new TaskCommand(log).register(program)
+    const task = new TaskCommand(log).register(program)
+    new TaskBoardCommand(log).register(task)
     new ArtifactCommand(log).register(program)
     new SpecCommand(log).register(program)
-    new MetaCommand(log).register(program)
-    new CompatCommand().register(program)
-    new DiagramCommand(log).register(program)
-    new WorktreeCommand().register(program)
-    new MintCommand().register(program)
-    new MetricCommand().register(program)
+    const util = new UtilCommand().register(program)
+    new MetaCommand(log).register(util)
+    new CompatCommand().register(util)
+    new DiagramCommand(log).register(util)
+    new WorktreeCommand().register(util)
+    new MintCommand().register(util)
+    new MetricCommand().register(util)
 
     /*  parse program arguments  */
     await program.parseAsync(process.argv)

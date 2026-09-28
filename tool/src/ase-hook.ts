@@ -4,19 +4,23 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import path                                 from "node:path"
-import fs                                   from "node:fs"
-import os                                   from "node:os"
+import path                                               from "node:path"
+import fs                                                 from "node:fs"
+import os                                                 from "node:os"
 
-import { Command }                          from "commander"
-import { execaSync }                        from "execa"
-import { quote }                            from "shell-quote"
-import * as v                               from "valibot"
+import { Command }                                        from "commander"
+import { execaSync }                                      from "execa"
+import { quote }                                          from "shell-quote"
+import * as v                                             from "valibot"
 
-import type Log                             from "./ase-log.js"
-import Version                              from "./ase-version.js"
-import { Config, configSchema, parseScope } from "./ase-config.js"
-import { readStdin, writeStdout }           from "./ase-stdio.js"
+import type Log                                           from "./ase-lib-log.js"
+import Version                                            from "./ase-lib-version.js"
+import { Config }                                         from "./ase-config-core.js"
+import { configSchema }                                   from "./ase-config-schema.js"
+import { parseScope, userStateDir }                       from "./ase-config-scope.js"
+import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
+import { Task }                                           from "./ase-task.js"
+import * as TaskFormat                                    from "./ase-task-format.js"
 
 /*  type of supported tool (host) systems  */
 type Tool = "claude" | "copilot" | "codex"
@@ -103,6 +107,11 @@ type ToolInput = v.InferOutput<typeof toolInputSchema>
     forever, so orphans are garbage-collected once they exceed this age  */
 const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
 
+/*  the ASE session information determined by the session-start hook  */
+type SessionInfo = Record<"version" | "versionHint" | "pluginRoot" | "persona" | "guidance" |
+    "userId" | "projectId" | "boxing" | "lifecycle" | "specBasedir" | "specSchema" |
+    "taskId" | "sessionId" | "headless", string>
+
 /*  CLI command "ase hook"  */
 export default class HookCommand {
     constructor (private log: Log) {}
@@ -114,13 +123,14 @@ export default class HookCommand {
 
     /*  resolve the base directory holding all per-session state  */
     private sessionBaseDir (): string {
-        return path.join(os.homedir(), ".ase", "session")
+        return path.join(userStateDir(), "session")
     }
 
     /*  garbage-collect orphaned session directories left behind by agents
         which died before their session-end hook could run; a live session
-        keeps its directory's mtime current, as every tool call acquires a
-        lock file inside it, so plain age is a reliable liveness signal  */
+        usually refreshes its directory's mtime, as its locked configuration
+        accesses create lock files inside it, so plain age is a sufficient
+        liveness heuristic  */
     private pruneStaleSessions (currentSessionId: string): void {
         const base = this.sessionBaseDir()
         let entries: fs.Dirent[]
@@ -232,6 +242,73 @@ export default class HookCommand {
         }
     }
 
+    /*  read a plugin file, throwing a descriptive error on failure  */
+    private readPluginFile (file: string, what: string): string {
+        try {
+            return fs.readFileSync(file, "utf8")
+        }
+        catch (err) {
+            throw new Error(`failed to read ${what}: ${file}`, { cause: err })
+        }
+    }
+
+    /*  determine the version hint on a tool/plugin version mismatch,
+        an available tool update, and a development setup  */
+    private async versionHint (versionCurrentPlugin: string): Promise<string> {
+        const versionCurrentTool = Version.current()
+        const versionLatestTool  = await Version.latest()
+        const versionHints: string[] = []
+        if (versionCurrentPlugin !== versionCurrentTool)
+            versionHints.push("**WARNING:** version *mismatch*: " +
+                `tool: **${versionCurrentTool}**, plugin: **${versionCurrentPlugin}**`)
+        if (versionCurrentTool !== versionLatestTool)
+            versionHints.push(`**NOTICE:** *latest* version: **${versionLatestTool}**, please update!`)
+        if (process.env.ASE_SETUP_DEV !== undefined)
+            versionHints.push("**NOTICE:** *development* setup")
+        return versionHints.length > 0 ? "(" + versionHints.join(", ") + ")" : ""
+    }
+
+    /*  determine the project id: the valid configured "project.id", or else
+        the id derived from the Git top-level directory of "cwd" (or "cwd" itself)  */
+    private determineProjectId (cwd: string, cfg: Config): string {
+        let projectDir = cwd
+        try {
+            const result = execaSync("git", [ "rev-parse", "--show-toplevel" ], {
+                stderr: "ignore", cwd
+            })
+            if (result.stdout.trim() !== "")
+                projectDir = result.stdout.trim()
+        }
+        catch {
+            /*  not inside a Git working tree  */
+        }
+        let configuredId = String(cfg.get("project.id") ?? "")
+        if (configuredId !== "" && !TaskFormat.ID_RE.test(configuredId)) {
+            this.log.write("warning", `hook: ignoring invalid configured "project.id" "${configuredId}" ` +
+                "(must match [A-Za-z0-9_-]+)")
+            configuredId = ""
+        }
+        return configuredId || Task.projectIdOf(projectDir)
+    }
+
+    /*  append environment variable exports to the environment file of
+        Anthropic Claude Code CLI (the other tools have no equivalent mechanism)  */
+    private writeEnvFile (tool: Tool, vars: Record<string, string>): void {
+        const envFile = tool === "claude" ? (process.env.CLAUDE_ENV_FILE ?? "") : ""
+        if (envFile === "")
+            return
+        const script = Object.entries(vars)
+            .map(([ name, value ]) => `export ${name}=${quote([ value ])}\n`)
+            .join("")
+        try {
+            fs.appendFileSync(envFile, script, "utf8")
+        }
+        catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err)
+            this.log.write("warning", `hook: failed to write environment file: ${message}`)
+        }
+    }
+
     /*  handler for "ase hook session-start" (all tools)  */
     private async doSessionStart (tool: Tool): Promise<number> {
         /*  determine plugin root (env var name differs per tool)  */
@@ -243,44 +320,14 @@ export default class HookCommand {
         const fileStyle = path.join(pluginRoot, "output-styles", "ase-terse.md")
 
         /*  read external files  */
-        let pkg:   string
-        let md:    string
-        let style: string
-        try {
-            pkg = fs.readFileSync(filePkg, "utf8")
-        }
-        catch (err) {
-            throw new Error(`failed to read plugin manifest: ${filePkg}`, { cause: err })
-        }
-        try {
-            md = fs.readFileSync(fileMd, "utf8")
-        }
-        catch (err) {
-            throw new Error(`failed to read constitution file: ${fileMd}`, { cause: err })
-        }
-        try {
-            style = fs.readFileSync(fileStyle, "utf8")
-        }
-        catch (err) {
-            throw new Error(`failed to read output style file: ${fileStyle}`, { cause: err })
-        }
+        const pkg   = this.readPluginFile(filePkg,   "plugin manifest")
+        const md    = this.readPluginFile(fileMd,    "constitution file")
+        const style = this.readPluginFile(fileStyle, "output style file")
 
         /*  determine own version  */
         const pkgObj = this.parseJSON(pkg, v.object({ version: v.optional(v.string()) }))
         const versionCurrentPlugin = pkgObj.version ?? ""
-        const versionCurrentTool   = Version.current()
-        const versionLatestTool    = await Version.latest()
-
-        /*  sanity check situation  */
-        const versionHints: string[] = []
-        if (versionCurrentPlugin !== versionCurrentTool)
-            versionHints.push("**WARNING:** version *mismatch*: " +
-                `tool: **${versionCurrentTool}**, plugin: **${versionCurrentPlugin}**`)
-        if (versionCurrentTool !== versionLatestTool)
-            versionHints.push(`**NOTICE:** *latest* version: **${versionLatestTool}**, please update!`)
-        if (process.env.ASE_SETUP_DEV !== undefined)
-            versionHints.push("**NOTICE:** *development* setup")
-        const versionHint = versionHints.length > 0 ? "(" + versionHints.join(", ") + ")" : ""
+        const versionHint          = await this.versionHint(versionCurrentPlugin)
 
         /*  read session information (Anthropic Claude Code CLI uses snake_case fields,
             GitHub Copilot CLI uses camelCase fields)  */
@@ -304,31 +351,20 @@ export default class HookCommand {
 
         /*  determine task id (only persist when scoped to a real session)  */
         const taskId = process.env.ASE_TASK_ID ?? "default"
-        cfg.lock(() => {
-            cfg.read()
-            if (hasSession) {
+        if (hasSession)
+            cfg.lock(() => {
+                cfg.read()
                 cfg.set("agent.task", taskId)
                 cfg.write()
-            }
-        })
+            })
+        else
+            cfg.read()
 
         /*  initialize agent activity status  */
         this.writeAgentStatus("ready")
 
         /*  determine project id  */
-        const cwd = input.cwd ?? process.cwd()
-        let projectDir = cwd
-        try {
-            const result = execaSync("git", [ "rev-parse", "--show-toplevel" ], {
-                stderr: "ignore", cwd
-            })
-            if (result.stdout.trim() !== "")
-                projectDir = result.stdout.trim()
-        }
-        catch {
-            /*  not inside a Git working tree  */
-        }
-        const projectId = path.basename(projectDir)
+        const projectId = this.determineProjectId(input.cwd ?? process.cwd(), cfg)
 
         /*  determine user id  */
         const userId = process.env.USER ?? process.env.LOGNAME ?? "unknown"
@@ -357,35 +393,44 @@ export default class HookCommand {
         /*  determine headless mode  */
         const headless = process.env.ASE_HEADLESS === "true" ? "true" : "false"
 
+        /*  publish the ASE session information and emit it as the hook output payload  */
+        const payload = this.publishSessionInfo(tool, {
+            version: versionCurrentPlugin, versionHint, pluginRoot, persona, guidance, userId, projectId,
+            boxing, lifecycle, specBasedir, specSchema, taskId, sessionId, headless
+        }, md, path.dirname(fileMd), style)
+        await writeStdout(JSON.stringify(payload))
+        return 0
+    }
+
+    /*  publish the ASE session information: export it to the shell commands and
+        render it, together with the constitution markdown, the output style, and
+        the deterministic ASE banner, into the "session-start" hook output payload  */
+    private publishSessionInfo (tool: Tool, info: SessionInfo, md: string, mdDir: string, style: string): Record<string, unknown> {
+        const {
+            version, versionHint, pluginRoot, persona, guidance, userId, projectId,
+            boxing, lifecycle, specBasedir, specSchema, taskId, sessionId, headless
+        } = info
+
         /*  provide ASE information to Anthropic Claude Code CLI shell commands
             (Anthropic Claude Code CLI only -- GitHub Copilot CLI has no equivalent mechanism)  */
-        const envFile = tool === "claude" ? (process.env.CLAUDE_ENV_FILE ?? "") : ""
-        if (envFile !== "") {
-            const script =
-                `export ASE_VERSION=${quote([ versionCurrentPlugin ])}\n` +
-                `export ASE_PLUGIN_ROOT=${quote([ pluginRoot ])}\n` +
-                `export ASE_USER_ID=${quote([ userId ])}\n` +
-                `export ASE_PROJECT_ID=${quote([ projectId ])}\n` +
-                `export ASE_PROJECT_BOXING=${quote([ boxing ])}\n` +
-                `export ASE_PROJECT_TASK_LIFECYCLE=${quote([ lifecycle ])}\n` +
-                `export ASE_SPEC_BASEDIR=${quote([ specBasedir ])}\n` +
-                `export ASE_SPEC_SCHEMA=${quote([ specSchema ])}\n` +
-                `export ASE_TASK_ID=${quote([ taskId ])}\n` +
-                `export ASE_SESSION_ID=${quote([ sessionId ])}\n` +
-                `export ASE_HEADLESS=${quote([ headless ])}\n` +
-                `export ASE_AGENT_TOOL=${quote([ tool ])}\n`
-            try {
-                fs.appendFileSync(envFile, script, "utf8")
-            }
-            catch (err: unknown) {
-                const message = err instanceof Error ? err.message : String(err)
-                this.log.write("warning", `hook: failed to write environment file: ${message}`)
-            }
-        }
+        this.writeEnvFile(tool, {
+            ASE_VERSION:                version,
+            ASE_PLUGIN_ROOT:            pluginRoot,
+            ASE_USER_ID:                userId,
+            ASE_PROJECT_ID:             projectId,
+            ASE_PROJECT_BOXING:         boxing,
+            ASE_PROJECT_TASK_LIFECYCLE: lifecycle,
+            ASE_SPEC_BASEDIR:           specBasedir,
+            ASE_SPEC_SCHEMA:            specSchema,
+            ASE_TASK_ID:                taskId,
+            ASE_SESSION_ID:             sessionId,
+            ASE_HEADLESS:               headless,
+            ASE_AGENT_TOOL:             tool
+        })
 
         /*  prepend ASE information to constitution markdown  */
-        md =
-            `<ase-version>${versionCurrentPlugin}</ase-version>\n` +
+        let context =
+            `<ase-version>${version}</ase-version>\n` +
             `<ase-version-hint>${versionHint}</ase-version-hint>\n` +
             `<ase-plugin-root>${pluginRoot}</ase-plugin-root>\n` +
             `<ase-persona-style>${persona}</ase-persona-style>\n` +
@@ -403,14 +448,14 @@ export default class HookCommand {
             "\n" + md
 
         /*  expand all @<file> references manually  */
-        md = this.expandReferences(md, path.dirname(fileMd))
+        context = this.expandReferences(context, mdDir)
 
         /*  append the output style to the constitution markdown (GitHub
             Copilot CLI and OpenAI Codex CLI only -- Anthropic Claude Code CLI
             applies the plugin output style natively), stripping the
             YAML frontmatter which only Anthropic Claude Code CLI understands  */
         if (tool !== "claude")
-            md += "\n" + style.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
+            context += "\n" + style.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "")
 
         /*  build the deterministic ASE banner (rendered directly by the
             agent harness, independent of any model decision, so it is
@@ -420,7 +465,7 @@ export default class HookCommand {
             the trailing help hint is emitted only if the guidance level asks for it  */
         const banner =
             "\n" +
-            `\n⧉ ASE: ⎈ version: ${versionCurrentPlugin}${versionHint !== "" ? " " + versionHint.replace(/\*/g, "") : ""}` +
+            `\n⧉ ASE: ⎈ version: ${version}${versionHint !== "" ? " " + versionHint.replace(/\*/g, "") : ""}` +
             `\n⧉ ASE: ※ user: ${userId}, ⚑ project: ${projectId}` +
             `\n⧉ ASE: ◉ task: ${taskId}, ⏻ session: ${sessionId}` +
             `\n⧉ ASE: ☯ persona: ${persona}, ▶ guidance: ${guidance}, ▢ boxing: ${boxing}` +
@@ -436,10 +481,10 @@ export default class HookCommand {
         const payload: Record<string, unknown> = tool !== "copilot" ? {
             "hookSpecificOutput": {
                 "hookEventName":     "SessionStart",
-                "additionalContext": md
+                "additionalContext": context
             }
         } : {
-            "additionalContext": md
+            "additionalContext": context
         }
 
         /*  attach the deterministic banner as a top-level "systemMessage"
@@ -449,9 +494,7 @@ export default class HookCommand {
             by letting the model emit the banner itself)  */
         if ((tool === "claude" || tool === "codex") && headless !== "true" && guidance !== "none")
             payload.systemMessage = banner
-
-        await writeStdout(JSON.stringify(payload))
-        return 0
+        return payload
     }
 
     /*  publish the agent activity marker to tmux as a per-pane user
@@ -490,7 +533,7 @@ export default class HookCommand {
         /*  determine session id  */
         const sessionId = await this.readSessionIdFromStdin()
 
-        /*  remove the session directory ~/.ase/session/<id> (only for a valid sessionId)  */
+        /*  remove the session directory <state-dir>/session/<id> (only for a valid sessionId)  */
         if (this.isValidSessionId(sessionId)) {
             const dir = path.join(this.sessionBaseDir(), sessionId)
             try {

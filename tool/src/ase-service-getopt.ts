@@ -80,6 +80,78 @@ const unquote = (s: string): string => {
     return out
 }
 
+/*  slice the verbatim trailing arguments from the raw input by skipping all
+    leading option tokens (and the separate value tokens they take), mirroring
+    the pass-through semantics of commander on the verbatim text  */
+const verbatimArgs = (input: string, flagTakesValue: Map<string, boolean>): string => {
+    const ranges = tokenizeRanges(input)
+    let idx = 0
+    while (idx < ranges.length) {
+        const tok = unquote(input.slice(ranges[idx].start, ranges[idx].end))
+        if (tok === "--") {
+            idx++
+            break
+        }
+        if (!tok.startsWith("-") || tok === "-")
+            break
+        idx++
+        if (flagTakesValue.get(tok) === true && idx < ranges.length)
+            idx++
+    }
+    return idx < ranges.length ? input.slice(ranges[idx].start) : ""
+}
+
+/*  convert a dashed long option name into its camel-cased commander key  */
+const camelKey = (long: string) => long.replace(/-(.)/g, (_, c: string) => c.toUpperCase())
+
+/*  parse the options specification into commander options, plus the
+    information needed for list validation and verbatim argument slicing  */
+const parseSpec = (spec: string) => {
+    const tokens         = spec.split(/\s+/).filter((e) => e.length > 0)
+    const re             = /^--([A-Za-z][A-Za-z0-9-]*)(?:\|-([A-Za-z]))?(?:=(\((.*)\)(\.\.\.)?|.*))?$/
+    const internals      = new Set<string>()
+    const flagTakesValue = new Map<string, boolean>()
+    const options:  Option[] = []
+    const listOpts: Array<{ long: string, choices: string[] }> = []
+    for (const tok of tokens) {
+        const m = re.exec(tok)
+        if (m === null)
+            throw new Error(`invalid spec token "${tok}"`)
+        const long       = m[1]
+        const short      = m[2] ?? null
+        const valuePart  = m[3] ?? null
+        const choicePart = m[4] ?? null
+        const listMarker = m[5] ?? null
+        const takesValue = valuePart !== null
+        const choices    = choicePart !== null ? choicePart.split("|") : null
+        const isList     = listMarker !== null
+        const dflt       = choices !== null ? choices[0] : valuePart
+        flagTakesValue.set(`--${long}`, takesValue)
+        if (short !== null)
+            flagTakesValue.set(`-${short}`, takesValue)
+        const head       = short !== null ? `-${short}, --${long}` : `--${long}`
+        const flags      = takesValue ? `${head} <value>` : head
+        const opt        = new Option(flags)
+        if (takesValue) {
+            if (choices !== null && !isList)
+                opt.choices(choices)
+            opt.default(dflt)
+        }
+        else
+            opt.default(false)
+        if (choices !== null && isList)
+            listOpts.push({ long, choices })
+        if (long.startsWith("int-")) {
+            /*  internal option: hide from usage help and remember
+                its camel-cased key for the info rendering  */
+            opt.hideHelp()
+            internals.add(camelKey(long))
+        }
+        options.push(opt)
+    }
+    return { options, internals, flagTakesValue, listOpts }
+}
+
 /*  MCP registration entry point for the option-parser tool  */
 export class GetoptMCP {
     register (mcp: McpServer): void {
@@ -101,9 +173,9 @@ export class GetoptMCP {
                 name: z.string()
                     .describe("Name of the caller (e.g. skill name), used in error messages"),
                 spec: z.string()
-                    .describe("Whitespace-separated option spec, e.g. `--foo/-f --bar --baz/-b=BAZ`"),
+                    .describe("Whitespace-separated option spec, e.g. `--foo|-f --bar --baz|-b=BAZ`"),
                 args: z.union([ z.string(), z.array(z.string()) ])
-                    .describe("Arguments to parse (string is split on whitespace)")
+                    .describe("Arguments to parse (string is split shell-like, honoring quotes)")
             }
         }, async (args) => {
             let helpText = ""
@@ -111,11 +183,11 @@ export class GetoptMCP {
                 /*  normalize args  */
                 const argsRaw    = typeof args.args === "string" ? args.args : null
                 const argsVec    = typeof args.args === "string" ?
-                    shParse(args.args)
-                        .map((e) => typeof e === "string" ? e :
-                            (e !== null && typeof e === "object" && "op" in e && e.op === "glob" ?
-                                (e as { pattern: string }).pattern : null))
-                        .filter((e): e is string => e !== null) :
+                    shParse(args.args, (key) => `$${key}`)
+                        .flatMap((e) => typeof e === "string" ? [ e ] :
+                            "pattern" in e ? [ e.pattern ] :
+                                "op" in e ? [ e.op ] :
+                                    `#${e.comment}`.split(/\s+/).filter((s) => s.length > 0)) :
                     args.args
 
                 /*  build a fresh commander program  */
@@ -129,49 +201,10 @@ export class GetoptMCP {
                         writeErr: () => {}
                     })
 
-                /*  tokenize spec and add one option per token  */
-                const tokens    = args.spec.split(/\s+/).filter((e) => e.length > 0)
-                const re        = /^--([A-Za-z][A-Za-z0-9-]*)(?:\|-([A-Za-z]))?(?:=(\((.*)\)(\.\.\.)?|.*))?$/
-                const camelKey  = (long: string) => long.replace(/-(.)/g, (_, c: string) => c.toUpperCase())
-                const internals = new Set<string>()
-                const flagTakesValue = new Map<string, boolean>()
-                const listOpts: Array<{ long: string, choices: string[] }> = []
-                for (const tok of tokens) {
-                    const m = re.exec(tok)
-                    if (m === null)
-                        throw new Error(`invalid spec token "${tok}"`)
-                    const long       = m[1]
-                    const short      = m[2] ?? null
-                    const valuePart  = m[3] ?? null
-                    const choicePart = m[4] ?? null
-                    const listMarker = m[5] ?? null
-                    const takesValue = valuePart !== null
-                    const choices    = choicePart !== null ? choicePart.split("|") : null
-                    const isList     = listMarker !== null
-                    const dflt       = choices !== null ? choices[0] : valuePart
-                    flagTakesValue.set(`--${long}`, takesValue)
-                    if (short !== null)
-                        flagTakesValue.set(`-${short}`, takesValue)
-                    const head       = short !== null ? `-${short}, --${long}` : `--${long}`
-                    const flags      = takesValue ? `${head} <value>` : head
-                    const opt        = new Option(flags)
-                    if (takesValue) {
-                        if (choices !== null && !isList)
-                            opt.choices(choices)
-                        opt.default(dflt)
-                    }
-                    else
-                        opt.default(false)
-                    if (choices !== null && isList)
-                        listOpts.push({ long, choices })
-                    if (long.startsWith("int-")) {
-                        /*  internal option: hide from usage help and remember
-                            its camel-cased key for the info rendering below  */
-                        opt.hideHelp()
-                        internals.add(camelKey(long))
-                    }
+                /*  parse spec and add its options  */
+                const { options, internals, flagTakesValue, listOpts } = parseSpec(args.spec)
+                for (const opt of options)
                     cmd.addOption(opt)
-                }
 
                 /*  parse args  */
                 cmd.parse(argsVec, { from: "user" })
@@ -196,38 +229,9 @@ export class GetoptMCP {
                 }
 
                 /*  compute verbatim trailing argument string  */
-                let argsVerbatim = ""
-                if (argsRaw !== null) {
-                    /*  tokenize raw input into [start,end) ranges, preserving quotes  */
-                    const ranges = tokenizeRanges(argsRaw)
-
-                    /*  walk the raw ranges, consuming leading option tokens (and any
-                        separate value tokens they take) until the first positional
-                        is reached, then slice the original input from there -- this
-                        mirrors commander's pass-through semantics while staying on
-                        the verbatim text and is robust against value-consuming
-                        options and shell-operator characters in the input  */
-                    let idx = 0
-                    while (idx < ranges.length) {
-                        const tok = unquote(argsRaw.slice(ranges[idx].start, ranges[idx].end))
-                        if (tok === "--") {
-                            idx++
-                            break
-                        }
-                        if (!tok.startsWith("-") || tok === "-")
-                            break
-                        let consumesNext = false
-                        if (/^--[^=]+$/.test(tok) || /^-[^-]$/.test(tok))
-                            consumesNext = flagTakesValue.get(tok) === true
-                        idx++
-                        if (consumesNext && idx < ranges.length)
-                            idx++
-                    }
-                    if (idx < ranges.length)
-                        argsVerbatim = argsRaw.slice(ranges[idx].start)
-                }
-                else
-                    argsVerbatim = shQuote(cmd.args)
+                const argsVerbatim = argsRaw !== null ?
+                    verbatimArgs(argsRaw, flagTakesValue) :
+                    shQuote(cmd.args)
 
                 /*  build markdown info rendering of parsed options  */
                 const opts = cmd.opts()

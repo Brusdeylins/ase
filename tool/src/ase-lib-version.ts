@@ -22,6 +22,10 @@ export default class Version {
             pkg,
             updateCheckInterval: 1000 * 60 * 60
         })
+
+        /*  re-persist the cached update information, as update-notifier consumes it on read  */
+        if (notifier.update !== undefined)
+            notifier.config?.set("update", notifier.update)
         return notifier.update?.latest ?? Version.current()
     }
 }

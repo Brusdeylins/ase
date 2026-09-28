@@ -79,7 +79,7 @@ resolution actually demands, and you *MUST* *NOT* call
 
     2.  <if condition="
             <problem-id/> is not set AND
-            <problem/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+            <problem/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
         ">
         Set <ase-task-id><problem/></ase-task-id> (set task id to problem)
         and <problem></problem> (set problem empty), call the
@@ -95,7 +95,7 @@ resolution actually demands, and you *MUST* *NOT* call
     3.  <if condition="
             <problem-id/> is not set AND
             <problem/> has the format `<id/>: <text/>` AND
-            <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+            <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
         ">
         Set <problem><text/></problem> and
         <ase-task-id><id/></ase-task-id> and call the `ase_task_id(id:
@@ -117,11 +117,17 @@ resolution actually demands, and you *MUST* *NOT* call
             <ase-task-id/> is equal `default` and
             <problem/> is not empty
         ">
-        Set <ase-task-id/> to a unique task id, derived from <problem/>,
-        which consists of two lower-case words concatenated with a
-        `-` character. Then call the `ase_task_id(id: "<ase-task-id/>",
-        session: "<ase-session-id/>")` tool from the `ase` MCP server to
-        implicitly switch the task. Do not output anything.
+        Call the `ase_task_newid(title: "<title/>", proposal:
+        "<proposal/>")` tool from the `ase` MCP server, where <title/> is
+        a brief title summarizing <problem/> and <proposal/> is a task id
+        derived from <problem/>, which consists of two lower-case words
+        concatenated with a `-` character, and set <ase-task-id/> to the
+        `id` field of its response -- the tool derives the id according
+        to the task id scheme of the project, so you *MUST* *NEVER*
+        assemble it yourself. Then call the `ase_task_id(id:
+        "<ase-task-id/>", session: "<ase-session-id/>")` tool from the
+        `ase` MCP server to implicitly switch the task. Do not output
+        anything.
         </if>
 
     6.  Report the task and problem with the following <template/>:
@@ -262,8 +268,13 @@ resolution actually demands, and you *MUST* *NOT* call
         <timestamp-modified/>, and <task-kind/> information.
 
     3.  You then *MUST* *save* the resulting plan content with the
-        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`
-        MCP tool call only -- *NEVER* by executing a shell command.
+        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>",
+        create: <create/>)` MCP tool call only -- *NEVER* by executing
+        a shell command -- where <create/> is `true` if <ase-task-id/>
+        was allocated via `ase_task_newid` in STEP 1, else `false`. If
+        this call fails because the task already exists (a concurrent
+        session took the same id), allocate and switch to a new
+        <ase-task-id/> exactly as in STEP 1, re-insert it, and save again.
 
     4.  If <problem-id/> is set (i.e. the <problem/> was retrieved from
         `ase_kv_get` in STEP 1.1 via key `ase-issue-<problem-id/>`),

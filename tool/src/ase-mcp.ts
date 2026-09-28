@@ -13,8 +13,8 @@ import { StdioServerTransport }          from "@modelcontextprotocol/sdk/server/
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import type { JSONRPCMessage }           from "@modelcontextprotocol/sdk/types.js"
 
-import type Log                 from "./ase-log.js"
-import { SERVICE_HOST as HOST, probe, loadServiceContext } from "./ase-service.js"
+import type Log                 from "./ase-lib-log.js"
+import { SERVICE_HOST as HOST, probe, isConnRefused, loadServiceContext } from "./ase-service.js"
 
 /*  CLI command "ase mcp"  */
 export default class MCPCommand {
@@ -173,8 +173,21 @@ export default class MCPCommand {
                 pending.push(msg)
                 return
             }
-            client.send(msg).catch((err: unknown) => {
-                this.log.write("error", `mcp: http send: ${this.asError(err).message}`)
+            const target = client
+            target.send(msg).catch((err: unknown) => {
+                if (!isConnRefused(err)) {
+                    this.log.write("error", `mcp: http send: ${this.asError(err).message}`)
+                    return
+                }
+
+                /*  service is gone: detach the dead client, recover, and re-send  */
+                if (client === target) {
+                    closedByUs.add(target)
+                    client = null
+                    target.close().catch(() => {})
+                    triggerReconnect("http connection refused")
+                }
+                sendToClient(msg)
             })
         }
 

@@ -9,13 +9,9 @@ import { z }              from "zod"
 
 /*  the reusable functionality  */
 export class Markdown {
-    /*  prepare Markdown for improved rendering by rewriting
-        unordered bullet paragraphs -- replacing the "-"/"*" bullet marker with
-        "◯" and splitting multi-line inline code spans into per-line single-line
-        spans (so each physical line carries its own closed backtick span).
-        Fenced code blocks (``` / ~~~) are detected line-wise and passed
-        through entirely verbatim, so neither the inline-span splitting nor the
-        bullet-marker rewriting ever touches their contents.  */
+    /*  prepare Markdown for improved rendering: rewrite escaped-backtick code
+        spans, split multi-line code spans into per-line spans, and replace
+        "-"/"*" bullet markers with "◯", passing fenced code blocks verbatim  */
     static prepare (text: string): string {
         if (typeof text !== "string")
             throw new Error("markdown: text must be a string")
@@ -96,9 +92,14 @@ export class Markdown {
         let j   = 0
         while (j < text.length) {
             const ch = text[j]
-            if (ch !== "`") {
+            if (ch === "\\" && text[j + 1] === "`") {
                 /*  literal backslash-escaped backtick *outside* any span
                     is left verbatim for later scanning  */
+                pre += "\\`"
+                j += 2
+                continue
+            }
+            if (ch !== "`") {
                 pre += ch
                 j++
                 continue
@@ -146,9 +147,15 @@ export class Markdown {
                 inner += c
                 k++
             }
-            if (!closed || !escaped) {
-                /*  not an escaped-backtick span: emit the opening run
-                    verbatim and continue scanning from just after it  */
+            if (closed && !escaped) {
+                /*  regular span: emit it verbatim and continue after it  */
+                pre += text.slice(j, k + open)
+                j = k + open
+                continue
+            }
+            if (!closed) {
+                /*  unmatched opening run: emit it verbatim and continue
+                    scanning from just after it  */
                 pre += "`".repeat(open)
                 j += open
                 continue

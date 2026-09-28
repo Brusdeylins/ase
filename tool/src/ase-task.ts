@@ -4,104 +4,59 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import path                                   from "node:path"
-import fs                                     from "node:fs"
+import path                                               from "node:path"
+import fs                                                 from "node:fs"
+import os                                                 from "node:os"
+import readline                                           from "node:readline/promises"
 
-import { Command }                            from "commander"
-import { execaSync }                          from "execa"
-import { DateTime }                           from "luxon"
-import picomatch                              from "picomatch"
-import { isScalar }                           from "yaml"
-import { z }                                  from "zod"
-import { LRUCache }                           from "lru-cache"
+import { Command }                                        from "commander"
+import { execaSync }                                      from "execa"
+import { isScalar }                                       from "yaml"
+import { z }                                              from "zod"
+import { LRUCache }                                       from "lru-cache"
+import type { McpServer }                                 from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import type { McpServer }                     from "@modelcontextprotocol/sdk/server/mcp.js"
+import type Log                                           from "./ase-lib-log.js"
+import { Config }                                         from "./ase-config-core.js"
+import { configSchema }                                   from "./ase-config-schema.js"
+import { parseScope, userStateDir }                       from "./ase-config-scope.js"
+import { Markdown }                                       from "./ase-service-markdown.js"
+import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
+import TaskStoreCommand, { storeSchema }                  from "./ase-task-store-server-cli.js"
+import { urlHost }                                        from "./ase-task-store-server-bind.js"
+import * as API                                           from "./ase-task-store-plugin-api.js"
+import * as Core                                          from "./ase-task-store-core.js"
+import * as Delegate                                      from "./ase-task-store-plugin-delegate.js"
+import * as TaskFormat                                    from "./ase-task-format.js"
+import type { TaskStoreClient }                           from "./ase-task-store-client.js"
+import { LocalTaskStoreClient, RemoteTaskStoreClient }    from "./ase-task-store-client.js"
 
-import type Log                               from "./ase-log.js"
-import { Config, configSchema, parseScope }   from "./ase-config.js"
-import { Markdown }                           from "./ase-markdown.js"
-import { readStdin, writeStdout }             from "./ase-stdio.js"
+/*  a configuration value together with the label of its supplying scope  */
+type ScopedValue = { value: string, scope: string }
 
-/*  a task lifecycle model: the lifecycle states a task plan can be in
-    (the accepted values of its "Status:" frontmatter key), the initial
-    state an absent key reads as, the "finished" states, and the allowed
-    state transitions (from each state to its successor states)  */
-export type TaskLifecycle = {
-    name: string, states: string[], initial: string, finished: string[],
-    transitions: Record<string, string[]>
+/*  the task store specification of the current project  */
+type TaskStoreSpec = {
+    projectId: string, projectIdExplicit: boolean, store: ScopedValue, token: ScopedValue,
+    lifecycle: TaskFormat.TaskLifecycle, idscheme: string
 }
 
-/*  the pre-defined task lifecycle models (see "project.task.lifecycle")  */
-export const taskLifecycles: Record<string, TaskLifecycle> = {
-    solo: {
-        name:     "solo",
-        states:   [ "OPEN", "SHELVED", "CLOSED", "CANCELLED" ],
-        initial:  "OPEN",
-        finished: [ "CLOSED", "CANCELLED" ],
-        transitions: {
-            OPEN:         [ "SHELVED", "CLOSED", "CANCELLED" ],
-            SHELVED:      [ "OPEN", "CANCELLED" ],
-            CLOSED:       [],
-            CANCELLED:    []
-        }
-    },
-    team: {
-        name:     "team",
-        states:   [ "PLANNING", "SHELVED", "IMPLEMENTING", "STALLED", "IMPLEMENTED", "CANCELLED" ],
-        initial:  "PLANNING",
-        finished: [ "IMPLEMENTED", "CANCELLED" ],
-        transitions: {
-            PLANNING:     [ "SHELVED", "IMPLEMENTING", "CANCELLED" ],
-            SHELVED:      [ "PLANNING", "CANCELLED" ],
-            IMPLEMENTING: [ "PLANNING", "STALLED", "IMPLEMENTED", "CANCELLED" ],
-            STALLED:      [ "IMPLEMENTING", "CANCELLED" ],
-            IMPLEMENTED:  [],
-            CANCELLED:    []
-        }
-    },
-    enterprise: {
-        name:     "enterprise",
-        states:   [ "DRAFTED", "SHELVED", "PLANNING", "PLANNED", "STALLED", "IMPLEMENTING",
-            "IMPLEMENTED", "DECLINED", "APPROVING", "APPROVED", "DEFERRED", "INTEGRATING",
-            "INTEGRATED", "CANCELLED" ],
-        initial:  "DRAFTED",
-        finished: [ "INTEGRATED", "CANCELLED" ],
-        transitions: {
-            DRAFTED:      [ "SHELVED", "PLANNING", "CANCELLED" ],
-            SHELVED:      [ "DRAFTED", "CANCELLED" ],
-            PLANNING:     [ "DRAFTED", "SHELVED", "PLANNED", "CANCELLED" ],
-            PLANNED:      [ "STALLED", "IMPLEMENTING", "CANCELLED" ],
-            STALLED:      [ "PLANNED", "CANCELLED" ],
-            IMPLEMENTING: [ "DRAFTED", "PLANNED", "STALLED", "IMPLEMENTED", "CANCELLED" ],
-            IMPLEMENTED:  [ "DECLINED", "APPROVING", "CANCELLED" ],
-            DECLINED:     [ "IMPLEMENTED", "CANCELLED" ],
-            APPROVING:    [ "DRAFTED", "PLANNED", "IMPLEMENTED", "DECLINED", "APPROVED", "CANCELLED" ],
-            APPROVED:     [ "DEFERRED", "INTEGRATING", "CANCELLED" ],
-            DEFERRED:     [ "APPROVED", "CANCELLED" ],
-            INTEGRATING:  [ "DRAFTED", "PLANNED", "APPROVED", "DEFERRED", "INTEGRATED", "CANCELLED" ],
-            INTEGRATED:   [],
-            CANCELLED:    []
-        }
-    }
-}
-
-/*  reusable functionality: persisted task plans under
-    <project>/<basedir>/TASK-<id>.md (driven by the
-    "project.artifact.task.{basedir,files}" configuration)  */
+/*  reusable functionality: the task plans of the current project,
+    forwarded to the task store selected by the "project.task.store"
+    configuration URL  */
 export class Task {
     /*  validate the task id to keep it safe as a filename component  */
     static validateId (id: string): void {
         if (typeof id !== "string" || id.length === 0)
             throw new Error("task: id must be a non-empty string")
-        if (!/^[A-Za-z0-9_-]+$/.test(id))
-            throw new Error("task: id must match [A-Za-z0-9_-]+")
+        if (!TaskFormat.TASK_ID_RE.test(id))
+            throw new Error("task: id must match [A-Za-z0-9#][A-Za-z0-9#_-]*")
     }
 
     /*  validate the session id to keep it safe as a config scope term  */
     static validateSession (session: string): void {
         if (typeof session !== "string" || session.length === 0)
             throw new Error("task: session must be a non-empty string")
-        if (!/^[A-Za-z0-9_-]+$/.test(session))
+        if (!TaskFormat.ID_RE.test(session))
             throw new Error("task: session must match [A-Za-z0-9_-]+")
     }
 
@@ -131,16 +86,34 @@ export class Task {
         return root
     }
 
-    /*  cached task storage specification (TTL-bounded, mirroring the project
-        root cache, as each read parses the whole layered YAML config chain)  */
-    private static specCache = new LRUCache<string, { basedir: string, files: string, lifecycle: TaskLifecycle }>({ max: 4, ttl: 2 * 1000 })
+    /*  derive the fallback project id from the sanitized basename of a
+        project root (shared by task store, hook, and service)  */
+    static projectIdOf (root: string): string {
+        return path.basename(root).replace(/[^A-Za-z0-9_-]/g, "_") || "project"
+    }
 
-    /*  read the configured "basedir" anchor and "files" miniglob spec for
-        task storage plus the task "lifecycle" model; "basedir" is
-        project-root-relative (POSIX, defaults to ".ase/task"), "files"
-        constrains the task filenames (defaults to "*.md"), and
-        "lifecycle" selects the task lifecycle model (defaults to "solo")  */
-    private static spec (log: Log): { basedir: string, files: string, lifecycle: TaskLifecycle } {
+    /*  cached task store specification (TTL-bounded, mirroring the project
+        root cache, as each read parses the whole layered YAML config chain)  */
+    private static specCache = new LRUCache<string, TaskStoreSpec>({ max: 4, ttl: 2 * 1000 })
+
+    /*  the configuration files the task store specification is read from
+        (for read-only consumers watching them), and the invalidation of the
+        cached specification after a change of them  */
+    static configFiles (log: Log): string[] {
+        const cfg = new Config("config", configSchema, log)
+        cfg.read()
+        return cfg.files()
+    }
+    static invalidate (): void {
+        Task.specCache.clear()
+    }
+
+    /*  read the "project.id" of the project (defaulting to the sanitized
+        basename of the project root), the "project.task.store" URL (defaulting to
+        "ase:./.ase/task") and "project.task.token" (both with their
+        supplying scope), the "project.task.lifecycle" model (defaulting
+        to "solo"), and the "project.task.idscheme" scheme (defaulting to "slug")  */
+    private static spec (log: Log): TaskStoreSpec {
         const root   = Task.projectRoot()
         const cached = Task.specCache.get(root)
         if (cached !== undefined)
@@ -153,441 +126,502 @@ export class Task {
                 return ""
             return String(isScalar(val) ? val.value : val)
         }
-        const basedir = (read("project.artifact.task.basedir") || ".ase/task")
-            .replace(/\\/g, "/").replace(/^\/+|\/+$/g, "")
-        if (basedir.split("/").includes(".."))
-            throw new Error(`task: configured "basedir" "${basedir}" must not escape the project root`)
-        const files   = read("project.artifact.task.files") || "*.md"
-        const name    = read("project.task.lifecycle") || "solo"
-        const lifecycle = taskLifecycles[name]
+        const scoped = (key: string): ScopedValue => {
+            const entry = cfg.getScoped(key)
+            if (entry === undefined)
+                return { value: "", scope: "" }
+            return {
+                value: String(isScalar(entry.value) ? entry.value.value : entry.value),
+                scope: Config.scopeLabel(entry.scope)
+            }
+        }
+        const explicit  = read("project.id")
+        if (explicit !== "" && !TaskFormat.ID_RE.test(explicit))
+            throw new Error(`task: configured "project.id" "${explicit}" must match [A-Za-z0-9_-]+`)
+
+        /*  sanitize a basename-derived project id, as it only keys the local
+            solo-mode store (a remote store requires an explicit one anyway)  */
+        const projectId = explicit || Task.projectIdOf(root)
+        const store    = scoped("project.task.store")
+        store.value   ||= "ase:./.ase/task"
+        const token     = scoped("project.task.token")
+        const name      = read("project.task.lifecycle") || "solo"
+        const lifecycle = TaskFormat.taskLifecycles[name]
         if (lifecycle === undefined)
             throw new Error(`task: configured "lifecycle" "${name}" must be one of: ` +
-                Object.keys(taskLifecycles).join(", "))
-        const result  = { basedir, files, lifecycle }
+                Object.keys(TaskFormat.taskLifecycles).join(", "))
+        const idscheme  = read("project.task.idscheme") || "slug"
+        const error     = TaskFormat.checkIdScheme(idscheme)
+        if (error !== "")
+            throw new Error(`task: configured "project.task.idscheme": ${error}`)
+        const result = { projectId, projectIdExplicit: explicit !== "", store, token, lifecycle, idscheme }
         Task.specCache.set(root, result)
         return result
     }
 
-    /*  resolve the configured task lifecycle model  */
-    static lifecycle (log: Log): TaskLifecycle {
-        return Task.spec(log).lifecycle
+    /*  resolve the effective task lifecycle model: the configured one for a
+        local task store, the one of the registered project for a remote one  */
+    static lifecycle (log: Log): Promise<TaskFormat.TaskLifecycle> {
+        return Task.with(log, (client) => Promise.resolve(client.lifecycle))
     }
 
-    /*  resolve the on-disk base directory for task storage  */
-    static baseDir (log: Log): string {
-        return path.join(Task.projectRoot(), Task.spec(log).basedir)
+    /*  set the lifecycle model of the project in the task store (for a local
+        task store via "project.task.lifecycle" on scope "project"); returns
+        the name of the previous lifecycle model  */
+    static async setLifecycle (log: Log, name: string): Promise<string> {
+        if (TaskFormat.taskLifecycles[name] === undefined)
+            throw new Error(`task: invalid lifecycle model "${name}" ` +
+                `(expected one of: ${Object.keys(TaskFormat.taskLifecycles).join(", ")})`)
+        return Task.with(log, async (client) => {
+            const from = client.lifecycle.name
+
+            /*  invalidate the cached specification, as a local
+                task store changed its configuration in any case  */
+            try {
+                await client.setLifecycle(name)
+            }
+            finally {
+                Task.invalidate()
+            }
+            return from
+        })
     }
 
-    /*  ensure a task id's "TASK-<id>.md" filename satisfies
-        the configured "files" miniglob  */
-    private static enforceFiles (log: Log, id: string): void {
-        const { files } = Task.spec(log)
-        const filename  = `TASK-${id}.md`
-        if (!picomatch(files, { dot: true })(filename))
-            throw new Error(`task: id "${id}" yields filename "${filename}" ` +
-                `which does not match the configured "files" glob "${files}"`)
+    /*  resolve the effective task id scheme: the configured one for a
+        local task store, the one of the registered project for a remote one  */
+    static idScheme (log: Log): Promise<string> {
+        return Task.with(log, (client) => Promise.resolve(client.idscheme))
     }
 
-    /*  resolve the on-disk path for a given task id; as a side effect,
-        eagerly migrate any legacy <basedir>/<id>/plan.md files to the
-        current <basedir>/TASK-<id>.md layout ("migrateAll" is a cheap
-        no-op once the store is migrated)  */
-    static path (log: Log, id: string): string {
+    /*  set the task id scheme of the project in the task store (for a local
+        task store via "project.task.idscheme" on scope "project"); returns the
+        previous task id scheme  */
+    static async setIdScheme (log: Log, spec: string): Promise<string> {
+        const error = TaskFormat.checkIdScheme(spec)
+        if (error !== "")
+            throw new Error(`task: ${error}`)
+        return Task.with(log, async (client) => {
+            const from = client.idscheme
+            try {
+                await client.setIdScheme(spec)
+            }
+            finally {
+                Task.invalidate()
+            }
+            return from
+        })
+    }
+
+    /*  allocate the next free task id according to the effective task id scheme,
+        derived from a title (scheme "slug") or a proposed id (scheme "any"),
+        by searching all existing task ids plus the additionally taken ones and,
+        for scheme "seq", the high-water mark of the removed and allocated ids
+        (reserving the allocated one); returns the scheme, the id, and the
+        regular expression matching the ids conforming to the scheme  */
+    static async newId (log: Log, title = "", proposal = "", taken: string[] = []): Promise<{ scheme: string, id: string, match: string }> {
+        return Task.with(log, async (client) => {
+            try {
+                const { scheme, id } = await client.newId(title, proposal, taken)
+                return { scheme, id, match: TaskFormat.parseIdScheme(scheme).match }
+            }
+            catch (err) {
+                if (err instanceof Core.Problem && err.status === 422)
+                    throw new Error(`task: ${err.message}`, { cause: err })
+                throw err
+            }
+        })
+    }
+
+    /*  determine whether a WHATWG URL hostname denotes the loopback interface  */
+    private static isLoopback (hostname: string): boolean {
+        return /^(?:127(?:\.\d{1,3}){3}|\[::1\]|localhost)$/i.test(hostname)
+    }
+
+    /*  determine whether the task store is a remote one (otherwise it
+        is operated in-process and follows the local configuration)  */
+    static isRemote (log: Log): boolean {
+        return /^ases?:\/\//.test(Task.spec(log).store.value)
+    }
+
+    /*  resolve the bearer token of a remote task store: the token embedded
+        in the URL, else $ASE_TASK_STORE_TOKEN, else "project.task.token",
+        else the token of the locally started task store server (only if the
+        URL addresses it); a token potentially committed or redirected is warned about  */
+    private static token (log: Log, spec: TaskStoreSpec, embedded: string | undefined, url: URL): string {
+        const repoScoped = spec.store.scope === "project" || spec.store.scope.startsWith("task:")
+        if (embedded !== undefined) {
+            if (repoScoped)
+                log.write("warning", `task: token embedded in "project.task.store" URL on scope "${spec.store.scope}" ` +
+                    "might be committed -- use $ASE_TASK_STORE_TOKEN or \"project.task.token\" on scope \"user\" instead")
+            return embedded
+        }
+
+        /*  warn about a user token being sent to a non-loopback host selected on
+            a repository-supplied scope, as a cloned repository could redirect it this way  */
+        const redirected = () => {
+            if (repoScoped && !Task.isLoopback(url.hostname))
+                log.write("warning", `task: sending token to non-loopback host "${url.host}" selected by ` +
+                    `"project.task.store" on scope "${spec.store.scope}" -- verify you trust this host` +
+                    (url.protocol === "ase:" ? " (token is transmitted in plaintext)" : ""))
+        }
+        const env = process.env.ASE_TASK_STORE_TOKEN
+        if (env !== undefined && env !== "") {
+            redirected()
+            return env
+        }
+        if (spec.token.value !== "") {
+            if (spec.token.scope !== "user")
+                log.write("warning", `task: "project.task.token" found on scope "${spec.token.scope}" ` +
+                    "-- configure it on scope \"user\" only")
+            redirected()
+            return spec.token.value
+        }
+
+        /*  fall back to the token of the locally started task store server,
+            but only if the URL addresses exactly this server  */
+        const cfg = new Config("store", storeSchema, log, parseScope("user"))
+        cfg.read()
+        const scalar = (key: string): string => {
+            const val = cfg.get(key)
+            return val === undefined ? "" : String(isScalar(val) ? val.value : val)
+        }
+        const tok      = scalar("token")
+        const address  = scalar("address") || "127.0.0.1"
+        const wildcard = address === "0.0.0.0" || address === "::"
+        const host     = urlHost(address).toLowerCase()
+        const loopback = Task.isLoopback(url.hostname)
+        if (tok !== "" && scalar("port") === url.port
+            && (url.hostname.toLowerCase() === host || (loopback && (wildcard || Task.isLoopback(host)))))
+            return tok
+        throw new Error(`task: no token for task store "${spec.store.value}" ` +
+            "(set $ASE_TASK_STORE_TOKEN, \"project.task.token\" on scope \"user\", or \"/<token>\" in the URL)")
+    }
+
+    /*  warn about task plans being sent to a GitHub repository selected on a repository-supplied
+        scope, once per project root and repository only (persisted across processes), so the
+        warning re-appears only if the repository changes  */
+    private static warnRepository (log: Log, repo: string, scope: string): void {
+        const file = path.join(userStateDir(), "task-github.json")
+        const root = Task.projectRoot()
+        let seen: Record<string, string> = {}
+        try {
+            const data: unknown = JSON.parse(fs.readFileSync(file, "utf8"))
+            if (typeof data === "object" && data !== null && !Array.isArray(data))
+                seen = data as Record<string, string>
+        }
+        catch {
+            /*  no (valid) state yet  */
+        }
+        if (seen[root] === repo)
+            return
+        log.write("warning", `task: sending task plans to GitHub repository "${repo}" selected by ` +
+            `"project.task.store" on scope "${scope}" -- verify you trust this repository ` +
+            "(reported once per repository only)")
+        seen[root] = repo
+        try {
+            fs.mkdirSync(path.dirname(file), { recursive: true })
+            fs.writeFileSync(file, JSON.stringify(seen, null, 4) + "\n", "utf8")
+        }
+        catch {
+            /*  best-effort only (the warning then repeats)  */
+        }
+    }
+
+    /*  create the (unopened) client of the configured task store: the
+        URL "ase://<addr>:<port>[/<token>]" selects a remote task store
+        server via HTTP, "ases://<addr>:<port>[/<token>][?insecure]" via
+        HTTPS (optionally without certificate verification),
+        "ase:<path>" the built-in storage plugin in-process on <path>
+        (resolved relative to the project root), and "github:<owner>/<repo>"
+        the built-in GitHub storage plugin in-process on the repository  */
+    private static client (log: Log): TaskStoreClient {
+        const spec = Task.spec(log)
+        const { projectId, store, lifecycle, idscheme } = spec
+        const unsupported = () => new Error(`task: unsupported "project.task.store" URL "${store.value}" ` +
+            "(expected: \"ase:<path>\", \"ase://<addr>:<port>[/<token>]\", " +
+            "\"ases://<addr>:<port>[/<token>][?insecure]\", or \"github:<owner>/<repo>\")")
+        let client: TaskStoreClient
+        let m: RegExpExecArray | null
+        if ((m = /^(ases?):\/\//.exec(store.value)) !== null) {
+            /*  parse via WHATWG URL, as it supports bracketed IPv6 addresses (e.g. "[::1]")
+                and retains the brackets in "hostname" for direct reuse in the HTTP URL  */
+            const secure = m[1] === "ases"
+            let url: URL
+            try {
+                url = new URL(store.value)
+            }
+            catch (_err: unknown) {
+                throw unsupported()
+            }
+            if (url.hostname === "" || url.port === "" || url.username !== "" || url.password !== ""
+                || url.hash !== "" || (url.search !== "" && !(secure && url.search === "?insecure"))
+                || (m = /^(?:\/([^/]+))?$/.exec(url.pathname)) === null)
+                throw unsupported()
+            const embedded = m[1] !== undefined ? decodeURIComponent(m[1]) : undefined
+
+            /*  require an explicit project id, as a basename-derived one
+                likely collides with unrelated projects on a shared server  */
+            if (!spec.projectIdExplicit)
+                throw new Error(`task: remote task store "${url.protocol}//${url.host}" requires an explicit "project.id" ` +
+                    `(set it via "ase config --scope project set project.id ${projectId}")`)
+            client = new RemoteTaskStoreClient(projectId, lifecycle, idscheme, log,
+                `${secure ? "https" : "http"}://${url.hostname}:${url.port}`,
+                Task.token(log, spec, embedded, url), url.search === "?insecure")
+        }
+        else if ((m = /^ase:(.+)$/.exec(store.value)) !== null) {
+            const root    = Task.projectRoot()
+            const basedir = path.resolve(root, m[1])
+
+            /*  confine a base directory selected by a repository-supplied scope
+                ("project" or "task:<id>") to the project root (also through
+                symlinks), as a cloned repository could otherwise direct task
+                writes anywhere  */
+            if (store.scope === "project" || store.scope.startsWith("task:")) {
+                let existing = basedir
+                while (!fs.existsSync(existing) && path.dirname(existing) !== existing)
+                    existing = path.dirname(existing)
+                const real = path.join(fs.realpathSync(existing), path.relative(existing, basedir))
+                const rel  = path.relative(fs.realpathSync(root), real)
+                if (rel === ".." || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel))
+                    throw new Error(`task: "project.task.store" "${store.value}" on scope "${store.scope}" ` +
+                        "must not escape the project root (configure it on scope \"user\" instead)")
+            }
+            client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, {
+                plugin:  Delegate.BUILTIN_PLUGIN,
+                options: { basedir, solo: true, lifecycle: lifecycle.name, idscheme },
+                key:     basedir
+            }, log)
+        }
+        else if ((m = /^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/.exec(store.value)) !== null) {
+            /*  warn about task plans being sent to a repository selected on a repository-supplied
+                scope, and use the token of "project.task.token", else $GITHUB_TOKEN resp. $GH_TOKEN  */
+            if (store.scope === "project" || store.scope.startsWith("task:"))
+                Task.warnRepository(log, m[1], store.scope)
+            if (spec.token.value !== "" && spec.token.scope !== "user")
+                log.write("warning", `task: "project.task.token" found on scope "${spec.token.scope}" ` +
+                    "-- configure it on scope \"user\" only")
+            client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, {
+                plugin:  "github",
+                options: { repos: { [projectId]: m[1] }, ...(spec.token.value !== "" ? { token: spec.token.value } : {}) },
+                key:     `${store.value}#${projectId}`
+            }, log)
+        }
+        else
+            throw unsupported()
+        return client
+    }
+
+    /*  run an operation on the opened client of the configured task store  */
+    private static async with<T> (log: Log, op: (client: TaskStoreClient) => Promise<T>): Promise<T> {
+        const client = Task.client(log)
+        try {
+            await client.open()
+            return await op(client)
+        }
+        finally {
+            await client.close()
+        }
+    }
+
+    /*  the textual form of a plan, or the minimal plan of a task id  */
+    static format (plan: API.TaskPlan): string {
+        return TaskFormat.formatTaskText(plan)
+    }
+    static minimal (id: string): API.TaskPlan {
+        return { header: { Type: TaskFormat.TASK_TYPE, Id: id }, body: "", attachment: [] }
+    }
+
+    /*  load a task as text, normalized into the current Markdown
+        frontmatter shape; returns empty string if no task exists  */
+    static async load (log: Log, id: string): Promise<string> {
         Task.validateId(id)
-        Task.enforceFiles(log, id)
-        Task.migrateAll(log)
-        return path.join(Task.baseDir(log), `TASK-${id}.md`)
+        const plan = await Task.with(log, (client) => client.load(id))
+        return plan === null ? "" : TaskFormat.formatTaskText(plan)
     }
 
-    /*  migrate all legacy <basedir>/<id>/plan.md task files to the current
-        <basedir>/TASK-<id>.md layout; an existing TASK-<id>.md is never
-        overwritten; the legacy <id>/ directory is removed only if it is
-        empty afterwards; returns the migrated task ids in lexicographic order  */
-    static migrateAll (log: Log): string[] {
-        const dir = Task.baseDir(log)
-        if (!fs.existsSync(dir))
-            return []
-        const migrated: string[] = []
-        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-            if (!entry.isDirectory() || !/^[A-Za-z0-9_-]+$/.test(entry.name))
-                continue
-            const id      = entry.name
-            const oldFile = path.join(dir, id, "plan.md")
-            const newFile = path.join(dir, `TASK-${id}.md`)
-            if (!fs.existsSync(oldFile))
-                continue
-            if (fs.existsSync(newFile)) {
-                log.write("warning", `task: not migrating "${id}": target "TASK-${id}.md" already exists`)
-                continue
-            }
-            fs.renameSync(oldFile, newFile)
-
-            /*  drop the legacy directory, but only if it is really empty  */
-            const legacyDir = path.dirname(oldFile)
-            if (fs.readdirSync(legacyDir).length === 0)
-                fs.rmdirSync(legacyDir)
-            else
-                log.write("warning", `task: keeping non-empty legacy directory "${legacyDir}"`)
-            migrated.push(id)
-        }
-        migrated.sort((a, b) => a.localeCompare(b))
-        return migrated
+    /*  load a task as text together with its entity tag (for a conditional
+        save); returns null if no task exists  */
+    static async source (log: Log, id: string): Promise<{ text: string, tag: string } | null> {
+        Task.validateId(id)
+        const plan = await Task.with(log, (client) => client.load(id))
+        return plan === null ? null : { text: TaskFormat.formatTaskText(plan), tag: Core.taskTag(plan) }
     }
 
-    /*  the legacy task plan header lines, each mapped onto the
-        frontmatter key which superseded it  */
-    private static legacy = [
-        { key: "Created",  re: /^⎈[ \t]+Created:[ \t]*(.*)$/m  },
-        { key: "Modified", re: /^⚙[ \t]+Modified:[ \t]*(.*)$/m },
-        { key: "Kind",     re: /^☯[ \t]+Kind:[ \t]*(.*)$/m     }
-    ]
-
-    /*  the frontmatter keys of the current task plan format, in their
-        canonical order (see "ase-format-task.md")  */
-    private static frontKeys = [
-        "Type", "Id", "Created", "Modified", "Group", "Phase",
-        "After", "Status", "Kind", "Tags", "Branch"
-    ]
-
-    /*  the legacy lifecycle states of the pre-lifecycle-model task plan
-        format, each mapped onto its candidate states in the current models
-        (first candidate present in the configured model wins, otherwise
-        the initial state of the model is used)  */
-    private static legacyStates: Record<string, string[]> = {
-        DRAFTED:   [],
-        REJECTED:  [],
-        APPROVED:  [ "PLANNED", "PLANNING", "OPEN" ],
-        DEFERRED:  [ "SHELVED" ],
-        STARTED:   [ "IMPLEMENTING", "OPEN" ],
-        BLOCKED:   [ "STALLED", "OPEN" ],
-        COMPLETED: [ "INTEGRATED", "IMPLEMENTED", "CLOSED" ],
-        CANCELLED: [ "CANCELLED" ]
-    }
-
-    /*  render a single frontmatter line with a column-aligned key  */
-    private static frontLine (key: string, value: string): string {
-        return (key + ":").padEnd(10) + value
-    }
-
-    /*  parse the frontmatter block of a plan into its key/value pairs,
-        keeping any non-key lines for a verbatim pass-through, plus the
-        length of the block; returns null if the plan carries no block  */
-    private static parseFront (text: string): { keys: Map<string, string>, other: string[], length: number } | null {
-        const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
-        if (fm === null)
-            return null
-        const keys  = new Map<string, string>()
-        const other = [] as string[]
-        for (const line of fm[1].split(/\r?\n/)) {
-            const m = /^([A-Za-z]+):[ \t]*(.*?)[ \t]*$/.exec(line)
-            if (m !== null)
-                keys.set(m[1], m[2])
-            else if (line !== "")
-                other.push(line)
-        }
-        return { keys, other, length: fm[0].length }
-    }
-
-    /*  re-assemble a frontmatter block with the keys in canonical order
-        (unknown keys and non-key lines trailing) and the values re-aligned  */
-    private static assembleFront (keys: Map<string, string>, other: string[]): string {
-        const front = Task.frontKeys
-            .filter((key) => keys.has(key))
-            .map((key) => Task.frontLine(key, keys.get(key)!))
-        for (const [ key, value ] of keys)
-            if (!Task.frontKeys.includes(key))
-                front.push(Task.frontLine(key, value))
-        return `---\n${[ ...front, ...other ].join("\n")}\n---\n`
-    }
-
-    /*  normalize a legacy task plan into the current Markdown frontmatter
-        shape, so every consumer sees a single plan shape only: a plan
-        carrying its metadata in the "#   TASK <id>: <title>" heading and
-        the "⎈"/"⚙"/"☯" glyph header lines is first lifted into a
-        frontmatter block; then the frontmatter block is migrated by
-        inserting the mandatory "Type:" key, mapping a legacy "Status:" value
-        onto the configured lifecycle model, rewriting the legacy "Properties:"
-        key into "Tags:", and re-ordering and re-aligning the keys; any content
-        without a frontmatter block or task heading is passed through
-        verbatim; absent optional keys are never materialized, as they read
-        as their default value  */
-    static normalize (id: string, text: string, lifecycle: TaskLifecycle): string {
-        if (text === "")
-            return text
-
-        /*  lift the heading and the glyph header lines into their frontmatter
-            keys, with the task id taken from the authoritative filename-derived id  */
-        if (!/^---\r?\n/.test(text)) {
-            const heading = /^#[ \t]+TASK(?:[ \t]+[A-Za-z0-9_-]+)?[ \t]*:[ \t]*(.*)$/m.exec(text)
-            if (heading === null)
-                return text
-            let body    = text.replace(heading[0], "")
-            const front = [ Task.frontLine("Id", id) ]
-            for (const legacy of Task.legacy) {
-                const m = legacy.re.exec(body)
-                if (m === null)
-                    continue
-                front.push(Task.frontLine(legacy.key, m[1].trim()))
-                body = body.replace(m[0], "")
-            }
-            text = `---\n${front.join("\n")}\n---\n\n` +
-                `#   TASK: ${heading[1].trim()}\n\n` +
-                body.replace(/^(?:[ \t]*\r?\n)+/, "")
-        }
-
-        /*  parse the frontmatter block into its key/value pairs  */
-        const fm = Task.parseFront(text)
-        if (fm === null)
-            return text
-        const keys = fm.keys
-
-        /*  a plan is legacy if it lacks the mandatory "Type:" key (or still
-            carries the "Properties:" key), decided before "Type:" is inserted  */
-        const isLegacy = !keys.has("Type") || keys.has("Properties")
-
-        /*  insert the mandatory "Type:" key  */
-        if (!keys.has("Type"))
-            keys.set("Type", "text/vnd.ase.task")
-
-        /*  map a legacy "Status:" value unconditionally onto the configured
-            lifecycle model, as legacy values like "APPROVED" or "DEFERRED"
-            carry a different meaning than their same-named current states  */
-        const status = keys.get("Status")
-        if (isLegacy && status !== undefined && Object.hasOwn(Task.legacyStates, status)) {
-            const state = Task.legacyStates[status].find((state) => lifecycle.states.includes(state))
-            keys.set("Status", state ?? lifecycle.initial)
-        }
-
-        /*  rewrite the legacy "Properties:" key into "Tags:", where the
-            legacy "grilled" property (a fully grilled plan) becomes one
-            "grilled:" tag per section and any other property a plain tag  */
-        const properties = keys.get("Properties")
-        if (properties !== undefined) {
-            keys.delete("Properties")
-            const tags = properties.split(",")
-                .map((token) => token.trim())
-                .filter((token) => token !== "" && token.toLowerCase() !== "none")
-                .flatMap((token) => token.toLowerCase() === "grilled" ?
-                    [ "grilled:specification", "grilled:design", "grilled:verification" ] : [ token ])
-            if (tags.length > 0)
-                keys.set("Tags", [ keys.get("Tags") ?? "", ...tags ].filter((tag) => tag !== "").join(", "))
-        }
-
-        /*  re-assemble the frontmatter block, followed by the untouched
-            remainder of the plan  */
-        return Task.assembleFront(keys, fm.other) + text.slice(fm.length)
-    }
-
-    /*  load a task, normalized into the current Markdown frontmatter
-        shape; returns empty string if no task exists  */
-    static load (log: Log, id: string): string {
-        const file = Task.path(log, id)
-        if (!fs.existsSync(file))
-            return ""
-        return Task.normalize(id, fs.readFileSync(file, "utf8"), Task.lifecycle(log))
-    }
-
-    /*  check a "Status:" change against the task lifecycle model: returns
-        a warning (else empty) if the new status is not a state of the
-        model or not reachable from the old status by traversing one or
-        more transitions of the state machine (as a single operation may
-        perform several lifecycle stages in one go)  */
-    private static checkStatus (lifecycle: TaskLifecycle, from: string, to: string): string {
-        if (!lifecycle.states.includes(to))
-            return `status "${to}" is not a state of the "${lifecycle.name}" task lifecycle model ` +
-                `(expected one of: ${lifecycle.states.join(", ")})`
-        const seen  = new Set<string>([ from ])
-        const queue = [ from ]
-        while (queue.length > 0) {
-            const state = queue.shift()!
-            if (state === to)
-                return ""
-            for (const next of lifecycle.transitions[state] ?? [])
-                if (!seen.has(next)) {
-                    seen.add(next)
-                    queue.push(next)
-                }
-        }
-        return `transition from "${from}" to "${to}" is not reachable in the "${lifecycle.name}" task lifecycle model`
-    }
-
-    /*  save a task as UTF-8 text under the given id into the
-        <project>/<basedir>/TASK-<id>.md file; the plan is saved as-is, but
-        its "Status:" frontmatter key is checked against the task lifecycle
-        model and a warning (else empty) is returned if the status is
-        unknown or not reachable from the previous status  */
-    static save (log: Log, id: string, text: string): string {
+    /*  save a task as text under the given id; throws if its "Status:"
+        frontmatter key is unknown to the task lifecycle model or not
+        reachable from the previous status, on a conditional save (with
+        an entity tag) a problem 412 if the task was changed in the meantime,
+        and on a create-only save an error if the task already exists;
+        returns a warning (else empty) if the id does not conform to the task id scheme  */
+    static async save (log: Log, id: string, text: string, tag?: string, create = false): Promise<string> {
         if (typeof text !== "string")
             throw new Error("task: text must be a string")
-        const lifecycle = Task.lifecycle(log)
-        const from      = Task.status(Task.load(log, id), lifecycle.initial)
-        const to        = Task.status(text, lifecycle.initial)
-        const file = Task.path(log, id)
-        fs.mkdirSync(path.dirname(file), { recursive: true })
-        fs.writeFileSync(file, text, "utf8")
-        return Task.checkStatus(lifecycle, from, to)
-    }
-
-    /*  delete a task by id; removes the single
-        <project>/<basedir>/TASK-<id>.md file; returns true if a task existed  */
-    static delete (log: Log, id: string): boolean {
-        const file = Task.path(log, id)
-        if (!fs.existsSync(file))
-            return false
-        fs.rmSync(file, { force: true })
-        return true
-    }
-
-    /*  rename a task by moving its <project>/<basedir>/TASK-<oldId>.md file
-        to <project>/<basedir>/TASK-<newId>.md; the embedded "Id:"
-        frontmatter key inside the plan content is rewritten to the new id
-        (falling back to the "#   TASK <id>:" heading of a still legacy,
-        not yet normalized plan); returns true on success, false if the
-        source task does not exist; throws if the target id already exists  */
-    static rename (log: Log, oldId: string, newId: string): boolean {
-        const oldFile = Task.path(log, oldId)
-        const newFile = Task.path(log, newId)
-        if (!fs.existsSync(oldFile))
-            return false
-        if (fs.existsSync(newFile))
-            throw new Error(`task: target id "${newId}" already exists`)
-        const text    = fs.readFileSync(oldFile, "utf8")
-        const updated = /^---\r?\n/.test(text) ?
-            text.replace(/^(Id:[ \t]*)[A-Za-z0-9_-]+[ \t]*$/m, `$1${newId}`) :
-            text.replace(/(^#\s+TASK\s+)[A-Za-z0-9_-]+(\s*:)/m, `$1${newId}$2`)
-        fs.mkdirSync(path.dirname(newFile), { recursive: true })
-        fs.writeFileSync(newFile, updated, "utf8")
-        fs.rmSync(oldFile, { force: true })
-        return true
-    }
-
-    /*  scan the task base directory (after eager migration) for
-        "TASK-<id>.md" files matching the configured "files" miniglob  */
-    private static scan (log: Log): { id: string, file: string, st: fs.Stats }[] {
-        Task.migrateAll(log)
-        const { basedir, files } = Task.spec(log)
-        const dir = path.join(Task.projectRoot(), basedir)
-        if (!fs.existsSync(dir))
-            return []
-        const isMatch = picomatch(files, { dot: true })
-        const out: { id: string, file: string, st: fs.Stats }[] = []
-        for (const entry of fs.readdirSync(dir)) {
-            const m = /^TASK-([A-Za-z0-9_-]+)\.md$/.exec(entry)
-            if (m === null || !isMatch(entry))
-                continue
-            const file = path.join(dir, entry)
-            const st   = fs.statSync(file)
-            if (!st.isFile())
-                continue
-            out.push({ id: m[1], file, st })
+        Task.validateId(id)
+        try {
+            return await Task.with(log, async (client) => {
+                await client.save(id, TaskFormat.parseTaskText(id, text, client.lifecycle), tag, create)
+                return TaskFormat.idWarning(client.idscheme, id)
+            })
         }
-        return out
+        catch (err: unknown) {
+            if (create && tag === undefined && err instanceof Core.Problem && err.status === 412)
+                throw new Error(`task: task "${id}" already exists`, { cause: err })
+            throw err
+        }
     }
 
-    /*  read the "Status:" frontmatter key of a (normalized) task plan,
-        falling back to the initial state of the task lifecycle model for a
-        plan whose frontmatter is absent or carries no such key  */
-    private static status (text: string, initial: string): string {
-        const fm = /^---\r?\n([\s\S]*?\r?\n)---\r?\n/.exec(text)
-        if (fm === null)
-            return initial
-        const m = /^Status:[ \t]*(\S+)[ \t]*$/m.exec(fm[1])
-        if (m === null)
-            return initial
-        return m[1]
+    /*  delete a task by id; returns true if a task existed  */
+    static async delete (log: Log, id: string): Promise<boolean> {
+        Task.validateId(id)
+        return Task.with(log, (client) => client.delete(id))
+    }
+
+    /*  rename a task, rewriting its "Id:" frontmatter key; returns null if
+        the source task does not exist, else a warning (else empty) if the new
+        id does not conform to the task id scheme; throws if the target id
+        already exists  */
+    static async rename (log: Log, oldId: string, newId: string): Promise<string | null> {
+        Task.validateId(oldId)
+        Task.validateId(newId)
+        try {
+            return await Task.with(log, async (client) =>
+                await client.patch(oldId, { id: newId }) === null ? null : TaskFormat.idWarning(client.idscheme, newId))
+        }
+        catch (err: unknown) {
+            if (err instanceof Core.Problem && err.status === 409)
+                throw new Error(`task: target id "${newId}" already exists`, { cause: err })
+            throw err
+        }
+    }
+
+    /*  flatten a task plan header into string values (joining the
+        array-typed keys "After" and "Tags" with commas)  */
+    private static flatHeader (header: API.TaskHeader): Map<string, string> {
+        return new Map(Object.entries(header).map(([ key, val ]) =>
+            [ key, Array.isArray(val) ? val.join(", ") : val ] as [ string, string ]))
+    }
+
+    /*  split a task plan into its flattened header keys and its Markdown
+        body (without the attachments), for read-only consumers which must
+        not parse plans themselves; returns null if no task exists  */
+    static async parts (log: Log, id: string): Promise<{ keys: Map<string, string>, body: string } | null> {
+        Task.validateId(id)
+        const plan = await Task.with(log, (client) => client.load(id))
+        return plan === null ? null : { keys: Task.flatHeader(plan.header), body: plan.body }
+    }
+
+    /*  list the attachments of a task plan, each with its type, description,
+        creation and modification timestamps (if any), and either the referenced
+        file (relative to a local task store) or the embedded data; returns an
+        empty list if no task exists  */
+    static async attachments (log: Log, id: string): Promise<{ type: string, desc: string, created?: string, modified?: string, file?: string, data?: string }[]> {
+        Task.validateId(id)
+        const plan = await Task.with(log, (client) => client.load(id))
+        return (plan?.attachment ?? []).filter((a) => a.Type !== undefined).map((a) => ({
+            type: a.Type,
+            desc: a.Desc ?? "",
+            ...(a.Created  !== undefined ? { created:  a.Created  } : {}),
+            ...(a.Modified !== undefined ? { modified: a.Modified } : {}),
+            ...(a.File !== undefined ? { file: a.File } : {}),
+            ...(a.Data !== undefined ? { data: a.Data } : {})
+        }))
+    }
+
+    /*  get the raw content of an attachment of a task plan (its embedded data or
+        its referenced file), through the task store; returns null if missing  */
+    static async attachmentContent (log: Log, id: string, index: number): Promise<{ type: string, content: Buffer } | null> {
+        Task.validateId(id)
+        return Task.with(log, (client) => client.content(id, index))
+    }
+
+    /*  subscribe to the change events of the task store: a remote one
+        (reconnecting automatically) or an in-process one (whose storage plugin
+        detects the external changes, e.g. by watching its directory or by polling),
+        reporting each change of the connection state; returns a function to unsubscribe  */
+    static subscribe (log: Log, onChange: () => void, onState?: (connected: boolean) => void): () => void {
+        return Task.client(log).subscribe(onChange, onState)
+    }
+
+    /*  list all persisted tasks (see list) with their flattened header keys,
+        plus the effective task lifecycle model, within a single task store access  */
+    static async listHeaders (log: Log): Promise<{
+        lifecycle: TaskFormat.TaskLifecycle,
+        items:     { id: string, status: string, title: string, mtime: string, keys: Map<string, string> }[]
+    }> {
+        return Task.with(log, async (client) => {
+            const items = (await client.list("header")).map((item) =>
+                ({ ...item, keys: Task.flatHeader(item.header ?? {}) }))
+            return { lifecycle: client.lifecycle, items }
+        })
     }
 
     /*  get the lifecycle status of a task plan: the "Status:" frontmatter
-        key of the normalized plan, falling back to the initial state of the
-        task lifecycle model; throws if no task exists  */
-    static getStatus (log: Log, id: string): string {
-        const text = Task.load(log, id)
-        if (text === "")
-            throw new Error(`task: no task "${id}"`)
-        return Task.status(text, Task.lifecycle(log).initial)
+        key of the plan, falling back to the initial state of the task
+        lifecycle model; throws if no task exists  */
+    static async getStatus (log: Log, id: string): Promise<string> {
+        Task.validateId(id)
+        return Task.with(log, async (client) => {
+            const plan = await client.load(id)
+            if (plan === null)
+                throw new Error(`task: no task "${id}"`)
+            return TaskFormat.taskStatus(plan.header, client.lifecycle)
+        })
     }
 
     /*  set the lifecycle status of a task plan: the (case-insensitively
         given) status has to be a state of the task lifecycle model, while
         the "Modified:" frontmatter key is left alone, as it tracks body
-        changes only; returns the previous and the new status plus a warning
-        (else empty) if the new status is not reachable from the previous
-        one in the state machine of the model; throws if no task exists, the plan has no frontmatter
-        block, or the status is unknown  */
-    static setStatus (log: Log, id: string, status: string): { from: string, to: string, warning: string } {
-        const lifecycle = Task.lifecycle(log)
-        const text = Task.load(log, id)
-        if (text === "")
-            throw new Error(`task: no task "${id}"`)
+        changes only; returns the previous and the new status; throws if no
+        task exists, the status is unknown, or it is not reachable from the
+        previous one in the state machine of the model  */
+    static async setStatus (log: Log, id: string, status: string): Promise<{ from: string, to: string }> {
+        Task.validateId(id)
         const to = status.trim().toUpperCase()
-        if (!lifecycle.states.includes(to))
-            throw new Error(`task: invalid state "${status}" ` +
-                `(expected one of: ${lifecycle.states.join(", ")})`)
-        const fm = Task.parseFront(text)
-        if (fm === null)
-            throw new Error(`task: task "${id}" has no frontmatter block`)
-        const from = fm.keys.get("Status") ?? lifecycle.initial
-        fm.keys.set("Status", to)
-        const warning = Task.save(log, id, Task.assembleFront(fm.keys, fm.other) + text.slice(fm.length))
-        return { from, to, warning }
+        return Task.with(log, async (client) => {
+            const lifecycle = client.lifecycle
+            if (!lifecycle.states.includes(to))
+                throw new Error(`task: invalid state "${status}" ` +
+                    `(expected one of: ${lifecycle.states.join(", ")})`)
+            const result = await client.patch(id, { status: to })
+            if (result === null)
+                throw new Error(`task: no task "${id}"`)
+            return { from: result.from ?? lifecycle.initial, to: result.status }
+        })
     }
 
     /*  list all persisted tasks in lexicographic id order, each with the
-        `status` of its (normalized) plan; if verbose is true, each entry's
-        `mtime` is set to the task file's modification time formatted as
-        "YYYY-MM-DD HH:MM", otherwise it is left undefined  */
-    static list (log: Log, verbose = false): { id: string, status: string, mtime: string | undefined }[] {
-        const lifecycle = Task.lifecycle(log)
-        const out = Task.scan(log).map((entry) => ({
-            id:     entry.id,
-            status: Task.status(Task.normalize(entry.id, fs.readFileSync(entry.file, "utf8"), lifecycle), lifecycle.initial),
-            mtime:  verbose ? DateTime.fromJSDate(entry.st.mtime).toFormat("yyyy-LL-dd HH:mm") : undefined
-        }))
-        out.sort((a, b) => a.id.localeCompare(b.id))
-        return out
+        `status` and `title` of its plan and the `mtime` of its last
+        modification formatted as "YYYY-MM-DD HH:MM"  */
+    static async list (log: Log): Promise<{ id: string, status: string, title: string, mtime: string }[]> {
+        return Task.with(log, (client) => client.list())
     }
 
-    /*  resolve an "include" and an "exclude" comma-separated lifecycle
-        state list into the effective state set a task plan has to be in
-        to be listed at all; the "none" sentinel and empty tokens are
-        silently dropped, the "finished" sentinel expands to the finished
-        states of the task lifecycle model, an empty "include" list means
-        all states, and the "exclude" list is applied after the "include" list  */
-    static states (log: Log, include: string, exclude: string): string[] {
-        const lifecycle = Task.lifecycle(log)
-        const parse = (list: string) => list.split(",")
-            .map((token) => token.trim())
-            .filter((token) => token !== "" && token.toUpperCase() !== "NONE")
-            .flatMap((token) => {
-                const state = token.toUpperCase()
-                if (state === "FINISHED")
-                    return lifecycle.finished
-                if (!lifecycle.states.includes(state))
-                    throw new Error(`task: invalid state "${token}" ` +
-                        `(expected one of: ${lifecycle.states.join(", ")}, or "finished")`)
-                return [ state ]
-            })
-        const included = parse(include)
-        const excluded = parse(exclude)
-        const states   = (included.length > 0 ? included : lifecycle.states)
-            .filter((state) => !excluded.includes(state))
-        if (states.length === 0)
-            throw new Error("task: options \"--include\" and \"--exclude\" cancel out to an empty state set")
-        return states
-    }
-
-    /*  purge tasks whose modification time is older than the given cutoff in
-        milliseconds; returns the list of removed task ids  */
-    static purge (log: Log, maxAgeMs: number): string[] {
-        const cutoff = Date.now() - maxAgeMs
-        const removed: string[] = []
-        for (const entry of Task.scan(log)) {
-            if (entry.st.mtimeMs < cutoff) {
-                fs.rmSync(entry.file, { force: true })
-                removed.push(entry.id)
+    /*  list all persisted tasks (see list), plus the known states of the task lifecycle
+        model and the effective state set of the "--include" and "--exclude" lifecycle
+        state lists, all resolved within a single task store access  */
+    static async listStates (log: Log, include: string, exclude: string): Promise<{
+        items:  { id: string, status: string, title: string, mtime: string }[],
+        known:  string[],
+        states: string[]
+    }> {
+        return Task.with(log, async (client) => {
+            let states: string[]
+            try {
+                states = TaskFormat.resolveStates(client.lifecycle, include, exclude)
             }
-        }
-        return removed
+            catch (err) {
+                throw new Error(`task: ${err instanceof Error ? err.message : String(err)}`, { cause: err })
+            }
+            return { items: await client.list(), known: client.lifecycle.states, states }
+        })
+    }
+
+    /*  purge tasks whose modification time is older than the given age
+        ("<number><unit>" with unit h, d, m, or y); returns the removed task ids  */
+    static async purge (log: Log, age: string): Promise<string[]> {
+        if (!/^\d+[hdmy]$/.test(age))
+            throw new Error("task: <age> must match <number><unit> with unit h, d, m, or y")
+        return Task.with(log, (client) => client.purge(age))
     }
 
     /*  get the active task id for a given session, or empty string if none  */
@@ -602,8 +636,10 @@ export class Task {
         return String(isScalar(val) ? val.value : val)
     }
 
-    /*  set the active task id for a given session  */
-    static setId (log: Log, session: string, id: string): void {
+    /*  set the active task id for a given session; returns a warning (else empty)
+        if the id does not conform to the effective task id scheme of the task store
+        (an unreachable task store skips the check, as switching does not require it)  */
+    static async setId (log: Log, session: string, id: string): Promise<string> {
         Task.validateSession(session)
         Task.validateId(id)
         const scope   = parseScope(`session:${session}`)
@@ -613,6 +649,16 @@ export class Task {
             cfg.set("agent.task", id)
             cfg.write()
         })
+        let idscheme: string
+        try {
+            idscheme = await Task.idScheme(log)
+        }
+        catch (err) {
+            log.write("warning", `task: cannot check task id "${id}" against the task id scheme: ` +
+                `${err instanceof Error ? err.message : String(err)}`)
+            return ""
+        }
+        return TaskFormat.idWarning(idscheme, id)
     }
 }
 
@@ -621,25 +667,25 @@ export default class TaskCommand {
     constructor (private log: Log) {}
 
     /*  register commands  */
-    register (program: Command): void {
+    register (program: Command): Command {
         /*  register CLI top-level command "ase task"  */
         const task = program
             .command("task")
-            .description("Manage persisted tasks under <project>/<basedir>/TASK-<id>.md")
+            .description("Manage persisted tasks in the task store configured by \"project.task.store\"")
             .action(() => {
                 task.outputHelp()
                 process.exit(1)
             })
 
         /*  register CLI sub-command "ase task list"  */
-        const lifecycleStates = Object.values(taskLifecycles)
+        const lifecycleStates = Object.values(TaskFormat.taskLifecycles)
             .map((lifecycle) => `${lifecycle.name}: ${lifecycle.states.join("|")}`)
             .join("; ")
         task
             .command("list")
             .description("List all persisted task ids, one per line")
-            .option("-v, --verbose", "also show the task plan status and the task file " +
-                "modification time as (YYYY-MM-DD HH:MM)")
+            .option("-v, --verbose", "also show the task plan status, the task plan " +
+                "modification time as (YYYY-MM-DD HH:MM), and the task title")
             .option("-i, --include <states>",
                 "comma-separated list of lifecycle states to list " +
                 `(${lifecycleStates}), "finished" for the finished states, ` +
@@ -651,9 +697,8 @@ export default class TaskCommand {
                 "or \"none\" for no exclusion",
                 "finished")
             .action(async (opts: { verbose?: boolean, include: string, exclude: string }) => {
-                const states = Task.states(this.log, opts.include, opts.exclude)
-                const known  = Task.lifecycle(this.log).states
-                const items  = Task.list(this.log, opts.verbose ?? false)
+                const { items: all, known, states } = await Task.listStates(this.log, opts.include, opts.exclude)
+                const items = all
                     .filter((item) => {
                         /*  keep (but warn about) a task in an unknown state
                             instead of silently dropping it from the list  */
@@ -666,7 +711,7 @@ export default class TaskCommand {
                     })
                 for (const item of items) {
                     if (opts.verbose)
-                        await writeStdout(`${item.id}\t${item.status}\t(${item.mtime})\n`)
+                        await writeStdout(`${item.id}\t${item.status}\t(${item.mtime})\t${item.title}\n`)
                     else
                         await writeStdout(`${item.id}\n`)
                 }
@@ -676,14 +721,14 @@ export default class TaskCommand {
         task
             .command("status")
             .description("Get or set the lifecycle status of a task: without <status> the current status " +
-                "is printed, with <status> it is set (case-insensitively, warning about a status " +
+                "is printed, with <status> it is set (case-insensitively, failing on a status " +
                 "not reachable in the task lifecycle model); <id> defaults to $ASE_TASK_ID")
             .argument("[<id>[:]]", "Task identifier (optionally colon-suffixed)")
             .argument("[<status>]", "Lifecycle status to set")
             .action(async (arg1?: string, arg2?: string) => {
                 /*  resolve "[<id>[:]] [<status>]": a single token is the status
                     if it is a state of the task lifecycle model, else the id  */
-                const states = Task.lifecycle(this.log).states
+                const states = (await Task.lifecycle(this.log)).states
                 let id     = process.env.ASE_TASK_ID ?? "default"
                 let status = arg2
                 if (arg2 !== undefined)
@@ -696,11 +741,9 @@ export default class TaskCommand {
                 }
                 id = id.replace(/:$/, "")
                 if (status === undefined)
-                    await writeStdout(`${Task.getStatus(this.log, id)}\n`)
+                    await writeStdout(`${await Task.getStatus(this.log, id)}\n`)
                 else {
-                    const result = Task.setStatus(this.log, id, status)
-                    if (result.warning !== "")
-                        this.log.write("warning", `task: ${result.warning}`)
+                    const result = await Task.setStatus(this.log, id, status)
                     this.log.write("info", `task: set status of "${id}" from "${result.from}" to "${result.to}"`)
                     process.exit(0)
                 }
@@ -712,8 +755,27 @@ export default class TaskCommand {
             .description("Load a task by id and write it to stdout")
             .argument("<id>", "Task identifier")
             .action(async (id: string) => {
-                const text = Task.load(this.log, id)
+                const text = await Task.load(this.log, id)
                 await writeStdout(text)
+            })
+
+        /*  register CLI sub-command "ase task view"  */
+        task
+            .command("view")
+            .description("View a task by id with $PAGER")
+            .argument("<id>", "Task identifier")
+            .action(async (id: string) => {
+                const text = await Task.load(this.log, id)
+                if (text === "")
+                    throw new Error(`task: no task "${id}"`)
+
+                /*  bypass the pager if stdout is not a terminal  */
+                if (!process.stdout.isTTY)
+                    await writeStdout(text)
+                else {
+                    const pager = process.env.PAGER ?? "more"
+                    execaSync(pager, { shell: true, input: text, stdout: "inherit", stderr: "inherit" })
+                }
             })
 
         /*  register CLI sub-command "ase task edit"  */
@@ -721,14 +783,60 @@ export default class TaskCommand {
             .command("edit")
             .description("Edit a task by id with $EDITOR")
             .argument("<id>", "Task identifier")
-            .action((id: string) => {
-                const file   = Task.path(this.log, id)
+            .action(async (id: string) => {
+                /*  round-trip the plan through a temporary file, as the
+                    task store is not necessarily a local file  */
+                Task.validateId(id)
+                const before = await Task.load(this.log, id) || Task.format(Task.minimal(id))
                 const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
-                fs.mkdirSync(path.dirname(file), { recursive: true })
-                if (!fs.existsSync(file))
-                    fs.writeFileSync(file, "", "utf8")
-                execaSync(editor, [ file ], { stdio: "inherit" })
-                this.log.write("info", `task: edited "${id}"`)
+                const dir    = fs.mkdtempSync(path.join(os.tmpdir(), "ase-task-"))
+                const file   = path.join(dir, `${id}.md`)
+                fs.writeFileSync(file, before, "utf8")
+
+                /*  on save failures, offer re-editing and never discard the edits:
+                    the temporary file is kept if the user declines re-editing  */
+                let next = id
+                for (;;) {
+                    try {
+                        execaSync(`${editor} "${file}"`, { shell: true, stdio: "inherit" })
+                        const after = fs.readFileSync(file, "utf8")
+                        if (after !== before) {
+                            /*  a changed "Id:" key renames the task (refusing
+                                an existing target id before anything is saved)  */
+                            next = TaskFormat.taskTextId(after) || id
+                            if (next !== id) {
+                                Task.validateId(next)
+                                if (await Task.source(this.log, next) !== null)
+                                    throw new Error(`task: target id "${next}" already exists`)
+                            }
+                            let warning = await Task.save(this.log, id, after)
+                            if (next !== id)
+                                warning = await Task.rename(this.log, id, next) ?? ""
+                            if (warning !== "")
+                                this.log.write("warning", `task: ${warning}`)
+                        }
+                        break
+                    }
+                    catch (err) {
+                        const msg = err instanceof Error ? err.message : String(err)
+                        this.log.write("error", msg)
+                        let ans = "n"
+                        if (process.stdin.isTTY) {
+                            const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
+                            try {
+                                ans = (await rl.question("re-edit? [Y/n] ")).trim().toLowerCase()
+                            }
+                            finally {
+                                rl.close()
+                            }
+                        }
+                        if (ans === "n" || ans === "no")
+                            throw new Error(`task: edits of "${id}" not saved, but kept in "${file}"`, { cause: err })
+                    }
+                }
+                fs.rmSync(dir, { recursive: true, force: true })
+                this.log.write("info", next !== id ?
+                    `task: edited "${id}" and renamed it to "${next}"` : `task: edited "${id}"`)
                 process.exit(0)
             })
 
@@ -736,11 +844,12 @@ export default class TaskCommand {
         task
             .command("save")
             .description("Save a task by id, reading content from stdin " +
-                "(warning about a Status: not reachable in the task lifecycle model)")
+                "(failing on a Status: not reachable in the task lifecycle model)")
+            .option("-c, --create", "fail if the task already exists instead of overwriting it", false)
             .argument("<id>", "Task identifier")
-            .action(async (id: string) => {
+            .action(async (id: string, opts: { create: boolean }) => {
                 const text    = await readStdin()
-                const warning = Task.save(this.log, id, text)
+                const warning = await Task.save(this.log, id, text, undefined, opts.create)
                 if (warning !== "")
                     this.log.write("warning", `task: ${warning}`)
                 this.log.write("info", `task: saved "${id}"`)
@@ -752,8 +861,8 @@ export default class TaskCommand {
             .command("delete")
             .description("Delete a task by id")
             .argument("<id>", "Task identifier")
-            .action((id: string) => {
-                const removed = Task.delete(this.log, id)
+            .action(async (id: string) => {
+                const removed = await Task.delete(this.log, id)
                 if (removed)
                     this.log.write("info", `task: removed "${id}"`)
                 else
@@ -767,13 +876,37 @@ export default class TaskCommand {
             .description("Rename a task from <old> to <new>")
             .argument("<old>", "Old task identifier")
             .argument("<new>", "New task identifier")
-            .action((oldId: string, newId: string) => {
-                const renamed = Task.rename(this.log, oldId, newId)
-                if (renamed)
+            .action(async (oldId: string, newId: string) => {
+                const warning = await Task.rename(this.log, oldId, newId)
+                if (warning !== null) {
+                    if (warning !== "")
+                        this.log.write("warning", `task: ${warning}`)
                     this.log.write("info", `task: renamed "${oldId}" to "${newId}"`)
+                }
                 else
                     this.log.write("info", `task: no task "${oldId}" to rename`)
-                process.exit(renamed ? 0 : 1)
+                process.exit(warning !== null ? 0 : 1)
+            })
+
+        /*  register CLI sub-command "ase task newid"  */
+        task
+            .command("newid")
+            .description("Print the next free task id according to the task id scheme of the project, " +
+                "determined by searching all existing task ids: for scheme \"slug\" derived from <title>, " +
+                "for scheme \"seq\" the next sequence number (reserved), and for scheme \"any\" the (made unique) " +
+                "--proposal, else derived from <title>; with --verbose additionally the scheme and " +
+                "the regular expression matching the ids conforming to the scheme")
+            .option("-p, --proposal <id>", "proposed task id (for task id scheme \"any\" only)", "")
+            .option("-t, --taken <ids>", "comma-separated task ids to consider as taken additionally", "")
+            .option("-v, --verbose", "print the scheme, the id, and the matching regular expression", false)
+            .argument("[<title>]", "Task title", "")
+            .action(async (title: string, opts: { proposal: string, taken: string, verbose: boolean }) => {
+                const taken  = opts.taken.split(",").map((id) => id.trim()).filter((id) => id !== "")
+                const result = await Task.newId(this.log, title, opts.proposal, taken)
+                if (opts.verbose)
+                    await writeStdout(`scheme: ${result.scheme}\nid:     ${result.id}\nmatch:  ${result.match}\n`)
+                else
+                    await writeStdout(`${result.id}\n`)
             })
 
         /*  register CLI sub-command "ase task purge"  */
@@ -782,19 +915,8 @@ export default class TaskCommand {
             .description("Remove all tasks with a modification time older than <age> (default: 31d); " +
                 "<age> is <number><unit> with unit h (hour), d (day), m (month), y (year)")
             .argument("[<age>]", "Maximum task age as <number><unit>", "31d")
-            .action((age: string) => {
-                const m = /^(\d+)([hdmy])$/.exec(age)
-                if (m === null)
-                    throw new Error("task: <age> must match <number><unit> with unit h, d, m, or y")
-                const n = Number.parseInt(m[1], 10)
-                const unit = m[2]
-                const hour  = 60 * 60 * 1000
-                const day   = 24 * hour
-                const month = 30 * day
-                const year  = 365 * day
-                const factors: Record<string, number> = { h: hour, d: day, m: month, y: year }
-                const factor  = factors[unit]
-                const removed = Task.purge(this.log, n * factor)
+            .action(async (age: string) => {
+                const removed = await Task.purge(this.log, age)
                 if (removed.length === 0)
                     this.log.write("info", "task: no tasks to purge")
                 else
@@ -802,8 +924,49 @@ export default class TaskCommand {
                         this.log.write("info", `task: purged "${id}"`)
                 process.exit(0)
             })
+
+        /*  register CLI sub-command "ase task lifecycle"  */
+        task
+            .command("lifecycle")
+            .description("Get or set the task lifecycle model of the project: without <name> the effective " +
+                "model is printed, with <name> the project in the task store is switched to it " +
+                "(for a local task store by setting \"project.task.lifecycle\" on scope \"project\")")
+            .argument("[<name>]", `Lifecycle model name (${Object.keys(TaskFormat.taskLifecycles).join("|")})`)
+            .action(async (name?: string) => {
+                if (name === undefined)
+                    await writeStdout(`${(await Task.lifecycle(this.log)).name}\n`)
+                else {
+                    const from = await Task.setLifecycle(this.log, name)
+                    this.log.write("info", `task: set lifecycle model of project from "${from}" to "${name}"`)
+                    process.exit(0)
+                }
+            })
+
+        /*  register CLI sub-command "ase task idscheme"  */
+        task
+            .command("idscheme")
+            .description("Get or set the task id scheme of the project: without <scheme> the effective " +
+                "scheme is printed, with <scheme> the project in the task store is switched to it " +
+                "(for a local task store by setting \"project.task.idscheme\" on scope \"project\")")
+            .argument("[<scheme>]", "Task id scheme (slug[:<words>]|seq[:<template>]|any)")
+            .action(async (scheme?: string) => {
+                if (scheme === undefined)
+                    await writeStdout(`${await Task.idScheme(this.log)}\n`)
+                else {
+                    const from = await Task.setIdScheme(this.log, scheme)
+                    this.log.write("info", `task: set task id scheme of project from "${from}" to "${scheme}"`)
+                    process.exit(0)
+                }
+            })
+
+        /*  register CLI sub-command group "ase task store"  */
+        new TaskStoreCommand(this.log).register(task)
+
+        /*  provide "ase task" command for further sub-commands  */
+        return task
     }
 }
+
 
 /*  render a caught error as an MCP tool error result  */
 const mcpError = (err: unknown) => {
@@ -813,6 +976,11 @@ const mcpError = (err: unknown) => {
         content: [ { type: "text" as const, text: `ERROR: ${message}` } ]
     }
 }
+
+/*  render a task id scheme warning as a trailing notice line of an MCP tool result
+    (not as "WARNING:", as callers treat such a result as a failed operation)  */
+const notice = (warning: string): string =>
+    warning !== "" ? `\nNOTICE: ${warning}` : ""
 
 /*  MCP registration entry point for task tools  */
 export class TaskMCP {
@@ -826,10 +994,11 @@ export class TaskMCP {
             description:
                 "List all persisted tasks. " +
                 "Returns a `tasks` array (in lexicographic `id` order) where each item has the " +
-                "task `id` and the `status` of its plan (the `Status:` frontmatter key, defaulting " +
-                "to the initial state of the configured task lifecycle model). " +
+                "task `id`, the `status` of its plan (the `Status:` frontmatter key, defaulting " +
+                "to the initial state of the configured task lifecycle model), and the `title` of " +
+                "its plan (the `#   TASK: <title>` heading, empty if absent). " +
                 "If `verbose` is `true`, each item additionally has an `mtime` field " +
-                "(last modification time of the task's `TASK-<id>.md` file, formatted as `YYYY-MM-DD HH:MM`). " +
+                "(last modification time of the task plan, formatted as `YYYY-MM-DD HH:MM`). " +
                 "Returns an empty array if no tasks exist.",
             inputSchema:  {
                 verbose: z.boolean().optional()
@@ -840,17 +1009,18 @@ export class TaskMCP {
                     id:     z.string().describe("task identifier"),
                     status: z.string().describe("task plan lifecycle status (`Status:` frontmatter key, " +
                         "defaulting to the initial state of the configured task lifecycle model)"),
+                    title:  z.string().describe("task plan title (`#   TASK: <title>` heading, empty if absent)"),
                     mtime:  z.string().optional()
-                        .describe("`TASK-<id>.md` modification time (`YYYY-MM-DD HH:MM`); only present if `verbose` is true")
+                        .describe("task plan modification time (`YYYY-MM-DD HH:MM`); only present if `verbose` is true")
                 })).describe("all persisted tasks in lexicographic id order")
             }
         }, async (args) => {
             try {
                 const verbose = args.verbose ?? false
-                const items   = Task.list(this.log, verbose)
+                const items   = await Task.list(this.log)
                 const tasks   = verbose ?
-                    items.map((item) => ({ id: item.id, status: item.status, mtime: item.mtime ?? "" })) :
-                    items.map((item) => ({ id: item.id, status: item.status }))
+                    items.map((item) => ({ id: item.id, status: item.status, title: item.title, mtime: item.mtime })) :
+                    items.map((item) => ({ id: item.id, status: item.status, title: item.title }))
                 const result  = { tasks }
                 return {
                     structuredContent: result,
@@ -878,7 +1048,7 @@ export class TaskMCP {
                 "followed by the render form enclosed in `<task-plan-render>` delimiter lines.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 variant: z.enum([ "source", "render", "both" ]).optional()
                     .describe("returned form of the plan: `source` (authoring form, the default), " +
                         "`render` (rendering-prepared form, display only), or `both` " +
@@ -886,7 +1056,7 @@ export class TaskMCP {
             }
         }, async (args) => {
             try {
-                const source  = Task.load(this.log, args.id)
+                const source  = await Task.load(this.log, args.id)
                 const variant = args.variant ?? "source"
                 let text = source
                 if (source !== "" && variant === "render")
@@ -911,37 +1081,40 @@ export class TaskMCP {
                 "Persist a task as `text` under `id`. " +
                 "The `text` MUST be the *authoring* form of the plan (as returned by the " +
                 "`source` variant of `ase_task_load`) and hence MUST NOT carry any rendering " +
-                "artifacts. Overwrites any existing task for the same `id`. " +
+                "artifacts. Overwrites any existing task for the same `id`, unless `create` is `true`, " +
+                "in which case the save fails if a task with this `id` already exists (to be used on the " +
+                "first save of a task whose `id` was allocated via `ase_task_newid`). " +
                 "Returns a status `text` by default, or, if `render` is `true`, the " +
                 "*rendering-prepared* form of the just-saved plan, for display purposes only. " +
                 "The `Status:` frontmatter key of `text` is checked against the configured task " +
-                "lifecycle model: if the status is not a state of the model or not reachable from " +
-                "the previously saved status via one or more transitions of the state machine, the " +
-                "result is prefixed with a `WARNING:` line (the plan is saved nevertheless). Prefer the " +
-                "`ase_task_status` MCP tool for pure status changes, as it validates strictly.",
+                "lifecycle model: if a changed status is not a state of the model or not reachable " +
+                "from the previously saved status via one or more transitions of the state machine, " +
+                "the save fails with an error. Prefer the `ase_task_status` MCP tool for pure status changes. " +
+                "If `id` does not conform to the task id scheme of the project, the returned `text` " +
+                "additionally carries a trailing `NOTICE: <info>` line.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 text: z.string()
                     .describe("text content of the task, in its authoring form"),
+                create: z.boolean().optional()
+                    .describe("if true, fail if a task with `id` already exists instead of overwriting it (default: false)"),
                 render: z.boolean().optional()
                     .describe("if true, return the rendering-prepared form of the just-saved " +
                         "plan instead of a status message (default: false)")
             }
         }, async (args) => {
             try {
-                const warning = Task.save(this.log, args.id, args.text)
+                const warning = await Task.save(this.log, args.id, args.text, undefined, args.create ?? false)
 
                 /*  return the rendering-prepared content on demand, so a caller
-                    displaying the just-saved plan does not have to re-load it  */
-                const text = (args.render ?? false) ?
-                    Markdown.prepare(args.text) :
-                    `OK: saved task "${args.id}"`
+                    displaying the just-saved plan does not have to re-load it
+                    (rendered from the stored plan, as the store normalizes the text)  */
+                const text = ((args.render ?? false) ?
+                    Markdown.prepare(await Task.load(this.log, args.id)) :
+                    `OK: saved task "${args.id}"`) + notice(warning)
                 return {
-                    content: [
-                        ...(warning !== "" ? [ { type: "text" as const, text: `WARNING: ${warning}` } ] : []),
-                        { type: "text", text }
-                    ]
+                    content: [ { type: "text", text } ]
                 }
             }
             catch (err: unknown) {
@@ -957,11 +1130,11 @@ export class TaskMCP {
                 "Returns a status `text` indicating whether a task existed and was removed.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')")
             }
         }, async (args) => {
             try {
-                const removed = Task.delete(this.log, args.id)
+                const removed = await Task.delete(this.log, args.id)
                 const msg     = removed ?
                     `OK: removed task "${args.id}"` :
                     `WARNING: no task "${args.id}" to remove`
@@ -978,21 +1151,21 @@ export class TaskMCP {
         mcp.registerTool("ase_task_rename", {
             title: "ASE task rename",
             description:
-                "Rename a previously persisted task from `old` to `new` by moving the " +
-                "task `TASK-<id>.md` file and rewriting its embedded `Id:` frontmatter key. " +
+                "Rename a previously persisted task from `old` to `new`, " +
+                "rewriting its embedded `Id:` frontmatter key. " +
                 "Returns a status `text` indicating whether the rename succeeded. " +
                 "Fails with an error if the target id already exists.",
             inputSchema: {
                 old: z.string()
-                    .describe("old task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("old task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 new: z.string()
-                    .describe("new task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
+                    .describe("new task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')")
             }
         }, async (args) => {
             try {
-                const renamed = Task.rename(this.log, args.old, args.new)
-                const msg     = renamed ?
-                    `OK: renamed task "${args.old}" to "${args.new}"` :
+                const warning = await Task.rename(this.log, args.old, args.new)
+                const msg     = warning !== null ?
+                    `OK: renamed task "${args.old}" to "${args.new}"` + notice(warning) :
                     `WARNING: no task "${args.old}" to rename`
                 return {
                     content: [ { type: "text", text: msg } ]
@@ -1010,14 +1183,13 @@ export class TaskMCP {
                 "Get or set the lifecycle `status` of the task plan `id` (its `Status:` frontmatter key). " +
                 "If `status` is provided, it is set (case-insensitively, validated against the states of " +
                 "the configured task lifecycle model, leaving the `Modified:` key alone) and a status `text` " +
-                "is returned, prefixed with `WARNING:` if the status is not reachable from the current one " +
-                "via one or more transitions of the state machine of the model (the status is set " +
-                "nevertheless). Otherwise the current status is returned " +
+                "is returned. Otherwise the current status is returned " +
                 "as `text`, defaulting to the initial state of the model. " +
-                "Fails with an error if no task exists or the status is unknown.",
+                "Fails with an error if no task exists, the status is unknown, or the status is not " +
+                "reachable from the current one via one or more transitions of the state machine of the model.",
             inputSchema: {
                 id: z.string()
-                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 status: z.string().optional()
                     .describe("lifecycle status to set (a state of the configured task lifecycle model, " +
                         "case-insensitive); if omitted, the current status is returned")
@@ -1025,18 +1197,59 @@ export class TaskMCP {
         }, async (args) => {
             try {
                 if (args.status !== undefined) {
-                    const result = Task.setStatus(this.log, args.id, args.status)
-                    const change = `status of task "${args.id}" from "${result.from}" to "${result.to}"`
-                    const msg    = result.warning !== "" ?
-                        `WARNING: ${result.warning} -- set ${change} nevertheless` :
-                        `OK: set ${change}`
+                    const result = await Task.setStatus(this.log, args.id, args.status)
+                    const text   = `OK: set status of task "${args.id}" from "${result.from}" to "${result.to}"`
                     return {
-                        content: [ { type: "text", text: msg } ]
+                        content: [ { type: "text", text } ]
                     }
                 }
-                const text = Task.getStatus(this.log, args.id)
+                const text = await Task.getStatus(this.log, args.id)
                 return {
                     content: [ { type: "text", text } ]
+                }
+            }
+            catch (err: unknown) {
+                return mcpError(err)
+            }
+        })
+
+        /*  task id generation  */
+        mcp.registerTool("ase_task_newid", {
+            title: "ASE task id generation",
+            description:
+                "Determine the next free task id according to the task id scheme of the project " +
+                "(the `project.task.idscheme` configuration, resp. the scheme registered in the task store), " +
+                "by searching all existing task ids. The scheme is either `slug[:<words>]` (the first " +
+                "`<words>` (default: 2) words of `title`, lower-cased and joined with `-`), " +
+                "`seq[:<template>]` (the highest sequence number of all existing and ever removed ids plus one, rendered " +
+                "through the sprintf-style `<template>` like `FOO-%03d`, `#%d`, or `%d` (the default)), or " +
+                "`any` (the `proposal`, else derived from `title` like for `slug:2`). A slug or proposed id " +
+                "which is already taken gets a numeric suffix `-2`, `-3`, etc. " +
+                "Returns the `scheme`, the new `id`, and the regular expression `match` of all ids " +
+                "conforming to the scheme (for `seq` capturing the sequence number, for `slug` accepting " +
+                "the numeric suffix). For scheme `seq` the id is reserved (never handed out again), " +
+                "for the other schemes it is not, so for allocating several ids at once pass the " +
+                "already allocated ones as `taken`, and on the first save of the new task pass " +
+                "`create: true` to `ase_task_save` to detect a concurrently created task with the same id.",
+            inputSchema: {
+                title: z.string().optional()
+                    .describe("title of the new task (required for scheme `slug`, ignored for scheme `seq`)"),
+                proposal: z.string().optional()
+                    .describe("proposed task id (used for scheme `any` only)"),
+                taken: z.array(z.string()).optional()
+                    .describe("task ids to consider as taken in addition to the existing ones (default: none)")
+            },
+            outputSchema: {
+                scheme: z.string().describe("task id scheme of the project"),
+                id:     z.string().describe("next free task id"),
+                match:  z.string().describe("regular expression matching the ids conforming to the scheme")
+            }
+        }, async (args) => {
+            try {
+                const result = await Task.newId(this.log, args.title ?? "", args.proposal ?? "", args.taken ?? [])
+                return {
+                    structuredContent: result,
+                    content:           [ { type: "text", text: JSON.stringify(result) } ]
                 }
             }
             catch (err: unknown) {
@@ -1050,10 +1263,12 @@ export class TaskMCP {
             description:
                 "Get or set the active ASE task `id` for a given `session`. " +
                 "If `id` is provided, it sets the task id in the given `session`, " +
-                "otherwise it returns the current task `id` of the `session`.",
+                "otherwise it returns the current task `id` of the `session`. " +
+                "If a set `id` does not conform to the task id scheme of the project, the returned `text` " +
+                "additionally carries a trailing `NOTICE: <info>` line.",
             inputSchema: {
                 id: z.string().optional()
-                    .describe("task identifier to set (allowed characters: A-Z, a-z, 0-9, '_', '-'); " +
+                    .describe("task identifier to set (allowed characters: A-Z, a-z, 0-9, '#', '_', '-'); " +
                         "if omitted, the current task id is returned"),
                 session: z.string()
                     .describe("session identifier (allowed characters: A-Z, a-z, 0-9, '_', '-')")
@@ -1061,9 +1276,9 @@ export class TaskMCP {
         }, async (args) => {
             try {
                 if (args.id !== undefined) {
-                    Task.setId(this.log, args.session, args.id)
+                    const warning = await Task.setId(this.log, args.session, args.id)
                     const msg = `OK: set agent.task to "${args.id}" ` +
-                        `for session "${args.session}"`
+                        `for session "${args.session}"` + notice(warning)
                     return {
                         content: [ { type: "text", text: msg } ]
                     }
@@ -1079,3 +1294,4 @@ export class TaskMCP {
         })
     }
 }
+

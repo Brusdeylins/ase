@@ -7,16 +7,12 @@
 import fs                                from "node:fs"
 
 import { Command, InvalidArgumentError } from "commander"
-import {
-    renderMermaidASCII,
-    renderMermaidSVG
-}                                        from "beautiful-mermaid"
 import { z }                             from "zod"
 
 import type { McpServer }                from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import type Log                          from "./ase-log.js"
-import { readStdin }                     from "./ase-stdio.js"
+import type Log                          from "./ase-lib-log.js"
+import { readStdin }                     from "./ase-lib-stdio.js"
 
 /*  options accepted by the pure rendering helper  */
 export interface DiagramRenderOpts {
@@ -186,8 +182,11 @@ export class Diagram {
 
     /*  pure rendering helper: turn a Mermaid source string plus options into
         a rendered Unicode/ASCII diagram string, or an SVG document string
-        when "svg" format is requested. Throws on render failure.  */
-    static render (src: string, opts: DiagramRenderOpts): string {
+        when "svg" format is requested. Throws on render failure.
+        ("beautiful-mermaid" is loaded on first use only)  */
+    static async render (src: string, opts: DiagramRenderOpts): Promise<string> {
+        const { renderMermaidASCII, renderMermaidSVG } = await import("beautiful-mermaid")
+
         /*  render as a self-contained SVG document using the library's
             themed defaults (the ANSI "colorMode" and the terminal
             clipping below are meaningful only for ASCII art)  */
@@ -228,7 +227,7 @@ export class Diagram {
                 const widest = lines.reduce((m, l) => Math.max(m, visibleWidth(l)), 0)
                 if (widest > maxWidth)
                     widthWarn =
-                        `ase diagram: WARNING: rendered diagram width ${widest} exceeds budget ${maxWidth}; ` +
+                        `ase util diagram: WARNING: rendered diagram width ${widest} exceeds budget ${maxWidth}; ` +
                         "rightmost content was clipped. Please regenerate the Mermaid source to fit " +
                         `within ${maxWidth} chars by preferring a portrait orientation ` +
                         "(\"flowchart TB\", top-to-bottom) over landscape (\"LR\"/\"RL\"/\"BT\"), " +
@@ -239,7 +238,7 @@ export class Diagram {
             if (maxHeight > 0 && lines.length > maxHeight) {
                 const overflow = lines.length - maxHeight
                 heightWarn =
-                    `ase diagram: WARNING: rendered diagram height ${lines.length} exceeds budget ${maxHeight}; ` +
+                    `ase util diagram: WARNING: rendered diagram height ${lines.length} exceeds budget ${maxHeight}; ` +
                     `bottom ${overflow} line(s) were clipped. Please regenerate the Mermaid source to fit ` +
                     `within ${maxHeight} lines by reducing depth or splitting into multiple diagrams.`
                 lines = lines.slice(0, maxHeight)
@@ -319,7 +318,7 @@ export default class DiagramCommand {
                 /*  create diagram rendering  */
                 let out: string
                 try {
-                    out = Diagram.render(src, opts)
+                    out = await Diagram.render(src, opts)
                 }
                 catch (err: unknown) {
                     const message = err instanceof Error ? err.message : String(err)
@@ -378,7 +377,7 @@ export class DiagramMCP {
             }
         }, async (args) => {
             try {
-                const out = Diagram.render(args.diagram, args)
+                const out = await Diagram.render(args.diagram, args)
                 return {
                     content: [ { type: "text", text: out } ]
                 }

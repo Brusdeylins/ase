@@ -19,8 +19,11 @@ task id via the `ase_task_id` MCP tool.
 ##  ARGUMENTS
 
 -   *id*:
-    The new task id to activate. If omitted, the currently active
-    task id is reported.
+    The new task id to activate (characters `A-Z`, `a-z`, `0-9`, `#`,
+    `_`, and `-`). If omitted, the currently active task id is
+    reported. An id not conforming to the task id scheme of the
+    project (`project.task.idscheme`: `slug[:<words>]`, `seq[:<template>]`,
+    or `any`) is accepted, but noticed.
 
 ##  SCENARIOS
 

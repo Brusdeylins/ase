@@ -27,9 +27,10 @@ return the first value that is defined; writes are always confined to
 the strongest (target) scope of the chain.
 
 The recognized keys are grouped under `project.*` (`project.id`,
-`project.name`, `project.boxing`, `project.task.lifecycle`, and the
-`project.artifact.`*kind*`.{basedir,files}` globs) and `agent.*`
-(`agent.persona`, `agent.guidance`, `agent.task`, and `agent.skill`).
+`project.name`, `project.boxing`, `project.task.lifecycle`,
+`project.task.idscheme`, and the `project.artifact.`*kind*`.{basedir,files}`
+globs) and `agent.*` (`agent.persona`, `agent.guidance`, `agent.task`, and
+`agent.skill`).
 Some keys are writable on selected scopes only; in particular
 `agent.task` and `agent.skill` are writable on a `session` scope only,
 and the `project.artifact.*` globs are writable on the `user` and
@@ -48,7 +49,13 @@ pyramid-structured `journalist`, the brief, factual, and abbreviating
 `project.boxing` takes effect immediately, i.e. still within the running
 session. Additionally, `project.task.lifecycle` selects the task plan
 lifecycle and is one of `solo` (the default), `team`, or `enterprise`; it is
-exported at session start as `<ase-project-task-lifecycle/>`.
+exported at session start as `<ase-project-task-lifecycle/>`. Finally,
+`project.task.idscheme` selects the scheme of newly generated task ids and is one
+of `slug[:<words>]` (the default, the first *words* (default: 2) words of
+the task title, lower-cased and joined with `-`), `seq[:<template>]` (a
+continuously increasing sequence number, rendered through a sprintf-style
+*template* like `FOO-%03d`, `#%d`, or `%d` (the default)), or `any` (an
+arbitrary unique id chosen by the agent).
 
 The following *operations* exist:
 

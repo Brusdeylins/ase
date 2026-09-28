@@ -109,7 +109,7 @@ Set <args></args> (set args to empty).
     2.  React on task and/or instruction:
 
         1.  <if condition="
-                <instruction/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+                <instruction/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
             ">
             Set <ase-task-id><instruction/></ase-task-id> (set task
             id to instruction) and <instruction></instruction> (set
@@ -125,7 +125,7 @@ Set <args></args> (set args to empty).
 
         2.  <elseif condition="
                 <instruction/> has the format `<id/>: <text/>` where
-                <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$` and
+                <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$` and
                 <text/> is *empty*
             ">
             Set <instruction></instruction> (set instruction to empty)
@@ -142,7 +142,7 @@ Set <args></args> (set args to empty).
 
         3.  <elseif condition="
                 <instruction/> has the format `<id/>: <text/>` where
-                <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$` and
+                <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$` and
                 <text/> is *not empty*
             ">
             Set <instruction><text/></instruction> (set instruction to

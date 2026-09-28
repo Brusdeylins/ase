@@ -21,7 +21,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `plugin/agents/`: the sub-agent definitions leveraged by the skills
     -   `plugin/meta/`: the shared meta files (constitution, tenets, persona,
         dialog, getopt, and artifact format conventions), exposed to skills
-        via `ase meta <name>`; the specification format `ase-format-spec.md`
+        via `ase util meta <name>`; the specification format `ase-format-spec.md`
         includes the SpecBook models and formats description
         `ase-format-specbook.md` and the standard SpecBook schema
         configuration `ase-format-specbook.yaml`, both generated at
@@ -34,9 +34,36 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `tool/src/ase.ts`: the entry point, wiring all top-level commands
     -   `tool/src/ase-*.ts`: one module per top-level command (`setup`,
         `config`, `mcp`, `service`, `hook`, `statusline`, `task`, `artifact`,
-        `spec`, `meta`, `compat`, `diagram`, `worktree`, `mint`, `metric`) plus support modules
-        (`log`, `stdio`, `getopt`, `kv`, `markdown`, `skills`, `sleep`,
-        `timestamp`, `version`)
+        `spec`, `util`, `util-meta`, `util-compat`, `util-diagram`, `util-worktree`,
+        `util-mint`, `util-metric`) plus generic library modules (`lib-log`,
+        `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`), the parts of
+        `ase setup` (`setup-common` for the shared types and sub-process
+        runner, `setup-mcp` for the MCP server registry, `setup-settings`
+        for the statusline and output style settings), the parts of
+        `ase config` (`config-scope` for the scope chain and directory
+        resolution, `config-schema` for the schema, presets, and write
+        policies, `config-core` for the layered `Config` class), the MCP-only tool modules of the
+        service (`service-kv`, `service-getopt`, `service-markdown`,
+        `service-skills`, `service-sleep`, `service-timestamp`),
+        the task board (`task-board` for
+        the `ase task board` CLI command plus its `task-board-core`,
+        `task-board-graph`, `task-board-tui` (split into its
+        `task-board-tui-{model,control,view,popup,style}` parts), and `task-board-web-server`
+        parts, the latter with its browser client in
+        `ase-task-board-web-client.{html,ts,vue,styl}`, a Vue application
+        bundled by Vite), and the task store (`task-store-server-cli` for
+        the `ase task store` CLI wrapper, `task-store-core` for the
+        transport-agnostic REST API functionality, `task-store-server-bind`
+        for its HTTP and WebSocket binding,
+        `task-store-plugin-api` for the storage plugin contract, `task-store-plugin-delegate`
+        for the plugin loader and the locking storage delegate,
+        `task-store-plugin-ase` for the built-in file-based storage plugin,
+        `task-store-plugin-github` for the built-in GitHub Issues storage plugin,
+        `task-format` for the textual task format codec and the lifecycle
+        models, see `docs/task-api.md`); `ase-task.ts` itself only forwards
+        the `ase task` CLI and `ase_task_*` MCP tools to the task store
+        selected by `project.task.store`, through
+        the local or remote task store clients of `ase-task-store-client.ts`
     -   `tool/bin/ase`: the published shim, loading compiled output from `dst/`
     -   `tool/plugin/` and `tool/.claude-plugin/`: build-time copies of
         `plugin/` and `.claude-plugin/` -- never edit them, they are regenerated
@@ -78,12 +105,12 @@ npm start lint          # markdownlint-cli2 + eslint over meta/ and skills/
 npm start build         # lint, then regenerate skills/ase-help-intent/data.md
 
 cd tool
-npm start lint          # eslint --config etc/eslint.mjs src/*.ts
+npm start lint          # eslint over src/*.{ts,vue} + vue-tsc type-check of the web board client
 npm start build         # lint + build-cmd + build-plugin
-npm start build-cmd     # tsc --project etc/tsc.json (emits into dst/)
+npm start build-cmd     # tsc + vite build of the web board client (emits into dst/)
 npm start build-plugin  # copy ../plugin and ../.claude-plugin into the package
-npm start build-watch   # nodemon rebuild on src/**/*.ts
-npm start lint-watch    # nodemon relint on src/**/*.ts
+npm start build-watch   # nodemon rebuild on src/**/*.{ts,vue,styl,html}
+npm start lint-watch    # nodemon relint on src/**/*.{ts,vue}
 
 cd pages
 npm start lint          # astro check + eslint over src/**/*.{ts,astro}
@@ -124,14 +151,14 @@ Beyond `ase setup`, the CLI provides `ase config` (layered `user` <
 `project` < `task` < `session` configuration), `ase service` (per-project
 background HTTP service), `ase mcp` (stdio-to-service MCP bridge), `ase
 hook` (agent tool hook handlers), `ase statusline` (statusline renderer),
-`ase task` (persisted task plans), `ase artifact` (artifact kind
+`ase task` (persisted task plans, including `ase task board` for the
+interactive task board in terminal and browser), `ase artifact` (artifact kind
 resolution), `ase spec` (SpecBook specification linting, exporting, and
-previewing),
-`ase meta` (plugin meta file output), `ase diagram` (Mermaid
-rendering), `ase worktree` (ASE worktree path resolution), `ase mint`
-(hash-derived identifier minting), `ase metric` (text length metrics),
-and `ase compat` (probe values for
-the `ase-meta-compat` self-test skill). See
+previewing), and `ase util` (utility commands: `ase util meta` (plugin
+meta file output), `ase util diagram` (Mermaid rendering), `ase util
+worktree` (ASE worktree path resolution), `ase util mint` (hash-derived
+identifier minting), `ase util metric` (text length metrics), and `ase
+util compat` (probe values for the `ase-meta-compat` self-test skill)). See
 `docs/usage-tool.md` for the full manual page.
 
 ## Code Style

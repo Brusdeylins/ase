@@ -5,7 +5,7 @@ Task Skill Common Steps
 <define name="task-react-id">
 
 1.  <if condition="
-        <instruction/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`
+        <instruction/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
     ">
     Set <ase-task-id><instruction/></ase-task-id> (set task
     id to instruction) and <instruction></instruction> (set
@@ -21,7 +21,7 @@ Task Skill Common Steps
 
 2.  <elseif condition="
         <instruction/> has the format `<id/>: <text/>` where
-        <id/> matches the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$` and
+        <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$` and
         <text/> is *empty*
     ">
     Set <instruction></instruction> (set instruction to empty)

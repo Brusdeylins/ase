@@ -11,7 +11,7 @@ import { z }              from "zod"
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import { writeStdout }    from "./ase-stdio.js"
+import { writeStdout }    from "./ase-lib-stdio.js"
 
 /*  the length metrics of a text  */
 export type Metric = {
@@ -60,7 +60,7 @@ export const measureInput = (file?: string, text?: string): Metric => {
         throw new Error("metric: either \"file\" or \"text\" has to be given")
 }
 
-/*  CLI command "ase metric"  */
+/*  CLI command "ase util metric"  */
 export default class MetricCommand {
     /*  register commands  */
     register (program: Command): void {

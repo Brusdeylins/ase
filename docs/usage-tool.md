@@ -23,8 +23,8 @@ It provides plugin/tool setup, layered project configuration
 management, a per-project background HTTP service (bridged into the
 agent tool as an MCP server), agent hook handlers, status line
 rendering, persisted task plan management, artifact resolution,
-specification linting, exporting and previewing, diagram rendering, identifier
-minting, and a compatibility self-test helper.
+specification linting, exporting and previewing, and miscellaneous
+utilities like diagram rendering, identifier minting, and text measuring.
 
 OPTIONS
 -------
@@ -57,12 +57,16 @@ The following top-level commands exist for configuration handling:
   The file is validated against a schema: on read, unknown or
   invalid entries are warned about and silently dropped from the
   in-memory view; on set/write, they cause a fatal error.
-  Recognized keys are grouped under two top-level sections:
+  Recognized keys are grouped under three top-level sections:
   `project.*` (project identity, classification, and artifact
-  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, and the
+  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.store`, `project.task.token` (masked as `***` by `list`), and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
-  task identifier -- and `agent.skill`).
+  task identifier -- and `agent.skill`), and `board.*`
+  (`board.tui.color.{dim,normal,accent,signal}` -- the colors of
+  the terminal task board, `board.web.color.{dim,normal,accent,signal}`
+  -- the base colors of the web task board, and `board.web.editor.keymap`
+  -- the key bindings of its task plan editor: `default`, `vim`, or `emacs`).
   All `ase config` subcommands accept a `--scope` *scope* option
   that selects the scope chain. The *scope* value is a
   comma-separated list of scope terms, in any order; each term
@@ -167,7 +171,7 @@ The following top-level commands exist for service management:
   Exits silently with status 0 if no log file exists.
 
 - `ase service stop`:
-  Stop the background service via HTTP `GET /stop`. Exits silently
+  Stop the background service via HTTP `POST /stop`. Exits silently
   with status 0 on successful stop. If no port is configured or
   the port is not responding, prints an informational message and
   exits with status 0.
@@ -277,9 +281,36 @@ or *GitHub Copilot CLI* statusline:
   tools (like the *claudeX* sister project) can pick it up via
   `#{@ase_task_id}`.
 
-The following top-level command exists for diagram rendering:
+The following top-level commands exist for miscellaneous utilities:
 
-- `ase diagram`:
+- `ase util`:
+  Entry point group for utility operations. Without a subcommand, the
+  help text is shown and the command exits with status 1.
+
+- `ase util meta` *name* \[...\]:
+  Output the contents of one or more plugin *meta files* to standard
+  output. Each *name* selects a file under the plugin's `meta/`
+  directory; the `ase-` prefix and `.md` extension are optional. This is
+  intended to be leveraged by *ASE* skills and not typically invoked
+  directly by end users.
+
+- `ase util compat`:
+  Output the canonical expected probe values for the `ase-meta-compat`
+  self-test skill as `<id>: <value>` lines, one per probe. This is
+  intended to be invoked by the skill (after it has recorded all actual
+  probe results) and not directly by end users.
+
+- `ase util worktree base` \[`-c`|`--create`\]:
+  Print the validated base directory `<repo-root>/.ase/worktree`
+  holding all *ASE* worktrees. With `--create`, the directory is
+  created if it does not exist yet.
+
+- `ase util worktree path` *id* \[`-c`|`--create`\]:
+  Print the validated worktree directory `<repo-root>/.ase/worktree/<id>`
+  of a single *id*, which has to match `[A-Za-z0-9_-]+`. With
+  `--create`, the base directory is created if it does not exist yet.
+
+- `ase util diagram`:
   Render a *Mermaid* diagram specification (read from standard
   input or from `--input` *file*) as Unicode/ASCII art or SVG. Supports
   the following options:
@@ -300,9 +331,7 @@ The following top-level command exists for diagram rendering:
     - \[`--terminal-width` *n*\] / \[`--terminal-height` *n*\]:
       explicit terminal width/height for clipping.
 
-The following top-level command exists for identifier minting:
-
-- `ase mint` \[`-t`|`--type` `uuid`|`sha1`\] \[`-c`|`--count` *count*\] \[*hint* \[...\]\]:
+- `ase util mint` \[`-t`|`--type` `uuid`|`sha1`\] \[`-c`|`--count` *count*\] \[*hint* \[...\]\]:
   Mint one or more hash-derived identifiers out of the *hint* formed by
   the remaining arguments, one identifier per output line. With `--type`
   `uuid` (default), a deterministic *UUID V5* over the *hint* within the
@@ -317,9 +346,7 @@ The following top-level command exists for identifier minting:
   of the `ase-meta-mint` skill; the language-level types of that skill
   require the AI and hence exist in the skill only.
 
-The following top-level command exists for text measuring:
-
-- `ase metric` \[`-f`|`--file` *file*\] \[*text* \[...\]\]:
+- `ase util metric` \[`-f`|`--file` *file*\] \[*text* \[...\]\]:
   Measure the length metrics of a text, given either as the content of
   *file* or as the *text* formed by the remaining arguments, which are
   mutually exclusive and of which exactly one has to be given. The
@@ -453,21 +480,34 @@ to choose between *Anthropic Claude Code CLI*, *GitHub Copilot CLI*, and
 *OpenAI Codex CLI* as the target agent tool.
 
 The following top-level commands exist for managing persisted task
-plans, each stored as a single file `<project>/`*basedir*`/TASK-`*id*`.md`,
-where *basedir* is the `project.artifact.task.basedir` configuration
-value (default `.ase/task`) and the filename must match the
-`project.artifact.task.files` glob (default `*.md`). A legacy
-`<basedir>/`*id*`/plan.md` layout is auto-migrated to the current
-single-file layout on first access:
+plans, forwarded to the *task store* selected by the `project.task.store`
+configuration URL: `ase:`*path* (default `ase:./.ase/task`, a path
+resolved relative to the project root) stores the plans as
+`TASK-`*id*`.md` files in the textual task format directly in *path*
+through the built-in storage plugin running in-process, while
+`ase://`*addr*`:`*port* or `ase://`*addr*`:`*port*`/`*token* forwards
+them to a remote task store server (see `task-api.md`), registering the
+`project.id` with its `project.task.lifecycle` there on first use, and
+`ases://` instead of `ase://` connects via HTTPS (with the URL suffix
+`?insecure` skipping the certificate verification). The
+bearer token is the embedded *token* (warned about if configured on the
+`project` scope), else `$ASE_TASK_STORE_TOKEN`, else the
+`project.task.token` configuration (writable on the `user` scope only),
+else the `token` of the per-user `store.yaml`. Finally,
+`github:`*owner*`/`*repo* stores the plans as the issues of a GitHub
+repository through the built-in GitHub storage plugin running
+in-process (requiring a `seq` task id scheme, with the GitHub token
+from `project.task.token`, else `$GITHUB_TOKEN`, else `$GH_TOKEN`):
 
 - `ase task`:
   Entry point group for task plan management. Without a subcommand,
   the help text is shown and the command exits with status 1.
 
 - `ase task list` \[`-v`|`--verbose`\]:
-  List all persisted task ids in lexicographic order, one per line.
-  With `--verbose`, each id is annotated with the task file's
-  modification timestamp (`YYYY-MM-DD HH:MM`).
+  List all persisted task ids in natural order (numbers ordered by their
+  value, e.g. `FOO-2` before `FOO-10`), one per line.
+  With `--verbose`, each id is annotated with the task plan status, its
+  modification timestamp (`YYYY-MM-DD HH:MM`), and its title.
 
 - `ase task status` \[*id*\[`:`\]\] \[*status*\]:
   Get or set the lifecycle status (`Status:` frontmatter key) of the
@@ -476,45 +516,198 @@ single-file layout on first access:
   (defaulting to the initial state of the configured task lifecycle
   model). With *status* (a state of the model, case-insensitive), the
   status is set (the `Modified:` key is left alone, as it tracks body
-  changes only); a status not reachable from the current one via one
-  or more transitions of the model is warned about, but set nevertheless. A
-  single bare token which is a state of the model is taken as *status*,
-  else as *id*. Exits with status 1 if no such task exists or the
-  *status* is unknown.
+  changes only). A single bare token which is a state of the model is
+  taken as *status*, else as *id*. Exits with status 1 if no such task
+  exists, the *status* is unknown, or it is not reachable from the
+  current one via one or more transitions of the model.
 
 - `ase task load` *id*:
   Load the task plan with the given *id* and write it to standard
   output. Prints nothing if the task does not exist.
 
+- `ase task view` *id*:
+  Show the task plan with the given *id* in the pager defined by
+  `$PAGER` (falling back to `more`), run through the shell and fed via
+  its standard input. If standard output is not a terminal, the pager is
+  bypassed and the plan is written plainly to standard output. Exits
+  with status 1 if no such task exists.
+
 - `ase task edit` *id*:
   Open the task plan with the given *id* in the editor defined by
-  `$EDITOR` or `$VISUAL` (falling back to `vi`). The file and its
-  parent directory are created if missing.
+  `$EDITOR` or `$VISUAL` (falling back to `vi`, run through the shell,
+  so a value with arguments is supported), round-tripped through
+  a temporary file, as the task store is not necessarily local. A not
+  yet existing plan starts as its minimal frontmatter.
 
-- `ase task save` *id*:
+- `ase task save` \[`-c`|`--create`\] *id*:
   Save the task plan with the given *id*, reading its contents from
-  standard input. The `Status:` frontmatter key is checked against the
-  configured task lifecycle model: a status which is not a state of the
-  model, or which is not reachable from the previously saved status via
-  one or more transitions of the model, is warned about, but the plan
-  is saved nevertheless.
+  standard input. With `--create`, the save fails with exit status 1
+  if a task with *id* already exists, instead of overwriting it (for the
+  first save of a task whose *id* was obtained via `ase task newid`).
+  The `Status:` frontmatter key is checked against the
+  configured task lifecycle model: a changed status which is not a state
+  of the model, or which is not reachable from the previously saved
+  status via one or more transitions of the model, lets the save fail
+  with exit status 1. An *id* not conforming to the task id scheme
+  (`project.task.idscheme`) is saved, but warned about (also on `ase task edit`
+  and `ase task rename`).
 
 - `ase task delete` *id*:
-  Delete the task plan with the given *id* (removing its
-  `<project>/`*basedir*`/TASK-`*id*`.md` file). Exits with status 1 if no
+  Delete the task plan with the given *id*. Exits with status 1 if no
   such task existed.
 
 - `ase task rename` *old-id* *new-id*:
-  Rename the task plan with the given *old-id* to *new-id* (moving the
-  `TASK-`*old-id*`.md` file to `TASK-`*new-id*`.md` and rewriting the
-  `# TASK <id>:` heading inside). Exits with status 1 if no such task
+  Rename the task plan with the given *old-id* to *new-id*, rewriting
+  the `Id:` frontmatter key inside. Exits with status 1 if no such task
   existed or the target id is already in use.
 
+- `ase task newid` \[`-p`|`--proposal` *id*\] \[`-t`|`--taken` *ids*\] \[`-v`|`--verbose`\] \[*title*\]:
+  Print the next free task id according to the effective task id scheme
+  of the project (see `ase task idscheme`), determined by searching all
+  existing task ids plus the comma-separated *ids* considered as taken
+  additionally (as only a `seq` id is reserved): for `slug[:<words>]` the
+  slug of the first *words* words of *title*, for `seq[:<template>]`
+  the highest sequence number of all ids matching *template* plus one
+  (at least the high-water mark of the removed and allocated ids plus one,
+  raised to the allocated number, so the number of a deleted, purged,
+  renamed, or concurrently allocated task is never reused; ids not matching the
+  current *template*, e.g. after a template change, are ignored),
+  and for `any` the (sanitized) proposed *id*, else the slug of *title*.
+  A taken slug or proposed id gets a numeric suffix `-2`, `-3`, etc.
+  With `--verbose`, print the lines `scheme:`, `id:`, and `match:`,
+  the latter being the regular expression of all ids conforming to the
+  scheme (see `project.task.idscheme`). Quote ids containing `#` in the shell, as `#` starts a comment.
+
 - `ase task purge` \[*age*\]:
-  Remove all persisted task files whose modification time is older than
+  Remove all persisted task plans whose modification time is older than
   *age* (default: `31d`). The *age* argument is a `<number><unit>`
   value, where *unit* is one of `h` (hour), `d` (day), `m` (month), or
   `y` (year).
+
+- `ase task lifecycle` \[*name*\]:
+  Without *name*, print the effective task lifecycle model of the
+  project: `project.task.lifecycle` for a local task store, else the
+  model the project is registered under in the remote task store (which
+  is registered under `project.task.lifecycle` on first use only, as the
+  model is shared by all clients of the project). With *name* (`solo`,
+  `team`, or `enterprise`), explicitly switch the project in the task
+  store to this model: for a local task store, which always follows
+  `project.task.lifecycle`, by setting it on the `project` scope. On
+  every switch of the model, the `Status` of the existing task plans is
+  mapped onto the new model (e.g. `solo` → `team`: `OPEN` → `PLANNING`,
+  `CLOSED` → `IMPLEMENTED`). For a remote task store, a deviating
+  `project.task.lifecycle` is warned about once per deviation only
+  (tracked in *per-user state directory*`/task-lifecycle.json`).
+
+- `ase task idscheme` \[*scheme*\]:
+  Without *scheme*, print the effective task id scheme of the project:
+  `project.task.idscheme` for a local task store (default: `slug`), else the
+  scheme the project is registered under in the remote task store (which
+  is registered under `project.task.idscheme` on first use only). With
+  *scheme* (`slug[:<words>]`, `seq[:<template>]`, or `any`), explicitly
+  switch the project in the task store to this scheme: for a local task
+  store by setting `project.task.idscheme` on the `project` scope. Existing
+  task ids are not changed. For a remote task store, a deviating
+  `project.task.idscheme` is warned about once per deviation only.
+
+- `ase task store start` \[`-a`|`--address` *host*\] \[`-p`|`--port` *port*\]
+  \[`-t`|`--token` *token*\] \[`-c`|`--cors` *origin*\] \[`-m`|`--module` *name*\]
+  \[`-d`|`--basedir` *dir*\] \[`-s`|`--solo`|`--no-solo`\] \[`--tls-cert` *file* `--tls-key` *file*\]:
+  Start the per-user task store REST API server (see `task-api.md`) in
+  the background, binding to *host* (default: `127.0.0.1`) and *port*
+  (default: the configured one, else allocated randomly), expecting the
+  bearer *token* (default: `ASE_TASK_STORE_TOKEN`, else the `token` key of
+  the per-user `store.yaml`, else generated; the effective token is
+  persisted there),
+  allowing cross-origin browser requests from *origin* (repeatable, `*`
+  for any origin), and loading the storage plugin *name*: `ase` for the
+  built-in one, `github` for the built-in GitHub Issues one (configured
+  by `storage.options`, see `task-api.md`), else the NPM package `ase-task-store-`*name* (default:
+  the `storage.plugin` key of `store.yaml`, else `ase`). The built-in
+  plugin stores the plans below *dir* (default: `storage.options.basedir`,
+  else `tasks` below the per-user config directory), one sub-directory
+  per project, or -- with `--solo` -- a single project flat in *dir*,
+  accepting any project id (persisted as `storage.options.solo`, reset
+  by `--no-solo`). With `--tls-cert` and `--tls-key` (both PEM
+  files, default: the `tls.cert` and `tls.key` keys of `store.yaml`,
+  where the effective paths are persisted), the server serves HTTPS
+  instead of HTTP. Binding to a non-loopback *host* without TLS is warned
+  about. Idempotent if the server is already running, but restarts the
+  server if an explicitly given option deviates from its configuration.
+
+- `ase task store status`:
+  Report whether the task store server is running, and on which address
+  and port. Exits with status 1 if it is not running.
+
+- `ase task store stop`:
+  Stop the task store server.
+
+The following sub-command exists for watching, moving, and editing
+the persisted task plans of the current project:
+
+- `ase task board` \[`-w`|`--web`\] \[`-t`|`--text`\]:
+  Show the task board: all task plans as cards (showing the task id and,
+  behind a `▶`, the title) in the
+  lanes of the effective task lifecycle model (see `ase task lifecycle`),
+  grouped by the phases of the model plus a final `Done` group, with the
+  active lanes in blue and the parking lanes in grey. Without options,
+  the interactive terminal board is started (in its last shown view:
+  the lanes view or the dependency graph view derived from the `After:`
+  keys, switched via `v`); lanes can be
+  minimized and groups collapsed, the selected lane can be grown via `g`
+  to the full board, showing all its cards in a grid of at least four
+  columns (`g`, `ESC`, or a click onto its title shrinks it back again),
+  a card title is cut onto a single line
+  or, toggled with `t`, wrapped onto at most three lines, and a card
+  opens its plan in a full-height dialog (also by a mouse click onto the
+  card, while a click onto its ` X ` closes the dialog again, a click onto
+  a tab selects it, and the mouse wheel scrolls it; `M` disables the
+  mouse support to regain the regular text selection of the terminal).
+  `?` hides and shows the key hint lines (terminal and web board, persisted).
+  `e` edits the selected task plan with `$EDITOR` (default: `vi`), a
+  draft which failed to save being offered again on the next `e`. In
+  the lanes and graph views, `N` creates a new task by editing a
+  pre-filled task plan (all frontmatter keys, a free placeholder id, the
+  initial state, and the section template of the task format), which is
+  stored under the id of its `Id:` line (refused for an existing id,
+  while an unchanged text creates no task at all). In the lanes, graph,
+  and task views, `D` deletes the selected task after a confirmation
+  (`y` confirms and `ESC` cancels; web: also via the `delete` and `cancel` buttons). In
+  the lanes view, `SPACE` picks up the selected task and a second `SPACE`
+  drops it onto the selected lane, changing the task status (`ESC`
+  cancels); only lanes whose state is reachable from the current state
+  in the lifecycle model accept the task. Alternatively, in the lanes,
+  graph, and task views, `T` transfers the selected task via a popup
+  listing all lane states (as `<group> ▷ <state>`, starting at the
+  current state), where `↑`/`↓` select one of the reachable states (the
+  others are dimmed), `⏎` (or a click onto it) moves the task, and `ESC`
+  (or a click outside) cancels. `/` focuses the `filter:` field
+  of the header (also a click onto it, as a click onto the `view:` value
+  or `v` switches the view; web: `⏎` keeps,
+  `ESC` or `✕` clears it; terminal: `⏎` keeps,
+  `ESC` clears it): its keywords are fuzzy matched against
+  the task id and title, AND-combined when separated by spaces and
+  OR-combined when separated by commas; the lanes show only the matching
+  tasks, the graph additionally their direct predecessors and successors
+  (dimmed and dashed). `--web` serves the web board through the ASE
+  service of the project and opens it in the browser, where a task is
+  moved by dragging its card onto a reachable lane (or, with the same
+  keyboard navigation as in the terminal, via `SPACE`); its minimized lanes
+  and collapsed groups are stored once per project, not per browser, so
+  all open web boards share them and pick up a change immediately.
+  In the task dialog of the web board, `e` (or `✎`) edits the task plan
+  (in the lanes and graph views, `e` opens the selected task directly for editing)
+  in a Markdown editor: `Ctrl`/`⌘`+`S` saves it, but only if the plan was
+  not changed meanwhile (else it offers to overwrite or discard), and
+  `ESC` cancels (after a confirmation if changed; with Vim or Emacs key
+  bindings via `board.web.editor.keymap`: `:w`/`:q` resp. `C-x C-s`/`C-x C-c`); a text which failed to
+  save is kept as a draft in the browser and offered on the next edit.
+  A running service with other ASE code is never restarted, as
+  this would break the MCP connections of agent sessions: an older service
+  without the web board fails `--web`, a differing build is only
+  warned about. `--text` prints
+  the lane overview as plain text, which is also the fallback without an
+  interactive terminal. All views follow changes of the task plans live.
 
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the
@@ -608,24 +801,6 @@ resolvers always see the very same specification:
   update. Before the first successful export, a placeholder page is
   served instead. The command does not terminate on its own.
 
-The following top-level command exists for exposing plugin meta files:
-
-- `ase meta` *name* \[...\]:
-  Output the contents of one or more plugin *meta files* to standard
-  output. Each *name* selects a file under the plugin's `meta/`
-  directory; the `ase-` prefix and `.md` extension are optional. This is
-  intended to be leveraged by *ASE* skills and not typically invoked
-  directly by end users.
-
-The following top-level command exists for the `ase-meta-compat`
-self-test skill:
-
-- `ase compat`:
-  Output the canonical expected probe values for the `ase-meta-compat`
-  self-test skill as `<id>: <value>` lines, one per probe. This is
-  intended to be invoked by the skill (after it has recorded all actual
-  probe results) and not directly by end users.
-
 The following top-level commands exist for *Anthropic Claude Code CLI* hook
 integration:
 
@@ -691,12 +866,19 @@ CONFIGURATION FILES
   to the Git top-level directory. Outside a Git repository, the file
   is placed relative to the current working directory.
 
-- **session**: `~/.ase/session/`*id*`/config.yaml`:
+- **session**: *per-user state directory*`/session/`*id*`/config.yaml`:
   Per-session *ASE* configuration (scope `session:`*id*), located
-  under the user's home directory (independent of any project context).
+  independent of any project context and removed on session end.
 
 STATE FILES
 -----------
+
+- *per-user state directory*:
+  Machine-local per-user *ASE* state (session configurations and
+  `task-lifecycle.json`), never roamed or versioned. The per-user
+  state directory is `~/Library/Application Support/ase` on macOS,
+  `%LOCALAPPDATA%\ase` on Windows, and `$XDG_STATE_HOME/ase`
+  (falling back to `~/.local/state/ase`) on Linux and other Unix systems.
 
 - `.ase/service.yaml`:
   Per-project service state.
@@ -712,13 +894,26 @@ STATE FILES
   --log-level debug service start` to log the full *MCP* traffic.
 
 - `<project>/`*basedir*`/TASK-`*id*`.md`:
-  Persisted task plan, managed by the `ase task` subcommands, located
-  relative to the Git top-level directory (or the current working
-  directory outside a Git repository). *basedir* defaults to `.ase/task`
-  (configurable via `project.artifact.task.basedir`). Each task file is
-  owned by *ASE* and removed by `ase task delete` and `ase task purge`.
-  A legacy `<basedir>/`*id*`/plan.md` layout is auto-migrated to this
-  single-file layout on first access.
+  Persisted task plan, managed by the `ase task` subcommands through the
+  built-in storage plugin of a local `ase:`*basedir* task store
+  (`project.task.store`, default `ase:./.ase/task`), located relative
+  to the Git top-level directory (or the current working directory
+  outside a Git repository). Each task file is owned by *ASE* and
+  removed by `ase task delete` and `ase task purge`.
+
+- `<project>/.ase/board.yaml`:
+  Display state of `ase task board`: separately for the terminal and the
+  web board, the minimized lanes, the collapsed groups, whether the
+  task titles are wrapped onto multiple lines, and whether the key hint
+  lines are shown. The web state is shared by all
+  browsers and tabs showing the web board. It never holds task content.
+
+- `<project>/.ase/.gitignore`:
+  Self-ignoring Git ignore file, created on first write of any of the
+  machine-local runtime files above (`service.yaml`, `service.log`, and
+  `board.yaml`), which it covers together with lock files and
+  `worktree/`, so they never show up as untracked files. An existing
+  file is never overwritten.
 
 HISTORY
 -------

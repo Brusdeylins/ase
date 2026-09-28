@@ -34,7 +34,7 @@ Procedure
     Inherit the always existing <ase-session-id/> and the current
     <ase-task-id/> from the current context.
 
-2.  <if condition="<request/> is NOT empty AND <request/> does NOT match the regexp `^[a-zA-Z][a-zA-Z0-9_-]*$`">
+2.  <if condition="<request/> is NOT empty AND <request/> does NOT match the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`">
     Only output the following <template/> and then immediately
     *STOP* processing the entire current skill:
 
@@ -76,6 +76,13 @@ Procedure
     -   Output:
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>** (*updated*)
+        </template>
+
+    -   If <text/> carries a line `NOTICE: <info/>` (the id does not
+        conform to the task id scheme of the project), additionally
+        output:
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ NOTICE: <info/>
         </template>
     </if>
 

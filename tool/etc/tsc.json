@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-		"outDir":                  "../dst",
+        "outDir":                  "../dst",
         "target":                  "esnext",
         "module":                  "nodenext",
         "moduleResolution":        "nodenext",
@@ -16,9 +16,13 @@
         "types":                   [ "node" ],
         "rootDir":                 "../src"
     },
-	"include": [
-		"../src/**/*.ts",
-		"../src/**/*.d.ts",
-		"../package.json"
+    "include": [
+        "../src/**/*.ts",
+        "../src/**/*.d.ts",
+        "../package.json"
+    ],
+    "exclude": [
+        "../src/ase-task-board-web-client.ts"
     ]
 }
+

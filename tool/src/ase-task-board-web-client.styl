@@ -1,0 +1,1086 @@
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  emit standard CSS at-rules only (no legacy vendor prefixes)  */
+vendors = official
+
+/*  Adobe Source Sans 3 font faces (inlined by Vite as data: URIs), where
+    the semi-bold faces also serve "bold" (weight range up to 700)  */
+@font-face
+    font-family: "Source Sans 3"
+    font-style: normal
+    font-weight: normal
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-Regular.ttf.woff2") format("woff2")
+@font-face
+    font-family: "Source Sans 3"
+    font-style: italic
+    font-weight: normal
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-It.ttf.woff2") format("woff2")
+@font-face
+    font-family: "Source Sans 3"
+    font-style: normal
+    font-weight: 600 700
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-Semibold.ttf.woff2") format("woff2")
+@font-face
+    font-family: "Source Sans 3"
+    font-style: italic
+    font-weight: 600 700
+    src: url("../node_modules/source-sans/WOFF2/TTF/SourceSans3-SemiboldIt.ttf.woff2") format("woff2")
+
+/*  DejaVu Sans Mono font face for code (regular only, as the oblique
+    and bold faces are intentionally not embedded)  */
+@font-face
+    font-family: "DejaVu Sans Mono"
+    font-style: normal
+    font-weight: normal
+    src: url("../node_modules/@fontsource/dejavu-mono/files/dejavu-mono-latin-400-normal.woff2") format("woff2")
+
+/*  the semantic colors (layer 2), mapped onto the color spreads
+    "--color-<role>-{1..64}" (layer 1) of the colors stylesheet  */
+:root
+    --c-text:          var(--color-normal-21)
+    --c-text-strong:   var(--color-normal-25)
+    --c-text-soft:     var(--color-normal-29)
+    --c-paper:         var(--color-normal-64)
+    --c-shade:         var(--color-normal-13)
+    --c-mute:          var(--color-dim-35)
+    --c-line:          var(--color-dim-44)
+    --c-border-strong: var(--color-dim-52)
+    --c-border:        var(--color-dim-54)
+    --c-border-soft:   var(--color-dim-56)
+    --c-fill:          var(--color-dim-60)
+    --c-ground:        var(--color-dim-62)
+    --c-ground-light:  var(--color-dim-63)
+    --c-accent-strong: var(--color-accent-27)
+    --c-accent:        var(--color-accent-36)
+    --c-accent-light:  var(--color-accent-44)
+    --c-accent-line:   var(--color-accent-52)
+    --c-accent-border: var(--color-accent-54)
+    --c-accent-fill:   var(--color-accent-60)
+    --c-accent-ground: var(--color-accent-62)
+    --c-accent-paper:  var(--color-accent-64)
+    --c-signal-strong: var(--color-signal-27)
+    --c-signal:        var(--color-signal-42)
+    --c-signal-ground: var(--color-signal-62)
+
+/*  the base settings  */
+*
+    box-sizing: border-box
+[hidden]
+    display: none !important
+
+/*  the single fixed font size, from which all other font sizes derive (in rem units)  */
+html, body
+    font-size: 16px
+body
+    margin: 0
+    font-family: "Source Sans 3", Helvetica, Arial, sans-serif
+    line-height: 1.3
+    color: var(--c-text)
+    background: var(--c-ground)
+
+/*  the page as a column of exactly the viewport height, where the view takes all
+    the height left by the header and the footer, so the footer always ends at the bottom edge  */
+#app
+    display: flex
+    flex-direction: column
+    height: 100vh
+.spacer
+    flex: 1
+.mute
+    color: var(--c-mute)
+    font-size: 0.6875rem
+.warn
+    color: var(--c-signal)
+    font-size: 0.6875rem
+
+/*  the header  */
+header
+    display: flex
+    align-items: center
+    justify-content: center
+    flex-wrap: wrap
+    gap: 4px 16px
+    margin: 0 16px
+    padding: 7px 16px
+    background: var(--c-paper)
+
+    /*  the line below the header, turning upward with rounded corners at both ends  */
+    border: 1px solid var(--c-border-soft)
+    border-top: 0
+    border-radius: 0 0 8px 8px
+    position: sticky
+    top: 0
+    z-index: 5
+    color: var(--c-text-soft)
+
+    /*  the separators between the header elements  */
+    .sep
+        margin: 0 0.6rem
+        color: var(--c-mute)
+
+    /*  the application name and the read-only header values, emphasized but without a box  */
+    .emph
+        color: var(--c-text)
+        font-weight: bold
+
+    /*  the header values in boxes, with the view as a toggle button  */
+    .val
+        display: inline-block
+        margin-left: 0.2rem
+        padding: 0 6px
+        border: 1px solid var(--c-border)
+        border-radius: 4px
+        background: var(--c-ground-light)
+        color: var(--c-text)
+        font: inherit
+        font-weight: bold
+    .toggle
+        cursor: pointer
+        &:hover
+            border-color: var(--c-signal)
+            background: var(--c-signal-ground)
+            color: var(--c-signal-strong)
+
+    /*  the filter input field at the end of the header, with its clear
+        button placed inside the field on its right side  */
+    .filter
+        display: inline-flex
+        align-items: center
+        gap: 4px
+        .field
+            position: relative
+            display: inline-flex
+            align-items: center
+        input
+            width: 180px
+            padding-right: 22px
+            outline: none
+            &:hover, &:focus
+                border-color: var(--c-signal)
+                background: var(--c-signal-ground)
+                color: var(--c-signal-strong)
+        .clear
+            position: absolute
+            right: 4px
+            padding: 0 2px
+            border: none
+            background: none
+            color: var(--c-mute)
+            font: inherit
+            font-size: 80%
+            line-height: 1
+            cursor: pointer
+            &:hover
+                color: var(--c-signal)
+
+/*  the lanes view  */
+#view
+    flex: 1
+    min-height: 0
+    display: flex
+    flex-direction: column
+    padding: 14px 16px 4px
+#board
+    display: flex
+    gap: 12px
+    flex: 1
+    min-height: 0
+    overflow-x: auto
+.group
+    display: flex
+    flex-direction: column
+    gap: 8px
+    min-width: 220px
+    flex: 1
+    &.coll
+        min-width: 36px
+        max-width: 36px
+        flex: none
+        .ghd
+            padding: 4px 0
+
+        /*  the lanes of a collapsed group as narrow boxes: arrow on top,
+            vertically written status, and number of cards at the bottom  */
+        .lane
+            align-items: center
+            gap: 6px
+            overflow: hidden
+
+            /*  the top and bottom spacing sits on the arrow and the count, as a
+                padding of the lane itself would raise its minimum height and so
+                make the weighted lane heights differ from the ones of expanded groups  */
+            > .arr
+                margin-top: 6px
+            > .cnt
+                margin-bottom: 6px
+            cursor: pointer
+            font-weight: bold
+            font-size: 0.875rem
+            background: var(--c-fill)
+            color: var(--c-text-soft)
+            &.active
+                background: var(--c-accent-fill)
+                color: var(--c-accent-strong)
+            &.done
+                color: var(--c-line)
+        .vt
+            flex: 1
+            min-height: 0
+            overflow: hidden
+            writing-mode: vertical-rl
+            text-orientation: upright
+
+            /*  tighten the vertical step between the stacked upright letters
+                (for vertical text, "line-height" only sets the column width)  */
+            letter-spacing: -0.25em
+        .cnt
+            font-weight: normal
+.ghd
+    background: var(--c-text-strong)
+    color: var(--c-paper)
+    font-weight: bold
+    font-size: 0.875rem
+    padding: 4px 12px
+    border-radius: 6px
+    cursor: pointer
+    white-space: nowrap
+    text-align: center
+
+/*  the group and lane titles after the expand/collapse arrow  */
+.ttl
+    margin-left: 0.5rem
+
+/*  the expand/collapse arrow, pointing right (by rotating the same
+    glyph) when collapsed, to keep both arrows exactly equally sized  */
+.arr
+    display: inline-block
+    &.right
+        transform: rotate(-90deg)
+.lane
+    display: flex
+    flex-direction: column
+    min-height: 0
+    background: var(--c-ground-light)
+    border: 1px solid var(--c-border)
+    border-radius: 6px
+    &.active
+        background: var(--c-accent-ground)
+        border-color: var(--c-accent-line)
+    &.dashed
+        border-style: dashed
+    &.min
+        flex: none !important
+.lhd
+    display: flex
+    justify-content: space-between
+    padding: 4px 12px
+    background: var(--c-fill)
+    border-radius: 6px 6px 0 0
+    font-weight: bold
+    color: var(--c-text-soft)
+    cursor: pointer
+    font-size: 0.875rem
+    .active &
+        background: var(--c-accent-fill)
+        color: var(--c-accent-strong)
+
+    /*  the lanes of the "done" states with dimmed names  */
+    .done &
+        color: var(--c-line)
+.lane, .cards
+    outline: none
+.cards
+    overflow-y: auto
+    padding: 8px 10px
+    display: flex
+    flex-direction: column
+    gap: 8px
+
+/*  the grown lane: all other groups and lanes (and the group header) hidden, and
+    the cards in a grid of at least four columns, or more if the cards then still
+    keep their minimum width, with all cards of a row having the same height  */
+#board.grown
+    overflow-x: hidden
+    .group:not(.grown), .group.grown > .ghd, .group.grown > .lane:not(.grown)
+        display: none
+    .lane.grown
+        flex: 1 1 0 !important
+        .cards
+            display: grid
+            grid-template-columns: repeat(auto-fill, minmax(unquote("min(240px, calc((100% - 3 * 8px) / 4))"), 1fr))
+            align-content: start
+
+/*  the task boxes (of both the lanes and the graph view), with the task id in a
+    sub-box, and the title cut onto a single line or (with titles shown) three lines  */
+.card
+    background: var(--c-paper)
+    border: 1px solid var(--c-border)
+    border-radius: 5px
+    padding: 8px 10px
+    cursor: pointer
+    overflow: hidden
+
+    /*  never shrink within a too low lane, as the lane scrolls instead  */
+    flex-shrink: 0
+    &:hover
+        border-color: var(--c-accent)
+.cbody
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+    .titles &
+        white-space: normal
+        display: -webkit-box
+        -webkit-box-orient: vertical
+        -webkit-line-clamp: 3
+        line-clamp: 3
+.cid, .ref
+    display: inline-block
+    background: var(--c-text)
+    color: var(--c-paper)
+    font-weight: bold
+    border-radius: 3px
+    padding: 0 8px
+    margin-right: 6px
+.tone-done.card, .tone-done .card
+    background: var(--c-ground)
+    color: var(--c-line)
+.tone-done .cid
+    background: var(--c-line)
+.tone-active.card, .tone-active .card
+    background: var(--c-accent-paper)
+    border-color: var(--c-accent-border)
+    color: var(--c-accent-strong)
+.tone-active.card:hover, .tone-active:hover .card
+    border-color: var(--c-accent)
+.tone-active .cid
+    background: var(--c-accent)
+
+/*  the pulse of the task boxes of active lanes and of the active graph nodes (like in the TUI),
+    drawn as a ring centered onto their top border line (instead of glyphs, whose font
+    bearings would leave gaps in the line), with a dot of pulsing size,
+    in a lighter accent color (or in signal color when selected),
+    stopped on reduced motion  */
+#board .lane.active .card:not(.ghost):not(.carried), #graph .node.tone-active:not(.context) .card
+    position: relative
+    overflow: visible
+    &::after
+        --pulse: var(--c-accent-light)
+        display: block
+        position: absolute
+        top: -0.5px
+        right: 12px
+        transform: translateY(-50%)
+        width: 8px
+        height: 8px
+        border: 1.25px solid var(--pulse)
+        border-radius: 50%
+        background: var(--pulse)
+        content: ""
+        animation: pulse 2.5s step-end infinite
+#board .lane.active .card.sel:not(.ghost):not(.carried)::after, #graph .node.tone-active.sel:not(.context) .card::after
+    --pulse: var(--c-signal)
+
+/*  the frames of the pulse (like "pulseFrames" of the TUI: "●", "◉", "⦿", "○", "⦿", "◉"):
+    10 frames of 250ms, staying on the filled circle for the first half  */
+@keyframes pulse
+    0%
+        background: var(--pulse)
+    50%
+        background: radial-gradient(circle closest-side, var(--pulse) 60%, var(--c-accent-paper) 60%)
+    60%
+        background: radial-gradient(circle closest-side, var(--pulse) 30%, var(--c-accent-paper) 30%)
+    70%
+        background: var(--c-accent-paper)
+    80%
+        background: radial-gradient(circle closest-side, var(--pulse) 30%, var(--c-accent-paper) 30%)
+    90%
+        background: radial-gradient(circle closest-side, var(--pulse) 60%, var(--c-accent-paper) 60%)
+@media (prefers-reduced-motion: reduce)
+    #board .lane.active .card:not(.ghost):not(.carried)::after, #graph .node.tone-active:not(.context) .card::after
+        animation: none
+
+/*  the drag & drop of task boxes: the dragged task box, the lanes it can be
+    dropped onto (filled while hovered), and the lanes it cannot be dropped onto
+    (with the lanes view id raising the specificity above the lane grounds)  */
+#board
+    .card.dragging
+        opacity: 0.4
+    .lane.target
+        border-color: var(--c-accent)
+        border-style: dashed
+    .lane.over
+        background: var(--c-accent-fill)
+    .lane.blocked
+        opacity: 0.45
+
+/*  the keyboard selection (like in the TUI): the selected group header, the
+    selected lane (with a bold border), and the selected task box, all in signal color  */
+#board
+    .ghd.sel
+        background: var(--c-signal)
+    .lane.sel
+        border-color: var(--c-signal)
+        box-shadow: 0 0 0 1px var(--c-signal)
+#board .card.sel, #graph .node.sel .card
+    border-color: var(--c-signal)
+    box-shadow: 0 0 0 1px var(--c-signal)
+    color: var(--c-signal)
+#board .card.sel .cid, #graph .node.sel .cid
+    background: var(--c-signal)
+
+/*  the task carried by the keyboard (like in the TUI): held with a double border,
+    and while shown on a target lane, a dim dashed ghost at its origin  */
+#board .card.held
+    border-style: double
+    border-width: 3px
+    padding: 6px 8px
+#board .card.ghost
+    background: none
+    border-style: dashed
+    border-color: var(--c-line)
+    box-shadow: none
+    color: var(--c-line)
+    .cid
+        background: var(--c-line)
+
+/*  the horizontal scroll bar and the footer  */
+#hscroll
+    display: flex
+    align-items: center
+    justify-content: center
+    gap: 8px
+    padding: 0 16px
+    color: var(--c-mute)
+    font-size: 0.8125rem
+    button
+        border: 0
+        background: none
+        cursor: pointer
+        color: var(--c-text-soft)
+
+    /*  the separator between the visible groups and the scroll hint  */
+    .sep
+        margin: 0 0.6rem
+        color: var(--c-mute)
+footer
+    padding: 4px 16px 6px
+    text-align: center
+    color: var(--c-text-soft)
+    font-size: 0.8125rem
+
+    /*  the status line in the last line, below the key hints, on the background of
+        the header, with the line above it turning downward with rounded corners at
+        both ends (keeping its height while empty)  */
+    .status
+        margin: 6px 0 -6px
+        padding: 7px 16px
+        font-size: 1rem
+        background: var(--c-paper)
+        border: 1px solid var(--c-border-soft)
+        border-bottom: 0
+        border-radius: 8px 8px 0 0
+        min-height: 1.3em
+        overflow: hidden
+        white-space: nowrap
+        text-overflow: ellipsis
+        color: var(--c-signal)
+
+        /*  the connection states and the ASE version, while there is nothing
+            else to report, with a lost connection in signal color  */
+        &.idle
+            color: var(--c-mute)
+            .off
+                color: var(--c-signal)
+
+    /*  the separators between the key hints  */
+    .sep
+        margin: 0 0.6rem
+        color: var(--c-mute)
+
+    /*  the actions after the key caps of the key hints  */
+    .action
+        margin-left: 0.4rem
+
+/*  the key caps of the board footer, the dialog footer, the deletion confirmation, and the transfer popup  */
+footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
+    display: inline-block
+    padding: 0 5px
+    border: 1px solid var(--c-border)
+    border-radius: 4px
+    background: var(--c-paper)
+    font: inherit
+    font-weight: bold
+
+/*  the graph view  */
+#graph
+    flex: 1
+    min-height: 0
+    overflow: auto
+    background: var(--c-ground-light)
+    border: 1px solid var(--c-border-soft)
+    border-radius: 6px
+    cursor: grab
+
+    /*  the background is dragged for scrolling  */
+    &.panning
+        cursor: grabbing
+        user-select: none
+
+    /*  a graph smaller than the view is centered in it (via auto margins,
+        which, unlike centering alignments, keep an overflowing graph scrollable),
+        and a larger graph is never shrunk (it is zoomed explicitly only)  */
+    display: flex
+    svg
+        max-width: none
+        display: block
+        flex-shrink: 0
+        margin: auto
+    .node
+        cursor: pointer
+
+        /*  do not clip the pulse of the task boxes of the active nodes  */
+        foreignObject
+            overflow: visible
+    .card
+        box-sizing: border-box
+        height: 100%
+
+    /*  the dependency context of a filtered graph: dimmed and dashed  */
+    .node.context .card
+        opacity: 0.5
+        border-style: dashed
+    .edge
+        fill: none
+        stroke: var(--c-line)
+        stroke-width: 1.4
+        &.sel
+            stroke: var(--c-signal)
+    .arrow
+        fill: var(--c-line)
+
+/*  the task dialog  */
+#scrim
+    position: fixed
+    inset: 0
+    background: unquote("color-mix(in srgb, var(--c-shade) 55%, transparent)")
+    z-index: 10
+
+/*  the confirmation of a task deletion and the transfer popup: a small box, centered over everything  */
+#confirm, #transfer, #busy
+    position: fixed
+    inset: 0
+    display: flex
+    align-items: center
+    justify-content: center
+    background: unquote("color-mix(in srgb, var(--c-shade) 55%, transparent)")
+    z-index: 20
+    .box
+        display: flex
+        flex-direction: column
+        align-items: center
+        gap: 12px
+        padding: 16px 24px 10px
+        background: var(--c-paper)
+        border: 1px solid var(--c-signal)
+        border-radius: 10px
+        box-shadow: 0 8px 32px unquote("color-mix(in srgb, var(--c-shade) 18%, transparent)")
+    .ask
+        color: var(--c-signal)
+        font-weight: bold
+    .buttons
+        display: flex
+        gap: 8px
+        button
+            border: 1px solid var(--c-signal)
+            border-radius: 4px
+            padding: 2px 12px
+            background: var(--c-paper)
+            color: var(--c-signal)
+            font: inherit
+            cursor: pointer
+            &:hover
+                background: var(--c-signal)
+                color: var(--c-paper)
+    .keys
+        color: var(--c-text-soft)
+        font-size: 0.6875rem
+        .sep
+            margin: 0 0.6rem
+            color: var(--c-mute)
+        .action
+            margin-left: 0.4rem
+
+/*  the transfer popup: in accent color, with a scrollable list of the lane states
+    (in bold, behind their group), where the hovered and selected states change
+    only their color (to keep the width) and the unselectable states are dimmed  */
+#transfer
+    .box
+        border-color: var(--c-accent)
+    .ask
+        color: var(--c-accent)
+        .cid
+            margin-right: 0
+    .states
+        display: flex
+        flex-direction: column
+        align-self: stretch
+        max-height: 60vh
+        overflow-y: auto
+        button
+            border: none
+            padding: 2px 12px
+            background: var(--c-paper)
+            color: var(--c-text)
+            font: inherit
+            text-align: left
+            cursor: pointer
+            &:hover:enabled, &.sel
+                color: var(--c-signal)
+            &:disabled
+                color: var(--c-mute)
+                cursor: default
+        .state
+            font-weight: bold
+        .cur
+            color: var(--c-text-soft)
+            font-weight: normal
+
+/*  the modal busy popup: in accent color, above all other popups, with a
+    rotating spinner and an indeterminate progress bar with a bouncing block  */
+#busy
+    z-index: 30
+    cursor: progress
+    .box
+        border-color: var(--c-accent)
+        padding: 16px 24px
+    .ask
+        display: flex
+        align-items: center
+        gap: 8px
+        color: var(--c-accent)
+        .cid
+            margin-right: 0
+            background: var(--c-accent)
+        .time
+            color: var(--c-text-soft)
+            font-weight: normal
+    .spinner
+        width: 12px
+        height: 12px
+        border: 2px solid var(--c-accent-line)
+        border-top-color: var(--c-accent)
+        border-radius: 50%
+        animation: busy-spin 0.8s linear infinite
+    .bar
+        position: relative
+        width: 320px
+        max-width: 70vw
+        margin: 8px 0
+        height: 12px
+        overflow: hidden
+        border-radius: 6px
+        background: var(--c-accent-line)
+        .block
+            position: absolute
+            top: 0
+            width: 25%
+            height: 100%
+            border-radius: 6px
+            background: var(--c-accent)
+            animation: busy-bounce 1.6s ease-in-out infinite alternate
+@keyframes busy-spin
+    to
+        transform: rotate(360deg)
+@keyframes busy-bounce
+    from
+        left: 0
+    to
+        left: 75%
+#dlg
+    position: absolute
+    left: 50%
+    top: 1.5vh
+    transform: translateX(-50%)
+    width: unquote("min(900px, 94vw)")
+    height: 97vh
+    display: flex
+    flex-direction: column
+    background: var(--c-paper)
+    border: 1px solid var(--c-border-strong)
+    border-radius: 10px
+    box-shadow: 0 8px 32px unquote("color-mix(in srgb, var(--c-shade) 18%, transparent)")
+
+    /*  the header: task id and title on the left, lane group and lane on the right  */
+    .dhd
+        display: flex
+        align-items: center
+        gap: 12px
+        padding: 4px 16px 4px 20px
+        background: var(--c-ground)
+        border-bottom: 1px solid var(--c-fill)
+        border-radius: 10px 10px 0 0
+        h1
+            flex: 1
+            min-width: 0
+            margin: 0
+            font-size: 1rem
+            white-space: nowrap
+            overflow: hidden
+            text-overflow: ellipsis
+
+            /*  the task title colored like its task box (the task id box
+                gets its color from the general task box tone rules)  */
+            color: var(--c-text)
+            &.tone-active
+                color: var(--c-accent-strong)
+            &.tone-done
+                color: var(--c-line)
+        .where
+            white-space: nowrap
+            color: var(--c-text-soft)
+            .val
+                display: inline-block
+                padding: 0 6px
+                border: 1px solid var(--c-border)
+                border-radius: 4px
+                background: var(--c-paper)
+                color: var(--c-text)
+                font-weight: bold
+
+    /*  the dependencies: predecessors on the left, successors on the right  */
+    .drefs
+        display: flex
+        justify-content: space-between
+        flex-wrap: wrap
+        gap: 6px 24px
+        padding: 4px 20px
+        background: var(--c-ground)
+        border-bottom: 1px solid var(--c-fill)
+        .mute
+            margin-right: 6px
+            font-size: 1rem
+
+    /*  the tabs: the task plan, followed by its attachments, all filled,
+        the selected one in signal color, the others in accent color  */
+    .dtabs
+        position: relative
+        display: flex
+        align-items: center
+        gap: 6px
+        padding: 4px 20px
+        background: var(--c-ground)
+        border-bottom: 1px solid var(--c-fill)
+
+        /*  the scroll arrows sit in the side paddings, so the tabs start
+            in the same left column as the other rows of the dialog  */
+        .tarr
+            position: absolute
+            top: 50%
+            transform: translateY(-50%)
+            border: 0
+            background: none
+            padding: 0
+            cursor: pointer
+            color: var(--c-mute)
+            font-size: 0.875rem
+            &:first-child
+                left: 5px
+            &:last-child
+                right: 5px
+        .tlist
+            flex: 1
+            min-width: 0
+            display: flex
+            gap: 6px
+            overflow-x: auto
+            scrollbar-width: none
+            &::-webkit-scrollbar
+                display: none
+        .tab
+            flex-shrink: 0
+            border: 1px solid var(--c-accent)
+            border-radius: 4px
+            padding: 1px 8px
+            background: var(--c-accent)
+            color: var(--c-paper)
+            font: inherit
+            font-size: 0.875rem
+            white-space: nowrap
+            cursor: pointer
+            &.sel
+                border-color: var(--c-signal)
+                background: var(--c-signal)
+                font-weight: bold
+            &:hover
+                opacity: 0.8
+
+    /*  the content: the rendered task plan or attachment of the selected tab  */
+
+    /*  the content fills the remaining height of the fixed-height dialog,
+        so the dialog keeps the same margin at the top and the bottom  */
+    #plan
+        flex: 1
+        min-height: 0
+        width: 100%
+        border: 0
+
+    /*  the task plan editor (CodeMirror), in the code font, with the
+        same horizontal padding as the rows of the task dialog  */
+    #editor
+        flex: 1
+        min-height: 0
+        overflow: hidden
+        background: var(--c-paper)
+        .cm-editor
+            height: 100%
+            color: var(--c-text)
+            &.cm-focused
+                outline: none
+        .cm-scroller
+            font-family: "DejaVu Sans Mono", Menlo, monospace
+            font-size: 0.9rem
+            line-height: 1.3
+        .cm-content
+            padding: 1.2rem 0 2rem 0
+            caret-color: transparent
+        .cm-line
+            padding: 0 20px
+
+        /*  the cursor as a filled block in the signal color with a white character
+            (also the block cursor of the Vim key bindings), outlined only while unfocused,
+            replacing the regular line cursor  */
+        .cm-cursor
+            display: none
+        .cm-block-cursor, .cm-fat-cursor
+            background: var(--c-signal)
+            color: #ffffff !important
+            *
+                color: #ffffff !important
+        .cm-editor:not(.cm-focused)
+            .cm-block-cursor, .cm-fat-cursor
+                background: none
+                color: inherit !important
+                outline: 1px solid var(--c-signal)
+                *
+                    color: inherit !important
+        .cm-selectionBackground, &.cm-focused .cm-selectionBackground
+            background: var(--c-accent-fill)
+
+        /*  the status and command line of the Vim and Emacs key bindings  */
+        .cm-panels
+            background: var(--c-ground)
+            border-top: 1px solid var(--c-fill)
+            color: var(--c-text-soft)
+            font-family: "DejaVu Sans Mono", Menlo, monospace
+            font-size: 0.8125rem
+            padding: 0 20px
+
+    /*  the notice of the task plan editor, with its action buttons  */
+    .dnote
+        display: flex
+        align-items: center
+        gap: 8px
+        padding: 4px 20px
+        background: var(--c-signal-ground)
+        border-bottom: 1px solid var(--c-fill)
+        color: var(--c-signal)
+        font-size: 0.875rem
+        button
+            border: 1px solid var(--c-signal)
+            border-radius: 4px
+            padding: 0 8px
+            background: var(--c-paper)
+            color: var(--c-signal)
+            font: inherit
+            cursor: pointer
+            &:hover
+                background: var(--c-signal)
+                color: var(--c-paper)
+
+    /*  the footer: the key hint  */
+    .dfoot
+        padding: 6px 20px
+        background: var(--c-ground)
+        border-top: 1px solid var(--c-fill)
+        border-radius: 0 0 10px 10px
+        color: var(--c-text-soft)
+        font-size: 0.6875rem
+
+        /*  the separators between the key hints  */
+        .sep
+            margin: 0 0.6rem
+            color: var(--c-mute)
+
+        /*  the actions after the key caps of the key hints  */
+        .action
+            margin-left: 0.4rem
+.close
+    border: 0
+    background: none
+    font-size: 1rem
+    cursor: pointer
+    color: var(--c-text)
+
+/*  the task id references to the predecessors and successors, filled
+    like the task id boxes: accent for active, dim for done, else default  */
+.ref
+    cursor: pointer
+    &.tone-active
+        background: var(--c-accent)
+    &.tone-done
+        background: var(--c-line)
+    &:hover
+        opacity: 0.8
+
+/*  the task plan document (shown within the task dialog): the frontmatter
+    fields, the numbered plan sections, and the attachments  */
+body.plan
+    background: var(--c-paper)
+    margin: 0
+
+    /*  the same horizontal padding as the rows of the task dialog, to align on the left  */
+    padding: 1.2rem 20px 2rem 20px
+    font-size: 1rem
+    line-height: 1.30
+    h1, h2, h3, h4
+        color: var(--c-accent)
+        line-height: 1.25
+        margin: 1.0em 0 0.5em
+    h1
+        font-size: 1.4rem
+    h2
+        font-size: 1.2rem
+    h3
+        font-size: 1.05rem
+    p, ol, ul, table, pre, blockquote
+        margin: 0 0 0.8em
+
+    /*  the list items (of loose lists, where the item texts are paragraphs) with less spacing  */
+    li > p
+        margin: 0 0 0.5em
+
+    /*  bullet lists with filled round bullets (also for the checklist items)  */
+    ul
+        list-style: disc
+        padding-left: 1rem
+
+        /*  more space between the (fixed) bullet and the item text  */
+        > li
+            padding-left: 0.8rem
+    ol
+        padding-left: 1.6rem
+    a
+        color: var(--c-accent)
+    img
+        max-width: 100%
+        height: auto
+    hr
+        border: 0
+        border-top: 1px solid var(--c-fill)
+
+        /*  the separator between the task fields and the task plan  */
+        &.fields
+            margin: 0 0 1rem 0
+    blockquote
+        padding: 0.1em 0 0.1em 0.9em
+        border-left: 3px solid var(--c-accent-border)
+        color: var(--c-text-soft)
+    code
+        font-family: "DejaVu Sans Mono", Menlo, monospace
+        font-size: 0.9rem
+        letter-spacing: -0.015em
+        color: var(--c-accent)
+    pre.textart
+        white-space: pre
+        overflow-x: auto
+        line-height: 1.15
+        font-size: 0.9rem
+        padding: 0.6rem 0
+        code
+            font-size: 0.9rem
+            padding: 0
+
+    /*  a preflight diff: headers dimmed, inserted lines accented, removed lines signaled  */
+    pre.diff code
+        color: var(--c-text)
+        letter-spacing: -0.015em
+        line-height: 1.00
+        .head
+            color: var(--c-mute)
+        .add
+            color: var(--c-accent)
+        .del
+            color: var(--c-signal)
+    table
+        border-collapse: collapse
+        th, td
+            padding: 0.25em 0.6em
+            border: 1px solid var(--c-border-soft)
+            text-align: left
+            vertical-align: top
+        th
+            background: var(--c-ground)
+    table.fields
+        margin-bottom: 1rem
+        line-height: 1.25
+        td
+            padding: 0 1.2rem 0 0
+            border: 0
+            &.k
+                color: var(--c-mute)
+                &::after
+                    content: ":"
+    .diagram
+        overflow-x: auto
+        margin: 0 0 0.8em
+        svg
+            max-width: 100%
+            height: auto
+    .caption
+        margin-top: 0.2rem
+        color: var(--c-mute)
+        font-size: 0.85rem
+
+    /*  the checkboxes of the checklist items  */
+    .box
+        display: inline-block
+        width: 0.75em
+        height: 0.75em
+        margin-right: 0.5em
+        vertical-align: -0.05em
+        border: 1px solid var(--c-accent)
+        border-radius: 2px
+        &.done
+            background: var(--c-accent)
+        &.part
+            background: linear-gradient(90deg, var(--c-accent) 50%, var(--c-accent-ground) 50%)
+        &.todo
+            background: var(--c-accent-ground)
+
+        /*  the open, cancelled, and deferred items as regular glyphs
+            within a fixed-size box with a rounded signal border  */
+        &.open, &.cancel, &.defer
+            overflow: hidden
+            border-color: var(--c-signal)
+            background: var(--c-signal-ground)
+            color: var(--c-signal)
+            &::before
+                display: flex
+                align-items: center
+                justify-content: center
+                height: 100%
+                font-size: 0.7em
+                font-weight: bold
+                line-height: 1
+        &.open::before
+            content: "?"
+        &.cancel::before
+            content: "−"
+        &.defer::before
+            content: "→"
+

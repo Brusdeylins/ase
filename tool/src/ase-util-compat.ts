@@ -7,7 +7,7 @@
 import { Command }          from "commander"
 import type { McpServer }   from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import { writeStdout }      from "./ase-stdio.js"
+import { writeStdout }      from "./ase-lib-stdio.js"
 
 /*  the canonical expected values for every ase-meta-compat probe,
     keyed by "<category>/<probe-name>" as used in the skill  */
@@ -50,7 +50,7 @@ const EXPECTED: Record<string, string> = {
 const formatExpected = (): string =>
     Object.entries(EXPECTED).map(([ id, value ]) => `${id}: ${value}`).join("\n") + "\n"
 
-/*  CLI command "ase compat"  */
+/*  CLI command "ase util compat"  */
 export default class CompatCommand {
     register (program: Command): void {
         program
