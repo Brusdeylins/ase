@@ -268,11 +268,14 @@ The following ASE commands/skills exist on the code-level:
 - **/ase-code-explain** *source-reference*:<br/>
   Explain code with visual diagrams and analogies.
 
-- **/ase-code-analyze** \[`--performance`|`-p`\] \[`--security`|`-s`\] \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\] *source-reference*:<br/>
+- **/ase-code-analyze** \[`--performance`|`-p`\] \[`--security`|`-s`\] \[`--tests`|`-t`\] \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\] *source-reference*:<br/>
   Analyze the source code for problems in the logic and semantics and
   its related control flow. With `--performance`, additionally analyze
   performance and efficiency; with `--security`, additionally analyze
-  security. `--severity` sets the minimum severity of findings to
+  security; with `--tests`, analyze whether the tests would notice a
+  wrong implementation (missing claims and edge cases, and expected
+  values lacking or contradicting an implementation-independent
+  source). `--severity` sets the minimum severity of findings to
   report. Usually, for each reported problem you want to resolve it with
   **/ase-code-resolve** or directly fix it with **/ase-code-edit**.
 
@@ -307,7 +310,7 @@ The following ASE commands/skills exist on the code-level:
   Lint the source code in an interactive review loop. With `--auto`, the
   loop runs non-interactively. `--severity` sets the minimum severity of
   findings to report. `--include` and `--exclude` narrow the checked
-  code quality aspects (`A01`...`A20`) to an effective set: `--include`
+  code quality aspects (`A01`...`A22`) to an effective set: `--include`
   alone keeps just the listed ones, `--exclude` alone keeps all others,
   and both together keep the included ones minus the excluded ones.
 
