@@ -5,6 +5,22 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [plugin]: Branch Merging
+    The new `ase-repo-merge` skill merges a source branch, including its uncommitted
+    changes, into a target branch -- through a merge commit, a rebase with fast-forward, or a
+    squash commit (`--mode merge|rebase|squash`) --, resolves merge conflicts semantically (aborting the
+    merge on unresolvable ones), checks that the source branch landed, and emits the
+    verdict `MERGED`, `CONFLICT`, or `FAILED`.
+
+-   FEATURE [plugin]: Conflict Resolution
+    The new `ase-repo-resolve` skill resolves the conflicts of an in-progress merge, rebase,
+    cherry-pick, revert, or stash apply, or the conflict markers left by `patch`, semantically
+    and without losing any change (backups and a per-hunk change preservation check), keeps
+    and escalates unresolvable hunks as-is (or lets the user decide them under `--interactive`),
+    continues the in-progress operation, and emits the verdict `RESOLVED`, `PARTIAL`, `NONE`,
+    or `FAILED`. The resolution procedure is shared with `ase-repo-merge` via the new
+    `ase-common-resolve.md` meta file.
+
 -   FEATURE [tool]: GitHub Issues task store
     The new built-in storage plugin `github` persists the task plans as the issues of a GitHub
     repository, selected either by `ase task store start --module github` (with the repositories

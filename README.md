@@ -258,6 +258,20 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-repo-dissect`](plugin/skills/ase-repo-dissect/help.md)
   `-m 4`
 
+- **Branch Merging**:
+  You want a branch, including its still uncommitted changes, merged
+  into a target branch, with merge conflicts resolved semantically and
+  an explicit merged/conflict verdict?
+  &rarr; [`/ase-repo-merge`](plugin/skills/ase-repo-merge/help.md)
+  `-t develop -c feature-x`
+
+- **Conflict Resolution**:
+  You ran into merge conflicts and want them resolved semantically,
+  without losing any change, and with the unresolvable hunks kept
+  as-is and escalated to you?
+  &rarr; [`/ase-repo-resolve`](plugin/skills/ase-repo-resolve/help.md)
+  `--interactive src/`
+
 - **Guided Bug Fixing**:
   You want a problem or bug resolved through a structured, plan-driven
   funnel of candidate root causes and fix approaches instead of a direct,
