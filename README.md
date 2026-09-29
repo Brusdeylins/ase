@@ -162,7 +162,7 @@ see whether **ASE** is right for you:
 - **Automated Change Logs**:
   You want to get your `CHANGELOG.md` entries
   automatically derived from your recent Git commits?
-  &rarr; [`/ase-meta-changelog`](plugin/skills/ase-meta-changelog/help.md)
+  &rarr; [`/ase-repo-changelog`](plugin/skills/ase-repo-changelog/help.md)
 
 - **Plan Implementation**:
   You have a named, persisted task plan and now want it implemented as a
@@ -242,20 +242,20 @@ see whether **ASE** is right for you:
   You want a raw Git diff turned into a concise, human-readable
   narrative of what changed and why, grouped by intent, and with
   optional intent-coherence check, risk grading and blast radius?
-  &rarr; [`/ase-meta-diff`](plugin/skills/ase-meta-diff/help.md)
+  &rarr; [`/ase-repo-diff`](plugin/skills/ase-repo-diff/help.md)
   `-c -r -b`
 
 - **Change Review**:
   You want the staged Git changes reviewed the way a human reviewer
   would on a pull request, with an approve/reject verdict and
   prioritized, severity-tagged, line-cited findings?
-  &rarr; [`/ase-meta-review`](plugin/skills/ase-meta-review/help.md)
+  &rarr; [`/ase-repo-review`](plugin/skills/ase-repo-review/help.md)
 
 - **Change Set Dissection**:
   You have one large, mixed change set, but want it split into cohesive
   parts, each landing in its own Git WorkTree so it can be reviewed and
   committed atomically?
-  &rarr; [`/ase-code-dissect`](plugin/skills/ase-code-dissect/help.md)
+  &rarr; [`/ase-repo-dissect`](plugin/skills/ase-repo-dissect/help.md)
   `-m 4`
 
 - **Guided Bug Fixing**:
@@ -355,7 +355,7 @@ see whether **ASE** is right for you:
 - **Commit Message Crafting**:
   You want a concise commit message crafted from the currently staged
   Git changes instead of writing it by hand?
-  &rarr; [`/ase-meta-commit`](plugin/skills/ase-meta-commit/help.md)
+  &rarr; [`/ase-repo-commit`](plugin/skills/ase-repo-commit/help.md)
 
 - **Conceptual Topic Neighborhood**:
   You want to explore the parent, sibling, and child topics of a concept,

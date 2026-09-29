@@ -44,11 +44,11 @@
 ○   `ase-docs-distill`:    Distill Document Key Points
 
 ⎈   **VERSION CONTROL**
-○   `ase-meta-changelog`:  Update ChangeLog Entries
-○   `ase-meta-commit`:     Git Commit Message
-○   `ase-meta-diff`:       Summarize Diff
-○   `ase-meta-review`:     Review Staged Changes
-○   `ase-code-dissect`:    Dissect a Change Set
+○   `ase-repo-changelog`:  Update ChangeLog Entries
+○   `ase-repo-commit`:     Git Commit Message
+○   `ase-repo-diff`:       Summarize Diff
+○   `ase-repo-review`:     Review Staged Changes
+○   `ase-repo-dissect`:    Dissect a Change Set
 
 ⎈   **TASK MANAGEMENT**
 ○   `ase-task-id`:         Configure Task Id

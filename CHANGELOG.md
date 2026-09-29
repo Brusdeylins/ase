@@ -17,6 +17,12 @@ ChangeLog
     planned". Issue changes made on GitHub are detected by conditional polling (ETag and `since`)
     and delivered as task store events through the new optional storage plugin method `watch`.
 
+-   CHANGE [plugin,pages]: New `ase-repo-*` skill family
+    Rename the Git repository related skills `ase-meta-review`, `ase-meta-diff`,
+    `ase-meta-changelog`, `ase-meta-commit`, and `ase-code-dissect` to `ase-repo-review`,
+    `ase-repo-diff`, `ase-repo-changelog`, `ase-repo-commit`, and `ase-repo-dissect`, and the
+    `ase-meta-review` sub-agent to `ase-repo-review`.
+
 -   FEATURE [tool,plugin]: Task id schemes
     The new `project.task.idscheme` configuration (`ase task idscheme`) selects the scheme of new
     task ids: `slug[:<words>]` (default), `seq[:<template>]` (e.g. `FOO-%03d`), or `any`. The new
