@@ -236,6 +236,15 @@ The following ASE commands/skills exist on the task-level:
   a comma-separated list of pre-selected next-step tokens to chain the
   subsequent skill.
 
+- **/ase-task-prove** \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
+  Prove the implementation of the current or given task plan against
+  the `REG` and `CON` claims of its `VERIFICATION` section: run the
+  witness test of each claim, then falsify it (revert a fix, else mutate
+  the code) and require it to fail, and record the `PROVEN` / `NOT
+  PROVEN` verdict with the captured transcripts as a proof ledger
+  attachment. A witness which stays green under its falsifier is
+  reported as `VACUOUS`.
+
 - **/ase-task-condense** \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
   Condense the current or given task plan by compressing its wording
   without losing essential content. `--next` passes a comma-separated
