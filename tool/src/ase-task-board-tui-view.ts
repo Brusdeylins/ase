@@ -8,7 +8,7 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import { splitHeight, toneOf, cardLabel, clampLines, glueId, glueTitle } from "./ase-task-board-core.js"
+import { splitHeight, toneOf, cardLabel, groupLabel, clampLines, glueId, glueTitle, glueGroup } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface } from "./ase-task-board-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
@@ -79,16 +79,23 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
     ]
 }
 
-/*  the label lines of a card of a width: the task id (with its markers) and title,
-    cut onto a single line, or if titles are shown, wrapped onto at most
-    three lines (with an ellipsis if cut), padded by one column on each side,
-    with a placeholder column glued in front of the task id to reserve
-    the extra column of its inverse rendering, and the arrow in front of
-    the title replaced by a placeholder column glued to the title  */
+/*  the label lines of a card of a width: its group (if any, and not for an epic,
+    between "♛" and "▶"), the task id (of an epic behind "♛"), its markers, and title,
+    cut onto a single line, or if titles are shown, wrapped onto at most three lines
+    (with an ellipsis if cut), padded by one column on each side, with the group
+    glued to the task id by five placeholder columns (the "♛", the "▶", their
+    spacing, and the gap), a placeholder column glued
+    in front of the task id to reserve the extra column of its inverse
+    rendering (plus two for the "♛" of an epic), and the arrow in front of the
+    title replaced by a placeholder column glued to the title  */
 const cardLines = ({ board, titles }: ViewCtx, c: Card, width: number): string[] => {
     const textW = Math.max(3, width - 2)
     const marks = board.cyclic.has(c.id) ? " ⟲" : ""
-    const text  = glueId + c.id + marks + cardLabel(c).slice(c.id.length).replace(/^ ▶ /, ` ${glueTitle}`)
+    const group = groupLabel(c)
+    const epic  = group === c.id
+    const glued = group !== "" && !epic ? glueGroup.repeat(3) + group.replace(/ /g, glueGroup) + glueGroup.repeat(2) : ""
+    const text  = glued + glueId + (epic ? glueGroup.repeat(2) : "") + c.id + marks +
+        cardLabel(c).slice(c.id.length).replace(/^ ▶ /, ` ${glueTitle}`)
     return clampLines(text, textW - 2, titles ? 3 : 1).map((line) => ` ${line}`)
 }
 
@@ -103,18 +110,25 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
     const tone    = toneOf(board, c)
     const tint    = phantom ? palette.dim : on ? palette.signal : tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
 
-    /*  the task id at the start of the first line (behind the margin and
-        the placeholder) is always bold and inverse, with one column of
-        spacing on each side, directly followed by the rest of the label,
-        where a partially visible card loses its cut border and text lines  */
-    const to      = 2 + c.id.length
+    /*  the group (if any, and not for an epic) at the start of the first line
+        (behind the margin) between "♛" and "▶" in bold box color, followed by the task id
+        (behind the placeholder), which is always bold and inverse, with one column
+        of spacing on each side (and for an epic behind "♛"), and then the
+        rest of the label, where a partially visible card loses its cut border and text lines  */
+    const group   = groupLabel(c)
+    const epic    = group === c.id
+    const lead    = group !== "" && !epic ? group.length + 5 : 0
+    const from    = lead + (epic ? 4 : 2)
+    const to      = from + c.id.length
+    const badge   = lead > 0 ? [ h(Text, { key: "group", ...cx("bold") },
+        `♛ ${lines[0].slice(4, lead - 1).replace(new RegExp(glueGroup, "g"), " ")} ▶`), " " ] : []
     const box     = {
         key: moving ? "moving" : c.id, ...(moving ? {} : { ref: ctx.cardRef(c.id) }),
         borderStyle: phantom ? dashed : held ? "double" : "single", borderColor: tint, borderDimColor: dim,
         borderTop: cut !== "top", borderBottom: cut !== "bottom", width, height: rows, flexDirection: "column"
     } as const
     const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
-        ...(k === 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, ` ${line.slice(2, to)} `),
+        ...(k === 0 ? [ line.slice(0, 1), ...badge, h(Text, { key: "id", ...cx("badge") }, ` ${epic ? "♛ " : ""}${line.slice(from, to)} `),
             line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ])))
         .slice(cut === "top" ? lines.length + 1 - rows : 0, cut === "bottom" ? rows - 1 : lines.length)
     if (!lane.active || ctx.pulse < 0 || moving || phantom || cut === "top")

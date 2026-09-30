@@ -38,10 +38,10 @@ export type GroupSpec = { title: string, lanes: LaneSpec[] }
 type LaneLayout  = Omit<LaneSpec, "kind">
 type GroupLayout = { title: string, lanes: LaneLayout[] }
 
-/*  a card of the board: the task id, its title, its lifecycle state (its lane),
-    its actual status (differing from its lifecycle state if foreign to the
-    lifecycle model), and the data needed for ordering and the graph  */
-export type Card = { id: string, title: string, status: string, actual: string, after: string[], created: string }
+/*  a card of the board: the task id, its title, its group (epic, else empty),
+    its lifecycle state (its lane), its actual status (differing from its lifecycle
+    state if foreign to the lifecycle model), and the data needed for ordering and the graph  */
+export type Card = { id: string, title: string, group: string, status: string, actual: string, after: string[], created: string }
 
 /*  the board: the lane layout of the detected lifecycle model, the cards
     per lane in display order, the computed graph, the cards shown as
@@ -282,6 +282,10 @@ export const cardLabel = (card: Card): string => {
     return title !== "" ? `${card.id} ▶ ${title}` : card.id
 }
 
+/*  the group label of a card (made safe for the terminal), or empty if it has no group  */
+export const groupLabel = (card: Card): string =>
+    card.group.replace(/\s+/g, " ").replace(/\p{Cc}/gu, "").trim()
+
 /*  the tab labels of a task view: the task plan, followed by its attachments
     with the "kind" parameter of their type (if any) behind a filled arrow and
     their description (if any, cut after 30 characters) behind a hollow arrow
@@ -322,9 +326,11 @@ export const diffTones = (lines: string[]): DiffTone[] => {
 }
 
 /*  the placeholder columns in the task box labels (glued to the following
-    word for word-wrapping), in front of the task id and in front of the title  */
+    word for word-wrapping), in front of the task id, in front of the title,
+    and around and within the group (gluing it to the task id)  */
 export const glueId    = String.fromCodePoint(0xE000)
 export const glueTitle = String.fromCodePoint(0xE001)
+export const glueGroup = String.fromCodePoint(0xE002)
 
 /*  word-wrap a text onto at most a maximum number of lines of a width,
     hard-breaking too long words and ending a cut text with an ellipsis  */
@@ -398,7 +404,8 @@ export const buildBoard = async (log: Log): Promise<Board> => {
             warnings.push(`task "${item.id}" has status "${item.status}" unknown to lifecycle model ` +
                 `"${lifecycle.name}" (shown as "${status}")`)
         }
-        cards.set(item.id, { id: item.id, title: item.title, status, actual: item.status, after, created: keys.get("Created") ?? "" })
+        const group  = (keys.get("Group") ?? "").trim()
+        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, after, created: keys.get("Created") ?? "" })
     }
 
     /*  derive predecessors (known ones only) and successors  */
@@ -412,6 +419,12 @@ export const buildBoard = async (log: Log): Promise<Board> => {
             else
                 warnings.push(`task "${c.id}" references unknown predecessor "${p}"`)
         }
+
+        /*  an epic (a task being its own group) implicitly comes after all other tasks of its group  */
+        if (c.group === c.id)
+            for (const m of cards.values())
+                if (m.group === c.id && m.id !== c.id && !known.includes(m.id))
+                    known.push(m.id)
         pred.set(c.id, known)
         for (const p of known)
             succ.set(p, [ ...(succ.get(p) ?? []), c.id ])

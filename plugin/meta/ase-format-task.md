@@ -127,6 +127,12 @@ You *MUST* honor the following hints on this *task* format:
 
 -   The `Group` frontmatter key content-wise places the task into a single group.
     The <task-group/> usually is the unique name of a "master task" or "epic".
+    An epic is created either *implicitly*, by just using the same plain
+    <task-group/> in the `Group` key of all its member tasks, or *explicitly*,
+    by an additional task whose `Id` equals the <task-group/> and whose
+    own `Group` equals its `Id`, too. Such an explicit epic task implicitly
+    comes `After` all other member tasks of its group, i.e., these need
+    not be listed in its `After` key.
 
 -   The `Phase` frontmatter key chronologically places the task into a single phase.
     The <task-phase/> usually is the unique name of a "phase", "stage", or "sprint".

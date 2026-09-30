@@ -245,7 +245,7 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
         title: g.title,
         lanes: g.lanes.map((l) => ({
             status: l.status, active: l.active, weight: l.weight, dashed: l.dashed, kind: l.kind,
-            cards:  (board.lanes.get(l.status) ?? []).map((c) => ({ id: c.id, title: c.title, cyclic: board.cyclic.has(c.id), tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c) }))
+            cards:  (board.lanes.get(l.status) ?? []).map((c) => ({ id: c.id, title: c.title, group: c.group, cyclic: board.cyclic.has(c.id), tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c) }))
         }))
     }))
 })
@@ -384,6 +384,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
                 tone:   toneOf(board, card),
                 status: card.status,
                 group:  board.groups.find((g) => g.lanes.some((l) => l.status === card.status))?.title ?? "",
+                epic:   card.group,
                 doc:    await taskDocument(parts.keys, parts.body),
                 tabs:   attachmentTabs(await Task.attachments(log, id)),
                 pred:   ref(board.pred.get(id) ?? []),

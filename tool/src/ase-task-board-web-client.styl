@@ -346,6 +346,11 @@ header
     border-radius: 3px
     padding: 0 8px
     margin-right: 6px
+
+/*  the task group in front of the task id of a group member: bold text in the box color  */
+.cepic
+    margin-right: 6px
+    font-weight: bold
 .tone-done.card, .tone-done .card
     background: var(--c-ground)
     color: var(--c-line)
@@ -570,6 +575,18 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
             stroke: var(--c-signal)
     .arrow
         fill: var(--c-line)
+
+    /*  the dashed container of the tasks of a group, with the group name in its top-left corner  */
+    .cluster
+        rect
+            fill: none
+            stroke: var(--c-line)
+            stroke-width: 1.4
+            stroke-dasharray: 6 4
+        text
+            fill: var(--c-mute)
+            font-size: 13px
+            font-weight: bold
 
 /*  the task dialog  */
 #scrim

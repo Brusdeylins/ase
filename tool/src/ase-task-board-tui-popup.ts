@@ -7,7 +7,7 @@
 import { Box, Text }                          from "ink"
 
 import type { Task }                          from "./ase-task.js"
-import { cardLabel, attachmentTabs, isPreflightDiff, diffTones } from "./ase-task-board-core.js"
+import { cardLabel, groupLabel, attachmentTabs, isPreflightDiff, diffTones } from "./ase-task-board-core.js"
 import type { Card }                          from "./ase-task-board-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
 import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.js"
@@ -412,19 +412,24 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
     /*  the header width, without its outer spaces and the " X " close button  */
     const titleW = Math.max(0, innerW - 2 - 4)
 
-    /*  the header: task id and title on the left (with the title cut as
-        needed), lane group and status on the right (dropped if even the id
-        would not fit otherwise)  */
+    /*  the header: task group (if any, and not for an epic), task id (of an epic
+        behind "♛"), and title on the left (with the title cut as needed), lane
+        group and status on the right (dropped if even the task group and id would not fit otherwise)  */
     const title  = card !== undefined ? cardLabel(card).replace(/^(\S+) ▶ /, "$1 ") : id
+    const tgroup = card !== undefined ? groupLabel(card) : ""
+    const epic   = tgroup !== "" && tgroup === id
+    const prefix = tgroup !== "" && !epic ? `♛ ${tgroup} ▶ ` : ""
+    const groupW = prefix.length + (epic ? 2 : 0)
     let   right  = card !== undefined ? `${group !== undefined ? `${group} ▷ ` : ""}${card.status}` : ""
-    if (id.length + 3 + right.length > titleW)
+    if (id.length + 3 + groupW + right.length > titleW)
         right = ""
     else if (right !== "")
         right = " " + right
     const lane   = right !== "" && card !== undefined ? card.status : ""
 
-    /*  the id is rendered inverse with one extra space on each side  */
-    const leftW  = Math.max(0, titleW - right.length - 2)
+    /*  the id is rendered inverse with one extra space on each side,
+        preceded by the task group between "♛" and "▶" in bold  */
+    const leftW  = Math.max(0, titleW - right.length - 2 - groupW)
     const head   = title.length > leftW ? title.slice(0, Math.max(0, leftW - 1)) + "…" : title.padEnd(leftW)
     const pos    = `lines ${s + 1}–${Math.min(lines.length, s + viewH)} of ${lines.length} `
 
@@ -454,7 +459,8 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
     return h(Box, { key: "dialog", top: 0, left, width, height: rows, ...cx("popup", "border-dim") },
         h(Text, {},
             " ",
-            h(Text, { ...cx("badge"), color: tint(id) }, ` ${head.slice(0, id.length)} `),
+            ...(prefix !== "" ? [ h(Text, { ...cx("bold"), color: tint(id) }, prefix) ] : []),
+            h(Text, { ...cx("badge"), color: tint(id) }, ` ${epic ? "♛ " : ""}${head.slice(0, id.length)} `),
             h(Text, { color: tint(id) }, head.slice(id.length)),
             h(Text, cx("dim"), right.slice(0, right.length - lane.length)),
             h(Text, cx("dim", "bold"), lane),

@@ -81,7 +81,9 @@ const sheet = (p: Palette) => ({
     "tone-idle-title":     { color: p.normal },
     "tone-idle-id":        { color: p.normal, bold: true, inverse: true },
     "tone-edge":           { color: p.dim },
-    "tone-edge-sel":       { color: p.signal }
+    "tone-edge-sel":       { color: p.signal },
+    "tone-group-frame":    { color: p.dim },
+    "tone-group-title":    { color: p.dim, bold: true }
 }) satisfies Record<string, BoxProps | TextProps>
 export type ClassName = keyof ReturnType<typeof sheet>
 let classes = sheet(palette)

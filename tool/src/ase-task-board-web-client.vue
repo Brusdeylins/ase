@@ -52,13 +52,13 @@
                         <div v-if="!surface.minimized.includes(l.status)" class="cards" tabindex="-1">
                             <!--  the task carried by the keyboard, shown on top of the selected target lane  -->
                             <div v-if="carried !== null && drag?.over === l.status" class="card held sel carried" :class="`tone-${carried.tone}`">
-                                <div class="cbody"><span class="cid">{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}{{ carried.title }}</div>
+                                <div class="cbody"><span v-if="carried.group !== '' && carried.group !== carried.id" class="cepic">♛ {{ carried.group }} ▶</span><span class="cid">{{ carried.group === carried.id ? "♛ " : "" }}{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}{{ carried.title }}</div>
                             </div>
                             <div v-for="c in l.cards" :key="c.id" class="card" draggable="true"
                                 :class="[ `tone-${c.tone}`, { sel: sel.id === c.id }, carryClass(c.id) ]"
                                 @click="sel = { g: gi, l: li, id: c.id }; openTask(c.id)"
                                 @dragstart="dragStart($event, c.id, l.status, c.moves)" @dragend="dragEnd">
-                                <div class="cbody"><span class="cid">{{ c.id }}</span>{{ c.cyclic ? "⟲ " : "" }}{{ c.title }}</div>
+                                <div class="cbody"><span v-if="c.group !== '' && c.group !== c.id" class="cepic">♛ {{ c.group }} ▶</span><span class="cid">{{ c.group === c.id ? "♛ " : "" }}{{ c.id }}</span>{{ c.cyclic ? "⟲ " : "" }}{{ c.title }}</div>
                             </div>
                         </div>
                     </div>
@@ -92,9 +92,10 @@
     </footer>
     <div v-show="task !== null" id="scrim" @click.self="leaveEdit(true)">
         <div v-if="task !== null" id="dlg">
-            <!--  the header: task id and title on the left, lane group and lane on the right  -->
+            <!--  the header: task group (if any, and not for an epic), task id (of an epic behind "♛"),
+                  and title on the left, lane group and lane on the right  -->
             <div class="dhd">
-                <h1 :class="`tone-${task.tone}`"><span class="cid">{{ task.id }}</span>{{ task.title }}</h1>
+                <h1 :class="`tone-${task.tone}`"><span v-if="task.epic !== '' && task.epic !== task.id" class="cepic">♛ {{ task.epic }} ▶</span><span class="cid">{{ task.epic === task.id ? "♛ " : "" }}{{ task.id }}</span>{{ task.title }}</h1>
                 <span v-if="editing?.id !== ''" class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
                 <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit(false)">✎</button>
                 <button class="close" title="close (ESC)" @click="leaveEdit(true)">✕</button>
@@ -207,14 +208,14 @@ import { vim, Vim, getCM }                                                      
 import { emacs, EmacsHandler }                                                     from "@replit/codemirror-emacs"
 
 /*  the board model and task details, as delivered by the service  */
-type Card    = { id: string, title: string, cyclic: boolean, tone: string, moves?: string[] }
+type Card    = { id: string, title: string, group: string, cyclic: boolean, tone: string, moves?: string[] }
 type Lane    = { status: string, active: boolean, weight: number, dashed: boolean, kind: "initial" | "regular" | "terminal", cards: Card[] }
 type Group   = { title: string, lanes: Lane[] }
 type Surface = { view: View, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }
 type Board   = { mode: string, project: string, version: string, warnings: string[], surface: Surface, moves: Record<string, string[]>, groups: Group[] }
 type Tone    = "active" | "done" | "idle"
 type Ref     = { id: string, tone: Tone }
-type Task    = { id: string, title: string, tone: Tone, status: string, group: string, doc: string, tabs: string[], pred: Ref[], succ: Ref[] }
+type Task    = { id: string, title: string, tone: Tone, status: string, group: string, epic: string, doc: string, tabs: string[], pred: Ref[], succ: Ref[] }
 type View    = "lanes" | "graph"
 
 /*  the key bindings of the task plan editor (see "board.web.editor.keymap")  */
@@ -726,7 +727,7 @@ const startNew = async () => {
     actionError.value = null
     tab.value     = 0
     tabDocs.value = {}
-    task.value    = { id: "new", title: "New Task", tone: "idle", status: "", group: "", doc: "", tabs: [ "0 ▶ plan" ], pred: [], succ: [] }
+    task.value    = { id: "new", title: "New Task", tone: "idle", status: "", group: "", epic: "", doc: "", tabs: [ "0 ▶ plan" ], pred: [], succ: [] }
     await openEditor("", src.text, "", src.keymap, true)
 }
 

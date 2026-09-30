@@ -5,6 +5,11 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool,plugin]: Task Groups in the Task Board
+    The task board (TUI and web) shows the `Group` (epic) of a task. An explicit epic task (whose
+    `Id` equals its own `Group`) implicitly comes `After` all other tasks of its group, as now
+    documented in the task format.
+
 -   FEATURE [plugin]: Branch Merging
     The new `ase-repo-merge` skill merges a source branch, including its uncommitted
     changes, into a target branch -- through a merge commit, a rebase with fast-forward, or a
