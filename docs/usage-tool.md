@@ -722,37 +722,6 @@ the persisted task plans of the current project:
   the lane overview as plain text, which is also the fallback without an
   interactive terminal. All views follow changes of the task plans live.
 
-The following top-level commands exist for autonomous agents driving the
-phases of the `enterprise` task lifecycle model:
-
-- `ase agent`:
-  Entry point group for the agents. Without a subcommand,
-  the help text is shown and the command exits with status 1.
-
-- `ase agent implementer` \[`-p`|`--parallel` *num*\] \[`-t`|`--timeout` *duration*\]:
-  Drive the *Implementation* phase of the `enterprise` task lifecycle
-  model (refused for any other model) until interrupted: every `PLANNED`
-  task whose `After:` predecessors are all `IMPLEMENTED` or later (or
-  `CANCELLED`, or no longer existing) is claimed into `IMPLEMENTING`
-  (in natural task id order, re-checked on every change of the task store,
-  while a task still waiting for its predecessors is reported once)
-  and implemented via
-  `claude -p --disallowedTools AskUserQuestion --permission-mode auto --permission-prompts none "/ase:ase-task-implement --next DONE <id>"`
-  (headless, with `ASE_HEADLESS=true`, where risky actions are denied
-  by the auto mode classifier instead of being prompted for). Afterwards, a task the skill put
-  into `IMPLEMENTED` is kept, while a task still in `IMPLEMENTING` is put
-  into `STALLED` (also after an implementation exceeding the *duration*
-  of `--timeout`, as `<number><unit>` with unit `s`, `m`, or `h`, default:
-  `60m`); on an interrupt (`SIGINT`/`SIGTERM`) the running implementations
-  are aborted and their tasks put back into `PLANNED`. `--parallel`
-  implements up to *num* (default: `1`) tasks in parallel, then each in
-  its own Git worktree (via `--worktree` of `ase-task-implement`). All
-  processing information, including the output of `claude`, is logged to
-  stdout with timestamp prefixes and, at the end of each implementation,
-  appended to the attachment of the task with the type
-  `text/plain; charset=utf-8; kind="agent:implementer"` (created if not
-  existing yet).
-
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the
 `project.artifact.*` configuration globs. Only the files Git tracks are
