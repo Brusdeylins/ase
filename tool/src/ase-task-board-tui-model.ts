@@ -579,14 +579,17 @@ export const useBoardState = (log: Log, initial: Board) => {
     if (fit.first !== first)
         setFirst(fit.first)
 
-    /*  scroll the graph viewport so the box of the selected node stays visible  */
+    /*  scroll the graph viewport so the box of the selected node stays visible,
+        with the rows of a surrounding group frame (padding) above and below it  */
     const viewH = boardH - 2
     const viewW = innerW - 4
     let   { x, y } = scroll
     const box = view === "graph" ? places.get(sel.id) : undefined
-    if (box !== undefined) {
-        if (box.top < y)                   y = box.top
-        if (box.bottom > y + viewH - 1)    y = box.bottom - viewH + 1
+    if (box !== undefined && layout !== null) {
+        const top    = Math.max(0, box.top - 2)
+        const bottom = Math.min(layout.graph.height, box.bottom + 1)
+        if (top < y)                       y = top
+        if (bottom > y + viewH - 1)        y = bottom - viewH + 1
         if (box.bl < x)                    x = Math.max(0, box.bl - 2)
         if (box.br > x + viewW - 1)        x = box.br - viewW + 3
     }
