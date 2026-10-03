@@ -408,6 +408,8 @@ header
 @media (prefers-reduced-motion: reduce)
     #board .lane.active .card:not(.ghost):not(.carried)::after, #graph .node.tone-active:not(.context) .card::after
         animation: none
+    #busy .spinner, #busy .bar .block
+        animation: none
 
 /*  the drag & drop of task boxes: the dragged task box, the lanes it can be
     dropped onto (filled while hovered), and the lanes it cannot be dropped onto

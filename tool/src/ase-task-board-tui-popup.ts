@@ -66,7 +66,7 @@ const wrap = (line: Line, width: number): Line[] => {
 
 /*  make a text safe for the terminal: expand tabs and strip control characters  */
 export const sanitize = (text: string): string =>
-    text.replace(/\t/g, "    ").replace(/\p{Cc}/gu, "")
+    text.replace(/\t/g, "    ").replace(/[\p{Cc}؜‎‏‪-‮⁦-⁩]/gu, "")
 
 /*  mark the checkbox of a plan line in the read dialog: checkboxes of items
     which are done, in progress, or open are accented, while checkboxes of
@@ -103,9 +103,10 @@ const headerLines = (keys: [ string, string ][], width: number): DialogLine[] =>
 const markdownLines = (text: string, width: number): DialogLine[] => {
     const out = [] as DialogLine[]
     for (const line of text.replace(/^(?:[ \t]*\r?\n)+/, "").split(/\r?\n/).map(sanitize)) {
-        const bold  = /^#/.test(line)
-        const color = /^#{1,4}(?!#)/.test(line) ? palette.accent : palette.normal
-        for (const part of wrap(checkbox(emphasis(line.replace(/^#+\s*/, ""))), width))
+        const heading = /^(#{1,6})[ \t]+/.exec(line)
+        const bold    = heading !== null
+        const color   = heading !== null && heading[1].length <= 4 ? palette.accent : palette.normal
+        for (const part of wrap(checkbox(emphasis(heading !== null ? line.slice(heading[0].length) : line)), width))
             out.push({ text: part.text, color, bold, mask: part.mask })
     }
     return out

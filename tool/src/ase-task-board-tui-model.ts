@@ -329,7 +329,7 @@ export const useBoardState = (log: Log, initial: Board) => {
             err instanceof Error ? err : new Error(String(err))
         ).then((content) => {
             if (live)
-                setFiles((files) => new Map(files).set(key, content))
+                setFiles(new Map([[ key, content ]]))
         })
         return () => {
             live = false

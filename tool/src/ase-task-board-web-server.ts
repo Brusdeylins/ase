@@ -637,7 +637,7 @@ const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
             }
             else if (storeState !== null)
                 stream.write(`event: store\ndata: ${JSON.stringify(storeState)}\n\n`)
-            request.raw.req.on("close", () => {
+            request.raw.res.on("close", () => {
                 clients.delete(client)
                 stream.end()
                 if (clients.size === 0 && stopWatch !== null) {
