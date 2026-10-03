@@ -17,7 +17,7 @@ import type { ForegroundColorName }         from "chalk"
 import type Log                             from "./ase-lib-log.js"
 import { Config }                           from "./ase-config-core.js"
 import { configSchema }                     from "./ase-config-schema.js"
-import { parseScope }                       from "./ase-config-scope.js"
+import { parseScope, userStateDir }         from "./ase-config-scope.js"
 import { readStdin, writeStdout }           from "./ase-lib-stdio.js"
 import pkg                                  from "../package.json" with { type: "json" }
 
@@ -285,6 +285,93 @@ const memoize = <T>(fn: () => T): (() => T) => {
     return (): T => (cache ??= { value: fn() }).value
 }
 
+/*  type of the rate-limit windows information  */
+type RateLimits = NonNullable<StatuslineInput["rate_limits"]>
+
+/*  the ChatGPT backend endpoint providing the OpenAI Codex subscription usage  */
+const CODEX_USAGE = "https://chatgpt.com/backend-api/wham/usage"
+
+/*  time-to-live (in milliseconds) of the cached OpenAI Codex subscription usage  */
+const CODEX_USAGE_TTL = 60 * 1000
+
+/*  type of a single rate-limit window in the OpenAI Codex usage response  */
+type CodexUsageWindow = {
+    used_percent?:         number
+    limit_window_seconds?: number
+    reset_at?:             number
+}
+
+/*  type of the (relevant subset of the) OpenAI Codex usage response  */
+type CodexUsageResponse = {
+    rate_limit?: {
+        primary_window?:   CodexUsageWindow | null
+        secondary_window?: CodexUsageWindow | null
+    } | null
+}
+
+/*  fetch the rate-limit windows directly from the ChatGPT backend with the credential
+    stored by the OpenAI Codex CLI; the result (even a failed one) is cached for a short
+    time, as the statusline is rendered frequently, and no failure is ever raised  */
+const fetchCodexLimits = async (): Promise<RateLimits | undefined> => {
+    /*  reuse the cached result while it is still fresh  */
+    const cacheFile = path.join(userStateDir(), "statusline-codex-usage.json")
+    let cache: { time?: number, limits?: RateLimits } = {}
+    try {
+        cache = (JSON.parse(fs.readFileSync(cacheFile, "utf8")) ?? {}) as typeof cache
+    }
+    catch (_e) {
+        /*  no (valid) cache yet  */
+    }
+    if (typeof cache.time === "number" && Math.abs(Date.now() - cache.time) < CODEX_USAGE_TTL)
+        return cache.limits
+
+    /*  query the usage endpoint (keeping the stale result on any failure)  */
+    let limits = cache.limits
+    try {
+        const home  = process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex")
+        const auth  = JSON.parse(fs.readFileSync(path.join(home, "auth.json"), "utf8")) as
+            { tokens?: { access_token?: string, account_id?: string } } | null
+        const token = auth?.tokens?.access_token
+        if (typeof token === "string" && token !== "") {
+            const res = await fetch(CODEX_USAGE, {
+                headers: {
+                    "Authorization":      `Bearer ${token}`,
+                    "ChatGPT-Account-ID": auth?.tokens?.account_id ?? "",
+                    "User-Agent":         `ase/${pkg.version}`
+                },
+                signal: AbortSignal.timeout(3 * 1000)
+            })
+            if (res.ok) {
+                /*  classify windows by their length, as plans without a 5h limit
+                    report the 7d window in the primary slot  */
+                const usage = await res.json() as CodexUsageResponse | null
+                const wins  = [ usage?.rate_limit?.primary_window, usage?.rate_limit?.secondary_window ]
+                    .filter((w): w is CodexUsageWindow => w !== undefined && w !== null)
+                const win5h = wins.find((w) => (w.limit_window_seconds ?? 5 * 3600) <  24 * 3600)
+                const win7d = wins.find((w) => (w.limit_window_seconds ?? 0)        >= 24 * 3600)
+                limits = {}
+                if (win5h !== undefined)
+                    limits.five_hour = { used_percentage: win5h.used_percent, resets_at: win5h.reset_at }
+                if (win7d !== undefined)
+                    limits.seven_day = { used_percentage: win7d.used_percent, resets_at: win7d.reset_at }
+            }
+        }
+    }
+    catch (_e) {
+        /*  credential unreadable or endpoint unreachable  */
+    }
+
+    /*  update the cache  */
+    try {
+        fs.mkdirSync(path.dirname(cacheFile), { recursive: true })
+        fs.writeFileSync(cacheFile, JSON.stringify({ time: Date.now(), limits }) + "\n", "utf8")
+    }
+    catch (_e) {
+        /*  best-effort  */
+    }
+    return limits
+}
+
 /*  command-line handling  */
 export default class StatuslineCommand {
     constructor (private log: Log) {}
@@ -441,6 +528,14 @@ export default class StatuslineCommand {
                 const getGit = memoize(() => probeGit(data.workspace?.current_dir ?? ""))
                 const getMem = memoize(() => probeMemory())
 
+                /*  determine the rate-limit windows: regularly supplied by the harness on stdin,
+                    but for OpenAI GPT models fetched directly as a fallback (and only on demand)  */
+                let limits = data.rate_limits
+                if (limits?.five_hour === undefined && limits?.seven_day === undefined
+                    && /^gpt-.+/i.test(getModel().name)
+                    && tmpl.some((line) => /%[SDWQ]/.test(line)))
+                    limits = await fetchCodexLimits()
+
                 /*  render a configuration value (if non-empty) with its icon and label  */
                 const cfgValue = (key: keyof ReturnType<typeof getCfg>, icon: string, label: string) => () => {
                     const value = getCfg()[key]
@@ -515,22 +610,22 @@ export default class StatuslineCommand {
 
                     /*  ==== RATE LIMITS ====  */
                     S: () => {
-                        const pct5h = data.rate_limits?.five_hour?.used_percentage
+                        const pct5h = limits?.five_hour?.used_percentage
                         const s     = pct5h !== undefined ? `${pct5h.toFixed(1)}%` : "-"
                         emit(`${prefix("⏲", "5h-usage")}${c.bold(s)}`)
                     },
                     D: () => {
-                        const until5h = data.rate_limits?.five_hour?.resets_at
+                        const until5h = limits?.five_hour?.resets_at
                         const s       = formatTimeUntil(until5h)
                         emit(`${prefix("⏱", "5h-resets")}${c.bold(s !== "" ? s : "-")}`)
                     },
                     W: () => {
-                        const pctWk = data.rate_limits?.seven_day?.used_percentage
+                        const pctWk = limits?.seven_day?.used_percentage
                         const s     = pctWk !== undefined ? `${pctWk.toFixed(1)}%` : "-"
                         emit(`${prefix("⏲", "7d-usage")}${c.bold(s)}`)
                     },
                     Q: () => {
-                        const untilWk = data.rate_limits?.seven_day?.resets_at
+                        const untilWk = limits?.seven_day?.resets_at
                         const s       = formatTimeUntil(untilWk)
                         emit(`${prefix("⏱", "7d-resets")}${c.bold(s !== "" ? s : "-")}`)
                     },

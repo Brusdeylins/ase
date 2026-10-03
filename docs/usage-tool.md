@@ -214,7 +214,11 @@ or *GitHub Copilot CLI* statusline:
   in `context_window.current_usage.*` and `context_window.total_*_tokens`,
   `cost.total_cost_usd` / `cost.total_duration_ms`, and the
   `rate_limits.five_hour` / `rate_limits.seven_day` window
-  percentages and reset timestamps). The output is an ANSI-colored
+  percentages and reset timestamps). If the payload carries no
+  `rate_limits` and the model matches `gpt-*`, the windows are instead
+  fetched directly from the *ChatGPT* backend with the credential stored
+  by *OpenAI Codex CLI* (`$CODEX_HOME/auth.json`, default
+  `~/.codex/auth.json`) and cached for 60 seconds. The output is an ANSI-colored
   rendering composed from one or more template *line* arguments.
   Each *line* may contain literal characters and the following
   `%`-prefixed placeholders: `%u` (user), `%p` (project), `%T` (task,
