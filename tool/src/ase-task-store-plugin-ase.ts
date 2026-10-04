@@ -83,7 +83,8 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
             this.watching = true
             this.arm()
         }
-        this.ctx.log("debug", `opened base directory "${this.basedir}"` + (this.solo ? " (solo mode)" : ""))
+        this.ctx.log("debug", `opened base directory "${this.basedir}" ` +
+            `(storage: ${this.solo ? "single" : "multi"}, lifecycle: ${this.lifecycle})`)
     }
     async close (): Promise<void> {
         this.watching = false
