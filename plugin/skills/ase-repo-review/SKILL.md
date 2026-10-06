@@ -1,17 +1,28 @@
 ---
 name: ase-repo-review
-argument-hint: "[--help|-h] [--severity|-S=(LOW|MEDIUM|HIGH)]"
+argument-hint: "[--help|-h] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--thorough|-t] [--working-copy|-w] [--branch|-b <branch>] [--commit|-c <commit>]"
 description: >
     Perform a holistic, human-reviewer-style critique of the currently
-    staged Git changes and emit an approve/reject verdict with
-    prioritized, severity-tagged, line-cited findings. Use when the user
-    wants the staged diff "reviewed", "critiqued", or "code-reviewed"
-    before committing.
+    staged Git changes (or, with `--working-copy`, of all uncommitted
+    changes, with `--branch`, of a branch against its base, or, with
+    `--commit`, of a single commit) and emit an approve/reject verdict
+    with prioritized, severity-tagged, line-cited findings. Use when the
+    user wants the staged diff, a branch, or a commit "reviewed",
+    "critiqued", or "code-reviewed".
 user-invocable: true
 disable-model-invocation: false
 effort: high
 allowed-tools:
     - "Bash(git diff *)"
+    - "Bash(git ls-files *)"
+    - "Bash(git rev-parse *)"
+    - "Bash(git for-each-ref *)"
+    - "Bash(git rev-list *)"
+    - "Bash(git merge-base *)"
+    - "Bash(git branch *)"
+    - "Bash(git worktree list *)"
+    - "Bash(git show *)"
+    - "Bash(git -C *)"
     - "Agent"
 ---
 
@@ -20,20 +31,22 @@ allowed-tools:
 @${CLAUDE_SKILL_DIR}/../../meta/ase-getopt.md
 
 <purpose name="ase-repo-review">
-Review Staged Changes
+Review Changes
 </purpose>
 
 <expand name="getopt"
     arg1="ase-repo-review"
-    arg2="--severity|-S=(LOW|MEDIUM|HIGH)">
+    arg2="--severity|-S=(AUTO|LOW|MEDIUM|HIGH) --thorough|-t --working-copy|-w --branch|-b= --commit|-c=">
     $ARGUMENTS
 </expand>
 
 <objective>
-Review the currently staged Git changes the way an *experienced human
-reviewer* would - judging them *holistically* against the change's *own
-intent* and against *correctness*, *design fit*, *clarity*, *robustness*,
-and *project-convention conformance* - and emit a single *approve /
+Review the currently staged (or all uncommitted) Git changes, the changes
+of a branch against its base, or a single commit the way an
+*experienced human reviewer* would - judging them *holistically* against
+the change's *own intent* and against *correctness*, *design fit*,
+*clarity*, *robustness*, *propagation*, freedom of *residue*, and
+*project-convention conformance* - and emit a single *approve /
 request-changes verdict* backed by *prioritized*, *severity-tagged*,
 *line-cited* findings. This is a *synthesizing critique*, not a mechanical
 scan: it complements `ase-code-lint` (mechanical quality), `ase-code-analyze`
@@ -47,15 +60,127 @@ Procedure
 
 1.  <step id="STEP 1: Determine Change Set">
 
-    1.  Determine *whether there are staged changes at all* by running the
-        corresponding command (taken exactly as given) and capturing its
-        output - the bare *list of staged file names* - into <diff/>. This
-        is a lightweight gate; the full diff is fetched by the sub-agent
-        in STEP 2, so capturing only the file-name list here is sufficient:
+    1.  <if condition="<getopt-option-commit/> is not empty and (<getopt-option-branch/> is not empty or <getopt-option-working-copy/> is equal `true`)">
+        Only output the following <template/> and then *STOP* immediately:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-repo-review**, ▶ ERROR: option `--commit` cannot be combined with `--branch` or `--working-copy`
+        </template>
+        </if>
+
+    2.  <if condition="<getopt-option-branch/> is not empty">
+        Determine the *base* of the branch:
+
+        1.  Run the command
+            `git rev-parse --verify --quiet "<getopt-option-branch/>^{commit}"`.
+            If it fails, only output the following <template/> and then
+            *STOP* immediately:
+
+            <template>
+            ⧉ **ASE**: ✪ skill: **ase-repo-review**, ▶ ERROR: branch **<getopt-option-branch/>** does not exist
+            </template>
+
+        2.  Determine the *candidate base branches* by running the command
+            `git for-each-ref --format="%(refname:short)" refs/heads/`
+            (taken exactly as given), excluding <getopt-option-branch/>
+            itself. For each <candidate/>, run the command
+            `git rev-list --count "<candidate/>..<getopt-option-branch/>"`
+            to count the commits of the branch since its fork point from
+            <candidate/>, and *drop* every candidate with a count of `0`,
+            as it already contains the branch. Set <base/> to the
+            remaining candidate with the *smallest* count (the *nearest*
+            fork point); on a tie, prefer the checked-out branch (the
+            output of `git branch --show-current`), and then the first
+            candidate. If no candidate remains, only output the following
+            <template/> and then *STOP* immediately:
+
+            <template>
+            ⧉ **ASE**: ✪ skill: **ase-repo-review**, ▶ ERROR: no base branch determinable for branch **<getopt-option-branch/>**
+            </template>
+
+        3.  Run the command
+            `git merge-base "<base/>" "<getopt-option-branch/>"` and
+            capture its output into <base-commit/>.
+
+        4.  Only output the following <template/>:
+
+            <template>
+            ⧉ **ASE**: ✪ skill: **ase-repo-review**, ⎇ branch: **<getopt-option-branch/>**, ⎇ base: **<base/>**
+            </template>
+
+        </if>
+        <elseif condition="<getopt-option-commit/> is not empty">
+        Run the command
+        `git rev-parse --verify --quiet "<getopt-option-commit/>^{commit}"`
+        and capture its output into <commit-id/>. If it fails, only output
+        the following <template/> and then *STOP* immediately:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-repo-review**, ▶ ERROR: commit **<getopt-option-commit/>** does not exist
+        </template>
+        </elseif>
+
+    3.  Determine *whether there are changes at all* by running the
+        corresponding command(s) (taken exactly as given) and capturing
+        their combined output - the bare *list of changed file names* -
+        into <diff/>. This is a lightweight gate; the full diff is fetched
+        by the sub-agent in STEP 2, so capturing only the file-name list
+        here is sufficient:
+
+        <if condition="<getopt-option-branch/> is not empty and <getopt-option-working-copy/> is equal `true`">
+        Determine the *worktree* of the branch by running the command
+        `git worktree list --porcelain` and setting <worktree-dir/> to the
+        `worktree` path of the entry whose `branch` line is
+        `refs/heads/<getopt-option-branch/>` (or to empty if there is
+        none, as a branch not checked out anywhere carries no uncommitted
+        changes).
+
+        If <worktree-dir/> is not empty, set <scope>branch
+        <getopt-option-branch/> since base commit <base-commit/> plus the
+        uncommitted changes in worktree <worktree-dir/></scope> and run:
+
+        `git -C "<worktree-dir/>" diff --name-only "<base-commit/>"`
+
+        `git -C "<worktree-dir/>" ls-files --others --exclude-standard`
+
+        From the output of the second command, *skip* every listed
+        entry below the `.ase/` directory -- it carries *ASE*'s own
+        state, and hence is never part of the user's change set.
+
+        Otherwise, set <scope>branch <getopt-option-branch/> since base
+        commit <base-commit/></scope> and run:
+
+        `git diff --name-only "<base-commit/>..<getopt-option-branch/>"`
+        </if>
+        <elseif condition="<getopt-option-branch/> is not empty">
+        Set <scope>branch <getopt-option-branch/> since base commit
+        <base-commit/></scope> and run:
+
+        `git diff --name-only "<base-commit/>..<getopt-option-branch/>"`
+        </elseif>
+        <elseif condition="<getopt-option-commit/> is not empty">
+        Set <scope>commit <commit-id/></scope> and run:
+
+        `git show --format= --name-only --diff-merges=first-parent "<commit-id/>"`
+        </elseif>
+        <elseif condition="<getopt-option-working-copy/> is equal `true`">
+        Set <scope>working copy</scope> and run:
+
+        `git diff --name-only HEAD`
+
+        `git ls-files --others --exclude-standard`
+
+        From the output of the second command, *skip* every listed
+        entry below the `.ase/` directory -- it carries *ASE*'s own
+        state, and hence is never part of the user's change set.
+        </elseif>
+        <else>
+        Set <scope>staged</scope> and run:
 
         `git diff --cached --name-only HEAD`
+        </else>
 
-    2.  <if condition="<diff/> is empty">
+    4.  <if condition="<diff/> is empty">
         Only output the following <template/> and then *STOP* immediately:
 
         <template>
@@ -70,13 +195,13 @@ Procedure
     <if condition="<ase-project-boxing/> is equal `black`">
 
     The project source artifacts are classified as a *black box*, so
-    the user does *not* want the staged changes scrutinized or their
+    the user does *not* want the changes scrutinized or their
     findings surfaced. *Skip* the entire review investigation: do
     *not* invoke the `Agent` tool and do *not* read any change, set
-    <findings/> to the *empty* list, set <verdict/> to `SKIPPED (boxing:
-    black)`, set <summary/> to a *one-line* neutral restatement of the
-    change intent derived solely from STEP 1, and proceed *directly* to
-    STEP 3.
+    <findings/> to the *empty* list, set <hidden/> to `0`, set
+    <verdict/> to `SKIPPED (boxing: black)`, set <summary/> to a
+    *one-line* neutral restatement of the change intent derived solely
+    from STEP 1, and proceed *directly* to STEP 3.
 
     </if>
 
@@ -92,13 +217,16 @@ Procedure
     repository probing, and the critique; only its final structured return
     value is consumed here.
 
+    Set <mode>thorough</mode> if <getopt-option-thorough/> is equal
+    `true`, and <mode>focused</mode> otherwise.
+
     For this, invoke *exactly once* the tool:
 
     ```text
         Agent(
             description:       "Review Investigation",
             subagent_type:     "ase:ase-repo-review",
-            prompt:            "Review the staged changes.",
+            prompt:            "Review in <mode/> mode the changes of scope: <scope/>",
             run_in_background: false
         )
     ```
@@ -115,20 +243,29 @@ Procedure
     severity floor below, so the floor only affects which findings are
     *rendered*, never the verdict.
 
-    Then determine the *effective severity floor* <floor/>: define the
-    ordinal rank `LOW`=1, `MEDIUM`=2, `HIGH`=3, start from
-    <floor><getopt-option-severity/></floor> (default `LOW`), and - if
-    <ase-project-boxing/> is equal `grey` - raise <floor/> to `MEDIUM`
-    whenever its current rank is below `rank(MEDIUM)` (grey boxing
-    surfaces only *material* findings of severity `MEDIUM` and above).
-    The floor affects only which findings are *rendered*, never the
-    <verdict/> derived above.
+    Then determine the *effective severity floor* <floor/> and its
+    origin <floor-origin/>: define the ordinal rank `LOW`=1, `MEDIUM`=2,
+    `HIGH`=3.
+
+    <if condition="<getopt-option-severity/> is equal `AUTO`">
+    Set <floor>MEDIUM</floor> and <floor-origin>boxing: grey</floor-origin>
+    if <ase-project-boxing/> is equal `grey` (grey boxing surfaces only
+    *material* findings of severity `MEDIUM` and above), and
+    <floor>LOW</floor> and <floor-origin>default</floor-origin> otherwise.
+    </if>
+    <else>
+    Set <floor><getopt-option-severity/></floor> and
+    <floor-origin>--severity <getopt-option-severity/></floor-origin>:
+    an *explicitly* given severity floor always *wins* over the boxing.
+    </else>
 
     Then *apply the effective severity floor* <floor/>: *Keep* a finding
     in <findings/> if and only if its `severity` field is `ACCEPTED` *or*
     `rank(severity)` is greater than or equal to `rank(<floor/>)`;
-    *silently drop* all other findings. With the default floor `LOW`, all
-    findings are kept. `ACCEPTED` findings are *never* dropped.
+    *drop* all other findings, but set <hidden/> to the *number* of
+    dropped findings. With the floor `LOW`, all findings are kept.
+    `ACCEPTED` findings are *never* dropped. The floor affects only which
+    findings are *rendered*, never the <verdict/> derived above.
 
     You *MUST* *NOT* output anything else in this STEP 2.
 
@@ -151,11 +288,10 @@ Procedure
 
     2.  <if condition="<findings/> is empty">
         Only output the following <template/> - with <note/> set to `the
-        change was not reviewed` if <verdict/> starts with `SKIPPED` and
-        to `the change is clean` otherwise - and then *SKIP* the
-        remainder of this STEP 3 (an empty finding list never yields the
-        `REJECT` verdict, so the closing hint of substep 4 would expand
-        into nothing anyway):
+        change was not reviewed` if <verdict/> starts with `SKIPPED`, to
+        `no finding reaches severity <floor/>` if <hidden/> is greater
+        than `0`, and to `the change is clean` otherwise - and then
+        *SKIP* substep 3 of this STEP 3:
 
         <template>
 
@@ -195,13 +331,39 @@ Procedure
         Do *not* output any further explanation.
         </if>
 
-    4.  Finally, give the closing hint by expanding the following
+    4.  <if condition="<hidden/> is greater than `0`">
+        Output the following <template/>, so that suppressed findings
+        are never mistaken for a clean change:
+
+        <template>
+
+        <ase-tpl-bullet-normal/> **HIDDEN FINDINGS**: <hidden/> finding(s) below severity **<floor/>** suppressed (<floor-origin/>).
+
+        </template>
+        </if>
+
+    5.  Finally, give the closing hints by expanding the following
         (which, depending on the configured <ase-guidance-level/>, may
         expand into nothing and hence emit no output at all):
 
         <if condition="<verdict/> starts with `REJECT`">
         <ase-tpl-hint level="normal">
         Use `/ase-code-resolve` to derive and apply a solution approach for the findings which demand changes.
+        </ase-tpl-hint>
+        </if>
+
+        <if condition="<hidden/> is greater than `0`">
+        Set <rerun>/ase-repo-review -S LOW</rerun>, append ` -w` to
+        <rerun/> if <getopt-option-working-copy/> is equal `true`, append
+        ` -b <getopt-option-branch/>` to <rerun/> if
+        <getopt-option-branch/> is not empty, append
+        ` -c <getopt-option-commit/>` to <rerun/> if
+        <getopt-option-commit/> is not empty, and
+        append ` -t` to <rerun/> if <getopt-option-thorough/> is equal
+        `true`, so that the re-run reviews the same scope in the same mode.
+
+        <ase-tpl-hint level="normal">
+        Use `<rerun/>` to re-run the review with all findings shown (a fresh review, so its findings can differ).
         </ase-tpl-hint>
         </if>
 

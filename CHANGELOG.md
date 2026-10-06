@@ -10,6 +10,23 @@ ChangeLog
     `Id` equals its own `Group`) implicitly comes `After` all other tasks of its group, as now
     documented in the task format.
 
+-   IMPROVEMENT [plugin]: Review Depth and Transparency
+    The `ase-repo-review` skill no longer reports a change as clean when its severity floor
+    suppressed findings, but always reports the number of suppressed findings. The new default
+    `--severity AUTO` keeps the floor `MEDIUM` under `grey` boxing, while an explicitly given
+    floor now wins over the boxing. The new `--thorough` option reports exhaustively (including
+    minor and plausible concerns), the new `--working-copy` option reviews all uncommitted
+    changes, and the new `PROPAGATION`, `COVERAGE`, and `RESIDUE` dimensions check for a fully
+    and consistently propagated change, for all special and edge cases being covered, and for
+    leftovers which do not belong into the change.
+
+-   FEATURE [plugin]: Branch and Commit Review
+    The `ase-repo-review` skill (now titled "Review Changes") reviews with the new `--branch`
+    option the commits of a branch against its automatically determined base branch (plus, with
+    `--working-copy`, the uncommitted changes of its worktree), and with the new `--commit`
+    option a single commit against its first parent. In both cases, the commit messages are
+    additionally checked for mismatches against the diff.
+
 -   FEATURE [plugin]: Branch Merging
     The new `ase-repo-merge` skill merges a source branch, including its uncommitted
     changes, into a target branch -- through a merge commit, a rebase with fast-forward, or a

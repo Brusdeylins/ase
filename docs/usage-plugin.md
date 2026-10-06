@@ -89,11 +89,20 @@ The following ASE commands/skills exist on the meta-level:
   risk report with mitigations. With `--blast`, additionally render a
   blast-radius map of the touched modules and their reverse dependencies.
 
-- **/ase-repo-review** \[`--severity`|`-S` `LOW`|`MEDIUM`|`HIGH`\]:<br/>
+- **/ase-repo-review** \[`--severity`|`-S` `AUTO`|`LOW`|`MEDIUM`|`HIGH`\] \[`--thorough`|`-t`\] \[`--working-copy`|`-w`\] \[`--branch`|`-b` *branch*\] \[`--commit`|`-c` *commit*\]:<br/>
   Perform a holistic, human-reviewer-style critique of the currently
   staged Git changes and emit an approve/reject verdict with
   prioritized, severity-tagged, line-cited findings. `--severity` sets
-  the minimum severity of findings to report.
+  the minimum severity of findings to report (default `AUTO`: `MEDIUM`
+  under `grey` boxing, else `LOW`), and the number of suppressed findings
+  is always reported. With `--thorough`, report exhaustively, including
+  minor and plausible concerns. With `--working-copy`, review all
+  uncommitted changes (staged, unstaged, and untracked files). With
+  `--branch`, review the commits of a branch against its automatically
+  determined base branch (plus, with `--working-copy`, the uncommitted
+  changes of its worktree), and with `--commit`, review a single commit
+  against its first parent, both also checking the commit messages
+  against the diff.
 
 - **/ase-repo-merge** \[`--target`|`-t` *branch*\] \[`--mode`|`-m` `merge`|`rebase`|`squash`\] \[`--cleanup`|`-c`\] *source-branch*:<br/>
   Merge the *source-branch*, after committing its still uncommitted

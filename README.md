@@ -246,8 +246,8 @@ see whether **ASE** is right for you:
   `-c -r -b`
 
 - **Change Review**:
-  You want the staged Git changes reviewed the way a human reviewer
-  would on a pull request, with an approve/reject verdict and
+  You want the staged Git changes, a branch, or a commit reviewed the
+  way a human reviewer would on a pull request, with an approve/reject verdict and
   prioritized, severity-tagged, line-cited findings?
   &rarr; [`/ase-repo-review`](plugin/skills/ase-repo-review/help.md)
 

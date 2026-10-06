@@ -1,28 +1,41 @@
 
 ##  NAME
 
-`ase-repo-review` - Review Staged Changes
+`ase-repo-review` - Review Changes
 
 ##  SYNOPSIS
 
 `ase-repo-review`
     [`--help`|`-h`]
-    [`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`)]
+    [`--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`)]
+    [`--thorough`|`-t`]
+    [`--working-copy`|`-w`]
+    [`--branch`|`-b` *branch*]
+    [`--commit`|`-c` *commit*]
 
 ##  DESCRIPTION
 
 The `ase-repo-review` skill performs a *holistic*,
-*human-reviewer-style* critique of the *staged* Git changes and emits a
-single *approve* / *reject* **verdict** backed by *prioritized*,
+*human-reviewer-style* critique of the *staged* Git changes (or, with
+`--working-copy`, of *all* uncommitted changes, with `--branch`, of the
+changes of a *branch* against its *base*, or, with `--commit`, of a
+*single commit*) and emits a single
+*approve* / *reject* **verdict** backed by *prioritized*,
 *severity-tagged*, *line-cited* **findings**. Rather than scanning the
 code mechanically, it first *reconstructs the change's own intent* and
 then judges the diff *as a whole* against that intent - the way an
 experienced reviewer would on a pull request.
 
 The critique spans a fixed set of reviewer *dimensions*: **intent**
-(does the diff do what it set out to, without scope creep or stray
-residue), **correctness** (latent bugs, edge cases, broken
-control/data flow), **design** (fit with the surrounding architecture,
+(does the diff do what it set out to, without scope creep),
+**propagation** (the change fully and consistently carried over to call
+sites, types, schemas, registries, catalogs, and analogous sibling
+places, with matching contracts and terminology, and without orphans left
+behind), **coverage** (all special and edge cases handled, like empty
+values, boundaries, error paths, and all variants), **residue** (debug
+output, commented-out code, scaffolding, temporary files, build output,
+or secrets which do not belong into the change), **correctness**
+(latent bugs, broken control/data flow), **design** (fit with the surrounding architecture,
 naming, abstraction level), **clarity** (readability and
 self-documentation for a future reader), **robustness** (error handling,
 resource and concurrency safety), **security** and **performance** (risks
@@ -51,23 +64,55 @@ inspects *logic and semantics*, `ase-repo-diff` narrates *what changed*
 (with optional coherence, risk, and blast-radius reports), and
 `ase-meta-diaboli` *adversarially challenges a thesis* - whereas
 `ase-repo-review` renders a *reviewer's judgment* on a concrete diff
-before it is committed.
+before it is committed or merged.
 
 ##  OPTIONS
 
--   `--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`):
-    Set the *severity floor* (default `LOW`): findings below the chosen
-    threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
-    `HIGH`. The default `LOW` keeps all findings; `ACCEPTED` findings are
-    never suppressed. Surviving findings are rendered in *descending
-    severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`. The floor only
-    affects the rendered findings table, not the overall *verdict*, which
-    is always derived from all findings before the floor is applied.
+-   `--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`):
+    Set the *severity floor* (default `AUTO`): findings below the chosen
+    threshold are suppressed, ordered `LOW` < `MEDIUM` < `HIGH`. The
+    default `AUTO` means `MEDIUM` for a project with `grey` boxing and
+    `LOW` (keep all findings) otherwise; an explicitly given floor always
+    wins over the boxing. `ACCEPTED` findings are never suppressed, and
+    the number of suppressed findings is always reported. Surviving
+    findings are rendered in *descending severity* order `HIGH`,
+    `MEDIUM`, `LOW`, `ACCEPTED`. The floor only affects the rendered
+    findings table, not the overall *verdict*, which is always derived
+    from all findings before the floor is applied.
+
+-   `--thorough`|`-t`:
+    Review *exhaustively* instead of reporting only a *few* high-signal
+    findings: report every well-grounded concern, including minor nits,
+    and additionally *plausible* concerns whose impact cannot be fully
+    proven, marked with "*Plausible:*" and rated at most `MEDIUM`.
+
+-   `--working-copy`|`-w`:
+    Review *all* uncommitted changes of the working copy - staged,
+    unstaged, and untracked files (except *ASE*'s own state below
+    `.ase/`) - instead of only the *staged* changes. Combined with
+    `--branch`, additionally review the uncommitted changes of the
+    worktree where the *branch* is checked out.
+
+-   `--branch`|`-b` *branch*:
+    Review the commits of *branch* (any Git revision) since its fork
+    point from its *base*, instead of the *staged* changes. The base is
+    determined automatically as the local branch with the *nearest* fork
+    point (preferring the checked-out branch on a tie) and is reported
+    before the review. The commit messages are checked for mismatches
+    against the diff.
+
+-   `--commit`|`-c` *commit*:
+    Review the single *commit* (any Git revision) against its first
+    parent, instead of the *staged* changes. Its commit message is
+    checked for mismatches against the diff. This option cannot be
+    combined with `--branch` or `--working-copy`.
 
 ##  ARGUMENTS
 
-The `ase-repo-review` skill takes no positional arguments; it always
-reviews the currently *staged* Git changes.
+The `ase-repo-review` skill takes no positional arguments; it reviews the
+currently *staged* Git changes, with `--working-copy` all uncommitted
+changes, with `--branch` a branch against its base, or with `--commit` a
+single commit.
 
 ##  SCENARIOS
 
@@ -75,6 +120,9 @@ reviews the currently *staged* Git changes.
 -   You want an approve or reject verdict before committing
 -   You want severity-tagged, line-cited findings on a diff
 -   You want a holistic judgment instead of a mechanical lint
+-   You want an exhaustive review of all uncommitted changes
+-   You want a feature branch reviewed before merging it
+-   You want a single, already committed change reviewed
 
 ##  EXAMPLES
 
@@ -88,6 +136,25 @@ Review the staged changes, reporting only `MEDIUM` and `HIGH` findings:
 
 ```text
 ❯ /ase-repo-review -S MEDIUM
+```
+
+Review all uncommitted changes exhaustively, reporting all findings:
+
+```text
+❯ /ase-repo-review -w -t -S LOW
+```
+
+Review the branch `feature` against its base, including the uncommitted
+changes of its worktree:
+
+```text
+❯ /ase-repo-review -b feature -w
+```
+
+Review the last commit:
+
+```text
+❯ /ase-repo-review -c HEAD
 ```
 
 ##  SEE ALSO
