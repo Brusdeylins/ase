@@ -36,12 +36,12 @@ export class Worktree {
     }
 
     /*  determine the fully resolved top-level directory of the Git
-        working tree, as a Git worktree can only be created from
-        inside one  */
-    static repoRoot (): string {
+        working tree of a directory, as a Git worktree can only be
+        created from inside one  */
+    static repoRoot (cwd = process.cwd()): string {
         let top = ""
         try {
-            top = execaSync("git", [ "rev-parse", "--show-toplevel" ], { stderr: "ignore" }).stdout.trim()
+            top = execaSync("git", [ "rev-parse", "--show-toplevel" ], { cwd, stderr: "ignore" }).stdout.trim()
         }
         catch {
             /*  not inside a Git working tree  */
@@ -79,8 +79,8 @@ export class Worktree {
     /*  resolve the base directory holding all ASE worktrees, asserting
         that every path component below the repository root is a real
         directory; the base directory is created on demand only  */
-    static baseDir (create = false, temp = false): string {
-        let dir = Worktree.repoRoot()
+    static baseDir (create = false, temp = false, cwd = process.cwd()): string {
+        let dir = Worktree.repoRoot(cwd)
         for (const component of temp ? [ ...baseComponents, tempComponent ] : baseComponents) {
             dir = path.join(dir, component)
             Worktree.assertRealDir(dir)
@@ -95,9 +95,9 @@ export class Worktree {
     /*  resolve the worktree directory of a single id; the leaf itself is
         created by "git worktree add" and hence only has to be free of an
         aliasing entry left behind by an earlier run  */
-    static dir (id: string, create = false, temp = false): string {
+    static dir (id: string, create = false, temp = false, cwd = process.cwd()): string {
         Worktree.validateId(id)
-        const dir = path.join(Worktree.baseDir(create, temp), id)
+        const dir = path.join(Worktree.baseDir(create, temp, cwd), id)
         Worktree.assertRealDir(dir)
         return dir
     }

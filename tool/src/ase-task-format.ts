@@ -8,10 +8,12 @@ import type * as API from "./ase-task-store-plugin-api.js"
 
 /*  a task lifecycle model: the lifecycle states a task plan can be in
     (the accepted values of its "Status:" frontmatter key), the initial
-    state an absent key reads as, the "finished" states, and the allowed
-    state transitions (from each state to its successor states)  */
+    state an absent key reads as, the "finished" states, the "activity" states
+    (in which a task is actively worked on, by a human or an agent, so its plan
+    must not be changed concurrently), and the allowed state transitions (from
+    each state to its successor states)  */
 export type TaskLifecycle = {
-    name: string, states: string[], initial: string, finished: string[],
+    name: string, states: string[], initial: string, finished: string[], activity: string[],
     transitions: Record<string, string[]>
 }
 
@@ -22,6 +24,7 @@ export const taskLifecycles: Record<string, TaskLifecycle> = {
         states:           [ "OPEN", "SHELVED", "CLOSED", "CANCELLED" ],
         initial:          "OPEN",
         finished:         [ "CLOSED", "CANCELLED" ],
+        activity:         [],
         transitions: {
             OPEN:         [ "SHELVED", "CLOSED", "CANCELLED" ],
             SHELVED:      [ "OPEN", "CANCELLED" ],
@@ -34,6 +37,7 @@ export const taskLifecycles: Record<string, TaskLifecycle> = {
         states:           [ "PLANNING", "SHELVED", "IMPLEMENTING", "STALLED", "IMPLEMENTED", "CANCELLED" ],
         initial:          "PLANNING",
         finished:         [ "IMPLEMENTED", "CANCELLED" ],
+        activity:         [ "IMPLEMENTING" ],
         transitions: {
             PLANNING:     [ "SHELVED", "IMPLEMENTING", "CANCELLED" ],
             SHELVED:      [ "PLANNING", "CANCELLED" ],
@@ -52,6 +56,7 @@ export const taskLifecycles: Record<string, TaskLifecycle> = {
         ],
         initial:          "DRAFTED",
         finished:         [ "INTEGRATED", "CANCELLED" ],
+        activity:         [ "PLANNING", "IMPLEMENTING", "APPROVING", "INTEGRATING" ],
         transitions: {
             DRAFTED:      [ "SHELVED", "PLANNING", "CANCELLED" ],
             SHELVED:      [ "DRAFTED", "CANCELLED" ],
@@ -565,6 +570,11 @@ export const parseTaskText = (id: string, text: string, lifecycle: TaskLifecycle
             bodyLines.pop()
         body = bodyLines.length > 0 ? `${bodyLines.join("\n")}\n` : ""
         for (const block of blocks.slice(2)) {
+            /*  drop one trailing empty line of the block, as it separates the block
+                from the next one (written by formatTaskText only behind a block ending
+                with an empty line, but typically added by hand, too)  */
+            if (block.length > 0 && block[block.length - 1] === "")
+                block.pop()
             const att: API.TaskAttachment = {}
             for (let i = 0; i < block.length; i++) {
                 const m = keyLineRe.exec(block[i])
@@ -608,7 +618,9 @@ export const formatTaskHeader = (header: API.TaskHeader): string => {
     header (see formatTaskHeader), the body enclosed in its leading and
     trailing empty line, and every attachment as its own block with
     "Data" rendered as a "|4+" (or, without trailing newline, "|4-")
-    literal block scalar, or as an empty value if empty  */
+    literal block scalar, as an empty value if empty, or as the elision
+    marker itself if elided, and a block ending with an empty line (of its
+    "Data") followed by a separating empty line (see parseTaskText)  */
 export const formatTaskText = (plan: API.TaskPlan): string => {
     let text = `---\n${formatTaskHeader(plan.header)}---\n\n`
     if (plan.body !== "")
@@ -617,8 +629,8 @@ export const formatTaskText = (plan: API.TaskPlan): string => {
         const keys = orderKeys(attachKeys, Object.keys(att).filter((key) => att[key] !== undefined))
         text += "---\n"
         for (const key of keys) {
-            if (key === "Data" && att.Data === "")
-                text += `${keyLine("Data", "")}\n`
+            if (key === "Data" && (att.Data === "" || isElided(att.Data)))
+                text += `${keyLine("Data", att.Data)}\n`
             else if (key === "Data") {
                 const keep = att.Data.endsWith("\n")
                 const data = att.Data.split("\n")
@@ -631,8 +643,56 @@ export const formatTaskText = (plan: API.TaskPlan): string => {
             else
                 text += `${keyLine(key, att[key])}\n`
         }
+        if (text.endsWith("\n\n"))
+            text += "\n"
     }
     return text
+}
+
+/*  the marker of an elided "Data" of an attachment, carrying its number of lines  */
+const elidedRe = /^\[elided: \d+ lines?\]$/
+export const isElided = (data: string | undefined): boolean =>
+    data !== undefined && elidedRe.test(data)
+
+/*  elide the non-empty "Data" of all attachments of a task plan, i.e., replace it
+    by a marker, so the plan can be passed through an LLM without its potentially
+    huge attachment payloads, and the marker be restored on saving (see restoreAttachments)  */
+export const elideAttachments = (plan: API.TaskPlan): API.TaskPlan => ({
+    ...plan,
+    attachment: plan.attachment.map((att) => {
+        if (att.Data === undefined || att.Data === "" || isElided(att.Data))
+            return att
+        const lines = att.Data.replace(/\n$/, "").split("\n").length
+        return { ...att, Data: `[elided: ${lines} line${lines === 1 ? "" : "s"}]` }
+    })
+})
+
+/*  restore the elided "Data" of the attachments of a task plan from the stored plan:
+    each elided attachment takes the "Data" of the first not yet taken stored attachment
+    of the same "Type", preferably also of the same "Created" (so the attachments can be
+    reordered or removed meanwhile); throws if no stored attachment matches  */
+export const restoreAttachments = (plan: API.TaskPlan, stored: API.TaskPlan | null): API.TaskPlan => {
+    if (!plan.attachment.some((att) => isElided(att.Data)))
+        return plan
+    const taken = new Set<number>()
+    const take  = (att: API.TaskAttachment, created: boolean): number =>
+        (stored?.attachment ?? []).findIndex((s, i) => !taken.has(i) && s.Type === att.Type
+            && s.Data !== undefined && !isElided(s.Data) && (!created || s.Created === att.Created))
+    return {
+        ...plan,
+        attachment: plan.attachment.map((att) => {
+            if (!isElided(att.Data))
+                return att
+            let i = take(att, true)
+            if (i < 0)
+                i = take(att, false)
+            if (i < 0)
+                throw new Error(`elided attachment of type "${att.Type ?? ""}" not found in the stored task plan ` +
+                    "(an elided attachment can only be kept, but not be created or copied)")
+            taken.add(i)
+            return { ...att, Data: stored!.attachment[i].Data }
+        })
+    }
 }
 
 /*  derive the title of a task plan from its body as defined by the

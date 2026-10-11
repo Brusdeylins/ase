@@ -21,6 +21,13 @@ import { Task }                  from "./ase-task.js"
 import { Problem }               from "./ase-task-store-core.js"
 import type { TaskLifecycle }    from "./ase-task-format.js"
 import * as TaskFormat           from "./ase-task-format.js"
+import { relaySpec }             from "./ase-agent-relay-client.js"
+import { AgentRelayClient }      from "./ase-agent-relay-client.js"
+import type { RelaySpec }        from "./ase-agent-relay-client.js"
+import type { AgentPresence }    from "./ase-agent-relay-core.js"
+import type { AgentUsage }       from "./ase-agent-relay-core.js"
+import { editOf }                from "./ase-task-request.js"
+import type { EditState }        from "./ase-task-request.js"
 
 /*  the kind of a lifecycle state: the initial state, a terminal (finished) state, or else a regular one  */
 export type LaneKind  = "initial" | "regular" | "terminal"
@@ -40,8 +47,14 @@ type GroupLayout = { title: string, lanes: LaneLayout[] }
 
 /*  a card of the board: the task id, its title, its group (epic, else empty),
     its lifecycle state (its lane), its actual status (differing from its lifecycle
-    state if foreign to the lifecycle model), and the data needed for ordering and the graph  */
-export type Card = { id: string, title: string, group: string, status: string, actual: string, after: string[], created: string }
+    state if foreign to the lifecycle model), the state of its edit requests
+    (see "ase agent editor", else empty), and the data needed for ordering and the graph  */
+export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", after: string[], created: string }
+
+/*  the marker of the state of the edit requests of a card (else empty):
+    requested, being processed, or failed  */
+export const editMarker = (card: Card): string =>
+    card.edit === "pending" ? "✎" : card.edit === "active" ? "✎…" : card.edit === "failed" ? "✎✗" : ""
 
 /*  the board: the lane layout of the detected lifecycle model, the cards
     per lane in display order, the computed graph, the cards shown as
@@ -59,10 +72,11 @@ export type Board = {
     warnings: string[]
 }
 
-/*  the per-surface view state: the shown view, minimized lanes, collapsed groups, and
-    whether the task titles, the key hints, and the standalone tasks of the graph are shown  */
+/*  the per-surface view state: the shown view (the lanes, the dependency graph, or the agents),
+    minimized lanes, collapsed groups, and whether the task titles, the key hints, and the
+    standalone tasks of the graph are shown  */
 export type Surface     = { view: SurfaceView, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }
-export type SurfaceView = "lanes" | "graph"
+export type SurfaceView = "lanes" | "graph" | "agents"
 export type SurfaceList = "minimized" | "collapsed"
 export type SurfaceFlag = "titles" | "keys" | "standalone"
 
@@ -137,7 +151,7 @@ export const splitHeight = (total: number, weights: number[], min = 0): number[]
 
 /*  the valibot schema of the persisted board state  */
 const surfaceSchema = v.object({
-    view:       v.optional(v.picklist([ "lanes", "graph" ]), "lanes"),
+    view:       v.optional(v.picklist([ "lanes", "graph", "agents" ]), "lanes"),
     minimized:  v.optional(v.array(v.string()), []),
     collapsed:  v.optional(v.array(v.string()), []),
 
@@ -224,7 +238,7 @@ export class BoardState {
         })
     }
 
-    /*  set the shown view (lanes or graph)  */
+    /*  set the shown view (lanes, graph, or agents)  */
     static setView (surface: "tui" | "web", view: SurfaceView): Promise<State> {
         return BoardState.update((state) => {
             state[surface].view = view
@@ -405,7 +419,7 @@ export const buildBoard = async (log: Log): Promise<Board> => {
                 `"${lifecycle.name}" (shown as "${status}")`)
         }
         const group  = (keys.get("Group") ?? "").trim()
-        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, after, created: keys.get("Created") ?? "" })
+        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), after, created: keys.get("Created") ?? "" })
     }
 
     /*  derive predecessors (known ones only) and successors  */
@@ -540,7 +554,7 @@ export const saveTask = async (log: Log, id: string, text: string, tag?: string)
     }
     let warning: string
     try {
-        warning = await Task.save(log, id, text, tag)
+        warning = (await Task.save(log, id, text, tag)).warning
     }
     catch (err: unknown) {
         if (err instanceof Problem && err.status === 412)
@@ -562,7 +576,7 @@ export const createTask = async (log: Log, id: string, text: string): Promise<st
         throw new Error(`task "${id}" already exists`)
     text = text.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, (fm) =>
         fm.replace(/^[A-Za-z]+:[ \t]*\r?\n/gm, ""))
-    return Task.save(log, id, text, undefined, true)
+    return (await Task.save(log, id, text, undefined, true)).warning
 }
 
 /*  watch the configuration files of a local task store (via their existing
@@ -648,5 +662,106 @@ export const watchTasks = (log: Log, onChange: () => Promise<void> | void,
         unsubscribe()
         await configs?.close()
     }
+}
+
+/*  the agents of the project as passed by the agent relay: whether
+    the agent relay is connected, and the running agents (by name)  */
+export type AgentsState = { connected: boolean, agents: AgentPresence[] }
+
+/*  resolve the agent relay of the project (from the given override, else from
+    "project.agent.relay"), where a misconfigured one is warned about and ignored  */
+const boardRelay = (log: Log, relay: string | undefined): RelaySpec | null => {
+    try {
+        return relaySpec(log, relay)
+    }
+    catch (err: unknown) {
+        log.write("warning", `board: ${err instanceof Error ? err.message : String(err)} -- agents not shown`)
+        return null
+    }
+}
+
+/*  order the agents by name (and id, for equally named agents on different hosts)  */
+const byName = (a: AgentPresence, b: AgentPresence): number =>
+    a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
+
+/*  fetch the agents of the project once (null without an agent relay)  */
+export const fetchAgents = async (log: Log, relay?: string): Promise<AgentsState | null> => {
+    const spec = boardRelay(log, relay)
+    if (spec === null)
+        return null
+    try {
+        return { connected: true, agents: (await new AgentRelayClient(log, spec).list()).sort(byName) }
+    }
+    catch (err: unknown) {
+        log.write("warning", `board: ${err instanceof Error ? err.message : String(err)}`)
+        return { connected: false, agents: [] }
+    }
+}
+
+/*  watch the agents of the project via the agent relay and invoke the callback initially
+    and on each change of them or of the connection state, where no agent relay at all
+    is reported once as null; returns a function to stop watching  */
+export const watchAgents = (log: Log, relay: string | undefined, onChange: (state: AgentsState | null) => void): (() => void) => {
+    const spec = boardRelay(log, relay)
+    if (spec === null) {
+        onChange(null)
+        return () => {}
+    }
+    let state: AgentsState = { connected: false, agents: [] }
+    onChange(state)
+    return new AgentRelayClient(log, spec).subscribe((agents) => {
+        state = { ...state, agents: agents.sort(byName) }
+        onChange(state)
+    }, (connected) => {
+        state = { ...state, connected }
+        onChange(state)
+    })
+}
+
+/*  a duration (in ms) in its coarsest unit, the label of an agent (its name, with its
+    differing kind), its uptime (the duration since its start, measured up to its latest
+    heartbeat), and its plain-text status (its uptime, its tasks, else "none" with its
+    state, its total and last usage of the agent tool, and its host and process id)  */
+export const agentDuration = (ms: number): string => {
+    const s = Math.max(0, Math.floor(ms / 1000))
+    return s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`
+}
+export const agentLabel = (agent: AgentPresence): string =>
+    agent.name !== agent.kind ? `${agent.name} (${agent.kind})` : agent.name
+export const agentUptime = (agent: AgentPresence): string =>
+    agentDuration(agent.beat - agent.started)
+export const agentStatus = (agent: AgentPresence): string =>
+    `uptime: ${agentUptime(agent)} · ` +
+    `task: ${agent.tasks.length > 0 ? agent.tasks.join(", ") : `none (${agent.state})`} · ` +
+    `usage: ${agentUsage(agent.usage?.total)} (last: ${agentUsage(agent.usage?.last)}) · ` +
+    `host: ${agent.host} · pid: ${agent.pid}`
+
+/*  a compact usage of the agent tool: its wall time, its output tokens (with
+    a metric suffix), and its costs (in USD), where an unavailable field is "n/a"
+    and no usage at all (before the first finished job) is "none"  */
+export const agentUsage = (usage: AgentUsage | undefined): string => {
+    if (usage === undefined)
+        return "none"
+    const tok = usage.costToken
+    const tokens = tok === null ? "n/a" :
+        tok < 1000 ? `${tok}` : tok < 1000 * 1000 ? `${(tok / 1000).toFixed(1)}k` : `${(tok / (1000 * 1000)).toFixed(1)}M`
+    const cost = usage.costUSD === null ? "$n/a" : `$${usage.costUSD.toFixed(2)}`
+    return `${agentDuration(usage.walltimeSec * 1000)}, ${tokens} tok, ${cost}`
+}
+
+/*  the digest of the agents as shown outside the agents view (the agents with their
+    states and tasks, and the connection state), for detecting a visible change of them
+    (e.g. a mere heartbeat or new processing log lines are none)  */
+export const agentsDigest = (state: AgentsState | null | undefined): string =>
+    state === undefined ? "" : state === null ? "null" :
+        JSON.stringify([ state.connected, state.agents.map((a) => [ a.id, a.kind, a.name, a.mode, a.state, a.tasks ]) ])
+
+/*  the agents busy with each task  */
+export const busyAgents = (state: AgentsState | null): Map<string, AgentPresence[]> => {
+    const busy = new Map<string, AgentPresence[]>()
+    for (const agent of state?.agents ?? [])
+        for (const id of agent.tasks)
+            busy.set(id, [ ...(busy.get(id) ?? []), agent ])
+    return busy
 }
 

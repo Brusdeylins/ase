@@ -183,6 +183,31 @@ The following configuration parameters control the project:
     (as `ase:`*basedir*) unless the latter is already set in the same
     file, and `files` is dropped.
 
+-   **project.agent.relay**: the URL of the agent relay (see `ase agent
+    relay`), through which the `ase agent` agents pass their live presence
+    (state, tasks, and processing log lines) to the task boards. Unset
+    (the default), no presence is passed at all. Writable on the `user`
+    and `project` scopes. Overridable via `--agent-relay` of `ase agent`
+    and `ase task board` (except for the web board). Requires an explicit
+    `project.id`.
+    -   `ase://`*addr*`:`*port* or `ase://`*addr*`:`*port*`/`*token*:
+        an agent relay server (`ase agent relay start`, or `ase task store
+        start --with-agent-relay`), authenticated by a bearer token: the
+        embedded *token* (warned about if the URL is configured on the
+        `project` scope), else `$ASE_AGENT_RELAY_TOKEN`, else
+        `project.agent.token`, else the `token` of the per-user
+        `relay.yaml` (resp. `store.yaml` of a task store co-hosting the
+        relay) of a locally started server the URL addresses.
+    -   `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\]: the same,
+        but connecting via HTTPS, or, with `?insecure`, skipping the
+        certificate verification.
+
+-   **project.agent.token**: the bearer token of the agent relay, used if
+    the `project.agent.relay` URL embeds no token and
+    `$ASE_AGENT_RELAY_TOKEN` is not set. It is writable on the `user`
+    scope only (a hand-edited value on another scope is used, but warned
+    about) and masked as `***` in `ase config list`.
+
 The project *artifacts* are configured per kind, each kind defined by a
 `.basedir` anchor and a `.files` miniglob spec. The `.basedir` is a
 directory resolved relative to the project root (empty means the project

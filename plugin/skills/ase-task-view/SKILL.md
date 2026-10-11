@@ -55,7 +55,10 @@ Procedure
 2.  **Perform Operation**:
 
     1.  Call the `ase_task_load(id: "<id/>", variant: "render")` tool
-        of the `ase` MCP server to load the task plan content in its
+        of the `ase` MCP server -- if <getopt-option-full/> is `true`,
+        additionally with the argument `attachments: "full"`, else with
+        the payloads of all attachments *elided* to `[elided: <n/> lines]`
+        markers (the default) -- to load the task plan content in its
         *rendering-prepared* form -- this skill is *display-only* and
         hence never persists the plan again -- and set <text/> to the
         `text` output field of this `ase_task_load` tool call. Do not
@@ -107,14 +110,9 @@ Procedure
         ⇥   **Target:**    <task-target/>
         </format>
 
-        *Render plan*: Only output the following <template/>. If
-        <getopt-option-full/> is *not* `true`, <task-content/> is longer than
-        90 lines, and the backmatter contains an attachment block with the
-        `Type` key value `text/x-diff; charset=utf-8; kind="draft"` (the implementation
-        draft from `ase-task-implement --draft`), replace the
-        entire payload of the `Data` key of this attachment block with
-        `[...]`. Else, do *not* truncate, summarize, or partially show the
-        plan. Use the following <template/>:
+        *Render plan*: Only output the following <template/>. Do *not*
+        truncate, summarize, or partially show the plan. Use the
+        following <template/>:
 
         <template>
         <ase-tpl-head title="TASK" subtitle="<task-id/>"/>
@@ -144,9 +142,9 @@ Procedure
         Use `/ase-task-edit` or `/ase-task-grill` to refine this plan, `/ase-task-implement --draft` to draft its implementation, `/ase-task-implement` to realize it, and `/ase-task-integrate` to deliver it.
         </ase-tpl-hint>
 
-        <if condition="<getopt-option-full/> is not equal `true` and the payload of the implementation draft attachment block was replaced with `[...]`">
+        <if condition="<getopt-option-full/> is not equal `true` and the backmatter of <task-content/> contains an elided `Data` payload">
         <ase-tpl-hint level="verbose">
-        Use `/ase-task-view --full` to show the elided implementation draft attachment, too.
+        Use `/ase-task-view --full` to show the elided attachment payloads, too.
         </ase-tpl-hint>
         </if>
 

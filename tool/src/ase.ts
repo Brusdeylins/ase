@@ -8,6 +8,7 @@
 import { Command, CommanderError, Option } from "commander"
 import Log                         from "./ase-lib-log.js"
 import type { LogLevel }           from "./ase-lib-log.js"
+import { writeStdout }             from "./ase-lib-stdio.js"
 import pkg                         from "../package.json" with { type: "json" }
 
 /*  type of top-level (global) options  */
@@ -49,7 +50,8 @@ const commands: Record<string, Registrar> = {
     task:       async (p) => attach(import("./ase-task.js"), p),
     artifact:   async (p) => attach(import("./ase-artifact.js"), p),
     spec:       async (p) => attach(import("./ase-spec.js"), p),
-    util:       async (p) => attach(import("./ase-util.js"), p)
+    util:       async (p) => attach(import("./ase-util.js"), p),
+    agent:      async (p) => attach(import("./ase-agent.js"), p)
 }
 
 /*  registrars of those sub-commands which live in their own modules and
@@ -162,6 +164,9 @@ const main = async (): Promise<void> => {
 }
 main().catch(async (err: unknown) => {
     if (err instanceof CommanderError) {
+        /*  flush the help or version output of Commander to a pipe,
+            as "process.exit" would otherwise truncate it  */
+        await writeStdout("")
         await log.close()
         process.exit(err.exitCode)
     }

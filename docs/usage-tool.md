@@ -60,7 +60,7 @@ The following top-level commands exist for configuration handling:
   in-memory view; on set/write, they cause a fatal error.
   Recognized keys are grouped under three top-level sections:
   `project.*` (project identity, classification, and artifact
-  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.default.{source,changeset,target}`, `project.task.store`, `project.task.token` (masked as `***` by `list`), and the
+  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.default.{source,changeset,target}`, `project.task.store`, `project.task.token` (masked as `***` by `list`), `project.agent.relay`, `project.agent.token` (masked as `***` by `list`), and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
   task identifier -- and `agent.skill`), and `board.*`
@@ -142,12 +142,17 @@ The following top-level commands exist for service management:
   and stops itself after 30 minutes of idle time. Without a
   subcommand, the help text is shown.
 
-- `ase service start`:
+- `ase service start` \[`-f`|`--foreground`\]:
   Start the background service (detached). Allocates a random
   port in the range `42000`..`44000` if none is persisted yet,
   writes it to `.ase/service.yaml`, and probes readiness. Exits
   silently with status 0 if the service is already running; prints
   `ase: service: started on port <port>` on a fresh start.
+  With `--foreground`, the service instead runs in the current
+  process, logging to the terminal instead of `.ase/service.log`,
+  without idle timeout, until it is interrupted (e.g. via `CTRL+C`)
+  or stopped via `ase service stop`; an already running service
+  is then an error.
 
 - `ase service status`:
   Report whether the background service is running. Probes the
@@ -633,7 +638,8 @@ with the Gitea token from `project.task.token`, else `$GITEA_TOKEN`):
 
 - `ase task store start` \[`-a`|`--address` *host*\] \[`-p`|`--port` *port*\]
   \[`-t`|`--token` *token*\] \[`-c`|`--cors` *origin*\] \[`-m`|`--module` *name*\]
-  \[`-d`|`--basedir` *dir*\] \[`-s`|`--solo`|`--no-solo`\] \[`--tls-cert` *file* `--tls-key` *file*\]:
+  \[`-d`|`--basedir` *dir*\] \[`-s`|`--solo`|`--no-solo`\] \[`--tls-cert` *file* `--tls-key` *file*\]
+  \[`--with-agent-relay`|`--without-agent-relay`\] \[`-f`|`--foreground`\]:
   Start the per-user task store REST API server (see `task-api.md`) in
   the background, binding to *host* (default: `127.0.0.1`) and *port*
   (default: the configured one, else allocated randomly), expecting the
@@ -652,12 +658,20 @@ with the Gitea token from `project.task.token`, else `$GITEA_TOKEN`):
   by `--no-solo`). With `--tls-cert` and `--tls-key` (both PEM
   files, default: the `tls.cert` and `tls.key` keys of `store.yaml`,
   where the effective paths are persisted), the server serves HTTPS
-  instead of HTTP. Binding to a non-loopback *host* without TLS is warned
+  instead of HTTP. With `--with-agent-relay` (persisted as `relay`, reset
+  by `--without-agent-relay`), the server additionally co-hosts the agent
+  relay (see `ase agent relay start`) under the same address, port, and
+  token, so a central host needs a single server process only. Binding to a non-loopback *host* without TLS is warned
   about. Idempotent if the server is already running, but restarts the
   server if an explicitly given option deviates from its configuration.
+  With `--foreground`, the server instead runs in the current process,
+  logging to the terminal instead of `store.log`, until it is interrupted
+  (e.g. via `CTRL+C`) or stopped via `ase task store stop`; an already
+  running server with an unchanged configuration is then an error.
 
 - `ase task store status`:
-  Report whether the task store server is running, and on which address
+  Report whether the task store server is running (and whether it
+  co-hosts the agent relay), and on which address
   and port. Exits with status 1 if it is not running.
 
 - `ase task store stop`:
@@ -666,7 +680,7 @@ with the Gitea token from `project.task.token`, else `$GITEA_TOKEN`):
 The following sub-command exists for watching, moving, and editing
 the persisted task plans of the current project:
 
-- `ase task board` \[`-w`|`--web`\] \[`-t`|`--text`\]:
+- `ase task board` \[`-w`|`--web`\] \[`-t`|`--text`\] \[`--agent-relay` *url*\]:
   Show the task board: all task plans as cards (showing the task id and,
   behind a `▶`, the title) in the
   lanes of the effective task lifecycle model (see `ase task lifecycle`),
@@ -694,7 +708,15 @@ the persisted task plans of the current project:
   initial state, and the section template of the task format), which is
   stored under the id of its `Id:` line (refused for an existing id,
   while an unchanged text creates no task at all). In the lanes, graph,
-  and task views, `D` deletes the selected task after a confirmation
+  and task views, `E` requests the edit of the selected task by a prompt
+  (refused for a finished task and while an edit of it is in progress;
+  a multi-line prompt, where `⏎` requests and `Shift`+`⏎` breaks the
+  line; terminal: `Shift`+`⏎` only under the kitty keyboard protocol,
+  while `Alt`+`⏎` breaks the line in every terminal; an empty prompt is
+  refused), which `ase agent editor`
+  then processes via `ase-task-edit` (prefilled with the prompt of a
+  failed request for a retry); its card is marked with `✎` while
+  requested, `✎…` while being processed, and `✎✗` when failed. `D` deletes the selected task after a confirmation
   (`y` confirms and `ESC` cancels; web: also via the `delete` and `cancel` buttons). In
   the lanes view, `SPACE` picks up the selected task and a second `SPACE`
   drops it onto the selected lane, changing the task status (`ESC`
@@ -729,8 +751,423 @@ the persisted task plans of the current project:
   this would break the MCP connections of agent sessions: an older service
   without the web board fails `--web`, a differing build is only
   warned about. `--text` prints
-  the lane overview as plain text, which is also the fallback without an
+  the lane overview as plain text (with the same `⟲` and `✎` markers),
+  which is also the fallback without an
   interactive terminal. All views follow changes of the task plans live.
+  With an agent relay (`--agent-relay` *url*, else `project.agent.relay`,
+  see `ase agent relay start`; the web board always follows the latter),
+  the board additionally follows the running agents live in a third
+  view `agents` (besides `lanes` and `graph`, all cycled via `v` or a
+  click onto the `view:` value): a master/detail view, with the framed
+  master list `Agents` on the left, showing each agent as a card with
+  its name (inverse, behind a `⚉`), a pulse on the right side of its top
+  border while busy (like the task cards of the active lanes, resp. just
+  a circle while waiting), and the labeled fields `kind:` and `mode:` of
+  its operation (e.g. `implementer` and `draft`, or `none` without a
+  mode), `uptime:` with the duration since its start, `task:` with the ids of
+  the tasks it is busy with (inverse, else `none (waiting)`), and `usage:` resp.
+  `last:` with its usage of the agent tool in total since its start resp. by its
+  last finished job, each as wall time, output tokens, and costs in USD
+  (e.g. `12m, 9.2k tok, $3.41`, with `n/a` for what the agent tool does not
+  report, and `none` before the first finished job), and the
+  framed detail view `Agent: Recent Log Entries` on the right (taking the remaining
+  width), showing the recent processing log lines of the selected agent
+  (all lines kept by the relay), each with its full timestamp
+  `YYYY-MM-DD HH:MM:SS.mmm:` as prefix (in normal color), the id of its
+  task (if any, inverse), its level as `[INFO]:`, `[WARNING]:`, resp.
+  `[ERROR]:`, and its content, both in accent color (warnings and errors in signal color), broken
+  onto multiple rows instead of being cut. The detail view follows the
+  bottom of the log while not scrolled up, and otherwise stays at the
+  lines shown, even while the relay drops the oldest lines. When the
+  selected agent vanishes, its neighbor is selected instead. `↑`/`↓` (or a click onto a
+  card) select an agent; `Shift`+`↑`/`↓` (terminal), the mouse wheel,
+  `PgUp`/`PgDn`, and `Home`/`End` scroll the log, where scrolling down to
+  its bottom follows it again. The info line shows the selected agent
+  with its host and process id, its state with the duration for which it
+  has been in it, and the age of its latest heartbeat. Without an agent relay, the agents view is
+  skipped. Additionally,
+  the card of each task an agent is busy with carries an inverse ` ⚉ <name> ` box per agent on its top border
+  (lanes view; in accent color, rounded in the web board), the status line shows the number of agents and the
+  connection state of the relay, and `--text` appends the agents with
+  their current operation. An agent stopping vanishes from the board
+  immediately, while an agent missing its heartbeat vanishes after 30
+  to 35 seconds. A relay connection without any traffic for 15 to 30
+  seconds (e.g. after a network partition) is detected, reported as
+  disconnected (dropping the shown agents), and re-established.
+
+The following top-level commands exist for autonomous agents driving the
+phases of the `enterprise` task lifecycle model and processing the edit
+requests of tasks:
+
+- `ase agent` \[*options*\] *agent* \[*agent-options*\] \[*agent* \[*agent-options*\] ...\]:
+  Run one or more of the agents `planner`, `implementer`, `approver`,
+  `integrator`, and `editor` concurrently in one process, e.g., `ase agent implementer
+  planner`. The *options* \[`-t`|`--tool` `claude`|`copilot`|`codex`\]
+  \[`-p`|`--parallel` *num*\] \[`-T`|`--timeout` *duration*\]
+  \[`-o`|`--one-shot`\] \[`-r`|`--repo` *url*\] \[`-d`|`--tempdir` *dir*\]
+  \[`--agent-relay` *url*\]
+  apply to all agents (where `--agent-relay` is accepted here only), while the same options within
+  the *agent-options* following an agent name (up to the next agent name)
+  override them for this agent only, e.g., `ase agent -t claude
+  implementer -p 2 approver -t codex editor` (where `--repo` and
+  `--tempdir` are not accepted per agent for `planner`, which never
+  processes tasks in a clone). The *agent-options* additionally
+  carry the individual options of an agent (if any), which are accepted
+  there only, and \[`-n`|`--name` *name*\], which names the agent
+  (default: its kind, i.e., `planner`, `implementer`, `approver`,
+  `integrator`, or `editor`; at most 64 characters) in its log lines, its processing log attachment, the
+  `Assignee:` of the tasks it processes, and its temporary directory. An agent kind may be given multiple times, e.g.,
+  `ase agent implementer -n impl-claude -t claude implementer -n
+  impl-codex -t codex`, where all names have to be unique and must not
+  be the name of another agent kind. The agents of the same kind then
+  form a pool: they compete for the same tasks, share the same tag (per mode), and
+  process their tasks in parallel to each other (so `integrator`, which
+  processes tasks serially only, can be given only once). All agents are validated and initialized before any of them
+  starts, so a single failing agent aborts the entire command. Without an
+  agent name, the help text (listing all agents with their options) is
+  shown and the command exits with status 1, while
+  `ase agent <agent> --help` shows the help of a single agent.
+
+  Each agent except `editor` (see below) drives one phase of the `enterprise` task lifecycle model
+  (refused for any other model) until interrupted, so that the four
+  agents together realize the entire model. Each agent observes the tasks in its
+  *incoming* state which do not carry the *tag* of its kind -- `ase-agent-<kind>`, resp. per mode
+  for `planner` (`ase-agent-planner-<mode>`, i.e., `ase-agent-planner-reboot` by default)
+  and for `implementer` in mode `draft` (`ase-agent-implementer-draft`) --
+  (plain or with any value) in their
+  `Tags:` frontmatter key yet and whose `After:` predecessors all passed
+  its phase (or no longer exist), and whose `Assignee:` frontmatter key
+  is either still empty or already the agent name of `--name` (so a task
+  can be pre-assigned to a particular agent of a pool, and a task assigned
+  to anybody else, e.g. a human, is left alone), where an agent can
+  require a task to be already assigned to it (see `planner`). It claims each such task
+  (in natural task id order, re-checked on every change
+  of the task store, while a task still waiting for its predecessors is
+  reported once) in a single conditional save of the task (retried on a
+  concurrent change), which moves it into its *activity* state, tags it with
+  its tag with the value `active` (so no other
+  agent of this kind picks it up, even if the skill itself puts it back
+  into the incoming state during its processing), and sets its
+  `Assignee:` frontmatter key to the agent name of `--name` (for information
+  only, as the tag alone guards the task against other agents), where a task
+  meanwhile tagged or (re)assigned is silently skipped instead,
+  and processes it through an ASE skill of the agent tool
+  of `--tool` (default: `claude`, or the `ASE_TOOL` environment variable
+  if set), i.e., via
+  `claude -p --disallowedTools AskUserQuestion --permission-mode auto --permission-prompts none "/ase:<skill> <args>"`,
+  `copilot --allow-all-tools --no-ask-user --no-color -p "/<skill> <args>"`, or
+  `codex exec --approve-for-me --color never "$<skill> <args>"`
+  (headless, with `ASE_HEADLESS=true`, where risky actions are denied
+  or automatically reviewed instead of being prompted for, and where
+  each additional directory a skill needs access to besides its working
+  directory is granted through an additional `--add-dir <dir>`). Afterwards,
+  in a single conditional save again, the task is unassigned (only if still
+  assigned to the agent, and not meanwhile to somebody else, e.g. the
+  `editor` agent), tagged with its plain tag instead
+  (or with the label of the processing as its value, like the verdict of `approver`), so no agent of this kind
+  picks it up again (and only now it counts as passed for its successors
+  where the *success* state precedes the passed one), and moved into its *success* or *parking* state, where a
+  processing failure or a processing exceeding the *duration* of
+  `--timeout` (as `<number><unit>` with unit `s`, `m`, or `h`, default:
+  `60m`) always leads to the parking state. The preparing of a processing
+  (e.g. creating a worktree) and its finishing (e.g. committing and
+  pushing a branch) are each limited to a fixed duration of `240s`,
+  where exceeding it also leads to the parking state. A task the skill
+  already put into the success state, but whose finishing failed (e.g. a
+  task `INTEGRATED` resp. `IMPLEMENTED`, but whose target resp. changeset
+  branch could not be pushed), and a task whose resulting state is not
+  reachable from its current state, is
+  instead tagged with its tag with the value `failed`, unassigned, left in its
+  state for a manual intervention (which removes the tag), and does not
+  count as passed for its successors, while the failure is logged as an error. On an interrupt
+  (`SIGINT`/`SIGTERM`/`SIGHUP`/`SIGQUIT`), and on the failure of a
+  concurrently run agent, the running processings are aborted and their
+  tasks put back, untagged and with their previous assignee, into the incoming state,
+  while a repeated signal terminates the process at once (leaving the
+  claimed tasks to the recovery described below). A final status update
+  of a processed task which fails even after its retries is retried in
+  the background with a growing delay. The claimed tasks of each run are recorded under a run lock in the
+  per-user state directory (below a sub-directory per task store, as
+  task ids are unique per task store only), so the tasks of an agent
+  terminated without this cleanup (e.g. killed or crashed) are recovered
+  on the next start of an agent of its kind for the same task store on
+  the same host by the same user: a task still in the
+  activity state is put back the same way, and any other task still tagged as
+  `active` is tagged plain (as processed), but only while it is still
+  assigned to the terminated agent and not claimed meanwhile by a live
+  agent, where concurrently started agents never recover the same run. `--parallel`
+  processes up to *num* (default: `1`) tasks of each agent in parallel,
+  where an agent can deny parallelism (see `integrator`). `--one-shot`
+  terminates an agent, instead of observing for further tasks, once a
+  check of the task store finds no dispatchable task while no task is
+  processed anymore by any agent of the same `ase agent` invocation (as a
+  task processed by one agent can become dispatchable to another one) --
+  intended for CI contexts like GitHub Actions.
+  Hence, a task still waiting for its predecessors at that time is left
+  for a later run. A failed check of the task store is retried after a
+  growing delay, where `--one-shot` gives up after three failures in a
+  row and terminates with a non-zero exit status. All processing
+  information, including the output of the agent tool, is logged to
+  stdout with timestamp prefixes in real time (the agent tool streams
+  its agent messages, tool calls, failures, and final result as JSONL
+  events), followed by the usage of the agent tool as wall time (measured
+  locally), output tokens (of `claude` and `codex`), and costs in USD (of `claude` only), with `n/a` for
+  what the agent tool does not report, and, at the end of each processing
+  (with at most 20 lines of each agent message), appended to the attachment of the task with the type
+  `text/plain; charset=utf-8; kind="agent:<name>"` (created if not
+  existing yet). A task whose status the skill itself moved elsewhere
+  is tagged, too, and left in that state.
+
+  With an agent relay (`--agent-relay` *url*, else `project.agent.relay`,
+  as `ase://<addr>:<port>[/<token>]` resp. `ases://<addr>:<port>[/<token>][?insecure]`
+  for HTTPS, optionally without certificate verification), each agent
+  additionally passes its live presence to the task boards (see `ase
+  task board`): its state (`waiting` or `busy` with the ids of its tasks)
+  immediately on every change, its usage of the agent tool (in total and
+  by its last job) immediately after each finished job, its new processing log lines (only the
+  ones added since its previous announcement, coalesced to at most four
+  announcements per second), and a heartbeat every 10 seconds, and it
+  removes its presence on termination. The relay requires an explicit
+  `project.id`. Its bearer token is the one embedded in the URL, else
+  `ASE_AGENT_RELAY_TOKEN`, else `project.agent.token` (intended for the
+  `user` scope, and warned about on any other scope), else the token of
+  the locally started agent relay (or of
+  the locally started task store co-hosting it), if the URL addresses it.
+  An unreachable relay is warned about once per outage and never disturbs
+  the processing of the tasks, where the not yet passed lines are kept
+  (at most 100) and passed once the relay is reachable again. A presence
+  rejected by the relay (e.g. by its limits or for an invalid token) is
+  warned about with its reason and retried after a growing delay (from
+  1 up to 15 minutes), where the rejected lines are dropped, unless the
+  rejection was by its limits or for an invalid token.
+
+  The `implementer`, `approver`, and `integrator` agents follow the
+  `Source:`, `Changeset:`, and `Target:` frontmatter keys of a task (or
+  their configured defaults `project.task.default.*`). Their `worktree`
+  values refer to the Git working copy the agents are started in: for
+  those the agents create no own Git worktree, but work in the working
+  copy directly, just adjusting its checked-out branch. As concurrently
+  processed tasks would interfere there, all agents of one `ase agent`
+  process handle at most one task at a time in the working copy itself
+  (other tasks waiting until it is free again), and the implementer
+  starts a task with a `worktree` changeset (or with a `branch:` changeset
+  checked out in the working copy) only in a working copy without
+  uncommitted changes (e.g. of an earlier task not yet integrated), while
+  such a task otherwise waits. This coordination does not extend to
+  agents of other processes or humans working in the same working copy. Without
+  `--repo`, all tasks are processed in this working copy, so the agents
+  have to be started inside one. With `--repo` *url*, each agent instead
+  clones the Git repository *url* once into its temporary directory
+  (removed on termination) and processes every task without a `worktree`
+  value in its own temporary Git worktree of this clone (below `work/`
+  of the temporary directory), where the Git operations on the clone are
+  serialized: before each task, its default branch and the
+  branches of the task (unless checked out for another task) are refreshed from the origin, and afterwards the
+  implementer pushes its `branch:` changeset and the integrator its
+  `branch:` target back to the origin (and deletes there a `branch:`
+  changeset deleted by the merge, where a failure is just warned about), where a rejected push fails the
+  task. If the push of the integrator fails after the skill already put the
+  task into `INTEGRATED` (resp. the push of the implementer after the skill
+  already put the task into `IMPLEMENTED`), the merge (resp. the committed
+  change set) is kept as the branch
+  `ase-agent-rescue/<id>` in the clone, the task is tagged
+  `ase-agent-integrator:failed` (resp. `ase-agent-implementer:failed`), and the temporary directory is preserved
+  (instead of being removed on termination) for a manual recovery, where the
+  implementer rescues its branch this way also for a partial change set of a
+  task it then puts into `STALLED`. Only a task with a `worktree` value then requires the agents to
+  be started inside a Git working copy (and fails otherwise). As the
+  skills run inside the clone, `--repo` requires a task store not
+  located in the working copy (i.e., not a local `ase:<path>` one).
+  In the names of all ASE worktrees derived from a task id (see the
+  individual agents below), a `#` of the id (e.g. of the `seq:#%d` id
+  scheme of the issue tracker task stores) is replaced by `_`, as
+  neither a worktree name nor a branch name can carry it.
+  The temporary directory of an agent holds the clone and other
+  temporary files: by default, it is securely created as a fresh,
+  private directory below the system temporary directory, while
+  `--tempdir` *dir* forces it to be the sub-directory `<name>` (the
+  agent name of `--name`) of *dir*, where `%p` in *dir* is expanded to the process
+  id of the agent, `%h` to a hash value unique to the process, and `%%`
+  to `%`. A missing *dir* is created private to the current user (and
+  removed again on termination if empty), while an existing *dir* has
+  to be a directory (no symbolic link) owned by the current user. A
+  sub-directory `<name>` left over by an earlier run is removed only if
+  its owning process is no longer alive and it holds no work preserved
+  for a manual recovery, and otherwise refused. The agents are:
+
+  | Agent         | Phase          | Incoming      | Activity       | Success                                           | Parking                                      | Predecessors passed                         |
+  | ------------- | -------------- | ------------- | -------------- | ------------------------------------------------- | -------------------------------------------- | ------------------------------------------- |
+  | `planner`     | Planning       | `DRAFTED`     | `PLANNING`     | `DRAFTED`                                         | `SHELVED`                                    | `PLANNED` or later, or `DRAFTED` and tagged |
+  | `implementer` | Implementation | `PLANNED`     | `IMPLEMENTING` | `IMPLEMENTED` (or `PLANNED` with `draft`)         | `STALLED` (or `PLANNED` with `draft`)        | `IMPLEMENTED` or later                      |
+  | `approver`    | Approval       | `IMPLEMENTED` | `APPROVING`    | `IMPLEMENTED` (`judge`) or `APPROVED` (`approve`) | `IMPLEMENTED` (or `DECLINED` with `approve`) | `APPROVED` or later                         |
+  | `integrator`  | Integration    | `APPROVED`    | `INTEGRATING`  | `INTEGRATED`                                      | `DEFERRED`                                   | `INTEGRATED` or `CANCELLED`                 |
+
+  - `ase agent planner`:
+    Claims only the `DRAFTED` tasks whose `Assignee:` frontmatter key
+    already is its agent name of `--name` (default: `planner`), so a plan
+    is rebooted only on the explicit request of a human, who assigns the
+    task to the planner.
+    Reboots the plan via `ase-task-reboot --next DONE <id>`. The skill
+    itself resets a rebooted plan into `DRAFTED`, where it waits,
+    tagged with `ase-agent-planner-reboot`, for its final review and its promotion into `PLANNED` by a
+    human (so removing this tag requests another reboot). A plan left in `PLANNING` is put into `SHELVED`. All this is
+    the behavior of the individual option \[`-m`|`--mode`
+    `reboot`|`condense`\] in its default mode `reboot`. In mode
+    `condense`, the agent instead claims only the tasks without the
+    separate tag `ase-agent-planner-condense` (so a condensed task can
+    still be rebooted later by a planner in mode `reboot`, and vice versa), condenses
+    the plan via `ase-task-condense --next DONE <id>`, tags it with
+    `ase-agent-planner-condense`, and puts it back into `DRAFTED` (or
+    into `SHELVED` if the skill failed).
+
+  - `ase agent implementer`:
+    Implements the plan from its `Source:` into its `Changeset:` via
+    `ase-task-implement --next DONE <id>`. A `worktree` changeset stays
+    *uncommitted* in the working copy, which is switched to the branch
+    of a `branch:<name>` source beforehand (where a task waits while the
+    working copy still carries uncommitted changes), or, if `--parallel` is greater than
+    `1`, in the own Git worktree `.ase/worktree/<id>` of each task (via
+    `--worktree <id>`). A `branch:<name>` changeset is checked out
+    (created from the source if missing) in the Git worktree
+    `.ase/worktree/<id>-implementer` of the agent (unless already checked
+    out in the working copy or another ASE worktree, which then has to
+    be without uncommitted changes, as they would be committed, too),
+    implemented there in place (via `--source worktree --changeset
+    worktree --worktree <id>-implementer`), afterwards *committed* onto the branch with the
+    message `<kind>: <title> (<id>)` -- also a partial result of a
+    failed processing, as the plan tracks it -- and the worktree is
+    removed again (under `--repo` the branch is pushed to the origin
+    beforehand, and rescued if the push is rejected, see above). An `attachment:<name>` changeset is entirely handled
+    by the skill. The skill itself puts a successfully implemented
+    task into `IMPLEMENTED`, while a task left in `IMPLEMENTING` is put
+    into `STALLED`. All this is the behavior of the individual option
+    \[`-m`|`--mode` `implement`|`draft`\] in its default mode
+    `implement`. In mode `draft`, the agent instead claims only the
+    tasks without an implementation draft attachment (type
+    `text/x-diff; charset=utf-8; kind="draft"`) yet and without the
+    separate tag `ase-agent-implementer-draft` (so a drafted task is
+    still implemented later by an implementer in mode `implement`),
+    drafts the implementation from the `Source:` into this attachment
+    only, ignoring the `Changeset:`, via `ase-task-implement --next DONE
+    --draft --stateless <id>` (in a temporary worktree of the skill,
+    leaving the working copy untouched), and puts the task back into
+    `PLANNED`: untagged if the draft attachment was created, as the
+    attachment itself keeps the agent from drafting it again, and
+    otherwise tagged with `ase-agent-implementer-draft`, so a failed
+    drafting is not retried endlessly.
+
+  - `ase agent approver`:
+    Reviews the `Changeset:` of the task via `ase-repo-review`: a
+    `worktree` changeset staged in its working copy (the Git worktree
+    `.ase/worktree/<id>` of a parallel implementer if existing, else the
+    working copy of the project), a `branch:<name>` changeset via
+    `ase-repo-review --branch <name>`, and an `attachment:<name>`
+    changeset staged in a temporary Git worktree, detached at the
+    `base` commit of the attachment and removed afterwards. A task
+    already carrying a verdict of the approver (i.e., any tag
+    `ase-agent-approver`) is never picked up again. The verdict
+    `APPROVE` resp. `REJECT` of the review is added as the tag
+    `ase-agent-approver:approve` resp. `ase-agent-approver:reject`
+    (and a failed or skipped review, which yields no verdict, as the
+    plain tag `ase-agent-approver`). With the individual option
+    \[`-m`|`--mode` `judge`|`approve`\] (default: `judge`), mode
+    `judge` then puts the task back into `IMPLEMENTED` for a human
+    decision, while mode `approve` puts it into `APPROVED` on the
+    verdict `APPROVE`, into `DECLINED` on the verdict `REJECT`, and
+    back into `IMPLEMENTED` without a verdict.
+
+  - `ase agent integrator`:
+    Integrates the `Changeset:` of the task into its `Target:` via
+    `ase-task-integrate --next DONE --mode <mode> <id>` (with `--worktree <id>` for a
+    `worktree` changeset in the Git worktree of a parallel implementer),
+    where the merge commits the change set into the target. With the
+    individual option \[`-m`|`--mode` `merge`|`rebase`|`squash`\]
+    (default: `squash`), passed through to the skill, mode `merge`
+    creates a merge commit, mode `rebase` rebases the change set onto
+    the target and fast-forwards the target, and mode `squash` combines
+    the change set into one new commit on the target. A
+    `branch:<name>` target not checked out in any Git worktree yet is
+    checked out in a temporary Git worktree for the merge and removed
+    afterwards. The agent tool is granted access to the Git worktrees
+    of the changeset and the target. The skill itself puts an integrated
+    task into `INTEGRATED`, while a task left in `INTEGRATING` is put
+    into `DEFERRED`, especially on unresolvable merge conflicts. Any
+    uncommitted change in the worktree of the target branch lets the
+    merge of every task with a `branch:` changeset fail, and is committed
+    together with the change set of a task with a `worktree` changeset,
+    so keep that worktree clean while the integrator runs. As merges into
+    the same target branch cannot run concurrently, tasks are processed
+    serially only: a global `--parallel` is silently clamped to `1`,
+    while its own `--parallel` is clamped with a warning.
+
+  - `ase agent editor`:
+    Unlike the other agents, it is bound to no phase and supports all
+    task lifecycle models (`solo`, `team`, and `enterprise`). It
+    processes the edit requests of tasks, which the task board adds
+    (key `E`) as an attachment of type `text/plain; charset=utf-8;
+    kind="edit"` (with the prompt as its data), mirrored in the tag
+    `ase-agent-editor:pending` (aggregated as `:active` while one is
+    processed and as `:failed` once one failed). It observes the tasks
+    with this tag, except those in an activity status of the model, where
+    the task is actively worked on (`team`: `IMPLEMENTING`; `enterprise`:
+    `PLANNING`, `IMPLEMENTING`, `APPROVING`, and `INTEGRATING`), which
+    wait until their status changes. It claims the oldest request of
+    such a task in a single conditional save by turning it into
+    `kind="edit-running"` and setting the `Assignee:` of the task to its
+    agent name (remembering the previous assignee in the request), which
+    keeps all other agents off the task during the edit without touching
+    its status, where the request of a finished task, resp. a request
+    with an empty prompt, is turned into `kind="edit-failed"` instead. It then edits the plan via `ase-task-edit --plan REFINE
+    --next DONE <id>: <prompt>` in the working copy, grounded in the
+    `Source:` of the task (a `branch:<name>` source checked out in the
+    temporary, detached Git worktree `.ase/worktree/.temp/<id>-editor`,
+    passed to the skill via its internal option `--int-source-dir` and
+    removed afterwards), where the skill saves the plan only if it was
+    not changed meanwhile (e.g. by a further edit request), and finally,
+    in a single save, restores the previous assignee (unless reassigned
+    meanwhile) and removes the request if the plan content actually
+    changed (its frontmatter, except `Status:`, `Tags:`, and `Assignee:`,
+    which other agents change, and its body) and the skill reported no error, or else turns it back into
+    `kind="edit"` on interrupt, resp. into `kind="edit-failed"` (with the
+    reason) otherwise. A finalization failing even after its retries is
+    retried on every further dispatching. Like the other agents, each
+    agent process holds a run lock in the per-user state directory
+    (`agent-editor/<store-hash>/<run-id>.lock`, see *STATE FILES*): on start, the requests left in
+    `kind="edit-running"` by any terminated editor process of the same
+    user on the same host (whose run lock is gone or stale and whose
+    process is no longer alive) are turned into `kind="edit-failed"`,
+    and the previous assignees of their tasks are restored.
+
+- `ase agent relay start` \[`-a`|`--address` *host*\] \[`-p`|`--port` *port*\]
+  \[`-t`|`--token` *token*\] \[`-c`|`--cors` *origin*\] \[`--tls-cert` *file* `--tls-key` *file*\]
+  \[`-f`|`--foreground`\]:
+  Start the per-user agent relay server in the background, which passes
+  the live presence of the agents (see `ase agent`) to the task boards
+  (see `ase task board`) without any external infrastructure. It can run
+  locally or on a central host, as long as both the agents and the task
+  boards reach it, and serves any number of projects (by their
+  `project.id`). It holds the presence of the agents in memory only:
+  per agent its state, its tasks, its usage of the agent tool, and its last 100 processing log lines,
+  where an agent without heartbeat for 30 seconds is removed. Its
+  REST endpoints are `GET /agents` (the projects with their number of
+  agents), `GET /projects/<id>/agents` (all agents of a project),
+  `PUT /projects/<id>/agents/<agent>` (the announcement of an agent,
+  with its added processing log lines only), and
+  `DELETE /projects/<id>/agents/<agent>` (its removal), and its WebSocket
+  event endpoint `/projects/<id>/agents/events` first sends a snapshot of
+  all agents and then each change, where the processing log lines of an
+  agent are always to be appended to the already received ones. The
+  options and their defaults correspond to `ase task store start`, with
+  `ASE_AGENT_RELAY_TOKEN` and the per-user `relay.yaml` (logging into
+  `relay.log`, or with `--foreground` to the terminal) instead. Alternatively, `ase task store start
+  --with-agent-relay` co-hosts the agent relay in the task store server.
+
+- `ase agent relay status`:
+  Report whether the agent relay server is running, and on which address
+  and port. Exits with status 1 if it is not running.
+
+- `ase agent relay stop`:
+  Stop the agent relay server.
 
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the
@@ -897,11 +1334,24 @@ STATE FILES
 -----------
 
 - *per-user state directory*:
-  Machine-local per-user *ASE* state (session configurations and
-  `task-lifecycle.json`), never roamed or versioned. The per-user
+  Machine-local per-user *ASE* state (session configurations,
+  `task-lifecycle.json`, and the agent run files below), never roamed or versioned. The per-user
   state directory is `~/Library/Application Support/ase` on macOS,
   `%LOCALAPPDATA%\ase` on Windows, and `$XDG_STATE_HOME/ase`
   (falling back to `~/.local/state/ase`) on Linux and other Unix systems.
+
+- *per-user state directory*`/agent-`*kind*`/`*store-hash*`/`*run-id*`.lock` and `.json`:
+  Run lock (a directory, refreshed periodically and considered stale
+  after 30 seconds without refresh) and run record (process id, process
+  start time, and claimed tasks) of each `ase agent` process of agent
+  *kind* (`planner`, `implementer`, `approver`, `integrator`, or
+  `editor`), below a sub-directory per task store, where *store-hash*
+  is the first 12 hex digits of the SHA-1 digest of the absolute base
+  directory of an `ase:` task store, the scheme, host, and port of an `ase://`
+  resp. `ases://` task store, or the `project.task.store` value
+  otherwise. They are used to recover the tasks of terminated agent
+  processes. On termination, the lock is removed, and so is the
+  record, unless it still records claimed tasks.
 
 - `.ase/service.yaml`:
   Per-project service state.
@@ -926,7 +1376,8 @@ STATE FILES
 
 - `<project>/.ase/board.yaml`:
   Display state of `ase task board`: separately for the terminal and the
-  web board, the minimized lanes, the collapsed groups, whether the
+  web board, the shown view (`lanes`, `graph`, or `agents`), the
+  minimized lanes, the collapsed groups, whether the
   task titles are wrapped onto multiple lines, whether the key hint
   lines are shown, and whether the graph shows the standalone tasks.
   The web state is shared by all

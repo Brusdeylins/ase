@@ -14,15 +14,16 @@ import pkg                                    from "../package.json" with { type
 import { useBoardState, mouseReporting }      from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
 import { handleMouse, handleKey }             from "./ase-task-board-tui-control.js"
-import { h, renderLanes, renderGraph }        from "./ase-task-board-tui-view.js"
+import { h, renderLanes, renderGraph, renderAgents } from "./ase-task-board-tui-view.js"
 import { palette, loadPalette, cx }           from "./ase-task-board-tui-style.js"
-import { sanitize, renderDialog, renderConfirm, renderTransfer, renderBusy } from "./ase-task-board-tui-popup.js"
+import { sanitize, renderDialog, renderConfirm, renderTransfer, renderPrompt, renderBusy } from "./ase-task-board-tui-popup.js"
 
 /*  render the whole screen  */
 const renderScreen = (ctx: BoardCtx, project: string) => {
     const {
-        columns, rows, all, board, surface, view, filter, typing, dialog, notice, carry, confirm, transfer,
-        headRef, tabLabels, dialogSel, dialogLines, transferCard, transferList, dim, store, busy, busyTick
+        columns, rows, all, board, surface, view, filter, typing, dialog, notice, carry, confirm, transfer, prompt,
+        headRef, tabLabels, dialogSel, dialogLines, transferCard, transferList, dim, store, busy, busyTick,
+        agents
     } = ctx
 
     /*  refuse to draw into a too small window  */
@@ -32,8 +33,9 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
 
     /*  the status line in the last line of the screen, below the key hints, enclosed
         on its left and right side by the downward lines of the rule above it,
-        showing the kind and connection state of the task store (a disconnected one
-        in signal color) and the ASE version (dimmed) while there is nothing else to report  */
+        showing the kind and connection state of the task store (a disconnected one in
+        signal color), the number of agents and the connection state of the agent relay (if
+        any), and the ASE version (dimmed) while there is nothing else to report  */
     const report = notice !== null ? sanitize(notice) :
         carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` :
             typing ? "filtering tasks by fuzzy matched keywords (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : null
@@ -44,6 +46,8 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
                 report ?? [ "⧉ ASE: ", h(Text, { key: "app", ...cx("bold") }, "Task Board"),
                     ...(store !== null ? [ " · store: ", h(Text, { key: "store", ...cx("bold") }, `${store.kind} `),
                         h(Text, { key: "state", ...cx(!store.connected && "signal") }, store.connected ? "●" : "○") ] : []),
+                    ...(agents !== null ? [ " · agents: ", h(Text, { key: "agents", ...cx("bold") }, `${agents.agents.length} `),
+                        h(Text, { key: "relay", ...cx(!agents.connected && "signal") }, agents.connected ? "●" : "○") ] : []),
                     " · version: ", h(Text, { key: "version", ...cx("bold") }, `ASE ${pkg.version}`) ])),
         h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│")))
 
@@ -57,8 +61,9 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
     /*  render the screen, with the dialog and popups on top  */
     return h(Box, { width: columns, height: rows, flexDirection: "column" },
         /*  the header, enclosed on its left and right side by the upward lines of
-            the rule below it, with the view value and the filter field in boxes of
-            their own, so that they are measurable for the mouse hit-testing; the parts
+            the rule below it, with the view value and the filter field (except in the
+            agents view, which is not filtered) in boxes of their own, so that they
+            are measurable for the mouse hit-testing; the parts
             are centered as a single box, as centering them individually places them on
             half columns, which rounds the text and box parts apart by one column  */
         h(Box, { paddingX: 1 },
@@ -77,12 +82,14 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
                         " · view: "),
                     h(Box, { ref: headRef("view"), ...cx("fixed") },
                         h(Text, cx("dim", "badge", dim && "dimmed"), ` ${view} `)),
-                    h(Text, cx("normal", "truncate", dim && "dimmed"), " · filter: "),
-                    h(Box, { ref: headRef("filter"), ...cx("fixed") },
-                        h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"), field)),
-                    h(Box, { ref: headRef("clear"), ...cx("fixed") },
-                        h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"),
-                            filter !== "" ? "✕ " : "  ")))),
+                    ...(view !== "agents" ? [
+                        h(Text, { key: "filter-label", ...cx("normal", "truncate", dim && "dimmed") }, " · filter: "),
+                        h(Box, { key: "filter", ref: headRef("filter"), ...cx("fixed") },
+                            h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"), field)),
+                        h(Box, { key: "clear", ref: headRef("clear"), ...cx("fixed") },
+                            h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"),
+                                filter !== "" ? "✕ " : "  "))
+                    ] : []))),
             h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│"))),
 
         /*  the horizontal rule below the header, turning upward with rounded corners at both ends  */
@@ -90,7 +97,8 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         h(Box, { paddingX: 1 },
             h(Text, cx("signal", "truncate", dim && "dimmed"),
                 board.warnings.length > 0 ? `⚠ ${board.warnings.map(sanitize).join(" · ")}` : " ")),
-        ...(view === "lanes" ? renderLanes(ctx) : renderGraph(ctx)).filter((el) => surface.keys || !String(el.key).startsWith("keys")),
+        ...(view === "lanes" ? renderLanes(ctx) : view === "graph" ? renderGraph(ctx) : renderAgents(ctx))
+            .filter((el) => surface.keys || !String(el.key).startsWith("keys")),
 
         /*  the horizontal rule between the key hints and the status line, turning downward with rounded corners at both ends  */
         h(Text, cx("dim", dim && "dimmed"), " ╭" + "─".repeat(Math.max(0, columns - 4)) + "╮ "),
@@ -118,12 +126,13 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null,
         transfer !== null && transferCard !== undefined ?
             renderTransfer(transfer.id, transferCard.status, transferList, transfer.at, columns, rows) : null,
+        prompt !== null ? renderPrompt(prompt.id, prompt.text, prompt.pos, columns, rows) : null,
         busy !== null ? renderBusy(busy.label, busy.since, busyTick, columns, rows) : null)
 }
 
 /*  the root component of the terminal board  */
-const App = ({ log, initial, project }: { log: Log, initial: Board, project: string }) => {
-    const ctx = useBoardState(log, initial)
+const App = ({ log, initial, project, relay }: { log: Log, initial: Board, project: string, relay?: string }) => {
+    const ctx = useBoardState(log, initial, relay)
 
     /*  handle the keyboard and the mouse  */
     useInput((input, key) => {
@@ -149,7 +158,7 @@ const App = ({ log, initial, project }: { log: Log, initial: Board, project: str
 }
 
 /*  run the terminal board until the user quits  */
-export const runTUI = async (log: Log): Promise<void> => {
+export const runTUI = async (log: Log, relay?: string): Promise<void> => {
     const initial = await buildBoard(log)
     const project = Task.projectIdOf(Task.projectRoot())
     loadPalette(log)
@@ -164,7 +173,11 @@ export const runTUI = async (log: Log): Promise<void> => {
     }
     process.once("exit", reset)
     try {
-        const app = render(h(App, { log, initial, project }), { alternateScreen: true, exitOnCtrlC: true, patchConsole: true })
+        /*  enable the kitty keyboard protocol (if the terminal supports it),
+            as only under it the Shift modifier of RETURN is reported  */
+        const app = render(h(App, { log, initial, project, relay }), {
+            alternateScreen: true, exitOnCtrlC: true, patchConsole: true, kittyKeyboard: { mode: "auto" }
+        })
         await app.waitUntilExit()
     }
     finally {

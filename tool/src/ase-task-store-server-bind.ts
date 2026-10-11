@@ -4,8 +4,6 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import crypto                   from "node:crypto"
-import net                      from "node:net"
 import type { IncomingMessage } from "node:http"
 import type { Duplex }          from "node:stream"
 
@@ -17,20 +15,15 @@ import type Log                 from "./ase-lib-log.js"
 import type * as Delegate       from "./ase-task-store-plugin-delegate.js"
 import * as Core                from "./ase-task-store-core.js"
 import * as TaskFormat          from "./ase-task-format.js"
+import { AgentRelayBinding }    from "./ase-agent-relay-server-bind.js"
+import { ServerGuard, urlHost } from "./ase-lib-server-bind.js"
+import type { ServerConfig }    from "./ase-lib-server-bind.js"
 
 /*  the options of the REST API server  */
-export type TaskStoreServerOptions = {
-    address: string
-    port:    number
-    token:   string
-    cors:    string[]
-    tls:     { cert: Buffer, key: Buffer } | null
+export type TaskStoreServerOptions = ServerConfig & {
     store:   Delegate.TaskStore
+    relay:   boolean
 }
-
-/*  the host part of an address for use in a URL (brackets for IPv6)  */
-export const urlHost = (address: string): string =>
-    net.isIPv6(address) ? `[${address}]` : address
 
 /*  a WebSocket subscription of a project's events, optionally
     restricted to a set of task ids  */
@@ -41,18 +34,32 @@ const P    = "/projects/{prjId}"
 const T    = `${P}/tasks/{taskId}`
 const json = { payload: { parse: true, allow: "application/json" } }
 
+/*  the interval of the keepalive pings of the subscribers, the maximum size of the
+    messages of the subscribers (which send none at all), the maximum amount of not
+    yet transmitted data of a subscriber (beyond which it cannot keep up, generously
+    bounded as the frames carry entire task plans), and the maximum number of
+    subscribers per project and in total  */
+const PING_MS        = 15 * 1000
+const PAYLOAD_MAX    = 4 * 1024
+const BUFFER_MAX     = 16 * 1024 * 1024
+const SUBS_MAX       = 128
+const SUBS_TOTAL_MAX = 1024
+
 /*  the HTTP binding of the REST API: bearer token authentication, CORS,
     the routes onto the core operations, problem details rendering, and
-    the WebSocket event endpoint  */
+    the WebSocket event endpoint, optionally co-hosting the agent relay  */
 export class TaskStoreServer {
-    private server: Hapi.Server
-    private wss:    WebSocketServer
-    private core:   Core.TaskStoreCore
-    private subs    = new Map<string, Set<Subscription>>()
-    private token:  Buffer
+    private server:     Hapi.Server
+    private wss:        WebSocketServer
+    private core:       Core.TaskStoreCore
+    private subs       = new Map<string, Set<Subscription>>()
+    private guard:      ServerGuard
+    private relay:      AgentRelayBinding | null
+    private unanswered = new WeakSet<WebSocket>()
+    private timer:      ReturnType<typeof setInterval> | null = null
 
     constructor (private log: Log, private options: TaskStoreServerOptions) {
-        this.token  = Buffer.from(options.token, "utf8")
+        this.relay  = options.relay ? new AgentRelayBinding(log) : null
         this.core   = new Core.TaskStoreCore(options.store, (prjId, frame) => this.emit(prjId, frame))
         this.server = Hapi.server({
             host:   options.address,
@@ -67,55 +74,56 @@ export class TaskStoreServer {
                 }
             }
         })
-        this.wss = new WebSocketServer({ noServer: true })
-        this.installExtensions()
+        this.wss = new WebSocketServer({ noServer: true, maxPayload: PAYLOAD_MAX })
+
+        /*  install the common extensions, logging the requests of the co-hosted
+            agent relay at debug level only (as the agents announce frequently)  */
+        this.guard = new ServerGuard(log, {
+            label:   "task store",
+            token:   options.token,
+            failure: "internal task store failure (see service log for details)",
+            level:   (path) => this.relay !== null && AgentRelayBinding.handles(path) ? "debug" : "info",
+            upgrade: (req, socket, head) => this.upgrade(req, socket, head)
+        })
+        this.guard.install(this.server)
         this.installRoutes()
     }
 
-    /*  start the server: open the storage and bind the listener  */
+    /*  start the server: open the storage, start the co-hosted agent relay,
+        bind the listener, and start the keepalive pings of the subscribers  */
     async start (): Promise<void> {
         await this.options.store.open()
+        this.relay?.start()
         try {
             await this.server.start()
         }
         catch (err: unknown) {
             /*  ignore a close failure to not mask the original start failure  */
+            this.relay?.stop()
             await this.options.store.close().catch(() => {})
             throw err
         }
+        this.timer = setInterval(() => { this.keepalive() }, PING_MS)
         const scheme = this.options.tls !== null ? "https" : "http"
         this.log.write("info", `task store: listening on ${scheme}://${urlHost(this.options.address)}:${this.options.port} ` +
-            `(storage plugin "${this.options.store.name}")`)
+            `(storage plugin "${this.options.store.name}"${this.relay !== null ? ", with agent relay" : ""})`)
     }
 
-    /*  stop the server: close all subscriptions with close code 1001,
-        unbind the listener, and close the storage  */
+    /*  stop the server: stop the keepalive pings, close all subscriptions with close code
+        1001, stop the co-hosted agent relay, unbind the listener, and close the storage  */
     async stop (): Promise<void> {
+        if (this.timer !== null)
+            clearInterval(this.timer)
+        this.timer = null
         for (const subs of this.subs.values())
             for (const sub of subs)
                 sub.ws.close(1001, "server shutting down")
         this.subs.clear()
+        this.relay?.stop()
         this.wss.close()
         await this.server.stop({ timeout: 1000 })
         await this.options.store.close()
         this.log.write("info", "task store: stopped")
-    }
-
-    /*  check a bearer token against the configured one in constant time  */
-    private authorized (header: string | undefined, query: string | undefined): boolean {
-        let token: string | undefined
-        if (typeof header === "string") {
-            const m = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(header)
-            if (m === null)
-                return false
-            token = m[1]
-        }
-        else if (typeof query === "string")
-            token = query
-        if (token === undefined)
-            return false
-        const buf = Buffer.from(token, "utf8")
-        return buf.length === this.token.length && crypto.timingSafeEqual(buf, this.token)
     }
 
     /*  read the path parameters and a single-valued query parameter  */
@@ -154,14 +162,38 @@ export class TaskStoreServer {
 
     /*  ==== events ====  */
 
+    /*  ping all subscribers, terminating those which have not answered the previous
+        ping (e.g. on a half-open connection after a network partition or a host crash)  */
+    private keepalive (): void {
+        for (const [ prjId, subs ] of this.subs)
+            for (const sub of subs) {
+                if (this.unanswered.has(sub.ws)) {
+                    this.log.write("debug", `task store: terminating unresponsive subscriber of project "${prjId}"`)
+                    sub.ws.terminate()
+                    continue
+                }
+                this.unanswered.add(sub.ws)
+                sub.ws.ping()
+            }
+    }
+
     /*  deliver an event frame to the subscribers of a project, each
         restricted to the task ids it subscribed to (except for a
-        lifecycle model or task id scheme change, which concerns all task plans)  */
+        lifecycle model or task id scheme change, which concerns all task plans),
+        terminating the subscribers which cannot keep up (as they would miss
+        events, and are notified of a change on their reconnection anyway)  */
     private emit (prjId: string, frame: Core.EventFrame): void {
         const subs = this.subs.get(prjId)
         if (subs === undefined)
             return
         for (const sub of subs) {
+            if (sub.ws.readyState !== sub.ws.OPEN)
+                continue
+            if (sub.ws.bufferedAmount > BUFFER_MAX) {
+                this.log.write("debug", `task store: terminating congested subscriber of project "${prjId}"`)
+                sub.ws.terminate()
+                continue
+            }
             const out: Core.EventFrame = {}
             const keep = (id: string) => sub.tasks === null || sub.tasks.has(id)
             if (frame.added !== undefined) {
@@ -183,41 +215,41 @@ export class TaskStoreServer {
                 out.lifecycle = frame.lifecycle
             if (frame.idscheme !== undefined)
                 out.idscheme = frame.idscheme
-            if (Object.keys(out).length > 0 && sub.ws.readyState === sub.ws.OPEN)
+            if (Object.keys(out).length > 0)
                 sub.ws.send(JSON.stringify(out))
         }
     }
 
-    /*  reject a WebSocket handshake with a plain HTTP problem response  */
-    private rejectUpgrade (socket: Duplex, status: number, detail: string, instance: string): void {
-        const body = JSON.stringify(Core.problemBody(status, detail, instance))
-        socket.write(`HTTP/1.1 ${status} ${Core.problemTitles[status] ?? "Error"}\r\n` +
-            "Content-Type: application/problem+json\r\n" +
-            `Content-Length: ${Buffer.byteLength(body)}\r\n` +
-            "Connection: close\r\n\r\n" + body)
-        socket.end(() => { socket.destroy() })
-    }
-
-    /*  handle a WebSocket handshake on the event endpoint  */
+    /*  handle a WebSocket handshake on the event endpoint (or, after its
+        authentication, on the event endpoint of the co-hosted agent relay)  */
     private async upgrade (req: IncomingMessage, socket: Duplex, head: Buffer): Promise<void> {
         const url  = new URL(req.url ?? "/", "http://localhost")
         const path = url.pathname
-        const m    = /^\/projects\/([^/]+)\/events$/.exec(path)
-        if (m === null) {
-            this.rejectUpgrade(socket, 404, `no WebSocket endpoint "${path}"`, path)
+        if (this.relay !== null && AgentRelayBinding.handles(path)) {
+            if (!this.guard.authorized(req.headers.authorization, url.searchParams.get("token") ?? undefined))
+                this.guard.rejectUpgrade(socket, 401, "missing or invalid bearer token", path)
+            else
+                this.relay.upgrade(req, socket, head, path, (status, detail) => {
+                    this.guard.rejectUpgrade(socket, status, detail, path)
+                })
             return
         }
-        if (!this.authorized(req.headers.authorization, url.searchParams.get("token") ?? undefined)) {
-            this.rejectUpgrade(socket, 401, "missing or invalid bearer token", path)
+        const m    = /^\/projects\/([^/]+)\/events$/.exec(path)
+        if (m === null) {
+            this.guard.rejectUpgrade(socket, 404, `no WebSocket endpoint "${path}"`, path)
+            return
+        }
+        if (!this.guard.authorized(req.headers.authorization, url.searchParams.get("token") ?? undefined)) {
+            this.guard.rejectUpgrade(socket, 401, "missing or invalid bearer token", path)
             return
         }
         const prjId = m[1]
         if (!TaskFormat.ID_RE.test(prjId)) {
-            this.rejectUpgrade(socket, 422, `invalid project id "${prjId}" (expected: [A-Za-z0-9_-]+)`, path)
+            this.guard.rejectUpgrade(socket, 422, `invalid project id "${prjId}" (expected: [A-Za-z0-9_-]+)`, path)
             return
         }
         if (!await this.core.projectExists(prjId)) {
-            this.rejectUpgrade(socket, 404, `no project "${prjId}" registered`, path)
+            this.guard.rejectUpgrade(socket, 404, `no project "${prjId}" registered`, path)
             return
         }
         let tasks: Set<string> | null = null
@@ -226,11 +258,24 @@ export class TaskStoreServer {
             tasks = new Set<string>()
             for (const id of list.split(",").map((token) => token.trim()).filter((token) => token !== "")) {
                 if (!TaskFormat.TASK_ID_RE.test(id)) {
-                    this.rejectUpgrade(socket, 422, `invalid task id "${id}" (expected: [A-Za-z0-9#][A-Za-z0-9#_-]*)`, path)
+                    this.guard.rejectUpgrade(socket, 422, `invalid task id "${id}" (expected: [A-Za-z0-9#][A-Za-z0-9#_-]*)`, path)
                     return
                 }
                 tasks.add(id)
             }
+        }
+
+        /*  reject a subscriber beyond the maximum numbers  */
+        let total = 0
+        for (const subs of this.subs.values())
+            total += subs.size
+        if ((this.subs.get(prjId)?.size ?? 0) >= SUBS_MAX) {
+            this.guard.rejectUpgrade(socket, 429, `too many subscribers of project "${prjId}" (maximum: ${SUBS_MAX})`, path)
+            return
+        }
+        if (total >= SUBS_TOTAL_MAX) {
+            this.guard.rejectUpgrade(socket, 429, `too many subscribers in total (maximum: ${SUBS_TOTAL_MAX})`, path)
+            return
         }
         this.wss.handleUpgrade(req, socket, head, (ws) => {
             const sub: Subscription = { ws, tasks }
@@ -242,6 +287,9 @@ export class TaskStoreServer {
             subs.add(sub)
             this.log.write("debug", `task store: subscribed to events of project "${prjId}"` +
                 (tasks !== null ? ` (tasks: ${[ ...tasks ].join(", ")})` : ""))
+            ws.on("pong", () => {
+                this.unanswered.delete(ws)
+            })
             ws.on("close", () => {
                 const subs = this.subs.get(prjId)
                 if (subs !== undefined) {
@@ -256,81 +304,15 @@ export class TaskStoreServer {
         })
     }
 
-    /*  ==== server extensions ====  */
-
-    /*  install the bearer token authentication, the request logging,
-        the problem details rendering, and the WebSocket upgrade hook  */
-    private installExtensions (): void {
-        /*  authenticate every request except a CORS preflight, which
-            carries no credentials by definition  */
-        this.server.ext("onRequest", (request, h) => {
-            if (request.method === "options")
-                return h.continue
-            if (!this.authorized(request.headers.authorization as string | undefined, undefined))
-                return h.response(Core.problemBody(401, "missing or invalid bearer token", request.path))
-                    .code(401).type("application/problem+json").takeover()
-            return h.continue
-        })
-
-        /*  render thrown problems and framework errors as problem details  */
-        this.server.ext("onPreResponse", (request, h) => {
-            const response = request.response
-            let status: number | null = null
-            let detail  = ""
-            if (response instanceof Core.Problem) {
-                status = response.status
-                detail = response.message
-            }
-            else if ("isBoom" in response && response.isBoom) {
-                status = response.output.statusCode
-                detail = response.message
-            }
-            if (status === null)
-                return h.continue
-
-            /*  log server-side failures in full, but expose no internals to the client  */
-            if (status >= 500) {
-                this.log.write("error", `task store: ${request.method.toUpperCase()} ${request.path}: ${detail}`)
-                detail = "internal task store failure (see service log for details)"
-            }
-            else
-                this.log.write("debug", `task store: ${request.method.toUpperCase()} ${request.path}: ${status}: ${detail}`)
-            return h.response(Core.problemBody(status, detail, request.path))
-                .code(status).type("application/problem+json")
-        })
-
-        /*  log every regular request  */
-        this.server.events.on("response", (request) => {
-            const response = request.response as unknown
-            let code = 0
-            if (typeof response === "object" && response !== null) {
-                if ("isBoom" in response && response.isBoom && "output" in response)
-                    code = (response as { output: { statusCode: number } }).output.statusCode
-                else if ("statusCode" in response && typeof response.statusCode === "number")
-                    code = response.statusCode
-            }
-            this.log.write("info", `task store: ${request.method.toUpperCase()} ${request.path} ${code}`)
-        })
-
-        /*  hook the WebSocket handshakes  */
-        this.server.listener.on("upgrade", (req, socket, head) => {
-            socket.on("error", () => { socket.destroy() })
-            this.upgrade(req, socket, head).catch((err: unknown) => {
-                const message = err instanceof Error ? err.message : String(err)
-                this.log.write("error", `task store: WebSocket upgrade failed: ${message}`)
-                socket.destroy()
-            })
-        })
-    }
-
     /*  ==== routes ====  */
 
-    /*  install the routes onto the core operations  */
+    /*  install the routes onto the core operations (and of the co-hosted agent relay)  */
     private installRoutes (): void {
         this.installProjectRoutes()
         this.installTaskRoutes()
         this.installPartRoutes()
         this.installAttachmentRoutes()
+        this.relay?.install(this.server)
     }
 
     /*  install the project endpoints (and the plain HTTP fallback of the event endpoint)  */

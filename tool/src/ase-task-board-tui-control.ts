@@ -16,13 +16,17 @@ import {
     refSegs, tabFirst, tabLayout, confirmBox, transferBox, CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE
 }                                             from "./ase-task-board-tui-popup.js"
 
-/*  handle a mouse press onto the deletion confirmation, the transfer popup,
-    or the read dialog, returning whether one of them was open  */
+/*  handle a mouse press onto the deletion confirmation, the transfer popup, the
+    prompt popup, or the read dialog, returning whether one of them was open  */
 const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): boolean => {
     const {
         columns, rows, all, dialog, setDialog, setNotice, confirm, setConfirm, transfer, setTransfer,
-        dialogW, tabLabels, dialogSel, dialogScroll, transferList, remove, transferTo
+        prompt, dialogW, tabLabels, dialogSel, dialogScroll, transferList, remove, transferTo
     } = ctx
+
+    /*  the prompt popup is operated by the keyboard only  */
+    if (prompt !== null)
+        return true
     if (confirm !== null) {
         /*  a click onto the " delete " or " cancel " button of the deletion confirmation  */
         const box = confirmBox(columns, rows)
@@ -98,8 +102,9 @@ const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): b
     predecessor/successor id jumps to its task view, and the wheel scrolls it  */
 export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): void => {
     const {
-        board, surface, view, setView, setFilter, typing, setTyping, sel, setSel, setDialog, scroll, layout,
-        carry, setCarry, opening, cardBoxes, laneBoxes, groupBoxes, headBoxes, boxAt, graphView, toggle, grown, setGrow
+        board, surface, view, setFilter, typing, setTyping, sel, setSel, setDialog, scroll, layout,
+        carry, setCarry, opening, cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, boxAt, graphView, toggle, grown, setGrow,
+        cycleView, agentList, agentIdx, selectAgent, scrollLog
     } = ctx
     if (handlePopupMouse(ctx, btn, mx, my))
         return
@@ -117,7 +122,21 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     }
     if (head === "view") {
         setCarry(null)
-        setView(view === "lanes" ? "graph" : "lanes")
+        cycleView()
+        return
+    }
+
+    /*  in the agents view, the wheel scrolls the log of the detail view
+        and a click onto the card of an agent selects the agent  */
+    if (view === "agents") {
+        if (btn === 64 || btn === 65)
+            scrollLog(btn === 64 ? -3 : 3)
+        else if (btn === 0) {
+            const id = boxAt(agentBoxes.current, mx, my)
+            const k  = agentList.findIndex((agent) => agent.id === id)
+            if (k >= 0 && k !== agentIdx)
+                selectAgent(k - agentIdx)
+        }
         return
     }
     if (head === "filter") {
@@ -199,13 +218,56 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     }
 }
 
-/*  handle a key press onto the deletion confirmation, the transfer
-    popup, or the filter field (outside of the read dialog)  */
+/*  handle a key press onto the deletion confirmation, the transfer popup,
+    the prompt popup, or the filter field (outside of the read dialog)  */
 const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
         dialog, setFilter, typing, setTyping, setNotice, confirm, setConfirm,
-        transfer, setTransfer, transferList, remove, transferTo
+        transfer, setTransfer, transferList, remove, transferTo, prompt, setPrompt, cancelPrompt, submitPrompt
     } = ctx
+
+    /*  type the prompt of an edit request: RETURN requests the edit, Shift+RETURN
+        (under the kitty keyboard protocol only) and Alt+RETURN (in every terminal,
+        e.g. with "Option as Meta" on macOS) insert a newline, ESC cancels,
+        the left/right arrows move the cursor by one character, HOME/END move it
+        to the start/end, BACKSPACE removes the character before the cursor, DELETE
+        removes the character at the cursor, and all other input (also pasted text,
+        with its newlines kept and its other control characters turned into spaces)
+        is inserted at the cursor  */
+    if (prompt !== null) {
+        const chars  = [ ...prompt.text ]
+        const pos    = Math.max(0, Math.min(prompt.pos, chars.length))
+        const insert = (text: string) => {
+            const ins = [ ...text ]
+            chars.splice(pos, 0, ...ins)
+            setPrompt({ ...prompt, text: chars.join(""), pos: pos + ins.length })
+        }
+        if (key.return && (key.shift || key.meta))
+            insert("\n")
+        else if (key.return)
+            submitPrompt()
+        else if (key.escape)
+            cancelPrompt()
+        else if (key.leftArrow || key.rightArrow)
+            setPrompt({ ...prompt, pos: Math.max(0, Math.min(chars.length, pos + (key.leftArrow ? -1 : 1))) })
+        else if (key.home || key.end)
+            setPrompt({ ...prompt, pos: key.home ? 0 : chars.length })
+        else if (key.backspace) {
+            if (pos > 0) {
+                chars.splice(pos - 1, 1)
+                setPrompt({ ...prompt, text: chars.join(""), pos: pos - 1 })
+            }
+        }
+        else if (key.delete) {
+            if (pos < chars.length) {
+                chars.splice(pos, 1)
+                setPrompt({ ...prompt, text: chars.join(""), pos })
+            }
+        }
+        else if (!key.ctrl && !key.meta && input !== "")
+            insert(input.replace(/\r\n?/g, "\n").replace(/[^\P{Cc}\n]/gu, " "))
+        return
+    }
 
     /*  answer the confirmation of a task deletion: "y" deletes, ESC cancels, the
         left/right arrows and TAB/Shift+TAB switch the selected button, RETURN
@@ -436,13 +498,13 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
         exit, all, board, surface, view, setView, typing, setTyping, sel, setSel, dialog, setDialog,
         notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
-        mouse, setMouse, places, nodes, toggleFlag, startEdit
+        prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, cycleView, selectAgent, scrollLog, logH
     } = ctx
     if (notice !== null)
         setNotice(null)
 
-    /*  answer the deletion confirmation, the transfer popup, or the filter field  */
-    if (confirm !== null || transfer !== null || (typing && dialog === null)) {
+    /*  answer the deletion confirmation, the transfer popup, the prompt popup, or the filter field  */
+    if (confirm !== null || transfer !== null || prompt !== null || (typing && dialog === null)) {
         handlePopupKey(ctx, input, key)
         return
     }
@@ -457,7 +519,7 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
 
     /*  request the deletion of a task in every view (under the kitty keyboard
         protocol, Shift+d arrives as "d" with the shift modifier)  */
-    const target = dialog !== null ? dialog.id : sel.id
+    const target = dialog !== null ? dialog.id : view === "agents" ? "" : sel.id
     if ((input === "D" || (input === "d" && key.shift)) && target !== "" && carry === null) {
         setConfirm({ id: target, yes: false })
         return
@@ -474,6 +536,13 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
             setTransfer({ id: card.id, at: card.status })
         return
     }
+
+    /*  request the edit of a task by a prompt in every view (under the kitty
+        keyboard protocol, Shift+e arrives as "e" with the shift modifier)  */
+    if ((input === "E" || (input === "e" && key.shift)) && target !== "" && carry === null) {
+        startPrompt(target)
+        return
+    }
     if (dialog !== null) {
         handleDialogKey(ctx, dialog, input, key)
         return
@@ -483,13 +552,28 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         return
     }
     if (input === "/") {
-        if (carry === null)
+        if (carry === null && view !== "agents")
             setTyping(true)
         return
     }
     if (input === "v") {
         setCarry(null)
-        setView(view === "lanes" ? "graph" : "lanes")
+        cycleView()
+        return
+    }
+    if (view === "agents") {
+        /*  the arrows select an agent of the master list, while Shift with the arrows,
+            PgUp/PgDn, and Home/End scroll the log of the detail view  */
+        if ((key.upArrow || key.downArrow) && key.shift)
+            scrollLog(key.upArrow ? -1 : 1)
+        else if (key.upArrow || key.downArrow)
+            selectAgent(key.upArrow ? -1 : 1)
+        else if (key.pageUp || key.pageDown)
+            scrollLog((key.pageUp ? -1 : 1) * Math.max(1, logH - 1))
+        else if (key.home || key.end)
+            scrollLog(key.home ? "top" : "bottom")
+        else if (input === "?")
+            toggleFlag("keys")
         return
     }
     if (key.return && sel.id !== "") {

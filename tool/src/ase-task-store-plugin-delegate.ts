@@ -97,6 +97,11 @@ export class TaskStore {
         return this.plugin.name
     }
 
+    /*  whether the underlying storage plugin stores task plans verbatim  */
+    get verbatim (): boolean {
+        return this.plugin.verbatim === true
+    }
+
     /*  run an operation of a project strictly serialized: in-process
         queued in arrival order (hence not re-entrant) and additionally
         under the cross-process lock of the storage plugin (if any)  */

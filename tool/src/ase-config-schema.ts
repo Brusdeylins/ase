@@ -102,6 +102,8 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "project.task.default.source":    [ "user", "project" ],
     "project.task.default.changeset": [ "user", "project" ],
     "project.task.default.target":    [ "user", "project" ],
+    "project.agent.relay":            [ "user", "project" ],
+    "project.agent.token":            [ "user" ],
     "project.artifact.spec.basedir":  [ "user", "project" ],
     "project.artifact.spec.files":    [ "user", "project" ],
     "project.artifact.spec.schema":   [ "user", "project" ],
@@ -127,7 +129,7 @@ export const configWritableScopesDefault: ReadonlyArray<ScopeTerm["kind"]> =
     [ "user", "project", "task", "session" ]
 
 /*  keys carrying secrets, whose values are masked in listings  */
-export const configSecretKeys: ReadonlyArray<string> = [ "project.task.token" ]
+export const configSecretKeys: ReadonlyArray<string> = [ "project.task.token", "project.agent.token" ]
 
 /*  schema for a single artifact kind's "basedir"/"files" specification  */
 const artifactSchema = v.optional(v.strictObject({
@@ -213,6 +215,10 @@ export const configSchema = v.nullish(v.strictObject({
                 changeset: flowSchema([ "worktree", "branch", "attachment" ]),
                 target:    flowSchema([ "worktree", "branch", "source" ])
             }))
+        })),
+        agent: v.optional(v.strictObject({
+            relay:     v.optional(v.pipe(v.string(), v.minLength(1))),
+            token:     v.optional(v.pipe(v.string(), v.minLength(1)))
         })),
         artifact: v.optional(v.strictObject({
             spec: artifactSpecSchema,

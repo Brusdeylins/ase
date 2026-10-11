@@ -23,7 +23,7 @@ Iteratively Edit a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-edit"
-    arg2="--plan|-p=(none|OVERWRITE|REFINE|PRESERVE) --dry|-d --next|-n=(none|DONE|GRILL|DRAFT|IMPLEMENT)... --int-reuse-task">
+    arg2="--plan|-p=(none|OVERWRITE|REFINE|PRESERVE) --dry|-d --next|-n=(none|DONE|GRILL|DRAFT|IMPLEMENT)... --int-reuse-task --int-source-dir=">
     $ARGUMENTS
 </expand>
 
@@ -50,8 +50,23 @@ When refining the plan this way, preserve the overall structure of the
 plan and only modify what the user actually requested. Do *not* rewrite
 unrelated sections of the plan.
 
+<if condition="<getopt-option-int-source-dir/> is not empty">
+The *code basis* of the task is the separate working copy
+<getopt-option-int-source-dir/> (e.g. a checkout of the branch of its
+`Source` key): read every project file the <instruction/> requires
+*exclusively* from there, instead of from the current working copy.
+</if>
+
 Attachment blocks of the "backmatter" are *never* dropped by a
-refinement. Instead, *remember* every attachment block whose content the
+refinement, unless the <instruction/> explicitly asks for it. Their
+`Data` payloads are *elided* to `[elided: <n/> lines]` markers, which
+you *MUST* keep *verbatim*, as `ase_task_save` restores them. Only if
+the <instruction/> requires reading or changing the payload of an
+attachment, fetch it via the `ase_task_attachment(id:
+"<ase-task-id/>", type: "<type/>")` tool of the `ase` MCP server (with
+<type/> being the value of its `Type` key), and replace its marker with
+the *complete* changed payload as a `|4+` (or `|4-`) literal block
+scalar according to the plan <format/>. *Remember* every attachment block whose content the
 applied <instruction/> changed as *touched*, so its `Modified` key is
 refreshed together with the frontmatter in step 3.1. An attachment the
 <instruction/> did not change stays *verbatim* -- an implementation
@@ -64,7 +79,7 @@ Set <task-content-dirty>true</task-content-dirty>.
 </define>
 
 <define name="generate-plan">
-<expand name="task-ground-plan"/>
+<expand name="task-ground-plan" arg1="<getopt-option-int-source-dir/>"/>
 
 Create a new plan from scratch and store the result as
 <task-content/> by closely following the defined plan format
@@ -184,6 +199,9 @@ Set <args></args> (set args to empty).
             <getopt-option-int-reuse-task/> is equal `true`
             *and* an `ase_task_save(id: '<ase-task-id/>', ...)` tool call
             exists earlier in the current session
+            *and* the `text` *output* field of the most recent such
+            `ase_task_save` tool call carries a `<task-plan-tag>`
+            delimiter line
         ">
             Set <text/> to the `text` *argument* of the most recent
             `ase_task_save(id: '<ase-task-id/>', ...)` tool call -- this
@@ -192,20 +210,28 @@ Set <args></args> (set args to empty).
             *without* calling `ase_task_load` again. Set
             <task-render></task-render> (set the rendering-prepared plan
             to empty, as it is re-derived in step 3.2 or 3.3). Set
-            <status>plan reused</status>. Do not output anything.
+            <task-tag/> to the content enclosed in the `<task-plan-tag>`
+            delimiter line of the `text` *output* field of that
+            `ase_task_save` tool call (the *entity tag* of the plan as
+            saved by it). Set <status>plan reused</status>. Do not
+            output anything.
         </if>
         <else>
             Call the `ase_task_load(id: "<ase-task-id/>", variant:
-            "both")` tool of the `ase` MCP server to load any existing
-            plan content in *both* of its forms. From the `text` output
+            "both", tag: true)` tool of the `ase` MCP server to load any existing
+            plan content in *both* of its forms, with the payloads of all
+            attachments *elided* to `[elided: <n/> lines]` markers (the
+            default of its `attachments` argument). From the `text` output
             field of this `ase_task_load` tool call, set <text/> to the
             content enclosed in the `<task-plan-source>` delimiter lines
             (the *authoring form*, the only form which is ever edited and
-            persisted) and set <task-render/> to the content enclosed in
+            persisted), set <task-render/> to the content enclosed in
             the `<task-plan-render>` delimiter lines (the
-            *rendering-prepared* form, used for *display only*). The
-            delimiter lines themselves are *never* part of either form.
-            Do not output anything related to this MCP tool call. Set
+            *rendering-prepared* form, used for *display only*), and set
+            <task-tag/> to the content enclosed in the `<task-plan-tag>`
+            delimiter line (the *entity tag* of the loaded plan, or empty
+            if absent, as no plan exists yet). The delimiter lines themselves are *never* part of
+            any form. Do not output anything related to this MCP tool call. Set
             <status>plan loaded</status>.
         </else>
 
@@ -356,15 +382,27 @@ Set <args></args> (set args to empty).
     2.  *Persist plan*:
         <if condition="<task-content-dirty/> is 'true'">
         Call the `ase_task_save(id: "<ase-task-id/>", text:
-        "<task-content/>", render: true)` tool of the `ase` MCP server to
+        "<task-content/>", render: true, tag: true)` tool of the `ase` MCP server --
+        if <task-tag/> is not empty, additionally with the argument
+        `base: "<task-tag/>"`, so the save is refused if the plan was
+        changed meanwhile by anybody else (instead of silently
+        overwriting that change), and if <task-tag/> is empty (no plan
+        existed yet), additionally with the argument `create: true`, so
+        the save is refused if the plan was created meanwhile by anybody
+        else -- to
         persist the current plan -- <task-content/> always is the
         *authoring form* of the plan and hence is persisted *as is* --
         and then set <task-content-dirty>false</task-content-dirty>
         again. This `ase_task_save` MCP tool call is the *only*
         permitted way to persist the plan -- *NEVER* write the plan
         file via `Write`/`Edit` or by executing a shell command.
-        Finally, set <task-render/> to the `text` *output* field
-        of this `ase_task_save` tool call -- the rendering-prepared form
+        Finally, *always* set <task-tag/> to the content enclosed in the
+        `<task-plan-tag>` delimiter line of the `text` *output* field of
+        this `ase_task_save` tool call (the entity tag of the just-saved
+        plan, to be passed as `base` on the next save of every
+        subsequent loop round), and set <task-render/> to the remaining
+        `text` *output* field
+        of this `ase_task_save` tool call (without this delimiter line) -- the rendering-prepared form
         of the just-persisted plan, which is for *display only* and
         *MUST NOT* be confused with the `text` *argument* passed into
         that call -- so the rendering in step 3.3 stays consistent across
@@ -377,6 +415,10 @@ Set <args></args> (set args to empty).
         </if>
 
     3.  *Render plan*:
+        If <ase-headless/> is `true`, nobody reads the rendering, so
+        silently *skip* this entire step 3.3 (no MCP tool call and no
+        output at all) and continue with step 3.4.
+
         <if condition="<task-render/> is empty">
         Call the `ase_markdown_prepare(text: "<task-content/>")` tool of
         the `ase` MCP server and set <task-render/> to the `text` output
@@ -414,12 +456,8 @@ Set <args></args> (set args to empty).
         </format>
 
         Only output the following <template/>, so the user
-        can read the plan and react to it. If <task-render/> is longer
-        than 90 lines and the backmatter contains an attachment block
-        with the `Type` key value `text/x-diff; charset=utf-8; kind="draft"` (the
-        implementation draft from `ase-task-implement --draft`), replace the entire payload of the `Data`
-        key of this attachment block with `[...]`. Else, do *not*
-        truncate, summarize, or partially show the plan. Use the
+        can read the plan and react to it. Do *not* truncate,
+        summarize, or partially show the plan. Use the
         following <template/>:
 
         <template>

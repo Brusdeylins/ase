@@ -309,8 +309,12 @@ Procedure
                 command
                 `git worktree add -b "<temp-branch/>" "<temp-dir/>" "<temp-base/>"`
                 (taken exactly as given), and apply the `Data` payload of
-                the attachment block (with the 4-space indentation
-                removed) inside it *verbatim*, e.g. via
+                the attachment block inside it *verbatim*. As this payload
+                is *elided* in <task-content/>, fetch it via the
+                `ase_task_attachment(id: "<ase-task-id/>", type: "text/x-diff;
+                charset=utf-8; kind=\"<changeset-name/>\"")` tool of the `ase`
+                MCP server, whose `text` output field is the payload
+                *verbatim* (without any indentation), and apply it, e.g. via
                 `git -C "<temp-dir/>" apply --3way`, re-applying hunks
                 which no longer apply manually. You *MUST* *NEVER* modify
                 anything *outside* of <temp-dir/>. Leave the change set

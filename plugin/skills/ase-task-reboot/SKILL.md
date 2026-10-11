@@ -109,7 +109,7 @@ Procedure
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
         </template>
 
-    7.  <expand name="task-ground-plan"/>
+    7.  <expand name="task-ground-plan" arg1=""/>
 
         Create a new plan from scratch and store the result as
         <task-content/> by closely following the defined plan format
@@ -142,8 +142,8 @@ Procedure
             state of the task lifecycle model
             <ase-project-task-lifecycle/>, as the rebooted plan starts
             its lifecycle anew,
-        -   the frontmatter keys `Group:`, `Phase:`, `After:`, `Kind:`,
-            and `Tags:` are taken over from the previous plan *verbatim*
+        -   the frontmatter keys `Group:`, `Phase:`, `After:`, `Assignee:`,
+            `Kind:`, and `Tags:` are taken over from the previous plan *verbatim*
             where present, except that all `grilled:` tags
             are *dropped* from `Tags:` (the whole key is dropped if no
             other tag remains), as the grilled plan content is gone,

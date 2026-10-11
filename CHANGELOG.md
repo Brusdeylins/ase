@@ -11,6 +11,22 @@ ChangeLog
     staged Git changes resp. with unstaged Git changes plus the untracked files, optionally
     further restricted to the given source reference.
 
+-   FEATURE [tool,plugin]: Prompt-Driven Task Editing from the Task Board
+    In the terminal and web task boards, key `E` requests the edit of a task by a prompt, stored
+    as an edit request attachment and marked on its card (`✎` requested, `✎…` in progress, `✎✗`
+    failed). The new `ase agent editor` processes these requests in all task lifecycle models via
+    `ase-task-edit`, temporarily assigning the task to itself to keep all other agents off it.
+    A further edit request is refused while an edit of the task is in progress.
+    `ase-task-edit` now saves conditionally, so it never overwrites a plan changed meanwhile.
+
+-   IMPROVEMENT [tool]: Foreground Server Start
+    The new `-f`/`--foreground` option of `ase service start`, `ase task store start`, and
+    `ase agent relay start` runs the server in the current process instead of detaching it,
+    logging to the terminal instead of its log file, until it is interrupted or stopped. The
+    service then runs without its idle timeout. An already running server with an unchanged
+    configuration is reported as an error, while one with deviating options is stopped and
+    replaced by the foreground server.
+
 -   FEATURE [tool,plugin]: D2 Diagram Rendering
     The `ase util diagram` command and the `ase_diagram` MCP tool render, with the new `--lang d2`
     option (resp. `lang` field), also *D2* diagram specifications as Unicode/ASCII art or SVG,
@@ -37,6 +53,41 @@ ChangeLog
     `--working-copy`, the uncommitted changes of its worktree), and with the new `--commit`
     option a single commit against its first parent. In both cases, the commit messages are
     additionally checked for mismatches against the diff.
+
+-   FEATURE [tool]: Live Agent Presence on the Task Board
+    The new `ase agent relay start|status|stop` runs a per-user agent relay server (configured
+    via `project.agent.relay`), through which the `ase agent` agents pass their live state, log
+    lines, and heartbeat to the task boards without any external infrastructure. The terminal and
+    web boards provide a third view `agents` (cycled via `v`) with the agents and their logs, plus
+    a `⚙ <name>` badge on the cards of the tasks being processed. A stopping agent vanishes from
+    the boards immediately, one missing its heartbeat after 30 to 35 seconds. Relay and task
+    store connections are kept alive via WebSocket ping/pong, so a dead connection is detected
+    and re-established, and the relay limits the number of projects, agents, and subscribers.
+
+-   IMPROVEMENT [tool,plugin]: Elided Task Attachments
+    The `ase_task_load` MCP tool by default elides the attachment payloads of a task plan to
+    `[elided: <n> lines]` markers, which `ase_task_save` restores from the stored plan, so the
+    skills no longer re-emit potentially huge attachments (like agent processing logs) token by
+    token; `attachments: "full"` and the new `ase_task_attachment` MCP tool provide the payloads
+    where needed (`ase-task-view --full`, `ase-task-implement`, `ase-task-integrate`). A single
+    blank line before the `---` of the next attachment block no longer becomes part of the
+    payload. In headless runs, `ase-task-edit` skips the rendering of the plan, and the `ase
+    agent` agents keep at most 20 lines of each agent message in the processing log of a task.
+
+-   IMPROVEMENT [tool]: Agent Tool Usage Accounting
+    The `ase agent` agents log the usage of the headless agent tool after each job as wall time,
+    output tokens, and costs in USD, filled with what `claude`, `copilot`, and `codex` report
+    (`n/a` otherwise), and pass it to the agent relay, so that the agent cards of the terminal,
+    web, and plain-text task boards show the usage per agent in total and by its last job.
+
+-   FEATURE [tool]: Enterprise Lifecycle Agents
+    The new `ase agent planner`, `implementer`, `approver`, and `integrator` drive the `enterprise`
+    task lifecycle model headless: each claims the tasks of its incoming state, processes them via
+    the agent tool and the skill `ase-task-reboot`, `ase-task-implement`, `ase-repo-review`, resp.
+    `ase-task-integrate`, and moves them on to their next state. The agents run concurrently,
+    also as pools, in one `ase agent` invocation, in Git worktrees or a temporary clone (`--repo`).
+    A task whose finishing failed (e.g. a push) is tagged `failed` and left for manual intervention,
+    and the tasks of a killed or crashed agent are recovered on the next start of its kind.
 
 -   FEATURE [plugin]: Branch Merging
     The new `ase-repo-merge` skill merges a source branch, including its uncommitted
@@ -261,6 +312,10 @@ ChangeLog
     determined by scanning the command line before parsing it (a help request or an unknown
     command still loads all of them, for the complete command overview). A plain `ase -V` this
     way loads 15 instead of 2337 modules, so the startup overhead of about three seconds is gone.
+
+-   BUGFIX [tool]: Complete help output on pipes
+    The help and version output of Commander (e.g. `ase agent implementer --help | less`)
+    is now flushed before the process exits, so it is no longer truncated on pipes.
 
 -   BUGFIX [plugin]: Task plan kind `SPECIFYING` honored
     `ase-task-implement` now recognizes the `Kind: SPECIFYING`

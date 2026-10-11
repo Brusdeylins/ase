@@ -329,8 +329,9 @@ export default class ServiceCommand {
         return { method: bMethod, info }
     }
 
-    /*  service-side: bind HAPI server until "/stop" command is received or idle timeout happens  */
-    private async runService (ctx: Context & { port: number }): Promise<void> {
+    /*  service-side: bind HAPI server until "/stop" command is received or idle timeout happens
+        (or, in the foreground, until "/stop" command is received or a termination signal arrives)  */
+    private async runService (ctx: Context & { port: number }, foreground = false): Promise<void> {
         /*  establish HAPI HTTP/REST service  */
         const server = Hapi.server({ host: HOST, port: ctx.port })
 
@@ -479,6 +480,30 @@ export default class ServiceCommand {
             process.exit(1)
         }
 
+        /*  stop service in the foreground on termination signal  */
+        if (foreground) {
+            const shutdown = async (signal: string) => {
+                if (stopping)
+                    return
+                stopping = true
+                this.log.write("info", `service: received ${signal}, stopping`)
+                try {
+                    await server.stop({ timeout: 1000 })
+                }
+                catch (err: unknown) {
+                    const e = err as Error
+                    this.log.write("error", `service: stop failed: ${e.message}`)
+                }
+                Service.clearPort(ctx.svc)
+                process.exit(0)
+            }
+            process.on("SIGTERM", () => shutdown("SIGTERM"))
+            process.on("SIGINT",  () => shutdown("SIGINT"))
+            process.on("SIGHUP",  () => shutdown("SIGHUP"))
+            process.on("SIGQUIT", () => shutdown("SIGQUIT"))
+            return
+        }
+
         /*  stop service after idle timeout  */
         setInterval(async () => {
             if (stopping)
@@ -503,8 +528,8 @@ export default class ServiceCommand {
         }, TICK_MS).unref()
     }
 
-    /*  start flow: ensure port, probe, optionally detach  */
-    private async doStart (): Promise<number> {
+    /*  start flow: ensure port, probe, optionally detach (or run in the foreground)  */
+    private async doStart (opts: { foreground?: boolean } = {}): Promise<number> {
         const ctx = this.loadContext()
         let port = ctx.port
         if (process.env[SERVE_ENV] === "1") {
@@ -521,10 +546,20 @@ export default class ServiceCommand {
         if (port !== null) {
             const match = await probe(port, ctx.projectId).catch(() => null)
             if (match === true) {
+                if (opts.foreground)
+                    throw new Error(`service: already running on port ${port} (stop it first with "ase service stop")`)
                 this.log.write("info", `service: already running on port ${port}`)
                 return 0
             }
         }
+
+        /*  run the service in the foreground, logging to the terminal and without idle timeout  */
+        if (opts.foreground) {
+            port = await Service.allocatePort()
+            await this.runService({ ...ctx, port }, true)
+            return await new Promise<number>(() => { /*  never resolves  */ })
+        }
+
         /*  bounded retry across the bind/start TOCTOU window: on each attempt
             re-allocate, re-spawn; early-break on foreign listener  */
         let lastErr: Error = new Error("service failed to start within timeout")
@@ -595,12 +630,12 @@ export default class ServiceCommand {
         throw lastErr
     }
 
-    /*  build the "POST /command" request options for a command token  */
-    private commandRequest (cmd: string, timeoutMs: number) {
+    /*  build the JSON "POST" request options for a service endpoint  */
+    private postRequest (body: Record<string, unknown>, timeoutMs: number) {
         return {
             method:              "POST" as const,
             headers:             { "Content-Type": "application/json" },
-            body:                { command: cmd },
+            body,
             signal:              AbortSignal.timeout(timeoutMs),
             ignoreResponseError: true
         }
@@ -616,7 +651,7 @@ export default class ServiceCommand {
         const match = await probe(ctx.port, ctx.projectId).catch(() => null)
         if (match === true) {
             const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`,
-                this.commandRequest("status", 2000))
+                this.postRequest({ command: "status" }, 2000))
             const d        = r._data as { uptimeMs?: number } | null
             const uptimeMs = typeof d?.uptimeMs === "number" ? d.uptimeMs : 0
             const uptime   = prettyMs(uptimeMs, { verbose: true })
@@ -644,7 +679,7 @@ export default class ServiceCommand {
                 throw new Error(`service not responding on port ${ctx.port} after auto-start`)
         }
         const r = await ofetch.raw(`http://${HOST}:${ctx.port}/command`,
-            { ...this.commandRequest(cmd, 5000), responseType: "text" })
+            { ...this.postRequest({ command: cmd }, 5000), responseType: "text" })
         const body = typeof r._data === "string" ? r._data : JSON.stringify(r._data)
         process.stdout.write(body)
         if (!body.endsWith("\n"))
@@ -700,13 +735,7 @@ export default class ServiceCommand {
             Service.clearPort(ctx.svc)
             return 0
         }
-        const r = await ofetch.raw(`http://${HOST}:${ctx.port}/stop`, {
-            method:              "POST",
-            headers:             { "Content-Type": "application/json" },
-            body:                {},
-            signal:              AbortSignal.timeout(5000),
-            ignoreResponseError: true
-        })
+        const r = await ofetch.raw(`http://${HOST}:${ctx.port}/stop`, this.postRequest({}, 5000))
         const ok = r.status >= 200 && r.status < 300
         Service.clearPort(ctx.svc)
         return ok ? 0 : 1
@@ -726,9 +755,11 @@ export default class ServiceCommand {
         /*  register CLI sub-command "ase service start"  */
         service
             .command("start")
-            .description("Start the background service")
-            .action(async () => {
-                process.exit(await this.doStart())
+            .description("Start the background service (or run it in the foreground)")
+            .option("-f, --foreground", "run the service in the foreground, logging to the terminal, " +
+                "until it is interrupted or stopped (without idle timeout)")
+            .action(async (opts: { foreground?: boolean }) => {
+                process.exit(await this.doStart(opts))
             })
 
         /*  register CLI sub-command "ase service status"  */

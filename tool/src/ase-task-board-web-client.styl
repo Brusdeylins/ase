@@ -351,6 +351,53 @@ header
 .cepic
     margin-right: 6px
     font-weight: bold
+
+/*  the marker of the state of the edit requests of the task: bold, in accent color while
+    being processed, and in signal color when failed, spaced apart from the title  */
+.cedit
+    font-weight: bold
+    margin-right: 6px
+    &.active
+        color: var(--c-accent)
+    &.failed
+        color: var(--c-signal)
+
+/*  the task box with agents busy with it: room above it and on its top for
+    the agents placed onto the left part of its top border (like in the TUI)  */
+.card.working
+    position: relative
+    overflow: visible
+    margin-top: 6px
+    padding-top: 16px
+#board .card.held.working
+    padding-top: 14px
+
+/*  the agents busy with the task, onto the left part of the top border of its box
+    (leaving room on the right part for the pulse of the box)  */
+.cagents
+    position: absolute
+    top: 0
+    left: 8px
+    transform: translateY(-50%)
+    max-width: calc(100% - 40px)
+    font-weight: bold
+    white-space: nowrap
+    overflow: hidden
+    text-overflow: ellipsis
+
+/*  an agent busy with the task: its icon and name in an inverse
+    box with rounded corners in accent color  */
+.cagent
+    display: inline-block
+    background: var(--c-accent)
+    color: var(--c-paper)
+    border-radius: 5px
+    padding: 0 8px
+    margin-right: 4px
+    &:last-child
+        margin-right: 0
+    .aicon
+        margin-right: 4px
 .tone-done.card, .tone-done .card
     background: var(--c-ground)
     color: var(--c-line)
@@ -365,12 +412,12 @@ header
 .tone-active .cid
     background: var(--c-accent)
 
-/*  the pulse of the task boxes of active lanes and of the active graph nodes (like in the TUI),
-    drawn as a ring centered onto their top border line (instead of glyphs, whose font
-    bearings would leave gaps in the line), with a dot of pulsing size,
-    in a lighter accent color (or in signal color when selected),
-    stopped on reduced motion  */
-#board .lane.active .card:not(.ghost):not(.carried), #graph .node.tone-active:not(.context) .card
+/*  the pulse of the task boxes of active lanes, of the active graph nodes, and of the agent cards
+    of the busy agents (like in the TUI), drawn as a ring centered onto their top border line (instead
+    of glyphs, whose font bearings would leave gaps in the line), with a dot of pulsing size,
+    in a lighter accent color (or in signal color when selected), stopped on reduced motion,
+    where the agent card of a waiting agent shows just the ring (in its border color)  */
+#board .lane.active .card:not(.ghost):not(.carried), #graph .node.tone-active:not(.context) .card, #agents .acard
     position: relative
     overflow: visible
     &::after
@@ -387,8 +434,13 @@ header
         background: var(--pulse)
         content: ""
         animation: pulse 2.5s step-end infinite
-#board .lane.active .card.sel:not(.ghost):not(.carried)::after, #graph .node.tone-active.sel:not(.context) .card::after
+#board .lane.active .card.sel:not(.ghost):not(.carried)::after, #graph .node.tone-active.sel:not(.context) .card::after, #agents .acard.sel::after
     --pulse: var(--c-signal)
+#agents .acard:not(.busy)::after
+    animation: none
+    background: var(--c-paper)
+#agents .acard:not(.busy):not(.sel)::after
+    --pulse: var(--c-border-strong)
 
 /*  the frames of the pulse (like "pulseFrames" of the TUI: "●", "◉", "⦿", "○", "⦿", "◉"):
     10 frames of 250ms, staying on the filled circle for the first half  */
@@ -406,7 +458,7 @@ header
     90%
         background: radial-gradient(circle closest-side, var(--pulse) 60%, var(--c-accent-paper) 60%)
 @media (prefers-reduced-motion: reduce)
-    #board .lane.active .card:not(.ghost):not(.carried)::after, #graph .node.tone-active:not(.context) .card::after
+    #board .lane.active .card:not(.ghost):not(.carried)::after, #graph .node.tone-active:not(.context) .card::after, #agents .acard::after
         animation: none
     #busy .spinner, #busy .bar .block
         animation: none
@@ -474,6 +526,191 @@ header
     .sep
         margin: 0 0.6rem
         color: var(--c-mute)
+
+/*  the agents view: the framed master list of the agent cards (selected one in signal color,
+    busy ones in accent color, and waiting ones in normal color),
+    and the framed detail view with the agent log, whose lines are broken with a hanging indent
+    behind their timestamp prefix (in normal color), followed by their task id and level prefix,
+    with their level and content in accent color (resp. signal color for warnings and errors)  */
+#agents
+    flex: 1
+    min-height: 0
+    display: flex
+    gap: 12px
+    section
+        position: relative
+        display: flex
+        flex-direction: column
+        min-height: 0
+        border: 1px solid var(--c-border)
+        border-radius: 8px
+        background: var(--c-ground-light)
+        padding: 14px 10px 10px
+    .atitle
+        position: absolute
+        top: 0
+        left: 50%
+        transform: translate(-50%, -50%)
+        max-width: calc(100% - 24px)
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        padding: 0 6px
+        border: 1px solid var(--c-border)
+        border-radius: 5px
+        background: var(--c-paper)
+        color: var(--c-mute)
+        font-size: 0.8125rem
+        font-weight: bold
+    /*  the position within the agent log, on the bottom border of its detail view  */
+    .apos
+        position: absolute
+        bottom: 0
+        right: 12px
+        transform: translate(0, 50%)
+        white-space: nowrap
+        padding: 0 6px
+        border: 1px solid var(--c-border)
+        border-radius: 5px
+        background: var(--c-paper)
+        color: var(--c-mute)
+        font-size: 0.8125rem
+    .amaster
+        flex: 0 0 260px
+    .adetail
+        flex: 1
+        min-width: 0
+    .alist
+        flex: 1
+        min-height: 0
+        overflow-y: auto
+        /*  make room for the pulse ring on the top border of the first card,
+            which the scroll container would otherwise clip  */
+        margin-top: -6px
+        padding-top: 6px
+        display: flex
+        flex-direction: column
+        gap: 8px
+    .aempty
+        color: var(--c-mute)
+        font-size: 0.8125rem
+        &.off
+            color: var(--c-signal)
+    .acard
+        flex-shrink: 0
+        padding: 6px 10px
+        border: 1px solid var(--c-border)
+        border-radius: 5px
+        background: var(--c-paper)
+        cursor: pointer
+        &:hover
+            border-color: var(--c-accent)
+        &.busy
+            background: var(--c-accent-ground)
+            border-color: var(--c-accent)
+            color: var(--c-accent)
+        &.sel
+            border: 2px solid var(--c-signal)
+            padding: 5px 9px
+            .aname, .afields
+                color: var(--c-signal)
+        &.busy.sel
+            background: var(--c-signal-ground)
+    .aname
+        margin-bottom: 3px
+        padding-right: 1.4em
+        font-weight: bold
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+
+    /*  the heart of the agent (filled for a second after each received heartbeat, else
+        empty) in the top right corner inside the card, in the color of its card, and in
+        the embedded DejaVu Sans Mono (which carries both hearts in a consistent size,
+        whereas the text font would let the browser pick them from differing fallbacks),
+        centered within a box of the same right offset and outer width as the pulse ring
+        on the top border (8px plus twice its 1.25px border), so both are vertically aligned  */
+    .abeat
+        position: absolute
+        top: 6px
+        right: 12px
+        width: 10.5px
+        text-align: center
+        font-family: "DejaVu Sans Mono", monospace
+        color: var(--c-text)
+    .acard.busy .abeat
+        color: var(--c-accent)
+    .acard.sel .abeat
+        top: 5px
+        color: var(--c-signal)
+
+    /*  the agent name with its icon (spaced apart a bit more): inverse in the color of its card  */
+    .abadge
+        padding: 0 9px
+        border-radius: 3px
+        color: var(--c-paper)
+        background: var(--c-text)
+    .aicon
+        margin-right: 4px
+    .acard.busy .abadge
+        background: var(--c-accent)
+    .acard.sel .abadge
+        background: var(--c-signal)
+
+    /*  the fields of the agent card as a two-column grid, aligning the
+        values behind their labels of the same width (the widest one)  */
+    .afields
+        display: grid
+        grid-template-columns: max-content minmax(0, 1fr)
+        align-items: baseline
+        column-gap: 0.4em
+        font-size: 0.875rem
+        line-height: 1.05
+    .aval
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+
+    /*  the task ids (on the agent cards and in the agent log): inverse in the
+        color of their card (resp. their log line), like the ids on the task cards  */
+    .atasks
+        display: flex
+        flex-wrap: wrap
+        gap: 4px
+    .atask
+        display: inline-block
+        padding: 0 4px
+        border-radius: 3px
+        font-weight: bold
+        color: var(--c-paper)
+        background: var(--c-text)
+    .acard.busy .atask
+        background: var(--c-accent)
+    .acard.sel .atask
+        background: var(--c-signal)
+    .aline .atask
+        text-indent: 0
+        line-height: 1.10
+        background: var(--c-accent)
+    .aline.warning .atask, .aline.error .atask
+        background: var(--c-signal)
+    .alog
+        flex: 1
+        min-height: 0
+        overflow-y: auto
+    .aline
+        padding-left: 25ch
+        text-indent: -25ch
+        font-family: "DejaVu Sans Mono", monospace
+        font-size: 0.8125rem
+        line-height: 1.2
+        white-space: pre-wrap
+        overflow-wrap: anywhere
+        color: var(--c-accent)
+        .atime
+            color: var(--c-text)
+        &.warning, &.error
+            color: var(--c-signal)
 footer
     padding: 4px 16px 6px
     text-align: center
@@ -513,8 +750,8 @@ footer
     .action
         margin-left: 0.4rem
 
-/*  the key caps of the board footer, the dialog footer, the deletion confirmation, and the transfer popup  */
-footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
+/*  the key caps of the board footer, the dialog footer, the deletion confirmation, the transfer popup, and the prompt popup  */
+footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .keys kbd
     display: inline-block
     padding: 0 5px
     border: 1px solid var(--c-border)
@@ -523,7 +760,30 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
     font: inherit
     font-weight: bold
 
-/*  the graph view  */
+/*  the graph view: its frame, with the graph statistics overlaid onto the top-right
+    corner of the graph border (like in the TUI), dimmed, in a box like the graph panel  */
+#gframe
+    position: relative
+    flex: 1
+    min-height: 0
+    display: flex
+    flex-direction: column
+    .gstats
+        position: absolute
+        top: 0
+        left: 50%
+        transform: translate(-50%, -50%)
+        max-width: calc(100% - 24px)
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        padding: 0 6px
+        border: 1px solid var(--c-border-soft)
+        border-radius: 5px
+        background: var(--c-ground-light)
+        color: var(--c-mute)
+        font-size: 0.8125rem
+        pointer-events: none
 #graph
     flex: 1
     min-height: 0
@@ -597,8 +857,9 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
     background: unquote("color-mix(in srgb, var(--c-shade) 55%, transparent)")
     z-index: 10
 
-/*  the confirmation of a task deletion, the transfer popup, and the busy popup: a small box, centered over everything  */
-#confirm, #transfer, #busy
+/*  the confirmation of a task deletion, the transfer popup, the prompt popup,
+    and the busy popup: a small box, centered over everything  */
+#confirm, #transfer, #prompt, #busy
     position: fixed
     inset: 0
     display: flex
@@ -641,6 +902,38 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd
             color: var(--c-mute)
         .action
             margin-left: 0.4rem
+
+/*  the prompt popup: in accent color, with its question in normal color (but bold),
+    and with a multi-line text area for the prompt, in monospace font and accent color
+    (on the lightest visibly tinted accent color while focused)  */
+#prompt
+    .box
+        border-color: var(--c-accent)
+    .ask
+        color: var(--c-text)
+        .cid
+            margin-right: 0
+    textarea
+        width: min(640px, 80vw)
+        padding: 6px 8px
+        border: 1px solid var(--c-border)
+        border-radius: 4px
+        background: var(--c-paper)
+        color: var(--c-accent)
+        font: inherit
+        font-family: "DejaVu Sans Mono", monospace
+        font-size: 0.875em
+        resize: vertical
+        &:focus
+            outline: none
+            border-color: var(--c-accent)
+            background: var(--c-accent-ground)
+    .buttons button
+        border-color: var(--c-accent)
+        color: var(--c-accent)
+        &:hover
+            background: var(--c-accent)
+            color: var(--c-paper)
 
 /*  the transfer popup: in accent color, with a scrollable list of the lane states
     (in bold, behind their group), where the hovered and selected states change
@@ -1017,9 +1310,11 @@ body.plan
         padding: 0.1em 0 0.1em 0.9em
         border-left: 3px solid var(--c-accent-border)
         color: var(--c-text-soft)
+    /*  the code font size relative to the surrounding text,
+        to scale along within the larger headers  */
     code
         font-family: "DejaVu Sans Mono", Menlo, monospace
-        font-size: 0.9rem
+        font-size: 0.9em
         letter-spacing: -0.015em
         color: var(--c-accent)
     pre.textart

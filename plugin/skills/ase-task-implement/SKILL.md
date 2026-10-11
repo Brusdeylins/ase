@@ -344,9 +344,13 @@ Procedure
                 whose `Desc` key carries a `merged <commit/>` value was
                 already *delivered* by `ase-task-integrate`, so it is *not*
                 re-applied, and the change set of this run starts afresh
-                at the source commit and replaces it below. Re-establish
-                it in the worktree by applying its `Data` payload (with the
-                4-space indentation removed) *verbatim*, e.g. via
+                at the source commit and replaces it below. As its `Data`
+                payload is *elided* in <task-content/>, fetch it via the
+                `ase_task_attachment(id: "<ase-task-id/>", type: "text/x-diff;
+                charset=utf-8; kind=\"<changeset-name/>\"")` tool of the `ase`
+                MCP server, whose `text` output field is the payload
+                *verbatim* (without any indentation). Re-establish
+                it in the worktree by applying this payload *verbatim*, e.g. via
                 `git -C "<work-dir/>" apply --3way`, and re-apply hunks
                 which no longer apply to a meanwhile drifted source
                 manually. The change set of this run is built *on top* of

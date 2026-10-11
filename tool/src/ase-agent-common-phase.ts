@@ -1,0 +1,375 @@
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+import * as TaskFormat              from "./ase-task-format.js"
+import type * as API                from "./ase-task-store-plugin-api.js"
+import type { AgentTask, AgentItem, AgentLog, LineLevel } from "./ase-agent-common.js"
+import {
+    Agent, tagsOf, taggedWith,
+    flatKeys, setPlanTag, updateTask
+}                                   from "./ase-agent-common.js"
+
+/*  the lifecycle states of the phase of an agent: the "incoming" state of the tasks
+    to claim, the "activity" state during processing, the "success" state (set by the
+    skill itself or by the agent), and the first state in the order of the lifecycle
+    model from which on a predecessor task has "passed" the phase  */
+export type AgentStates = { incoming: string, activity: string, success: string, passed: string }
+
+/*  restore the previous assignee of a task plan (or clear it with an empty <assignee>),
+    but only if it is still assigned to the agent <name> (and not meanwhile to somebody
+    else, e.g. a human or the editor agent)  */
+const reassign = (plan: API.TaskPlan, name: string, assignee: string): void => {
+    if (String(plan.header.Assignee ?? "").trim() !== name)
+        return
+    if (assignee !== "")
+        plan.header.Assignee = assignee
+    else
+        delete plan.header.Assignee
+}
+
+/*  the agent driving one phase of the "enterprise" task lifecycle model:
+    it claims every task in the "incoming" state, which does not carry the tag
+    "ase-agent-<kind>" yet, whose "After:" predecessors all passed the phase, and
+    which is either still unassigned (unless the agent requires the assignment) or
+    already assigned to the agent, into the "activity" state, processes it via an ASE skill of the headless agent
+    tool, tags it, and moves it into the state decided by the concrete agent  */
+export abstract class PhaseAgent extends Agent {
+    /*  the phase states of the agent  */
+    protected abstract readonly states: AgentStates
+
+    /*  whether only tasks already assigned to the agent (with its name as their
+        "Assignee:", e.g. explicitly by a human) are claimed, instead of also
+        the still unassigned tasks  */
+    protected readonly assigned: boolean = false
+
+    /*  whether the job of the agent finishes the result of the skill afterwards (e.g. by
+        committing and publishing it), so a task already in the "success" state does not
+        prove the finishing (see "recover")  */
+    protected readonly finishing: boolean = false
+
+    /*  whether a task is dispatchable to the agent by its assignee: a task
+        pre-assigned to the agent always is, an unassigned task only if the
+        agent does not require the assignment, and a task assigned to anybody
+        else (a human or another agent) never is  */
+    private assignedTo (keys: Map<string, string>): boolean {
+        const assignee = (keys.get("Assignee") ?? "").trim()
+        return assignee === this.name || (assignee === "" && !this.assigned)
+    }
+
+    /*  decide on the resulting state of a task, still in the "activity" state after
+        the skill invocation, by its success and its output lines  */
+    protected abstract outcome (ok: boolean, output: string[]): string
+
+    /*  decide on the value of the tag of a processed task (e.g. a verdict of the
+        skill) by its success and its output lines, or none (undefined) for a plain
+        tag, or no tag at all (null), if the result of the processing itself (e.g. an
+        attachment) keeps the agent from claiming the task again (see "ready")  */
+    protected label (_ok: boolean, _output: string[]): string | null | undefined {
+        return undefined
+    }
+
+    /*  the tag marking the tasks picked up by any agent of its kind: with the
+        value "active" ("ase-agent-<kind>:active") from the claim on, and plain
+        ("ase-agent-<kind>") or with the value of its label (e.g. a verdict, like
+        "ase-agent-approver:approve") once processed, so a task which the skill itself
+        puts back into the "incoming" state during its processing (e.g.
+        "ase-task-reboot", which takes over the tags) is never picked up again
+        by a peer agent and does not count as passed for its successors yet,
+        where an agent can use a tag of its own per mode (e.g. "ase-agent-implementer-draft")  */
+    protected get tag (): string {
+        return `ase-agent-${this.kind}`
+    }
+
+    /*  select the dispatchable tasks among all listed tasks <items> (except the
+        <busy> ones already processed in a worker slot), and the tasks waiting
+        (with the reason): by default every task in the "incoming" state, which is
+        not tagged yet, is dispatchable to the agent by its assignee, and whose
+        "After:" predecessors all passed the phase (or no longer exist), else waiting,
+        where a predecessor still held by an agent of its kind (tagged as "active")
+        has not passed the phase yet, even if the skill already moved it into or
+        beyond the "passed" state, as the agent still finishes it (e.g. commits and
+        publishes its change set) and might still fail it  */
+    protected select (items: AgentItem[], busy: Set<string>): { tasks: AgentTask[], waiting: Map<string, string> } {
+        const lifecycle = this.lifecycle!
+        const { incoming, success, passed } = this.states
+        const known   = new Map(items.map((item) => [ item.id, item ]))
+        const waiting = new Map<string, string>()
+        const tasks: AgentTask[] = []
+        const done    = (id: string): boolean => {
+            const item = known.get(id)!
+            const tags = tagsOf(item.keys)
+            return !tags.includes(`${this.tag}:failed`) && !tags.includes(`${this.tag}:active`)
+                && (lifecycle.states.indexOf(item.status) >= lifecycle.states.indexOf(passed)
+                    || (item.status === success && taggedWith(item.keys, this.tag)))
+        }
+        for (const item of items.filter((item) => item.status === incoming
+            && !taggedWith(item.keys, this.tag) && this.assignedTo(item.keys) && !busy.has(item.id))) {
+            const pending = (item.keys.get("After") ?? "").split(",")
+                .map((after) => after.trim())
+                .filter((after) => after !== "" && known.has(after) && !done(after))
+            if (pending.length === 0)
+                tasks.push({ id: item.id, title: item.title, keys: item.keys })
+            else
+                waiting.set(item.id, "its predecessors " +
+                    pending.map((after) => `"${after}" (${known.get(after)!.status})`).join(", "))
+        }
+        return { tasks, waiting }
+    }
+
+    /*  claim a selected task, returning the description of the claim (for the processing
+        log), or null if the task was skipped (throws if the claim failed):
+        by default the claim is won only if the task is still in the "incoming" state, and
+        the task is then moved into the "activity" state, tagged as "active", and assigned
+        to the agent, all in a single conditional update of the task (retried on a concurrent
+        change of it), so a failed claim never leaves the task half-claimed, and the claim
+        is recorded for the run of the agent, so it is recovered after a termination  */
+    protected async claim (task: AgentTask): Promise<string | null> {
+        const { incoming, activity } = this.states
+
+        /*  a task whose status changed meanwhile is skipped, while a task tagged
+            meanwhile was already picked up by an agent of this kind (e.g. a peer agent,
+            after the listing) and a task (re)assigned meanwhile is no longer for the
+            agent, so both are silently skipped, and any other task is claimed (with its
+            current header keys, including the previous assignee to restore on interrupt)  */
+        let from    = ""
+        let skipped = ""
+        let keys    = task.keys
+
+        /*  the header keys of the task of the last attempted claim which might have been saved,
+            as a retried update after a claim saved, but whose response was lost, finds the
+            task already claimed by itself (and not by another agent of the same name, as
+            the attempt is reset whenever its save was surely rejected)  */
+        let attempted: Map<string, string> | null = null
+        try {
+            const exists = await updateTask(this.log, task.id, (plan, lifecycle) => {
+                from = TaskFormat.taskStatus(plan.header, lifecycle)
+                const current = flatKeys(plan.header)
+                if (attempted !== null && from === activity && tagsOf(current).includes(`${this.tag}:active`)
+                    && (current.get("Assignee") ?? "").trim() === this.name) {
+                    keys    = attempted
+                    skipped = ""
+                    return false
+                }
+                keys    = current
+                skipped = from !== incoming ? "status" :
+                    taggedWith(keys, this.tag) || !this.assignedTo(keys) ? "silently" : ""
+                if (skipped !== "")
+                    return false
+                this.runLock.claim(task.id, { name: this.name, tag: this.tag, assignee: (keys.get("Assignee") ?? "").trim() })
+                plan.header.Status = activity
+                setPlanTag(plan, this.tag, "active")
+                plan.header.Assignee = this.name
+                attempted = keys
+                return true
+            }, () => {
+                attempted = null
+            })
+            if (!exists)
+                skipped = "silently"
+        }
+        catch (err: unknown) {
+            /*  the claim is still recorded if it might have been saved (as its
+                response was lost), so the task is recovered after the run  */
+            if (attempted === null)
+                this.runLock.unclaim(task.id)
+            throw err
+        }
+        if (skipped !== "") {
+            this.runLock.unclaim(task.id)
+            if (skipped === "status")
+                await this.write("warning", this.name, `task "${task.id}" skipped, as its status changed meanwhile to "${from}"`)
+            return null
+        }
+        task.keys = keys
+        return `claimed task (status "${incoming}" → "${activity}")`
+    }
+
+    /*  settle a processed task after the skill invocation (successful by <ok>,
+        with the job finished by <finished>, or interrupted by <aborted>), by
+        default deciding on its status: a task already in the "success" state is
+        tagged plain or labeled, unassigned, and kept, a task still in the "activity" state
+        returns untagged (and with its previous assignee) into the "incoming" state
+        on interrupt and is otherwise tagged plain or labeled, unassigned, and moved into the
+        state of the outcome, where a task already in the "success" state, but whose
+        finishing failed (e.g. one already "INTEGRATED" resp. "IMPLEMENTED" by the
+        skill, but whose publishing of the merge resp. of the changeset branch was
+        rejected), and a task whose outcome is not reachable from its state, is
+        tagged as "failed", unassigned, and left in its state for a manual intervention
+        (instead of being parked, e.g. "STALLED", which is reachable from "IMPLEMENTED"
+        via "APPROVING" and "PLANNED" and would hide the failure)  */
+    protected async settle (task: AgentTask, ok: boolean, finished: boolean, aborted: boolean,
+        output: string[], log: AgentLog): Promise<void> {
+        const { incoming, activity, success } = this.states
+
+        /*  the tag is made plain or labeled (and the assignee cleared) together with the
+            status change, in a single conditional update of the task (retried on a concurrent
+            change of it), so no agent of its kind claims a processed task again, and a
+            processing with a label (e.g. a verdict) or without a tag (as its result itself
+            guards it) succeeded, even if not moved into the "success" state, where the
+            assignee is only cleared (resp. restored) if the task is still assigned to the
+            agent (and not meanwhile, e.g., to the editor agent)  */
+        const value    = aborted ? undefined : this.label(ok, output)
+        const tagged   = (val: string | null | undefined) => val === null ? "untagged" :
+            `tag "${val !== undefined ? `${this.tag}:${val}` : this.tag}"`
+        const assignee = (task.keys.get("Assignee") ?? "").trim()
+        let level: LineLevel = "info"
+        let result = ""
+        const finish = () => updateTask(this.log, task.id, (plan, lifecycle) => {
+            const status = TaskFormat.taskStatus(plan.header, lifecycle)
+            if (status === activity && aborted) {
+                setPlanTag(plan, this.tag, null)
+                reassign(plan, this.name, assignee)
+                plan.header.Status = incoming
+                level  = "warning"
+                result = `task released (status "${status}" → "${incoming}", untagged)`
+            }
+            else if (status === success && finished) {
+                setPlanTag(plan, this.tag, value)
+                reassign(plan, this.name, "")
+                level  = "info"
+                result = `task processed successfully (status "${success}", ${tagged(value)})`
+            }
+            else if (status === activity || status === success) {
+                const to = this.outcome(ok, output)
+                reassign(plan, this.name, "")
+                if (status === success) {
+                    /*  the skill succeeded, but the finishing failed (as "finished" is
+                        false here), so the result of the skill (e.g. a merge or a commit
+                        not published) must not be hidden by parking the task  */
+                    setPlanTag(plan, this.tag, "failed")
+                    level  = "error"
+                    result = `task processed, but its finishing failed -- left in "${status}" ` +
+                        `for a manual intervention (${tagged("failed")})`
+                }
+                else if (TaskFormat.checkStatus(lifecycle, status, to) !== "") {
+                    setPlanTag(plan, this.tag, "failed")
+                    level  = "error"
+                    result = `task processed, but its status "${status}" cannot change into "${to}" ` +
+                        `-- left in "${status}" for a manual intervention (${tagged("failed")})`
+                }
+                else {
+                    setPlanTag(plan, this.tag, value)
+                    plan.header.Status = to
+                    const good = to === success || value !== undefined
+                    level  = good ? "info" : "warning"
+                    result = `task processed ${good ? "successfully" : "unsuccessfully"} ` +
+                        `(status "${status}" → "${to}", ${tagged(value)})`
+                }
+            }
+            else {
+                /*  tagged, too, as a skill can itself move the task back into the
+                    "incoming" state (e.g. "ase-task-integrate" on nothing to integrate)  */
+                setPlanTag(plan, this.tag, value)
+                reassign(plan, this.name, "")
+                level  = "warning"
+                result = `task status changed meanwhile to "${status}" -- left untouched (${tagged(value)})`
+            }
+            return true
+        })
+
+        /*  a finalization failing even after its retries is retried in the background
+            (see "unsettle"), while the claim stays recorded for the run, so the task never
+            stays in the "activity" state (and is recovered after a termination meanwhile)  */
+        let exists: boolean
+        try {
+            exists = await finish()
+        }
+        catch (err: unknown) {
+            this.unsettle(task.id, async () => {
+                const exists = await finish()
+                this.runLock.unclaim(task.id)
+                await this.write(exists ? level : "warning", `${this.name}: ${task.id}`,
+                    exists ? `${result} (finalization retried)` : "task vanished -- finalization dropped",
+                    undefined, task.id)
+                return true
+            })
+            await log("error", "finalizing the task failed (retried later): " +
+                `${err instanceof Error ? err.message : String(err)}`)
+            return
+        }
+        this.runLock.unclaim(task.id)
+        if (exists)
+            await log(level, result)
+        else
+            await log("warning", "task vanished meanwhile")
+    }
+
+    /*  recover the tasks left behind by terminated runs of agents of its kind (e.g. killed
+        ones), as recorded for their runs, where each terminated run is seized exclusively
+        (so concurrently started agents never recover the same run), and a task is recovered
+        only if still owned by the terminated agent, i.e., still tagged as "active" and assigned
+        to it, and not claimed meanwhile by a live agent of this host (e.g. after its release
+        by an earlier recovery, or after its settling right before the termination): such a
+        task is released (like on an interrupt) if still in the "activity" state, tagged as
+        "failed" (like on a failed finishing, see "settle") if in the "success" state of an
+        agent whose job finishes the result of the skill, as the finishing (e.g. the publishing
+        of the change set) might never have run, and else tagged plain (as processed), where
+        each recovered claim is removed from the record of the run, and the record of a run
+        is removed once all its tasks are recovered  */
+    protected async recover (): Promise<void> {
+        const { incoming, activity, success } = this.states
+        for (const { run } of await this.runLock.dead()) {
+            const claims = await this.runLock.seize(run)
+            if (claims === null)
+                continue
+            let recovered = true
+            for (const [ id, claim ] of Object.entries(claims)) {
+                let result = ""
+                try {
+                    if (await this.runLock.claimed(id)) {
+                        this.runLock.forget(run, id)
+                        continue
+                    }
+                    await updateTask(this.log, id, (plan, lifecycle) => {
+                        const status = TaskFormat.taskStatus(plan.header, lifecycle)
+                        result = ""
+                        if (!tagsOf(flatKeys(plan.header)).includes(`${claim.tag}:active`)
+                            || String(plan.header.Assignee ?? "").trim() !== claim.name)
+                            return false
+                        else if (status === activity) {
+                            setPlanTag(plan, claim.tag, null)
+                            reassign(plan, claim.name, claim.assignee)
+                            plan.header.Status = incoming
+                            result = `released (status "${status}" → "${incoming}", untagged)`
+                        }
+                        else if (status === success && this.finishing) {
+                            setPlanTag(plan, claim.tag, "failed")
+                            reassign(plan, claim.name, "")
+                            result = `processed, but its finishing might not have run -- left in "${status}" ` +
+                                `for a manual intervention (tag "${claim.tag}:failed")`
+                        }
+                        else {
+                            setPlanTag(plan, claim.tag)
+                            reassign(plan, claim.name, "")
+                            result = `marked as processed (status "${status}", tag "${claim.tag}")`
+                        }
+                        return true
+                    })
+                }
+                catch (err: unknown) {
+                    recovered = false
+                    await this.write("warning", this.name, `task "${id}" of terminated ${this.kind} "${claim.name}" ` +
+                        `not recovered: ${err instanceof Error ? err.message : String(err)}`)
+                    continue
+                }
+                this.runLock.forget(run, id)
+                if (result !== "")
+                    await this.write("warning", this.name, `task "${id}" of terminated ${this.kind} "${claim.name}" ${result}`)
+            }
+            if (recovered)
+                await this.runLock.purge(run)
+            else
+                await this.runLock.free(run)
+        }
+    }
+
+    /*  the description of the observed tasks (for the start log line)  */
+    protected observing (): string {
+        return `"${this.states.incoming}" tasks without tag "${this.tag}" ` +
+            (this.assigned ? `and assigned to "${this.name}"` : `and unassigned or assigned to "${this.name}"`)
+    }
+}
+

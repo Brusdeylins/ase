@@ -17,13 +17,11 @@ The plan is loaded via the `ase_task_load` MCP tool and shown framed
 between a `( TASK )` header and footer rule. If *id* is omitted, the
 *current* task id (inherited from the session context) is used.
 
-By default, when the plan is longer than 90 lines and its backmatter
-contains an implementation draft attachment (an attachment block of
-type `text/x-diff; charset=utf-8; kind="draft"`, produced by
-`ase-task-implement --draft`), the payload of that attachment is
-collapsed to `[...]` to keep the view compact. The `--full`|`-f` option
-suppresses this collapsing and renders the plan in full, without any
-truncation or summarization.
+By default, the payload of every attachment in the backmatter (like an
+implementation draft of `ase-task-implement --draft` or the processing
+log of an `ase agent`) is elided to an `[elided: <n> lines]` marker to
+keep the view compact. The `--full`|`-f` option loads the payloads, too,
+and renders the plan in full, without any truncation or summarization.
 
 An implementation draft attachment whose `Modified:` key is absent or
 older than the `Modified:` key of the plan frontmatter is *stale*, as
@@ -39,9 +37,8 @@ created from, stored in, and delivered to.
 ##  OPTIONS
 
 -   `--full`|`-f`:
-    Render the plan in full, without collapsing the implementation
-    draft attachment. By default, its payload is replaced with `[...]`
-    for plans longer than 90 lines.
+    Render the plan in full, including the payloads of its attachments.
+    By default, each payload is elided to an `[elided: <n> lines]` marker.
 
 ##  ARGUMENTS
 

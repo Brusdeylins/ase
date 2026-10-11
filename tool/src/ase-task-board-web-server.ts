@@ -17,11 +17,13 @@ import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import { Config }                from "./ase-config-core.js"
 import { configSchema, webColorDefaults, webColorNames } from "./ase-config-schema.js"
-import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDraftDiff, diffTones, newTaskText, createTask, saveTask, TaskConflict } from "./ase-task-board-core.js"
+import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDraftDiff, diffTones, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
-import type { Board, StoreState } from "./ase-task-board-core.js"
+import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
+import type { AgentPresence, AgentLine } from "./ase-agent-relay-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
+import { editProbe, editRefused, requestEdit, RequestError } from "./ase-task-request.js"
 import pkg                       from "../package.json" with { type: "json" }
 
 /*  the build stamp of the loaded code (version and content hash of the board modules
@@ -245,7 +247,10 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
         title: g.title,
         lanes: g.lanes.map((l) => ({
             status: l.status, active: l.active, weight: l.weight, dashed: l.dashed, kind: l.kind,
-            cards:  (board.lanes.get(l.status) ?? []).map((c) => ({ id: c.id, title: c.title, group: c.group, cyclic: board.cyclic.has(c.id), tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c) }))
+            cards:  (board.lanes.get(l.status) ?? []).map((c) => ({
+                id: c.id, title: c.title, group: c.group, cyclic: board.cyclic.has(c.id), tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c),
+                edit: c.edit, finished: editRefused(lifecycle, c.actual)
+            }))
         }))
     }))
 })
@@ -255,6 +260,77 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
 type Client = { stream: PassThrough, compressor: { flush: () => void } | null }
 const clients = new Set<Client>()
 let stopWatch: (() => Promise<void>) | null = null
+
+/*  the agents passed by the agent relay (null without an agent relay), and its watcher,
+    running alongside the change watcher  */
+let agentsState: AgentsState | null = null
+let stopAgents: (() => void) | null = null
+
+/*  the agents as pushed to the web boards: as every announcement of every agent (incl. its
+    heartbeats) changes them, they are pushed coalesced (at most every AGENTS_PUSH_MS), split into
+    their presence without the recent processing log lines (pushed only if changed) and the processing
+    log lines added per agent since the previous push (a delta, which the web boards append to the
+    lines they know, keeping the most recent ones only, or a reset with all lines of an agent),
+    where a newly connected web board gets the pushed presence and all pushed lines as a reset  */
+type AgentsPresence = { connected: boolean, agents: Omit<AgentPresence, "recent">[] } | null
+type AgentsLogs     = Record<string, { reset: boolean, lines: AgentLine[] }>
+const AGENTS_PUSH_MS = 300
+let agentsTimer: ReturnType<typeof setTimeout> | null = null
+let agentsPushed     = 0
+let pushedPresence   = ""
+let pushedLogs       = new Map<string, AgentLine[]>()
+
+/*  the presence of the agents (without their recent processing log lines)  */
+const agentsPresence = (state: AgentsState | null): AgentsPresence =>
+    state === null ? null : { connected: state.connected, agents: state.agents.map(({ recent: _recent, ...agent }) => agent) }
+
+/*  whether two processing log lines are the same  */
+const sameLine = (a: AgentLine, b: AgentLine): boolean =>
+    a.time === b.time && a.level === b.level && a.task === b.task && a.msg === b.msg
+
+/*  push the changes of the agents since the previous push to all event stream clients  */
+const pushAgents = (): void => {
+    agentsPushed = Date.now()
+    const presence = JSON.stringify(agentsPresence(agentsState))
+    if (presence !== pushedPresence) {
+        pushedPresence = presence
+        emitRaw("agents", presence)
+    }
+    const logs = {} as AgentsLogs
+    const next = new Map<string, AgentLine[]>()
+    for (const agent of agentsState?.agents ?? []) {
+        const sent = pushedLogs.get(agent.id) ?? []
+        const last = sent.at(-1)
+        const at   = last !== undefined ? agent.recent.findLastIndex((line) => sameLine(line, last)) : -1
+        if (at >= 0) {
+            if (at < agent.recent.length - 1)
+                logs[agent.id] = { reset: false, lines: agent.recent.slice(at + 1) }
+        }
+        else if (agent.recent.length > 0 || sent.length > 0)
+            logs[agent.id] = { reset: true, lines: agent.recent }
+        next.set(agent.id, agent.recent)
+    }
+    pushedLogs = next
+    if (Object.keys(logs).length > 0)
+        emit("logs", logs)
+}
+
+/*  schedule a coalesced push of the changes of the agents  */
+const scheduleAgents = (state: AgentsState | null): void => {
+    agentsState = state
+    if (agentsTimer !== null)
+        return
+    agentsTimer = setTimeout(() => {
+        agentsTimer = null
+        pushAgents()
+    }, Math.max(0, agentsPushed + AGENTS_PUSH_MS - Date.now()))
+}
+
+/*  the pushed agents for a newly connected event stream client  */
+const pushedAgents = (): { presence: string, logs: AgentsLogs } => ({
+    presence: pushedPresence,
+    logs:     Object.fromEntries([ ...pushedLogs ].map(([ id, lines ]) => [ id, { reset: true, lines } ]))
+})
 
 /*  the kind and connection state of the task store, as reported by the change watcher  */
 let storeState: StoreState | null = null
@@ -276,12 +352,15 @@ const currentBoard = (log: Log): Promise<Board> => {
     return cached
 }
 
-/*  send an event to all event stream clients  */
-const emit = (event: string, data: unknown): void => {
+/*  send an event (with its data, resp. its already serialized data) to all event stream clients  */
+const emitRaw = (event: string, data: string): void => {
     for (const c of clients) {
-        c.stream.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+        c.stream.write(`event: ${event}\ndata: ${data}\n\n`)
         c.compressor?.flush()
     }
+}
+const emit = (event: string, data: unknown): void => {
+    emitRaw(event, JSON.stringify(data))
 }
 
 /*  drop the memoized board and broadcast a change notification to all event stream clients  */
@@ -349,7 +428,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
 
     /*  the dependency graph as SVG, reduced onto the tasks matching the
         filter query plus their direct predecessors and successors
-        (and optionally without the standalone tasks)  */
+        (and optionally without the standalone tasks), plus its statistics  */
     server.route({
         method:  "GET",
         path:    "/task-board/api/graph",
@@ -358,7 +437,11 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
             const found  = filterBoard(await currentBoard(log), filterQuery(request), true)
             const board  = state.standalone ? found : dropStandalone(found)
             const svg    = board.cards.size === 0 ? "" : drawGraphSVG(board, await layoutGraph(board, "px", state.titles))
-            return h.response({ svg })
+            const stats  = {
+                tasks:        board.cards.size,
+                dependencies: [ ...board.pred.values() ].reduce((n, ps) => n + ps.length, 0)
+            }
+            return h.response({ svg, stats })
         })
     })
 
@@ -553,18 +636,64 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
             return h.response({ ok: true })
         })
     })
+
+    /*  get the prompt of the most recent failed edit request of a task
+        (for its re-request), else an empty one, answering 404 if the task is missing
+        and 409 if it is finished or an edit of it is in progress (for a web board which
+        cannot check the task itself, as it is not on its possibly filtered board)  */
+    server.route({
+        method:  "GET",
+        path:    "/task-board/api/task/{id}/edit",
+        handler: guarded(async (request, h) => {
+            const id = String(request.params.id)
+            if (!TaskFormat.TASK_ID_RE.test(id))
+                return h.response({ error: `invalid task id "${id}"` }).code(400)
+            const probe = await editProbe(log, id)
+            if ("refused" in probe) {
+                if (probe.refused === "missing")
+                    return h.response({ error: `no task "${id}"` }).code(404)
+                const reason = probe.refused === "finished" ? "task is finished" : "edit in progress"
+                return h.response({ error: `editing task "${id}" by prompt refused: ${reason}` }).code(409)
+            }
+            return h.response({ prompt: probe.prompt })
+        })
+    })
+
+    /*  request the edit of a task by a prompt (processed by "ase agent editor"), answering
+        400 if the prompt is empty, 404 if the task is missing, and 409 if it is finished or
+        an edit of it is in progress (as checked atomically with the request)  */
+    server.route({
+        method:  "POST",
+        path:    "/task-board/api/task/{id}/edit",
+        options: { payload: { parse: true, allow: "application/json" } },
+        handler: guarded(async (request, h) => {
+            const id = String(request.params.id)
+            const p  = request.payload as { prompt?: unknown } | null
+            if (!TaskFormat.TASK_ID_RE.test(id) || p === null || typeof p.prompt !== "string")
+                return h.response({ error: "invalid edit request" }).code(400)
+            try {
+                await requestEdit(log, id, p.prompt)
+            }
+            catch (err: unknown) {
+                const code = !(err instanceof RequestError) || err.reason === "empty" ? 400 :
+                    err.reason === "missing" ? 404 : 409
+                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(code)
+            }
+            return h.response({ ok: true })
+        })
+    })
 }
 
 /*  register the surface routes of the web board: view changes, surface toggles, keep-alive, and change events  */
 const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
-    /*  set the shown view (lanes or graph) of the web surface, as the view of newly opened web boards  */
+    /*  set the shown view (lanes, graph, or agents) of the web surface, as the view of newly opened web boards  */
     server.route({
         method:  "POST",
         path:    "/task-board/api/view",
         options: { payload: { parse: true, allow: "application/json" } },
         handler: guarded(async (request, h) => {
             const p = request.payload as { view?: unknown } | null
-            if (p === null || (p.view !== "lanes" && p.view !== "graph"))
+            if (p === null || (p.view !== "lanes" && p.view !== "graph" && p.view !== "agents"))
                 return h.response({ error: "invalid view request" }).code(400)
             return h.response((await BoardState.setView("web", p.view)).web)
         })
@@ -609,8 +738,9 @@ const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
     })
 
     /*  the change event stream: the watcher (which also notices changes
-        of the lifecycle mode) runs only while at least one client is connected,
-        and every client gets the task store state on connect and on each change  */
+        of the lifecycle mode) and the agents watcher run only while at least one client
+        is connected, and every client gets the task store state and the agents on connect
+        and on each change  */
     server.route({
         method:  "GET",
         path:    "/task-board/events",
@@ -627,27 +757,58 @@ const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
                     setImmediate(() => { c.flush() })
                 }
             })
-            clients.add(client)
-            if (stopWatch === null) {
-                cached    = null
-                stopWatch = watchTasks(log, broadcast, (state) => {
-                    storeState = state
-                    emit("store", state)
-                })
-            }
-            else if (storeState !== null)
-                stream.write(`event: store\ndata: ${JSON.stringify(storeState)}\n\n`)
-            request.raw.res.on("close", () => {
+
+            /*  release the client, and stop the watchers once no client is connected anymore  */
+            const release = () => {
                 clients.delete(client)
                 stream.end()
                 if (clients.size === 0 && stopWatch !== null) {
                     stopWatch().catch((err: unknown) => {
                         log.write("warning", `board: stopping watcher failed: ${err instanceof Error ? err.message : String(err)}`)
                     })
-                    stopWatch  = null
-                    storeState = null
+                    stopAgents?.()
+                    if (agentsTimer !== null)
+                        clearTimeout(agentsTimer)
+                    stopWatch   = null
+                    stopAgents  = null
+                    agentsTimer = null
+                    storeState  = null
+                    agentsState = null
                 }
-            })
+            }
+
+            clients.add(client)
+            if (stopWatch === null) {
+                /*  a watcher failing to start (e.g. on a misconfigured task store)
+                    must not leave the client registered (and the watchers running)  */
+                try {
+                    cached     = null
+                    stopWatch  = watchTasks(log, broadcast, (state) => {
+                        storeState = state
+                        emit("store", state)
+                    })
+                    agentsPushed   = 0
+                    pushedPresence = ""
+                    pushedLogs     = new Map()
+                    stopAgents     = watchAgents(log, undefined, scheduleAgents)
+                }
+                catch (err: unknown) {
+                    release()
+                    throw err
+                }
+            }
+            else {
+                if (storeState !== null)
+                    stream.write(`event: store\ndata: ${JSON.stringify(storeState)}\n\n`)
+
+                /*  the agents once pushed (else the pending first push reaches this client, too)  */
+                if (agentsPushed > 0) {
+                    const { presence, logs } = pushedAgents()
+                    stream.write(`event: agents\ndata: ${presence}\n\n`)
+                    stream.write(`event: logs\ndata: ${JSON.stringify(logs)}\n\n`)
+                }
+            }
+            request.raw.res.on("close", release)
             stream.write(": connected\n\n")
             return h.response(stream)
                 .type("text/event-stream")

@@ -16,15 +16,17 @@ import type { DOMElement }                    from "ink"
 import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
-    buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf
+    buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf,
+    watchAgents, busyAgents, agentsDigest
 }                                             from "./ase-task-board-core.js"
-import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState } from "./ase-task-board-core.js"
+import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState, AgentsState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
+import { editRefused, editPrompt, requestEdit } from "./ase-task-request.js"
 import { filterBoard, dropStandalone }        from "./ase-task-board-filter.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
-import { fitGroups }                          from "./ase-task-board-tui-view.js"
-import { dialogTabs, planLines, attachmentLines, DIALOG_CHROME, DIALOG_WIDTH } from "./ase-task-board-tui-popup.js"
+import { fitGroups, agentLogWidth }           from "./ase-task-board-tui-view.js"
+import { dialogTabs, planLines, attachmentLines, agentLogLines, agentLogKey, DIALOG_CHROME, DIALOG_WIDTH } from "./ase-task-board-tui-popup.js"
 import type { PlanParts }                     from "./ase-task-board-tui-popup.js"
 import { pulseFrames }                        from "./ase-task-board-tui-style.js"
 
@@ -81,6 +83,9 @@ export const transferEntries = (board: Board, cycle: TaskFormat.TaskLifecycle, c
 /*  the duration (in ms) a task store operation has to last before the busy popup shows it  */
 export const BUSY_DELAY = 800
 
+/*  the duration (in ms) the heart of an agent card stays filled after a received heartbeat  */
+const BEAT_SHOWN_MS = 1000
+
 /*  the label of a busy task store operation: its text, the optional task id
     (rendered inverse), and an optional suffix  */
 export type BusyLabel = { text: string, id?: string, suffix?: string }
@@ -124,12 +129,14 @@ const useBusy = () => {
 }
 
 /*  the rendered boxes for the mouse hit-testing: the card, lane, and group boxes of the
-    lane view, the view value and filter field of the header, and the graph viewport content  */
+    lane view, the agent cards of the agents view, the view value, filter field, and clear
+    button of the header, and the graph viewport content  */
 const useHitBoxes = () => {
     const cardBoxes  = React.useRef(new Map<string, DOMElement>())
     const laneBoxes  = React.useRef(new Map<string, DOMElement>())
     const groupBoxes = React.useRef(new Map<string, DOMElement>())
     const headBoxes  = React.useRef(new Map<string, DOMElement>())
+    const agentBoxes = React.useRef(new Map<string, DOMElement>())
     const graphView  = React.useRef<DOMElement | null>(null)
     const register   = (map: Map<string, DOMElement>, key: string) => (el: DOMElement | null) => {
         if (el !== null)
@@ -141,7 +148,8 @@ const useHitBoxes = () => {
     const laneRef    = (g: number, l: number) => register(laneBoxes.current, `${g}:${l}`)
     const groupRef   = (g: number) => register(groupBoxes.current, String(g))
     const headRef    = (key: "view" | "filter" | "clear") => register(headBoxes.current, key)
-    return { cardBoxes, laneBoxes, groupBoxes, headBoxes, graphView, cardRef, laneRef, groupRef, headRef }
+    const agentRef   = (id: string) => register(agentBoxes.current, id)
+    return { cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, graphView, cardRef, laneRef, groupRef, headRef, agentRef }
 }
 
 /*  find the registered box under a (0-based) mouse position  */
@@ -154,8 +162,67 @@ const boxAt = (map: Map<string, DOMElement>, mx: number, my: number): string | u
     return undefined
 }
 
+/*  the state of the agents view: the agents of the master list, the selected one (followed by its id,
+    else, until explicitly selected again, the one at the index of the previously selected one),
+    and the lines of its recent processing log in the detail view (within its frame), scrolled
+    to the bottom unless explicitly scrolled up, where the scroll position is anchored to the
+    processing log line at its top (as the oldest lines are dropped once the recent lines are
+    complete), falling back to the top once this line was dropped, too  */
+const useAgentsView = (agents: AgentsState | null, columns: number, boardH: number) => {
+    const [ agentSel,  setAgentSel  ] = React.useState("")
+    const [ logScroll, setLogScroll ] = React.useState<{ key: string, offset: number } | null>(null)
+    const agentList = agents?.agents ?? []
+    const agentHit  = agentList.findIndex((a) => a.id === agentSel)
+    const agentLast = React.useRef(0)
+    const agentIdx  = agentHit >= 0 ? agentHit : Math.max(0, Math.min(agentLast.current, agentList.length - 1))
+    const agent     = agentList.at(agentIdx)
+    const logLines  = React.useMemo(() => agent !== undefined ? agentLogLines(agent, agentLogWidth(columns)) : [], [ agent, columns ])
+    const logH      = Math.max(1, boardH - 2)
+    const logMax    = Math.max(0, logLines.length - logH)
+    let   logFirst  = logMax
+    if (logScroll !== null && agentHit >= 0 && agent !== undefined) {
+        const entry = agent.recent.findIndex((line) => agentLogKey(line) === logScroll.key)
+        logFirst = entry < 0 ? 0 :
+            Math.max(0, Math.min(logMax, logLines.findIndex((line) => line.entry === entry) + logScroll.offset))
+    }
+
+    /*  remember the index of the selected agent, and once it vanished (or initially), explicitly
+        select the agent at its previous index (resp. the first one), following its log at the bottom  */
+    React.useEffect(() => {
+        if (agentHit >= 0)
+            agentLast.current = agentHit
+        else if (agentList.length > 0) {
+            setAgentSel(agentList[agentIdx].id)
+            setLogScroll(null)
+        }
+    }, [ agentHit, agentIdx, agentList ])
+
+    /*  select another agent (relative to the selected one), following its log at the bottom  */
+    const selectAgent = (delta: number): void => {
+        if (agentList.length === 0)
+            return
+        setAgentSel(agentList[Math.max(0, Math.min(agentList.length - 1, agentIdx + delta))].id)
+        setLogScroll(null)
+    }
+
+    /*  scroll the log of the detail view (by lines, or to its top or bottom),
+        anchored to the processing log line of its top row, and following it
+        again at the bottom once scrolled down to it  */
+    const scrollLog = (delta: number | "top" | "bottom"): void => {
+        const next = delta === "top" ? 0 : delta === "bottom" ? logMax : Math.max(0, Math.min(logMax, logFirst + delta))
+        const line = logLines[next]
+        if (next >= logMax || line === undefined || agent === undefined) {
+            setLogScroll(null)
+            return
+        }
+        const start = logLines.findIndex((l) => l.entry === line.entry)
+        setLogScroll({ key: agentLogKey(agent.recent[line.entry]), offset: next - start })
+    }
+    return { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog }
+}
+
 /*  the state of the terminal board: all state, the derived values, and the actions  */
-export const useBoardState = (log: Log, initial: Board) => {
+export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const { exit, suspendTerminal } = useApp()
     const { columns, rows } = useWindowSize()
     const [ all,     setBoard   ] = React.useState<Board>(initial)
@@ -183,16 +250,21 @@ export const useBoardState = (log: Log, initial: Board) => {
     const [ cycle,   setCycle   ] = React.useState<TaskFormat.TaskLifecycle | null>(null)
     const [ confirm, setConfirm ] = React.useState<{ id: string, yes: boolean } | null>(null)
     const [ transfer, setTransfer ] = React.useState<{ id: string, at: string } | null>(null)
+    const [ prompt,  setPrompt  ] = React.useState<{ id: string, text: string, pos: number } | null>(null)
     const [ store,   setStore   ] = React.useState<StoreState | null>(null)
+    const [ relayed, setRelayed ] = React.useState<AgentsState | null | undefined>(undefined)
     const [ grow,    setGrow    ] = React.useState(false)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
+
+    /*  the drafts of the prompts of cancelled (or failed to be sent) edit requests, per task  */
+    const promptDrafts = React.useRef(new Map<string, { text: string, pos: number }>())
 
     /*  the busy popup of slow task store operations  */
     const { busy, busyTick, track } = useBusy()
 
     /*  the rendered boxes for the mouse hit-testing  */
-    const { cardBoxes, laneBoxes, groupBoxes, headBoxes, graphView, cardRef, laneRef, groupRef, headRef } = useHitBoxes()
+    const { cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, graphView, cardRef, laneRef, groupRef, headRef, agentRef } = useHitBoxes()
 
     /*  report mouse clicks while the board runs and mouse support is enabled
         (disabling it gives the regular text selection of the terminal back)  */
@@ -263,6 +335,14 @@ export const useBoardState = (log: Log, initial: Board) => {
         }
     }, [ all, transfer ])
 
+    /*  close the prompt popup if its task vanished in the meantime  */
+    React.useEffect(() => {
+        if (prompt !== null && !all.cards.has(prompt.id)) {
+            setPrompt(null)
+            setNotice(`editing task "${prompt.id}" by prompt cancelled: task vanished in the meantime`)
+        }
+    }, [ all, prompt ])
+
     /*  remember the box of every graph node for the spatial navigation and the scrolling  */
     const places = React.useMemo(() => {
         const map = new Map<string, Place>()
@@ -284,6 +364,38 @@ export const useBoardState = (log: Log, initial: Board) => {
             stop().catch(() => {})
         }
     }, [ log ])
+
+    /*  follow the agents passed by the agent relay (if any, else null, and undefined until
+        known), where the agents view falls back to the lanes view without an agent relay,
+        and where, outside the agents view, a frame of the agent relay is taken over only
+        if it visibly changes the agents there (and not on a mere heartbeat or on new
+        processing log lines), in order to not needlessly re-render the board, while the
+        latest frame is taken over as soon as the agents view is entered  */
+    const viewRef   = React.useRef(view)
+    viewRef.current = view
+    const latest    = React.useRef<AgentsState | null | undefined>(undefined)
+    React.useEffect(() => {
+        return watchAgents(log, relay, (next) => {
+            latest.current = next
+            setRelayed((prev) => viewRef.current === "agents" || agentsDigest(prev) !== agentsDigest(next) ? next : prev)
+        })
+    }, [ log, relay ])
+    React.useEffect(() => {
+        if (view === "agents" && latest.current !== undefined)
+            setRelayed(latest.current)
+    }, [ view ])
+    const agents  = relayed ?? null
+    const working = React.useMemo(() => busyAgents(agents), [ agents ])
+    React.useEffect(() => {
+        if (view === "agents" && relayed === null)
+            setView("lanes")
+    }, [ view, relayed ])
+
+    /*  cycle through the views: lanes, graph, and (with an agent relay) agents  */
+    const cycleView = (): void => {
+        const views: SurfaceView[] = agents !== null ? [ "lanes", "graph", "agents" ] : [ "lanes", "graph" ]
+        setView(views[(views.indexOf(view) + 1) % views.length])
+    }
 
     /*  fetch the plan (with its attachments) of the read dialog whenever it is opened or the board changes
         (the latter in the background, i.e. without the busy popup)  */
@@ -513,6 +625,75 @@ export const useBoardState = (log: Log, initial: Board) => {
         })
     }
 
+    /*  the token of the pending loading of the prompt of an edit request, invalidated by every
+        later loading and every change of the popups, the read dialog, the selection, or the view
+        (so a slowly loaded prompt never opens its popup over another one or for another task)  */
+    const promptLoad = React.useRef(0)
+    React.useEffect(() => {
+        promptLoad.current++
+    }, [ confirm, transfer, prompt, dialog?.id, sel.id, view ])
+
+    /*  open the prompt popup of an edit request of a task (refused for a finished task, and
+        while an edit of it is in progress, as a new request would change the task under the
+        running edit), prefilled with its draft of a cancelled (or failed to be sent) prompt,
+        else with the prompt of its most recent failed edit request (for a retry)  */
+    const startPrompt = (id: string): void => {
+        const card = all.cards.get(id)
+        if (card === undefined)
+            return
+        if (cycle !== null && editRefused(cycle, card.actual)) {
+            setNotice(`editing task "${id}" by prompt refused: task is finished`)
+            return
+        }
+        if (card.edit === "active") {
+            setNotice(`editing task "${id}" by prompt refused: edit in progress`)
+            return
+        }
+        const draft = promptDrafts.current.get(id)
+        if (draft !== undefined) {
+            setPrompt({ id, ...draft })
+            return
+        }
+        const token = ++promptLoad.current
+        track({ text: "loading edit prompt of task", id }, editPrompt(log, id)).then((text) => {
+            if (token === promptLoad.current)
+                setPrompt({ id, text, pos: [ ...text ].length })
+        }).catch((err: unknown) => {
+            if (token === promptLoad.current)
+                setNotice(`editing task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+
+    /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if
+        empty, so that a cleared prompt is not prefilled again on reopening)  */
+    const cancelPrompt = (): void => {
+        if (prompt === null)
+            return
+        promptDrafts.current.set(prompt.id, { text: prompt.text, pos: prompt.pos })
+        setNotice(`editing task "${prompt.id}" by prompt cancelled`)
+        setPrompt(null)
+    }
+
+    /*  request the edit of a task by the prompt of its popup (processed by "ase agent editor"),
+        dropping the draft of the task once sent, resp. keeping the prompt as its draft on failure  */
+    const submitPrompt = (): void => {
+        if (prompt === null)
+            return
+        const { id, text, pos } = prompt
+        if (text.trim() === "") {
+            setNotice(`requesting edit of task "${id}" failed: empty edit prompt`)
+            return
+        }
+        setPrompt(null)
+        track({ text: "requesting edit of task", id }, requestEdit(log, id, text)).then(() => {
+            promptDrafts.current.delete(id)
+            setNotice(`edit of task "${id}" requested`)
+        }).catch((err: unknown) => {
+            promptDrafts.current.set(id, { text, pos })
+            setNotice(`requesting edit of task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+
     /*  toggle a flag (task titles, key hints, or standalone tasks) of the TUI surface  */
     const toggleFlag = (flag: SurfaceFlag): void => {
         BoardState.toggleFlag("tui", flag).then((state) => {
@@ -540,9 +721,13 @@ export const useBoardState = (log: Log, initial: Board) => {
     }, [ grow, growable ])
 
     const headH  = 3
-    const footH  = surface.keys ? 6 : 3
+    const footH  = surface.keys ? (view === "agents" ? 5 : 6) : 3
     const boardH = rows - headH - footH
     const innerW = columns - 2
+
+    /*  the agents view: its agents, the selected one, and the scrolled processing log of the latter  */
+    const { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog } =
+        useAgentsView(agents, columns, boardH)
 
     /*  the tabs of the read dialog, the lines of its selected tab (clamped to
         the existing tabs), and the maximum scroll offset of these lines  */
@@ -601,17 +786,18 @@ export const useBoardState = (log: Log, initial: Board) => {
         board.levels.get(a.id)! - board.levels.get(b.id)! || byCreation(a, b))
 
     /*  the board is dimmed while a dialog or popup is shown (incl. the busy popup)  */
-    const dim = dialog !== null || confirm !== null || transfer !== null || busy !== null
+    const dim = dialog !== null || confirm !== null || transfer !== null || prompt !== null || busy !== null
 
-    /*  pulse the tasks of active lanes (or the active nodes of the graph), but only while
+    /*  pulse the tasks of active lanes (or the active nodes of the graph, or the busy agents), but only while
         any of them (or its pulse) is actually visible, in order to not needlessly re-render the board  */
     const shown   = grown ? [ { ...board.groups[sel.g], lanes: [ board.groups[sel.g].lanes[sel.l] ] } ] : board.groups.slice(fit.first, fit.last + 1)
-    const pulsing = !dim && (view === "lanes" ?
+    const agentsBusy = view === "agents" && agentList.some((a) => a.state === "busy")
+    const pulsing = !dim && (agentsBusy || (view === "lanes" ?
         shown.some((g) => !surface.collapsed.includes(g.title)
             && g.lanes.some((l) => l.active && !surface.minimized.includes(l.status) && (board.lanes.get(l.status)?.length ?? 0) > 0)) :
-        layout !== null && [ ...layout.graph.nodes.values() ].some((n) => !layout.board.context.has(n.id)
+        view === "graph" && layout !== null && [ ...layout.graph.nodes.values() ].some((n) => !layout.board.context.has(n.id)
             && toneOf(layout.board, layout.board.cards.get(n.id)!) === "active"
-            && n.y >= y && n.y < y + viewH && n.x + n.w - 3 >= x && n.x + n.w - 3 < x + viewW))
+            && n.y >= y && n.y < y + viewH && n.x + n.w - 3 >= x && n.x + n.w - 3 < x + viewW)))
     const [ pulseTick, setPulseTick ] = React.useState(0)
     React.useEffect(() => {
         if (!pulsing)
@@ -625,14 +811,64 @@ export const useBoardState = (log: Log, initial: Board) => {
     }, [ pulsing ])
     const pulse = pulsing ? pulseTick : -1
 
+    /*  tick the wall-clock every second while the agents view is shown, for the live
+        durations of its footer (the time in the current state and the age of the heartbeat)  */
+    const [ now, setNow ] = React.useState(Date.now())
+    React.useEffect(() => {
+        if (view !== "agents")
+            return
+        setNow(Date.now())
+        const timer = setInterval(() => {
+            setNow(Date.now())
+        }, 1000)
+        return () => {
+            clearInterval(timer)
+        }
+    }, [ view ])
+
+    /*  the local time at which the latest heartbeat of each agent was received (measured
+        locally, as the clock of the agent relay may be skewed), for the heart of its card
+        (filled for BEAT_SHOWN_MS after a heartbeat, else empty), where the heartbeats are
+        recognized by their changed time stamps and a filled heart is re-rendered once it is
+        due to be emptied (as the wall-clock tick alone would empty it too early or too late)  */
+    const beats     = React.useRef(new Map<string, { beat: number, seen: number }>())
+    const beatsSeen = React.useMemo(() => {
+        const at   = Date.now()
+        const list = agents?.agents ?? []
+        const next = new Map<string, { beat: number, seen: number }>()
+        for (const a of list) {
+            const prev = beats.current.get(a.id)
+            next.set(a.id, prev !== undefined && prev.beat === a.beat ? prev : { beat: a.beat, seen: at })
+        }
+        beats.current = next
+        return next
+    }, [ agents ])
+    React.useEffect(() => {
+        if (view !== "agents")
+            return
+        const latest = Math.max(0, ...[ ...beatsSeen.values() ].map((b) => b.seen))
+        const due    = latest + BEAT_SHOWN_MS - Date.now()
+        if (latest === 0 || due <= 0)
+            return
+        const timer = setTimeout(() => {
+            setNow(Date.now())
+        }, due)
+        return () => {
+            clearTimeout(timer)
+        }
+    }, [ view, beatsSeen ])
+    const beatOf = (id: string): boolean =>
+        now - (beatsSeen.get(id)?.seen ?? 0) < BEAT_SHOWN_MS
+
     return {
         log, exit, columns, rows, all, board, surface, view, setView, filter, setFilter, typing, setTyping,
         sel, setSel, dialog, setDialog, scroll, layout, notice, setNotice, carry, setCarry, cycle,
-        confirm, setConfirm, transfer, setTransfer, mouse, setMouse, opening, grown, setGrow,
-        cardBoxes, laneBoxes, groupBoxes, headBoxes, cardRef, laneRef, groupRef, headRef, boxAt, graphView,
+        confirm, setConfirm, transfer, setTransfer, prompt, setPrompt, mouse, setMouse, opening, grown, setGrow,
+        cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, cardRef, laneRef, groupRef, headRef, agentRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
-        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, store, busy, busyTick,
-        toggle, toggleFlag, startEdit, remove, transferTo, drop
+        transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,
+        agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog,
+        toggle, toggleFlag, startEdit, startPrompt, cancelPrompt, submitPrompt, remove, transferTo, drop
     }
 }
 

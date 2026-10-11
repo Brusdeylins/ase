@@ -23,6 +23,7 @@ export const problemTitles: Record<number, string> = {
     415: "Unsupported Media Type",
     422: "Unprocessable Content",
     426: "Upgrade Required",
+    429: "Too Many Requests",
     500: "Internal Server Error"
 }
 
@@ -63,7 +64,7 @@ export type EventListener = (prjId: string, frame: EventFrame) => void
 /*  the results of the core operations  */
 export type ProjectView     = { id: string, lifecycle: TaskFormat.TaskLifecycle, idscheme: string, seqmark: number }
 export type TaskListEntry   = { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader }
-export type TaskSaveResult  = { created: boolean, id: string, status: string }
+export type TaskSaveResult  = { created: boolean, id: string, status: string, tag?: string }
 export type TaskPatchResult = { id: string, status: string, from?: string }
 export type KeySetResult    = { created: boolean, key: string, value: API.TaskHeaderValue }
 
@@ -491,7 +492,14 @@ export class TaskStoreCore {
                 this.listener(prjId, { added: { [taskId]: this.entry(plan, lifecycle) } })
             else
                 this.emitUpdated(prjId, taskId, plan, lifecycle, [ "header", "body", "attachment" ])
-            return { created: result === "created", id: taskId, status }
+
+            /*  determine the entity tag of the just-saved plan (as stored, since a store
+                not storing it verbatim may normalize it, e.g. an issue tracker) still
+                within the serialized operation, so it can never be the one of a subsequent
+                save of somebody else, and so any save (conditional or not) can be the
+                base of a next conditional save  */
+            const saved = this.store.verbatim ? plan : await this.store.taskLoad(prjId, taskId)
+            return { created: result === "created", id: taskId, status, ...(saved !== null ? { tag: taskTag(saved) } : {}) }
         })
     }
 

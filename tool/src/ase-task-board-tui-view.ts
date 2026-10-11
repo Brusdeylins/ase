@@ -8,8 +8,9 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import { splitHeight, toneOf, cardLabel, groupLabel, clampLines, glueId, glueTitle, glueGroup } from "./ase-task-board-core.js"
+import { splitHeight, toneOf, cardLabel, groupLabel, editMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface } from "./ase-task-board-core.js"
+import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
 import { palette, dashed, dashedBold, cx, isClass, pulseFrames } from "./ase-task-board-tui-style.js"
@@ -25,6 +26,10 @@ const GROUP_GAP  = 1
 /*  layout constants of a grown lane: minimum card width, gap between cards  */
 const GRID_MIN   = 30
 const GRID_GAP   = 1
+
+/*  make a text of the agent relay safe for the terminal (strip control characters)  */
+const clean = (text: string): string =>
+    text.replace(/\p{Cc}/gu, "")
 
 /*  compute the visible group range starting at a first group, with the
     width of each visible group (collapsed groups stay narrow, expanded
@@ -55,9 +60,11 @@ export const fitGroups = (groups: GroupSpec[], collapsed: string[], first: numbe
     task (if any) and the lane states it can be moved to, the groups
     whose lanes show a scroll arrow on their left or right border (or -1),
     the current pulse frame of the tasks of active lanes (or -1),
+    the agents busy with each task,
     and the registration of the rendered card, lane, and group boxes for the mouse hit-testing  */
 type ViewCtx = {
     board: Board, surface: Surface, sel: Sel, dim: boolean, carry: Carry | null, titles: boolean, scroll: Scroll, pulse: number,
+    working:  Map<string, AgentPresence[]>
     cardRef:  (id: string) => (el: DOMElement | null) => void
     laneRef:  (g: number, l: number) => (el: DOMElement | null) => void
     groupRef: (g: number) => (el: DOMElement | null) => void
@@ -86,16 +93,18 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
     glued to the task id by five placeholder columns (the "♛", the "▶", their
     spacing, and the gap), a placeholder column glued
     in front of the task id to reserve the extra column of its inverse
-    rendering (plus two for the "♛" of an epic), and the arrow in front of the
-    title replaced by a placeholder column glued to the title  */
+    rendering (plus two for the "♛" of an epic), the arrow in front of the
+    title dropped, and a placeholder column glued in front of the first marker
+    (resp. the title) for its spacing to the inverse task id  */
 const cardLines = ({ board, titles }: ViewCtx, c: Card, width: number): string[] => {
     const textW = Math.max(3, width - 2)
-    const marks = board.cyclic.has(c.id) ? " ⟲" : ""
+    const edit  = editMarker(c)
+    const marks = (board.cyclic.has(c.id) ? " ⟲" : "") + (edit !== "" ? ` ${edit}` : "")
     const group = groupLabel(c)
     const epic  = group === c.id
     const glued = group !== "" && !epic ? glueGroup.repeat(3) + group.replace(/ /g, glueGroup) + glueGroup.repeat(2) : ""
-    const text  = glued + glueId + (epic ? glueGroup.repeat(2) : "") + c.id + marks +
-        cardLabel(c).slice(c.id.length).replace(/^ ▶ /, ` ${glueTitle}`)
+    const text  = glued + glueId + (epic ? glueGroup.repeat(2) : "") + c.id +
+        (marks + cardLabel(c).slice(c.id.length).replace(/^ ▶ /, " ")).replace(/^ /, ` ${glueTitle}`)
     return clampLines(text, textW - 2, titles ? 3 : 1).map((line) => ` ${line}`)
 }
 
@@ -127,12 +136,36 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
         borderStyle: phantom ? dashed : held ? "double" : "single", borderColor: tint, borderDimColor: dim,
         borderTop: cut !== "top", borderBottom: cut !== "bottom", width, height: rows, flexDirection: "column"
     } as const
+
+    /*  the marker of the edit requests (on whatever line it was wrapped onto) in bold,
+        and like in the web board in accent color while being processed and in signal
+        color when failed (except for the ghost of the carried task)  */
+    const edit    = editMarker(c)
+    const color   = phantom ? undefined : c.edit === "active" ? palette.accent : c.edit === "failed" ? palette.signal : undefined
+    let   marked  = edit === ""
+    const marker  = (text: string): React.ReactNode[] => {
+        const at = marked ? -1 : text.indexOf(edit)
+        if (at < 0)
+            return [ text ]
+        marked = true
+        return [ text.slice(0, at), h(Text, { key: "edit", bold: true, ...(color !== undefined ? { color } : {}) }, edit), text.slice(at + edit.length) ]
+    }
     const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
         ...(k === 0 ? [ line.slice(0, 1), ...badge, h(Text, { key: "id", ...cx("badge") }, ` ${epic ? "♛ " : ""}${line.slice(from, to)} `),
-            line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "") ] : [ line.replace(glueTitle, "") ])))
+            ...marker(line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "")) ] : marker(line.replace(glueTitle, "")))))
         .slice(cut === "top" ? lines.length + 1 - rows : 0, cut === "bottom" ? rows - 1 : lines.length)
+
+    /*  the agents busy with the task, each as an inverse " ⚉ <name> " box in accent color (like on
+        the agent cards, separated by a border character) on the left part of its top border (placed
+        on the border row, i.e. above the content of a bordered box, and behind one border character)  */
+    const workers = !moving && !phantom && cut !== "top" ? ctx.working.get(c.id) : undefined
+    const agents  = (top: number) => workers !== undefined && width > 10 ? [
+        h(Box, { key: "agents", position: "absolute", top, left: top < 0 ? 1 : 2, width: width - 7 },
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" },
+                ...workers.flatMap((agent, k) => [ k > 0 ? (held ? "═" : "─") : "",
+                    h(Text, { key: agent.id, ...cx("badge"), color: palette.accent, dimColor: dim }, ` ⚉ ${clean(agent.name)} `) ]))) ] : []
     if (!lane.active || ctx.pulse < 0 || moving || phantom || cut === "top")
-        return h(Box, box, ...text)
+        return h(Box, box, ...text, ...agents(-1))
 
     /*  the tasks of active lanes pulse in their top border, which hence
         is drawn on its own above the box without its regular top border  */
@@ -140,7 +173,8 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
     const top     = cl + cm.repeat(Math.max(0, width - 4)) + pulseFrames[ctx.pulse] + cm + cr
     return h(Box, { key: box.key, ref: ctx.cardRef(c.id), width, height: rows, flexDirection: "column" },
         h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, top),
-        ...(rows > 1 ? [ h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: rows - 1 }, ...text) ] : []))
+        ...(rows > 1 ? [ h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: rows - 1 }, ...text) ] : []),
+        ...agents(0))
 }
 
 /*  render one lane of the lane view  */
@@ -348,14 +382,14 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
 
 /*  render the lane view  */
 export const renderLanes = (ctx: BoardCtx) => {
-    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, pulse, grown, cardRef, laneRef, groupRef } = ctx
+    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, pulse, grown, cardRef, laneRef, groupRef, working } = ctx
     const total  = board.groups.length
     const shown  = fit.last - fit.first + 1
     const arrows = shown < total && !grown
     const group  = board.groups[sel.g]
     const info   = grown ? `lane ${group.lanes[sel.l].status} of group ${group.title} grown · g shrinks` :
         `groups ${fit.first + 1}–${fit.last + 1} of ${total} · ${arrows ? "←/→ scrolls" : "all visible"}`
-    const view   = { board, surface, sel, dim, carry, titles: surface.titles, scroll: { left: -1, right: -1 }, pulse, cardRef, laneRef, groupRef }
+    const view   = { board, surface, sel, dim, carry, titles: surface.titles, scroll: { left: -1, right: -1 }, pulse, cardRef, laneRef, groupRef, working }
 
     /*  the scroll bar consumes the entire width remaining besides the info  */
     const track  = Math.max(1, columns - 2 - info.length - 3)
@@ -378,7 +412,7 @@ export const renderLanes = (ctx: BoardCtx) => {
                     "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop transition task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                "D: delete task · N: new task · " +
+                "D: delete task · E: edit task by prompt · N: new task · " +
                 (grown ? "g/ESC: shrink lane · " :
                     `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane · c: ${folded ? "expand" : "collapse"} group · `) +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
@@ -392,7 +426,7 @@ export const renderLanes = (ctx: BoardCtx) => {
 
 /*  render the graph view  */
 export const renderGraph = (ctx: BoardCtx) => {
-    const { board, sel, dim, layout, boardH, x, y, viewH, viewW, graphView, graphTitles, surface, mouse, pulse } = ctx
+    const { board, sel, dim, layout, boardH, x, y, viewH, viewW, graphView, graphTitles, surface, mouse, pulse, agents } = ctx
     const card = sel.id !== "" ? board.cards.get(sel.id) : undefined
     if (layout === null)
         return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, ...cx("frame", "border-dim") },
@@ -412,8 +446,7 @@ export const renderGraph = (ctx: BoardCtx) => {
         }
         return segs
     })
-    const edges   = [ ...board.pred.values() ].reduce((n, ps) => n + ps.length, 0)
-    const roots   = [ ...board.cards.keys() ].filter((id) => (board.pred.get(id) ?? []).length === 0).length
+    const deps    = [ ...board.pred.values() ].reduce((n, ps) => n + ps.length, 0)
     return [
         h(Box, { key: "graph", height: boardH, marginX: 1 },
             /*  a graph smaller than the viewport is centered in it  */
@@ -425,10 +458,10 @@ export const renderGraph = (ctx: BoardCtx) => {
                             return h(Text, { key: k, ...cx(dim && "dimmed", isClass(tone) && tone) }, seg.text)
                         })))))),
 
-            /*  overlay the graph statistics onto the top-right corner of the border  */
-            h(Box, { position: "absolute", top: 0, right: 2 },
-                h(Text, cx("dim", dim && "dimmed"),
-                    ` ${board.cards.size} nodes, ${edges} edges, ${roots} roots${board.cyclic.size > 0 ? ", CYCLES" : ""} `))),
+            /*  overlay the graph statistics centered onto the top border  */
+            h(Box, { position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
+                h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
+                    `[ ${board.cards.size} tasks, ${deps} dependencies ]`))),
         h(Box, { key: "info", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"), card === undefined ? " " :
                 [ "task: ", h(Text, { key: "id", ...cx("bold") }, card.id), " · status: ", h(Text, { key: "status", ...cx("bold") }, card.status) ])),
@@ -437,12 +470,114 @@ export const renderGraph = (ctx: BoardCtx) => {
                 "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `D: delete task · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
+                `D: delete task · E: edit task by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
                 `s: ${surface.standalone ? "hide" : "show"} standalone tasks · ` +
-                "/: filter tasks · v: view lanes")),
+                `/: filter tasks · v: view ${agents !== null ? "agents" : "lanes"}`)),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+    ]
+}
+
+/*  the width of the master list (incl. its frame) and the height of an agent card of the agents view  */
+const AGENT_W = 40
+const AGENT_H = 9
+
+/*  the inner width of the detail view of the agents view on a screen width (without the side paddings
+    of the screen, the frame and its left padding, the master list, the gap between the master list
+    and the detail view, and the always reserved scroll bar)  */
+export const agentLogWidth = (columns: number): number =>
+    Math.max(10, columns - 2 - AGENT_W - 1 - 3 - 2)
+
+/*  render the agents view: on the left the framed master list "agents" of the agents as vertically
+    aligned cards (name and state, kind and mode of operation, uptime, the ids of the tasks it is
+    busy with, inversely, else "none (waiting)", and its total and last usage of the agent tool),
+    scrolled to keep the selected agent visible, and on the right the framed detail view "agent log" (taking the remaining
+    width) with the recent processing log of the selected agent, scrolled to the bottom unless scrolled
+    up, and with the scroll position overlaid onto its frame  */
+export const renderAgents = (ctx: BoardCtx) => {
+    const { agents, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, boardH, dim, mouse, pulse, now, beatOf, agentRef } = ctx
+    const fit   = Math.max(1, Math.floor((boardH - 2) / AGENT_H))
+    const first = Math.max(0, Math.min(agentIdx - fit + 1, agentList.length - fit))
+    const empty = agents === null || !agents.connected ? "agent relay unreachable — reconnecting …" : "no agents running"
+    const title = (text: string) => h(Box, { key: "title", position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
+        h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), text), " ]"))
+
+    /*  the master list, where the top border of a card carries on its right side (like the
+        task cards of the active lanes) the pulse of a busy agent, resp. the circle of a waiting one,
+        and the top right corner inside the card carries the heart of the agent (filled for a
+        second after each received heartbeat, else empty)  */
+    const cardW = AGENT_W - 4
+    const cards = agentList.slice(first, first + fit).map((a, i) => {
+        const on    = first + i === agentIdx && !dim
+        const tint  = on ? palette.signal : a.state === "busy" ? palette.accent : palette.normal
+        const label = (text: string) => text.padEnd(9)
+        const val   = (text: string) => h(Text, { bold: true }, text)
+        const mode  = typeof a.mode === "string" && a.mode !== "" ? clean(a.mode) : "none"
+        const [ cl, cm, cr ] = on ? [ "┏", "━", "┓" ] : [ "┌", "─", "┐" ]
+        const mark  = a.state !== "busy" ? "○" : pulse >= 0 ? pulseFrames[pulse] : pulseFrames[0]
+        return h(Box, { key: a.id, ref: agentRef(a.id), width: cardW, height: AGENT_H, flexShrink: 0, flexDirection: "column" },
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, cl + cm.repeat(Math.max(0, cardW - 4)) + mark + cm + cr),
+            h(Box, {
+                height: AGENT_H - 1, flexDirection: "column", paddingX: 1,
+                borderStyle: on ? "bold" : "single", borderTop: false, borderColor: tint, borderDimColor: dim
+            },
+            h(Box, { flexDirection: "row" },
+                h(Box, { flexGrow: 1, flexShrink: 1 },
+                    h(Text, { wrap: "truncate" }, h(Text, { ...cx("badge"), color: tint, dimColor: dim }, ` ⚉ ${clean(a.name)} `))),
+                h(Box, { flexShrink: 0, marginLeft: 1 },
+                    h(Text, { color: tint, dimColor: dim }, beatOf(a.id) ? "♥" : "♡"))),
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("kind:"), val(clean(a.kind))),
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("mode:"), val(mode)),
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("uptime:"), val(agentUptime(a))),
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("task:"), ...(a.tasks.length === 0 ? [ val("none (waiting)") ] :
+                a.tasks.flatMap((id, k) => [ k > 0 ? " " : "", h(Text, { key: id, ...cx("badge"), color: tint, dimColor: dim }, ` ${clean(id)} `) ]))),
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("usage:"), val(agentUsage(a.usage?.total))),
+            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("last:"),  val(agentUsage(a.usage?.last)))))
+    })
+    const master = h(Box, { key: "master", width: AGENT_W, height: boardH, flexShrink: 0 },
+        h(Box, { paddingX: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
+            ...(cards.length > 0 ? cards : [ h(Text, { key: "empty", ...cx("dim", dim && "dimmed") }, empty) ])),
+        title("Agents"),
+        ...(agentList.length > fit ? [ h(Box, { key: "pos", position: "absolute", bottom: 0, right: 2 },
+            h(Text, cx("dim", dim && "dimmed"), `[ ${first + 1}–${Math.min(first + fit, agentList.length)} of ${agentList.length} ]`)) ] : []))
+
+    /*  the detail view, with a vertical scroll bar directly at its right border (like the read dialog)  */
+    const lines  = logLines.slice(logFirst, logFirst + logH)
+    const thumbH = Math.max(1, Math.round(logH * Math.min(1, logH / Math.max(1, logLines.length))))
+    const thumbY = logMax === 0 ? 0 : Math.round((logH - thumbH) * logFirst / logMax)
+    const detail = h(Box, { key: "detail", flexGrow: 1, height: boardH, marginLeft: 1 },
+        h(Box, { paddingLeft: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
+            ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, empty) ] :
+                lines.length === 0 ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, "(no processing log lines yet)") ] :
+                    lines.map((line, i) => h(Box, { key: logFirst + i },
+                        h(Box, { flexGrow: 1, flexShrink: 1 },
+                            h(Text, cx("truncate", dim && "dimmed"),
+                                h(Text, cx("normal", dim && "dimmed"), line.prefix),
+                                ...(line.task !== "" ? [ h(Text, cx(line.tone, "badge", dim && "dimmed"), ` ${line.task} `), " " ] : []),
+                                h(Text, cx(line.tone, dim && "dimmed"), line.level),
+                                h(Text, cx(line.tone, dim && "dimmed"), line.text))),
+                        h(Text, cx("signal", dim && "dimmed"),
+                            logLines.length <= logH ? "  " : i >= thumbY && i < thumbY + thumbH ? " █" : " ░"))))),
+        title("Agent: Recent Log Entries"),
+        ...(agent !== undefined ? [ h(Box, { key: "pos", position: "absolute", bottom: 0, right: 2 },
+            h(Text, cx("dim", dim && "dimmed"), logLines.length <= logH ? `[ ${logLines.length} lines ]` :
+                `[ lines ${logFirst + 1}–${logFirst + lines.length} of ${logLines.length} · ${logFirst >= logMax ? "following" : "scrolled"} ]`)) ] : []))
+    return [
+        h(Box, { key: "agents", height: boardH, paddingX: 1 }, master, detail),
+        h(Box, { key: "info", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"), agent === undefined ? " " : [
+                "agent: ",    h(Text, { key: "agent",  ...cx("bold") }, clean(agentLabel(agent))),
+                " · host: ",  h(Text, { key: "host",   ...cx("bold") }, clean(agent.host)),
+                " · pid: ",   h(Text, { key: "pid",    ...cx("bold") }, String(agent.pid)),
+                ` · ${clean(agent.state)}: `, h(Text, { key: "since", ...cx("bold") }, agentDuration(now - agent.since)),
+                " · heartbeat: ", h(Text, { key: "beat", ...cx("bold") }, `${agentDuration(now - agent.beat)} ago`) ])),
+        h(Box, { key: "keys1", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
+                "↑/↓/Left-Click: select agent · ⇈/⇊/⇤/⇥: page/top/bottom agent log · Mouse-Wheel: scroll agent log")),
+        h(Box, { key: "keys2", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
+                `v: view lanes · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 

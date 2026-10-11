@@ -23,7 +23,7 @@ import { parseScope, userStateDir, projectIdOf }          from "./ase-config-sco
 import { Markdown }                                       from "./ase-service-markdown.js"
 import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
 import TaskStoreCommand, { storeSchema }                  from "./ase-task-store-server-cli.js"
-import { urlHost }                                        from "./ase-task-store-server-bind.js"
+import { urlHost, isLoopback }                            from "./ase-lib-server-bind.js"
 import * as API                                           from "./ase-task-store-plugin-api.js"
 import * as Core                                          from "./ase-task-store-core.js"
 import * as Delegate                                      from "./ase-task-store-plugin-delegate.js"
@@ -232,15 +232,28 @@ export class Task {
         })
     }
 
-    /*  determine whether a WHATWG URL hostname denotes the loopback interface  */
-    private static isLoopback (hostname: string): boolean {
-        return /^(?:127(?:\.\d{1,3}){3}|\[::1\]|localhost)$/i.test(hostname)
-    }
-
     /*  determine whether the task store is a remote one (otherwise it
         is operated in-process and follows the local configuration)  */
     static isRemote (log: Log): boolean {
         return /^ases?:\/\//.test(Task.spec(log).store.value)
+    }
+
+    /*  determine whether the task store is a local directory of the
+        built-in file-based storage plugin ("ase:<path>")  */
+    static isLocal (log: Log): boolean {
+        return /^ase:(?!\/\/)/.test(Task.spec(log).store.value)
+    }
+
+    /*  determine the identity of the task store (e.g. for keying state kept
+        per task store): its "project.task.store" URL, with the directory of
+        a local one resolved against the project root, and without the token
+        and the query of a remote one  */
+    static storeKey (log: Log): string {
+        const store = Task.spec(log).store.value
+        const m = /^ase:(?!\/\/)(.+)$/.exec(store)
+        if (m !== null)
+            return `ase:${path.resolve(Task.projectRoot(), m[1])}`
+        return store.replace(/^(ases?:\/\/[^/?#]*).*$/, "$1")
     }
 
     /*  resolve the bearer token of a remote task store: the token embedded
@@ -259,7 +272,7 @@ export class Task {
         /*  warn about a user token being sent to a non-loopback host selected on
             a repository-supplied scope, as a cloned repository could redirect it this way  */
         const redirected = () => {
-            if (repoScoped && !Task.isLoopback(url.hostname))
+            if (repoScoped && !isLoopback(url.hostname))
                 log.write("warning", `task: sending token to non-loopback host "${url.host}" selected by ` +
                     `"project.task.store" on scope "${spec.store.scope}" -- verify you trust this host` +
                     (url.protocol === "ase:" ? " (token is transmitted in plaintext)" : ""))
@@ -289,9 +302,9 @@ export class Task {
         const address  = scalar("address") || "127.0.0.1"
         const wildcard = address === "0.0.0.0" || address === "::"
         const host     = urlHost(address).toLowerCase()
-        const loopback = Task.isLoopback(url.hostname)
+        const loopback = isLoopback(url.hostname)
         if (tok !== "" && scalar("port") === url.port
-            && (url.hostname.toLowerCase() === host || (loopback && (wildcard || Task.isLoopback(host)))))
+            && (url.hostname.toLowerCase() === host || (loopback && (wildcard || isLoopback(host)))))
             return tok
         throw new Error(`task: no token for task store "${spec.store.value}" ` +
             "(set $ASE_TASK_STORE_TOKEN, \"project.task.token\" on scope \"user\", or \"/<token>\" in the URL)")
@@ -461,12 +474,16 @@ export class Task {
         return plan === null ? "" : TaskFormat.formatTaskText(plan)
     }
 
-    /*  load a task as text together with its entity tag (for a conditional
-        save); returns null if no task exists  */
-    static async source (log: Log, id: string): Promise<{ text: string, tag: string } | null> {
+    /*  load a task as text, optionally with its attachment payloads elided (see
+        TaskFormat.elideAttachments), together with its entity tag (for a conditional
+        save, always of the complete plan); returns null if no task exists  */
+    static async source (log: Log, id: string, elided = false): Promise<{ text: string, tag: string } | null> {
         Task.validateId(id)
         const plan = await Task.with(log, (client) => client.load(id))
-        return plan === null ? null : { text: TaskFormat.formatTaskText(plan), tag: Core.taskTag(plan) }
+        return plan === null ? null : {
+            text: TaskFormat.formatTaskText(elided ? TaskFormat.elideAttachments(plan) : plan),
+            tag:  Core.taskTag(plan)
+        }
     }
 
     /*  save a task as text under the given id; throws if its "Status:"
@@ -474,15 +491,31 @@ export class Task {
         reachable from the previous status, on a conditional save (with
         an entity tag) a problem 412 if the task was changed in the meantime,
         and on a create-only save an error if the task already exists;
-        returns a warning (else empty) if the id does not conform to the task id scheme  */
-    static async save (log: Log, id: string, text: string, tag?: string, create = false): Promise<string> {
+        returns a warning (else empty) if the id does not conform to the task id scheme,
+        the entity tag of the just-saved plan, and the text of the just-saved plan
+        (as sent, re-serialized from its parsed form, i.e., before any
+        normalization by the task store, and with its elided attachment
+        payloads still elided, while they are restored from the stored
+        plan for the save itself); the entity tag
+        is the one the task store reports for the plan as stored, and only on a
+        task store server predating this report the one of the plan as sent (which
+        never is the one of a plan saved by somebody else in the meantime, so a
+        conditional save based on it at worst is refused spuriously)  */
+    static async save (log: Log, id: string, text: string, tag?: string, create = false): Promise<{ warning: string, tag: string, text: string }> {
         if (typeof text !== "string")
             throw new Error("task: text must be a string")
         Task.validateId(id)
         try {
             return await Task.with(log, async (client) => {
-                await client.save(id, TaskFormat.parseTaskText(id, text, client.lifecycle), tag, create)
-                return TaskFormat.idWarning(client.idscheme, id)
+                const sent  = TaskFormat.parseTaskText(id, text, client.lifecycle)
+                const plan  = sent.attachment.some((att) => TaskFormat.isElided(att.Data)) ?
+                    TaskFormat.restoreAttachments(sent, await client.load(id)) : sent
+                const saved = await client.save(id, plan, tag, create)
+                return {
+                    warning: TaskFormat.idWarning(client.idscheme, id),
+                    tag:     saved ?? Core.taskTag(plan),
+                    text:    TaskFormat.formatTaskText(sent)
+                }
             })
         }
         catch (err: unknown) {
@@ -619,6 +652,33 @@ export class Task {
         })
     }
 
+    /*  inspect a task plan by the operation <op>, which derives a result from the
+        loaded plan (and the lifecycle model); returns null if no task exists  */
+    static async inspect<T> (log: Log, id: string, op: (plan: API.TaskPlan, lifecycle: TaskFormat.TaskLifecycle) => T): Promise<T | null> {
+        Task.validateId(id)
+        return Task.with(log, async (client) => {
+            const plan = await client.load(id)
+            return plan === null ? null : op(plan, client.lifecycle)
+        })
+    }
+
+    /*  update a task plan by the operation <op>, which modifies the loaded plan in
+        place and returns whether it changed it, where the plan is saved conditionally
+        (throwing if it was changed meanwhile), and only if changed; returns false
+        if no task exists  */
+    static async update (log: Log, id: string, op: (plan: API.TaskPlan, lifecycle: TaskFormat.TaskLifecycle) => boolean): Promise<boolean> {
+        Task.validateId(id)
+        return Task.with(log, async (client) => {
+            const plan = await client.load(id)
+            if (plan === null)
+                return false
+            const etag = Core.taskTag(plan)
+            if (op(plan, client.lifecycle))
+                await client.save(id, plan, etag)
+            return true
+        })
+    }
+
     /*  list all persisted tasks in lexicographic id order, each with the
         `status` and `title` of its plan and the `mtime` of its last
         modification formatted as "YYYY-MM-DD HH:MM"  */
@@ -701,15 +761,21 @@ export default class TaskCommand {
         /*  round-trip the plan through a temporary file, as the
             task store is not necessarily a local file  */
         Task.validateId(id)
-        const before = await Task.load(this.log, id) || Task.format(Task.minimal(id))
+        const source = await Task.source(this.log, id)
+        const before = source?.text ?? Task.format(Task.minimal(id))
         const editor = process.env.EDITOR ?? process.env.VISUAL ?? "vi"
         const dir    = fs.mkdtempSync(path.join(os.tmpdir(), "ase-task-"))
         const file   = path.join(dir, `${id}.md`)
         fs.writeFileSync(file, before, "utf8")
 
         /*  on save failures, offer re-editing and never discard the edits:
-            the temporary file is kept if the user declines re-editing  */
-        let next = id
+            the temporary file is kept if the user declines re-editing, and
+            the save is conditional on the plan as loaded (or create-only, if
+            it did not exist), so changes of the task in the meantime (e.g. by
+            the agents) are never overwritten, but keep the edits unsaved instead  */
+        let next     = id
+        let tag      = source?.tag
+        let conflict = false
         for (;;) {
             try {
                 execaSync(`${editor} "${file}"`, { shell: true, stdio: "inherit" })
@@ -723,7 +789,16 @@ export default class TaskCommand {
                         if (await Task.source(this.log, next) !== null)
                             throw new Error(`task: target id "${next}" already exists`)
                     }
-                    let warning = await Task.save(this.log, id, after)
+                    let warning: string
+                    try {
+                        ({ warning, tag } = await Task.save(this.log, id, after, tag, tag === undefined))
+                    }
+                    catch (err: unknown) {
+                        const problem = err instanceof Core.Problem ? err :
+                            err instanceof Error && err.cause instanceof Core.Problem ? err.cause : null
+                        conflict = problem?.status === 412
+                        throw err
+                    }
                     if (next !== id)
                         warning = await Task.rename(this.log, id, next) ?? ""
                     if (warning !== "")
@@ -734,6 +809,9 @@ export default class TaskCommand {
             catch (err) {
                 const msg = err instanceof Error ? err.message : String(err)
                 this.log.write("error", msg)
+                if (conflict)
+                    throw new Error(`task: "${id}" was changed in the meantime -- ` +
+                        `edits not saved, but kept in "${file}"`, { cause: err })
                 let ans = "n"
                 if (process.stdin.isTTY) {
                     const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
@@ -884,7 +962,7 @@ export default class TaskCommand {
             .argument("<id>", "Task identifier")
             .action(async (id: string, opts: { create: boolean }) => {
                 const text    = await readStdin()
-                const warning = await Task.save(this.log, id, text, undefined, opts.create)
+                const { warning } = await Task.save(this.log, id, text, undefined, opts.create)
                 if (warning !== "")
                     this.log.write("warning", `task: ${warning}`)
                 this.log.write("info", `task: saved "${id}"`)
@@ -1080,18 +1158,33 @@ export class TaskMCP {
                 "`render` is the *rendering-prepared* form, which is for *display only* and " +
                 "MUST NOT be persisted; " +
                 "`both` returns the source form enclosed in `<task-plan-source>` delimiter lines, " +
-                "followed by the render form enclosed in `<task-plan-render>` delimiter lines.",
+                "followed by the render form enclosed in `<task-plan-render>` delimiter lines. " +
+                "If `tag` is `true`, the entity tag of the loaded plan is additionally returned in a trailing " +
+                "`<task-plan-tag>` delimiter line, to be passed as `base` into `ase_task_save` for a conditional save. " +
+                "The `attachments` argument selects the returned form of the attachment payloads: `elided` (the default) " +
+                "replaces the non-empty `Data` of each attachment block with a `[elided: <n> lines]` marker " +
+                "(keeping all other keys), which `ase_task_save` restores from the stored plan as long as the " +
+                "block is kept (removing the block removes the attachment, replacing the marker replaces the " +
+                "payload); `full` returns the complete payloads, needed only to process them as a whole " +
+                "(a single payload is better fetched via `ase_task_attachment`).",
             inputSchema: {
                 id: z.string()
                     .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 variant: z.enum([ "source", "render", "both" ]).optional()
                     .describe("returned form of the plan: `source` (authoring form, the default), " +
                         "`render` (rendering-prepared form, display only), or `both` " +
-                        "(both forms, each enclosed in its delimiter lines)")
+                        "(both forms, each enclosed in its delimiter lines)"),
+                attachments: z.enum([ "elided", "full" ]).optional()
+                    .describe("returned form of the attachment payloads: `elided` (each replaced " +
+                        "by a marker restored on saving, the default) or `full` (complete)"),
+                tag: z.boolean().optional()
+                    .describe("if true, additionally return the entity tag of the plan in a trailing " +
+                        "`<task-plan-tag>` delimiter line (default: false)")
             }
         }, async (args) => {
             try {
-                const source  = await Task.load(this.log, args.id)
+                const loaded  = await Task.source(this.log, args.id, args.attachments !== "full")
+                const source  = loaded?.text ?? ""
                 const variant = args.variant ?? "source"
                 let text = source
                 if (source !== "" && variant === "render")
@@ -1100,6 +1193,8 @@ export class TaskMCP {
                     text =
                         `<task-plan-source>\n${source}\n</task-plan-source>\n\n` +
                         `<task-plan-render>\n${Markdown.prepare(source)}\n</task-plan-render>\n`
+                if (loaded !== null && args.tag === true)
+                    text += `\n<task-plan-tag>${loaded.tag}</task-plan-tag>\n`
                 return {
                     content: [ { type: "text", text } ]
                 }
@@ -1120,13 +1215,23 @@ export class TaskMCP {
                 "in which case the save fails if a task with this `id` already exists (to be used on the " +
                 "first save of a task whose `id` was allocated via `ase_task_newid`). " +
                 "Returns a status `text` by default, or, if `render` is `true`, the " +
-                "*rendering-prepared* form of the just-saved plan, for display purposes only. " +
+                "*rendering-prepared* form of the just-saved plan (with its attachment payloads elided), " +
+                "for display purposes only. " +
+                "An attachment block whose `Data` is an `[elided: <n> lines]` marker (see `ase_task_load`) gets " +
+                "its payload restored from the stored attachment of the same `Type` (preferably also of the same " +
+                "`Created`); the save fails if there is no such stored attachment. " +
                 "The `Status:` frontmatter key of `text` is checked against the configured task " +
                 "lifecycle model: if a changed status is not a state of the model or not reachable " +
                 "from the previously saved status via one or more transitions of the state machine, " +
                 "the save fails with an error. Prefer the `ase_task_status` MCP tool for pure status changes. " +
                 "If `id` does not conform to the task id scheme of the project, the returned `text` " +
-                "additionally carries a trailing `NOTICE: <info>` line.",
+                "additionally carries a trailing `NOTICE: <info>` line. " +
+                "With `base` (the entity tag of the plan the `text` is based on, as returned by `ase_task_load` " +
+                "with `tag` or by a previous `ase_task_save` with `tag` or `base`), the save is conditional: it fails with " +
+                "an error if the plan was changed meanwhile (by anybody else). " +
+                "If `tag` is `true` or `base` is given, the returned `text` additionally carries the entity tag " +
+                "of the just-saved plan in a trailing `<task-plan-tag>` delimiter line, to be passed as `base` " +
+                "into the next `ase_task_save` of this plan.",
             inputSchema: {
                 id: z.string()
                     .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
@@ -1136,18 +1241,70 @@ export class TaskMCP {
                     .describe("if true, fail if a task with `id` already exists instead of overwriting it (default: false)"),
                 render: z.boolean().optional()
                     .describe("if true, return the rendering-prepared form of the just-saved " +
-                        "plan instead of a status message (default: false)")
+                        "plan instead of a status message (default: false)"),
+                base: z.string().optional()
+                    .describe("entity tag of the plan the text is based on, for a conditional save " +
+                        "failing if the plan was changed meanwhile (default: unconditional save)"),
+                tag: z.boolean().optional()
+                    .describe("if true, additionally return the entity tag of the just-saved plan in a trailing " +
+                        "`<task-plan-tag>` delimiter line (default: false, but implied by `base`)")
             }
         }, async (args) => {
             try {
-                const warning = await Task.save(this.log, args.id, args.text, undefined, args.create ?? false)
+                const base = args.base !== undefined && args.base !== "" ? args.base : undefined
+                let result: { warning: string, tag: string, text: string }
+                try {
+                    result = await Task.save(this.log, args.id, args.text, base, args.create ?? false)
+                }
+                catch (err: unknown) {
+                    if (base !== undefined && err instanceof Core.Problem && err.status === 412)
+                        throw new Error(`task: task "${args.id}" was changed meanwhile -- save refused ` +
+                            "(reload the task and apply the change again)", { cause: err })
+                    throw err
+                }
 
                 /*  return the rendering-prepared content on demand, so a caller
                     displaying the just-saved plan does not have to re-load it
-                    (rendered from the stored plan, as the store normalizes the text)  */
-                const text = ((args.render ?? false) ?
-                    Markdown.prepare(await Task.load(this.log, args.id)) :
-                    `OK: saved task "${args.id}"`) + notice(warning)
+                    (rendered from the stored plan, as the store normalizes the text,
+                    but only if it still is the just-saved one, i.e., carries its
+                    entity tag, else from the plan as sent), and the entity tag of the
+                    just-saved plan for a conditional save (as reported by the save
+                    itself, so it never is the one of a subsequent save of somebody else)  */
+                const render = args.render ?? false
+                const stored = render ? await Task.source(this.log, args.id, true) : null
+                const source = stored !== null && stored.tag === result.tag ? stored.text : result.text
+                const text   = (render ? Markdown.prepare(source) : `OK: saved task "${args.id}"`) +
+                    notice(result.warning) +
+                    (base !== undefined || args.tag === true ? `\n<task-plan-tag>${result.tag}</task-plan-tag>\n` : "")
+                return {
+                    content: [ { type: "text", text } ]
+                }
+            }
+            catch (err: unknown) {
+                return mcpError(err)
+            }
+        })
+
+        /*  task attachment  */
+        mcp.registerTool("ase_task_attachment", {
+            title: "ASE task attachment",
+            description:
+                "Get the complete payload (`Data`) of an attachment of the persisted task `id` by its exact `type` " +
+                "(the value of its `Type` key, like `text/x-diff; charset=utf-8; kind=\"draft\"`), " +
+                "e.g. to process a payload elided by `ase_task_load`. If several attachments carry this `Type`, " +
+                "the last one is taken. Returns the payload verbatim as `text`, or a `WARNING:` " +
+                "if no such attachment with an embedded payload exists.",
+            inputSchema: {
+                id: z.string()
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
+                type: z.string()
+                    .describe("exact value of the `Type` key of the attachment")
+            }
+        }, async (args) => {
+            try {
+                const attachment = (await Task.attachments(this.log, args.id)).findLast((a) => a.type === args.type)
+                const text = attachment?.data !== undefined ? attachment.data :
+                    `WARNING: no attachment of type "${args.type}" with an embedded payload in task "${args.id}"`
                 return {
                     content: [ { type: "text", text } ]
                 }

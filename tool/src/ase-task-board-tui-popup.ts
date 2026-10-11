@@ -7,8 +7,9 @@
 import { Box, Text }                          from "ink"
 
 import type { Task }                          from "./ase-task.js"
-import { cardLabel, groupLabel, attachmentTabs, isDraftDiff, diffTones } from "./ase-task-board-core.js"
+import { cardLabel, groupLabel, attachmentTabs, isDraftDiff, diffTones, clampLines } from "./ase-task-board-core.js"
 import type { Card }                          from "./ase-task-board-core.js"
+import type { AgentPresence, AgentLine }      from "./ase-agent-relay-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
 import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.js"
 import type { TransferEntry, BusyLabel }      from "./ase-task-board-tui-model.js"
@@ -27,8 +28,10 @@ const SIGNAL = 16
 const emphasis = (line: string): Line => {
     const out  = { text: "", mask: [] as number[] }
     const add  = (text: string, style: number) => {
+        const n = out.mask.length
         out.text += text
-        out.mask.push(...new Array<number>(text.length).fill(style))
+        out.mask.length = n + text.length
+        out.mask.fill(style, n)
     }
     let last = 0
     for (const m of line.matchAll(/`([^`]+)`|\*\*(.+?)\*\*|__(.+?)__|\*([^*\s](?:[^*]*?[^*\s])?)\*/g)) {
@@ -165,6 +168,51 @@ export const attachmentLines = (att: Attachment, content: Buffer | Error | undef
     return out
 }
 
+/*  the full local timestamp of a processing log line as "YYYY-MM-DD HH:MM:SS.mmm"  */
+const logTime = (ms: number): string => {
+    const d   = new Date(ms)
+    const pad = (n: number, k = 2) => String(n).padStart(k, "0")
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+        `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
+}
+
+/*  the rows of the recent processing log of an agent in the detail view of the agents view,
+    broken onto a width: per line its full timestamp as a "...: " prefix (in normal color), the id of
+    its task (if any, to be rendered inversely, as " <id> ", followed by a space), its level as a
+    "[...]: " prefix, and its message (level and message in accent color,
+    resp. in signal color for warnings and errors), with its continuation rows indented behind the
+    timestamp prefix only (starting below the task id, to save rows), where the task id and the level
+    are broken together with the message as a placeholder word of their width (resp. on a row of their
+    own, cut by the rendering, where they do not fit onto a row, as otherwise the placeholder word
+    would be hard-broken and its remainder shown in place of the message), and where each row
+    carries the index of its processing log line (for anchoring the scroll position to the content)  */
+export type LogLine = { prefix: string, level: string, task: string, text: string, tone: "accent" | "signal", entry: number }
+export const agentLogLines = (agent: AgentPresence, width: number): LogLine[] =>
+    agent.recent.flatMap((line, entry) => {
+        const prefix = `${logTime(line.time)}: `
+        const level  = `[${line.level.toUpperCase()}]: `
+        const tone   = line.level !== "info" ? "signal" : "accent"
+        const task   = sanitize(line.task)
+        const hold   = "\uE000".repeat((task !== "" ? task.length + 3 : 0) + level.length - 1)
+        const textW  = Math.max(10, width - prefix.length)
+        const msg    = sanitize(line.msg)
+        const rows   = hold.length < textW ? clampLines(hold + " " + msg, textW, Infinity) :
+            [ hold, ...clampLines(msg, textW, Infinity) ]
+        return rows.map((row, k): LogLine => ({
+            prefix: k === 0 ? prefix : " ".repeat(prefix.length),
+            level:  k === 0 ? level  : "",
+            task:   k === 0 ? task : "",
+            text:   k === 0 ? row.slice(hold.length + 1) : row,
+            tone,
+            entry
+        }))
+    })
+
+/*  the identity of a processing log line of an agent (for anchoring the scroll position
+    of its log to it, as the oldest lines are dropped once the recent lines are complete)  */
+export const agentLogKey = (line: AgentLine): string =>
+    `${line.time}\u0000${line.level}\u0000${line.task}\u0000${line.msg}`
+
 /*  the tab labels of the read dialog: the task content, followed by its attachments  */
 export const dialogTabs = (parts: PlanParts): string[] =>
     attachmentTabs(parts !== undefined && parts !== null && !(parts instanceof Error) ? parts.atts : [])
@@ -292,6 +340,76 @@ export const renderConfirm = (id: string, yes: boolean, columns: number, rows: n
             " ",
             h(Text, cx("button", !yes && "button-active"), " cancel "),
             " ".repeat(Math.max(0, innerW - pad - 2 * CONFIRM_BUTTON - 1))),
+        blank("blank-below"),
+        h(Text, cx("dim"), keys))
+}
+
+/*  render the prompt popup of an edit request of a task, in the style of the
+    confirmation of a task deletion, with the prompt (with an inverse cursor cell at
+    the cursor position, resp. behind its end) broken at its newlines and wrapped onto
+    the five lines of the frame of an input box (like in the web board, in accent color),
+    scrolled to show the cursor, and with every inner cell written (with spaces) to hide
+    the content underneath  */
+export const renderPrompt = (id: string, text: string, pos: number, columns: number, rows: number) => {
+    const width  = Math.min(columns - 2, 80)
+    const innerW = width - 2
+    const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
+
+    /*  the centered question, with the task id rendered inverse with one extra space on each side  */
+    const tid    = ` ${sanitize(id)} `.slice(0, Math.max(0, innerW - 21))
+    const qpad   = Math.max(0, Math.floor((innerW - 21 - tid.length) / 2))
+    const hint   = "←/→: move cursor · ⇧⏎/⌥⏎: new line · ⏎: request edit · ESC: cancel".slice(0, innerW)
+    const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
+
+    /*  the cells of the prompt, sanitized per character (with newlines ending their line and
+        other control characters shown as spaces), so that the cursor position stays aligned
+        with the characters  */
+    const cells  = [] as { ch: string, cur: boolean, nl: boolean }[]
+    const chars  = [ ...text ]
+    chars.forEach((c, k) => {
+        const s = [ ...(/^\p{Cc}$/u.test(c) && c !== "\t" ? " " : sanitize(c)) ]
+        if (s.length === 0 && k === pos)
+            s.push(" ")
+        s.forEach((ch, j) => cells.push({ ch, cur: k === pos && j === 0, nl: c === "\n" }))
+    })
+    if (pos >= chars.length)
+        cells.push({ ch: " ", cur: true, nl: false })
+
+    /*  the prompt lines, broken after the newlines and cut into chunks of the inner width (minus
+        the margins and the frame of the input box), scrolled to show the line of the cursor  */
+    const lineW  = Math.max(1, innerW - 6)
+    const viewH  = 5
+    const lines  = [ [] ] as (typeof cells)[]
+    for (const cell of cells) {
+        if (lines[lines.length - 1].length >= lineW)
+            lines.push([])
+        lines[lines.length - 1].push(cell)
+        if (cell.nl)
+            lines.push([])
+    }
+    const curL   = lines.findIndex((line) => line.some((cell) => cell.cur))
+    const first  = Math.max(0, Math.min(lines.length - viewH, curL - viewH + 1))
+    const shown  = Array.from({ length: viewH }, (_, k) => lines[first + k] ?? [])
+    const height = viewH + 8
+    return h(Box, { key: "prompt", top: Math.floor((rows - height) / 2), left: Math.floor((columns - width) / 2), width, height, ...cx("popup", "border-dim") },
+        h(Text, cx("normal", "bold"),
+            " ".repeat(qpad) + "Edit task ",
+            h(Text, cx("inverse"), tid),
+            " by prompt:".padEnd(Math.max(0, innerW - qpad - 10 - tid.length))),
+        blank("blank-above"),
+        h(Text, { key: "input-top", ...cx("accent") }, ` ╭${"─".repeat(Math.max(0, innerW - 4))}╮ `),
+        ...shown.map((line, k) => {
+            const at = line.findIndex((cell) => cell.cur)
+            const ch = line.map((cell) => cell.ch)
+            return h(Text, { key: k },
+                h(Text, cx("accent"), " │ "),
+                h(Text, cx("accent"), ...(at < 0 ? [ ch.join("").padEnd(lineW) ] : [
+                    ch.slice(0, at).join(""),
+                    h(Text, cx("inverse"), ch[at]),
+                    ch.slice(at + 1).join("").padEnd(Math.max(0, lineW - 1 - at)) ])),
+                h(Text, cx("accent"), " │ "))
+        }),
+        h(Text, { key: "input-bottom", ...cx("accent") }, ` ╰${"─".repeat(Math.max(0, innerW - 4))}╯ `),
         blank("blank-below"),
         h(Text, cx("dim"), keys))
 }
@@ -455,7 +573,7 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
     /*  the key hints, or instead the status notice of an edit, truncated to the free width  */
     const free   = Math.max(0, innerW - pos.length - 1)
     const keys   = (notice !== null ? " " + sanitize(notice) :
-        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · T: transition · D: delete · M: toggle mouse · ⏎/ESC: close").slice(0, free)
+        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · E: edit by prompt · T: transition · D: delete · M: toggle mouse · ⏎/ESC: close").slice(0, free)
 
     return h(Box, { key: "dialog", top: 0, left, width, height: rows, ...cx("popup", "border-dim") },
         h(Text, {},

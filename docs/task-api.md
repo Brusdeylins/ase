@@ -32,7 +32,8 @@ wiring is proposed as:
 
 - `ase task store start` \[`-a`|`--address` *host*\] \[`-p`|`--port` *port*\]
   \[`-t`|`--token` *token*\] \[`-c`|`--cors` *origin*\] \[`-m`|`--module` *name*\]
-  \[`-d`|`--basedir` *dir*\] \[`-s`|`--solo`|`--no-solo`\] \[`--tls-cert` *file* `--tls-key` *file*\]:
+  \[`-d`|`--basedir` *dir*\] \[`-s`|`--solo`|`--no-solo`\] \[`--tls-cert` *file* `--tls-key` *file*\]
+  \[`--with-agent-relay`|`--without-agent-relay`\] \[`-f`|`--foreground`\]:
   Start the server in the background, binding to *host* (default
   `127.0.0.1`) and *port* (default: allocated randomly and persisted
   into *per-user config dir*`/store.yaml`), expecting the bearer
@@ -42,9 +43,15 @@ wiring is proposed as:
   dir*`/store.yaml`, else the built-in `ase` plugin, see *Storage
   plugin API* below), with *dir* and `--solo`/`--no-solo` configuring the
   built-in plugin, and serving HTTPS with the PEM certificate and key *file*s
-  (see *TLS* below). Idempotent if already running, but restarts the
+  (see *TLS* below). With `--with-agent-relay` (persisted, reset by
+  `--without-agent-relay`), the server additionally co-hosts the agent
+  relay of `ase agent relay` under the same address, port, and token,
+  i.e., its `/agents` and `/projects/{prjId}/agents...` endpoints (see
+  `ase agent relay` in `docs/usage-tool.md`, as they are not part of
+  this API). Idempotent if already running, but restarts the
   server if an explicitly given option deviates from its configuration. The
-  server logs into *per-user config dir*`/store.log`.
+  server logs into *per-user config dir*`/store.log`, or, with `--foreground`,
+  runs in the current process and logs to the terminal.
 
 - `ase task store status`:
   Report whether the server is running, and on which address and port.
@@ -192,6 +199,23 @@ deliberately agnostic of them:
 - **Rendering**: the rendering-prepared form of a plan (the `render`
   variant of `ase_task_load` and the `render` option of
   `ase_task_save`) is produced by the client.
+
+- **Attachment elision**: `ase_task_load` by default (`attachments:
+  "elided"`) replaces the non-empty `Data` of each attachment with an
+  `[elided: <n> lines]` marker, so a plan passes through an LLM without
+  its potentially huge payloads, and `ase_task_save` restores a kept
+  marker from the stored attachment of the same `Type` (preferably also
+  of the same `Created`), failing if there is none. `attachments: "full"`
+  returns the complete payloads, and `ase_task_attachment` the payload of
+  a single attachment by its `Type`.
+
+- **Conditional saving**: the `tag` option of `ase_task_load` returns the
+  entity tag of the loaded plan, which the `base` option of `ase_task_save`
+  passes as `If-Match`, so the save fails instead of overwriting a plan
+  changed meanwhile; the `tag` option of `ase_task_save` (implied by
+  `base`) returns the entity tag of the just-saved plan, as reported by
+  the store atomically with the save, for the next save, as used by
+  `ase-task-edit` (which saves a not yet existing plan with `create`).
 
 - **Active task id**: the session-scoped active task id
   (`ase_task_id`, `agent.task`) is kept in the client's configuration.
@@ -770,12 +794,16 @@ Response `201` (created) or `200` (overwritten):
 ```json
 {
     "id":     "T1",
-    "status": "OPEN"
+    "status": "OPEN",
+    "tag":    "3f786850e387550fdab836ed7e6dc881de23001b"
 }
 ```
 
 - `id`: the task identifier.
 - `status`: the lifecycle status of the saved plan.
+- `tag`: the entity tag of the saved plan (on every save, conditional
+  or not), determined atomically with the save, for a subsequent
+  conditional `PUT` without an intermediate `GET`.
 
 Errors: `400` for a malformed body or a missing `header` or
 `body` field, `404` if no project *prjId* is registered, `412` if
@@ -1340,7 +1368,11 @@ and *GitLab storage plugin* below),
 reported with all three parts under `updated`.
 
 Messages sent by the client are ignored. Ping frames are answered with
-pong frames as per RFC 6455.
+pong frames as per RFC 6455. Conversely, the server sends a ping frame
+to each subscriber every 15 seconds and terminates a subscriber which
+has not answered the previous ping with a pong frame (as RFC 6455
+requires and most WebSocket libraries do automatically), so a
+half-open connection is dropped after at most 30 seconds.
 
 Errors (as regular HTTP responses before the upgrade): `401` for a
 missing or invalid token, `404` if no project *prjId* is registered, `422` for
@@ -1500,6 +1532,13 @@ export type TaskStorageContext = {
 export interface TaskStoragePlugin {
     /*  the plugin name, for diagnostics  */
     readonly name: string
+
+    /*  optionally declare that task plans are stored verbatim, i.e., that
+        "taskLoad" returns a plan whose textual form equals the one of the
+        plan passed to "taskSave" (instead of one normalized by the storage,
+        e.g. an issue tracker), so the entity tag of a just-saved plan can be
+        determined without loading it again  */
+    readonly verbatim?: boolean
 
     /*  open the storage (connect, create directories, etc.) and
         close it again (flush, disconnect, etc.); "close" is called

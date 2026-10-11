@@ -37,7 +37,7 @@ export interface TaskStoreClient {
     newId  (title: string, proposal: string, taken: string[]): Promise<{ scheme: string, id: string }>
     list   (fields?: "header"): Promise<Core.TaskListEntry[]>
     load   (id: string): Promise<API.TaskPlan | null>
-    save   (id: string, plan: API.TaskPlan, tag?: string, create?: boolean): Promise<void>
+    save   (id: string, plan: API.TaskPlan, tag?: string, create?: boolean): Promise<string | undefined>
     patch  (id: string, change: { status?: string, id?: string }): Promise<Core.TaskPatchResult | null>
     delete (id: string): Promise<boolean>
     purge  (age: string): Promise<string[]>
@@ -84,7 +84,7 @@ export class LocalTaskStoreClient implements TaskStoreClient {
         and re-registering the project (mapping the plan states)  */
     async setLifecycle (name: string): Promise<void> {
         this.configure("project.task.lifecycle", name)
-        await this.core.projectSet(this.prjId, { lifecycle: name })
+        this.lifecycle = (await this.core.projectSet(this.prjId, { lifecycle: name })).project.lifecycle
     }
     /*  switch the task id scheme by persisting "project.task.idscheme" and re-registering the project  */
     async setIdScheme (spec: string): Promise<void> {
@@ -149,8 +149,8 @@ export class LocalTaskStoreClient implements TaskStoreClient {
     load (id: string): Promise<API.TaskPlan | null> {
         return this.missing(() => this.core.taskLoad(this.prjId, id), null)
     }
-    async save (id: string, plan: API.TaskPlan, tag?: string, create = false): Promise<void> {
-        await this.core.taskSave(this.prjId, id, plan, tag, create)
+    async save (id: string, plan: API.TaskPlan, tag?: string, create = false): Promise<string | undefined> {
+        return (await this.core.taskSave(this.prjId, id, plan, tag, create)).tag
     }
     newId (title: string, proposal: string, taken: string[]): Promise<{ scheme: string, id: string }> {
         return this.core.taskNewId(this.prjId, { title, proposal, taken })
@@ -210,6 +210,12 @@ export class LocalTaskStoreClient implements TaskStoreClient {
 /*  the project as exposed by the project endpoints of a task store server
     (with the task id scheme and sequence number high-water mark absent on servers predating them)  */
 type RemoteProject = { id: string, lifecycle: { name: string }, idscheme?: string, seqmark?: number }
+
+/*  the interval of the keepalive pings of the event subscription (where a connection without
+    any traffic for this interval is pinged and without any traffic for twice this interval
+    is terminated) and the timeout of its WebSocket handshake  */
+const KEEPALIVE_MS = 15 * 1000
+const HANDSHAKE_MS = 10 * 1000
 
 /*  the remote client: the REST API of a task store server, with the
     project registered under its configured lifecycle model and task id
@@ -384,13 +390,14 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
     async load (id: string): Promise<API.TaskPlan | null> {
         return this.task(await this.request<API.TaskPlan>("GET", `${this.tasks}/${encodeURIComponent(id)}`))
     }
-    async save (id: string, plan: API.TaskPlan, tag?: string, create = false): Promise<void> {
-        const result = await this.request<{ status: string }>("PUT", `${this.tasks}/${encodeURIComponent(id)}`, plan, {
+    async save (id: string, plan: API.TaskPlan, tag?: string, create = false): Promise<string | undefined> {
+        const result = await this.request<{ status: string, tag?: string }>("PUT", `${this.tasks}/${encodeURIComponent(id)}`, plan, {
             ...(tag !== undefined ? { "If-Match": `"${tag}"` } : {}),
             ...(create ? { "If-None-Match": "*" } : {})
         })
         if (result === null)
             this.unregistered()
+        return result.tag
     }
 
     /*  allocate the next free task id on the server, falling back to determining
@@ -440,10 +447,12 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
     }
 
     /*  subscribe to the change events of the project via the WebSocket event
-        endpoint, reconnecting after a connection loss or a failed handshake
-        (with a change notification on reconnect, as events may have been missed,
-        incl. lifecycle model changes), reporting each change of the connection
-        state (initially disconnected); returns a function to unsubscribe  */
+        endpoint, reconnecting after a connection loss, a failed or timed out
+        handshake, or a connection without any traffic despite keepalive pings
+        (e.g. a half-open one after a network partition), with a change notification
+        on reconnect (as events may have been missed, incl. lifecycle model changes),
+        reporting each change of the connection state (initially disconnected);
+        returns a function to unsubscribe  */
     subscribe (onChange: () => void, onState?: (connected: boolean) => void): () => void {
         const url = `${this.base.replace(/^http/, "ws")}/projects/${this.prjId}/events`
         let ws:      WebSocket | null = null
@@ -451,11 +460,31 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
         let stopped  = false
         let failed   = false
         const connect = (): void => {
-            ws = new WebSocket(url, {
+            const sock = new WebSocket(url, {
                 headers:            { Authorization: `Bearer ${this.token}` },
-                rejectUnauthorized: !this.insecure
+                rejectUnauthorized: !this.insecure,
+                handshakeTimeout:   HANDSHAKE_MS
             })
-            ws.on("open", () => {
+            ws = sock
+
+            /*  keep the connection alive: record any traffic (the frames, and the pings
+                of the task store and the pongs of our own pings), and terminate the
+                connection if there was none since the previous (then unanswered) ping  */
+            let traffic  = true
+            let watchdog: ReturnType<typeof setInterval> | null = null
+            const alive  = () => { traffic = true }
+            sock.on("ping", alive)
+            sock.on("pong", alive)
+            sock.on("open", () => {
+                watchdog = setInterval(() => {
+                    if (!traffic) {
+                        this.log.write("debug", `task: store "${this.base}": events: connection unresponsive -- reconnecting`)
+                        sock.terminate()
+                        return
+                    }
+                    traffic = false
+                    sock.ping()
+                }, KEEPALIVE_MS)
                 if (failed) {
                     RemoteTaskStoreClient.registered.delete(this.key)
                     onChange()
@@ -463,7 +492,9 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
                 failed = false
                 onState?.(true)
             })
-            ws.on("message", (data) => {
+            sock.on("message", (data) => {
+                traffic = true
+
                 /*  drop the cached registration on a lifecycle model or task id scheme change  */
                 try {
                     const frame = JSON.parse(String(data)) as Core.EventFrame
@@ -475,10 +506,12 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
                 }
                 onChange()
             })
-            ws.on("error", (err) => {
+            sock.on("error", (err) => {
                 this.log.write("debug", `task: store "${this.base}": events: ${err.message}`)
             })
-            ws.on("close", () => {
+            sock.on("close", () => {
+                if (watchdog !== null)
+                    clearInterval(watchdog)
                 ws     = null
                 failed = true
                 if (!stopped) {

@@ -226,9 +226,20 @@ You *MUST* honor the following hints on this *task* format:
     For embedded content, the `Data` key contains the content data as a YAML
     "literal block scalar" with the block header `|4+`, i.e., with an explicit
     indentation of exactly 4 spaces (which are stripped from the content) and
-    with all trailing blank lines kept as part of the content. Content without
+    with all trailing blank lines kept as part of the content -- except for
+    *one* blank line directly before the `---` line of the next block, which
+    only separates the blocks. Content without
     a trailing newline instead uses the block header `|4-`, and empty content
     is given as an empty `Data:` value.
+
+    When loaded via `ase_task_load` (by default), the content of a `Data` key
+    is *elided*, i.e., given as the single-line marker value
+    `[elided: <n/> lines]` instead. Keep such a marker *verbatim* to keep the
+    content unchanged, as `ase_task_save` restores it from the stored
+    attachment. Fetch the content via `ase_task_attachment` only if it has
+    to be read or changed, and then replace the marker with the complete
+    changed content. A marker *MUST* *NEVER* be copied into another block or
+    another task.
 
     For referenced content, the `File` key contains the filename relative to the
     task storage location. Every attachment can optionally have a `Desc` key
@@ -265,7 +276,7 @@ You *MUST* honor the following hints on this *task* format:
 
 -   A skill which *rewrites* the "frontmatter" or the "body" of a task *MUST*
     pass the entire "backmatter" through *verbatim* -- every attachment block
-    byte-for-byte, in its original order -- unless the skill *explicitly*
+    byte-for-byte (with its elided `Data` marker), in its original order -- unless the skill *explicitly*
     manages attachments itself. Attachments are *never* dropped, reordered,
     re-indented, or re-flowed as a side-effect of a body rewrite.
 

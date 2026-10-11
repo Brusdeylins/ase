@@ -17,14 +17,17 @@ import { writeStdout }                      from "./ase-lib-stdio.js"
 
 /*  internal command options type  */
 interface BoardOpts {
-    web?:  boolean
-    text?: boolean
+    web?:        boolean
+    text?:       boolean
+    agentRelay?: string
 }
 
-/*  render the lane overview as plain text, for use without a terminal  */
-const textOverview = async (log: Log): Promise<string> => {
-    const { buildBoard, cardLabel } = await import("./ase-task-board-core.js")
-    const board = await buildBoard(log)
+/*  render the lane overview (and the agents passed by the agent relay, if any)
+    as plain text, for use without a terminal  */
+const textOverview = async (log: Log, relay?: string): Promise<string> => {
+    const { buildBoard, cardLabel, editMarker, fetchAgents, busyAgents, agentLabel, agentStatus } = await import("./ase-task-board-core.js")
+    const [ board, agents ] = await Promise.all([ buildBoard(log), fetchAgents(log, relay) ])
+    const busy  = busyAgents(agents)
     const out   = [
         `⧉ ASE: Task Board · project: ${Task.projectIdOf(Task.projectRoot())} · mode: ${board.mode} · tasks: ${board.cards.size}`,
         ""
@@ -34,13 +37,30 @@ const textOverview = async (log: Log): Promise<string> => {
         for (const lane of group.lanes) {
             const cards = board.lanes.get(lane.status) ?? []
             out.push(`  ${lane.status}${lane.active ? " (active)" : ""} · ${cards.length}`)
-            for (const c of cards)
-                out.push(`    ${cardLabel(c).replace(c.id, c.id + (board.cyclic.has(c.id) ? " ⟲" : ""))}`)
+            for (const c of cards) {
+                /*  mark the task (like the terminal board) as cyclic and with the state of its edit requests  */
+                const edit  = editMarker(c)
+                const marks = (board.cyclic.has(c.id) ? " ⟲" : "") + (edit !== "" ? ` ${edit}` : "")
+                out.push(`    ${cardLabel(c).replace(c.id, c.id + marks)}` +
+                    (busy.has(c.id) ? ` ⚙ ${busy.get(c.id)!.map((agent) => agent.name).join(", ")}` : ""))
+            }
+        }
+    }
+    if (agents !== null) {
+        out.push(`━ agents · ${agents.connected ? agents.agents.length : "agent relay unreachable"}`)
+        for (const agent of agents.agents) {
+            const op = agent.recent.at(-1)
+            out.push(`  ${agent.state === "busy" ? "●" : "○"} ${agentLabel(agent)} · ${agentStatus(agent)}`)
+            if (op !== undefined)
+                out.push(`    ${op.task !== "" ? `${op.task}: ` : ""}${op.msg}`)
         }
     }
     for (const w of board.warnings)
         out.push(`⚠ ${w}`)
-    return out.join("\n") + "\n"
+
+    /*  make the lines safe for the terminal (strip control characters,
+        e.g. in the texts passed by the agent relay)  */
+    return out.map((line) => line.replace(/\p{Cc}/gu, "")).join("\n") + "\n"
 }
 
 /*  CLI sub-command "ase task board"  */
@@ -99,9 +119,15 @@ export default class TaskBoardCommand {
             .option("-w, --web", "serve the web board through the ASE service of the project " +
                 "and open it in the browser")
             .option("-t, --text", "print the lane overview as plain text and exit")
+            .option("--agent-relay <url>", "agent relay to receive the live presence of the agents from, " +
+                "as \"ase[s]://<addr>:<port>[/<token>]\" (default: the configured \"project.agent.relay\", else none; " +
+                "the web board always follows the configured one)")
             .action(async (opts: BoardOpts) => {
                 /*  serve and open the web board  */
                 if (opts.web === true) {
+                    if (opts.agentRelay !== undefined)
+                        this.log.write("warning", "board: \"--agent-relay\" is ignored by the web board, " +
+                            "which follows the configured \"project.agent.relay\"")
                     const url = `http://${SERVICE_HOST}:${await this.servicePort()}/task-board`
                     await writeStdout(`${url}\n`)
                     await this.openBrowser(url)
@@ -110,7 +136,7 @@ export default class TaskBoardCommand {
 
                 /*  print the plain text overview if requested or without a terminal  */
                 if (opts.text === true || !process.stdout.isTTY || !process.stdin.isTTY) {
-                    await writeStdout(await textOverview(this.log))
+                    await writeStdout(await textOverview(this.log, opts.agentRelay))
                     return
                 }
 
@@ -118,7 +144,7 @@ export default class TaskBoardCommand {
                     (its development build records a never cleared performance measure per render)  */
                 process.env.NODE_ENV ??= "production"
                 const { runTUI } = await import("./ase-task-board-tui.js")
-                await runTUI(this.log)
+                await runTUI(this.log, opts.agentRelay)
             })
     }
 }

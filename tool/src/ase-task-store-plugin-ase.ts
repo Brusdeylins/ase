@@ -43,7 +43,8 @@ const exists = (p: string): Promise<boolean> =>
     lifecycle model name, the task id scheme, and the sequence number
     high-water mark  */
 class FileTaskStoragePlugin implements API.TaskStoragePlugin {
-    readonly name = "ase"
+    readonly name     = "ase"
+    readonly verbatim = true
     private basedir:   string
     private solo:      boolean
     private lifecycle: string

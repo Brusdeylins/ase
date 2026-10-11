@@ -76,6 +76,8 @@ Task Skill Common Steps
     Call the `ase_task_load(id: "<ase-task-id/>")` tool of the
     `ase` MCP server to load the current task plan content in its
     *authoring form* -- the `variant` argument defaults to `source`
+    -- with the payloads of all attachments *elided* to `[elided: <n/>
+    lines]` markers -- the `attachments` argument defaults to `elided`
     -- and set <text/> to the `text` output field of this
     `ase_task_load` tool call. Do not output anything related to
     this MCP tool call. Set <status>plan loaded</status>.
@@ -100,6 +102,14 @@ Only output the following <template/>:
 Before deriving any plan content from the <instruction/>, *ground* the
 plan in the *current state* of the project, instead of deriving it from
 the <instruction/> alone. Do not output anything during this grounding.
+
+<if condition="<arg1/> is not empty">
+The *code basis* of the task is the separate working copy <arg1/>
+(e.g. a checkout of the branch of its `Source` key): resolve every
+project-relative file path below relative to <arg1/> and read the
+files *exclusively* from there, instead of from the current working
+copy.
+</if>
 
 1.  Call the `ase_artifact_list(kind: [ "spec", "code", "infr" ])` tool
     of the `ase` MCP server *once* and read the returned `artifacts`
@@ -154,8 +164,11 @@ refreshed <timestamp-modified/> into the frontmatter keys `Id:`,
 `Created:`, and `Modified:` of <task-content/>.
 
 Call the `ase_task_save(id: "<ase-task-id/>", text:
-"<task-content/>")` tool of the `ase` MCP server to save the task
-plan content in its *authoring form*. This `ase_task_save` MCP
+"<task-content/>", tag: true)` tool of the `ase` MCP server to save the task
+plan content in its *authoring form* -- the `tag: true` makes
+its output carry the `<task-plan-tag>` delimiter line, which
+lets a subsequent `ase-task-edit --int-reuse-task` reuse the
+just-saved plan instead of loading it again. This `ase_task_save` MCP
 tool call is the *only* permitted way to persist the task plan --
 you *MUST* *NEVER* write the plan file via `Write`/`Edit` or by
 executing a shell command. Do not output anything

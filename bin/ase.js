@@ -37,9 +37,13 @@ const stat2 = fs.statSync(asejs, { throwIfNoEntry: false })
 if (stat2 === undefined)
     run("npm", [ "start", "build" ], { cwd: tooldir })
 
+/*  determine logical base directory (Node resolves symlinks for
+    "__dirname", but keeps them in "process.argv[1]")  */
+const basedir = path.resolve(path.dirname(process.argv[1]), "..")
+
 /*  pass-through execution to real "ase" CLI  */
 run(process.execPath, [ asejs, ...process.argv.slice(2) ], {
-    env: { ...process.env, ASE_SETUP_DEV: "1" }
+    env: { ...process.env, ASE_SETUP_DEV: "1", ASE_SETUP_DEV_BASEDIR: basedir }
 })
 process.exit(0)
 

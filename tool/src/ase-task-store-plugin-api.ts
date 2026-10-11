@@ -69,6 +69,13 @@ export interface TaskStoragePlugin {
     /*  the plugin name, for diagnostics  */
     readonly name: string
 
+    /*  optionally declare that task plans are stored verbatim, i.e., that
+        "taskLoad" returns a plan whose textual form equals the one of the
+        plan passed to "taskSave" (instead of one normalized by the storage,
+        e.g. an issue tracker), so the entity tag of a just-saved plan can be
+        determined without loading it again  */
+    readonly verbatim?: boolean
+
     /*  open the storage (connect, create directories, etc.) and
         close it again (flush, disconnect, etc.); "close" is called
         exactly once after a successful "open" (on shutdown or failed startup)  */
