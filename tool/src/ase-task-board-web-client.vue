@@ -52,14 +52,14 @@
                         <div v-if="!surface.minimized.includes(l.status)" class="cards" tabindex="-1">
                             <!--  the task carried by the keyboard, shown on top of the selected target lane  -->
                             <div v-if="carried !== null && drag?.over === l.status" class="card held sel carried" :class="`tone-${carried.tone}`">
-                                <div class="cbody"><span v-if="carried.group !== '' && carried.group !== carried.id" class="cepic">♛ {{ carried.group }} ▶</span><span class="cid">{{ carried.group === carried.id ? "♛ " : "" }}{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}<span v-if="carried.edit !== ''" class="cedit" :class="carried.edit" :title="editTitles[carried.edit]">{{ editMarkers[carried.edit] }}</span>{{ carried.title }}</div>
+                                <div class="cbody"><span v-if="carried.group !== '' && carried.group !== carried.id" class="cepic">♛ {{ carried.group }} ▶</span><span class="cid">{{ carried.group === carried.id ? "♛ " : "" }}{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}<span v-if="carried.edit !== ''" class="cedit" :class="carried.edit" :title="editTitles[carried.edit]">{{ editMarkers[carried.edit] }}</span><template v-for="(s, si) in titleSegments(carried.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></div>
                             </div>
                             <div v-for="c in l.cards" :key="c.id" class="card" draggable="true"
                                 :class="[ `tone-${c.tone}`, { sel: sel.id === c.id, working: working.has(c.id) }, carryClass(c.id) ]"
                                 @click="sel = { g: gi, l: li, id: c.id }; openTask(c.id)"
                                 @dragstart="dragStart($event, c.id, l.status, c.moves)" @dragend="dragEnd">
                                 <div v-if="working.has(c.id)" class="cagents"><span v-for="name in working.get(c.id)!" :key="name" class="cagent"><span class="aicon">⚉</span> {{ name }}</span></div>
-                                <div class="cbody"><span v-if="c.group !== '' && c.group !== c.id" class="cepic">♛ {{ c.group }} ▶</span><span class="cid">{{ c.group === c.id ? "♛ " : "" }}{{ c.id }}</span>{{ c.cyclic ? "⟲ " : "" }}<span v-if="c.edit !== ''" class="cedit" :class="c.edit" :title="editTitles[c.edit]">{{ editMarkers[c.edit] }}</span>{{ c.title }}</div>
+                                <div class="cbody"><span v-if="c.group !== '' && c.group !== c.id" class="cepic">♛ {{ c.group }} ▶</span><span class="cid">{{ c.group === c.id ? "♛ " : "" }}{{ c.id }}</span>{{ c.cyclic ? "⟲ " : "" }}<span v-if="c.edit !== ''" class="cedit" :class="c.edit" :title="editTitles[c.edit]">{{ editMarkers[c.edit] }}</span><template v-for="(s, si) in titleSegments(c.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></div>
                             </div>
                         </div>
                     </div>
