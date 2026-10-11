@@ -9,6 +9,8 @@
     [`--help`|`-h`]
     [`--rounds`|`-r` *n*]
     [`--until`|`-u` `MUST`|`SHOULD`|`MAY`]
+    [`--perspective`|`-p` *perspective*]
+    [`--ground`|`-G`]
     [`--focus`|`-f` *section*[,...]]
     [`--next`|`-n` *option*[,...]]
     [*id*]
@@ -94,6 +96,28 @@ in state `[-]` (cancelled) or `[>]` (deferred) are never questioned.
     decides which points are raised as questions and in which order
     within a focus area.
 
+-   `--perspective`|`-p` *perspective*:
+    Grill exclusively from the logical *perspective* -- a keyword or
+    short hint like `domain`, `performance`, or `security`. The
+    perspective acts as an exclusive lens: only open points relevant from
+    this perspective are raised as questions, while every question still
+    carries its focus area, severity, and impact. The active perspective
+    is shown in the announcement line, like `GRILLING (security)`.
+    Without a perspective, the grilling is holistic.
+
+-   `--ground`|`-G`:
+    Ground the grilling in facts instead of the world knowledge of the
+    model alone: once before the first round, the artifacts of all kinds
+    (`SPEC`, `CODE`, `DOCS`, `INFR`, and `OTHR`) are scanned for
+    the project facts relevant to the grilled subject (from the given
+    perspective, if any) and the Internet/Web is searched for the
+    established practices, standards, patterns, and pitfalls about it.
+    These facts serve all rounds, both for raising the questions and for
+    preferably deriving their answer alternatives. The grounding is shown
+    in the announcement line, like `GRILLING (security, grounded)`. If
+    no usable facts are found, a warning is shown and the grilling falls
+    back to model knowledge.
+
 -   `--focus`|`-f` *section*[,...]:
     Grill only the given plan *section*(s), in the given order. Each
     *section* is one of `SPECIFICATION` (abbreviated `SPEC`), `DESIGN`
@@ -148,6 +172,13 @@ Grill the current task plan in two rounds:
 
 ```text
 ❯ /ase-task-grill --rounds 2
+```
+
+Grill the current task plan exclusively from the performance
+perspective, grounded in the project artifacts and the Internet/Web:
+
+```text
+❯ /ase-task-grill --perspective performance --ground
 ```
 
 Grill only the `DESIGN` and then the `SPECIFICATION` section of the

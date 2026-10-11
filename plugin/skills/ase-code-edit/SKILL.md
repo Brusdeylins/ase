@@ -1,6 +1,6 @@
 ---
 name: ase-code-edit
-argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--verify|-v] [--worktree|-w <name>[:<branch>]] [--loop|-l] [<query>|<issue-id>]"
+argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--grill-perspective|-p <perspective>] [--grill-ground|-G] [--verify|-v] [--worktree|-w <name>[:<branch>]] [--loop|-l] [<query>|<issue-id>]"
 description: >
     Edit Source Code: Use when the user wants to "edit" the code base in
     one shot from a query or a bare analyzer issue id like "P1", fusing
@@ -22,7 +22,7 @@ Edit Source Code
 
 <expand name="getopt"
     arg1="ase-code-edit"
-    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --verify|-v --worktree|-w= --loop|-l">
+    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --grill-perspective|-p= --grill-ground|-G --verify|-v --worktree|-w= --loop|-l">
     $ARGUMENTS
 </expand>
 
@@ -199,9 +199,18 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
     1.  Understand what "grilling" is about:
 
-        <expand name="grill-understanding" arg1="the edit query in <todo-what/> and <todo-how/>"></expand>
+        <expand name="grill-understanding"
+            arg1="the edit query in <todo-what/> and <todo-how/>"
+            arg2="<getopt-option-grill-perspective/>"
+            arg3="<getopt-option-grill-ground/>"></expand>
 
-    2.  Perform *at most* <getopt-option-grill-rounds/> grilling
+    2.  Ground the grilling:
+
+        <expand name="grill-ground"
+            arg1="the edit query in <todo-what/> and <todo-how/>"
+            arg2="<worktree-dir/>"></expand>
+
+    3.  Perform *at most* <getopt-option-grill-rounds/> grilling
         *rounds*, numbered <m/> (1-<getopt-option-grill-rounds/>) --
         the round count is a *maximum* only, as every round can
         *stop* the grilling *early* in its item 2 below.
@@ -212,7 +221,8 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
             Explicitly start *from scratch* from *only* the current
             <todo-what/> and <todo-how/> and *forget* all information
-            gathered in previous rounds. Set <round-id/> to
+            gathered in previous rounds -- except the grounding facts
+            <grill-facts/>. Set <round-id/> to
             `GRILLING ROUND <m/>/<getopt-option-grill-rounds/>` if
             <getopt-option-grill-rounds/> is greater than 1, or to
             `GRILLING` otherwise (a single round needs no round
@@ -283,7 +293,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
             <expand name="grill-short-responses"></expand>
 
-        5.  SHOW CURRENT TODO:
+        5.  SHOW UPDATED TODO:
 
             Set <round-suffix/> to
             ` round <m/>/<getopt-option-grill-rounds/>` if

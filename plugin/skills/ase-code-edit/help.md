@@ -11,6 +11,8 @@
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
     [`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`]
+    [`--grill-perspective`|`-p` *perspective*]
+    [`--grill-ground`|`-G`]
     [`--verify`|`-v`]
     [`--worktree`|`-w` *name*[`:`*branch*]]
     [`--loop`|`-l`]
@@ -59,12 +61,11 @@ implementation until it passes). The *querying* state and every
     `REGRESSION` and `CONFIRMATION` are raised only together with
     `--verify`, as only then a verification honors their decisions.
     All questions of a round are announced together below a
-    `GRILLING ROUND K/L` line (the announcement line and round numbering
-    are omitted when only a single round is performed) as an
-    `#`/`FOCUS ▶ TOPIC`/`QUESTION` table with one row per
-    question, each row carrying two to four grounded answer alternatives
-    (with the alternative reflecting the current understanding marked as
-    `CURRENT`). They are then asked in *one* batch via a single
+    `GRILLING ROUND K/L` line (the round numbering is omitted when only
+    a single round is performed) as a `QUESTION`/`ANSWERS` table with
+    one row per question, each row carrying two to three grounded answer
+    alternatives (with the alternative reflecting the current understanding
+    marked with `⚑`). They are then asked in *one* batch via a single
     interactive dialog titled `GRILLING ROUND K/L` (or plain `GRILLING`
     for a single round), whose question asks for the combined answer to
     all (or a subset) of the listed aspect questions and whose only
@@ -95,6 +96,28 @@ implementation until it passes). The *querying* state and every
     with an individual impact (`HIGH`, `MEDIUM`, or `LOW`), which
     decides which points are raised as questions and in which order
     within a focus area. Only effective together with `--grill`.
+
+-   `--grill-perspective`|`-p` *perspective*:
+    Grill exclusively from the logical *perspective* -- a keyword or
+    short hint like `domain`, `performance`, or `security`. The
+    perspective acts as an exclusive lens: only open points relevant from
+    this perspective are raised as questions, while every question still
+    carries its focus area, severity, and impact. The active perspective
+    is shown in the announcement line, like `GRILLING (security)`.
+    Without a perspective, the grilling is holistic. Only effective together with `--grill`.
+
+-   `--grill-ground`|`-G`:
+    Ground the grilling in facts instead of the world knowledge of the
+    model alone: once before the first round, the artifacts of all kinds
+    (`SPEC`, `CODE`, `DOCS`, `INFR`, and `OTHR`) are scanned for
+    the project facts relevant to the grilled subject (from the given
+    perspective, if any) and the Internet/Web is searched for the
+    established practices, standards, patterns, and pitfalls about it.
+    These facts serve all rounds, both for raising the questions and for
+    preferably deriving their answer alternatives. The grounding is shown
+    in the announcement line, like `GRILLING (security, grounded)`. If
+    no usable facts are found, a warning is shown and the grilling falls
+    back to model knowledge. Only effective together with `--grill`.
 
 -   `--verify`|`-v`:
     Verify whether the implementation fulfills the requirements, by
@@ -152,6 +175,13 @@ Grill the query with two rounds first, then implement and verify:
 
 ```text
 ❯ /ase-code-edit -g -r 2 -v refactor the config loading into layers
+```
+
+Grill the query exclusively from the security perspective, grounded in
+the project artifacts and the Internet/Web, then implement:
+
+```text
+❯ /ase-code-edit -g -p security -G add a file upload endpoint to the API
 ```
 
 Loop over multiple edits inside a dedicated Git worktree:

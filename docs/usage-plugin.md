@@ -191,7 +191,7 @@ The following ASE commands/skills exist on the task-level:
   may be a bare *id*, an *id* with an inline *instruction*, or an
   *instruction* alone.
 
-- **/ase-task-grill** \[`--rounds`|`-r` *n*\] \[`--until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--focus`|`-f` *section*\[,...\]\] \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
+- **/ase-task-grill** \[`--rounds`|`-r` *n*\] \[`--until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--perspective`|`-p` *perspective*\] \[`--ground`|`-G`\] \[`--focus`|`-f` *section*\[,...\]\] \[`--next`|`-n` *option*\[,...\]\] \[*id*\]:<br/>
   Relentlessly interview the user about every essential aspect of the
   task plan until a shared understanding is reached, asking up to 10
   focus-area-sorted (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`,
@@ -201,6 +201,9 @@ The following ASE commands/skills exist on the task-level:
   grill rounds (default: `1`), each saving the plan and re-deriving its
   questions from the updated plan, and `--until` stops the grilling early once all open
   points of the given severity or higher are clear (default: `MUST`).
+  `--perspective` grills exclusively from the given logical perspective (like
+  `security`), and `--ground` grounds the questions and answers in the
+  project artifacts and the Internet/Web instead of model knowledge alone.
   `--focus` grills
   only the given plan sections (`SPECIFICATION`/`SPEC`, `DESIGN`/`DES`,
   `VERIFICATION`/`VER`, default: `all`), in the given order. `--next`
@@ -322,7 +325,7 @@ The following ASE commands/skills exist on the code-level:
   Refactor source code. The `--auto`, `--dry`, `--direct`, `--quick`,
   `--next`, and *task-id*`:` options behave as for **/ase-code-craft**.
 
-- **/ase-code-edit** \[`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`\] \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--verify`|`-v`\] \[`--worktree`|`-w` *name*\[`:`*branch*\]\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+- **/ase-code-edit** \[`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`\] \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--grill-perspective`|`-p` *perspective*\] \[`--grill-ground`|`-G`\] \[`--verify`|`-v`\] \[`--worktree`|`-w` *name*\[`:`*branch*\]\] \[`--loop`|`-l`\] \[*query*\]:<br/>
   Edit the code base directly from a *query* in a plan-less state
   machine (querying, discovering, grilling, implementing, verifying)
   which fuses **/ase-code-craft**, **/ase-code-refactor**,
@@ -332,6 +335,9 @@ The following ASE commands/skills exist on the code-level:
   grilled with at most `--grill-rounds` rounds of questions before
   implementing, stopping early once all open points of severity
   `--grill-until` or higher are clear (default: `MUST`).
+  `--grill-perspective` grills exclusively from the given logical
+  perspective (like `security`), and `--grill-ground` grounds the
+  grilling in the project artifacts and the Internet/Web.
   With `--verify`, the implementation is verified until it passes;
   otherwise strictly no verification is performed. With `--worktree`,
   all change sets land in the dedicated Git worktree
@@ -402,7 +408,7 @@ The following ASE commands/skills exist on the specification-level:
   with outside of the dedicated specification skills, which activate
   the know-how implicitly.
 
-- **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--verify`|`-v`\] \[`--worktree`|`-w` *name*\[`:`*branch*\]\] \[`--loop`|`-l`\] \[*query*\]:<br/>
+- **/ase-spec-edit** \[`--grill`|`-g`\] \[`--grill-rounds`|`-r` *n*\] \[`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`\] \[`--grill-perspective`|`-p` *perspective*\] \[`--grill-ground`|`-G`\] \[`--verify`|`-v`\] \[`--worktree`|`-w` *name*\[`:`*branch*\]\] \[`--loop`|`-l`\] \[*query*\]:<br/>
   Edit the *SpecBook*-based specification (`SPEC`) directly from a
   *query* in a plan-less state machine (querying, discovering, grilling,
   implementing, verifying), the specification-level counterpart of
@@ -412,7 +418,9 @@ The following ASE commands/skills exist on the specification-level:
   With `--grill`, the query is grilled with at most `--grill-rounds`
   rounds of questions before implementing, stopping early once all open
   points of severity `--grill-until` or higher are clear (default:
-  `MUST`). With `--verify`, the specification is
+  `MUST`). `--grill-perspective` grills exclusively from the given
+  logical perspective (like `domain`), and `--grill-ground` grounds the
+  grilling in the project artifacts and the Internet/Web. With `--verify`, the specification is
   validated via *SpecBook* linting and the diagnostics are fixed in at
   most three rounds; otherwise strictly no validation is performed.
   With `--worktree`, all change sets land in the dedicated Git

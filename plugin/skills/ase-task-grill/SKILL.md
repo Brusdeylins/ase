@@ -1,6 +1,6 @@
 ---
 name: ase-task-grill
-argument-hint: "[--help|-h] [--rounds|-r <n>] [--until|-u MUST|SHOULD|MAY] [--focus|-f <section>[,...]] [--next|-n <option>[,...]] [<id>]"
+argument-hint: "[--help|-h] [--rounds|-r <n>] [--until|-u MUST|SHOULD|MAY] [--perspective|-p <perspective>] [--ground|-G] [--focus|-f <section>[,...]] [--next|-n <option>[,...]] [<id>]"
 description: >
     Interview the user relentlessly about the task plan until reaching a
     shared understanding, resolving each branch of the question decision
@@ -22,7 +22,7 @@ Iteratively Grill a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-grill"
-    arg2="--rounds|-r=1 --until|-u=(MUST|SHOULD|MAY) --focus|-f=(all|SPECIFICATION|SPEC|DESIGN|DES|VERIFICATION|VER)... --next|-n=(none|DONE|EDIT|IMPLEMENT|DRAFT)... --int-reuse-task">
+    arg2="--rounds|-r=1 --until|-u=(MUST|SHOULD|MAY) --perspective|-p= --ground|-G --focus|-f=(all|SPECIFICATION|SPEC|DESIGN|DES|VERIFICATION|VER)... --next|-n=(none|DONE|EDIT|IMPLEMENT|DRAFT)... --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -138,7 +138,16 @@ Set <args>--int-reuse-task</args>.
 
     1.  Understand what "grilling" is about:
 
-        <expand name="grill-understanding" arg1="the task plan in <task-content/>"></expand>
+        <expand name="grill-understanding"
+            arg1="the task plan in <task-content/>"
+            arg2="<getopt-option-perspective/>"
+            arg3="<getopt-option-ground/>"></expand>
+
+        Ground the grilling:
+
+        <expand name="grill-ground"
+            arg1="the task plan in <task-content/>"
+            arg2=""></expand>
 
     2.  <if condition="the frontmatter of <task-content/> carries a `Created: <text/>` key">
         Set <timestamp-created><text/></timestamp-created> (set
@@ -157,7 +166,8 @@ Set <args>--int-reuse-task</args>.
             Explicitly start *from scratch* from *only* the *current*
             <task-content/> -- as updated by all previous rounds -- and
             *forget* all questions and answers gathered in previous
-            rounds. Set <round-id/> to
+            rounds -- except the grounding facts <grill-facts/>. Set
+            <round-id/> to
             `GRILLING ROUND <m/>/<getopt-option-rounds/>` if
             <getopt-option-rounds/> is greater than 1, or to
             `GRILLING` otherwise (a single round needs no round

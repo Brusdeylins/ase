@@ -4,6 +4,15 @@ Grill Skill Common Steps
 
 <define name="grill-understanding">
 
+Set <grill-perspective><arg2/></grill-perspective> (with any leading
+and trailing whitespace stripped), set <grill-ground><arg3/></grill-ground>,
+and set <grill-facts></grill-facts> (empty). Set <grill-label/> to
+` (<grill-perspective/>, grounded)` if <grill-perspective/> is not empty
+and <grill-ground/> is `true`, to ` (<grill-perspective/>)` if only
+<grill-perspective/> is not empty, to ` (grounded)` if only
+<grill-ground/> is `true`, or to empty otherwise. Do not output
+anything.
+
 -   GOAL:
 
     Interactively interviewing the user *relentlessly* about every
@@ -14,6 +23,24 @@ Grill Skill Common Steps
     necessary to ensure that for at least the most important decisions,
     during a subsequent implementation, no essential freedom of choice
     exists any longer.
+
+-   PERSPECTIVE:
+
+    <if condition="<grill-perspective/> is not empty">
+    Grill *exclusively* from the logical perspective <grill-perspective/>
+    -- a keyword or short hint like `domain`, `performance`, or
+    `security`. The perspective is an *exclusive lens* over <arg1/>:
+    raise *only* open points which are relevant when <arg1/> is viewed
+    from this perspective, and *drop* all open points which are not,
+    even if they are open otherwise. The perspective does *not* replace
+    the *Focus Areas* below: every question still carries its focus
+    area, severity, and impact -- e.g. a perspective `domain` still
+    yields questions of focus area `ARCHITECTURE`, as long as they are
+    relevant from the domain perspective.
+    </if>
+    <else>
+    Grill *holistically*, i.e. from no particular perspective.
+    </else>
 
 -   FOCUS:
 
@@ -114,6 +141,82 @@ Grill Skill Common Steps
 
 </define>
 
+<define name="grill-ground">
+
+Ground the grilling *once*, before its first round, where <arg1/> is
+the grilled subject and <arg2/> is the directory of the working copy
+the local artifacts are read from (or empty for the project working
+copy). It sets <grill-facts/> to the grounding facts, which -- unlike
+all other information gathered by a round -- are *exempt* from the
+forgetting at the start of every round and hence serve *all* rounds.
+Do not output anything, except for the warning below.
+
+<if condition="<grill-ground/> is equal `true`">
+
+1.  LOCAL GROUNDING:
+
+    Resolve the artifact kinds `spec`, `code`, `docs`, `infr`, and
+    `othr` to their project-relative file lists:
+
+    <if condition="<arg2/> is not empty">
+    Run the command `ase artifact list` *once* with <arg2/> as its
+    working directory and parse its `# <kind/>:` and `- <file/>` output
+    lines into the file lists -- the `ase_artifact_list` tool always
+    resolves against the *project* working copy and hence *MUST* *NOT*
+    be used here.
+    </if>
+    <else>
+    Call the `ase_artifact_list(kind: [ "spec", "code", "docs", "infr",
+    "othr" ])` tool of the `ase` MCP server *once* and read the returned
+    `artifacts` array of `{ kind, files }` objects into the file lists.
+    </else>
+
+    From these file lists, determine the files (or their parts) which
+    are relevant for <arg1/>
+    <if condition="<grill-perspective/> is not empty">
+    when viewed from the perspective <grill-perspective/>
+    </if>
+    -- across *all* artifact kinds, not only the grilled subject itself
+    -- and *read* them. Condense their relevant *project facts* --
+    existing decisions, conventions, constraints, and terminology --
+    each with its project-relative file path, into <grill-facts/>.
+
+2.  WEB GROUNDING:
+
+    Use the `ase-meta-search` skill in a sub-agent to gather *world
+    facts* -- established practices, standards, patterns, and pitfalls
+    -- with the following tool call, where <topic/> is a concise,
+    self-contained summary of <arg1/>
+    <if condition="<grill-perspective/> is not empty">
+    from the perspective <grill-perspective/>
+    </if>
+    which mentions *no* confidential project internals:
+
+    `Agent(
+        description: "Query Web Search Service",
+        subagent_type: "ase:ase-meta-search",
+        prompt: "Search the Internet/Web and gather established maxims, principles, tenets, practices, standards, definitions, patterns, and pitfalls about the following topic: <topic/>",
+        run_in_background: false
+    )`
+
+    Condense the returned relevant facts, each with its source, and
+    append them to <grill-facts/>.
+
+3.  <if condition="<grill-facts/> contains no usable facts">
+
+    Set <grill-facts></grill-facts> (empty), so the grilling falls back
+    to model knowledge, and output the following <template/>:
+
+    <template>
+    <ase-tpl-bullet-secondary/> **WARNING**: grounding found no usable facts -- falling back to model knowledge.
+    </template>
+
+    </if>
+
+</if>
+
+</define>
+
 <define name="grill-stop">
 
 The requested number of grilling rounds is a *maximum* only: the
@@ -153,7 +256,19 @@ questions:
     rounds --, and a very brief but precise question text
     <question-N-text/>. Each question is chosen to
     resolve the open points related to the above understanding
-    of grilling, by focusing on the mentioned *Focus Areas*.
+    of grilling, by focusing on the mentioned *Focus Areas*
+    <if condition="<grill-perspective/> is not empty">
+    and seen *exclusively* through the mentioned *Perspective*
+    <grill-perspective/>
+    </if>.
+
+    <if condition="<grill-facts/> is not empty">
+    Derive the open points primarily from the grounding facts in
+    <grill-facts/> instead of from your world knowledge alone: raise
+    the decisions these facts reveal as open -- like a project
+    convention the subject deviates from, or an established practice
+    or pitfall the subject does not address yet.
+    </if>
 
     <content/>
 
@@ -217,7 +332,14 @@ questions:
 4.  DETERMINE ANSWERS:
 
     For all remaining <question-N/>, check <arg4/> and
-    your world knowledge to find *two to three* grounded answer
+    <if condition="<grill-facts/> is not empty">
+    the grounding facts in <grill-facts/> -- preferring them over
+    your world knowledge, which only fills their gaps --
+    </if>
+    <else>
+    your world knowledge
+    </else>
+    to find *two to three* grounded answer
     alternatives <answer-N-K/> with a question-local id
     <answer-N-K-id/> of the <K/>-th upper-case letter (`A`, `B`,
     `C`) -- where <K/> restarts at `1` for *every* question,
@@ -254,7 +376,7 @@ questions:
     entire table into a plain text rendering:
 
     <template>
-    ⧉ **ASE**: <round-id/>: *Relentless Interviewing Until Clarity*
+    ⧉ **ASE**: <round-id/><grill-label/>: *Relentless Interviewing Until Clarity*
 
     | QUESTION      | ANSWERS     |
     | ------------- | ----------- |

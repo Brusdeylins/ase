@@ -10,6 +10,8 @@
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
     [`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`]
+    [`--grill-perspective`|`-p` *perspective*]
+    [`--grill-ground`|`-G`]
     [`--verify`|`-v`]
     [`--worktree`|`-w` *name*[`:`*branch*]]
     [`--loop`|`-l`]
@@ -98,6 +100,28 @@ timestamp refreshed.
     decides which points are raised as questions and in which order
     within a focus area. Only effective together with `--grill`.
 
+-   `--grill-perspective`|`-p` *perspective*:
+    Grill exclusively from the logical *perspective* -- a keyword or
+    short hint like `domain`, `performance`, or `security`. The
+    perspective acts as an exclusive lens: only open points relevant from
+    this perspective are raised as questions, while every question still
+    carries its focus area, severity, and impact. The active perspective
+    is shown in the announcement line, like `GRILLING (security)`.
+    Without a perspective, the grilling is holistic. Only effective together with `--grill`.
+
+-   `--grill-ground`|`-G`:
+    Ground the grilling in facts instead of the world knowledge of the
+    model alone: once before the first round, the artifacts of all kinds
+    (`SPEC`, `CODE`, `DOCS`, `INFR`, and `OTHR`) are scanned for
+    the project facts relevant to the grilled subject (from the given
+    perspective, if any) and the Internet/Web is searched for the
+    established practices, standards, patterns, and pitfalls about it.
+    These facts serve all rounds, both for raising the questions and for
+    preferably deriving their answer alternatives. The grounding is shown
+    in the announcement line, like `GRILLING (security, grounded)`. If
+    no usable facts are found, a warning is shown and the grilling falls
+    back to model knowledge. Only effective together with `--grill`.
+
 -   `--verify`|`-v`:
     Verify the edited specification by validating it via *SpecBook*
     linting and fixing the reported diagnostics in the affected `SPEC`
@@ -155,6 +179,13 @@ Grill the query with two rounds first, then edit and validate:
 
 ```text
 ❯ /ase-spec-edit -g -r 2 -v split the Event entity into Event and EventSeries
+```
+
+Grill the query exclusively from the domain perspective, grounded in
+the project artifacts and the Internet/Web, then edit:
+
+```text
+❯ /ase-spec-edit -g -p domain -G add recurring events to the Event model
 ```
 
 Loop over multiple specification edits inside a dedicated Git worktree:

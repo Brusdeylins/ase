@@ -14,8 +14,9 @@
 
 import type { Register, RenderElement } from "claude-code"
 
-/*  the marker line above a grilling table (single-round and multi-round)  */
-const MARKER = /⧉ \*{0,2}ASE\*{0,2}: GRILLING(?: ROUND \d+\/\d+)?:/
+/*  the marker line above a grilling table (single-round and multi-round,
+    optionally labeled with the perspective and/or grounding)  */
+const MARKER = /⧉ \*{0,2}ASE\*{0,2}: GRILLING(?: ROUND \d+\/\d+)?(?: \([^)]*\))?:/
 
 /*  a row and the delimiter row of a Markdown table  */
 const ROW  = /^ *\|.*\| *$/

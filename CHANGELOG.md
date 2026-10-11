@@ -5,6 +5,15 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [plugin]: Perspective-Focused and Grounded Grilling
+    The `ase-task-grill` skill supports the new `--perspective`/`-p` and `--ground`/`-G` options,
+    and the `ase-code-edit` and `ase-spec-edit` skills the corresponding `--grill-perspective`/`-p`
+    and `--grill-ground`/`-G` options. A perspective (a keyword or short hint like `domain`,
+    `performance`, or `security`) acts as an exclusive lens, raising only the open points relevant
+    from it. Grounding scans the artifacts of all kinds and searches the Internet/Web once before
+    the first round, so questions and answer alternatives are derived from these facts instead of
+    model knowledge alone. Both are shown in the round headline, like `GRILLING (security, grounded)`.
+
 -   FEATURE [plugin]: Change-Restricted Analyzing and Linting
     The `ase-code-analyze` and `ase-code-lint` skills support the new `--staged` and
     `--unstaged` options, which restrict the analyzing resp. linting to the source files with
