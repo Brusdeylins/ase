@@ -35,7 +35,7 @@
         "marked":                                 "18.1.0",
         "dice-coefficient":                       "2.1.1",
         "fast-levenshtein":                       "3.0.0",
-        "plyr":                                   "3.8.4",
+        "@videojs/html":                          "10.0.1",
         "typed.js":                               "3.0.0"
     },
     "engines": {
