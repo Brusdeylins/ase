@@ -110,6 +110,11 @@
         "@gitbeaker/rest":                  "43.8.0",
         "gitea-js":                         "1.23.0"
     },
+    "overrides": {
+        "stylus": {
+            "glob":                         "13.0.6"
+        }
+    },
     "allowScripts": {
         "fsevents":                         true
     },
