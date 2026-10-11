@@ -115,12 +115,14 @@ The following top-level commands exist for configuration handling:
   are reported.
 
 - `ase config list`:
-  List all effective configured values across the scope
-  inheritance chain, rendered as a three-column table of `KEY`,
-  `VALUE`, and `SCOPE`. The `SCOPE` column identifies the
-  scope (`user`, `project`, `task:`*id*, or `session:`*id*) that
-  supplied each value. For overlapping keys only the value from
-  the strongest scope is shown.
+  List all available configuration keys with their effective
+  values across the scope inheritance chain, rendered as a
+  three-column table of `KEY`, `VALUE`, and `SCOPE`. The `SCOPE`
+  column identifies the scope (`default`, `user`, `project`,
+  `task:`*id*, or `session:`*id*) that supplied each value, or
+  is `-` for a key which is not set in any scope (its `VALUE`
+  is then empty). For overlapping keys only the value from the
+  strongest scope is shown.
 
 - `ase config get` *key*:
   Print the value at the given dotted *key*. Fails with an error

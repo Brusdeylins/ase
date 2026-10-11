@@ -72,17 +72,20 @@ export default class ConfigCommand {
         /*  register CLI sub-command "ase config list"  */
         configCmd
             .command("list")
-            .description("list all configured values as flat dotted keys")
+            .description("list all available configuration keys and their effective values")
             .action(async (_opts: unknown, cmd: Command) => {
                 const scope = parseScope(cmd.optsWithGlobals().scope as string | undefined)
                 const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
-                const rows: string[][] = []
+                const rows = new Map<string, string[]>()
+                for (const key of cfg.keys())
+                    rows.set(key, [ key, "", "-" ])
                 for (const e of cfg.entries()) {
                     const val = isScalar(e.value) ? e.value.value : e.value
-                    rows.push([ e.key, configSecretKeys.includes(e.key) ? "***" : String(val), Config.scopeLabel(e.scope) ])
+                    rows.set(e.key, [ e.key, configSecretKeys.includes(e.key) ? "***" : String(val), Config.scopeLabel(e.scope) ])
                 }
-                await writeStdout(renderTable([ "KEY", "VALUE", "SCOPE" ], rows))
+                const sorted = [ ...rows.values() ].sort((a, b) => a[0].localeCompare(b[0]))
+                await writeStdout(renderTable([ "KEY", "VALUE", "SCOPE" ], sorted))
             })
 
         /*  register CLI sub-command "ase config edit"  */

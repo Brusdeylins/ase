@@ -134,7 +134,7 @@
             <!--  the header: task group (if any, and not for an epic), task id (of an epic behind "♛"),
                   and title on the left, lane group and lane on the right  -->
             <div class="dhd">
-                <h1 :class="`tone-${task.tone}`"><span v-if="task.epic !== '' && task.epic !== task.id" class="cepic">♛ {{ task.epic }} ▶</span><span class="cid">{{ task.epic === task.id ? "♛ " : "" }}{{ task.id }}</span>{{ task.title }}</h1>
+                <h1 :class="`tone-${task.tone}`"><span v-if="task.epic !== '' && task.epic !== task.id" class="cepic">♛ {{ task.epic }} ▶</span><span class="cid">{{ task.epic === task.id ? "♛ " : "" }}{{ task.id }}</span><template v-for="(s, si) in titleSegments(task.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></h1>
                 <span v-if="editing?.id !== ''" class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
                 <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit(false)">✎</button>
                 <button class="close" title="close (ESC)" @click="leaveEdit(true)">✕</button>
@@ -1171,6 +1171,10 @@ const editTitles:  Record<EditState, string> = {
     active:  "edit by prompt in progress",
     failed:  "edit by prompt failed (press E to retry)"
 }
+
+/*  split a task title into its plain text and its Markdown inline code ("`...`") segments  */
+const titleSegments = (title: string) =>
+    title.split(/`([^`]+)`/).map((text, i) => ({ text, code: i % 2 === 1 })).filter((s) => s.text !== "")
 
 /*  open the prompt popup of an edit request of a task (refused for a finished task, and
     while an edit of it is in progress, as a new request would change the task under the

@@ -330,6 +330,13 @@ export class Config {
         return walk(this.schema, [])
     }
 
+    /*  enumerate all full dotted keys known from the attached valibot schema  */
+    keys (): string[] {
+        if (this.schema === null)
+            return []
+        return this.schemaLeafPaths().map((p) => p.join("."))
+    }
+
     /*  resolve a (possibly trailing-segment) dotted key to its full schema path  */
     resolveKey (key: string): string {
         if (this.schema === null)
