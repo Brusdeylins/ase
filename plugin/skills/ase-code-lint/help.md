@@ -11,7 +11,9 @@
     [`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`)]
     [`--include`|`-i`=*aspect*[`,`...]]
     [`--exclude`|`-e`=*aspect*[`,`...]]
-    *source-reference*
+    [`--staged`]
+    [`--unstaged`]
+    [*source-reference*]
 
 ##  DESCRIPTION
 
@@ -76,10 +78,23 @@ the code, and comments contradicting the code.
     code quality aspects. Applied *after* `--include`, so
     `-i A01,A02 -e A02` checks `A01` only.
 
+-   `--staged`:
+    Restrict the linting to the source files with *staged* Git changes.
+    Deleted files are skipped, and the files are linted in their current
+    working copy state. Mutually exclusive with `--unstaged`.
+
+-   `--unstaged`:
+    Restrict the linting to the source files with *unstaged* Git changes
+    plus the *untracked* source files. Deleted files are skipped.
+    Mutually exclusive with `--staged`.
+
 ##  ARGUMENTS
 
 -   *source-reference*:
     A file, directory, or other reference to the source code to lint.
+    Optional only under `--staged` or `--unstaged`: with it, only the
+    changed files within it are linted; without it, all changed files
+    of the repository are linted.
 
 ##  SCENARIOS
 
@@ -88,6 +103,7 @@ the code, and comments contradicting the code.
 -   You want all quality corrections applied automatically
 -   You want only specific quality aspects like formatting or spelling checked
 -   You want missing or excessive code documentation flagged
+-   You want only your staged or unstaged changes linted before committing
 
 ##  EXAMPLES
 
@@ -125,6 +141,18 @@ Lint a directory for the documentation aspect only:
 
 ```text
 ❯ /ase-code-lint -i A21 src/handlers/
+```
+
+Lint only the source files with staged Git changes:
+
+```text
+❯ /ase-code-lint --staged
+```
+
+Lint only the unstaged and untracked source files and apply all corrections:
+
+```text
+❯ /ase-code-lint --auto --unstaged
 ```
 
 ##  SEE ALSO

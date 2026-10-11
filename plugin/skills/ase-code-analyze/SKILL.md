@@ -1,6 +1,6 @@
 ---
 name: ase-code-analyze
-argument-hint: "[--help|-h] [--performance|-p] [--security|-s] [--severity|-S=(LOW|MEDIUM|HIGH)] [--prefix|-P=<prefix>] <source-reference>"
+argument-hint: "[--help|-h] [--performance|-p] [--security|-s] [--severity|-S=(LOW|MEDIUM|HIGH)] [--prefix|-P=<prefix>] [--staged] [--unstaged] [<source-reference>]"
 description: >
     Analyze the source code for problems in either the logic and
     semantics and its related control flow, performance and efficiency,
@@ -11,6 +11,8 @@ effort: high
 allowed-tools:
     - "Agent"
     - "Glob"
+    - "Bash(git rev-parse *)"
+    - "Bash(git -C *)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -23,7 +25,7 @@ Analyze Source Code
 
 <expand name="getopt"
     arg1="ase-code-analyze"
-    arg2="--performance|-p --security|-s --severity|-S=(LOW|MEDIUM|HIGH) --prefix|-P=">
+    arg2="--performance|-p --security|-s --severity|-S=(LOW|MEDIUM|HIGH) --prefix|-P= --staged --unstaged">
     $ARGUMENTS
 </expand>
 
@@ -50,6 +52,17 @@ problems in *performance* and *efficiency*, or problems in *security*.
 
     </if>
 
+    <if condition="<getopt-option-staged/> is equal `true` and <getopt-option-unstaged/> is equal `true`">
+
+    Only output the following <template/> and then *STOP* the entire flow
+    (do not perform any further steps):
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-code-analyze**, ▶ ERROR: options `--staged` and `--unstaged` are mutually exclusive
+    </template>
+
+    </if>
+
     </step>
 
 2.  <step id="STEP 2: Investigate Code Base">
@@ -59,8 +72,9 @@ problems in *performance* and *efficiency*, or problems in *security*.
     The project source artifacts are classified as a *black box*, so
     the user does *not* want them inspected or their problems surfaced.
     *Skip* the entire investigation and analysis: do *not* invoke any
-    `Glob` or `Agent` tool and do *not* read any source, only output
-    the following <template/> and then *SKIP* the remaining step STEP 3:
+    `Bash`, `Glob`, or `Agent` tool and do *not* read any source, only
+    output the following <template/> and then *SKIP* the remaining step
+    STEP 3:
 
     <template>
     <ase-tpl-bullet-normal/> **CODE ANALYSIS**: *suppressed* (`project.boxing` is `black`)
@@ -84,10 +98,55 @@ problems in *performance* and *efficiency*, or problems in *security*.
     `true`, set <lens>security</lens> if <getopt-option-security/> is
     equal `true`, and set <lens>logic</lens> otherwise.
 
+    <if condition="<getopt-option-staged/> is equal `true` or <getopt-option-unstaged/> is equal `true`">
+
+    Then *silently* restrict the analysis to the *changed* files of
+    the Git working copy. Set <changes>staged</changes> if
+    <getopt-option-staged/> is equal `true`, and set
+    <changes>unstaged</changes> otherwise. Determine the *repository
+    root* by running the command `git rev-parse --show-toplevel`
+    (taken exactly as given) and capturing its output into
+    <repo-root/>. Then determine the changed files by running the
+    corresponding commands (taken exactly as given), each listing one
+    path relative to <repo-root/> per line, and collect all listed
+    paths:
+
+    <if condition="<getopt-option-staged/> is equal `true`">
+    `git -C "<repo-root/>" -c core.quotepath=off diff --cached --name-only --diff-filter=d`
+    </if>
+    <else>
+    `git -C "<repo-root/>" -c core.quotepath=off diff --name-only --diff-filter=d`
+
+    `git -C "<repo-root/>" -c core.quotepath=off ls-files --others --exclude-standard`
+    </else>
+
+    *Skip* every listed path below the `.ase/` directory (it carries
+    *ASE*'s own state) and every path which is not a source code file
+    (e.g. a binary file), and prefix every remaining path with
+    `<repo-root/>/`. If `<getopt-arguments/>` is not empty, keep only
+    those files which lie within the source code referenced by it,
+    expanding any directory or wildcard references with the `Glob`
+    tool. Set <sources/> to the resulting list of individual source
+    code files, preserving order.
+
+    If <sources/> is empty, only output the following <template/>
+    and then *SKIP* the rest of this STEP 2 and the remaining step
+    STEP 3:
+
+    <template>
+    <ase-tpl-bullet-normal/> **CODE ANALYSIS**: *no <changes/> source files to analyze*
+    </template>
+
+    </if>
+    <else>
+
     Then *silently* resolve `<getopt-arguments/>` to the list
     <sources/> of individual source code files, expanding any
-    directory or wildcard references with the `Glob` tool. Then
-    partition <sources/>, preserving order, into at most *eight*
+    directory or wildcard references with the `Glob` tool.
+
+    </else>
+
+    Then partition <sources/>, preserving order, into at most *eight*
     batches of roughly equal size (a single file yields a single
     batch), and invoke the following tool once per batch, emitting
     *all* invocations *in one single message* so they run in
@@ -117,7 +176,7 @@ problems in *performance* and *efficiency*, or problems in *security*.
     to that list.
 
     You *MUST* *NOT* output anything at all in this STEP 2 beyond the
-    `Glob` and `Agent` tool invocations.
+    `Bash`, `Glob`, and `Agent` tool invocations and the templates above.
 
     </step>
 

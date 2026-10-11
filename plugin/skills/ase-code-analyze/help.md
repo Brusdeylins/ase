@@ -11,7 +11,9 @@
     [`--security`|`-s`]
     [`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`)]
     [`--prefix`|`-P` *prefix*]
-    *source-reference*
+    [`--staged`]
+    [`--unstaged`]
+    [*source-reference*]
 
 ##  DESCRIPTION
 
@@ -47,6 +49,15 @@ under *distinct* prefixes coexist instead of overwriting each other.
 Without the option (the default), ids stay unprefixed and the purge
 covers the *entire* `ase-issue-*` space, including any prefixed results.
 
+The `--staged` option restricts the analysis to the source files with
+*staged* Git changes, and the `--unstaged` option restricts it to the
+source files with *unstaged* Git changes plus the *untracked* source
+files. Deleted files are skipped, and the files are analyzed in their
+current working copy state. With a *source-reference*, only the changed
+files within it are analyzed; without one, all changed files of the
+repository are analyzed. If no such file exists, nothing is analyzed.
+The `--staged` and `--unstaged` options are *mutually exclusive*.
+
 The skill investigates the code base silently, reports each detected
 problem as a `PROBLEM` entry with severity (`LOW`, `MEDIUM`, `HIGH`) and
 inline file/line references (in the performance lens, each entry
@@ -59,7 +70,7 @@ fixed via `ase-code-edit P<n>`.
 
 -   *source-reference*:
     A file, directory, function, or other reference to the source code
-    to analyze.
+    to analyze. Optional only under `--staged` or `--unstaged`.
 
 ##  SCENARIOS
 
@@ -68,6 +79,7 @@ fixed via `ase-code-edit P<n>`.
 -   You want performance and efficiency opportunities surfaced
 -   You want a security-focused inspection of your code
 -   You want problems persisted as issue ids like `P1` for later resolving
+-   You want only your staged or unstaged changes analyzed before committing
 
 ##  EXAMPLES
 
@@ -105,6 +117,18 @@ Analyze a directory under its own id namespace, yielding `auth-P1`, `auth-P2`, .
 
 ```text
 ❯ /ase-code-analyze --prefix auth src/auth/
+```
+
+Analyze only the source files with staged Git changes:
+
+```text
+❯ /ase-code-analyze --staged
+```
+
+Analyze only the unstaged and untracked source files below a directory:
+
+```text
+❯ /ase-code-analyze --unstaged src/handlers/
 ```
 
 ##  SEE ALSO

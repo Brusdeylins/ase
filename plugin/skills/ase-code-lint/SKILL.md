@@ -1,12 +1,15 @@
 ---
 name: ase-code-lint
-argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(LOW|MEDIUM|HIGH)] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] <source-reference>"
+argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(LOW|MEDIUM|HIGH)] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] [--staged] [--unstaged] [<source-reference>]"
 description: >
     Lint source code for potential code quality problems.
     Use when the user wants to "lint" or "check" source code.
 user-invocable: true
 disable-model-invocation: false
 effort: high
+allowed-tools:
+    - "Bash(git rev-parse *)"
+    - "Bash(git -C *)"
 ---
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-control.md
@@ -20,7 +23,7 @@ Lint Source Code
 
 <expand name="getopt"
     arg1="ase-code-lint"
-    arg2="--auto|-a --severity|-S=(LOW|MEDIUM|HIGH) --include|-i=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --exclude|-e=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)...">
+    arg2="--auto|-a --severity|-S=(LOW|MEDIUM|HIGH) --include|-i=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --exclude|-e=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --staged --unstaged">
     $ARGUMENTS
 </expand>
 
@@ -33,14 +36,25 @@ related to a set of code quality aspects.
 
 1.  <step id="STEP 1: Investigation">
 
+    <if condition="<getopt-option-staged/> is equal `true` and <getopt-option-unstaged/> is equal `true`">
+
+    Only output the following <template/> and then *STOP* the entire flow
+    (do not perform any further steps):
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-code-lint**, ▶ ERROR: options `--staged` and `--unstaged` are mutually exclusive
+    </template>
+
+    </if>
+
     <if condition="<ase-project-boxing/> is equal `black`">
 
     The project source artifacts are classified as a *black box*, so
     the user does *not* want them inspected or their problems surfaced.
     *Skip* the entire investigation and reporting: do *not* invoke any
-    `Glob` or `Agent` tool and do *not* read any source, only output
-    the following <template/> and then *SKIP* the remaining steps STEP 2
-    and STEP 3:
+    `Bash`, `Glob`, or `Agent` tool and do *not* read any source, only
+    output the following <template/> and then *SKIP* the remaining steps
+    STEP 2 and STEP 3:
 
     <template>
     <ase-tpl-bullet-normal/> **LINT**: *suppressed* (`project.boxing` is `black`)
@@ -83,10 +97,55 @@ related to a set of code quality aspects.
     transcript. The sub-agents perform the silent reading and checking;
     only their final structured return values are consumed here.
 
+    <if condition="<getopt-option-staged/> is equal `true` or <getopt-option-unstaged/> is equal `true`">
+
+    For this, first *silently* restrict the linting to the *changed*
+    files of the Git working copy. Set <changes>staged</changes> if
+    <getopt-option-staged/> is equal `true`, and set
+    <changes>unstaged</changes> otherwise. Determine the *repository
+    root* by running the command `git rev-parse --show-toplevel`
+    (taken exactly as given) and capturing its output into
+    <repo-root/>. Then determine the changed files by running the
+    corresponding commands (taken exactly as given), each listing one
+    path relative to <repo-root/> per line, and collect all listed
+    paths:
+
+    <if condition="<getopt-option-staged/> is equal `true`">
+    `git -C "<repo-root/>" -c core.quotepath=off diff --cached --name-only --diff-filter=d`
+    </if>
+    <else>
+    `git -C "<repo-root/>" -c core.quotepath=off diff --name-only --diff-filter=d`
+
+    `git -C "<repo-root/>" -c core.quotepath=off ls-files --others --exclude-standard`
+    </else>
+
+    *Skip* every listed path below the `.ase/` directory (it carries
+    *ASE*'s own state) and every path which is not a source code file
+    (e.g. a binary file), and prefix every remaining path with
+    `<repo-root/>/`. If `<getopt-arguments/>` is not empty, keep only
+    those files which lie within the source code referenced by it,
+    expanding any directory or wildcard references with the `Glob`
+    tool. Set <sources/> to the resulting list of individual source
+    code files, preserving order.
+
+    If <sources/> is empty, only output the following <template/>
+    and then *SKIP* the rest of this STEP 1 and the remaining steps
+    STEP 2 and STEP 3:
+
+    <template>
+    <ase-tpl-bullet-normal/> **LINT**: *no <changes/> source files to lint*
+    </template>
+
+    </if>
+    <else>
+
     For this, first *silently* resolve `<getopt-arguments/>` to the
     list <sources/> of individual source code files, expanding any
-    directory or wildcard references with the `Glob` tool. Then
-    partition <sources/>, preserving order, into at most *eight*
+    directory or wildcard references with the `Glob` tool.
+
+    </else>
+
+    Then partition <sources/>, preserving order, into at most *eight*
     batches of roughly equal size (a single file yields a single
     batch), and invoke the following tool once per batch, emitting
     *all* invocations *in one single message* so they run in
@@ -502,7 +561,7 @@ related to a set of code quality aspects.
 
         <if condition="<getopt-option-auto/> is not equal `true`">
         <ase-tpl-hint level="verbose">
-        Use `/ase-code-lint --auto` to apply all corrections unattended, `--severity` to raise the reporting floor, and `--include`/`--exclude` to narrow the checked aspects.
+        Use `/ase-code-lint --auto` to apply all corrections unattended, `--severity` to raise the reporting floor, `--include`/`--exclude` to narrow the checked aspects, and `--staged`/`--unstaged` to lint only the changed files.
         </ase-tpl-hint>
         </if>
 

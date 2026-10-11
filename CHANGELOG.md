@@ -5,6 +5,12 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [plugin]: Change-Restricted Analyzing and Linting
+    The `ase-code-analyze` and `ase-code-lint` skills support the new `--staged` and
+    `--unstaged` options, which restrict the analyzing resp. linting to the source files with
+    staged Git changes resp. with unstaged Git changes plus the untracked files, optionally
+    further restricted to the given source reference.
+
 -   FEATURE [tool,plugin]: D2 Diagram Rendering
     The `ase util diagram` command and the `ase_diagram` MCP tool render, with the new `--lang d2`
     option (resp. `lang` field), also *D2* diagram specifications as Unicode/ASCII art or SVG,
