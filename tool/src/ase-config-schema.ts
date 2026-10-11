@@ -59,7 +59,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.boxing":  "white",
         "project.task.lifecycle":         "solo",
         "project.task.idscheme":          "slug",
-        "project.task.store":             "ase:./.ase/task",
+        "project.task.store.url":         "ase:./.ase/task",
         "project.task.default.source":    "worktree",
         "project.task.default.changeset": "worktree",
         "project.task.default.target":    "source",
@@ -95,15 +95,19 @@ export const projectClassificationPresets: Record<string, Record<string, string>
 export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"]>> = {
     "agent.task":                     [ "session" ],
     "agent.skill":                    [ "session" ],
-    "project.task.store":             [ "user", "project" ],
-    "project.task.token":             [ "user" ],
+    "project.task.store.url":         [ "user", "project" ],
+    "project.task.store.token":       [ "user" ],
+    "project.task.store.crt":         [ "user", "project" ],
+    "project.task.store.key":         [ "user", "project" ],
     "project.task.lifecycle":         [ "user", "project" ],
     "project.task.idscheme":          [ "user", "project" ],
     "project.task.default.source":    [ "user", "project" ],
     "project.task.default.changeset": [ "user", "project" ],
     "project.task.default.target":    [ "user", "project" ],
-    "project.agent.relay":            [ "user", "project" ],
-    "project.agent.token":            [ "user" ],
+    "project.relay.url":              [ "user", "project" ],
+    "project.relay.token":            [ "user" ],
+    "project.relay.crt":              [ "user", "project" ],
+    "project.relay.key":              [ "user", "project" ],
     "project.artifact.spec.basedir":  [ "user", "project" ],
     "project.artifact.spec.files":    [ "user", "project" ],
     "project.artifact.spec.schema":   [ "user", "project" ],
@@ -129,7 +133,7 @@ export const configWritableScopesDefault: ReadonlyArray<ScopeTerm["kind"]> =
     [ "user", "project", "task", "session" ]
 
 /*  keys carrying secrets, whose values are masked in listings  */
-export const configSecretKeys: ReadonlyArray<string> = [ "project.task.token", "project.agent.token" ]
+export const configSecretKeys: ReadonlyArray<string> = [ "project.task.store.token", "project.relay.token" ]
 
 /*  schema for a single artifact kind's "basedir"/"files" specification  */
 const artifactSchema = v.optional(v.strictObject({
@@ -206,8 +210,12 @@ export const configSchema = v.nullish(v.strictObject({
         boxing:  v.optional(v.picklist(projectClassification.boxing)),
         task: v.optional(v.strictObject({
             lifecycle: v.optional(v.picklist(projectClassification.lifecycle)),
-            store:     v.optional(v.pipe(v.string(), v.minLength(1))),
-            token:     v.optional(v.pipe(v.string(), v.minLength(1))),
+            store:     v.optional(v.strictObject({
+                url:       v.optional(v.pipe(v.string(), v.minLength(1))),
+                token:     v.optional(v.pipe(v.string(), v.minLength(1))),
+                crt:       v.optional(v.pipe(v.string(), v.minLength(1))),
+                key:       v.optional(v.pipe(v.string(), v.minLength(1)))
+            })),
             idscheme:  v.optional(v.pipe(v.string(), v.check((s) => checkIdScheme(s) === "",
                 "expected \"slug[:<words>]\", \"seq[:<template>]\", or \"any\""))),
             default:   v.optional(v.strictObject({
@@ -216,9 +224,11 @@ export const configSchema = v.nullish(v.strictObject({
                 target:    flowSchema([ "worktree", "branch", "source" ])
             }))
         })),
-        agent: v.optional(v.strictObject({
-            relay:     v.optional(v.pipe(v.string(), v.minLength(1))),
-            token:     v.optional(v.pipe(v.string(), v.minLength(1)))
+        relay: v.optional(v.strictObject({
+            url:       v.optional(v.pipe(v.string(), v.minLength(1))),
+            token:     v.optional(v.pipe(v.string(), v.minLength(1))),
+            crt:       v.optional(v.pipe(v.string(), v.minLength(1))),
+            key:       v.optional(v.pipe(v.string(), v.minLength(1)))
         })),
         artifact: v.optional(v.strictObject({
             spec: artifactSpecSchema,

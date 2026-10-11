@@ -249,6 +249,36 @@ export class Service {
                 fs.closeSync(fd)
         }
     }
+
+    /*  show a log file on stdout, either completely or its last <lines> lines only, and
+        optionally follow it for newly appended lines (default: the last 10 lines first),
+        where each line is passed through <transform> (e.g. to colorize parts of it)  */
+    static async showLog (logFile: string, opts: { follow?: boolean, lines?: string },
+        transform: (line: string) => string = (line) => line): Promise<number> {
+        const lines = opts.lines !== undefined ? Number(opts.lines) : null
+        if (lines !== null && (!Number.isInteger(lines) || lines < 1))
+            throw new Error(`invalid number of lines: ${opts.lines}`)
+        if (!fs.existsSync(logFile))
+            return 0
+        if (opts.follow) {
+            /*  follow until interrupted (on log trimming,
+                "tail" continues at the new end of the file)  */
+            const tail = new Tail(logFile, { nLines: lines ?? 10 })
+            tail.on("line", (line: string) => {
+                process.stdout.write(`${transform(line)}\n`)
+            })
+            return await new Promise<number>((_resolve, reject) => {
+                tail.on("error", (err: unknown) => {
+                    reject(err instanceof Error ? err : new Error(String(err)))
+                })
+            })
+        }
+        const text = lines !== null ?
+            Service.readLogTail(logFile, lines) :
+            fs.readFileSync(logFile, "utf8").replace(/\n$/, "")
+        process.stdout.write(text.length > 0 ? `${text.split("\n").map(transform).join("\n")}\n` : "")
+        return 0
+    }
 }
 
 /*  MCP registration entry point for service-identity tools  */
@@ -689,33 +719,8 @@ export default class ServiceCommand {
 
     /*  log flow: show the (tail of the) log file and optionally follow it  */
     private async doLog (opts: { follow?: boolean, lines?: string }): Promise<number> {
-        const ctx     = this.loadContext()
-        const logFile = path.join(ctx.aseDir, "service.log")
-        const lines   = opts.lines !== undefined ? Number(opts.lines) : null
-        if (lines !== null && (!Number.isInteger(lines) || lines < 1))
-            throw new Error(`invalid number of lines: ${opts.lines}`)
-        if (!fs.existsSync(logFile))
-            return 0
-        if (opts.follow) {
-            /*  follow until interrupted (on log trimming,
-                "tail" continues at the new end of the file)  */
-            const tail = new Tail(logFile, { nLines: lines ?? 10 })
-            tail.on("line", (line: string) => {
-                process.stdout.write(`${line}\n`)
-            })
-            return await new Promise<number>((_resolve, reject) => {
-                tail.on("error", (err: unknown) => {
-                    reject(err instanceof Error ? err : new Error(String(err)))
-                })
-            })
-        }
-        if (lines !== null) {
-            const tail = Service.readLogTail(logFile, lines)
-            process.stdout.write(tail.length > 0 ? `${tail}\n` : "")
-        }
-        else
-            process.stdout.write(fs.readFileSync(logFile))
-        return 0
+        const ctx = this.loadContext()
+        return Service.showLog(path.join(ctx.aseDir, "service.log"), opts)
     }
 
     /*  stop flow: no-op if no port configured or connection refused  */

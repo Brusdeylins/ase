@@ -29,6 +29,7 @@ export default class Log {
     private stream: fs.WriteStream | null = null
     private logLevelIdx = 0
     private deferred: string[] | null = null
+    private _prefix = ""
 
     /*  creation  */
     constructor (
@@ -78,12 +79,20 @@ export default class Log {
             this.stream = this.openStream(file)
     }
 
+    /*  get the current line prefix or set a new one (e.g. the name of
+        a member of an agent fleet, sharing the log with the others)  */
+    prefix (prefix?: string): string {
+        if (prefix !== undefined)
+            this._prefix = prefix
+        return this._prefix
+    }
+
     /*  write a message on a log level, if enabled by the current log level  */
     write (level: LogLevel, msg: string) {
         const idx = levels.findIndex((l) => l.name === level)
         if (idx !== -1 && idx <= this.logLevelIdx) {
             const timestamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss.SSS")
-            let line = `${this._program}: [${timestamp}]: `
+            let line = `${this._prefix}${this._program}: [${timestamp}]: `
             if (this._logFile === "-" && process.stderr.isTTY)
                 line += `${levels[idx].style("[" + levels[idx].name.toUpperCase() + "]")}`
             else

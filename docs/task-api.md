@@ -150,10 +150,10 @@ CLIENTS
 
 The `ase task` CLI sub-commands and the `ase_task_*` MCP tools are the
 primary clients of this API. A client resolves the server *address*,
-*port*, and optional *token* from the `project.task.store` configuration URL
+*port*, and optional *token* from the `project.task.store.url` configuration URL
 `ase://`*addr*`:`*port*\[`/`*token*\] (without an embedded *token*, the
 token is taken from `ASE_TASK_STORE_TOKEN`, else the user-scoped
-`project.task.token` configuration, else the `token` key of *per-user
+`project.task.store.token` configuration, else the `token` key of *per-user
 config dir*`/store.yaml`) -- or, via HTTPS, from the URL
 `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\], verifying the
 server certificate against the Node.js CA store (extendable via
@@ -1438,7 +1438,7 @@ a *single* project is stored flat in `basedir` itself, with a single
 first registered under, which a later registration under a different
 id does not rewrite), and *any* project id is accepted, so it is the
 caller's responsibility to use such a store for one project only --
-which is exactly what the `ase:`*path* form of `project.task.store`
+which is exactly what the `ase:`*path* form of `project.task.store.url`
 does. Every plugin reports the task *title* (see *Task titles* above)
 in its listing, as only the plugin knows how to obtain it efficiently: the
 built-in plugin fully parses every task plan file on listing and
@@ -1462,7 +1462,7 @@ server working on the same directory cannot lose updates of each
 other, and it writes the `TASK-<taskId>.md` and `PROJECT.yaml` files
 *atomically* (temporary file plus rename), so no reader ever sees a
 partially written file. The very same guarantees hold for the
-`ase:`*path* form of `project.task.store`, as it runs the same
+`ase:`*path* form of `project.task.store.url`, as it runs the same
 functionality in-process.
 
 The plugin module has to *default export* a `TaskStoragePluginFactory`
@@ -1636,7 +1636,7 @@ GITHUB STORAGE PLUGIN
 The built-in `github` plugin (`ase-task-store-plugin-github.ts`,
 selected by `--module github` or the `github:`*owner*`/`*repo* resp.
 `github+http[s]://`*host*`/`*owner*`/`*repo* form of
-`project.task.store`) persists the task plans as the *issues* of GitHub
+`project.task.store.url`) persists the task plans as the *issues* of GitHub
 repositories, through the GitHub REST API. It takes the options `url`
 (the web URL of the GitHub instance, default: `https://github.com`, else
 e.g. `https://<sub>.ghe.com` of GitHub Enterprise Cloud with data
@@ -1707,7 +1707,7 @@ The built-in `gitlab` plugin (`ase-task-store-plugin-gitlab.ts`,
 selected by `--module gitlab` or the `gitlab:`*namespace*`/`*project*
 resp. `gitlab://`*host*`/`*namespace*`/`*project* resp.
 `gitlab+http[s]://`*host*`/`*namespace*`/`*project* form of
-`project.task.store`) persists the task plans as the *issues* of GitLab
+`project.task.store.url`) persists the task plans as the *issues* of GitLab
 projects, through the GitLab REST API v4. It takes the options `url`
 (the GitLab instance, default: `$GITLAB_HOST`, else `https://gitlab.com`),
 `token` (default: `$GITLAB_TOKEN`, a token with scope `api` and at least
@@ -1772,7 +1772,7 @@ GITEA STORAGE PLUGIN
 The built-in `gitea` plugin (`ase-task-store-plugin-gitea.ts`, selected
 by `--module gitea` or the `gitea+https://`*host*`/`*owner*`/`*repo*
 resp. `gitea+http://`*host*`/`*owner*`/`*repo* form of
-`project.task.store`) persists the task plans as the *issues* of Gitea
+`project.task.store.url`) persists the task plans as the *issues* of Gitea
 repositories, through the Gitea REST API v1 (via `gitea-js`). It takes
 the options `url` (the Gitea instance, default: `https://gitea.com`),
 `token` (default: `$GITEA_TOKEN`, a token with the scopes `write:issue`

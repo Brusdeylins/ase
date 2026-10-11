@@ -200,7 +200,7 @@ export class Config {
 
     /*  migrate a configuration document in place from the obsolete (pre-1.1.0)
         "project.artifact.task.{basedir,files}" variables: "basedir" becomes
-        "project.task.store" (as "ase:<basedir>") unless the latter is already
+        "project.task.store.url" (as "ase:<basedir>") unless the latter is already
         set, "files" is dropped; returns whether the document was changed  */
     private migrate (doc: Document): boolean {
         const task = [ "project", "artifact", "task" ]
@@ -208,9 +208,11 @@ export class Config {
             return false
         const basedir = doc.getIn([ ...task, "basedir" ])
         const parent  = doc.getIn([ "project", "task" ])
+        const store   = doc.getIn([ "project", "task", "store" ])
         if (typeof basedir === "string" && basedir !== ""
-            && (parent === undefined || isMap(parent)) && !doc.hasIn([ "project", "task", "store" ]))
-            doc.setIn([ "project", "task", "store" ], `ase:${basedir}`)
+            && (parent === undefined || isMap(parent)) && (store === undefined || isMap(store))
+            && !doc.hasIn([ "project", "task", "store", "url" ]))
+            doc.setIn([ "project", "task", "store", "url" ], `ase:${basedir}`)
         doc.deleteIn(task)
         for (const p of [ [ "project", "artifact" ], [ "project" ] ]) {
             const node = doc.getIn(p)
@@ -366,13 +368,14 @@ export class Config {
     }
 
     /*  retrieve the effective value at a dotted key (strongest scope wins)
-        together with the scope term which supplied it  */
-    getScoped (key: string): { value: unknown, scope: ScopeTerm } | undefined {
+        together with the scope term and the configuration file (empty for
+        the built-in "default" scope) which supplied it  */
+    getScoped (key: string): { value: unknown, scope: ScopeTerm, filename: string } | undefined {
         const segs = this.resolveKey(key).split(".")
         for (let i = this.docs.length - 1; i >= 0; i--) {
             const node = this.docs[i].doc.getIn(segs)
             if (node !== undefined)
-                return { value: node, scope: this.docs[i].scope }
+                return { value: node, scope: this.docs[i].scope, filename: this.docs[i].filename }
         }
         return undefined
     }

@@ -6,11 +6,13 @@
 
 import * as v                     from "valibot"
 
-import { ServerCommand }          from "./ase-lib-server-cli.js"
+import { ServerCommand, configuredTls } from "./ase-lib-server-cli.js"
 import type {
     ServerContext, ServerStartOptions,
     ServerConfig, ServerInstance, ServerFacts
 }                                 from "./ase-lib-server-cli.js"
+import { Config }                 from "./ase-config-core.js"
+import { configSchema }           from "./ase-config-schema.js"
 import * as Server                from "./ase-agent-relay-server-bind.js"
 
 /*  schema for the per-user "relay.yaml"  */
@@ -26,6 +28,12 @@ export const relaySchema = v.nullish(v.strictObject({
     }))
 }))
 
+/*  the configured TLS certificate and key of the agent relay: "project.relay.crt" and
+    "project.relay.key" of the configuration <cfg>, unless "project.relay.url" selects
+    HTTP on this host (as the agents and task boards following it would then fail)  */
+export const relayTls = (cfg: Config): { cert: string | null, key: string | null } =>
+    configuredTls(cfg, "project.relay")
+
 /*  CLI command group "ase agent relay"  */
 export default class AgentRelayCommand extends ServerCommand<ServerContext, ServerStartOptions> {
     protected readonly label       = "agent relay"
@@ -39,6 +47,13 @@ export default class AgentRelayCommand extends ServerCommand<ServerContext, Serv
     /*  the agent relay has no specific configuration  */
     protected context (ctx: ServerContext): ServerContext {
         return ctx
+    }
+
+    /*  the TLS certificate and key configured in the project configuration  */
+    protected tlsDefaults (): { cert: string | null, key: string | null } {
+        const cfg = new Config("config", configSchema, this.log)
+        cfg.read()
+        return relayTls(cfg)
     }
 
     /*  create the standalone agent relay server  */

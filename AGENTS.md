@@ -36,14 +36,19 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `config`, `mcp`, `service`, `hook`, `statusline`, `task`, `artifact`,
         `spec`, `util`, `util-meta`, `util-compat`, `util-diagram`, `util-worktree`,
         `util-mint`, `util-metric`, `agent`) plus generic library modules (`lib-log`,
-        `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`, and the
-        `lib-server-cli` and `lib-server-bind` parts shared by the task store
+        `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`, the
+        `lib-daemon-cli` part shared by all background processes (servers,
+        agents, and the agent fleet) for their start/status/log/stop CLI commands,
+        and the `lib-server-cli` and `lib-server-bind` parts shared by the task store
         and agent relay servers for their CLI commands and their HTTP
         binding), the parts of `ase agent` (`agent-common` for the common
         agent base, `agent-common-phase` for the common base of the lifecycle
         phase agents `agent-planner`, `agent-implementer`, `agent-approver`,
-        and `agent-integrator`, and `agent-common-request` for the common base
-        of the task request agent `agent-editor`), the parts of
+        and `agent-integrator`, `agent-common-request` for the common base
+        of the task request agent `agent-editor`, `agent-instance` for the
+        `ase agent <kind> start|status|log|stop` commands of a single agent, and
+        `agent-fleet` for the `ase agent fleet` supervisor of multiple agents
+        and the agent relay), the parts of
         `ase setup` (`setup-common` for the shared types and sub-process
         runner, `setup-mcp` for the MCP server registry, `setup-settings`
         for the statusline and output style settings), the parts of
@@ -73,7 +78,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         models, `task-request` for the codec of the agent requests attached
         to tasks, like the edit requests of the task boards; see
         `docs/task-api.md`), and the agent relay, selected by
-        `project.agent.relay` and passing the live presence of the agents
+        `project.relay.url` and passing the live presence of the agents
         to the task boards (`agent-relay-server-cli` for the `ase agent relay` CLI
         wrapper, `agent-relay-core` for the transport-agnostic in-memory
         presence, `agent-relay-server-bind` for its HTTP and WebSocket
@@ -81,7 +86,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         for the relay URL resolution, the client, and the presence reporter
         of the agents). `ase-task.ts` itself only forwards
         the `ase task` CLI and `ase_task_*` MCP tools to the task store
-        selected by `project.task.store`, through
+        selected by `project.task.store.url`, through
         the local or remote task store clients of `ase-task-store-client.ts`.
     -   `tool/bin/ase`: the published shim, loading compiled output from `dst/`
     -   `tool/plugin/` and `tool/.claude-plugin/`: build-time copies of
@@ -176,10 +181,14 @@ autonomous task lifecycle agents `planner`, `implementer`, `approver`,
 and `integrator`, which together drive the `enterprise` task lifecycle
 model headless, and the `editor` agent, which processes the
 prompt-driven edit requests of the task boards in any lifecycle model;
-one invocation runs any of them concurrently with shared and per-agent
-options, e.g. `ase agent implementer planner`; additionally, `ase agent
-relay` runs the per-user agent relay server, which passes the live
-presence of the agents to the task boards), `ase artifact` (artifact kind
+each agent runs in its own process, managed individually via `ase agent
+<kind> start|status|log|stop`, e.g. `ase agent implementer start -p 2`;
+additionally, `ase agent relay` runs the per-user agent relay server,
+which passes the live presence of the agents to the task boards, and
+`ase agent fleet start|status|log|stop` runs a fleet of agents (and of the
+relay) of a YAML configuration (initially created via `ase agent fleet
+init`) through a supervising process, restarting every exited member
+with an exponential backoff), `ase artifact` (artifact kind
 resolution), `ase spec` (SpecBook specification linting, exporting, and
 previewing), and `ase util` (utility commands: `ase util meta` (plugin
 meta file output), `ase util diagram` (Mermaid rendering), `ase util

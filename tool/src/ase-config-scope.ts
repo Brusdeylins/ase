@@ -103,7 +103,7 @@ export const ensureAseGitignore = (aseDir: string): void => {
     const file = path.join(aseDir, ".gitignore")
     if (fs.existsSync(file))
         return
-    const rules = [ ".gitignore", "*.lock", "board.yaml", "service.log", "service.yaml", "worktree/" ]
+    const rules = [ ".gitignore", "*.lock", "agent/", "board.yaml", "service.log", "service.yaml", "worktree/" ]
     try {
         fs.mkdirSync(aseDir, { recursive: true })
         fs.writeFileSync(file, `#   ASE machine-local runtime files (generated)\n${rules.join("\n")}\n`,

@@ -163,7 +163,7 @@ class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
             throw new Error("task store: plugin \"gitlab\" requires a \"poll\" interval of 0 (disabled) resp. 1 to 86400 seconds")
 
         /*  create the used GitLab REST API resources, each with every request failure explained  */
-        this.source = options.token !== undefined ? "the \"token\" option (resp. \"project.task.token\")" : "$GITLAB_TOKEN"
+        this.source = options.token !== undefined ? "the \"token\" option (resp. \"project.task.store.token\")" : "$GITLAB_TOKEN"
         const config = { host: this.url, token }
         this.issues     = this.explained(new Issues(config))
         this.notes      = this.explained(new IssueNotes(config))

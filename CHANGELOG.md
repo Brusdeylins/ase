@@ -5,6 +5,13 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool]: Individually Managed Agents and Supervised Agent Fleets
+    Each agent now runs in its own process, managed via `ase agent <kind> start|status|log|stop`,
+    replacing the former form running multiple agents in one process. The new `ase agent fleet
+    init|start|status|log|stop` runs a fleet of agents and the agent relay of `.ase/fleet.yaml`
+    through a supervisor restarting exited members with exponential backoff. The new `log`
+    sub-command also covers `ase agent relay` and `ase task store`, like `ase service log`.
+
 -   FEATURE [plugin]: Perspective-Focused and Grounded Grilling
     The `ase-task-grill` skill supports the new `--perspective`/`-p` and `--ground`/`-G` options,
     and the `ase-code-edit` and `ase-spec-edit` skills the corresponding `--grill-perspective`/`-p`
@@ -65,7 +72,7 @@ ChangeLog
 
 -   FEATURE [tool]: Live Agent Presence on the Task Board
     The new `ase agent relay start|status|stop` runs a per-user agent relay server (configured
-    via `project.agent.relay`), through which the `ase agent` agents pass their live state, log
+    via `project.relay.url`), through which the `ase agent` agents pass their live state, log
     lines, and heartbeat to the task boards without any external infrastructure. The terminal and
     web boards provide a third view `agents` (cycled via `v`) with the agents and their logs, plus
     a `⚙ <name>` badge on the cards of the tasks being processed. A stopping agent vanishes from
@@ -124,7 +131,7 @@ ChangeLog
 -   FEATURE [tool]: GitHub Issues task store
     The new built-in storage plugin `github` persists the task plans as the issues of a GitHub
     repository, selected either by `ase task store start --module github` (with the repositories
-    mapped per project in `storage.options.repos`) or in-process by the `project.task.store` URL
+    mapped per project in `storage.options.repos`) or in-process by the `project.task.store.url` URL
     `github:<owner>/<repo>`. The task id is the issue number rendered through the required `seq`
     task id scheme, and the task plan maps as closely as possible onto the issue: title, body,
     state (refined by an `ase:Status:<state>` label), labels (`Tags`), assignee, milestone
@@ -236,11 +243,12 @@ ChangeLog
     creates its directory on first save only, so service, CLI, and server can share one directory.
 
 -   FEATURE [tool]: Configurable task store
-    The new `project.task.store` URL selects the task plan location: `ase:<path>` (default
+    The new `project.task.store.url` URL selects the task plan location: `ase:<path>` (default
     `ase:./.ase/task`, confined to the project root on `project`/`task` scope) runs the built-in
     plugin in-process, `ase[s]://<addr>:<port>[/<token>][?insecure]` forwards to a remote server via
     HTTP(S). The token alternatively comes from `$ASE_TASK_STORE_TOKEN`, the new user-scoped
-    `project.task.token`, or `store.yaml`. A remote store requires an explicit `project.id` and keeps
+    `project.task.store.token`, or `store.yaml`, and the new `project.task.store.{crt,key}` supply
+    the TLS certificate and key of `ase task store start`. A remote store requires an explicit `project.id` and keeps
     its registered lifecycle model, changed only via the new `ase task lifecycle [<name>]` (mapping
     existing `Status` values). `project.artifact.task.{basedir,files}` were removed and are migrated
     in place, and the legacy pre-1.0 task file migration was dropped.

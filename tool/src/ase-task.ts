@@ -41,7 +41,7 @@ type TaskStoreSpec = {
 }
 
 /*  reusable functionality: the task plans of the current project,
-    forwarded to the task store selected by the "project.task.store"
+    forwarded to the task store selected by the "project.task.store.url"
     configuration URL  */
 export class Task {
     /*  validate the task id to keep it safe as a filename component  */
@@ -109,8 +109,8 @@ export class Task {
     }
 
     /*  read the "project.id" of the project (defaulting to the sanitized
-        basename of the project root), the "project.task.store" URL (defaulting to
-        "ase:./.ase/task") and "project.task.token" (both with their
+        basename of the project root), the "project.task.store.url" URL (defaulting to
+        "ase:./.ase/task") and "project.task.store.token" (both with their
         supplying scope), the "project.task.lifecycle" model (defaulting
         to "solo"), and the "project.task.idscheme" scheme (defaulting to "slug")  */
     private static spec (log: Log): TaskStoreSpec {
@@ -142,9 +142,9 @@ export class Task {
         /*  sanitize a basename-derived project id, as it only keys the local
             solo-mode store (a remote store requires an explicit one anyway)  */
         const projectId = explicit || Task.projectIdOf(root)
-        const store    = scoped("project.task.store")
+        const store    = scoped("project.task.store.url")
         store.value   ||= "ase:./.ase/task"
-        const token     = scoped("project.task.token")
+        const token     = scoped("project.task.store.token")
         const name      = read("project.task.lifecycle") || "solo"
         const lifecycle = TaskFormat.taskLifecycles[name]
         if (lifecycle === undefined)
@@ -245,7 +245,7 @@ export class Task {
     }
 
     /*  determine the identity of the task store (e.g. for keying state kept
-        per task store): its "project.task.store" URL, with the directory of
+        per task store): its "project.task.store.url" URL, with the directory of
         a local one resolved against the project root, and without the token
         and the query of a remote one  */
     static storeKey (log: Log): string {
@@ -257,15 +257,15 @@ export class Task {
     }
 
     /*  resolve the bearer token of a remote task store: the token embedded
-        in the URL, else $ASE_TASK_STORE_TOKEN, else "project.task.token",
+        in the URL, else $ASE_TASK_STORE_TOKEN, else "project.task.store.token",
         else the token of the locally started task store server (only if the
         URL addresses it); a token potentially committed or redirected is warned about  */
     private static token (log: Log, spec: TaskStoreSpec, embedded: string | undefined, url: URL): string {
         const repoScoped = spec.store.scope === "project" || spec.store.scope.startsWith("task:")
         if (embedded !== undefined) {
             if (repoScoped)
-                log.write("warning", `task: token embedded in "project.task.store" URL on scope "${spec.store.scope}" ` +
-                    "might be committed -- use $ASE_TASK_STORE_TOKEN or \"project.task.token\" on scope \"user\" instead")
+                log.write("warning", `task: token embedded in "project.task.store.url" URL on scope "${spec.store.scope}" ` +
+                    "might be committed -- use $ASE_TASK_STORE_TOKEN or \"project.task.store.token\" on scope \"user\" instead")
             return embedded
         }
 
@@ -274,7 +274,7 @@ export class Task {
         const redirected = () => {
             if (repoScoped && !isLoopback(url.hostname))
                 log.write("warning", `task: sending token to non-loopback host "${url.host}" selected by ` +
-                    `"project.task.store" on scope "${spec.store.scope}" -- verify you trust this host` +
+                    `"project.task.store.url" on scope "${spec.store.scope}" -- verify you trust this host` +
                     (url.protocol === "ase:" ? " (token is transmitted in plaintext)" : ""))
         }
         const env = process.env.ASE_TASK_STORE_TOKEN
@@ -284,7 +284,7 @@ export class Task {
         }
         if (spec.token.value !== "") {
             if (spec.token.scope !== "user")
-                log.write("warning", `task: "project.task.token" found on scope "${spec.token.scope}" ` +
+                log.write("warning", `task: "project.task.store.token" found on scope "${spec.token.scope}" ` +
                     "-- configure it on scope \"user\" only")
             redirected()
             return spec.token.value
@@ -307,7 +307,7 @@ export class Task {
             && (url.hostname.toLowerCase() === host || (loopback && (wildcard || isLoopback(host)))))
             return tok
         throw new Error(`task: no token for task store "${spec.store.value}" ` +
-            "(set $ASE_TASK_STORE_TOKEN, \"project.task.token\" on scope \"user\", or \"/<token>\" in the URL)")
+            "(set $ASE_TASK_STORE_TOKEN, \"project.task.store.token\" on scope \"user\", or \"/<token>\" in the URL)")
     }
 
     /*  warn about task plans being sent to a GitHub/Gitea repository resp. GitLab project selected on a
@@ -330,7 +330,7 @@ export class Task {
         log.write("warning", `task: sending task plans to ${plugin === "gitlab" ? "GitLab project" :
             plugin === "gitea" ? "Gitea repository" : "GitHub repository"} ` +
             `"${repo}" selected by ` +
-            `"project.task.store" on scope "${scope}" -- verify you trust this repository ` +
+            `"project.task.store.url" on scope "${scope}" -- verify you trust this repository ` +
             "(reported once per repository only)")
         seen[root] = repo
         try {
@@ -358,7 +358,7 @@ export class Task {
     private static client (log: Log): TaskStoreClient {
         const spec = Task.spec(log)
         const { projectId, store, lifecycle, idscheme } = spec
-        const unsupported = () => new Error(`task: unsupported "project.task.store" URL "${store.value}" ` +
+        const unsupported = () => new Error(`task: unsupported "project.task.store.url" URL "${store.value}" ` +
             "(expected: \"ase:<path>\", \"ase://<addr>:<port>[/<token>]\", " +
             "\"ases://<addr>:<port>[/<token>][?insecure]\", \"github:<owner>/<repo>\", " +
             "\"github+http[s]://<host>/<owner>/<repo>\", " +
@@ -407,7 +407,7 @@ export class Task {
                 const real = path.join(fs.realpathSync(existing), path.relative(existing, basedir))
                 const rel  = path.relative(fs.realpathSync(root), real)
                 if (rel === ".." || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel))
-                    throw new Error(`task: "project.task.store" "${store.value}" on scope "${store.scope}" ` +
+                    throw new Error(`task: "project.task.store.url" "${store.value}" on scope "${store.scope}" ` +
                         "must not escape the project root (configure it on scope \"user\" instead)")
             }
             client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, {
@@ -422,14 +422,14 @@ export class Task {
             || (m = /^(gitlab)\+(https?:\/\/[A-Za-z0-9.-]+(?::\d+)?)\/([A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)+)$/.exec(store.value)) !== null
             || (m = /^(gitea)\+(https?:\/\/[A-Za-z0-9.-]+(?::\d+)?)\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)$/.exec(store.value)) !== null) {
             /*  warn about task plans being sent to a repository selected on a repository-supplied
-                scope, and use the token of "project.task.token", else $GITHUB_TOKEN resp. $GH_TOKEN
+                scope, and use the token of "project.task.store.token", else $GITHUB_TOKEN resp. $GH_TOKEN
                 (GitHub), $GITLAB_TOKEN (GitLab), or $GITEA_TOKEN (Gitea), and the given host (or
                 the given base URL of the "+http[s]" forms), else $GITLAB_HOST (GitLab)  */
             const [ , plugin, host, repo ] = m
             if (store.scope === "project" || store.scope.startsWith("task:"))
                 Task.warnRepository(log, plugin, host ? `${host}/${repo}` : repo, store.scope)
             if (spec.token.value !== "" && spec.token.scope !== "user")
-                log.write("warning", `task: "project.task.token" found on scope "${spec.token.scope}" ` +
+                log.write("warning", `task: "project.task.store.token" found on scope "${spec.token.scope}" ` +
                     "-- configure it on scope \"user\" only")
             client = new LocalTaskStoreClient(projectId, lifecycle, idscheme, {
                 plugin,
@@ -836,7 +836,7 @@ export default class TaskCommand {
         /*  register CLI top-level command "ase task"  */
         const task = program
             .command("task")
-            .description("Manage persisted tasks in the task store configured by \"project.task.store\"")
+            .description("Manage persisted tasks in the task store configured by \"project.task.store.url\"")
             .action(() => {
                 task.outputHelp()
                 process.exit(1)

@@ -158,7 +158,7 @@ class GiteaTaskStoragePlugin implements API.TaskStoragePlugin {
             throw new Error("task store: plugin \"gitea\" requires a \"poll\" interval of 0 (disabled) resp. 1 to 86400 seconds")
 
         /*  create the Gitea REST API client, with every request bounded in time  */
-        this.source = options.token !== undefined ? "the \"token\" option (resp. \"project.task.token\")" : "$GITEA_TOKEN"
+        this.source = options.token !== undefined ? "the \"token\" option (resp. \"project.task.store.token\")" : "$GITEA_TOKEN"
         this.gt = giteaApi(this.url, {
             token,
             customFetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(60 * 1000) })

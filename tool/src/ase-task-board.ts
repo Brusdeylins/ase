@@ -120,14 +120,14 @@ export default class TaskBoardCommand {
                 "and open it in the browser")
             .option("-t, --text", "print the lane overview as plain text and exit")
             .option("--agent-relay <url>", "agent relay to receive the live presence of the agents from, " +
-                "as \"ase[s]://<addr>:<port>[/<token>]\" (default: the configured \"project.agent.relay\", else none; " +
+                "as \"ase[s]://<addr>:<port>[/<token>]\" (default: the configured \"project.relay.url\", else none; " +
                 "the web board always follows the configured one)")
             .action(async (opts: BoardOpts) => {
                 /*  serve and open the web board  */
                 if (opts.web === true) {
                     if (opts.agentRelay !== undefined)
                         this.log.write("warning", "board: \"--agent-relay\" is ignored by the web board, " +
-                            "which follows the configured \"project.agent.relay\"")
+                            "which follows the configured \"project.relay.url\"")
                     const url = `http://${SERVICE_HOST}:${await this.servicePort()}/task-board`
                     await writeStdout(`${url}\n`)
                     await this.openBrowser(url)

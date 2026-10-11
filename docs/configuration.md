@@ -108,7 +108,7 @@ The following configuration parameters control the project:
     environment variables), and they are writable on the `user` and
     `project` scopes only.
 
--   **project.task.store**: the *task store* URL the `ase task` commands
+-   **project.task.store.url**: the *task store* URL the `ase task` commands
     and `ase_task_*` MCP tools forward the project *task plans* to:
 
     -   `ase:`*path*: the built-in storage plugin, running in-process,
@@ -127,7 +127,7 @@ The following configuration parameters control the project:
         embedded *token* (warned about on every task operation if the URL
         is configured on the `project` scope, as `.ase/config.yaml` is
         usually committed), else `$ASE_TASK_STORE_TOKEN`, else
-        `project.task.token`, else the `token` of the per-user
+        `project.task.store.token`, else the `token` of the per-user
         `store.yaml` of a locally started task store server.
     -   `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\]: the same,
         but connecting via HTTPS, verifying the server certificate against
@@ -141,7 +141,7 @@ The following configuration parameters control the project:
         GitHub Enterprise Server or `<sub>.ghe.com` (see *GitHub storage plugin*
         in `task-api.md`), which requires a `seq` task id scheme in
         `project.task.idscheme` (like `seq:#%d`), as the task ids are
-        the issue numbers. The GitHub token is `project.task.token`,
+        the issue numbers. The GitHub token is `project.task.store.token`,
         else `$GITHUB_TOKEN`, else `$GH_TOKEN`. On the `project` and
         `task` scopes, the repository is warned about once per project
         and repository (remembered in the per-user state directory as
@@ -156,7 +156,7 @@ The following configuration parameters control the project:
         `http://`*host* for `gitlab+http://`), else
         `$GITLAB_HOST`, else `https://gitlab.com` (see *GitLab storage
         plugin* in `task-api.md`), which also requires a `seq` task id
-        scheme. The GitLab token is `project.task.token`, else
+        scheme. The GitLab token is `project.task.store.token`, else
         `$GITLAB_TOKEN`. On the `project` and `task` scopes, the project
         is warned about as for `github:` (remembered as `task-gitlab.json`).
     -   `gitea+https://`*host*`/`*owner*`/`*repo* or
@@ -165,13 +165,13 @@ The following configuration parameters control the project:
         issues of the repository *owner*`/`*repo* on the Gitea instance
         `https://`*host* resp. `http://`*host* (see *Gitea storage
         plugin* in `task-api.md`), which also requires a `seq` task id
-        scheme. The Gitea token is `project.task.token`, else
+        scheme. The Gitea token is `project.task.store.token`, else
         `$GITEA_TOKEN`. On the `project` and `task` scopes, the
         repository is warned about as for `github:` (remembered as
         `task-gitea.json`).
 
--   **project.task.token**: the bearer token of a remote task store
-    server, used if the `project.task.store` URL embeds no token and
+-   **project.task.store.token**: the bearer token of a remote task store
+    server, used if the URL of `project.task.store.url` embeds no token and
     `$ASE_TASK_STORE_TOKEN` is not set, or the GitHub, GitLab, resp. Gitea
     token of a `github:`, `gitlab:`, resp. `gitea+`*scheme*`:` task store. It is writable on the `user`
     scope only (a hand-edited value on another scope is used, but warned
@@ -179,34 +179,55 @@ The following configuration parameters control the project:
 
     For compatibility, the obsolete (pre-1.1.0) variables
     `project.artifact.task.{basedir,files}` are migrated in place on
-    reading a configuration file: a `basedir` becomes `project.task.store`
+    reading a configuration file: a `basedir` becomes `project.task.store.url`
     (as `ase:`*basedir*) unless the latter is already set in the same
     file, and `files` is dropped.
 
--   **project.agent.relay**: the URL of the agent relay (see `ase agent
+-   **project.task.store.crt** and **project.task.store.key**: the PEM
+    certificate (chain) file and the PEM private key file of the task store
+    server, supplying the options `--tls-cert` and `--tls-key` not given to
+    `ase task store start` (unless `project.task.store.url` selects HTTP via
+    `ase://` on this host), where a relative file is resolved against the
+    directory of the configuration file defining it. Writable on the `user`
+    and `project` scopes.
+
+-   **project.relay.url**: the URL of the agent relay (see `ase agent
     relay`), through which the `ase agent` agents pass their live presence
     (state, tasks, and processing log lines) to the task boards. Unset
     (the default), no presence is passed at all. Writable on the `user`
-    and `project` scopes. Overridable via `--agent-relay` of `ase agent`
+    and `project` scopes. Overridable via `--agent-relay` of `ase agent
+    <agent> start` (and the section `relay` of `ase agent fleet start`)
     and `ase task board` (except for the web board). Requires an explicit
-    `project.id`.
+    `project.id`. If it addresses this host, it also supplies the
+    options `address`, `port`, and `token` not given in the section
+    `relay` of `ase agent fleet start`, and decides on HTTP or HTTPS of
+    its agent relay.
     -   `ase://`*addr*`:`*port* or `ase://`*addr*`:`*port*`/`*token*:
         an agent relay server (`ase agent relay start`, or `ase task store
         start --with-agent-relay`), authenticated by a bearer token: the
         embedded *token* (warned about if the URL is configured on the
         `project` scope), else `$ASE_AGENT_RELAY_TOKEN`, else
-        `project.agent.token`, else the `token` of the per-user
+        `project.relay.token`, else the `token` of the per-user
         `relay.yaml` (resp. `store.yaml` of a task store co-hosting the
         relay) of a locally started server the URL addresses.
     -   `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\]: the same,
         but connecting via HTTPS, or, with `?insecure`, skipping the
         certificate verification.
 
--   **project.agent.token**: the bearer token of the agent relay, used if
-    the `project.agent.relay` URL embeds no token and
+-   **project.relay.token**: the bearer token of the agent relay, used if
+    the URL of `project.relay.url` embeds no token and
     `$ASE_AGENT_RELAY_TOKEN` is not set. It is writable on the `user`
     scope only (a hand-edited value on another scope is used, but warned
     about) and masked as `***` in `ase config list`.
+
+-   **project.relay.crt** and **project.relay.key**: the PEM certificate
+    (chain) file and the PEM private key file of the agent relay,
+    supplying the options `--tls-cert` and `--tls-key` not given to
+    `ase agent relay start` resp. the options `tls-cert` and `tls-key` not
+    given in the section `relay` of `ase agent fleet start` (unless
+    `project.relay.url` selects HTTP via `ase://` on this host), where a relative
+    file is resolved against the directory of the configuration file
+    defining it. Writable on the `user` and `project` scopes.
 
 The project *artifacts* are configured per kind, each kind defined by a
 `.basedir` anchor and a `.files` miniglob spec. The `.basedir` is a
@@ -217,7 +238,7 @@ relative to `.basedir`. The four configurable kinds are `spec`,
 catch-all collects all remaining files and is resolved last (it has no
 configurable `.basedir`/`.files`). The *task plans* are not artifacts
 in this sense, as they live in the *task store* selected by
-`project.task.store`:
+`project.task.store.url`:
 
 -   **project.artifact.spec.{basedir,files}**: anchor directory and glob spec matching the project *specification* files,
     i.e. the *SpecBook*-based specification covering both requirements and architecture

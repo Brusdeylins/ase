@@ -8,8 +8,6 @@ import path                       from "node:path"
 import fs                         from "node:fs"
 import crypto                     from "node:crypto"
 import os                         from "node:os"
-import { fileURLToPath }          from "node:url"
-import { spawn }                  from "node:child_process"
 import type { ChildProcess }      from "node:child_process"
 
 import type { Command }           from "commander"
@@ -20,9 +18,9 @@ import type * as v                from "valibot"
 
 import { Config }                 from "./ase-config-core.js"
 import { parseScope }             from "./ase-config-scope.js"
-import type Log                   from "./ase-lib-log.js"
 import { isLogLevel }             from "./ase-lib-log.js"
 import { Service }                from "./ase-service.js"
+import { DaemonCommand }          from "./ase-lib-daemon-cli.js"
 import { urlHost, isLoopback, serverHeader } from "./ase-lib-server-bind.js"
 import type { ServerConfig }      from "./ase-lib-server-bind.js"
 
@@ -34,14 +32,42 @@ export const DEFAULT_ADDRESS = "127.0.0.1"
 const probeAgent = new Agent({ connect: { rejectUnauthorized: false } })
 
 /*  whether an address belongs to this host (loopback or a local network interface)  */
-const isLocal = (address: string): boolean =>
+export const isLocal = (address: string): boolean =>
     isLoopback(address) || Object.values(os.networkInterfaces())
         .some((ifaces) => (ifaces ?? []).some((iface) => iface.address === address))
 
 /*  the URL host to connect to for a bound address  */
-const connectHost = (address: string): string =>
+export const connectHost = (address: string): string =>
     (address === "0.0.0.0" || address === "") ? DEFAULT_ADDRESS :
         address === "::" ? "[::1]" : urlHost(address)
+
+/*  the TLS certificate and key of a server configured in the configuration <cfg>:
+    "<prefix>.crt" and "<prefix>.key" (each resolved against the directory of the
+    configuration file defining it), unless "<prefix>.url" selects HTTP via "ase://"
+    on this host (as the clients following it would then fail)  */
+export const configuredTls = (cfg: Config, prefix: string): { cert: string | null, key: string | null } => {
+    const scoped = (key: string): { value: string, filename: string } | null => {
+        const entry = cfg.getScoped(key)
+        if (entry === undefined)
+            return null
+        return { value: String(isScalar(entry.value) ? entry.value.value : entry.value), filename: entry.filename }
+    }
+    const url = scoped(`${prefix}.url`)
+    if (url !== null && url.value.startsWith("ase://")) {
+        try {
+            if (isLocal(new URL(url.value).hostname.replace(/^\[|\]$/g, "")))
+                return { cert: null, key: null }
+        }
+        catch (_err: unknown) {
+            /*  an invalid URL is reported by its users  */
+        }
+    }
+    const file = (key: string): string | null => {
+        const entry = scoped(key)
+        return entry !== null ? path.resolve(path.dirname(entry.filename), entry.value) : null
+    }
+    return { cert: file(`${prefix}.crt`), key: file(`${prefix}.key`) }
+}
 
 /*  the resolved common part of the per-user configuration context of a server  */
 export type ServerContext = {
@@ -86,20 +112,13 @@ type ProbeResult = "running" | "unauthorized" | "foreign" | null
     it resolves the configuration of the server from its per-user configuration file,
     the command line, and the environment, probes, spawns, and stops the server, and persists
     its runtime facts, where the concrete server command decides on its specific parts  */
-export abstract class ServerCommand<C extends ServerContext, O extends ServerStartOptions> {
-    constructor (protected log: Log) {}
-
-    /*  the label of the server in the messages (e.g. "task store"), the name of its per-user
-        configuration and log file (e.g. "store"), the schema of its configuration file, the
-        prefix of its environment variables (e.g. "ASE_TASK_STORE"), its CLI command words (e.g.
-        "task store") and the description of its CLI command group, and its endpoint listing
-        the projects to probe it with (e.g. "/projects")  */
-    protected abstract readonly label:       string
-    protected abstract readonly description: string
+export abstract class ServerCommand<C extends ServerContext, O extends ServerStartOptions> extends DaemonCommand {
+    /*  the name of its per-user configuration and log file (e.g. "store"), the schema of its
+        configuration file, the prefix of its environment variables (e.g. "ASE_TASK_STORE"),
+        and its endpoint listing the projects to probe it with (e.g. "/projects")  */
     protected abstract readonly name:        string
     protected abstract readonly schema:      v.GenericSchema
     protected abstract readonly prefix:      string
-    protected abstract readonly words:       string
     protected abstract readonly probePath:   string
 
     /*  extend the common context by the specific configuration of the server, read via <scalar>  */
@@ -122,6 +141,13 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
     }
     protected started (_env: NodeJS.ProcessEnv): string {
         return ""
+    }
+
+    /*  the TLS certificate and key of the server configured outside its per-user configuration
+        file (e.g. in the project configuration), applied like the options "--tls-cert" and
+        "--tls-key" if these are not given  */
+    protected tlsDefaults (): { cert: string | null, key: string | null } {
+        return { cert: null, key: null }
     }
 
     /*  the description of the running server in the status (e.g. a co-hosted agent relay)  */
@@ -342,6 +368,13 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
         if (process.env[this.env("SERVE")] === "1")
             return this.runServer(ctx)
 
+        /*  let the TLS certificate and key not given fall back to the otherwise configured ones  */
+        const tlsDefaults = this.tlsDefaults()
+        if (opts.tlsCert === undefined && tlsDefaults.cert !== null)
+            opts.tlsCert = tlsDefaults.cert
+        if (opts.tlsKey === undefined && tlsDefaults.key !== null)
+            opts.tlsKey = tlsDefaults.key
+
         /*  validate the explicitly given port and resolve the TLS certificate and key (both or
             none), the given ones checked for readability, before a running server is stopped
             to apply deviating options, so invalid options never leave no server running  */
@@ -431,17 +464,9 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
             return this.runServer(ctx, env)
 
         /*  spawn the server detached, logging into its log file  */
-        fs.mkdirSync(ctx.dir, { recursive: true })
         const logFile = path.join(ctx.dir, `${this.name}.log`)
-        Service.trimLog(logFile)
-        const fd    = fs.openSync(logFile, "a")
-        const entry = fileURLToPath(new URL("./ase.js", import.meta.url))
-        const child = spawn(process.execPath, [ entry, ...this.words.split(" "), "start" ], {
-            detached: true,
-            env:      { ...process.env, ...env, [this.env("SERVE")]: "1" },
-            stdio:    [ "ignore", fd, fd ]
-        })
-        fs.closeSync(fd)
+        const child   = this.spawnDetached([ ...this.words.split(" "), "start" ],
+            { ...env, [this.env("SERVE")]: "1" }, logFile)
 
         /*  wait for the server to respond  */
         return this.awaitStartup(child, logFile, address, port, token, tlsCert !== null, env)
@@ -474,17 +499,6 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
         return 1
     }
 
-    /*  check whether a process is still alive  */
-    private isAlive (pid: number): boolean {
-        try {
-            process.kill(pid, 0)
-            return true
-        }
-        catch (err: unknown) {
-            return (err as Error & { code?: string }).code === "EPERM"
-        }
-    }
-
     /*  stop flow: terminate the server process and wait until it is gone  */
     private async doStop (): Promise<number> {
         const ctx = this.loadContext()
@@ -504,39 +518,19 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
             this.persist(ctx.cfg, { pid: null })
             return 0
         }
-        try {
-            process.kill(ctx.pid, "SIGTERM")
-        }
-        catch (err: unknown) {
-            const e = err as Error & { code?: string }
-            if (e.code !== "ESRCH")
-                throw err
+        if (await this.terminate(ctx.pid, 5000))
+            this.log.write("info", `${this.label}: stopped (process ${ctx.pid})`)
+        else
             this.log.write("info", `${this.label}: not running (process ${ctx.pid} already gone)`)
-            this.persist(ctx.cfg, { pid: null })
-            return 0
-        }
-        for (let i = 0; i < 50; i++) {
-            await new Promise((resolve) => setTimeout(resolve, 100))
-            if (!this.isAlive(ctx.pid)) {
-                this.log.write("info", `${this.label}: stopped (process ${ctx.pid})`)
-                this.persist(ctx.cfg, { pid: null })
-                return 0
-            }
-        }
-        throw new Error(`${this.label}: process ${ctx.pid} did not stop within timeout`)
+        this.persist(ctx.cfg, { pid: null })
+        return 0
     }
 
     /*  register the CLI sub-command group and its commands
-        "start", "status", and "stop" below the CLI command <parent>  */
+        "start", "status", "log", and "stop" below the CLI command <parent>  */
     register (parent: Command): void {
         /*  register CLI sub-command group  */
-        const group = parent
-            .command(this.words.split(" ").at(-1)!)
-            .description(this.description)
-            .action(() => {
-                group.outputHelp()
-                process.exit(1)
-            })
+        const group = this.group(parent)
 
         /*  register CLI sub-command "start"  */
         const start = group
@@ -568,6 +562,9 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
             .action(async () => {
                 process.exit(await this.doStatus())
             })
+
+        /*  register CLI sub-command "log"  */
+        this.registerLog(group, () => path.join(this.loadContext().dir, `${this.name}.log`))
 
         /*  register CLI sub-command "stop"  */
         group

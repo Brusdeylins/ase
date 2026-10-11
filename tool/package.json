@@ -108,7 +108,8 @@
         "@octokit/plugin-rest-endpoint-methods": "18.0.0",
         "@octokit/plugin-paginate-rest":    "16.0.0",
         "@gitbeaker/rest":                  "43.8.0",
-        "gitea-js":                         "1.23.0"
+        "gitea-js":                         "1.23.0",
+        "textframe":                        "1.2.1"
     },
     "overrides": {
         "stylus": {

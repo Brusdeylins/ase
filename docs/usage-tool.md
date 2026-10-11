@@ -60,7 +60,7 @@ The following top-level commands exist for configuration handling:
   in-memory view; on set/write, they cause a fatal error.
   Recognized keys are grouped under three top-level sections:
   `project.*` (project identity, classification, and artifact
-  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.default.{source,changeset,target}`, `project.task.store`, `project.task.token` (masked as `***` by `list`), `project.agent.relay`, `project.agent.token` (masked as `***` by `list`), and the
+  globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.default.{source,changeset,target}`, `project.task.store.url`, `project.task.store.token` (masked as `***` by `list`), `project.task.store.crt`, `project.task.store.key`, `project.relay.url`, `project.relay.token` (masked as `***` by `list`), `project.relay.crt`, `project.relay.key`, and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
   (`agent.persona`, `agent.guidance`, `agent.task` -- the active
   task identifier -- and `agent.skill`), and `board.*`
@@ -498,7 +498,7 @@ to choose between *Anthropic Claude Code CLI*, *GitHub Copilot CLI*, and
 *OpenAI Codex CLI* as the target agent tool.
 
 The following top-level commands exist for managing persisted task
-plans, forwarded to the *task store* selected by the `project.task.store`
+plans, forwarded to the *task store* selected by the `project.task.store.url`
 configuration URL: `ase:`*path* (default `ase:./.ase/task`, a path
 resolved relative to the project root) stores the plans as
 `TASK-`*id*`.md` files in the textual task format directly in *path*
@@ -510,22 +510,22 @@ them to a remote task store server (see `task-api.md`), registering the
 `?insecure` skipping the certificate verification). The
 bearer token is the embedded *token* (warned about if configured on the
 `project` scope), else `$ASE_TASK_STORE_TOKEN`, else the
-`project.task.token` configuration (writable on the `user` scope only),
+`project.task.store.token` configuration (writable on the `user` scope only),
 else the `token` of the per-user `store.yaml`. Finally,
 `github:`*owner*`/`*repo* resp. `github+http[s]://`*host*`/`*owner*`/`*repo*
 stores the plans as the issues of a repository on GitHub resp. a GitHub
 Enterprise instance through the built-in GitHub storage plugin running
 in-process (requiring a `seq` task id scheme, with the GitHub token
-from `project.task.token`, else `$GITHUB_TOKEN`, else `$GH_TOKEN`),
+from `project.task.store.token`, else `$GITHUB_TOKEN`, else `$GH_TOKEN`),
 `gitlab:`*namespace*`/`*project* resp. `gitlab://`*host*`/`*namespace*`/`*project*
 resp. `gitlab+http[s]://`*host*`/`*namespace*`/`*project* the issues of a GitLab project through the built-in GitLab storage
 plugin running in-process (likewise requiring a `seq` task id scheme,
 with the GitLab instance *host*, else `$GITLAB_HOST`, else `gitlab.com`,
-and the GitLab token from `project.task.token`, else `$GITLAB_TOKEN`), and
+and the GitLab token from `project.task.store.token`, else `$GITLAB_TOKEN`), and
 `gitea+https://`*host*`/`*owner*`/`*repo* resp. `gitea+http://`*host*`/`*owner*`/`*repo*
 the issues of a Gitea repository through the built-in Gitea storage
 plugin running in-process (likewise requiring a `seq` task id scheme,
-with the Gitea token from `project.task.token`, else `$GITEA_TOKEN`):
+with the Gitea token from `project.task.store.token`, else `$GITEA_TOKEN`):
 
 - `ase task`:
   Entry point group for task plan management. Without a subcommand,
@@ -658,7 +658,9 @@ with the Gitea token from `project.task.token`, else `$GITEA_TOKEN`):
   per project, or -- with `--solo` -- a single project flat in *dir*,
   accepting any project id (persisted as `storage.options.solo`, reset
   by `--no-solo`). With `--tls-cert` and `--tls-key` (both PEM
-  files, default: the `tls.cert` and `tls.key` keys of `store.yaml`,
+  files, default: the configured `project.task.store.crt` and
+  `project.task.store.key` (unless `project.task.store.url` selects HTTP via
+  `ase://` on this host), else the `tls.cert` and `tls.key` keys of `store.yaml`,
   where the effective paths are persisted), the server serves HTTPS
   instead of HTTP. With `--with-agent-relay` (persisted as `relay`, reset
   by `--without-agent-relay`), the server additionally co-hosts the agent
@@ -675,6 +677,10 @@ with the Gitea token from `project.task.token`, else `$GITEA_TOKEN`):
   Report whether the task store server is running (and whether it
   co-hosts the agent relay), and on which address
   and port. Exits with status 1 if it is not running.
+
+- `ase task store log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]:
+  Show the log `store.log` of the task store server run in the
+  background. The options correspond to `ase service log`.
 
 - `ase task store stop`:
   Stop the task store server.
@@ -756,7 +762,7 @@ the persisted task plans of the current project:
   the lane overview as plain text (with the same `⟲` and `✎` markers),
   which is also the fallback without an
   interactive terminal. All views follow changes of the task plans live.
-  With an agent relay (`--agent-relay` *url*, else `project.agent.relay`,
+  With an agent relay (`--agent-relay` *url*, else `project.relay.url`,
   see `ase agent relay start`; the web board always follows the latter),
   the board additionally follows the running agents live in a third
   view `agents` (besides `lanes` and `graph`, all cycled via `v` or a
@@ -801,34 +807,37 @@ The following top-level commands exist for autonomous agents driving the
 phases of the `enterprise` task lifecycle model and processing the edit
 requests of tasks:
 
-- `ase agent` \[*options*\] *agent* \[*agent-options*\] \[*agent* \[*agent-options*\] ...\]:
-  Run one or more of the agents `planner`, `implementer`, `approver`,
-  `integrator`, and `editor` concurrently in one process, e.g., `ase agent implementer
-  planner`. The *options* \[`-t`|`--tool` `claude`|`copilot`|`codex`\]
+- `ase agent` *agent* `start` \[*agent-options*\] \[`-f`|`--foreground`\]:
+  Start one of the agents `planner`, `implementer`, `approver`,
+  `integrator`, and `editor` in the background, each running in its own
+  process, e.g., `ase agent implementer start -p 2`. The *agent-options*
+  \[`-n`|`--name` *name*\] \[`-t`|`--tool` `claude`|`copilot`|`codex`\]
   \[`-p`|`--parallel` *num*\] \[`-T`|`--timeout` *duration*\]
   \[`-o`|`--one-shot`\] \[`-r`|`--repo` *url*\] \[`-d`|`--tempdir` *dir*\]
-  \[`--agent-relay` *url*\]
-  apply to all agents (where `--agent-relay` is accepted here only), while the same options within
-  the *agent-options* following an agent name (up to the next agent name)
-  override them for this agent only, e.g., `ase agent -t claude
-  implementer -p 2 approver -t codex editor` (where `--repo` and
-  `--tempdir` are not accepted per agent for `planner`, which never
-  processes tasks in a clone). The *agent-options* additionally
-  carry the individual options of an agent (if any), which are accepted
-  there only, and \[`-n`|`--name` *name*\], which names the agent
-  (default: its kind, i.e., `planner`, `implementer`, `approver`,
-  `integrator`, or `editor`; at most 64 characters) in its log lines, its processing log attachment, the
-  `Assignee:` of the tasks it processes, and its temporary directory. An agent kind may be given multiple times, e.g.,
-  `ase agent implementer -n impl-claude -t claude implementer -n
-  impl-codex -t codex`, where all names have to be unique and must not
-  be the name of another agent kind. The agents of the same kind then
+  \[`--agent-relay` *url*\] (where `--repo` and `--tempdir` are not
+  accepted for `planner`, which never processes tasks in a clone)
+  additionally carry the individual options of an agent (if any).
+  `--name` names the agent (default: its kind, i.e., `planner`,
+  `implementer`, `approver`, `integrator`, or `editor`; at most 64
+  characters) in its log lines, its processing log attachment, the
+  `Assignee:` of the tasks it processes, its temporary directory, and
+  its runtime files `.ase/agent/<name>.yaml` (its process id) and
+  `.ase/agent/<name>.log` (its log), so multiple agents of the same kind
+  are started under different names, e.g., `ase agent implementer start
+  -n impl-claude -t claude` and `ase agent implementer start -n
+  impl-codex -t codex`, where a name must not be the name of another
+  agent kind, `relay`, or `fleet`. The agents of the same kind then
   form a pool: they compete for the same tasks, share the same tag (per mode), and
   process their tasks in parallel to each other (so `integrator`, which
-  processes tasks serially only, can be given only once). All agents are validated and initialized before any of them
-  starts, so a single failing agent aborts the entire command. Without an
-  agent name, the help text (listing all agents with their options) is
-  shown and the command exits with status 1, while
-  `ase agent <agent> --help` shows the help of a single agent.
+  processes tasks serially only, has to be started only once). The
+  agent is validated and initialized (e.g., its agent tool is looked up
+  and the task lifecycle model is checked) before the command returns,
+  so a failing agent is reported together with the tail of its log. An
+  agent of the same name already running is left alone. With
+  `--foreground`, the agent runs in the current process instead, logging
+  to the terminal, until it is interrupted or stopped. Several agents are
+  best run together as a fleet (see `ase agent fleet start`). `ase agent
+  <agent> start --help` shows the options of a single agent.
 
   Each agent except `editor` (see below) drives one phase of the `enterprise` task lifecycle model
   (refused for any other model) until interrupted, so that the four
@@ -901,11 +910,11 @@ requests of tasks:
   processes up to *num* (default: `1`) tasks of each agent in parallel,
   where an agent can deny parallelism (see `integrator`). `--one-shot`
   terminates an agent, instead of observing for further tasks, once a
-  check of the task store finds no dispatchable task while no task is
-  processed anymore by any agent of the same `ase agent` invocation (as a
-  task processed by one agent can become dispatchable to another one) --
-  intended for CI contexts like GitHub Actions.
-  Hence, a task still waiting for its predecessors at that time is left
+  check of the task store finds no dispatchable task while it processes
+  no task anymore -- intended for CI contexts like GitHub Actions, and
+  not allowed in a fleet (see `ase agent fleet start`).
+  Hence, a task still waiting for its predecessors at that time (e.g.,
+  for a task still processed by an agent of another phase) is left
   for a later run. A failed check of the task store is retried after a
   growing delay, where `--one-shot` gives up after three failures in a
   row and terminates with a non-zero exit status. All processing
@@ -920,7 +929,7 @@ requests of tasks:
   existing yet). A task whose status the skill itself moved elsewhere
   is tagged, too, and left in that state.
 
-  With an agent relay (`--agent-relay` *url*, else `project.agent.relay`,
+  With an agent relay (`--agent-relay` *url*, else `project.relay.url`,
   as `ase://<addr>:<port>[/<token>]` resp. `ases://<addr>:<port>[/<token>][?insecure]`
   for HTTPS, optionally without certificate verification), each agent
   additionally passes its live presence to the task boards (see `ase
@@ -931,7 +940,7 @@ requests of tasks:
   announcements per second), and a heartbeat every 10 seconds, and it
   removes its presence on termination. The relay requires an explicit
   `project.id`. Its bearer token is the one embedded in the URL, else
-  `ASE_AGENT_RELAY_TOKEN`, else `project.agent.token` (intended for the
+  `ASE_AGENT_RELAY_TOKEN`, else `project.relay.token` (intended for the
   `user` scope, and warned about on any other scope), else the token of
   the locally started agent relay (or of
   the locally started task store co-hosting it), if the URL addresses it.
@@ -949,14 +958,17 @@ requests of tasks:
   values refer to the Git working copy the agents are started in: for
   those the agents create no own Git worktree, but work in the working
   copy directly, just adjusting its checked-out branch. As concurrently
-  processed tasks would interfere there, all agents of one `ase agent`
-  process handle at most one task at a time in the working copy itself
-  (other tasks waiting until it is free again), and the implementer
+  processed tasks would interfere there, an agent handles at most one
+  task at a time in the working copy itself (other tasks waiting until
+  it is free again), and the implementer
   starts a task with a `worktree` changeset (or with a `branch:` changeset
   checked out in the working copy) only in a working copy without
   uncommitted changes (e.g. of an earlier task not yet integrated), while
   such a task otherwise waits. This coordination does not extend to
-  agents of other processes or humans working in the same working copy. Without
+  other agents (each running in its own process, also within a fleet)
+  or humans working in the same working copy, so a working copy should
+  be used directly by a single agent only, while the other agents are
+  given `--repo` (or process tasks without `worktree` values only). Without
   `--repo`, all tasks are processed in this working copy, so the agents
   have to be started inside one. With `--repo` *url*, each agent instead
   clones the Git repository *url* once into its temporary directory
@@ -1099,8 +1111,8 @@ requests of tasks:
     together with the change set of a task with a `worktree` changeset,
     so keep that worktree clean while the integrator runs. As merges into
     the same target branch cannot run concurrently, tasks are processed
-    serially only: a global `--parallel` is silently clamped to `1`,
-    while its own `--parallel` is clamped with a warning.
+    serially only: `--parallel` is clamped to `1` with a warning (and
+    a fleet refuses more than one `integrator`).
 
   - `ase agent editor`:
     Unlike the other agents, it is bound to no phase and supports all
@@ -1140,11 +1152,27 @@ requests of tasks:
     process is no longer alive) are turned into `kind="edit-failed"`,
     and the previous assignees of their tasks are restored.
 
+- `ase agent` *agent* `status` \[`-n`|`--name` *name*\]:
+  Report whether the agent of the name *name* (default: its kind) is
+  running. Exits with status 1 if it is not running.
+
+- `ase agent` *agent* `log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\] \[`--name` *name*\]:
+  Show the log `.ase/agent/`*name*`.log` of the agent of the name *name*
+  (default: its kind) run in the background (where an agent of a fleet
+  logs into the log of the fleet instead, see `ase agent fleet log`).
+  The options `-f`/`--follow` and `-n`/`--lines` correspond to `ase
+  service log`, where the name is hence given via `--name` only.
+
+- `ase agent` *agent* `stop` \[`-n`|`--name` *name*\]:
+  Stop the agent of the name *name* (default: its kind), waiting (up to
+  5 minutes) until it aborted its running processings and put their
+  tasks back.
+
 - `ase agent relay start` \[`-a`|`--address` *host*\] \[`-p`|`--port` *port*\]
   \[`-t`|`--token` *token*\] \[`-c`|`--cors` *origin*\] \[`--tls-cert` *file* `--tls-key` *file*\]
   \[`-f`|`--foreground`\]:
   Start the per-user agent relay server in the background, which passes
-  the live presence of the agents (see `ase agent`) to the task boards
+  the live presence of the agents (see `ase agent` *agent* `start`) to the task boards
   (see `ase task board`) without any external infrastructure. It can run
   locally or on a central host, as long as both the agents and the task
   boards reach it, and serves any number of projects (by their
@@ -1161,15 +1189,133 @@ requests of tasks:
   agent are always to be appended to the already received ones. The
   options and their defaults correspond to `ase task store start`, with
   `ASE_AGENT_RELAY_TOKEN` and the per-user `relay.yaml` (logging into
-  `relay.log`, or with `--foreground` to the terminal) instead. Alternatively, `ase task store start
+  `relay.log`, or with `--foreground` to the terminal) instead, where
+  `--tls-cert` and `--tls-key` not given fall back to the configured
+  `project.relay.crt` and `project.relay.key` (unless
+  `project.relay.url` selects HTTP via `ase://` on this host). Alternatively, `ase task store start
   --with-agent-relay` co-hosts the agent relay in the task store server.
 
 - `ase agent relay status`:
   Report whether the agent relay server is running, and on which address
   and port. Exits with status 1 if it is not running.
 
+- `ase agent relay log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]:
+  Show the log `relay.log` of the agent relay server run in the
+  background. The options correspond to `ase service log`.
+
 - `ase agent relay stop`:
   Stop the agent relay server.
+
+- `ase agent fleet init` \[`-c`|`--config` *file*\] \[`-t`|`--tool` *tool*\] \[`--force`\]:
+  Create the initial YAML configuration *file* (default:
+  `.ase/fleet.yaml`) of a fleet (see `ase agent fleet start`) for the
+  `enterprise` task lifecycle model, with the agent relay, the four
+  phase agents `planner` (mode `reboot`), `implementer` (mode
+  `implement`, 2 tasks in parallel), `approver` (mode `judge`, 2 tasks
+  in parallel, so a human still decides on the approval), and
+  `integrator` (mode `squash`), and the edit request agent `editor`,
+  all with the agent tool *tool* (default: `claude`, or the `ASE_TOOL`
+  environment variable if set), where the section `default` lists all
+  its options with their default values (an empty value for the options
+  without a fixed default). The configuration is checked like on
+  `ase agent fleet start` before it is written, and an already existing
+  *file* is overwritten only with `--force`.
+
+- `ase agent fleet start` \[`-c`|`--config` *file*\] \[`-f`|`--foreground`\]:
+  Start the fleet of agents (and optionally of the agent relay they
+  report to) of the YAML configuration *file* (default:
+  `.ase/fleet.yaml`) in the background, through a supervising process
+  which runs each member in its own child process via `ase agent`
+  *agent* `start --foreground` resp. `ase agent relay start
+  --foreground`, all logging into `.ase/agent/fleet.log` (or with
+  `--foreground` to the terminal), where each line is prefixed with the
+  name of the member writing it (resp. `fleet` for the fleet itself),
+  padded to the longest name and followed by ` | ` (e.g.,
+  `implementer | ase: [...]: [INFO]: ...`), and, on a terminal, colored
+  by the name (see `ase agent fleet log`). The configuration carries the
+  optional section `fleet` with the option `foreground` of the fleet
+  itself (the same as `--foreground`), the optional section `relay`
+  with the options `address`, `port`, `token`, `cors`, `tls-cert`, and
+  `tls-key` of `ase agent relay start`, the optional section `default`
+  with the options `tool`, `parallel`, `timeout`, `repo`, `tempdir`, and
+  `agent-relay` as the default options of all agents (each one applied
+  only to the agents supporting it, and overridden by the section of
+  an agent), and one section per agent, named by its agent name, with
+  its agent options and an optional `kind` (default: the section name),
+  all options given by their long names, where `true` enables a flag,
+  `false` or an empty value omits an option, and a list repeats an
+  option, e.g.:
+
+  ```yaml
+  fleet:
+      foreground: true
+  relay:
+      port:     4711
+  default:
+      tool:     claude
+  planner:
+  implementer:
+      parallel: 2
+  editor-claude:
+      kind:     editor
+  editor-codex:
+      kind:     editor
+      tool:     codex
+  ```
+
+  The options `name` (given by the section name), `one-shot` (as the
+  members are restarted), and `foreground` are not allowed, neither is
+  a non-empty `agent-relay` together with the section `relay`, and `integrator`
+  can be given only once. Before the fleet starts, the structure of the
+  configuration, the option names, and the option syntax are checked,
+  while the option values (e.g., `parallel` or `tool`) are checked only
+  once the corresponding member starts. With the section `relay`, the
+  fleet owns the per-user agent relay (which hence must not run
+  already): the options `address`, `port`, and `token` not given fall
+  back to those of `project.relay.url` (its embedded token, else
+  `$ASE_AGENT_RELAY_TOKEN`, else `project.relay.token`), if it addresses
+  this host (else it is warned about and not adopted), where a deviating
+  `address` or `port` is warned about (as the task boards following
+  `project.relay.url` then do not see the agents); the options
+  `tls-cert` and `tls-key` not given fall back to `project.relay.crt`
+  and `project.relay.key` (unless an adopted `project.relay.url`
+  selects HTTP), where an adopted `project.relay.url` selecting HTTPS
+  requires both. The fleet starts the agent relay first and passes its
+  URL via `--agent-relay` and its actual token via
+  `$ASE_AGENT_RELAY_TOKEN` to all agents. The command returns once
+  all members started successfully (else all of them are stopped again
+  and the failure is reported). Afterwards, the fleet restarts every
+  member whenever it exits (e.g., crashed, or stopped individually via
+  `ase agent` *agent* `stop`) after a delay starting at 1 second and
+  doubled on each restart in a row up to 5 minutes, which is reset
+  once the member ran for 10 minutes. On termination, the fleet first
+  stops all agents and then the agent relay, where a repeated signal is
+  forwarded to the remaining members (terminating the agents at once).
+  As each agent runs in its own process, the agents of a fleet do not
+  coordinate their direct use of the Git working copy they are started
+  in (see `ase agent` *agent* `start`). An already running fleet is
+  left alone. As the members run in their own process groups, they
+  survive a fleet process killed without a chance to stop them (e.g.,
+  via `SIGKILL`): such orphaned members (identified by their runtime
+  state still recording the process of the fleet) are stopped first.
+
+- `ase agent fleet status`:
+  Report whether the fleet is running, and for each member whether it
+  is running (with its process id) or awaiting its restart, and how
+  often it was restarted. Exits with status 1 if it is not running.
+
+- `ase agent fleet log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]:
+  Show the log `.ase/agent/fleet.log` of the fleet run in the background,
+  aggregating the lines of the fleet itself and of all its members, each
+  one prefixed with its name (see `ase agent fleet start`), which is
+  colored by the name if the output is a terminal. The options
+  correspond to `ase service log`.
+
+- `ase agent fleet stop`:
+  Stop the fleet with all its members, first all agents and then the
+  agent relay. With the fleet process already gone (e.g., killed via
+  `SIGKILL`), its orphaned members are stopped (see `ase agent fleet
+  start`).
 
 The following top-level commands exist for resolving project artifact
 kinds to project-relative file lists, driven by the
@@ -1345,12 +1491,12 @@ STATE FILES
 - *per-user state directory*`/agent-`*kind*`/`*store-hash*`/`*run-id*`.lock` and `.json`:
   Run lock (a directory, refreshed periodically and considered stale
   after 30 seconds without refresh) and run record (process id, process
-  start time, and claimed tasks) of each `ase agent` process of agent
+  start time, and claimed tasks) of each agent process of agent
   *kind* (`planner`, `implementer`, `approver`, `integrator`, or
   `editor`), below a sub-directory per task store, where *store-hash*
   is the first 12 hex digits of the SHA-1 digest of the absolute base
   directory of an `ase:` task store, the scheme, host, and port of an `ase://`
-  resp. `ases://` task store, or the `project.task.store` value
+  resp. `ases://` task store, or the `project.task.store.url` value
   otherwise. They are used to recover the tasks of terminated agent
   processes. On termination, the lock is removed, and so is the
   record, unless it still records claimed tasks.
@@ -1371,7 +1517,7 @@ STATE FILES
 - `<project>/`*basedir*`/TASK-`*id*`.md`:
   Persisted task plan, managed by the `ase task` subcommands through the
   built-in storage plugin of a local `ase:`*basedir* task store
-  (`project.task.store`, default `ase:./.ase/task`), located relative
+  (`project.task.store.url`, default `ase:./.ase/task`), located relative
   to the Git top-level directory (or the current working directory
   outside a Git repository). Each task file is owned by *ASE* and
   removed by `ase task delete` and `ase task purge`.
@@ -1385,10 +1531,26 @@ STATE FILES
   The web state is shared by all
   browsers and tabs showing the web board. It never holds task content.
 
+- `<project>/.ase/agent/`*name*`.yaml` and `.log`:
+  Runtime state (process id and process start time) and log (of a
+  detached agent only) of the agent named *name* (see `ase agent`
+  *agent* `start`), where the state exists while the agent runs.
+
+- `<project>/.ase/agent/fleet.yaml` and `fleet.log`:
+  Runtime state (process id, process start time, configuration file,
+  and the kind, process id, and number of restarts of each member) and
+  log (of a detached fleet only) of the fleet (see `ase agent fleet
+  start`), where the state exists while the fleet runs.
+
+- `<project>/.ase/fleet.yaml`:
+  Default configuration of the fleet (see `ase agent fleet start`),
+  written by the user (or initially created via `ase agent fleet init`)
+  and intended to be versioned.
+
 - `<project>/.ase/.gitignore`:
   Self-ignoring Git ignore file, created on first write of any of the
-  machine-local runtime files above (`service.yaml`, `service.log`, and
-  `board.yaml`), which it covers together with lock files and
+  machine-local runtime files above (`service.yaml`, `service.log`,
+  `board.yaml`, and `agent/`), which it covers together with lock files and
   `worktree/`, so they never show up as untracked files. An existing
   file is never overwritten.
 

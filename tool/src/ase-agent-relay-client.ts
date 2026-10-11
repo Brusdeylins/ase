@@ -44,7 +44,7 @@ export const redactURL = (url: string): string => {
 }
 
 /*  resolve the bearer token of the agent relay: the token embedded in the URL,
-    else $ASE_AGENT_RELAY_TOKEN, else "project.agent.token", else the token of the
+    else $ASE_AGENT_RELAY_TOKEN, else "project.relay.token", else the token of the
     locally started agent relay server (or of the locally started task store server
     co-hosting the agent relay), but only if the URL addresses exactly this server;
     a token potentially committed or redirected is warned about  */
@@ -52,8 +52,8 @@ const relayToken = (log: Log, relay: ScopedValue, token: ScopedValue, embedded: 
     const repoScoped = relay.scope === "project" || relay.scope.startsWith("task:")
     if (embedded !== undefined) {
         if (repoScoped)
-            log.write("warning", `agent: token embedded in "project.agent.relay" URL on scope "${relay.scope}" ` +
-                "might be committed -- use $ASE_AGENT_RELAY_TOKEN or \"project.agent.token\" on scope \"user\" instead")
+            log.write("warning", `agent: token embedded in "project.relay.url" on scope "${relay.scope}" ` +
+                "might be committed -- use $ASE_AGENT_RELAY_TOKEN or \"project.relay.token\" on scope \"user\" instead")
         return embedded
     }
 
@@ -62,7 +62,7 @@ const relayToken = (log: Log, relay: ScopedValue, token: ScopedValue, embedded: 
     const redirected = () => {
         if (repoScoped && !isLoopback(url.hostname))
             log.write("warning", `agent: sending token to non-loopback host "${url.host}" selected by ` +
-                `"project.agent.relay" on scope "${relay.scope}" -- verify you trust this host` +
+                `"project.relay.url" on scope "${relay.scope}" -- verify you trust this host` +
                 (url.protocol === "ase:" ? " (token is transmitted in plaintext)" : ""))
     }
     const env = process.env.ASE_AGENT_RELAY_TOKEN
@@ -72,7 +72,7 @@ const relayToken = (log: Log, relay: ScopedValue, token: ScopedValue, embedded: 
     }
     if (token.value !== "") {
         if (token.scope !== "user")
-            log.write("warning", `agent: "project.agent.token" found on scope "${token.scope}" ` +
+            log.write("warning", `agent: "project.relay.token" found on scope "${token.scope}" ` +
                 "-- configure it on scope \"user\" only")
         redirected()
         return token.value
@@ -102,41 +102,28 @@ const relayToken = (log: Log, relay: ScopedValue, token: ScopedValue, embedded: 
             return tok
     }
     throw new Error(`agent: no token for agent relay "${redactURL(relay.value)}" ` +
-        "(set $ASE_AGENT_RELAY_TOKEN, \"project.agent.token\" on scope \"user\", or \"/<token>\" in the URL)")
+        "(set $ASE_AGENT_RELAY_TOKEN, \"project.relay.token\" on scope \"user\", or \"/<token>\" in the URL)")
 }
 
-/*  resolve the agent relay of the project: the URL "ase://<addr>:<port>[/<token>]" selects
-    an agent relay server via HTTP, "ases://<addr>:<port>[/<token>][?insecure]" via HTTPS
-    (optionally without certificate verification), taken from the given override (the
-    "--agent-relay" option), else from "project.agent.relay", where no URL at all
-    (null) disables the passing of the presence of the agents  */
-export const relaySpec = (log: Log, override?: string): RelaySpec | null => {
-    const cfg = new Config("config", configSchema, log)
-    cfg.read()
-    const scoped = (key: string): ScopedValue => {
-        const entry = cfg.getScoped(key)
-        if (entry === undefined)
-            return { value: "", scope: "" }
-        return {
-            value: String(isScalar(entry.value) ? entry.value.value : entry.value),
-            scope: Config.scopeLabel(entry.scope)
-        }
-    }
-    const relay = override !== undefined && override !== "" ? { value: override, scope: "option" } : scoped("project.agent.relay")
-    if (relay.value === "")
-        return null
+/*  a parsed agent relay URL: the parsed URL itself, whether it selects HTTPS,
+    its embedded token (if any), and whether the certificate verification is skipped  */
+export type RelayURL = { url: URL, secure: boolean, embedded: string | undefined, insecure: boolean }
 
+/*  parse an agent relay URL "ase://<addr>:<port>[/<token>]" (selecting an agent relay
+    server via HTTP) or "ases://<addr>:<port>[/<token>][?insecure]" (selecting it via
+    HTTPS, optionally without certificate verification)  */
+export const parseRelayURL = (value: string): RelayURL => {
     /*  parse via WHATWG URL, as it supports bracketed IPv6 addresses (e.g. "[::1]")
         and retains the brackets in "hostname" for direct reuse in the HTTP URL  */
-    const unsupported = () => new Error(`agent: unsupported agent relay URL "${redactURL(relay.value)}" ` +
+    const unsupported = () => new Error(`agent: unsupported agent relay URL "${redactURL(value)}" ` +
         "(expected: \"ase://<addr>:<port>[/<token>]\" or \"ases://<addr>:<port>[/<token>][?insecure]\")")
-    const m = /^(ases?):\/\//.exec(relay.value)
+    const m = /^(ases?):\/\//.exec(value)
     if (m === null)
         throw unsupported()
     const secure = m[1] === "ases"
     let url: URL
     try {
-        url = new URL(relay.value)
+        url = new URL(value)
     }
     catch (_err: unknown) {
         throw unsupported()
@@ -153,6 +140,28 @@ export const relaySpec = (log: Log, override?: string): RelaySpec | null => {
     catch (_err: unknown) {
         throw unsupported()
     }
+    return { url, secure, embedded, insecure: url.search === "?insecure" }
+}
+
+/*  resolve the agent relay of the project: the URL (see "parseRelayURL") is taken from
+    the given override (the "--agent-relay" option), else from "project.relay.url",
+    where no URL at all (null) disables the passing of the presence of the agents  */
+export const relaySpec = (log: Log, override?: string): RelaySpec | null => {
+    const cfg = new Config("config", configSchema, log)
+    cfg.read()
+    const scoped = (key: string): ScopedValue => {
+        const entry = cfg.getScoped(key)
+        if (entry === undefined)
+            return { value: "", scope: "" }
+        return {
+            value: String(isScalar(entry.value) ? entry.value.value : entry.value),
+            scope: Config.scopeLabel(entry.scope)
+        }
+    }
+    const relay = override !== undefined && override !== "" ? { value: override, scope: "option" } : scoped("project.relay.url")
+    if (relay.value === "")
+        return null
+    const { url, secure, embedded, insecure } = parseRelayURL(relay.value)
 
     /*  require an explicit project id, as a basename-derived one
         likely collides with unrelated projects on a shared server  */
@@ -165,8 +174,8 @@ export const relaySpec = (log: Log, override?: string): RelaySpec | null => {
     return {
         prjId,
         base:     `${secure ? "https" : "http"}://${url.hostname}:${url.port}`,
-        token:    relayToken(log, relay, scoped("project.agent.token"), embedded, url),
-        insecure: url.search === "?insecure"
+        token:    relayToken(log, relay, scoped("project.relay.token"), embedded, url),
+        insecure
     }
 }
 

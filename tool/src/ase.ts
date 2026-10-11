@@ -76,6 +76,14 @@ const subCommands: Record<string, Record<string, Registrar>> = {
 const main = async (): Promise<void> => {
     await log.init()
 
+    /*  apply the line prefix of the logger, passed by a supervising process (e.g. "ase agent
+        fleet" to its members), and consume it, as it must not leak into any sub-process  */
+    const prefix = process.env.ASE_LOG_PREFIX
+    if (prefix !== undefined) {
+        log.prefix(prefix)
+        Reflect.deleteProperty(process.env, "ASE_LOG_PREFIX")
+    }
+
     /*  establish top-level program  */
     const program = new Command()
     program

@@ -197,7 +197,7 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
 
         /*  explain a denied access (but not an exceeded rate limit), as the
             GitHub message names neither the token source nor the missing permission  */
-        const source = options.token !== undefined ? "the \"token\" option (resp. \"project.task.token\")" :
+        const source = options.token !== undefined ? "the \"token\" option (resp. \"project.task.store.token\")" :
             process.env.GITHUB_TOKEN !== undefined ? "$GITHUB_TOKEN" : "$GH_TOKEN"
         this.gh.hook.error("request", (err, request) => {
             const status = statusOf(err)

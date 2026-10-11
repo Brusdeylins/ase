@@ -11,11 +11,13 @@ import { Option }                 from "commander"
 import { isMap }                  from "yaml"
 import * as v                     from "valibot"
 
-import { ServerCommand }          from "./ase-lib-server-cli.js"
+import { ServerCommand, configuredTls } from "./ase-lib-server-cli.js"
 import type {
     ServerContext, ServerStartOptions,
     ServerConfig, ServerInstance, ServerFacts
 }                                 from "./ase-lib-server-cli.js"
+import { Config }                 from "./ase-config-core.js"
+import { configSchema }           from "./ase-config-schema.js"
 import * as Delegate              from "./ase-task-store-plugin-delegate.js"
 import * as Server                from "./ase-task-store-server-bind.js"
 
@@ -74,6 +76,15 @@ export default class TaskStoreCommand extends ServerCommand<StoreContext, StartO
             plugin:  plugin !== null ? String(plugin) : null,
             options: isMap(opts) ? (opts.toJSON() as Record<string, unknown>) : {}
         }
+    }
+
+    /*  the TLS certificate and key configured in the project configuration:
+        "project.task.store.crt" and "project.task.store.key", unless
+        "project.task.store.url" selects HTTP on this host  */
+    protected tlsDefaults (): { cert: string | null, key: string | null } {
+        const cfg = new Config("config", configSchema, this.log)
+        cfg.read()
+        return configuredTls(cfg, "project.task.store")
     }
 
     /*  the base directory of the built-in storage plugin of the context  */

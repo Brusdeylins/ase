@@ -669,7 +669,7 @@ export const watchTasks = (log: Log, onChange: () => Promise<void> | void,
 export type AgentsState = { connected: boolean, agents: AgentPresence[] }
 
 /*  resolve the agent relay of the project (from the given override, else from
-    "project.agent.relay"), where a misconfigured one is warned about and ignored  */
+    "project.relay.url"), where a misconfigured one is warned about and ignored  */
 const boardRelay = (log: Log, relay: string | undefined): RelaySpec | null => {
     try {
         return relaySpec(log, relay)

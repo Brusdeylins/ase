@@ -839,8 +839,12 @@ export abstract class Agent {
         return this._name !== "" ? this._name : this.kind
     }
 
-    /*  whether tasks are processed serially only (clamping "--parallel" to 1)  */
+    /*  whether tasks are processed serially only (clamping "--parallel" to 1, and
+        refusing multiple agents of the kind in a fleet, see "ase agent fleet")  */
     protected readonly serial: boolean = false
+    get serialOnly (): boolean {
+        return this.serial
+    }
 
     /*  whether tasks are processed in Git worktrees (requiring "git" in $PATH)  */
     protected readonly worktree: boolean = false
@@ -855,7 +859,6 @@ export abstract class Agent {
     private cmd:         Command | null                  = null
     private tool:        Tool                            = "claude"
     private parallel                                     = 1
-    private peers                                        = 1
     private timeoutSpec                                  = ""
     private timeout                                      = 0
     private oneShot                                      = false
@@ -876,9 +879,6 @@ export abstract class Agent {
     /*  the working directories in the temporary clone of "--repo" kept
         for a manual recovery of the work preserved in them (see "preserve")  */
     private keptdirs                                     = new Set<string>()
-
-    /*  the interrupt of the running agent (a no-op while not running)  */
-    private stop:        () => void                      = () => {}
 
     /*  the client of the agent relay (if any) and the presence of the running agent announced to it  */
     private relay:       AgentRelayClient | null         = null
@@ -969,10 +969,9 @@ export abstract class Agent {
         return true
     }
 
-    /*  whether tasks are processed in parallel to others: by multiple worker
-        slots of the agent or also by the peer agents of its kind  */
+    /*  whether tasks are processed in parallel to others by multiple worker slots of the agent  */
     protected get parallelized (): boolean {
-        return this.parallel > 1 || this.peers > 1
+        return this.parallel > 1
     }
 
     /*  defer a dispatchable task (instead of claiming it, see "ready"), reporting
@@ -991,7 +990,7 @@ export abstract class Agent {
         into it, stages in it, or integrates from or into it), so no agent of this process using
         it directly processes another task meanwhile, which would mix up the uncommitted change
         sets of the tasks (the agents of other processes, and humans, are not coordinated, so
-        a working copy should be used by the agents of a single "ase agent" process only);
+        a working copy should be used directly by a single agent process only);
         returns false if it is already held for another task  */
     protected holdRoot (task: AgentTask, root: string): boolean {
         return this.hold(task, root)
@@ -1321,23 +1320,24 @@ export abstract class Agent {
         }
     }
 
-    /*  the per-agent CLI command, parsing the options following the agent name on the
-        "ase agent" command line up to the next agent name, where the options shared
-        with "ase agent" carry no defaults, as they fall back to those of "ase agent"  */
+    /*  the per-agent CLI command "start", parsing the options of the agent, where the
+        options shared by all agents carry no defaults, as they fall back to those
+        given to "setup" (see "ase agent <kind> start" and "ase agent fleet start")  */
     command (): Command {
         if (this.cmd === null) {
-            this.cmd = new Command(`ase agent ${this.kind}`)
+            this.cmd = new Command("start")
                 .description(this.description)
                 .exitOverride()
-                .allowExcessArguments(true)
-                .passThroughOptions(true)
                 .option("-n, --name <name>",        "name of the agent in its log lines, its processing log " +
-                    `attachment "agent:<name>", and the "Assignee:" of its tasks (default: "${this.kind}")`)
-                .option("-t, --tool <tool>",        "agent tool (\"claude\", \"copilot\", or \"codex\")")
-                .option("-p, --parallel <num>",     "maximum number of tasks processed in parallel")
+                    `attachment "agent:<name>", the "Assignee:" of its tasks, and its runtime files (default: "${this.kind}")`)
+                .option("-t, --tool <tool>",        "agent tool (\"claude\", \"copilot\", or \"codex\"; " +
+                    "default: $ASE_TOOL, else \"claude\")")
+                .option("-p, --parallel <num>",     "maximum number of tasks processed in parallel (default: 1)")
                 .option("-T, --timeout <duration>", "maximum duration of processing a task " +
-                    "as <number><unit> with unit s, m, or h")
+                    "as <number><unit> with unit s, m, or h (default: 60m)")
                 .option("-o, --one-shot",           "terminate once all dispatchable incoming tasks are processed")
+                .option("--agent-relay <url>",      "agent relay to pass the live presence of the agent to, " +
+                    "as \"ase[s]://<addr>:<port>[/<token>]\" (default: the configured \"project.relay.url\", else none)")
             if (this.worktree)
                 this.cmd
                     .option("-r, --repo <url>",    "Git repository to clone temporarily for the tasks " +
@@ -1349,11 +1349,10 @@ export abstract class Agent {
         return this.cmd
     }
 
-    /*  configure the agent from the options of "ase agent", overridden by its own
-        options, validate its configuration, and initialize it, where <peers> is the
-        number of agents of its kind run concurrently (including itself) and <relay>
-        the client of the agent relay to announce the presence of the agent to (if any)  */
-    async setup (global: AgentOpts, own: Partial<AgentOpts>, peers = 1, relay: AgentRelayClient | null = null): Promise<void> {
+    /*  configure the agent from the default options, overridden by its own options,
+        validate its configuration, and initialize it, where <relay> is the client
+        of the agent relay to announce the presence of the agent to (if any)  */
+    async setup (global: AgentOpts, own: Partial<AgentOpts>, relay: AgentRelayClient | null = null): Promise<void> {
         const opts = {
             ...global,
             ...Object.fromEntries(Object.entries(own).filter((entry) => entry[1] !== undefined))
@@ -1361,10 +1360,7 @@ export abstract class Agent {
         this._name = opts.name ?? ""
         if (this._name !== "" && !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(this._name))
             throw new Error(`agent: invalid name "${this._name}" (expected letters, digits, "_", ".", or "-")`)
-        this.peers = peers
         this.relay = relay
-        if (this.serial && peers > 1)
-            throw new Error(`agent: ${this.kind} processes tasks serially only -- cannot run ${peers} agents of it`)
         this.tool = parseTool(opts.tool)
         for (const cli of [ toolSpecs[this.tool].cli, ...(this.worktree ? [ "git" ] : []) ])
             await which(cli).catch(() => {
@@ -1400,11 +1396,6 @@ export abstract class Agent {
                 `${this.lifecycles.map((name) => `"${name}"`).join(" or ")} task lifecycle model ` +
                 `(project uses "${this.lifecycle.name}")`)
         await this.init(opts)
-    }
-
-    /*  interrupt the running agent like a terminating signal (e.g. on a failed peer agent)  */
-    interrupt (): void {
-        this.stop()
     }
 
     /*  clone the repository of "--repo" temporarily, with its default
@@ -1535,9 +1526,7 @@ export abstract class Agent {
         /*  dispatch on every change until interrupted (or, in one-shot mode, until a
             dispatching leaves all worker slots free while all agents of this process
             are idle), then await the aborted jobs, where the interrupt is triggered by
-            all terminating signals which can be caught (or by a failed peer agent),
-            so no claimed task keeps its "active" tag  */
-        this.stop = interrupt
+            all terminating signals which can be caught, so no claimed task keeps its "active" tag  */
         process.on("SIGINT",  signalled)
         process.on("SIGTERM", signalled)
         process.on("SIGHUP",  signalled)
@@ -1630,7 +1619,6 @@ export abstract class Agent {
             process.off("SIGTERM", signalled)
             process.off("SIGHUP",  signalled)
             process.off("SIGQUIT", signalled)
-            this.stop = () => {}
 
             /*  let the agents of this process waiting for this one re-check their termination  */
             wakeAgents.delete(notify)
