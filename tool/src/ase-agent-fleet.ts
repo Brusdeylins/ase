@@ -405,6 +405,7 @@ export default class AgentFleetCommand extends DaemonCommand {
         const width   = Math.max(...[ "fleet", ...members.map((m) => m.name) ].map((name) => name.length))
         const colored = process.stderr.isTTY === true
         this.log.prefix(logPrefix("fleet", width, colored))
+        this.log.write("info", `${this.label}: starting (process ${process.pid}) with configuration "${file}"`)
 
         const save = () => {
             writeState(stateFile, {
