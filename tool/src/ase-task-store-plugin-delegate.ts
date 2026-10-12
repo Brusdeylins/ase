@@ -109,7 +109,7 @@ export class TaskStore {
         let queue = this.queues.get(prjId)
         if (queue === undefined) {
             queue = new PQueue({ concurrency: 1 })
-            queue.on("idle", () => this.queues.delete(prjId))
+            queue.addEventListener("idle", () => this.queues.delete(prjId))
             this.queues.set(prjId, queue)
         }
         return queue.add(() => this.plugin.lock !== undefined ? this.plugin.lock(prjId, op) : op())
