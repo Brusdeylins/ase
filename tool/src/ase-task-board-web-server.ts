@@ -207,7 +207,10 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
     ] as [ string, string ][]).filter(([ , v ]) => v !== "")
     const url  = `/task-board/api/task/${encodeURIComponent(id)}/attachment/${n}`
     const type = att.type.split(";")[0].trim().toLowerCase()
-    if (type.startsWith("image/") && type !== "image/svg+xml")
+
+    /*  embed images (including SVG, as an image context never runs
+        its scripts and never loads its external resources)  */
+    if (type.startsWith("image/"))
         return fieldsDocument(fields, `<div class="embedding"><img src="${url}" alt="${escapeHTML(att.desc || att.type)}"></div>`)
     let text = att.data
     if (text === undefined) {
@@ -531,12 +534,17 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
             if (a === null)
                 return h.response({ error: "no such attachment" }).code(404)
             const type = a.type.split(";")[0].trim().toLowerCase()
+
+            /*  confine the content: no scripts, forms, or origin access (sandbox)
+                and no external resources, except for inline styles and data URLs,
+                so even a directly displayed SVG can neither act nor track  */
             const res  = h.response(a.content).type(type)
-                .header("Content-Security-Policy", "sandbox")
+                .header("Content-Security-Policy",
+                    "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:")
                 .header("X-Content-Type-Options", "nosniff")
 
             /*  never render non-image attachments on the service address  */
-            if (!type.startsWith("image/") || type === "image/svg+xml")
+            if (!type.startsWith("image/"))
                 res.header("Content-Disposition", `attachment; filename="attachment-${n}"`)
             return res
         })
