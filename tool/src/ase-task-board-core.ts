@@ -680,6 +680,13 @@ const boardRelay = (log: Log, relay: string | undefined): RelaySpec | null => {
     }
 }
 
+/*  the names of the requests processed by the agents announced to the agent relay (for their
+    suggestion on requesting a task by prompt): "edit" of the editor agent, and the request
+    names of the request agents of "ase agent custom"  */
+export const requestNames = (state: AgentsState | null): string[] =>
+    [ ...new Set((state?.agents ?? []).map((agent) => agent.kind === "editor" ? "edit" : agent.request ?? "")
+        .filter((name) => name !== "")) ].sort()
+
 /*  order the agents by name (and id, for equally named agents on different hosts)  */
 const byName = (a: AgentPresence, b: AgentPresence): number =>
     a.name.localeCompare(b.name) || a.id.localeCompare(b.id)

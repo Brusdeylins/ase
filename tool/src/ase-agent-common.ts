@@ -58,18 +58,30 @@ export type LineLevel = "error" | "warning" | "info"
 /*  the processing log of a claimed task  */
 export type AgentLog = (level: LineLevel, msg: string) => Promise<void>
 
-/*  the invocation of an ASE skill command in a working directory,
-    optionally granting access to additional directories, optionally
+/*  the result of the invocation of the headless agent tool: whether it succeeded
+    (exit code 0 without timeout and interrupt), and its agent message text lines  */
+export type AgentResult = { ok: boolean, output: string[] }
+
+/*  the invocation of a skill command "<skill> <args>" (rendered per agent tool, see
+    "skillPrompt"), or alternatively of an already rendered raw prompt, in a working
+    directory, optionally granting access to additional directories, optionally
     finished after the invocation (e.g. by committing its result), and
     optionally cleaned up afterwards in any case, even after a failed
     finishing or a timed out preparing (e.g. by removing its temporary worktree)  */
 export type AgentJob = {
-    cmd:      string
+    cmd?:     string
+    prompt?:  string
     cwd:      string
     dirs?:    string[]
-    finish?:  (log: AgentLog) => Promise<void>
+    finish?:  (log: AgentLog, result: AgentResult) => Promise<void>
     cleanup?: (log: AgentLog) => Promise<void>
 }
+
+/*  the work of a job in its working directory (see "Agent.sourceJob", "Agent.changesetJob",
+    "Agent.changesetReadJob", and "Agent.targetJob"): the job without its prompt, plus the
+    temporary worktree of a "branch:" source (else empty) and the ASE worktree id under
+    which the skill finds the changeset (else empty)  */
+export type AgentWork = Omit<AgentJob, "cmd" | "prompt"> & { dirs: string[], sourceDir: string, changesetWorktree: string }
 
 /*  the type ("worktree", "branch", "attachment", or "source") and the name
     (of "branch:<name>" and "attachment:<name>") of a change set flow value  */
@@ -85,21 +97,31 @@ type ToolEntry = { level: LineLevel, msg: string, text?: boolean, quiet?: boolea
     which would otherwise be fed back into the next rendering of the task plan)  */
 const TEXT_MAX = 20
 
-/*  the per-tool headless invocation of the ASE skill command <cmd> with access to the
+/*  the per-tool headless invocation of the rendered prompt <prompt> with access to the
     additional directories <add> (the "--add-dir" options), streaming JSONL events,
     where risky actions are denied or automatically reviewed instead of being prompted for
     (the variadic "--add-dir" of Claude has to precede the other options to not consume the prompt)  */
-const toolArgs: Record<Tool, (cmd: string, add: string[]) => string[]> = {
-    "claude":  (cmd, add) => [
+const toolArgs: Record<Tool, (prompt: string, add: string[]) => string[]> = {
+    "claude":  (prompt, add) => [
         ...add, "-p", "--output-format", "stream-json", "--verbose", "--disallowedTools", "AskUserQuestion",
-        "--permission-mode", "auto", "--permission-prompts", "none", `/ase:${cmd}`
+        "--permission-mode", "auto", "--permission-prompts", "none", prompt
     ],
-    "copilot": (cmd, add) => [
-        ...add, "--allow-all-tools", "--no-ask-user", "--no-color", "--output-format", "json", "-p", `/${cmd}`
+    "copilot": (prompt, add) => [
+        ...add, "--allow-all-tools", "--no-ask-user", "--no-color", "--output-format", "json", "-p", prompt
     ],
-    "codex":   (cmd, add) => [
-        "exec", ...add, "--json", "--approve-for-me", "--color", "never", `$${cmd}`
+    "codex":   (prompt, add) => [
+        "exec", ...add, "--json", "--approve-for-me", "--color", "never", prompt
     ]
+}
+
+/*  the per-tool rendering of the invocation of the skill <skill> with the arguments <args>:
+    "/<skill>" for Claude and Copilot and "$<skill>" for Codex, where an un-namespaced ASE
+    skill ("ase-*") gets the plugin namespace "ase:" for Claude only (as Copilot and Codex
+    invoke the plugin skills un-namespaced), and the arguments are appended with a single
+    space only if non-empty  */
+export const skillPrompt = (tool: Tool, skill: string, args: string): string => {
+    const name = tool === "claude" && skill.startsWith("ase-") && !skill.includes(":") ? `ase:${skill}` : skill
+    return `${tool === "codex" ? "$" : "/"}${name}${args !== "" ? ` ${args}` : ""}`
 }
 
 /*  abbreviate a value into a single line of at most <max> characters  */
@@ -348,17 +370,23 @@ const flowDefaults: Record<string, string> = {
     Target:    "source"
 }
 
+/*  the raw value of the change set flow key "Source:", "Changeset:", or "Target:"
+    of a task (or else its configured default)  */
+export const taskFlowRaw = (log: Log, task: AgentTask, key: "Source" | "Changeset" | "Target"): string => {
+    const value = task.keys.get(key) ?? ""
+    if (value !== "")
+        return value
+    const cfg = new Config("config", configSchema, log)
+    cfg.read()
+    const val = cfg.getExplicit(`project.task.default.${key.toLowerCase()}`)
+    return typeof val === "string" ? val : (process.env[`ASE_PROJECT_TASK_DEFAULT_${key.toUpperCase()}`] ?? flowDefaults[key])
+}
+
 /*  the value of the change set flow key "Source:", "Changeset:", or "Target:" of a
     task (or else its configured default), parsed and validated like by the skills,
     as the names are passed to Git, and a "Target:" of "source" resolved to "Source:"  */
 export const taskFlow = (log: Log, task: AgentTask, key: "Source" | "Changeset" | "Target"): FlowValue => {
-    let value = task.keys.get(key) ?? ""
-    if (value === "") {
-        const cfg = new Config("config", configSchema, log)
-        cfg.read()
-        const val = cfg.getExplicit(`project.task.default.${key.toLowerCase()}`)
-        value = typeof val === "string" ? val : (process.env[`ASE_PROJECT_TASK_DEFAULT_${key.toUpperCase()}`] ?? flowDefaults[key])
-    }
+    const value = taskFlowRaw(log, task, key)
     const i     = value.indexOf(":")
     const type  = i < 0 ? value : value.slice(0, i)
     const name  = i < 0 ? "" : value.slice(i + 1)
@@ -488,6 +516,22 @@ export const execaJob = (file: string, args: readonly string[], options: JobOpti
     })
 }
 
+/*  run a shell command of the preparing or the finishing of a job in the working directory
+    <cwd> with the additional environment variables <env> (like "execaJob"), logging its
+    output lines, and throwing on its failure  */
+export const shellJob = async (cmd: string, cwd: string, env: Record<string, string>, log: AgentLog): Promise<void> => {
+    await log("info", `running: ${cmd}`)
+    const result = await execaJobBase(cmd, {
+        shell: true, cwd, env, all: true, reject: false, stdin: "ignore", cancelSignal: jobScope.getStore()
+    })
+    for (const line of stripVTControlCharacters(result.all ?? "").split("\n"))
+        if (line.trim() !== "")
+            await log("info", line)
+    if (result.failed)
+        throw new Error(`agent: command "${cmd}" failed: ${result.exitCode !== undefined ?
+            `exit code ${result.exitCode}` : result.shortMessage}`)
+}
+
 /*  run an operation (e.g. the preparing) of a job within its fixed maximum duration,
     where the commands of the operation are killed on timeout (see "jobScope") and the
     operation itself (which still has to end) is passed on timeout to <late> (if given),
@@ -587,13 +631,14 @@ export const contextDir = async (root: string, task: AgentTask): Promise<string>
     return stdout.split("\n").includes(`worktree ${dir}`) ? dir : root
 }
 
-/*  the "--worktree" option of the skills selecting a working copy as their context
-    worktree: none for the working copy <root>, else the id of its ASE worktree  */
-export const worktreeOpt = (root: string, dir: string): string => {
+/*  the ASE worktree id of a working copy, as selected by the "--worktree" option of the
+    skills as their context worktree: empty for the working copy <root>, else the id of
+    its ASE worktree  */
+export const worktreeName = (root: string, dir: string): string => {
     if (dir === root)
         return ""
     else if (path.dirname(dir) === Worktree.baseDir(false, false, root))
-        return ` --worktree ${path.basename(dir)}`
+        return path.basename(dir)
     throw new Error(`agent: working copy "${dir}" is neither "${root}" nor an ASE worktree of it`)
 }
 
@@ -839,6 +884,22 @@ export abstract class Agent {
         return this._name !== "" ? this._name : this.kind
     }
 
+    /*  the name of the processing log attachment "agent:<name>" of the tasks (default: its name),
+        the role of the agent in the recovery descriptions (default: its kind), and the namespace
+        of its runs (default: its kind, see "AgentRun"), which a configured agent can override  */
+    protected get logName (): string {
+        return this.name
+    }
+    protected get role (): string {
+        return this.kind
+    }
+    protected get runKind (): string {
+        return this.kind
+    }
+
+    /*  the name of the requests processed by the agent, as announced in its presence (default: none)  */
+    protected presenceRequest = ""
+
     /*  whether tasks are processed serially only (clamping "--parallel" to 1, and
         refusing multiple agents of the kind in a fleet, see "ase agent fleet")  */
     protected readonly serial: boolean = false
@@ -895,7 +956,7 @@ export abstract class Agent {
     private _run:        AgentRun | null                 = null
     protected get runLock (): AgentRun {
         if (this._run === null)
-            this._run = new AgentRun(this.log, this.kind)
+            this._run = new AgentRun(this.log, this.runKind)
         return this._run
     }
 
@@ -960,13 +1021,24 @@ export abstract class Agent {
         return this.unsettledRetry
     }
 
-    /*  prepare the skill invocation for a claimed task (throws on failure)  */
-    protected abstract prepare (task: AgentTask, parallel: boolean): Promise<AgentJob>
+    /*  prepare the skill invocation for a claimed task, logging into its processing
+        log <log> (throws on failure)  */
+    protected abstract prepare (task: AgentTask, parallel: boolean, log: AgentLog): Promise<AgentJob>
 
     /*  whether a dispatchable task (e.g. one without a result of a previous
         processing) is to be claimed, checked right before its claim  */
     protected async ready (_task: AgentTask): Promise<boolean> {
         return true
+    }
+
+    /*  the wake-up of the dispatcher of the running agent (if running), and its delayed
+        triggering, e.g. once a task held off by the agent becomes dispatchable again  */
+    private wakeup: (() => void) | null = null
+    protected redispatch (delay: number): void {
+        const timer = setTimeout(() => {
+            this.wakeup?.()
+        }, delay)
+        timer.unref()
     }
 
     /*  whether tasks are processed in parallel to others by multiple worker slots of the agent  */
@@ -1151,6 +1223,347 @@ export abstract class Agent {
         await fs.promises.writeFile(path.join(this.temp!.dir, tempPreserved), `${note}\n`, { flag: "a" })
     }
 
+    /*  whether a task is ready for the access of the working directory kind <workdir>
+        ("project", "source", "changeset", "changeset-read", or "target"), see "workdirJob"  */
+    protected async workdirReady (task: AgentTask, workdir: string): Promise<boolean> {
+        if (workdir === "changeset")
+            return this.changesetReady(task)
+        else if (workdir === "changeset-read")
+            return this.changesetReadReady(task)
+        else if (workdir === "target")
+            return this.targetReady(task)
+        return true
+    }
+
+    /*  the work of a job in the working directory kind <workdir>: the project root
+        ("project"), or the working copy of "sourceJob" (with the "branch:" source checked out
+        on request), "changesetJob" (with the work committed on request), "changesetReadJob",
+        or "targetJob", where the agent-owned worktrees are named with the suffix <suffix>  */
+    protected async workdirJob (task: AgentTask, workdir: string, suffix: string, parallel: boolean,
+        options: { checkout: boolean, commit: boolean }): Promise<AgentWork> {
+        if (workdir === "source")
+            return this.sourceJob(task, suffix, options.checkout)
+        else if (workdir === "changeset")
+            return this.changesetJob(task, suffix, parallel, options.commit)
+        else if (workdir === "changeset-read")
+            return this.changesetReadJob(task, suffix)
+        else if (workdir === "target")
+            return this.targetJob(task, suffix)
+        return { cwd: Task.projectRoot(), dirs: [], sourceDir: "", changesetWorktree: "" }
+    }
+
+    /*  the work of a job in the working copy holding the "Source:" of a task (see "workdir"),
+        where a "branch:" source is additionally checked out on request (<checkout>) in a
+        temporary, detached Git worktree "<id>-<suffix>" (granted to the agent tool), which is
+        removed afterwards  */
+    protected async sourceJob (task: AgentTask, suffix: string, checkout: boolean): Promise<AgentWork> {
+        const source = taskFlow(this.log, task, "Source")
+        const root   = await this.workdir(task, [ source ])
+        if (source.type !== "branch" || !checkout)
+            return { cwd: root, dirs: [], sourceDir: "", changesetWorktree: "" }
+        const dir = Worktree.dir(`${worktreeId(task.id)}-${suffix}`, true, true, root)
+        await gitWorktreeDetached(root, dir, source.name)
+        return {
+            cwd:  root,
+            dirs: [ dir ],
+            sourceDir: dir,
+            changesetWorktree: "",
+            cleanup: async (log: AgentLog) => {
+                await gitWorktreeRemove(root, dir)
+                await log("info", `temporary worktree of source branch "${source.name}" removed`)
+            }
+        }
+    }
+
+    /*  whether a task is ready for the write access to its "Changeset:" (see "changesetJob"):
+        a task with a "branch:" changeset is processed only while its changeset branch is held for
+        it alone (see "holdBranch"), as two tasks with the same changeset branch would otherwise
+        be processed in the same worktree at once (mixing their change sets into the commit,
+        and removing the worktree under each other), and a task is processed directly in the
+        working copy the agent is started in (a serially processed "worktree" changeset, or a
+        "branch:" changeset checked out in it) only while the working copy is held for it alone
+        (see "holdRoot") and while it carries no uncommitted changes (except the ASE state), as
+        otherwise the uncommitted change set of an earlier task (e.g. one still to be reviewed and
+        integrated) or the uncommitted work of a human would mix into the one of this task (and,
+        for a "branch:" changeset, even be committed onto its branch), so the task is deferred
+        (and not claimed) until then (re-checked on the next change of the tasks, e.g. once the
+        earlier task was integrated)  */
+    protected async changesetReady (task: AgentTask): Promise<boolean> {
+        let source:    FlowValue
+        let changeset: FlowValue
+        try {
+            source    = taskFlow(this.log, task, "Source")
+            changeset = taskFlow(this.log, task, "Changeset")
+        }
+        catch (_err) {
+            /*  an invalid value fails the processing of the task  */
+            return true
+        }
+        const root = this.localRoot([ source, changeset ])
+        if (changeset.type === "branch" && !this.holdBranch(task, root, changeset.name))
+            return this.defer(task, `the changeset branch "${changeset.name}" used by another task`)
+        else if (root === "")
+            return true
+        else if ((changeset.type === "worktree" && !this.parallelized)
+            || (changeset.type === "branch" && (await gitWorktree(root, changeset.name).catch(() => "")) === root)) {
+            if (!this.holdRoot(task, root))
+                return this.defer(task, "the working copy used by another task")
+            else if (!(await gitClean(root).catch(() => true))) {
+                this.unhold(task.id)
+                return this.defer(task, "the working copy without uncommitted changes (e.g. of an earlier task)")
+            }
+        }
+        return true
+    }
+
+    /*  the work of a job with write access to the "Changeset:" of a task, processed from its
+        "Source:" (see "changesetReady"): a "worktree" changeset in the working copy itself
+        (switched to a "branch:" source, if processed serially, else in the ASE worktree of the
+        task, created by the skill itself), a "branch:" changeset in the worktree in which it is
+        checked out, else in an agent worktree "<id>-<suffix>" (with the branch created from the
+        source if missing), and an "attachment:" changeset left to the skill, where the work on a
+        "branch:" changeset is committed onto it on request (<commit>) and published  */
+    protected async changesetJob (task: AgentTask, suffix: string, parallel: boolean, commit: boolean): Promise<AgentWork> {
+        const source    = taskFlow(this.log, task, "Source")
+        const changeset = taskFlow(this.log, task, "Changeset")
+        const cwd       = await this.workdir(task, [ source, changeset ])
+        if (changeset.type === "branch") {
+            /*  check out the changeset branch (created from the source if missing) in a
+                worktree of the agent, unless it is already checked out in the working copy
+                or an ASE worktree (which then has to be without uncommitted changes, as
+                they would be committed onto the branch, too), process the task inside it
+                in place, and afterwards commit the result onto the branch (also a partial
+                one, as the plan tracks it) and publish it to the origin of a temporarily
+                cloned repository, where the worktree of the agent is removed only if clean
+                and a branch which could not be published is rescued (as the commit would
+                otherwise be lost with the clone, see "settle"), so the change set is not lost  */
+            let dir   = await gitWorktree(cwd, changeset.name)
+            const own = dir === ""
+            if (own) {
+                dir = Worktree.dir(`${worktreeId(task.id)}-${suffix}`, true, false, cwd)
+                await gitWorktreeAdd(cwd, dir, changeset.name, source.type === "branch" ? source.name : "HEAD")
+            }
+            else if (!(await gitClean(dir)))
+                throw new Error(`agent: working copy "${dir}" with branch "${changeset.name}" checked out has ` +
+                    "uncommitted changes (e.g. the change set of an earlier task) -- cannot implement task into it")
+            return {
+                cwd,
+                dirs: [],
+                sourceDir: "",
+                changesetWorktree: worktreeName(cwd, dir),
+                ...(commit ? {
+                    finish: async (log: AgentLog) => {
+                        /*  the ASE state (e.g. the local task store) is never committed  */
+                        await execaJob("git", [ "add", "--all", "--", ".", ":(exclude).ase" ], { cwd: dir })
+                        if ((await execaJob("git", [ "diff", "--cached", "--quiet" ], { cwd: dir, reject: false })).exitCode !== 0) {
+                            const message = `${task.keys.get("Kind") || "CRAFTING"}: ${task.title} (${task.id})`
+                            await execaJob("git", [ "commit", "--quiet", "-m", message ], { cwd: dir })
+                            await log("info", `change set committed onto branch "${changeset.name}"`)
+                        }
+                        else
+                            await log("warning", `no change set to commit onto branch "${changeset.name}"`)
+                        await this.publish(cwd, changeset.name, log).catch(async (err: unknown) => {
+                            await this.rescue(cwd, changeset.name, task, log).catch((err2: unknown) =>
+                                log("error", `rescuing branch "${changeset.name}" failed: ` +
+                                    (err2 instanceof Error ? err2.message : String(err2))))
+                            throw err
+                        })
+                    }
+                } : {}),
+                cleanup: async (log: AgentLog) => {
+                    /*  a worktree nested inside the working directory of the task in the
+                        temporary clone of "--repo" is kept only by preserving the clone  */
+                    if (own && await gitClean(dir).catch(() => false))
+                        await gitWorktreeRemove(cwd, dir)
+                    else if (own && !(await this.preserve(cwd, task, `worktree "${dir}" with uncommitted change set`, log)))
+                        await log("warning", `worktree "${dir}" with uncommitted change set kept for a manual recovery`)
+                }
+            }
+        }
+        else if (changeset.type === "worktree" && !parallel) {
+            /*  process into the working copy (held for this task, see "changesetReady") only
+                if it still carries no uncommitted changes (except the ASE state), and switch
+                the working copy to the source branch  */
+            if (!(await gitClean(cwd)))
+                throw new Error("agent: working copy has uncommitted changes (e.g. the change set of an earlier task) " +
+                    "-- cannot implement task into it")
+            if (source.type === "branch") {
+                const { stdout: branch } = await execaJob("git", [ "branch", "--show-current" ], { cwd })
+                if (branch.trim() !== source.name)
+                    await execaJob("git", [ "switch", "--quiet", source.name ], { cwd })
+            }
+        }
+        return { cwd, dirs: [], sourceDir: "", changesetWorktree: changeset.type === "worktree" && parallel ? worktreeId(task.id) : "" }
+    }
+
+    /*  whether a task is ready for the review access to its "Changeset:" (see
+        "changesetReadJob"): a task whose uncommitted "worktree" change set is located
+        directly in the working copy the agent is started in (and not in an ASE worktree
+        of it) is processed (and hence staged) only while the working copy is held for it
+        alone (see "holdRoot"), else it is deferred  */
+    protected async changesetReadReady (task: AgentTask): Promise<boolean> {
+        let changeset: FlowValue
+        try {
+            changeset = taskFlow(this.log, task, "Changeset")
+        }
+        catch (_err) {
+            /*  an invalid value fails the processing of the task  */
+            return true
+        }
+        const root = this.localRoot([ changeset ])
+        if (changeset.type === "worktree" && root !== ""
+            && (await contextDir(root, task).catch(() => "")) === root && !this.holdRoot(task, root))
+            return this.defer(task, "the working copy used by another task")
+        return true
+    }
+
+    /*  the work of a job with review access to the "Changeset:" of a task (see
+        "changesetReadReady"): a "worktree" changeset staged in its context worktree, a
+        "branch:" changeset left in place (to be addressed by its name), and an "attachment:"
+        changeset applied staged in a temporary worktree "<id>-<name>-<suffix>", detached at
+        the commit it is based on, which is removed afterwards  */
+    protected async changesetReadJob (task: AgentTask, suffix: string): Promise<AgentWork> {
+        const changeset = taskFlow(this.log, task, "Changeset")
+        const root      = await this.workdir(task, [ changeset ])
+        if (changeset.type === "branch")
+            return { cwd: root, dirs: [], sourceDir: "", changesetWorktree: "" }
+        else if (changeset.type === "attachment") {
+            /*  materialize the change set attachment in a temporary worktree,
+                detached at the commit it is based on, staged for the review  */
+            const kind = new RegExp(`^text/x-diff\\s*;.*\\bkind\\s*=\\s*"?${changeset.name}"?\\s*(?:;|$)`, "i")
+            const attachment = (await Task.attachments(this.log, task.id)).filter((att) => kind.test(att.type)).pop()
+            if (attachment?.data === undefined)
+                throw new Error(`agent: no change set attachment "${changeset.name}" exists`)
+            const base = /\bbase\s+([0-9a-f]+)\b/.exec(attachment.desc)?.[1] ?? "HEAD"
+            const dir  = Worktree.dir(`${worktreeId(task.id)}-${changeset.name}-${suffix}`, true, true, root)
+            await gitWorktreeDetached(root, dir, base)
+            try {
+                await execaJob("git", [ "apply", "--index" ], { cwd: dir, input: attachment.data })
+            }
+            catch (err: unknown) {
+                await gitWorktreeRemove(root, dir)
+                throw err
+            }
+            return { cwd: dir, dirs: [], sourceDir: "", changesetWorktree: "", cleanup: () => gitWorktreeRemove(root, dir) }
+        }
+        else {
+            /*  stage the uncommitted change set in its context worktree  */
+            const cwd = await contextDir(root, task)
+            await execaJob("git", [ "add", "--all", "--", ".", ":(exclude).ase" ], { cwd })
+            return { cwd, dirs: [], sourceDir: "", changesetWorktree: "" }
+        }
+    }
+
+    /*  whether a task is ready for the integration access to its "Changeset:" and
+        "Target:" (see "targetJob"): a task integrated from or into the working copy the
+        agent is started in directly (an uncommitted "worktree" change set located in it, a
+        "branch:" changeset checked out in it, whose uncommitted changes the skill commits and
+        which it rebases in place, a "worktree" target, or a "branch:" target checked out in
+        it) is processed only while the working copy is held for it alone (see "holdRoot"),
+        and a task with a "branch:" changeset or target is processed only while these branches
+        are held for it alone (see "holdBranch"), as another task (e.g. one implemented into
+        the same changeset branch, or into this target branch) would otherwise be processed in
+        the same worktree at once (mixing their change sets, and merging, rebasing, or removing
+        the worktree under each other), else it is deferred  */
+    protected async targetReady (task: AgentTask): Promise<boolean> {
+        let changeset: FlowValue
+        let target:    FlowValue
+        try {
+            changeset = taskFlow(this.log, task, "Changeset")
+            target    = taskFlow(this.log, task, "Target")
+        }
+        catch (_err) {
+            /*  an invalid value fails the processing of the task  */
+            return true
+        }
+        const root = this.localRoot([ changeset, target ])
+        if (changeset.type === "branch" && !this.holdBranch(task, root, changeset.name))
+            return this.defer(task, `the changeset branch "${changeset.name}" used by another task`)
+        else if (target.type === "branch" && !this.holdBranch(task, root, target.name))
+            return this.defer(task, `the target branch "${target.name}" used by another task`)
+        else if (root === "")
+            return true
+        const direct = target.type === "worktree"
+            || (changeset.type === "worktree" && (await contextDir(root, task).catch(() => "")) === root)
+            || (changeset.type === "branch" && (await gitWorktree(root, changeset.name).catch(() => "")) === root)
+            || (target.type === "branch" && (await gitWorktree(root, target.name).catch(() => "")) === root)
+        if (direct && !this.holdRoot(task, root))
+            return this.defer(task, "the working copy used by another task")
+        return true
+    }
+
+    /*  the work of a job with integration access to the "Changeset:" and "Target:" of a task
+        (see "targetReady"), in the working copy itself, granting access to the context worktree
+        of a "worktree" changeset (whose ASE worktree id the skill selects) and to the worktrees in
+        which the changeset and target branches are checked out, where a target branch not checked
+        out anywhere yet is checked out in a temporary worktree "<id>-<suffix>"  */
+    protected async targetJob (task: AgentTask, suffix: string): Promise<AgentWork> {
+        const changeset = taskFlow(this.log, task, "Changeset")
+        const target    = taskFlow(this.log, task, "Target")
+        const root      = await this.workdir(task, [ changeset, target ])
+        const dirs: string[] = []
+        let context = ""
+        if (changeset.type === "worktree") {
+            const dir = await contextDir(root, task)
+            context = worktreeName(root, dir)
+            dirs.push(dir)
+        }
+        else if (changeset.type === "branch")
+            dirs.push(await gitWorktree(root, changeset.name))
+
+        /*  check out a target branch not checked out anywhere yet in a temporary
+            worktree, into which the merge commits, and afterwards publish the
+            target branch to the origin of a temporarily cloned repository (deleting
+            there a changeset branch which the merge deleted) and remove the
+            temporary worktree again in any case, where a target branch not moved by
+            the skill is not published (as it carries nothing to publish, but might be
+            outdated by the origin meanwhile, whose rejected push would then needlessly
+            fail the task and preserve the clone), a target branch which could
+            not be published is rescued (as the skill already recorded the task as
+            integrated, see "settle"), so its merge is not lost, while a changeset
+            branch which could not be deleted is only reported (as the merge itself
+            was already published)  */
+        const tip = async (branch: string): Promise<string> =>
+            (await execaJob("git", [ "rev-parse", "--verify", "--quiet", `refs/heads/${branch}` ],
+                { cwd: root, reject: false })).stdout.trim()
+        let temp = ""
+        let base = ""
+        if (target.type === "branch") {
+            let dir = await gitWorktree(root, target.name)
+            if (dir === "") {
+                temp = Worktree.dir(`${worktreeId(task.id)}-${suffix}`, true, true, root)
+                await gitWorktreeAdd(root, temp, target.name)
+                dir = temp
+            }
+            dirs.push(dir)
+            base = await tip(target.name)
+        }
+        return {
+            cwd:  root,
+            dirs: dirs.filter((dir) => dir !== ""),
+            sourceDir: "",
+            changesetWorktree: context,
+            finish: async (log: AgentLog) => {
+                const reason = (err: unknown) => err instanceof Error ? err.message : String(err)
+                if (target.type === "branch" && await tip(target.name) === base)
+                    await log("info", `target branch "${target.name}" unchanged -- nothing to publish`)
+                else if (target.type === "branch")
+                    await this.publish(root, target.name, log).catch(async (err: unknown) => {
+                        await this.rescue(root, target.name, task, log).catch((err2: unknown) =>
+                            log("error", `rescuing branch "${target.name}" failed: ${reason(err2)}`))
+                        throw err
+                    })
+                if (changeset.type === "branch")
+                    await this.unpublish(root, changeset.name, log).catch((err: unknown) =>
+                        log("warning", `changeset branch "${changeset.name}" not deleted from origin: ${reason(err)}`))
+            },
+            cleanup: async () => {
+                if (temp !== "")
+                    await gitWorktreeRemove(root, temp)
+            }
+        }
+    }
+
     /*  write a processing log line in the style of the regular logger to stdout (each
         line of a multi-line message as a full log line, with the line prefix of the logger,
         e.g. of an agent fleet member, and with the level tag styled on a terminal only),
@@ -1188,7 +1601,9 @@ export abstract class Agent {
         const { tool, timeout, timeoutSpec } = this
         const { cwd } = job
         const cli  = toolSpecs[tool].cli
-        const args = toolArgs[tool](job.cmd, (job.dirs ?? [])
+        const cmd  = job.cmd ?? ""
+        const i    = cmd.indexOf(" ")
+        const args = toolArgs[tool](job.prompt ?? skillPrompt(tool, i < 0 ? cmd : cmd.slice(0, i), i < 0 ? "" : cmd.slice(i + 1)), (job.dirs ?? [])
             .filter((dir, i, dirs) => dir !== cwd && dirs.indexOf(dir) === i)
             .flatMap((dir) => [ "--add-dir", dir ]))
         await log("info", `running: ${cli} ${args.map((arg) => arg.includes(" ") ? `"${arg}"` : arg).join(" ")}`)
@@ -1253,7 +1668,7 @@ export abstract class Agent {
             let ok = false
             let job: AgentJob | null = null
             try {
-                job = await withinJobTimeout("preparing the job", () => this.prepare(task, this.parallelized), (pending) => {
+                job = await withinJobTimeout("preparing the job", () => this.prepare(task, this.parallelized, log), (pending) => {
                     late = pending
                         .then((orphan) => orphan.cleanup?.(log))
                         .catch(() => {})
@@ -1270,7 +1685,7 @@ export abstract class Agent {
             const finish = job?.finish
             if (finish !== undefined) {
                 try {
-                    await withinJobTimeout("finishing the job", () => finish(log))
+                    await withinJobTimeout("finishing the job", () => finish(log, { ok, output }))
                 }
                 catch (err: unknown) {
                     await log("error", err instanceof Error ? err.message : String(err))
@@ -1309,7 +1724,7 @@ export abstract class Agent {
         const now = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
         try {
             const attached = await Task.attach(this.log, task.id, {
-                Type: `text/plain; charset=utf-8; kind="agent:${this.name}"`,
+                Type: `text/plain; charset=utf-8; kind="agent:${this.logName}"`,
                 Created: now, Modified: now, Data: `${lines.join("\n")}\n`
             }, true)
             if (attached)
@@ -1350,6 +1765,10 @@ export abstract class Agent {
         }
         return this.cmd
     }
+
+    /*  validate the own options of the agent ahead of its setup (e.g. before detaching it),
+        throwing on an invalid one  */
+    validate (_own: Partial<AgentOpts>): void {}
 
     /*  configure the agent from the default options, overridden by its own options,
         validate its configuration, and initialize it, where <relay> is the client
@@ -1536,11 +1955,12 @@ export abstract class Agent {
         process.on("SIGHUP",  signalled)
         process.on("SIGQUIT", signalled)
         wakeAgents.add(notify)
+        this.wakeup = notify
         const unsubscribe = Task.subscribe(this.log, notify)
 
         /*  announce the presence of the agent to the agent relay (if any) while it runs  */
         if (this.relay !== null) {
-            this.presence = new AgentPresenceReporter(this.log, this.relay, this.kind, this.name, this.mode)
+            this.presence = new AgentPresenceReporter(this.log, this.relay, this.kind, this.name, this.mode, this.presenceRequest)
             this.presence.start()
         }
 
@@ -1625,6 +2045,7 @@ export abstract class Agent {
             process.off("SIGQUIT", signalled)
 
             /*  let the agents of this process waiting for this one re-check their termination  */
+            this.wakeup = null
             wakeAgents.delete(notify)
             busyAgents.delete(this)
             for (const wakeAgent of wakeAgents)

@@ -195,7 +195,7 @@
             <div v-if="editing?.keymap === 'vim'" class="dfoot"><kbd>:w</kbd><span class="action">saves</span><span class="sep">·</span><kbd>:q</kbd><span class="action">cancels</span><span class="sep">·</span><kbd>:q!</kbd><span class="action">discards</span></div>
             <div v-else-if="editing?.keymap === 'emacs'" class="dfoot"><kbd>C-x C-s</kbd><span class="action">saves</span><span class="sep">·</span><kbd>C-x C-c</kbd><span class="action">cancels</span></div>
             <div v-else-if="editing !== null" class="dfoot"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd><span class="action">saves</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
-            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>E</kbd><span class="action">edits by prompt</span><span class="sep">·</span><kbd>T</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>D</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></div>
+            <div v-else class="dfoot"><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>E</kbd><span class="action">edits by prompt</span><span class="sep">·</span><kbd>R</kbd><span class="action">requests by prompt</span><span class="sep">·</span><kbd>T</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>D</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></div>
         </div>
     </div>
 
@@ -224,16 +224,21 @@
         </div>
     </div>
 
-    <!--  the prompt of an edit request of a task (processed by "ase agent editor")  -->
+    <!--  the prompt of an edit request of a task (processed by "ase agent editor"),
+          or of a request by prompt of any name (processed by a request agent)  -->
     <div v-if="prompt !== null" id="prompt" @click.self="cancelPrompt">
         <div class="box">
-            <div class="ask">Edit task <span class="cid">{{ prompt.id }}</span> by prompt:</div>
+            <div class="ask">{{ prompt.name !== null ? "Request" : "Edit" }} task <span class="cid">{{ prompt.id }}</span> by prompt:</div>
+            <div v-if="prompt.name !== null" class="name">request name:
+                <input ref="promptName" v-model="prompt.name" list="request-names" spellcheck="false" placeholder="e.g. lint" />
+                <datalist id="request-names"><option v-for="n in requestNames" :key="n" :value="n"></option></datalist>
+            </div>
             <textarea ref="promptEl" v-model="prompt.text" rows="5" spellcheck="false"></textarea>
             <div class="buttons">
-                <button @click="submitPrompt">request edit</button>
+                <button @click="submitPrompt">{{ prompt.name !== null ? "request" : "request edit" }}</button>
                 <button @click="cancelPrompt">cancel</button>
             </div>
-            <div class="keys"><kbd>⏎</kbd><span class="action">requests edit</span><span class="sep">·</span><kbd>Shift+⏎</kbd><span class="action">breaks line</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
+            <div class="keys"><kbd>⏎</kbd><span class="action">{{ prompt.name !== null ? "requests" : "requests edit" }}</span><span class="sep">·</span><kbd>Shift+⏎</kbd><span class="action">breaks line</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
         </div>
     </div>
 
@@ -281,7 +286,7 @@ type GraphStats = { tasks: number, dependencies: number }
     log lines added per agent (a delta to be appended, or a reset with all its lines)  */
 type AgentLine  = { time: number, level: "error" | "warning" | "info", task: string, msg: string }
 type AgentUsage = { walltimeSec: number, costToken: number | null, costUSD: number | null }
-type Agent      = { id: string, kind: string, name: string, mode?: string, host: string, pid: number, started?: number, state: "waiting" | "busy", tasks: string[], usage?: { total: AgentUsage, last: AgentUsage } | null, since: number, beat: number }
+type Agent      = { id: string, kind: string, name: string, mode?: string, request?: string, host: string, pid: number, started?: number, state: "waiting" | "busy", tasks: string[], usage?: { total: AgentUsage, last: AgentUsage } | null, since: number, beat: number }
 type Agents     = { connected: boolean, agents: Agent[] }
 type AgentLogs  = Record<string, { reset: boolean, lines: AgentLine[] }>
 
@@ -365,6 +370,9 @@ const busyLabel = (url: string, opts?: RequestInit): BusyLabel => {
         return { text: fixed[name] }
     const method = opts?.method ?? "GET"
     const edit   = /\/api\/task\/([^/?]+)\/edit$/.exec(url)?.[1]
+    const req    = /\/api\/task\/([^/?]+)\/request$/.exec(url)?.[1]
+    if (req !== undefined)
+        return { text: "requesting task", id: decodeURIComponent(req) }
     if (edit !== undefined)
         return { text: method === "POST" ? "requesting edit of task" : "loading edit prompt of task", id: decodeURIComponent(edit) }
     const text   = method === "DELETE" ? "deleting" : method !== "GET" ? "saving" : "loading"
@@ -421,8 +429,9 @@ const editing     = ref<{ id: string, orig: string, base: string, keymap: Keymap
 const notice      = ref<Notice | null>(null)
 const confirmDel  = ref<string | null>(null)
 const transfer    = ref<{ id: string, at: string } | null>(null)
-const prompt      = ref<{ id: string, text: string } | null>(null)
+const prompt      = ref<{ id: string, text: string, name: string | null } | null>(null)
 const promptEl    = ref<HTMLTextAreaElement | null>(null)
+const promptName  = ref<HTMLInputElement | null>(null)
 let   editor      = null as EditorView | null
 const scroll      = reactive({ all: true, info: "" })
 const tab         = ref(0)
@@ -440,6 +449,9 @@ let   zoom        = 1
 
 /*  the drafts of the prompts of cancelled (or failed to be sent) edit requests, per task  */
 const promptDrafts = new Map<string, string>()
+
+/*  the drafts of the cancelled (or failed to be sent) requests by prompt, per task  */
+const requestDrafts = new Map<string, { name: string, text: string }>()
 
 /*  the agents passed by the agent relay, as reported by the service (null without an agent relay)  */
 const agents    = shallowRef<Agents | null>(null)
@@ -699,7 +711,8 @@ const hints     = computed(() => {
         { key: "T",             action: "transition task" }
     ], [
         { key: "D",             action: "delete task" },
-        { key: "E",             action: "edit task by prompt" },
+        { key: "E",             action: "edit by prompt" },
+        { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
         { key: "g/ESC",         action: "shrink lane" },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
@@ -717,7 +730,8 @@ const hints     = computed(() => {
         { key: "T",             action: "transition task" }
     ], [
         { key: "D",             action: "delete task" },
-        { key: "E",             action: "edit task by prompt" },
+        { key: "E",             action: "edit by prompt" },
+        { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
         { key: "g",             action: "grow lane" },
@@ -743,7 +757,8 @@ const hints     = computed(() => {
         { key: "T",             action: "transition task" }
     ], [
         { key: "D",             action: "delete task" },
-        { key: "E",             action: "edit task by prompt" },
+        { key: "E",             action: "edit by prompt" },
+        { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "s",             action: `${surface.value.standalone ? "hide" : "show"} standalone tasks` },
@@ -1204,16 +1219,63 @@ const openPrompt = async (id: string) => {
         if (confirmDel.value !== null || transfer.value !== null || prompt.value !== null)
             return
     }
-    prompt.value = { id, text }
+    prompt.value = { id, text, name: null }
     nextTick(() => promptEl.value?.focus())
+}
+
+/*  the names of the requests processed by the agents announced to the agent relay (for their
+    suggestion on requesting a task by prompt): "edit" of the editor agent, and the request
+    names of the request agents of "ase agent custom"  */
+const requestNames = computed(() =>
+    [ ...new Set(agentList.value.map((a) => a.kind === "editor" ? "edit" : a.request ?? "").filter((n) => n !== "")) ].sort())
+
+/*  open the prompt popup of a request by prompt of any name of a task (see "ase task request",
+    refused for a finished task), with the request name suggested from the request agents
+    announced to the agent relay, prefilled with its draft of a cancelled (or failed to be
+    sent) request, where a missing request name is to be entered first  */
+const openRequest = (id: string) => {
+    const card = board.value?.groups.flatMap((g) => g.lanes).flatMap((l) => l.cards).find((c) => c.id === id)
+    if (card?.finished === true) {
+        actionError.value = `requesting task "${id}" by prompt refused: task is finished`
+        return
+    }
+    const draft = requestDrafts.get(id)
+    const name  = draft?.name ?? requestNames.value[0] ?? ""
+    prompt.value = { id, text: draft?.text ?? "", name }
+    nextTick(() => (name === "" ? promptName.value : promptEl.value)?.focus())
 }
 
 /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if
     empty, so that a cleared prompt is not prefilled again on reopening)  */
 const cancelPrompt = () => {
-    if (prompt.value !== null)
+    if (prompt.value !== null && prompt.value.name !== null)
+        requestDrafts.set(prompt.value.id, { name: prompt.value.name, text: prompt.value.text })
+    else if (prompt.value !== null)
         promptDrafts.set(prompt.value.id, prompt.value.text)
     prompt.value = null
+}
+
+/*  request a task by the prompt of its popup under its request name (processed by a request
+    agent of "ase agent custom", resp. by "ase agent editor" for "edit"), dropping the draft of
+    the task once sent, resp. keeping the request as its draft on failure  */
+const submitRequest = async (p: { id: string, text: string, name: string }) => {
+    if (p.name.trim() === "" || p.text.trim() === "") {
+        actionError.value = `requesting task "${p.id}" by prompt failed: empty ${p.name.trim() === "" ? "request name" : "prompt"}`
+        return
+    }
+    prompt.value = null
+    const res = await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(p.id)}/request`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: p.name.trim(), prompt: p.text })
+    })
+    if (res.error !== undefined) {
+        requestDrafts.set(p.id, { name: p.name, text: p.text })
+        actionError.value = `requesting "${p.name}" of task "${p.id}" failed: ${res.error}`
+    }
+    else {
+        requestDrafts.delete(p.id)
+        actionError.value = null
+        notify(`"${p.name.trim()}" of task "${p.id}" requested`)
+    }
 }
 
 /*  show a transient (non-warning) notice of a performed action in the status line  */
@@ -1234,6 +1296,10 @@ const submitPrompt = async () => {
     const p = prompt.value
     if (p === null)
         return
+    if (p.name !== null) {
+        await submitRequest({ ...p, name: p.name })
+        return
+    }
     if (p.text.trim() === "") {
         actionError.value = `requesting edit of task "${p.id}" failed: empty edit prompt`
         return
@@ -1595,6 +1661,10 @@ const onDialogKey = (ev: KeyboardEvent) => {
         ev.preventDefault()
         openPrompt(task.value.id)
     }
+    else if (ev.key === "R" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
+        ev.preventDefault()
+        openRequest(task.value.id)
+    }
     else if (ev.key === "D" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
         ev.preventDefault()
         confirmDel.value = task.value.id
@@ -1702,6 +1772,10 @@ const onTaskKey = (ev: KeyboardEvent, id: string, carrying: boolean): boolean =>
     else if (ev.key === "E") {
         if (id !== "" && !carrying)
             openPrompt(id)
+    }
+    else if (ev.key === "R") {
+        if (id !== "" && !carrying)
+            openRequest(id)
     }
     else if (ev.key === "D") {
         if (id !== "")
@@ -1886,14 +1960,19 @@ const onTransferKey = (ev: KeyboardEvent, t: { id: string, at: string }) => {
     ev.preventDefault()
 }
 
-/*  answer the prompt popup: RETURN requests the edit, ESC cancels, and all other
-    keys (also Shift+RETURN for a line break) belong to its text area, as do all keys
+/*  answer the prompt popup: RETURN requests the edit (or the request, resp. switches from
+    the request name to the prompt), ESC cancels, and all other keys (also Shift+RETURN for a
+    line break) belong to its text area (or request name field), as do all keys
     while an input method composes text (where Safari reports the composition-ending
     RETURN with the key code 229 only), while RETURN on a focused button presses it  */
 const onPromptKey = (ev: KeyboardEvent) => {
     if (ev.isComposing || ev.keyCode === 229)
         return
-    if (ev.key === "Enter" && !ev.shiftKey && !(ev.target instanceof HTMLButtonElement)) {
+    if (ev.key === "Enter" && !ev.shiftKey && ev.target === promptName.value && promptName.value !== null) {
+        ev.preventDefault()
+        promptEl.value?.focus()
+    }
+    else if (ev.key === "Enter" && !ev.shiftKey && !(ev.target instanceof HTMLButtonElement)) {
         ev.preventDefault()
         submitPrompt()
     }

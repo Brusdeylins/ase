@@ -45,8 +45,12 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         agent base, `agent-common-phase` for the common base of the lifecycle
         phase agents `agent-planner`, `agent-implementer`, `agent-approver`,
         and `agent-integrator`, `agent-common-request` for the common base
-        of the task request agent `agent-editor`, `agent-instance` for the
-        `ase agent <kind> start|status|log|stop` commands of a single agent, and
+        of the task request agent `agent-editor`, `agent-custom` for the
+        `custom` agent of a configured behavior (a facade to its phase or
+        request delegate) with `agent-custom-config` for its definition
+        model (options, YAML loading, validation, and templates),
+        `agent-instance` for the `ase agent <kind> start|status|log|stop`
+        commands of a single agent, and
         `agent-fleet` for the `ase agent fleet` supervisor of multiple agents
         and the agent relay), the parts of
         `ase setup` (`setup-common` for the shared types and sub-process
@@ -127,12 +131,14 @@ The per-deliverable targets are:
 cd plugin
 npm start lint          # markdownlint-cli2 + eslint over meta/ and skills/
 npm start build         # lint, then regenerate skills/ase-help-intent/data.md
+npm start fetch-types   # force re-download of mods/claude-code.d.ts
 
 cd tool
 npm start lint          # eslint over src/*.{ts,vue} + vue-tsc type-check of the web board client
 npm start build         # lint + build-cmd + build-plugin
 npm start build-cmd     # tsc + vite build of the web board client (emits into dst/)
 npm start build-plugin  # copy ../plugin and ../.claude-plugin into the package
+npm start build-container # build and push the container image (etc/ase.dockerfile)
 npm start build-watch   # nodemon rebuild on src/**/*.{ts,vue,styl,html}
 npm start lint-watch    # nodemon relint on src/**/*.{ts,vue}
 
@@ -179,8 +185,10 @@ hook` (agent tool hook handlers), `ase statusline` (statusline renderer),
 interactive task board in terminal and browser), `ase agent` (the
 autonomous task lifecycle agents `planner`, `implementer`, `approver`,
 and `integrator`, which together drive the `enterprise` task lifecycle
-model headless, and the `editor` agent, which processes the
-prompt-driven edit requests of the task boards in any lifecycle model;
+model headless, the `editor` agent, which processes the
+prompt-driven edit requests of the task boards in any lifecycle model,
+and the `custom` agent, whose entire behavior is configured (with the
+reference definitions of all built-in agent modes in `docs/agent-custom/`);
 each agent runs in its own process, managed individually via `ase agent
 <kind> start|status|log|stop`, e.g. `ase agent implementer start -p 2`;
 additionally, `ase agent relay` runs the per-user agent relay server,

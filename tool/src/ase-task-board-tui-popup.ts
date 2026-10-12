@@ -12,7 +12,7 @@ import type { Card }                          from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine }      from "./ase-agent-relay-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
 import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.js"
-import type { TransferEntry, BusyLabel }      from "./ase-task-board-tui-model.js"
+import type { TransferEntry, BusyLabel, PromptRequest } from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
     (bit 0: bold, bit 1: italic, bit 2: code, bit 3: accent, bit 4: signal)  */
@@ -344,21 +344,26 @@ export const renderConfirm = (id: string, yes: boolean, columns: number, rows: n
         h(Text, cx("dim"), keys))
 }
 
-/*  render the prompt popup of an edit request of a task, in the style of the
+/*  render the prompt popup of an edit request (or, with <request>, of a request by prompt of
+    any name, with its request name above the prompt) of a task, in the style of the
     confirmation of a task deletion, with the prompt (with an inverse cursor cell at
     the cursor position, resp. behind its end) broken at its newlines and wrapped onto
     the five lines of the frame of an input box (like in the web board, in accent color),
     scrolled to show the cursor, and with every inner cell written (with spaces) to hide
     the content underneath  */
-export const renderPrompt = (id: string, text: string, pos: number, columns: number, rows: number) => {
+export const renderPrompt = (id: string, text: string, pos: number, columns: number, rows: number, request: PromptRequest | null = null) => {
     const width  = Math.min(columns - 2, 80)
     const innerW = width - 2
     const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
 
     /*  the centered question, with the task id rendered inverse with one extra space on each side  */
-    const tid    = ` ${sanitize(id)} `.slice(0, Math.max(0, innerW - 21))
-    const qpad   = Math.max(0, Math.floor((innerW - 21 - tid.length) / 2))
-    const hint   = "←/→: move cursor · ⇧⏎/⌥⏎: new line · ⏎: request edit · ESC: cancel".slice(0, innerW)
+    const lead   = request !== null ? "Request task " : "Edit task "
+    const fixed  = lead.length + 11
+    const tid    = ` ${sanitize(id)} `.slice(0, Math.max(0, innerW - fixed))
+    const qpad   = Math.max(0, Math.floor((innerW - fixed - tid.length) / 2))
+    const hint   = (request !== null ?
+        "⇥: switch field · ↑/↓: request name · ⇧⏎/⌥⏎: new line · ⏎: request · ESC: cancel" :
+        "←/→: move cursor · ⇧⏎/⌥⏎: new line · ⏎: request edit · ESC: cancel").slice(0, innerW)
     const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
 
     /*  the cells of the prompt, sanitized per character (with newlines ending their line and
@@ -390,16 +395,31 @@ export const renderPrompt = (id: string, text: string, pos: number, columns: num
     const curL   = lines.findIndex((line) => line.some((cell) => cell.cur))
     const first  = Math.max(0, Math.min(lines.length - viewH, curL - viewH + 1))
     const shown  = Array.from({ length: viewH }, (_, k) => lines[first + k] ?? [])
-    const height = viewH + 8
+    const height = viewH + 8 + (request !== null ? 2 : 0)
+
+    /*  the request name of a request by prompt (with an inverse cursor cell behind its end while
+        focused, where the prompt then shows no cursor), followed by the suggested request names  */
+    const named  = request !== null ? [
+        h(Text, { key: "request" },
+            h(Text, cx("normal"), " request name: "),
+            h(Text, cx("accent", "bold"), sanitize(request.name).slice(0, Math.max(0, innerW - 18))),
+            h(Text, cx(request.focus ? "inverse" : "normal"), " "),
+            h(Text, cx("dim"), (request.choices.length > 0 ? `  (${request.choices.join(", ")})` : "")
+                .slice(0, Math.max(0, innerW - 16 - Math.min(request.name.length, innerW - 18)))
+                .padEnd(Math.max(0, innerW - 16 - Math.min(request.name.length, innerW - 18))))),
+        blank("blank-request")
+    ] : []
+    const focus  = request === null || !request.focus
     return h(Box, { key: "prompt", top: Math.floor((rows - height) / 2), left: Math.floor((columns - width) / 2), width, height, ...cx("popup", "border-dim") },
         h(Text, cx("normal", "bold"),
-            " ".repeat(qpad) + "Edit task ",
+            " ".repeat(qpad) + lead,
             h(Text, cx("inverse"), tid),
-            " by prompt:".padEnd(Math.max(0, innerW - qpad - 10 - tid.length))),
+            " by prompt:".padEnd(Math.max(0, innerW - qpad - lead.length - tid.length))),
         blank("blank-above"),
+        ...named,
         h(Text, { key: "input-top", ...cx("accent") }, ` ╭${"─".repeat(Math.max(0, innerW - 4))}╮ `),
         ...shown.map((line, k) => {
-            const at = line.findIndex((cell) => cell.cur)
+            const at = focus ? line.findIndex((cell) => cell.cur) : -1
             const ch = line.map((cell) => cell.ch)
             return h(Text, { key: k },
                 h(Text, cx("accent"), " │ "),
@@ -573,7 +593,7 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
     /*  the key hints, or instead the status notice of an edit, truncated to the free width  */
     const free   = Math.max(0, innerW - pos.length - 1)
     const keys   = (notice !== null ? " " + sanitize(notice) :
-        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · E: edit by prompt · T: transition · D: delete · M: toggle mouse · ⏎/ESC: close").slice(0, free)
+        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · E: edit by prompt · R: request by prompt · T: transition · D: delete · M: toggle mouse · ⏎/ESC: close").slice(0, free)
 
     return h(Box, { key: "dialog", top: 0, left, width, height: rows, ...cx("popup", "border-dim") },
         h(Text, {},

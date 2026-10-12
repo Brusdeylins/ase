@@ -126,7 +126,7 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null,
         transfer !== null && transferCard !== undefined ?
             renderTransfer(transfer.id, transferCard.status, transferList, transfer.at, columns, rows) : null,
-        prompt !== null ? renderPrompt(prompt.id, prompt.text, prompt.pos, columns, rows) : null,
+        prompt !== null ? renderPrompt(prompt.id, prompt.text, prompt.pos, columns, rows, prompt.request) : null,
         busy !== null ? renderBusy(busy.label, busy.since, busyTick, columns, rows) : null)
 }
 

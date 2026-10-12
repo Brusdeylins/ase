@@ -412,7 +412,7 @@ export const renderLanes = (ctx: BoardCtx) => {
                     "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop transition task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                "D: delete task · E: edit task by prompt · N: new task · " +
+                "D: delete task · E: edit by prompt · R: request by prompt · N: new task · " +
                 (grown ? "g/ESC: shrink lane · " :
                     `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane · c: ${folded ? "expand" : "collapse"} group · `) +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
@@ -470,7 +470,7 @@ export const renderGraph = (ctx: BoardCtx) => {
                 "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `D: delete task · E: edit task by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
+                `D: delete task · E: edit by prompt · R: request by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
                 `s: ${surface.standalone ? "hide" : "show"} standalone tasks · ` +
                 `/: filter tasks · v: view ${agents !== null ? "agents" : "lanes"}`)),
         h(Box, { key: "keys3", ...cx("bar") },

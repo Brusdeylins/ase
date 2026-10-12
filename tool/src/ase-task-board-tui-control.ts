@@ -234,6 +234,28 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
         removes the character at the cursor, and all other input (also pasted text,
         with its newlines kept and its other control characters turned into spaces)
         is inserted at the cursor  */
+    if (prompt !== null && prompt.request !== null && (key.tab || prompt.request.focus)) {
+        /*  type the request name of a request by prompt: TAB switches between the request name
+            and the prompt, RETURN switches to the prompt, the up/down arrows cycle through the
+            suggested request names, BACKSPACE removes the last character, ESC cancels, and all
+            other input of letters, digits, and dashes is appended (lower-cased)  */
+        const request = prompt.request
+        const name    = (value: string) => setPrompt({ ...prompt, request: { ...request, name: value } })
+        if (key.tab || key.return)
+            setPrompt({ ...prompt, request: { ...request, focus: key.tab ? !request.focus : false } })
+        else if (key.escape)
+            cancelPrompt()
+        else if ((key.upArrow || key.downArrow) && request.choices.length > 0) {
+            const i = request.choices.indexOf(request.name)
+            const n = request.choices.length
+            name(request.choices[i < 0 ? 0 : (i + (key.upArrow ? n - 1 : 1)) % n])
+        }
+        else if (key.backspace || key.delete)
+            name([ ...request.name ].slice(0, -1).join(""))
+        else if (!key.ctrl && !key.meta && /^[A-Za-z0-9-]+$/.test(input))
+            name(request.name + input.toLowerCase())
+        return
+    }
     if (prompt !== null) {
         const chars  = [ ...prompt.text ]
         const pos    = Math.max(0, Math.min(prompt.pos, chars.length))
@@ -498,7 +520,7 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
         exit, all, board, surface, view, setView, typing, setTyping, sel, setSel, dialog, setDialog,
         notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
-        prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, cycleView, selectAgent, scrollLog, logH
+        prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, startRequest, cycleView, selectAgent, scrollLog, logH
     } = ctx
     if (notice !== null)
         setNotice(null)
@@ -541,6 +563,13 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         keyboard protocol, Shift+e arrives as "e" with the shift modifier)  */
     if ((input === "E" || (input === "e" && key.shift)) && target !== "" && carry === null) {
         startPrompt(target)
+        return
+    }
+
+    /*  request a task by a prompt of any request name in every view (under the kitty
+        keyboard protocol, Shift+r arrives as "r" with the shift modifier)  */
+    if ((input === "R" || (input === "r" && key.shift)) && target !== "" && carry === null) {
+        startRequest(target)
         return
     }
     if (dialog !== null) {

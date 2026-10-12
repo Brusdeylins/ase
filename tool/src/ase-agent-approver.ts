@@ -6,14 +6,8 @@
 
 import type { Command }             from "commander"
 
-import { Task }                     from "./ase-task.js"
-import { Worktree }                 from "./ase-util-worktree.js"
-import type { AgentOpts, AgentTask, AgentJob, FlowValue } from "./ase-agent-common.js"
-import {
-    taskFlow, contextDir, worktreeId,
-    gitWorktreeRemove, gitWorktreeDetached,
-    verdictOf, execaJob
-}                                   from "./ase-agent-common.js"
+import type { AgentOpts, AgentTask, AgentJob } from "./ase-agent-common.js"
+import { taskFlow, verdictOf }      from "./ase-agent-common.js"
 import { PhaseAgent }               from "./ase-agent-common-phase.js"
 
 /*  agent "ase agent approver"  */
@@ -57,56 +51,16 @@ export default class AgentApproverCommand extends PhaseAgent {
         this.mode = mode
     }
 
-    /*  a task whose uncommitted "worktree" change set is located directly in the working copy
-        the agent is started in (and not in an ASE worktree of it) is reviewed (and hence staged)
-        only while the working copy is held for it alone (see "holdRoot"), else it is deferred  */
+    /*  a task is reviewed only while its changeset is free for it (see "changesetReadReady")  */
     protected async ready (task: AgentTask): Promise<boolean> {
-        let changeset: FlowValue
-        try {
-            changeset = taskFlow(this.log, task, "Changeset")
-        }
-        catch (_err) {
-            /*  an invalid value fails the processing of the task  */
-            return true
-        }
-        const root = this.localRoot([ changeset ])
-        if (changeset.type === "worktree" && root !== ""
-            && (await contextDir(root, task).catch(() => "")) === root && !this.holdRoot(task, root))
-            return this.defer(task, "the working copy used by another task")
-        return true
+        return this.changesetReadReady(task)
     }
 
-    /*  review the changeset of the task  */
+    /*  review the changeset of the task (see "changesetReadJob")  */
     protected async prepare (task: AgentTask): Promise<AgentJob> {
+        const work      = await this.changesetReadJob(task, this.kind)
         const changeset = taskFlow(this.log, task, "Changeset")
-        const root      = await this.workdir(task, [ changeset ])
-        if (changeset.type === "branch")
-            return { cmd: `ase-repo-review --branch ${changeset.name}`, cwd: root }
-        else if (changeset.type === "attachment") {
-            /*  materialize the change set attachment in a temporary worktree,
-                detached at the commit it is based on, staged for the review  */
-            const kind = new RegExp(`^text/x-diff\\s*;.*\\bkind\\s*=\\s*"?${changeset.name}"?\\s*(?:;|$)`, "i")
-            const attachment = (await Task.attachments(this.log, task.id)).filter((att) => kind.test(att.type)).pop()
-            if (attachment?.data === undefined)
-                throw new Error(`agent: no change set attachment "${changeset.name}" exists`)
-            const base = /\bbase\s+([0-9a-f]+)\b/.exec(attachment.desc)?.[1] ?? "HEAD"
-            const dir  = Worktree.dir(`${worktreeId(task.id)}-${changeset.name}-approver`, true, true, root)
-            await gitWorktreeDetached(root, dir, base)
-            try {
-                await execaJob("git", [ "apply", "--index" ], { cwd: dir, input: attachment.data })
-            }
-            catch (err: unknown) {
-                await gitWorktreeRemove(root, dir)
-                throw err
-            }
-            return { cmd: "ase-repo-review", cwd: dir, cleanup: () => gitWorktreeRemove(root, dir) }
-        }
-        else {
-            /*  stage the uncommitted change set in its context worktree  */
-            const cwd = await contextDir(root, task)
-            await execaJob("git", [ "add", "--all", "--", ".", ":(exclude).ase" ], { cwd })
-            return { cmd: "ase-repo-review", cwd }
-        }
+        return { ...work, cmd: changeset.type === "branch" ? `ase-repo-review --branch ${changeset.name}` : "ase-repo-review" }
     }
 
     /*  the verdict of a successful review ("APPROVE" or "REJECT"), or empty if none

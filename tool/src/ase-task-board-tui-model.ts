@@ -17,11 +17,12 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf,
-    watchAgents, busyAgents, agentsDigest
+    watchAgents, busyAgents, agentsDigest, requestNames
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState, AgentsState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
-import { editRefused, editPrompt, requestEdit } from "./ase-task-request.js"
+import { editRefused, editPrompt, requestEdit, requestsOf } from "./ase-task-request.js"
+import type { TaskRequests }                  from "./ase-task-request.js"
 import { filterBoard, dropStandalone }        from "./ase-task-board-filter.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
@@ -35,6 +36,12 @@ export type Sel = { g: number, l: number, id: string }
 
 /*  the currently carried task (if any) and the lane states it can be moved to  */
 export type Carry = { id: string, from: string, targets: Set<string> }
+
+/*  the prompt popup of a task: its prompt with the cursor position, and, for a request by
+    prompt of any name (instead of an edit request), its request name, whether the name
+    (instead of the prompt) is focused, and the suggested request names  */
+export type PromptRequest = { name: string, focus: boolean, choices: string[] }
+export type PromptState = { id: string, text: string, pos: number, request: PromptRequest | null }
 
 /*  the navigable items of a group: one per card, or one per lane
     which is minimized, empty, or within a collapsed group  */
@@ -250,7 +257,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const [ cycle,   setCycle   ] = React.useState<TaskFormat.TaskLifecycle | null>(null)
     const [ confirm, setConfirm ] = React.useState<{ id: string, yes: boolean } | null>(null)
     const [ transfer, setTransfer ] = React.useState<{ id: string, at: string } | null>(null)
-    const [ prompt,  setPrompt  ] = React.useState<{ id: string, text: string, pos: number } | null>(null)
+    const [ prompt,  setPrompt  ] = React.useState<PromptState | null>(null)
     const [ store,   setStore   ] = React.useState<StoreState | null>(null)
     const [ relayed, setRelayed ] = React.useState<AgentsState | null | undefined>(undefined)
     const [ grow,    setGrow    ] = React.useState(false)
@@ -259,6 +266,9 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
 
     /*  the drafts of the prompts of cancelled (or failed to be sent) edit requests, per task  */
     const promptDrafts = React.useRef(new Map<string, { text: string, pos: number }>())
+
+    /*  the drafts of the cancelled (or failed to be sent) requests by prompt, per task  */
+    const requestDrafts = React.useRef(new Map<string, { name: string, text: string, pos: number }>())
 
     /*  the busy popup of slow task store operations  */
     const { busy, busyTick, track } = useBusy()
@@ -651,17 +661,35 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         }
         const draft = promptDrafts.current.get(id)
         if (draft !== undefined) {
-            setPrompt({ id, ...draft })
+            setPrompt({ id, ...draft, request: null })
             return
         }
         const token = ++promptLoad.current
         track({ text: "loading edit prompt of task", id }, editPrompt(log, id)).then((text) => {
             if (token === promptLoad.current)
-                setPrompt({ id, text, pos: [ ...text ].length })
+                setPrompt({ id, text, pos: [ ...text ].length, request: null })
         }).catch((err: unknown) => {
             if (token === promptLoad.current)
                 setNotice(`editing task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
         })
+    }
+
+    /*  open the prompt popup of a request by prompt of any name of a task (see "ase task
+        request", refused for a finished task), with the request name suggested from the
+        request agents announced to the agent relay, prefilled with its draft of a cancelled
+        (or failed to be sent) request, where a missing request name is to be entered first  */
+    const startRequest = (id: string): void => {
+        const card = all.cards.get(id)
+        if (card === undefined)
+            return
+        if (cycle !== null && editRefused(cycle, card.actual)) {
+            setNotice(`requesting task "${id}" by prompt refused: task is finished`)
+            return
+        }
+        const choices = requestNames(agents)
+        const draft   = requestDrafts.current.get(id)
+        const name    = draft?.name ?? choices[0] ?? ""
+        setPrompt({ id, text: draft?.text ?? "", pos: draft?.pos ?? 0, request: { name, focus: name === "", choices } })
     }
 
     /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if
@@ -669,17 +697,54 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const cancelPrompt = (): void => {
         if (prompt === null)
             return
-        promptDrafts.current.set(prompt.id, { text: prompt.text, pos: prompt.pos })
-        setNotice(`editing task "${prompt.id}" by prompt cancelled`)
+        if (prompt.request !== null) {
+            requestDrafts.current.set(prompt.id, { name: prompt.request.name, text: prompt.text, pos: prompt.pos })
+            setNotice(`requesting task "${prompt.id}" by prompt cancelled`)
+        }
+        else {
+            promptDrafts.current.set(prompt.id, { text: prompt.text, pos: prompt.pos })
+            setNotice(`editing task "${prompt.id}" by prompt cancelled`)
+        }
         setPrompt(null)
     }
 
+    /*  request a task by the prompt of its popup under its request name (processed by a
+        request agent of "ase agent custom", resp. by "ase agent editor" for "edit"), dropping
+        the draft of the task once sent, resp. keeping the request as its draft on failure  */
+    const submitRequest = (id: string, text: string, pos: number, name: string): void => {
+        let requests: TaskRequests
+        try {
+            requests = requestsOf(name)
+        }
+        catch (err: unknown) {
+            setNotice(`requesting task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
+            return
+        }
+        if (text.trim() === "") {
+            setNotice(`requesting "${name}" of task "${id}" failed: empty prompt`)
+            return
+        }
+        setPrompt(null)
+        track({ text: `requesting "${name}" of task`, id }, requests.request(log, id, text)).then(() => {
+            requestDrafts.current.delete(id)
+            setNotice(`"${name}" of task "${id}" requested`)
+        }).catch((err: unknown) => {
+            requestDrafts.current.set(id, { name, text, pos })
+            setNotice(`requesting "${name}" of task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+
     /*  request the edit of a task by the prompt of its popup (processed by "ase agent editor"),
-        dropping the draft of the task once sent, resp. keeping the prompt as its draft on failure  */
+        dropping the draft of the task once sent, resp. keeping the prompt as its draft on failure,
+        or request a task by the prompt of its popup under its request name  */
     const submitPrompt = (): void => {
         if (prompt === null)
             return
         const { id, text, pos } = prompt
+        if (prompt.request !== null) {
+            submitRequest(id, text, pos, prompt.request.name)
+            return
+        }
         if (text.trim() === "") {
             setNotice(`requesting edit of task "${id}" failed: empty edit prompt`)
             return
@@ -868,7 +933,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,
         agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog,
-        toggle, toggleFlag, startEdit, startPrompt, cancelPrompt, submitPrompt, remove, transferTo, drop
+        toggle, toggleFlag, startEdit, startPrompt, startRequest, cancelPrompt, submitPrompt, remove, transferTo, drop
     }
 }
 

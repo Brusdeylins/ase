@@ -13,6 +13,16 @@ ChangeLog
     It runs as user `ase:ase` with the home directory `/ase` on an external volume, which holds
     the projects and the Claude Code credentials.
 
+-   FEATURE [tool]: Fully Configurable Custom Agents
+    The new `ase agent custom` runs agents whose entire behavior is configured instead of
+    hard-coded, via flat `--<group>-<item>` options or a YAML definition (`--definition`): either
+    claiming tasks by their lifecycle status (`--type phase`) or processing attached prompt requests
+    (`--type request`), with configurable states, tags, assignees, skill or text prompts with
+    placeholder templates, working directories, preparing and finishing commands, success criteria,
+    verdicts, and attachments. Every mode of the five built-in agents is expressible as a reference
+    definition. Requests of any name are attached via the new `ase task request` command, the new
+    `ase_task_request` MCP tool, or key `R` of the task boards.
+
 -   FEATURE [tool]: Individually Managed Agents and Supervised Agent Fleets
     Each agent now runs in its own process, managed via `ase agent <kind> start|status|log|stop`,
     replacing the former form running multiple agents in one process. The new `ase agent fleet

@@ -30,6 +30,7 @@ import * as Delegate                                      from "./ase-task-store
 import * as TaskFormat                                    from "./ase-task-format.js"
 import type { TaskStoreClient }                           from "./ase-task-store-client.js"
 import { LocalTaskStoreClient, RemoteTaskStoreClient }    from "./ase-task-store-client.js"
+import { requestsOf }                                     from "./ase-task-request.js"
 
 /*  a configuration value together with the label of its supplying scope  */
 type ScopedValue = { value: string, scope: string }
@@ -914,6 +915,22 @@ export default class TaskCommand {
                 }
             })
 
+        /*  register CLI sub-command "ase task request"  */
+        task
+            .command("request")
+            .description("Request the processing of a task by a prompt, attached as a request of a name " +
+                "(\"edit\" for the edit requests of \"ase agent editor\", any other name for the requests " +
+                "of a custom request agent of \"ase agent custom\"), replacing its failed requests of the name " +
+                "(refused for a finished task, and while a request of the name is being processed)")
+            .argument("<id>", "Task identifier")
+            .argument("<name>", "Request name")
+            .argument("<prompt...>", "Prompt of the request")
+            .action(async (id: string, name: string, prompt: string[]) => {
+                await requestsOf(name).request(this.log, id, prompt.join(" "))
+                this.log.write("info", `task: requested "${name}" of "${id}"`)
+                process.exit(0)
+            })
+
         /*  register CLI sub-command "ase task load"  */
         task
             .command("load")
@@ -1398,6 +1415,35 @@ export class TaskMCP {
                 const text = await Task.getStatus(this.log, args.id)
                 return {
                     content: [ { type: "text", text } ]
+                }
+            }
+            catch (err: unknown) {
+                return mcpError(err)
+            }
+        })
+
+        /*  task request  */
+        mcp.registerTool("ase_task_request", {
+            title: "ASE task request",
+            description:
+                "Request the processing of the persisted task `id` by a `prompt`, attached as a request of the " +
+                "`name` (`edit` for the edit requests of the `ase agent editor`, any other name for the requests " +
+                "of a custom request agent of `ase agent custom`), replacing its failed requests of the name. " +
+                "Returns a status `text`. Fails with an error if the task does not exist or is finished, " +
+                "or while a request of the name is being processed.",
+            inputSchema: {
+                id: z.string()
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
+                name: z.string()
+                    .describe("request name (a lower-case word of letters, digits, and dashes)"),
+                prompt: z.string()
+                    .describe("prompt of the request")
+            }
+        }, async (args) => {
+            try {
+                await requestsOf(args.name).request(this.log, args.id, args.prompt)
+                return {
+                    content: [ { type: "text", text: `OK: requested "${args.name}" of task "${args.id}"` } ]
                 }
             }
             catch (err: unknown) {

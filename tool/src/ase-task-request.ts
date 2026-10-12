@@ -112,12 +112,13 @@ export class TaskRequests {
 
     /*  finalize a processed request (at index <i>) of a task plan: remove it (state null), or turn
         it back into a requested or into a failed one (with a description), restore the previous
-        assignee of the task (unless it was reassigned meanwhile), and re-derive the request tag  */
-    finalize (plan: API.TaskPlan, i: number, state: RequestState | null, desc?: string): void {
+        assignee of the task (or hand it over to the given <assignee> instead, where an empty one
+        unassigns it), unless it was reassigned meanwhile, and re-derive the request tag  */
+    finalize (plan: API.TaskPlan, i: number, state: RequestState | null, desc?: string, assignee?: string): void {
         const att  = plan.attachment[i]
         const type = att.Type ?? ""
         if (String(plan.header.Assignee ?? "") === typeParam(type, "agent")) {
-            const previous = typeParam(type, "assignee")
+            const previous = assignee ?? typeParam(type, "assignee")
             if (previous !== "")
                 plan.header.Assignee = previous
             else
@@ -203,6 +204,21 @@ export class TaskRequests {
     ("edit-running"), and failed ("edit-failed", to be re-requested), mirrored
     in the task header as tag "ase-agent-editor:<state>"  */
 export const edits = new TaskRequests("edit", "ase-agent-editor", "edited")
+
+/*  the valid names of requests: lower-case words, not ending in a state suffix of a request kind  */
+export const REQUEST_NAME_RE = /^(?!.*-(?:running|failed)$)[a-z][a-z0-9-]*$/
+
+/*  the requests of a name (e.g. "lint", processed by a request agent of "ase agent custom"),
+    mirrored in the task header as tag "ase-agent-<name>:<state>", where the edit requests
+    ("edit") are the ones of the editor agent  */
+export const requestsOf = (name: string): TaskRequests => {
+    if (!REQUEST_NAME_RE.test(name))
+        throw new Error(`invalid request name "${name}" ` +
+            "(expected a lower-case word of letters, digits, and dashes, not ending in \"-running\" or \"-failed\")")
+    if ([ "planner", "implementer", "approver", "integrator", "editor" ].includes(name))
+        throw new Error(`invalid request name "${name}" (its tag "ase-agent-${name}" is the one of a built-in agent)`)
+    return name === edits.name ? edits : new TaskRequests(name, `ase-agent-${name}`, "processed")
+}
 
 /*  the state of an edit request, and the aggregated state of the edit requests of a task by its header tag (else empty)  */
 export type EditState = RequestState

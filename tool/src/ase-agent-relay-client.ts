@@ -394,7 +394,8 @@ export class AgentPresenceReporter {
     private resume  = 0
     private stopped = false
 
-    constructor (private log: Log, private client: AgentRelayClient, private kind: string, private name: string, private mode = "") {
+    constructor (private log: Log, private client: AgentRelayClient, private kind: string, private name: string, private mode = "",
+        private request = "") {
         this.id = `${os.hostname()}-${process.pid}-${name}`
             .replace(/[^A-Za-z0-9_.-]+/g, "-").replace(/^[^A-Za-z0-9]+/, "").slice(0, 128)
     }
@@ -446,6 +447,8 @@ export class AgentPresenceReporter {
             kind: this.kind, name: this.name, mode: this.mode, host: os.hostname(), pid: process.pid, started: this.started,
             state: this.state, tasks: this.tasks, usage: this.usage, lines
         }
+        if (this.request !== "")
+            presence.request = this.request
         this.flight = this.client.announce(this.id, presence).then(() => {
             if (this.failing)
                 this.log.write("info", `agent: agent relay "${this.client.base}" accepting presence of agent again`)

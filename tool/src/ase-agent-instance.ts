@@ -71,14 +71,16 @@ export const agentDefaults = (): AgentOpts => {
     return { tool: envTool !== "" ? envTool : "claude", parallel: "1", timeout: "60m", oneShot: false }
 }
 
-/*  the command-line arguments of the explicitly given options of a command (except "--foreground")  */
+/*  the command-line arguments of the explicitly given options of a command (except "--foreground"),
+    where a repeatable option is repeated per value  */
 const givenArgs = (cmd: Command): string[] =>
     cmd.options.flatMap((option) => {
         const key = option.attributeName()
         if (option.long === undefined || option.long === "--foreground" || cmd.getOptionValueSource(key) !== "cli")
             return []
-        const value = cmd.getOptionValue(key) as string | boolean
-        return value === true ? [ option.long ] : [ option.long, String(value) ]
+        const value = cmd.getOptionValue(key) as string | string[] | boolean
+        return value === true ? [ option.long ] :
+            (Array.isArray(value) ? value : [ value ]).flatMap((item) => [ option.long!, String(item) ])
     })
 
 /*  CLI command group "ase agent <kind>", managing a single agent of a kind
@@ -119,8 +121,10 @@ export default class AgentInstanceCommand extends DaemonCommand {
             return 0
         }
 
-        /*  spawn the agent detached, logging into its log file, and await its successful setup  */
+        /*  spawn the agent detached (after validating its options), logging into
+            its log file, and await its successful setup  */
         if (!opts.foreground && !serve) {
+            this.agent.validate(opts)
             const logFile = this.file(name, "log")
             const child   = this.spawnDetached([ "-l", this.log.logLevel(), "agent", kind, "start", ...givenArgs(start) ],
                 { ASE_AGENT_SERVE: "1" }, logFile)

@@ -23,7 +23,7 @@ import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
 import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine } from "./ase-agent-relay-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
-import { editProbe, editRefused, requestEdit, RequestError } from "./ase-task-request.js"
+import { editProbe, editRefused, requestEdit, requestsOf, RequestError } from "./ase-task-request.js"
 import pkg                       from "../package.json" with { type: "json" }
 
 /*  the build stamp of the loaded code (version and content hash of the board modules
@@ -673,6 +673,32 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
                 return h.response({ error: "invalid edit request" }).code(400)
             try {
                 await requestEdit(log, id, p.prompt)
+            }
+            catch (err: unknown) {
+                const code = !(err instanceof RequestError) || err.reason === "empty" ? 400 :
+                    err.reason === "missing" ? 404 : 409
+                return h.response({ error: err instanceof Error ? err.message : String(err) }).code(code)
+            }
+            return h.response({ ok: true })
+        })
+    })
+
+    /*  request a task by a prompt under a request name (processed by a request agent of
+        "ase agent custom", resp. by "ase agent editor" for "edit"), answering 400 if the
+        request name is invalid or the prompt is empty, 404 if the task is missing, and 409
+        if it is finished or a request of the name is in progress (as checked atomically
+        with the request)  */
+    server.route({
+        method:  "POST",
+        path:    "/task-board/api/task/{id}/request",
+        options: { payload: { parse: true, allow: "application/json" } },
+        handler: guarded(async (request, h) => {
+            const id = String(request.params.id)
+            const p  = request.payload as { name?: unknown, prompt?: unknown } | null
+            if (!TaskFormat.TASK_ID_RE.test(id) || p === null || typeof p.name !== "string" || typeof p.prompt !== "string")
+                return h.response({ error: "invalid request" }).code(400)
+            try {
+                await requestsOf(p.name).request(log, id, p.prompt)
             }
             catch (err: unknown) {
                 const code = !(err instanceof RequestError) || err.reason === "empty" ? 400 :

@@ -924,6 +924,23 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
         color: var(--c-text)
         .cid
             margin-right: 0
+    .name
+        align-self: stretch
+        color: var(--c-text)
+        input
+            margin-left: 6px
+            padding: 2px 6px
+            border: 1px solid var(--c-border)
+            border-radius: 4px
+            background: var(--c-paper)
+            color: var(--c-accent)
+            font: inherit
+            font-family: "DejaVu Sans Mono", monospace
+            font-size: 0.875em
+            &:focus
+                outline: none
+                border-color: var(--c-accent)
+                background: var(--c-accent-ground)
     textarea
         width: min(640px, 80vw)
         padding: 6px 8px

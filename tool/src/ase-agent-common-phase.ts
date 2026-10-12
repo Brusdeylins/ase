@@ -47,8 +47,15 @@ export abstract class PhaseAgent extends Agent {
 
     /*  whether the job of the agent finishes the result of the skill afterwards (e.g. by
         committing and publishing it), so a task already in the "success" state does not
-        prove the finishing (see "recover")  */
-    protected readonly finishing: boolean = false
+        prove the finishing (see "recover"), where a concrete agent can decide on it
+        on its initialization (e.g. by its mode)  */
+    protected finishing = false
+
+    /*  the assignee under which the agent claims, holds, recognizes, and releases
+        the tasks (default: its name)  */
+    protected get assignee (): string {
+        return this.name
+    }
 
     /*  whether a task is dispatchable to the agent by its assignee: a task
         pre-assigned to the agent always is, an unassigned task only if the
@@ -56,18 +63,32 @@ export abstract class PhaseAgent extends Agent {
         else (a human or another agent) never is  */
     private assignedTo (keys: Map<string, string>): boolean {
         const assignee = (keys.get("Assignee") ?? "").trim()
-        return assignee === this.name || (assignee === "" && !this.assigned)
+        return assignee === this.assignee || (assignee === "" && !this.assigned)
     }
 
     /*  decide on the resulting state of a task, still in the "activity" state after
         the skill invocation, by its success and its output lines  */
-    protected abstract outcome (ok: boolean, output: string[]): string
+    protected abstract outcome (ok: boolean, output: string[], task: AgentTask): string
+
+    /*  decide whether a processed task, moved into the state <to> and tagged with the value
+        <value> of its label, was processed successfully (for the level and the wording of
+        the result log line): by default, if moved into the "success" state or labeled  */
+    protected succeeded (to: string, value: string | null | undefined, _task: AgentTask): boolean {
+        return to === this.states.success || value !== undefined
+    }
+
+    /*  decide on the assignee to hand a processed task over to, by its success and
+        its previous assignee <previous> before the claim (or empty to unassign it):
+        by default, a processed task is unassigned  */
+    protected handover (_success: boolean, _previous: string): string {
+        return ""
+    }
 
     /*  decide on the value of the tag of a processed task (e.g. a verdict of the
         skill) by its success and its output lines, or none (undefined) for a plain
         tag, or no tag at all (null), if the result of the processing itself (e.g. an
         attachment) keeps the agent from claiming the task again (see "ready")  */
-    protected label (_ok: boolean, _output: string[]): string | null | undefined {
+    protected label (_ok: boolean, _output: string[], _task: AgentTask): string | null | undefined {
         return undefined
     }
 
@@ -148,7 +169,7 @@ export abstract class PhaseAgent extends Agent {
                 from = TaskFormat.taskStatus(plan.header, lifecycle)
                 const current = flatKeys(plan.header)
                 if (attempted !== null && from === activity && tagsOf(current).includes(`${this.tag}:active`)
-                    && (current.get("Assignee") ?? "").trim() === this.name) {
+                    && (current.get("Assignee") ?? "").trim() === this.assignee) {
                     keys    = attempted
                     skipped = ""
                     return false
@@ -158,10 +179,10 @@ export abstract class PhaseAgent extends Agent {
                     taggedWith(keys, this.tag) || !this.assignedTo(keys) ? "silently" : ""
                 if (skipped !== "")
                     return false
-                this.runLock.claim(task.id, { name: this.name, tag: this.tag, assignee: (keys.get("Assignee") ?? "").trim() })
+                this.runLock.claim(task.id, { name: this.assignee, tag: this.tag, assignee: (keys.get("Assignee") ?? "").trim() })
                 plan.header.Status = activity
                 setPlanTag(plan, this.tag, "active")
-                plan.header.Assignee = this.name
+                plan.header.Assignee = this.assignee
                 attempted = keys
                 return true
             }, () => {
@@ -204,14 +225,16 @@ export abstract class PhaseAgent extends Agent {
         output: string[], log: AgentLog): Promise<void> {
         const { incoming, activity, success } = this.states
 
-        /*  the tag is made plain or labeled (and the assignee cleared) together with the
-            status change, in a single conditional update of the task (retried on a concurrent
-            change of it), so no agent of its kind claims a processed task again, and a
+        /*  the tag is made plain or labeled (and the assignee cleared, or handed over) together
+            with the status change, in a single conditional update of the task (retried on a
+            concurrent change of it), so no agent of its kind claims a processed task again, and a
             processing with a label (e.g. a verdict) or without a tag (as its result itself
             guards it) succeeded, even if not moved into the "success" state, where the
-            assignee is only cleared (resp. restored) if the task is still assigned to the
-            agent (and not meanwhile, e.g., to the editor agent)  */
-        const value    = aborted ? undefined : this.label(ok, output)
+            assignee is only cleared (resp. restored, or handed over) if the task is still
+            assigned to the agent (and not meanwhile, e.g., to the editor agent), and where a
+            task already in the "success" state counts as processed by the skill only if the
+            "success" state differs from the "activity" state (else it is decided by the outcome)  */
+        const value    = aborted ? undefined : this.label(ok, output, task)
         const tagged   = (val: string | null | undefined) => val === null ? "untagged" :
             `tag "${val !== undefined ? `${this.tag}:${val}` : this.tag}"`
         const assignee = (task.keys.get("Assignee") ?? "").trim()
@@ -221,39 +244,42 @@ export abstract class PhaseAgent extends Agent {
             const status = TaskFormat.taskStatus(plan.header, lifecycle)
             if (status === activity && aborted) {
                 setPlanTag(plan, this.tag, null)
-                reassign(plan, this.name, assignee)
+                reassign(plan, this.assignee, assignee)
                 plan.header.Status = incoming
                 level  = "warning"
                 result = `task released (status "${status}" → "${incoming}", untagged)`
             }
-            else if (status === success && finished) {
+            else if (status === success && status !== activity && finished) {
+                const good = this.succeeded(success, value, task)
                 setPlanTag(plan, this.tag, value)
-                reassign(plan, this.name, "")
-                level  = "info"
-                result = `task processed successfully (status "${success}", ${tagged(value)})`
+                reassign(plan, this.assignee, this.handover(good, assignee))
+                level  = good ? "info" : "warning"
+                result = `task processed ${good ? "successfully" : "unsuccessfully"} (status "${success}", ${tagged(value)})`
             }
             else if (status === activity || status === success) {
-                const to = this.outcome(ok, output)
-                reassign(plan, this.name, "")
-                if (status === success) {
+                const to = this.outcome(ok, output, task)
+                if (status === success && status !== activity) {
                     /*  the skill succeeded, but the finishing failed (as "finished" is
                         false here), so the result of the skill (e.g. a merge or a commit
                         not published) must not be hidden by parking the task  */
                     setPlanTag(plan, this.tag, "failed")
+                    reassign(plan, this.assignee, "")
                     level  = "error"
                     result = `task processed, but its finishing failed -- left in "${status}" ` +
                         `for a manual intervention (${tagged("failed")})`
                 }
                 else if (TaskFormat.checkStatus(lifecycle, status, to) !== "") {
                     setPlanTag(plan, this.tag, "failed")
+                    reassign(plan, this.assignee, "")
                     level  = "error"
                     result = `task processed, but its status "${status}" cannot change into "${to}" ` +
                         `-- left in "${status}" for a manual intervention (${tagged("failed")})`
                 }
                 else {
+                    const good = this.succeeded(to, value, task)
                     setPlanTag(plan, this.tag, value)
+                    reassign(plan, this.assignee, this.handover(good, assignee))
                     plan.header.Status = to
-                    const good = to === success || value !== undefined
                     level  = good ? "info" : "warning"
                     result = `task processed ${good ? "successfully" : "unsuccessfully"} ` +
                         `(status "${status}" → "${to}", ${tagged(value)})`
@@ -263,7 +289,7 @@ export abstract class PhaseAgent extends Agent {
                 /*  tagged, too, as a skill can itself move the task back into the
                     "incoming" state (e.g. "ase-task-integrate" on nothing to integrate)  */
                 setPlanTag(plan, this.tag, value)
-                reassign(plan, this.name, "")
+                reassign(plan, this.assignee, this.handover(this.succeeded(status, value, task), assignee))
                 level  = "warning"
                 result = `task status changed meanwhile to "${status}" -- left untouched (${tagged(value)})`
             }
@@ -351,13 +377,13 @@ export abstract class PhaseAgent extends Agent {
                 }
                 catch (err: unknown) {
                     recovered = false
-                    await this.write("warning", this.name, `task "${id}" of terminated ${this.kind} "${claim.name}" ` +
+                    await this.write("warning", this.name, `task "${id}" of terminated ${this.role} "${claim.name}" ` +
                         `not recovered: ${err instanceof Error ? err.message : String(err)}`)
                     continue
                 }
                 this.runLock.forget(run, id)
                 if (result !== "")
-                    await this.write("warning", this.name, `task "${id}" of terminated ${this.kind} "${claim.name}" ${result}`)
+                    await this.write("warning", this.name, `task "${id}" of terminated ${this.role} "${claim.name}" ${result}`)
             }
             if (recovered)
                 await this.runLock.purge(run)
@@ -369,7 +395,7 @@ export abstract class PhaseAgent extends Agent {
     /*  the description of the observed tasks (for the start log line)  */
     protected observing (): string {
         return `"${this.states.incoming}" tasks without tag "${this.tag}" ` +
-            (this.assigned ? `and assigned to "${this.name}"` : `and unassigned or assigned to "${this.name}"`)
+            (this.assigned ? `and assigned to "${this.assignee}"` : `and unassigned or assigned to "${this.assignee}"`)
     }
 }
 

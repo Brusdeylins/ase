@@ -13,6 +13,7 @@ import AgentImplementerCommand           from "./ase-agent-implementer.js"
 import AgentApproverCommand              from "./ase-agent-approver.js"
 import AgentIntegratorCommand            from "./ase-agent-integrator.js"
 import AgentEditorCommand                from "./ase-agent-editor.js"
+import AgentCustomCommand                from "./ase-agent-custom.js"
 import AgentInstanceCommand              from "./ase-agent-instance.js"
 import AgentRelayCommand                 from "./ase-agent-relay-server-cli.js"
 import AgentFleetCommand                 from "./ase-agent-fleet.js"
@@ -29,15 +30,16 @@ export default class AgentCommand {
             () => new AgentImplementerCommand(this.log),
             () => new AgentApproverCommand(this.log),
             () => new AgentIntegratorCommand(this.log),
-            () => new AgentEditorCommand(this.log)
+            () => new AgentEditorCommand(this.log),
+            () => new AgentCustomCommand(this.log)
         ].map((create) => [ create().kind, create ]))
 
         /*  register CLI top-level command "ase agent"  */
         const cmd = program
             .command("agent")
-            .description("Autonomous agents driving the task lifecycle phases (planner, implementer, approver, integrator) " +
-                "and processing the edit requests of tasks (editor), each running in its own process, " +
-                "individually or as a fleet, optionally reporting to the agent relay")
+            .description("Autonomous agents driving the task lifecycle phases (planner, implementer, approver, integrator), " +
+                "processing the edit requests of tasks (editor), or of fully configured behavior (custom), " +
+                "each running in its own process, individually or as a fleet, optionally reporting to the agent relay")
             .action(() => {
                 cmd.outputHelp()
                 process.exit(1)

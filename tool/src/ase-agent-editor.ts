@@ -4,12 +4,7 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import { Worktree }                              from "./ase-util-worktree.js"
-import type { AgentTask, AgentJob, AgentLog }    from "./ase-agent-common.js"
-import {
-    taskFlow, worktreeId,
-    gitWorktreeRemove, gitWorktreeDetached
-}                                                from "./ase-agent-common.js"
+import type { AgentTask, AgentJob }              from "./ase-agent-common.js"
 import { RequestAgent }                          from "./ase-agent-common-request.js"
 import { edits }                                 from "./ase-task-request.js"
 
@@ -39,22 +34,9 @@ export default class AgentEditorCommand extends RequestAgent {
         branch (passed to the skill and the agent tool), which is removed afterwards  */
     protected async prepare (task: AgentTask): Promise<AgentJob> {
         const { prompt } = this.claims.get(task.id)!
-        const source = taskFlow(this.log, task, "Source")
-        const root   = await this.workdir(task, [ source ])
-        const edit   = (opt: string) => `ase-task-edit --plan REFINE --next DONE${opt} ${task.id}: ${prompt.replace(/\s+/g, " ")}`
-        if (source.type !== "branch")
-            return { cmd: edit(""), cwd: root }
-        const dir = Worktree.dir(`${worktreeId(task.id)}-editor`, true, true, root)
-        await gitWorktreeDetached(root, dir, source.name)
-        return {
-            cmd:  edit(` --int-source-dir "${dir}"`),
-            cwd:  root,
-            dirs: [ dir ],
-            cleanup: async (log: AgentLog) => {
-                await gitWorktreeRemove(root, dir)
-                await log("info", `temporary worktree of source branch "${source.name}" removed`)
-            }
-        }
+        const work = await this.sourceJob(task, this.kind, true)
+        const opt  = work.sourceDir !== "" ? ` --int-source-dir "${work.sourceDir}"` : ""
+        return { ...work, cmd: `ase-task-edit --plan REFINE --next DONE${opt} ${task.id}: ${prompt.replace(/\s+/g, " ")}` }
     }
 }
 

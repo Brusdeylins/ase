@@ -28,6 +28,8 @@ import { parseRelayURL, redactURL }      from "./ase-agent-relay-client.js"
 import { pidAlive, pidStart }            from "./ase-agent-common.js"
 import type { Agent }                    from "./ase-agent-common.js"
 import { relaySchema, relayTls }         from "./ase-agent-relay-server-cli.js"
+import { flattenDefinition, resolveDefinition } from "./ase-agent-custom-config.js"
+import type { CustomDefinition }         from "./ase-agent-custom-config.js"
 import { runtimeDir, readState, writeState, stateAlive, validateName, agentDefaults } from "./ase-agent-instance.js"
 import type { RuntimeState }             from "./ase-agent-instance.js"
 
@@ -117,6 +119,19 @@ const initConfig = (tool: string): string => textframe`
     #   the integration phase agent (APPROVED > INTEGRATING > INTEGRATED)
     integrator:
         mode:           squash          # Git integration operation ("merge", "rebase", or "squash")
+
+    #   a custom agent of fully configured behavior (see "ase agent custom start"), e.g. one
+    #   processing the requests "lint" (attached via "ase task request <id> lint <prompt>")
+    #lint:
+    #    kind:           custom          # agent kind
+    #    type:           request         # processing type ("phase" or "request")
+    #    #definition:    <file>          # YAML file with the definition (relative to this file)
+    #    prompt:
+    #        text:       "Lint the source code of task {id} with focus on: {prompt}"
+    #    success:
+    #        criterion:  [ clean ]       # success criteria ("exit", "clean", "changed", ...)
+    #    attach:
+    #        output:     lint-report     # kind of the attachment storing the output
     `
 
 /*  the agent relay of a fleet: its "ase agent relay start" options, the token to pass to
@@ -319,14 +334,21 @@ export default class AgentFleetCommand extends DaemonCommand {
         /*  the agents, named by their sections  */
         const kinds  = [ ...this.kinds.keys() ]
         const agents: FleetPlan["agents"] = []
+        const serial = new Map<string, string>()
         for (const name of Object.keys(data)) {
             if (name === "fleet" || name === "relay" || name === "default")
                 continue
-            const { kind = name, ...values } = section(name)
+            const { kind = name, ...options } = section(name)
             if (typeof kind !== "string" || !this.kinds.has(kind))
                 throw new Error(`fleet: section "${name}": unknown agent kind "${String(kind)}" ` +
                     `(expected ${kinds.map((name) => `"${name}"`).join(", ")})`)
             validateName(name, kind, kinds)
+
+            /*  the options of a custom agent can be nested by group, and its
+                definition file is relative to the configuration file  */
+            const values = kind === "custom" ? flattenDefinition(options, `fleet: section "${name}"`) : options
+            if (kind === "custom" && typeof values.definition === "string")
+                values.definition = path.resolve(path.dirname(file), values.definition)
             for (const key of [ ...deniedKeys, ...(relay !== null ? [ "agent-relay" ] : []) ])
                 if (given(values, key))
                     throw new Error(`fleet: section "${name}": option "${key}" not allowed in a fleet` +
@@ -345,6 +367,29 @@ export default class AgentFleetCommand extends DaemonCommand {
                     `${(err instanceof Error ? err.message : String(err)).replace(/^error: /, "")}`, { cause: err })
             }
             agents.push({ name, kind, args })
+
+            /*  the tag of an agent processing tasks serially only: the resolved one of a custom
+                agent processing serially, and the one of a built-in agent of a serial kind  */
+            let tag = ""
+            if (kind === "custom") {
+                let def: CustomDefinition
+                try {
+                    def = resolveDefinition(cmd.opts(), name)
+                }
+                catch (err: unknown) {
+                    throw new Error(`fleet: section "${name}": ` +
+                        `${(err instanceof Error ? err.message : String(err)).replace(/^agent: /, "")}`, { cause: err })
+                }
+                tag = def.serial ? def.tag.name : ""
+            }
+            else if (this.kinds.get(kind)!().serialOnly)
+                tag = `ase-agent-${kind}`
+            const other = serial.get(tag)
+            if (tag !== "" && other !== undefined && (kind === "custom" || agents.find((agent) => agent.name === other)?.kind === "custom"))
+                throw new Error(`fleet: sections "${other}" and "${name}" both process the tasks of tag "${tag}" serially only ` +
+                    "-- cannot run both")
+            if (tag !== "")
+                serial.set(tag, name)
         }
         if (agents.length === 0)
             throw new Error(`fleet: configuration "${file}" defines no agents`)

@@ -549,6 +549,21 @@ with the Gitea token from `project.task.store.token`, else `$GITEA_TOKEN`):
   exists, the *status* is unknown, or it is not reachable from the
   current one via one or more transitions of the model.
 
+- `ase task request` *id* *name* *prompt*...:
+  Request the processing of the task *id* by the *prompt* (its words
+  joined by single spaces) under the request name *name* (a lower-case
+  word of letters, digits, and dashes, not ending in `-running` or
+  `-failed`, and none of the built-in agent kinds): `edit` for the edit
+  requests of `ase agent editor` (like key `E` of the task board), any
+  other name for the requests of a request agent of `ase agent custom`
+  (see `--type request`). The request is attached to the task as an
+  attachment of type `text/plain; charset=utf-8; kind="<name>"` (with the
+  prompt as its data), mirrored in the tag `ase-agent-<name>:pending`
+  (`ase-agent-editor:pending` for `edit`), replacing all failed requests
+  of the name. Refused (with exit status 1) for a missing or finished
+  task, and while a request of the name is being processed. The MCP tool
+  `ase_task_request` provides the same.
+
 - `ase task load` *id*:
   Load the task plan with the given *id* and write it to standard
   output. Prints nothing if the task does not exist.
@@ -724,7 +739,15 @@ the persisted task plans of the current project:
   refused), which `ase agent editor`
   then processes via `ase-task-edit` (prefilled with the prompt of a
   failed request for a retry); its card is marked with `✎` while
-  requested, `✎…` while being processed, and `✎✗` when failed. `D` deletes the selected task after a confirmation
+  requested, `✎…` while being processed, and `✎✗` when failed. In the
+  same views, `R` requests the selected task by a prompt under a request
+  name (see `ase task request`), suggested from the request agents
+  announced to the agent relay (`edit` for `ase agent editor`, else the
+  request name of a request agent of `ase agent custom`; terminal: `⇥`
+  switches between the request name and the prompt, and `↑`/`↓` cycle
+  through the suggestions; web: a request name field with the
+  suggestions as its completions), which the request agent of the name
+  then processes. `D` deletes the selected task after a confirmation
   (`y` confirms and `ESC` cancels; web: also via the `delete` and `cancel` buttons). In
   the lanes view, `SPACE` picks up the selected task and a second `SPACE`
   drops it onto the selected lane, changing the task status (`ESC`
@@ -804,21 +827,22 @@ the persisted task plans of the current project:
   disconnected (dropping the shown agents), and re-established.
 
 The following top-level commands exist for autonomous agents driving the
-phases of the `enterprise` task lifecycle model and processing the edit
-requests of tasks:
+phases of the `enterprise` task lifecycle model, processing the edit
+requests of tasks, and of fully configured behavior:
 
 - `ase agent` *agent* `start` \[*agent-options*\] \[`-f`|`--foreground`\]:
   Start one of the agents `planner`, `implementer`, `approver`,
-  `integrator`, and `editor` in the background, each running in its own
-  process, e.g., `ase agent implementer start -p 2`. The *agent-options*
+  `integrator`, `editor`, and `custom` in the background, each running
+  in its own process, e.g., `ase agent implementer start -p 2`. The *agent-options*
   \[`-n`|`--name` *name*\] \[`-t`|`--tool` `claude`|`copilot`|`codex`\]
   \[`-p`|`--parallel` *num*\] \[`-T`|`--timeout` *duration*\]
   \[`-o`|`--one-shot`\] \[`-r`|`--repo` *url*\] \[`-d`|`--tempdir` *dir*\]
   \[`--agent-relay` *url*\] (where `--repo` and `--tempdir` are not
-  accepted for `planner`, which never processes tasks in a clone)
+  accepted for `planner`, which never processes tasks in a clone, and
+  silently ignored for `custom` with `--workdir project`)
   additionally carry the individual options of an agent (if any).
   `--name` names the agent (default: its kind, i.e., `planner`,
-  `implementer`, `approver`, `integrator`, or `editor`; at most 64
+  `implementer`, `approver`, `integrator`, `editor`, or `custom`; at most 64
   characters) in its log lines, its processing log attachment, the
   `Assignee:` of the tasks it processes, its temporary directory, and
   its runtime files `.ase/agent/<name>.yaml` (its process id) and
@@ -839,7 +863,7 @@ requests of tasks:
   best run together as a fleet (see `ase agent fleet start`). `ase agent
   <agent> start --help` shows the options of a single agent.
 
-  Each agent except `editor` (see below) drives one phase of the `enterprise` task lifecycle model
+  Each agent except `editor` and `custom` (see below) drives one phase of the `enterprise` task lifecycle model
   (refused for any other model) until interrupted, so that the four
   agents together realize the entire model. Each agent observes the tasks in its
   *incoming* state which do not carry the *tag* of its kind -- `ase-agent-<kind>`, resp. per mode
@@ -1152,6 +1176,263 @@ requests of tasks:
     process is no longer alive) are turned into `kind="edit-failed"`,
     and the previous assignees of their tasks are restored.
 
+  - `ase agent custom`:
+    Unlike the other agents, its *entire* behavior is *configured*
+    instead of hard-coded, so several custom agents of different
+    behavior run side by side under distinct names (`--name`), individually
+    and in a fleet. With `--type phase` (default), it claims tasks by
+    their *lifecycle status*, like the phase agents, and with `--type
+    request`, it processes the *prompt requests* attached to tasks in
+    any lifecycle status (see `ase task request`), like `editor`. Only
+    the prompt (and `--state-incoming` for `phase`) is mandatory, while
+    all other options default to the safe *annotate* behavior: a
+    `phase` task returns into its incoming state, tagged
+    `ase-agent-<name>` and unassigned, while a `request` task keeps its
+    status and tags (except the request state tag) and gets its
+    previous assignee back. Every option is a flat long option of the
+    form `--<group>-<item>` (except the ungrouped ones), where
+    `--definition`|`-D` *file* loads a YAML file with the same keys
+    (the given options win), either flat (`state-incoming: PLANNED`) or
+    nested by group (`state: { incoming: PLANNED }`), where a list value
+    repeats a repeatable option, a flag takes a boolean, and a relative
+    `prompt-file` is relative to the definition file. The options are
+    validated on the start (also before detaching the agent), where an
+    error names the offending option. The options are:
+
+    - *ungrouped*: `--type phase`|`request`; `--definition`|`-D`
+      *file*; `--workdir project`|`source`|`changeset`|`changeset-read`|`target`
+      (default: `project`, see below); `--lifecycle` *model* (repeatable,
+      the supported task lifecycle models, default: every model containing
+      all given states, resp. all models for `request`); `--serial`
+      (process the tasks serially only, ignoring `--parallel`).
+
+    - *state* (`phase` only): `--state-incoming` *state* (the state of
+      the tasks to claim); `--state-activity` *state* (the state during
+      the processing, default: incoming, i.e., the claim is marked by the
+      `:active` tag only); `--state-success` *state* and `--state-failure`
+      *state* (the target states on success resp. failure, default:
+      incoming); `--state-phase` *state* (the *phase success state*, decoupled
+      from the target state: a task the skill itself moves there counts
+      as processed, and a task there carrying the tag counts as having
+      passed the phase for its `After:` successors, default: success);
+      `--state-passed` *state* (the first state from which on a task
+      has passed the phase, default: phase); `--state-verdict`
+      *VERDICT*`=`*state* (repeatable, the target state per verdict,
+      overriding the success/failure target state). All states have to
+      exist in the task lifecycle models, and the transitions from the
+      incoming into the activity state, back (on interrupt), and from the
+      activity into the target states have to be reachable.
+
+    - *tag*: `--tag-name` *tag* (the tag of the processed tasks, starting
+      with `ase-agent-` and without `:`, default: `ase-agent-<name>`, hence
+      no sharing between differently named agents; for `request`, it is
+      always the request state tag `ase-agent-<request-name>`, resp.
+      `ase-agent-editor` for `edit`); `--tag-success` and `--tag-failure`
+      *tag* (`phase` only: the tag set on success resp. failure, either
+      *tag-name* (default), *tag-name*`:`*value* (a lower-case value other
+      than `active`, e.g. `:failed` to tell failures apart), or `none` to
+      untag, where a foreign tag is refused, as the agent would claim the
+      task again); `--tag-require` and `--tag-exclude` *tag* (repeatable,
+      the tags a claimable task has to carry resp. must not carry, a
+      plain tag matching it also with any value); `--tag-retry` (`phase`
+      only, a shorthand for `--tag-failure none`: a failed task returning
+      into the incoming state is claimed again, but held off by the agent
+      process for an exponentially growing delay from 1 minute up to 1
+      hour). The tag options never apply to an interrupted task (released
+      untagged) or to a task left for a manual intervention (tagged
+      *tag-name*`:failed`, e.g. after a failed finishing).
+
+    - *assign*: `--assign-name` *who* (the assignee under which the agent
+      claims, holds, recognizes, and releases the tasks, and which names
+      its agent-owned worktrees, so a custom agent can act as, e.g.,
+      `planner`, although its agent name must not clash with a built-in
+      kind, default: the agent name); `--assign-required` (`phase` only,
+      claim only the tasks explicitly assigned to *who*);
+      `--assign-success` and `--assign-failure` *who* (the assignee to hand
+      a task over to after its processing: a name, `none` to unassign, or
+      `previous` for the assignee before the claim, default: `none` for
+      `phase`, `previous` for `request`), applied only while the task is
+      still assigned to the agent, where an interrupted task always gets
+      its previous assignee back and a task left for a manual intervention
+      is always unassigned.
+
+    - *request* (`request` only): `--request-name` *name* (the name of the
+      processed requests, i.e., the attachments `kind="<name>"`,
+      `kind="<name>-running"`, and `kind="<name>-failed"`, default: the
+      agent name, where `edit` processes the edit requests of key `E`);
+      `--request-done` *word* (the word naming a processed task in the log
+      lines, default: `processed`, e.g. `edited`).
+
+    - *prompt*: exactly one of `--prompt-skill` *name* (with `--prompt-args`
+      *template*, default: `{id}` for `phase`, `{id}: {prompt}` for
+      `request`), `--prompt-text` *template*, or `--prompt-file` *file*
+      (with a template as its content). A skill is invoked like the
+      built-in agents do, i.e., as `/<skill>` (`claude` and `copilot`) or
+      `$<skill>` (`codex`), followed by a single space and the rendered
+      arguments only if these are non-empty, where an un-namespaced ASE
+      skill (`ase-*`) gets the plugin namespace `ase:` for `claude` only,
+      a `<plugin>:<skill>` stays verbatim, and any other name (e.g. a
+      project skill generated by `ase-meta-workflow`) stays
+      un-namespaced. A prompt text is passed as-is. Flags like `--next
+      DONE` are always given explicitly.
+
+    - *prepare*: `--prepare-run` *cmd* (repeatable, a shell command run
+      in the working directory before the prompt, e.g. `npm ci`, where a
+      failing command fails the processing without running the prompt),
+      with the environment variables `ASE_TASK_ID`, `ASE_TASK_TITLE`,
+      `ASE_TASK_SOURCE`, `ASE_TASK_CHANGESET`, `ASE_TASK_TARGET`,
+      `ASE_AGENT_NAME`, and `ASE_AGENT_WORKDIR`.
+
+    - *success*: `--success-criterion`
+      `exit`|`clean`|`changed`|`verdict`|`attachment`|`status` (repeatable,
+      all given criteria have to hold, replacing the default `exit` and
+      `clean` for `phase`, resp. `clean` and `changed` for `request`):
+      `exit` an exit code 0 of the agent tool without timeout or
+      interrupt, `clean` no `▶ ERROR:` output line, `changed` a plan content
+      changed since the claim (`request` only, hence also succeeding on
+      an interrupt after the plan was saved, like `editor`), `verdict` a
+      found verdict, `attachment` an existing attachment of
+      `--attach-expect`, and `status` the move into the phase success
+      state by the skill itself (`phase` only); `--success-match` *regex*
+      (repeatable, an output line has to match it, e.g.
+      `status:\W*plan integrated\b`). An unmet criterion is logged, and a
+      failed request is described in its `<name>-failed` attachment by
+      the first applicable reason: a failed preparing or finishing
+      command, `skill reported an error`, `agent tool failed`, else the
+      reason of the first unmet criterion (e.g. `plan not changed`, `no
+      verdict`, `no attachment "<spec>"`, or `no output line matching
+      "<regex>"`).
+
+    - *verdict*: `--verdict-label` *label* (extracts the last upper-case
+      word after the label in the output of a successfully exited agent
+      tool, e.g. `REVIEW VERDICT` for `**REVIEW VERDICT**: **APPROVE**`),
+      accepted only if listed by the repeatable `--verdict-allow`
+      *VERDICT* (default: the verdicts of `--state-verdict`, else any),
+      stored lower-cased as the tag value (e.g. `ase-agent-approver:approve`,
+      instead of `--tag-success` resp. `--tag-failure`) and mapped to a
+      target state via `--state-verdict`.
+
+    - *attach*: `--attach-log` *name* (the processing log attachment
+      `agent:<name>`, also wherever it is referenced, e.g. in the failure
+      description of a request, default: the agent name);
+      `--attach-output` *kind* (stores the output lines of the prompt as
+      the task attachment of type `text/plain; charset=utf-8;
+      kind="<kind>"`, replacing the one of an earlier processing);
+      `--attach-expect` *spec* (the attachment the criterion `attachment`
+      requires); `--attach-skip` *spec* (`phase` only, leaves every task
+      already carrying such an attachment unclaimed), where *spec* is
+      *kind* or *mime-type*`;`*kind* (e.g. `text/x-diff;draft`), matching
+      the `kind` parameter of the attachment type exactly and, if given,
+      its MIME type.
+
+    - *finish*: `--finish-commit` (with `--workdir changeset` only:
+      commits the work onto a `branch:` changeset with the message
+      `<Kind>: <title> (<id>)` and publishes it, rescuing a branch which
+      could not be published, like `implementer`); `--finish-success` and
+      `--finish-failure` *cmd* (a shell command run in the working
+      directory after a successful resp. failed processing, with the
+      environment variables of `--prepare-run` plus `ASE_TASK_STATUS`,
+      where a failing success command fails the finishing, while a failing
+      failure command is only reported). The preparing and finishing
+      commands are limited by the fixed duration of `240s` of the
+      preparing resp. finishing of a processing (see above).
+
+    The templates of `--prompt-args`, `--prompt-text`, and `--prompt-file`
+    expand the placeholders `{id}`, `{title}`, `{prompt}` (the request
+    prompt, `request` only, with its whitespace collapsed into single
+    spaces), `{source}`, `{changeset}`, `{target}` (the raw flow values of
+    `Source:`, `Changeset:`, and `Target:`, or their configured defaults),
+    `{source-type}`, `{source-name}`, `{changeset-type}`,
+    `{changeset-name}`, `{target-type}`, `{target-name}` (the parsed flow
+    values: the type `worktree`, `branch`, or `attachment`, and the branch
+    resp. attachment name, else empty, where a `Target:` of `source`
+    reads as the `Source:`), `{workdir}` (the working directory),
+    `{source-dir}` (the temporary worktree of a `branch:` source, else
+    empty), `{changeset-worktree}` (the ASE worktree id under which the
+    skill finds the changeset, else empty), `{key:<Header>}` (a frontmatter
+    key of the task), and the conditional `{?<cond>:<text>}`, which emits
+    *text* (with placeholders, but without nested conditionals) only if
+    *cond* holds, either `<placeholder>` (non-empty) or
+    `<placeholder>=<value>`, e.g. `{?source-dir: --int-source-dir
+    "{source-dir}"}` or `{?changeset-type=branch:--branch {changeset-name}}`.
+    All other text, including whitespace, is kept verbatim, `{{` and `}}`
+    yield literal braces, and an unknown placeholder fails the start.
+
+    The working directory of `--workdir` determines the working directory
+    of the agent tool, the directories granted to it, the holds and
+    deferrals of the tasks, and the values of `{source-dir}` and
+    `{changeset-worktree}`, where `--repo` and `--tempdir` apply to all but
+    `project` (and are ignored silently there, so the section `default` of
+    a fleet applies uniformly to all its custom agents), and where the
+    worktrees the agent creates itself are named
+    `<id>-<assign-name>` resp. `<id>-<changeset-name>-<assign-name>` (with
+    every `#` of the task id replaced by `_`), so they equal those of the
+    built-in agents if `--assign-name` is set to the built-in kind:
+
+    - `project`: the project root.
+    - `source`: the working copy holding the `Source:` (the project root,
+      or with `--repo` a worktree of its temporary clone), where a
+      `branch:` source is additionally checked out in a temporary detached
+      worktree `<id>-<assign-name>` (as `{source-dir}`, granted to the
+      agent tool) only if the template references `{source-dir}` (like
+      `editor`).
+    - `changeset` (*write* access, like `implementer`): a `worktree`
+      changeset in the project root, which, processed serially, is held,
+      deferred until free of uncommitted changes, and switched onto a
+      `branch:` source, and, processed in parallel, yields the ASE worktree
+      id of the task (created by the skill) as `{changeset-worktree}`; a
+      `branch:` changeset held and checked out in the agent worktree
+      `<id>-<assign-name>` (created from the source if missing, else
+      reused if already checked out, but then required free of uncommitted
+      changes), yielding its ASE worktree id (unless the project root) as
+      `{changeset-worktree}`, and removed afterwards only if clean (else
+      preserved); an `attachment:` changeset is left to the skill.
+    - `changeset-read` (*review* access, like `approver`): a `worktree`
+      changeset staged in its context worktree, which becomes the working
+      directory; a `branch:` changeset left in place (to be addressed via
+      `{changeset-name}`); an `attachment:` changeset applied staged in
+      the temporary worktree `<id>-<changeset-name>-<assign-name>`,
+      detached at its base commit, which becomes the working directory.
+    - `target` (*integration* access, like `integrator`): the project root,
+      with access granted to the context worktree of a `worktree` changeset
+      (whose ASE worktree id becomes `{changeset-worktree}`) and to the
+      worktree of a `branch:` changeset, where a `branch:` target is
+      checked out in the temporary worktree `<id>-<assign-name>` unless
+      checked out already, published afterwards if moved (or rescued if
+      not publishable), and the merged `branch:` changeset is deleted from
+      the origin.
+
+    A custom agent announces itself to the agent relay with the kind
+    `custom`, its `--assign-name` as its mode (e.g. `planner`), and, for
+    `request`, its request name (suggested by key `R` of the task boards).
+    Its runs are recorded per tag (`agent-custom-<tag-name>/<store-hash>`,
+    see *STATE FILES*), so the recoveries of differently configured custom
+    agents never affect each other, while the five built-in agents stay
+    hard-coded, but every mode of them is exactly expressible as a custom
+    definition, except for the agent name in the processing log lines,
+    the agent presence, and a few informational log lines (see the
+    reference definitions in `docs/agent-custom/`, e.g., `ase agent custom
+    start -n c-implementer -D docs/agent-custom/implementer-draft.yaml`).
+    Examples:
+
+    ```sh
+    # an approval agent deciding on the task status by its verdict
+    ase agent custom start -n reviewer --state-incoming IMPLEMENTED \
+        --state-activity APPROVING --state-phase APPROVED --workdir changeset-read \
+        --prompt-skill ase-repo-review --prompt-args "{?changeset-type=branch:--branch {changeset-name}}" \
+        --verdict-label "REVIEW VERDICT" --state-verdict APPROVE=APPROVED --state-verdict REJECT=DECLINED \
+        --success-criterion exit --success-criterion verdict
+
+    # a request agent attaching a lint report (requested via "ase task request <id> lint <prompt>")
+    ase agent custom start -n linter --type request --request-name lint --workdir source \
+        --prompt-text "Lint the source code changed by task {id} with focus on: {prompt}" \
+        --success-criterion clean --attach-output lint-report
+
+    # an agent running a project skill generated by "ase-meta-workflow" on the planned tasks
+    ase agent custom start -n workflow --state-incoming PLANNED --tag-require workflow \
+        --prompt-skill my-workflow --prompt-args "{id}"
+    ```
+
 - `ase agent` *agent* `status` \[`-n`|`--name` *name*\]:
   Report whether the agent of the name *name* (default: its kind) is
   running. Exits with status 1 if it is not running.
@@ -1217,7 +1498,8 @@ requests of tasks:
   all with the agent tool *tool* (default: `claude`, or the `ASE_TOOL`
   environment variable if set), where the section `default` lists all
   its options with their default values (an empty value for the options
-  without a fixed default). The configuration is checked like on
+  without a fixed default), plus a commented-out example of a custom
+  agent (see `ase agent custom`). The configuration is checked like on
   `ase agent fleet start` before it is written, and an already existing
   *file* is overwritten only with `--force`.
 
@@ -1244,7 +1526,9 @@ requests of tasks:
   its agent options and an optional `kind` (default: the section name),
   all options given by their long names, where `true` enables a flag,
   `false` or an empty value omits an option, and a list repeats an
-  option, e.g.:
+  option (for `kind: custom`, the options can also be nested by group,
+  like in a definition file, whose `definition` is relative to the
+  configuration file), e.g.:
 
   ```yaml
   fleet:
@@ -1265,8 +1549,12 @@ requests of tasks:
 
   The options `name` (given by the section name), `one-shot` (as the
   members are restarted), and `foreground` are not allowed, neither is
-  a non-empty `agent-relay` together with the section `relay`, and `integrator`
-  can be given only once. Before the fleet starts, the structure of the
+  a non-empty `agent-relay` together with the section `relay`, `integrator`
+  can be given only once, and two agents processing serially only on the
+  same tag (two `--serial` custom agents of the same resolved `--tag-name`,
+  or one next to `integrator` with its tag `ase-agent-integrator`) are
+  refused, as the definitions of the custom agents are resolved and
+  validated already. Before the fleet starts, the structure of the
   configuration, the option names, and the option syntax are checked,
   while the option values (e.g., `parallel` or `tool`) are checked only
   once the corresponding member starts. With the section `relay`, the
@@ -1493,7 +1781,8 @@ STATE FILES
   after 30 seconds without refresh) and run record (process id, process
   start time, and claimed tasks) of each agent process of agent
   *kind* (`planner`, `implementer`, `approver`, `integrator`, or
-  `editor`), below a sub-directory per task store, where *store-hash*
+  `editor`, resp. `custom-<tag-name>` per tag of the custom agents), below
+  a sub-directory per task store, where *store-hash*
   is the first 12 hex digits of the SHA-1 digest of the absolute base
   directory of an `ase:` task store, the scheme, host, and port of an `ase://`
   resp. `ases://` task store, or the `project.task.store.url` value

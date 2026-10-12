@@ -7,13 +7,8 @@
 import type { Command }                        from "commander"
 
 import { Task }                                from "./ase-task.js"
-import { Worktree }                            from "./ase-util-worktree.js"
-import type { AgentOpts, AgentTask, AgentJob, FlowValue } from "./ase-agent-common.js"
-import {
-    taskFlow, gitWorktree,
-    gitWorktreeAdd, gitWorktreeRemove,
-    worktreeOpt, worktreeId, execaJob, gitClean
-}                                              from "./ase-agent-common.js"
+import type { AgentOpts, AgentTask, AgentJob } from "./ase-agent-common.js"
+import { taskFlow }                            from "./ase-agent-common.js"
 import { PhaseAgent }                          from "./ase-agent-common-phase.js"
 
 /*  agent "ase agent implementer"  */
@@ -39,8 +34,7 @@ export default class AgentImplementerCommand extends PhaseAgent {
         passed:   "IMPLEMENTED"
     }
 
-    protected readonly worktree  = true
-    protected readonly finishing = true
+    protected readonly worktree = true
 
     /*  the mode of "--mode": "implement" implements a task into its changeset,
         while "draft" just drafts its implementation into its "draft" attachment  */
@@ -55,6 +49,10 @@ export default class AgentImplementerCommand extends PhaseAgent {
         if (mode !== "implement" && mode !== "draft")
             throw new Error(`agent: ${this.name}: invalid mode "${mode}" (expected "implement" or "draft")`)
         this.mode = mode
+
+        /*  the job of an implementing finishes the result of the skill (by committing and
+            publishing a "branch:" changeset), while a draft has nothing to finish  */
+        this.finishing = mode === "implement"
     }
 
     /*  the tag of the drafting, separate from the one of the implementing,
@@ -69,64 +67,27 @@ export default class AgentImplementerCommand extends PhaseAgent {
             .some((att) => /^text\/x-diff\s*;.*\bkind\s*=\s*"?draft"?\s*(?:;|$)/i.test(att.type))
     }
 
-    /*  a task is drafted only if it carries no implementation draft yet, a task with a
-        "branch:" changeset is implemented only while its changeset branch is held for it
-        alone (see "holdBranch"), as two tasks with the same changeset branch would otherwise
-        be implemented in the same worktree at once (mixing their change sets into the commit,
-        and removing the worktree under each other), and a task is
-        implemented directly in the working copy the agent is started in (a serially
-        processed "worktree" changeset, or a "branch:" changeset checked out in it) only
-        while the working copy is held for it alone (see "holdRoot") and while it carries
-        no uncommitted changes (except the ASE state), as otherwise the uncommitted change
-        set of an earlier task (e.g. one still to be reviewed and integrated) or the
-        uncommitted work of a human would mix into the one of this task (and, for a
-        "branch:" changeset, even be committed onto its branch), so the task is deferred
-        (and not claimed) until then (re-checked on the next change of the tasks, e.g.
-        once the earlier task was integrated)  */
+    /*  a task is drafted only if it carries no implementation draft yet, and a task is
+        implemented only while its changeset is free for it (see "changesetReady")  */
     protected async ready (task: AgentTask): Promise<boolean> {
         if (this.mode === "draft")
             return !(await this.drafted(task.id))
-        let source:    FlowValue
-        let changeset: FlowValue
-        try {
-            source    = taskFlow(this.log, task, "Source")
-            changeset = taskFlow(this.log, task, "Changeset")
-        }
-        catch (_err) {
-            /*  an invalid value fails the processing of the task  */
-            return true
-        }
-        const root = this.localRoot([ source, changeset ])
-        if (changeset.type === "branch" && !this.holdBranch(task, root, changeset.name))
-            return this.defer(task, `the changeset branch "${changeset.name}" used by another task`)
-        else if (root === "")
-            return true
-        else if ((changeset.type === "worktree" && !this.parallelized)
-            || (changeset.type === "branch" && (await gitWorktree(root, changeset.name).catch(() => "")) === root)) {
-            if (!this.holdRoot(task, root))
-                return this.defer(task, "the working copy used by another task")
-            else if (!(await gitClean(root).catch(() => true))) {
-                this.unhold(task.id)
-                return this.defer(task, "the working copy without uncommitted changes (e.g. of an earlier task)")
-            }
-        }
-        return true
+        return this.changesetReady(task)
     }
 
-    /*  implement the task from its source into its changeset,
+    /*  implement the task from its source into its changeset (see "changesetJob"),
         which the skill itself puts into "IMPLEMENTED" on success,
         or draft its implementation into its "draft" attachment only,
         where the skill leaves the task status untouched  */
     protected async prepare (task: AgentTask, parallel: boolean): Promise<AgentJob> {
-        const source    = taskFlow(this.log, task, "Source")
         if (this.mode === "draft") {
             /*  the skill drafts in a temporary worktree of its own (from the source commit,
                 without uncommitted changes), so the working copy is used as-is and the
                 drafts are parallel-safe  */
-            const cwd = await this.workdir(task, [ source ])
+            const work = await this.sourceJob(task, this.kind, false)
             return {
+                ...work,
                 cmd: `ase-task-implement --next DONE --draft --stateless ${task.id}`,
-                cwd,
                 finish: async (log) => {
                     if (!(await this.drafted(task.id)))
                         throw new Error("agent: no implementation draft attachment created")
@@ -134,72 +95,15 @@ export default class AgentImplementerCommand extends PhaseAgent {
                 }
             }
         }
+        const work      = await this.changesetJob(task, this.kind, parallel, true)
         const changeset = taskFlow(this.log, task, "Changeset")
-        const cwd       = await this.workdir(task, [ source, changeset ])
-        const cmd       = `ase-task-implement --next DONE${changeset.type === "worktree" && parallel ? ` --worktree ${worktreeId(task.id)}` : ""}`
-        if (changeset.type === "branch") {
-            /*  check out the changeset branch (created from the source if missing) in a
-                worktree of the agent, unless it is already checked out in the working copy
-                or an ASE worktree (which then has to be without uncommitted changes, as
-                they would be committed onto the branch, too), implement the task inside it
-                in place, and afterwards commit the result onto the branch (also a partial
-                one, as the plan tracks it) and publish it to the origin of a temporarily
-                cloned repository, where the worktree of the agent is removed only if clean
-                and a branch which could not be published is rescued (as the commit would
-                otherwise be lost with the clone, see "settle"), so the change set is not lost  */
-            let dir   = await gitWorktree(cwd, changeset.name)
-            const own = dir === ""
-            if (own) {
-                dir = Worktree.dir(`${worktreeId(task.id)}-implementer`, true, false, cwd)
-                await gitWorktreeAdd(cwd, dir, changeset.name, source.type === "branch" ? source.name : "HEAD")
-            }
-            else if (!(await gitClean(dir)))
-                throw new Error(`agent: working copy "${dir}" with branch "${changeset.name}" checked out has ` +
-                    "uncommitted changes (e.g. the change set of an earlier task) -- cannot implement task into it")
-            return {
-                cmd: `${cmd} --source worktree --changeset worktree${worktreeOpt(cwd, dir)} ${task.id}`,
-                cwd,
-                finish: async (log) => {
-                    /*  the ASE state (e.g. the local task store) is never committed  */
-                    await execaJob("git", [ "add", "--all", "--", ".", ":(exclude).ase" ], { cwd: dir })
-                    if ((await execaJob("git", [ "diff", "--cached", "--quiet" ], { cwd: dir, reject: false })).exitCode !== 0) {
-                        const message = `${task.keys.get("Kind") || "CRAFTING"}: ${task.title} (${task.id})`
-                        await execaJob("git", [ "commit", "--quiet", "-m", message ], { cwd: dir })
-                        await log("info", `change set committed onto branch "${changeset.name}"`)
-                    }
-                    else
-                        await log("warning", `no change set to commit onto branch "${changeset.name}"`)
-                    await this.publish(cwd, changeset.name, log).catch(async (err: unknown) => {
-                        await this.rescue(cwd, changeset.name, task, log).catch((err2: unknown) =>
-                            log("error", `rescuing branch "${changeset.name}" failed: ` +
-                                (err2 instanceof Error ? err2.message : String(err2))))
-                        throw err
-                    })
-                },
-                cleanup: async (log) => {
-                    /*  a worktree nested inside the working directory of the task in the
-                        temporary clone of "--repo" is kept only by preserving the clone  */
-                    if (own && await gitClean(dir).catch(() => false))
-                        await gitWorktreeRemove(cwd, dir)
-                    else if (own && !(await this.preserve(cwd, task, `worktree "${dir}" with uncommitted change set`, log)))
-                        await log("warning", `worktree "${dir}" with uncommitted change set kept for a manual recovery`)
-                }
-            }
+        return {
+            ...work,
+            cmd: "ase-task-implement --next DONE" +
+                (changeset.type === "branch" ? " --source worktree --changeset worktree" : "") +
+                (work.changesetWorktree !== "" ? ` --worktree ${work.changesetWorktree}` : "") +
+                ` ${task.id}`
         }
-        else if (changeset.type === "worktree" && !parallel) {
-            /*  implement into the working copy (held for this task, see "ready") only if it
-                still carries no uncommitted changes (except the ASE state), and switch the
-                working copy to the source branch  */
-            if (!(await gitClean(cwd)))
-                throw new Error("agent: working copy has uncommitted changes (e.g. the change set of an earlier task) " +
-                    "-- cannot implement task into it")
-            if (source.type === "branch") {
-                const { stdout: branch } = await execaJob("git", [ "branch", "--show-current" ], { cwd })
-                if (branch.trim() !== source.name)
-                    await execaJob("git", [ "switch", "--quiet", source.name ], { cwd })
-            }
-        }
-        return { cmd: `${cmd} ${task.id}`, cwd }
     }
 
     /*  a drafted task is untagged, as its draft attachment itself keeps it

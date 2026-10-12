@@ -27,10 +27,12 @@ import {
     which the issue tracker stores even derive from the last update of the issue)  */
 const nonContentKeys = [ "Status", "Tags", "Assignee", "Modified" ]
 
-/*  the outcome of the processing of a request, for deciding on its success: the current task
-    plan, whether its content changed since the claim, whether the skill reported an error,
-    whether the agent tool succeeded, whether the processing was interrupted, and the output lines  */
+/*  the outcome of the processing of a request, for deciding on its success: the id of the
+    task, its current plan, whether its content changed since the claim, whether the skill
+    reported an error, whether the agent tool succeeded, whether the processing was
+    interrupted, and the output lines  */
 export type RequestOutcome = {
+    id:      string
     plan:    API.TaskPlan
     changed: boolean
     errored: boolean
@@ -59,6 +61,19 @@ export abstract class RequestAgent extends Agent {
         of the task, and the digest of the plan content right after the claim  */
     protected claims = new Map<string, { prompt: string, assignee: string, digest: string }>()
 
+    /*  the assignee under which the agent claims, holds, recognizes, and releases
+        the tasks (default: its name)  */
+    protected get assignee (): string {
+        return this.name
+    }
+
+    /*  decide on the assignee to hand a processed task over to, by its success and its
+        previous assignee <previous> before the claim (or empty to unassign it): by default,
+        the previous assignee is restored  */
+    protected handover (_success: boolean, previous: string): string {
+        return previous
+    }
+
     /*  whether an attachment type is the one of a request processed by this agent process  */
     private own (type: string): boolean {
         return this.requests.state(type) === "active" && typeParam(type, "run") === this.runLock.id
@@ -76,7 +91,7 @@ export abstract class RequestAgent extends Agent {
         frontmatter (except the keys changed by the agents and the task boards, like its
         status, tags, and assignee) and its body, but none of its attachments (like the
         requests and the agent processing logs), for detecting whether it was edited  */
-    private digest (plan: API.TaskPlan): string {
+    protected digest (plan: API.TaskPlan): string {
         const header = Object.fromEntries(Object.entries(plan.header)
             .filter(([ key ]) => !nonContentKeys.includes(key)))
         return crypto.createHash("sha1").update(JSON.stringify({ header, body: plan.body })).digest("hex")
@@ -113,13 +128,13 @@ export abstract class RequestAgent extends Agent {
                 for (let i = 0; i < plan.attachment.length; i++) {
                     const type = plan.attachment[i].Type ?? ""
                     if (this.local(type) && dead.has(typeParam(type, "run"))) {
-                        this.requests.finalize(plan, i, "failed", `failed (${this.kind} terminated during processing)`)
+                        this.requests.finalize(plan, i, "failed", `failed (${this.role} terminated during processing)`)
                         changed = true
                     }
                 }
                 return changed
             })
-            await this.write("warning", this.name, `task "${item.id}": ${this.requests.name} request of terminated ${this.kind} marked as failed`)
+            await this.write("warning", this.name, `task "${item.id}": ${this.requests.name} request of terminated ${this.role} marked as failed`)
         }
         for (const { run } of runs)
             await this.runLock.purge(run)
@@ -186,11 +201,11 @@ export abstract class RequestAgent extends Agent {
                 prompt   = (att.Data ?? "").trim()
                 assignee = String(plan.header.Assignee ?? "")
                 const params = {
-                    agent: this.name, assignee, host: os.hostname(), owner: runOwner,
+                    agent: this.assignee, assignee, host: os.hostname(), owner: runOwner,
                     pid: String(process.pid), run: this.runLock.id
                 }
                 plan.attachment[i] = { ...att, Type: this.requests.type("active", params), Modified: attachmentTime() }
-                plan.header.Assignee = this.name
+                plan.header.Assignee = this.assignee
             }
             this.requests.retag(plan)
             sum = this.digest(plan)
@@ -203,7 +218,7 @@ export abstract class RequestAgent extends Agent {
         else if (prompt === "")
             return null
         this.claims.set(task.id, { prompt, assignee, digest: sum })
-        return `claimed ${this.requests.name} request (status "${status}", assigned to "${this.name}"` +
+        return `claimed ${this.requests.name} request (status "${status}", assigned to "${this.assignee}"` +
             (assignee !== "" ? ` instead of "${assignee}")` : ")")
     }
 
@@ -239,7 +254,7 @@ export abstract class RequestAgent extends Agent {
             if (i < 0) {
                 /*  the request vanished meanwhile: just restore the assignee and the tag  */
                 const before = JSON.stringify([ plan.header.Assignee, plan.header.Tags ])
-                if (String(plan.header.Assignee ?? "") === this.name) {
+                if (String(plan.header.Assignee ?? "") === this.assignee) {
                     if (claim.assignee !== "")
                         plan.header.Assignee = claim.assignee
                     else
@@ -250,9 +265,9 @@ export abstract class RequestAgent extends Agent {
                 return JSON.stringify([ plan.header.Assignee, plan.header.Tags ]) !== before
             }
             const changed = this.digest(plan) !== claim.digest
-            const reason  = this.failure({ plan, changed, errored, ok, aborted, output })
+            const reason  = this.failure({ id: task.id, plan, changed, errored, ok, aborted, output })
             if (reason === null) {
-                this.requests.finalize(plan, i, null)
+                this.requests.finalize(plan, i, null, undefined, this.handover(true, claim.assignee))
                 result  = `task ${this.requests.done} successfully (request removed)`
                 success = true
             }
@@ -261,7 +276,8 @@ export abstract class RequestAgent extends Agent {
                 result = `${this.requests.name} request released (requested again)`
             }
             else {
-                this.requests.finalize(plan, i, "failed", `failed (${reason}, see attachment "agent:${this.name}")`)
+                this.requests.finalize(plan, i, "failed", `failed (${reason}, see attachment "agent:${this.logName}")`,
+                    this.handover(false, claim.assignee))
                 result = `task not ${this.requests.done} (${reason}, request marked as failed)`
             }
             return true
