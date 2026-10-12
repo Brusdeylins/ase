@@ -601,7 +601,14 @@ with the Gitea token from `project.task.store.token`, else `$GITEA_TOKEN`):
 
 - `ase task rename` *old-id* *new-id*:
   Rename the task plan with the given *old-id* to *new-id*, rewriting
-  the `Id:` frontmatter key inside. Exits with status 1 if no such task
+  the `Id:` frontmatter key inside, and *old-id* to *new-id* in the
+  `After:` keys of all other task plans of the project (frontmatter
+  only, so their `Modified:` key stays untouched), reporting the number
+  of updated plans. For an explicit epic (whose `Group:` equals its old
+  or already its new `Id:`),
+  its own `Group:` key and those of all its member task plans are
+  rewritten, too, while otherwise the group names are left untouched,
+  as they form a namespace of their own. Exits with status 1 if no such task
   existed or the target id is already in use.
 
 - `ase task newid` \[`-p`|`--proposal` *id*\] \[`-t`|`--taken` *ids*\] \[`-v`|`--verbose`\] \[*title*\]:

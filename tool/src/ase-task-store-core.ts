@@ -65,7 +65,7 @@ export type EventListener = (prjId: string, frame: EventFrame) => void
 export type ProjectView     = { id: string, lifecycle: TaskFormat.TaskLifecycle, idscheme: string, seqmark: number }
 export type TaskListEntry   = { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader }
 export type TaskSaveResult  = { created: boolean, id: string, status: string, tag?: string }
-export type TaskPatchResult = { id: string, status: string, from?: string }
+export type TaskPatchResult = { id: string, status: string, from?: string, references?: number }
 export type KeySetResult    = { created: boolean, key: string, value: API.TaskHeaderValue }
 
 /*  the plain-object check  */
@@ -534,15 +534,67 @@ export class TaskStoreCore {
                 if (await this.store.taskLoad(prjId, newId) !== null)
                     throw problem(409, `task "${newId}" already exists in project "${prjId}"`)
 
+                /*  determine whether the plan is an explicit epic (its "Group" equals
+                    its old "Id", or already its new one, as an edit of the task text
+                    changes both and saves the text before renaming), as only then the
+                    group name follows the rename, too, while otherwise the group names
+                    are a namespace of their own  */
+                const epic = plan.header.Group === taskId || plan.header.Group === newId
+
+                /*  determine all other plans referencing the old id in their "After"
+                    keys or, for an explicit epic, its members referencing the old id
+                    in their "Group" keys, rewritten to the new id (header only, so
+                    their "Modified" key stays untouched)  */
+                const referrers: { id: string, plan: API.TaskPlan }[] = []
+                for (const { id } of await this.store.taskList(prjId)) {
+                    if (id === taskId)
+                        continue
+                    const other = await this.store.taskLoad(prjId, id)
+                    if (other === null)
+                        continue
+                    const { Group: group, After: after } = other.header
+                    const inGroup = epic && group === taskId
+                    const inAfter = Array.isArray(after) && after.includes(taskId)
+                    if (!inGroup && !inAfter)
+                        continue
+                    if (inGroup)
+                        other.header.Group = newId
+                    if (inAfter)
+                        other.header.After = (after as string[]).map((ref) => ref === taskId ? newId : ref)
+                    referrers.push({ id, plan: other })
+                }
+
                 /*  always rename (atomically) first and only then persist a status
-                    change under the new id, so a crash never leaves both ids behind  */
+                    change or the group of an explicit epic under the new id, so a
+                    crash never leaves both ids behind  */
                 plan.header.Id = newId
+                if (epic)
+                    plan.header.Group = newId
                 if (!await this.store.taskRename(prjId, taskId, newId))
                     throw problem(404, `no task "${taskId}" in project "${prjId}"`)
-                if (status !== null)
+                if (status !== null || epic)
                     await this.store.taskSave(prjId, newId, plan)
                 await this.retire(prjId, project, [ taskId ])
                 this.listener(prjId, { deleted: [ taskId ], added: { [newId]: this.entry(plan, lifecycle) } })
+
+                /*  rewrite the references, failing clearly with the plans left behind  */
+                for (let i = 0; i < referrers.length; i++) {
+                    try {
+                        await this.store.taskSave(prjId, referrers[i].id, referrers[i].plan)
+                    }
+                    catch (err) {
+                        const pending = referrers.slice(i).map((referrer) => `"${referrer.id}"`).join(", ")
+                        throw problem(500, `task "${taskId}" renamed to "${newId}", but failed to update ` +
+                            `the references of ${pending}: ${err instanceof Error ? err.message : String(err)}`)
+                    }
+                    this.emitUpdated(prjId, referrers[i].id, referrers[i].plan, lifecycle, [ "header" ])
+                }
+                return {
+                    id:         newId,
+                    status:     TaskFormat.taskStatus(plan.header, lifecycle),
+                    ...(status !== null ? { from } : {}),
+                    references: referrers.length
+                }
             }
             else {
                 await this.store.taskSave(prjId, taskId, plan)
