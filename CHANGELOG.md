@@ -5,6 +5,17 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [plugin,tool]: Change Set Snapshot Attachment
+    The `ase-task-implement` and `ase-task-integrate` skills now maintain a change set snapshot for
+    `worktree` and `branch:` changesets: a view-only, text-only unified diff of the change set in
+    the task attachment of type `text/x-diff; charset=utf-8; kind="changeset"`, created or replaced
+    in place, with `base <commit>` (plus `, partial` for an incomplete change set) resp. `base
+    <commit>, merged <commit>` for the change set which finally landed on the target in its `Desc:`
+    key. This makes the change set viewable wherever the task is visible, especially during its
+    approval. The task boards now color every diff attachment per line and mark an outdated
+    snapshot tab with `(stale)`, and `ase agent implementer` keeps the `Source:` of the plan for a
+    `branch:` changeset, so its snapshot covers the entire branch.
+
 -   FEATURE [tool]: Container Image
     The new `build-container` build target uses `docker buildx` and `etc/ase.dockerfile` to build
     and push the multi-architecture container image `ghcr.io/rse/ase`. The image is based on Alpine

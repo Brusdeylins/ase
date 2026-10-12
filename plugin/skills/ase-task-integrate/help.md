@@ -50,6 +50,13 @@ overridable via `--changeset`:
     created by `ase-task-implement --draft`, selectable via the
     `--draft` shorthand.
 
+After a successful integration of a `worktree` or `branch:` changeset,
+the skill creates, or replaces in place, the *change set snapshot* of
+the plan -- the attachment block of type `text/x-diff; charset=utf-8;
+kind="changeset"` -- with the view-only, text-only unified diff which
+finally landed on the target, carrying `base <commit>, merged <commit>`
+in its `Desc:` key.
+
 The *target* is selected by the plan's `Target:` frontmatter key
 (if absent, the configured default `project.task.default.target`),
 overridable via `--target`:

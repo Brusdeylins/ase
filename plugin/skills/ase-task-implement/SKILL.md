@@ -539,10 +539,43 @@ Procedure
             </template>
             </if>
 
-        Apart from the checkboxes, the frontmatter keys, and the change
-        set attachment above, the plan *MUST* stay *exactly* as loaded --
-        in particular, the "backmatter" with its other attachment blocks
-        is passed through *verbatim*.
+        -   <if condition="<changeset-type/> is `worktree` or `branch`">
+            Attach the *change set snapshot*, which makes the change set
+            viewable wherever the task is visible (e.g. on the task boards
+            during its approval). Set <snapshot-suffix/> to `, partial` if
+            the change set was *not* applied completely and successfully
+            (the same criterion as for the `STALLED` state above), or to
+            empty otherwise. For <changeset-type/> `worktree`, expand the
+            following:
+
+            <expand name="changeset-snapshot"
+                arg1="<work-dir/>"
+                arg2="<source-commit/>"
+                arg3=""
+                arg4="<snapshot-suffix/>"
+                arg5="<timestamp-modified/>"></expand>
+
+            For <changeset-type/> `branch`, expand the following instead:
+
+            <expand name="changeset-snapshot"
+                arg1="<work-dir/>"
+                arg2="<source-commit/>"
+                arg3="<changeset-name/>"
+                arg4="<snapshot-suffix/>"
+                arg5="<timestamp-modified/>"></expand>
+            </if>
+            <elseif condition="<changeset-name/> is not `changeset`">
+            The change set is an attachment itself, so it needs no
+            snapshot, and a snapshot of an earlier run would show an
+            *outdated* change set: *remove* an attachment block with the
+            `Type` key value `text/x-diff; charset=utf-8; kind="changeset"`
+            from the "backmatter" of <task-content/>, if existing.
+            </elseif>
+
+        Apart from the checkboxes, the frontmatter keys, the change set
+        attachment, and the change set snapshot above, the plan *MUST*
+        stay *exactly* as loaded -- in particular, the "backmatter" with
+        its other attachment blocks is passed through *verbatim*.
 
         Finally call the `ase_task_save(id: "<ase-task-id/>", text:
         "<task-content/>")` tool of the `ase` MCP server to persist the

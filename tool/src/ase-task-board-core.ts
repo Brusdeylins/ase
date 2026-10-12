@@ -300,27 +300,30 @@ export const cardLabel = (card: Card): string => {
 export const groupLabel = (card: Card): string =>
     card.group.replace(/\s+/g, " ").replace(/\p{Cc}/gu, "").trim()
 
+/*  determine whether an attachment type is a diff (like an implementation draft or a change set snapshot)  */
+export const isDiff = (type: string): boolean =>
+    /^text\/x-diff\s*(?:;|$)/i.test(type.trim())
+
 /*  the tab labels of a task view: the task plan, followed by its attachments
-    with the "kind" parameter of their type (if any) behind a filled arrow and
+    with the "kind" parameter of their type (if any) behind a filled arrow,
+    a "(stale)" marker for a change set snapshot older than the "Modified"
+    timestamp of the plan (as it was captured for an earlier plan), and
     their description (if any, cut after 30 characters) behind a hollow arrow
     (all made safe for the terminal)  */
-export const attachmentTabs = (atts: { type: string, desc: string }[]): string[] => {
+export const attachmentTabs = (atts: { type: string, desc: string, modified?: string }[], modified = ""): string[] => {
     const safe = (s: string) => s.replace(/\t/g, " ").replace(/\p{Cc}/gu, "").trim()
     return [
         "0 ▶ plan",
         ...atts.map((att, i) => {
-            const m    = /;\s*kind\s*=\s*(?:"([^"]*)"|([^;\s]+))/i.exec(att.type)
-            const kind = safe(m !== null ? (m[1] ?? m[2]) : "")
-            const desc = safe(att.desc)
-            const text = desc.length > 30 ? desc.slice(0, 30) + "…" : desc
-            return `${i + 1}` + (kind !== "" ? ` ▶ ${kind}` : "") + (text !== "" ? ` ▷ ${text}` : "")
+            const m     = /;\s*kind\s*=\s*(?:"([^"]*)"|([^;\s]+))/i.exec(att.type)
+            const kind  = safe(m !== null ? (m[1] ?? m[2]) : "")
+            const desc  = safe(att.desc)
+            const text  = desc.length > 30 ? desc.slice(0, 30) + "…" : desc
+            const stale = isDiff(att.type) && kind === "changeset" && modified !== "" && (att.modified ?? "") < modified
+            return `${i + 1}` + (kind !== "" ? ` ▶ ${kind}` : "") + (stale ? " (stale)" : "") + (text !== "" ? ` ▷ ${text}` : "")
         })
     ]
 }
-
-/*  determine whether an attachment type is an implementation draft diff  */
-export const isDraftDiff = (type: string): boolean =>
-    /^text\/x-diff\s*(?:;|$)/i.test(type.trim()) && /;\s*kind\s*=\s*"?draft"?\s*(?:;|$)/i.test(type)
 
 /*  classify the lines of a diff: its file headers up to and including the
     hunk headers as "head", and within hunks the inserted lines as "add", the

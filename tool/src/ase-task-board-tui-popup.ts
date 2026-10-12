@@ -7,7 +7,7 @@
 import { Box, Text }                          from "ink"
 
 import type { Task }                          from "./ase-task.js"
-import { cardLabel, groupLabel, attachmentTabs, isDraftDiff, diffTones, clampLines } from "./ase-task-board-core.js"
+import { cardLabel, groupLabel, attachmentTabs, isDiff, diffTones, clampLines } from "./ase-task-board-core.js"
 import type { Card }                          from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine }      from "./ase-agent-relay-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
@@ -154,11 +154,11 @@ export const attachmentLines = (att: Attachment, content: Buffer | Error | undef
     if (/^text\/markdown\b/i.test(att.type.trim()))
         return [ ...out, ...markdownLines(text, width) ]
 
-    /*  a draft diff is colored per line: its file headers up to and
+    /*  a diff is colored per line: its file headers up to and
         including the hunk headers dimmed, inserted lines accented, removed
         lines signaled, and context lines in the default color  */
     const lines = text.replace(/^(?:[ \t]*\r?\n)+/, "").split(/\r?\n/).map(sanitize)
-    const tones = isDraftDiff(att.type) ? diffTones(lines) : null
+    const tones = isDiff(att.type) ? diffTones(lines) : null
     const tint  = { head: palette.dim, add: palette.accent, del: palette.signal, ctx: palette.normal }
     lines.forEach((line, i) => {
         const color = tones !== null ? tint[tones[i]] : palette.accent
@@ -215,7 +215,8 @@ export const agentLogKey = (line: AgentLine): string =>
 
 /*  the tab labels of the read dialog: the task content, followed by its attachments  */
 export const dialogTabs = (parts: PlanParts): string[] =>
-    attachmentTabs(parts !== undefined && parts !== null && !(parts instanceof Error) ? parts.atts : [])
+    parts !== undefined && parts !== null && !(parts instanceof Error) ?
+        attachmentTabs(parts.atts, parts.keys.get("Modified") ?? "") : attachmentTabs([])
 
 /*  the first visible tab of the tab bar, starting at a previous first
     tab, but moved so that the selected tab fits into the width  */

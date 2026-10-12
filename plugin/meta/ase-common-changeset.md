@@ -248,3 +248,70 @@ final commit.
 
 </define>
 
+<define name="changeset-snapshot">
+
+Attach the *change set snapshot* -- the *view-only* unified diff of the
+change set, which makes the change set viewable wherever the task is
+visible (e.g. on the task boards during its approval), without access
+to the Git working copy -- to the "backmatter" of <task-content/>,
+where <arg1/> is the directory of the Git working copy to run the
+commands in, <arg2/> is the commit the change set is *based* on,
+<arg3/> is the *head* commit of the change set (or empty for the
+*working tree* of <arg1/>), <arg4/> is a suffix of its `Desc` key (or
+empty), and <arg5/> is the timestamp of its `Modified` key. Do not
+output anything.
+
+1.  Capture the output of the command
+    `git -C "<arg1/>" merge-base "<arg2/>" "<head/>"` (with <head/>
+    being <arg3/>, or `HEAD` if <arg3/> is empty) into
+    <snapshot-base/>, the commit the diff starts at, so the diff covers
+    the change set only, even if <arg2/> meanwhile moved on.
+
+2.  Capture the diff into <snapshot-diff/>, always without the ASE
+    state in `.ase`, and as a *text-only* diff, i.e., binary files
+    appear as `Binary files ... differ` lines only:
+
+    -   <if condition="<arg3/> is empty">
+        The diff covers the commits and the *uncommitted* changes of
+        the working tree, including the *untracked* files, which are
+        captured through a *temporary* index, so the index of <arg1/>
+        stays *untouched*. Run the command
+        `index="$(mktemp)" && cp "$(git -C "<arg1/>" rev-parse --path-format=absolute --git-path index)" "$index" && GIT_INDEX_FILE="$index" git -C "<arg1/>" add --all -- . ":(exclude).ase" && GIT_INDEX_FILE="$index" git -C "<arg1/>" diff --cached --no-color "<snapshot-base/>" -- . ":(exclude).ase"; rm -f "$index"`
+        (taken exactly as given).
+        </if>
+        <else>
+        Run the command
+        `git -C "<arg1/>" diff --no-color "<snapshot-base/>" "<arg3/>" -- . ":(exclude).ase"`
+        (taken exactly as given).
+        </else>
+
+3.  If one of the commands failed or <snapshot-diff/> is empty, there is
+    no change set to show, so leave <task-content/> *untouched* and
+    *skip* the remaining sub-steps of this definition.
+
+4.  Append the snapshot as an *attachment block* to the "backmatter" of
+    <task-content/> with the following <template/>, closely following
+    the plan <format/>. If an attachment block with the `Type` key value
+    `text/x-diff; charset=utf-8; kind="changeset"` already exists, *replace*
+    this entire existing attachment block in place. Set
+    <timestamp-snapshot-created/> to the value of the `Created` key of the
+    *replaced* attachment block, so the creation time of the snapshot
+    survives its replacement, or to <arg5/> if no such block or key
+    exists. Set <payload/> to <snapshot-diff/> with *every* line --
+    including empty lines -- indented by *exactly* 4 spaces, so the YAML
+    literal block scalar of the `Data` key carries the diff *verbatim*.
+    The "body" keeps its trailing empty line directly before the `---`
+    line of the first attachment block.
+
+    <template>
+    ---
+    Type:      text/x-diff; charset=utf-8; kind="changeset"
+    Desc:      base <snapshot-base/><arg4/>
+    Created:   <timestamp-snapshot-created/>
+    Modified:  <arg5/>
+    Data:      |4+
+    <payload/>
+    </template>
+
+</define>
+

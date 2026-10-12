@@ -267,6 +267,19 @@ You *MUST* honor the following hints on this *task* format:
     branch after the integration, and the attachment is *delivered*: it is then neither delivered
     again by `ase-task-integrate` nor re-applied by `ase-task-implement`.
 
+    For a `Changeset` of `worktree` or `branch:<name/>`, the skills
+    `ase-task-implement` and `ase-task-integrate` additionally maintain the
+    *change set snapshot*: a *view-only*, text-only unified diff of the change
+    set, which makes it viewable wherever the task is visible (e.g. on the task
+    boards during its approval). It carries the `Type` key value
+    `text/x-diff; charset=utf-8; kind="changeset"`, is *replaced* in place on
+    every run (keeping its `Created` key), and its `Desc` key carries
+    `base <commit/>` (plus `, partial` for an incomplete change set) after an
+    implementation, resp. `base <commit/>, merged <commit/>` after an
+    integration. It is *never* delivered by `ase-task-integrate`, unless the
+    `Changeset` is `attachment:changeset`, in which case this attachment *is*
+    the change set itself. A stale snapshot just shows an outdated change set.
+
     A skill which changes the content of an attachment refreshes its `Modified`
     key with the current timestamp -- the very same value it writes into the
     `Modified` key of the frontmatter if it changes the "body", too. Hence,

@@ -17,7 +17,7 @@ import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import { Config }                from "./ase-config-core.js"
 import { configSchema, webColorDefaults, webColorNames } from "./ase-config-schema.js"
-import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDraftDiff, diffTones, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
+import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
 import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
@@ -196,7 +196,7 @@ const taskDocument = async (keys: Map<string, string>, body: string): Promise<st
     fieldsDocument([ ...keys ].filter(([ k ]) => k !== "Type"), await renderPlan(body))
 
 /*  render a task plan attachment as a standalone document: its fields and
-    its content, with images embedded, Markdown rendered, a draft diff
+    its content, with images embedded, Markdown rendered, a diff
     colored per line, binary content as a placeholder, and else verbatim text  */
 const attachmentDocument = async (log: Log, id: string, n: number): Promise<string | null> => {
     const att = (await Task.attachments(log, id))[n]
@@ -226,7 +226,7 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
     }
     if (type === "text/markdown")
         return fieldsDocument(fields, await renderPlan(text, true))
-    if (isDraftDiff(att.type)) {
+    if (isDiff(att.type)) {
         const lines = text.split(/\r?\n/)
         const tones = diffTones(lines)
         return fieldsDocument(fields, "<pre class=\"textart diff\"><code>" +
@@ -469,7 +469,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
                 group:  board.groups.find((g) => g.lanes.some((l) => l.status === card.status))?.title ?? "",
                 epic:   card.group,
                 doc:    await taskDocument(parts.keys, parts.body),
-                tabs:   attachmentTabs(await Task.attachments(log, id)),
+                tabs:   attachmentTabs(await Task.attachments(log, id), parts.keys.get("Modified") ?? ""),
                 pred:   ref(board.pred.get(id) ?? []),
                 succ:   ref(board.succ.get(id) ?? [])
             })

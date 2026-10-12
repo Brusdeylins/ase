@@ -721,6 +721,11 @@ the persisted task plans of the current project:
   card, while a click onto its ` X ` closes the dialog again, a click onto
   a tab selects it, and the mouse wheel scrolls it; `M` disables the
   mouse support to regain the regular text selection of the terminal).
+  The dialog shows the attachments of the plan as further tabs, where a
+  diff attachment (type `text/x-diff`, like the implementation draft or
+  the change set snapshot `kind="changeset"` of `ase-task-implement` and
+  `ase-task-integrate`) is colored per line, and a change set snapshot
+  older than the plan is marked `(stale)`.
   `?` hides and shows the key hint lines (terminal and web board, persisted).
   In the graph view, `s` hides and shows the standalone tasks, i.e., the
   tasks without any predecessors and successors (persisted).
@@ -1070,8 +1075,9 @@ requests of tasks, and of fully configured behavior:
     `.ase/worktree/<id>-implementer` of the agent (unless already checked
     out in the working copy or another ASE worktree, which then has to
     be without uncommitted changes, as they would be committed, too),
-    implemented there in place (via `--source worktree --changeset
-    worktree --worktree <id>-implementer`), afterwards *committed* onto the branch with the
+    implemented there in place (via `--changeset worktree --worktree
+    <id>-implementer`, keeping the `Source:` of the plan, so the change set
+    snapshot of the skill shows the entire branch), afterwards *committed* onto the branch with the
     message `<kind>: <title> (<id>)` -- also a partial result of a
     failed processing, as the plan tracks it -- and the worktree is
     removed again (under `--repo` the branch is pushed to the origin

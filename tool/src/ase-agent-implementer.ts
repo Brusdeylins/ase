@@ -95,12 +95,16 @@ export default class AgentImplementerCommand extends PhaseAgent {
                 }
             }
         }
+        /*  a "branch:" changeset is implemented in place in the worktree carrying its
+            branch, while the "Source:" of the plan stays in effect, so the skill bases
+            the change set snapshot on the fork point of the branch from its source
+            (and hence shows the entire branch, also on a re-run of a declined task)  */
         const work      = await this.changesetJob(task, this.kind, parallel, true)
         const changeset = taskFlow(this.log, task, "Changeset")
         return {
             ...work,
             cmd: "ase-task-implement --next DONE" +
-                (changeset.type === "branch" ? " --source worktree --changeset worktree" : "") +
+                (changeset.type === "branch" ? " --changeset worktree" : "") +
                 (work.changesetWorktree !== "" ? ` --worktree ${work.changesetWorktree}` : "") +
                 ` ${task.id}`
         }
