@@ -7,8 +7,8 @@
 import type { Command }                        from "commander"
 
 import { Task }                                from "./ase-task.js"
-import type { AgentOpts, AgentTask, AgentJob } from "./ase-agent-common.js"
-import { taskFlow }                            from "./ase-agent-common.js"
+import type { AgentOpts, AgentTask, AgentItem, AgentJob } from "./ase-agent-common.js"
+import { taskFlow, tagsOf }                    from "./ase-agent-common.js"
 import { PhaseAgent }                          from "./ase-agent-common-phase.js"
 
 /*  agent "ase agent implementer"  */
@@ -18,7 +18,8 @@ export default class AgentImplementerCommand extends PhaseAgent {
     protected readonly description =
         "Drive the \"Implementation\" phase of the \"enterprise\" task lifecycle model: claim " +
         "every \"PLANNED\" task unassigned or assigned to the implementer, not yet tagged " +
-        "\"ase-agent-implementer\", and with implemented \"After:\" predecessors into " +
+        "\"ase-agent-implementer\", and with integrated \"After:\" predecessors (or implemented ones, " +
+        "if stacked onto their \"branch:\" changeset by its \"Source:\") into " +
         "\"IMPLEMENTING\", implement it from its \"Source:\" into its \"Changeset:\" via the " +
         "\"ase-task-implement\" skill (in a Git worktree where needed), tag it, and put it into " +
         "\"STALLED\" unless it became \"IMPLEMENTED\" (tagged \"ase-agent-implementer:failed\" " +
@@ -59,6 +60,34 @@ export default class AgentImplementerCommand extends PhaseAgent {
         so a drafted task is still implemented later  */
     protected get tag (): string {
         return `ase-agent-${this.kind}${this.mode === "draft" ? "-draft" : ""}`
+    }
+
+    /*  a predecessor passed the implementation phase for its successor only once its change
+        set is contained in the "Source:" of the successor, from which the successor is
+        implemented resp. drafted, i.e., once integrated (and its integrated target branch
+        published, i.e., not still held by the integrator or failed there), or, for a
+        successor stacked onto it (with the "branch:" changeset of the predecessor as its
+        "Source:"), already once implemented (and its changeset branch committed and
+        published, i.e., not still held by the implementer or failed there), where an
+        invalid "Source:" or "Changeset:" value never stacks  */
+    protected passes (pred: AgentItem, status: string, item: AgentItem): boolean {
+        const tags = tagsOf(pred.keys)
+        const held = (tag: string) => tags.includes(`${tag}:active`) || tags.includes(`${tag}:failed`)
+        let stacked = false
+        try {
+            const changeset = taskFlow(this.log, pred, "Changeset")
+            const source    = taskFlow(this.log, item, "Source")
+            stacked = changeset.type === "branch" && source.type === "branch" && changeset.name === source.name
+        }
+        catch (_err) {
+            /*  an invalid value never stacks  */
+        }
+        const states = this.lifecycle!.states
+        if (stacked)
+            return states.indexOf(status) >= states.indexOf("IMPLEMENTED")
+                && !(status === "IMPLEMENTED" && held("ase-agent-implementer"))
+        else
+            return status === "INTEGRATED" && !held("ase-agent-integrator")
     }
 
     /*  whether the task carries an implementation draft attachment  */

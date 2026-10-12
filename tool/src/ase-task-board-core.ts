@@ -414,13 +414,10 @@ export const buildBoard = async (log: Log): Promise<Board> => {
     for (const item of items) {
         const keys   = item.keys
         const after  = [ ...new Set((keys.get("After") ?? "").split(",").map((s) => s.trim()).filter((s) => s !== "")) ]
-        let   status = item.status
-        if (!lifecycle.states.includes(status)) {
-            const source = Object.values(TaskFormat.taskLifecycles).find((m) => m.states.includes(status))
-            status = source !== undefined ? TaskFormat.mapStatus(source, lifecycle, status) : lifecycle.initial
+        const status = TaskFormat.adaptStatus(lifecycle, item.status)
+        if (status !== item.status)
             warnings.push(`task "${item.id}" has status "${item.status}" unknown to lifecycle model ` +
                 `"${lifecycle.name}" (shown as "${status}")`)
-        }
         const group  = (keys.get("Group") ?? "").trim()
         cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), after, created: keys.get("Created") ?? "" })
     }

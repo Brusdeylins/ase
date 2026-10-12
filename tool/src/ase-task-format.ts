@@ -144,6 +144,17 @@ export const mapStatus = (from: TaskLifecycle, to: TaskLifecycle, status: string
     return mapped ?? (finished ? to.finished[0] : to.initial)
 }
 
+/*  adapt a status onto a task lifecycle model: a state of the model is kept,
+    a state foreign to it is mapped onto it via the first model knowing the
+    state (see "mapStatus"), and a status unknown to all models falls back
+    to the initial state of the model  */
+export const adaptStatus = (lifecycle: TaskLifecycle, status: string): string => {
+    if (lifecycle.states.includes(status))
+        return status
+    const source = Object.values(taskLifecycles).find((model) => model.states.includes(status))
+    return source !== undefined ? mapStatus(source, lifecycle, status) : lifecycle.initial
+}
+
 /*  resolve an "include" and an "exclude" comma-separated lifecycle
     state list into the effective state set a task plan has to be in
     to be listed at all; the "none" sentinel and empty tokens are

@@ -4,9 +4,10 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
+import { Task }                     from "./ase-task.js"
 import * as TaskFormat              from "./ase-task-format.js"
-import type * as API                from "./ase-task-store-plugin-api.js"
-import type { AgentTask, AgentItem, AgentLog, LineLevel } from "./ase-agent-common.js"
+import type * as API               from "./ase-task-store-plugin-api.js"
+import type { AgentTask, AgentItem, AgentSelection, AgentLog, LineLevel } from "./ase-agent-common.js"
 import {
     Agent, tagsOf, taggedWith,
     flatKeys, setPlanTag, updateTask
@@ -104,40 +105,130 @@ export abstract class PhaseAgent extends Agent {
         return `ase-agent-${this.kind}`
     }
 
-    /*  select the dispatchable tasks among all listed tasks <items> (except the
-        <busy> ones already processed in a worker slot), and the tasks waiting
-        (with the reason): by default every task in the "incoming" state, which is
-        not tagged yet, is dispatchable to the agent by its assignee, and whose
-        "After:" predecessors all passed the phase (or no longer exist), else waiting,
-        where a predecessor still held by an agent of its kind (tagged as "active")
-        has not passed the phase yet, even if the skill already moved it into or
-        beyond the "passed" state, as the agent still finishes it (e.g. commits and
-        publishes its change set) and might still fail it  */
-    protected select (items: AgentItem[], busy: Set<string>): { tasks: AgentTask[], waiting: Map<string, string> } {
+    /*  whether a predecessor <pred> (known and not cancelled) with its <status> (adapted
+        to the lifecycle model) passed the phase for its successor <item>: by default once
+        in or beyond the "passed" state, or in the "success" state and tagged as processed,
+        where a predecessor still held by an agent of its kind (tagged as "active") has not
+        passed the phase yet while in the "success" state or not finished, even if the skill
+        already moved it into or beyond the "passed" state, as the agent still finishes it
+        (e.g. commits and publishes its change set) and might still fail it, and where a
+        predecessor whose finishing failed (tagged as "failed") has not passed the phase
+        yet while still in the "success" state, but has once moved on beyond it (e.g. after
+        a manual intervention)  */
+    protected passes (pred: AgentItem, status: string, _item: AgentItem): boolean {
         const lifecycle = this.lifecycle!
-        const { incoming, success, passed } = this.states
+        const { success, passed } = this.states
+        const index = (status: string) => lifecycle.states.indexOf(status)
+        const tags  = tagsOf(pred.keys)
+        if (status === success)
+            return !tags.includes(`${this.tag}:active`) && !tags.includes(`${this.tag}:failed`)
+                && (index(status) >= index(passed) || taggedWith(pred.keys, this.tag))
+        else
+            return index(status) >= index(passed)
+                && (!tags.includes(`${this.tag}:active`) || lifecycle.finished.includes(status))
+    }
+
+    /*  whether a task has predecessors: those of its "After:" key, or, as an
+        explicit epic (a task being its own group), the members of its group  */
+    private dependent (task: AgentTask): boolean {
+        return (task.keys.get("After") ?? "").trim() !== "" || (task.keys.get("Group") ?? "").trim() === task.id
+    }
+
+    /*  select the dispatchable tasks among all listed tasks <items> (except the
+        <busy> ones already processed in a worker slot), the tasks waiting (with the
+        reason), and the tasks with a notice: by default every task in the "incoming"
+        state, which is not tagged yet, is dispatchable to the agent by its assignee,
+        and whose predecessors all passed the phase (see "passes") or no longer exist,
+        else waiting, where the predecessors of a task are those of its "After:" key and,
+        for an explicit epic (a task being its own group), implicitly all other tasks of
+        its group, where a predecessor with a status foreign to the lifecycle model is
+        judged by the status it maps onto, where a cancelled predecessor of the "After:"
+        key never passes (as the successor might depend on its never delivered result,
+        so the successor waits until a human resolves the dependency), while a cancelled
+        member of an epic counts as dropped from the epic (and hence as passed), and
+        where a task with unknown or cancelled predecessors, or waiting in a dependency
+        cycle (both of which never resolve by themselves), is noticed  */
+    protected select (items: AgentItem[], busy: Set<string>): AgentSelection {
+        const lifecycle = this.lifecycle!
+        const { incoming } = this.states
         const known   = new Map(items.map((item) => [ item.id, item ]))
         const waiting = new Map<string, string>()
+        const notices = new Map<string, string>()
         const tasks: AgentTask[] = []
-        const done    = (id: string): boolean => {
-            const item = known.get(id)!
-            const tags = tagsOf(item.keys)
-            return !tags.includes(`${this.tag}:failed`) && !tags.includes(`${this.tag}:active`)
-                && (lifecycle.states.indexOf(item.status) >= lifecycle.states.indexOf(passed)
-                    || (item.status === success && taggedWith(item.keys, this.tag)))
+
+        /*  determine the explicit predecessors of all tasks, and the
+            implicit ones of the explicit epics (their group members)  */
+        const members = new Map<string, string[]>()
+        for (const item of items) {
+            const group = (item.keys.get("Group") ?? "").trim()
+            if (group !== "" && group !== item.id)
+                members.set(group, [ ...(members.get(group) ?? []), item.id ])
         }
+        const explicit = new Map(items.map((item) => [ item.id, [ ...new Set((item.keys.get("After") ?? "").split(",")
+            .map((after) => after.trim())
+            .filter((after) => after !== "")) ] ]))
+        const implicit = new Map(items.map((item) => [ item.id, (item.keys.get("Group") ?? "").trim() === item.id ?
+            (members.get(item.id) ?? []).filter((member) => !explicit.get(item.id)!.includes(member)) : [] ]))
+        const preds = (id: string) => [ ...(explicit.get(id) ?? []), ...(implicit.get(id) ?? []) ]
+
+        /*  determine whether a (known) predecessor passed the phase for its successor  */
+        const cancelled = (id: string) => TaskFormat.adaptStatus(lifecycle, known.get(id)!.status) === "CANCELLED"
+        const done = (id: string, succ: string): boolean => {
+            const pred   = known.get(id)!
+            const status = TaskFormat.adaptStatus(lifecycle, pred.status)
+            if (status === "CANCELLED")
+                return !explicit.get(succ)!.includes(id)
+            return this.passes(pred, status, known.get(succ)!)
+        }
+
+        /*  determine the dependency cycle through a task along the predecessors
+            not passed yet (as a path from the task back to itself, else empty)  */
+        const cycle = (id: string): string[] => {
+            const seen = new Set<string>()
+            const walk = (path: string[]): string[] => {
+                const last = path[path.length - 1]
+                for (const pred of preds(last)) {
+                    if (pred === id)
+                        return [ ...path, id ]
+                    if (!known.has(pred) || seen.has(pred) || done(pred, last))
+                        continue
+                    seen.add(pred)
+                    const found = walk([ ...path, pred ])
+                    if (found.length > 0)
+                        return found
+                }
+                return []
+            }
+            return walk([ id ])
+        }
+
+        /*  select the tasks  */
+        const quoted = (ids: string[]) => ids.map((id) => `"${id}"`)
         for (const item of items.filter((item) => item.status === incoming
             && !taggedWith(item.keys, this.tag) && this.assignedTo(item.keys) && !busy.has(item.id))) {
-            const pending = (item.keys.get("After") ?? "").split(",")
-                .map((after) => after.trim())
-                .filter((after) => after !== "" && known.has(after) && !done(after))
+            const after   = preds(item.id)
+            const unknown = after.filter((pred) => !known.has(pred))
+            const pending = after.filter((pred) => known.has(pred) && !done(pred, item.id))
+            const dropped = pending.filter((pred) => cancelled(pred))
+            const cyclic  = pending.length > 0 ? cycle(item.id) : []
+            const notes: string[] = []
+            if (unknown.length > 0)
+                notes.push(`references the unknown predecessors ${quoted(unknown).join(", ")} (treated as passed)`)
+            if (dropped.length > 0)
+                notes.push(`waits for the cancelled predecessors ${quoted(dropped).join(", ")}, ` +
+                    "which never pass (remove them from its \"After:\" key, or cancel the task, too)")
+            if (cyclic.length > 0)
+                notes.push(`waits in the dependency cycle ${quoted(cyclic).join(" → ")} (each after the next), ` +
+                    "which never resolves by itself")
+            if (notes.length > 0)
+                notices.set(item.id, notes.join(", and "))
             if (pending.length === 0)
                 tasks.push({ id: item.id, title: item.title, keys: item.keys })
             else
                 waiting.set(item.id, "its predecessors " +
-                    pending.map((after) => `"${after}" (${known.get(after)!.status})`).join(", "))
+                    pending.map((pred) => `"${pred}" (${known.get(pred)!.status})`).join(", "))
         }
-        return { tasks, waiting }
+        return { tasks, waiting, notices }
     }
 
     /*  claim a selected task, returning the description of the claim (for the processing
@@ -149,6 +240,17 @@ export abstract class PhaseAgent extends Agent {
         is recorded for the run of the agent, so it is recovered after a termination  */
     protected async claim (task: AgentTask): Promise<string | null> {
         const { incoming, activity } = this.states
+
+        /*  a task with predecessors is re-checked against a fresh listing right before
+            its claim, as its predecessors might have changed since the listing of the
+            dispatching (e.g. while the task was prepared, see "ready"), so a task no
+            longer dispatchable is silently skipped (and reported as waiting by the next
+            dispatching, triggered by the change of its predecessors)  */
+        if (this.dependent(task)) {
+            const { items } = await Task.listHeaders(this.log)
+            if (!this.select(items, new Set()).tasks.some((selected) => selected.id === task.id))
+                return null
+        }
 
         /*  a task whose status changed meanwhile is skipped, while a task tagged
             meanwhile was already picked up by an agent of this kind (e.g. a peer agent,

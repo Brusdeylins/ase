@@ -52,6 +52,12 @@ export type AgentTask = { id: string, title: string, keys: Map<string, string> }
 /*  a listed task: its id, its status, its title, and its flattened header keys  */
 export type AgentItem = { id: string, status: string, title: string, keys: Map<string, string> }
 
+/*  the selection of the listed tasks by an agent: the dispatchable tasks, the waiting
+    tasks (with the reason), and optionally the tasks with a notice (e.g. on a problem
+    of their dependencies), where the waiting and noticed tasks are reported once per
+    change of their reason resp. notice  */
+export type AgentSelection = { tasks: AgentTask[], waiting: Map<string, string>, notices?: Map<string, string> }
+
 /*  the level of a processing log line  */
 export type LineLevel = "error" | "warning" | "info"
 
@@ -854,13 +860,14 @@ export class AgentRun {
 }
 
 /*  the state of a running agent: its worker slots (slot number to task id), their jobs,
-    its abort, its waiting tasks (with the reason), whether it is dispatching, and the
-    wake-up of its dispatcher  */
+    its abort, its waiting tasks (with the reason), its noticed tasks (with the notice),
+    whether it is dispatching, and the wake-up of its dispatcher  */
 type RunState = {
     slots:       Map<number, string>
     running:     Set<Promise<void>>
     abort:       AbortController
     waiting:     Map<string, string>
+    notices:     Map<string, string>
     dispatching: boolean
     notify:      () => void
 }
@@ -1578,8 +1585,9 @@ export abstract class Agent {
     }
 
     /*  select the dispatchable tasks among all listed tasks <items> (except the
-        <busy> ones already processed in a worker slot), and the tasks waiting (with the reason)  */
-    protected abstract select (items: AgentItem[], busy: Set<string>): { tasks: AgentTask[], waiting: Map<string, string> }
+        <busy> ones already processed in a worker slot), the tasks waiting (with the reason),
+        and the tasks with a notice (with the notice)  */
+    protected abstract select (items: AgentItem[], busy: Set<string>): AgentSelection
 
     /*  claim a selected task, returning the description of the claim (for the processing
         log), or null if the task was silently skipped (throws if the task was not claimed)  */
@@ -1847,12 +1855,17 @@ export abstract class Agent {
     }
 
     /*  claim all dispatchable tasks in natural id order into free worker slots,
-        reporting the waiting tasks once per change of their reason  */
+        reporting the waiting and the noticed tasks once per change of their reason resp. notice  */
     private async dispatch (state: RunState): Promise<void> {
         const { slots, running, abort, notify } = state
         const { items } = await Task.listHeaders(this.log)
         const selected  = this.select(items, new Set(slots.values()))
         const tasks     = selected.tasks
+        const notices   = selected.notices ?? new Map<string, string>()
+        for (const [ id, notice ] of notices)
+            if (state.notices.get(id) !== notice)
+                await this.write("warning", this.name, `task "${id}" ${notice}`)
+        state.notices = notices
         for (const [ id, reason ] of selected.waiting)
             if (state.waiting.get(id) !== reason)
                 await this.write("info", this.name, `task "${id}" waits for ${reason}`)
@@ -1944,7 +1957,7 @@ export abstract class Agent {
         }
 
         /*  the state of the run shared with its dispatching  */
-        const state: RunState = { slots, running, abort, waiting: new Map(), dispatching: false, notify }
+        const state: RunState = { slots, running, abort, waiting: new Map(), notices: new Map(), dispatching: false, notify }
 
         /*  dispatch on every change until interrupted (or, in one-shot mode, until a
             dispatching leaves all worker slots free while all agents of this process

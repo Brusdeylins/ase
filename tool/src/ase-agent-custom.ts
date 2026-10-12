@@ -12,7 +12,7 @@ import * as TaskFormat              from "./ase-task-format.js"
 import { TaskRequests, attachmentTime } from "./ase-task-request.js"
 import type {
     AgentOpts, AgentTask, AgentItem, AgentJob,
-    AgentLog, AgentResult, AgentWork
+    AgentLog, AgentResult, AgentWork, AgentSelection
 }                                   from "./ase-agent-common.js"
 import {
     Agent, taskFlow, taskFlowRaw, tagsOf,
@@ -39,8 +39,8 @@ type CustomRecord = {
     fixed:   string
 }
 
-/*  the selected tasks (and the waiting ones, with the reason)  */
-type Selection = { tasks: AgentTask[], waiting: Map<string, string> }
+/*  the selected tasks (and the waiting ones, with the reason, and the noticed ones, with the notice)  */
+type Selection = AgentSelection
 
 /*  whether a record of a custom agent succeeded (where a missing one counts as failure)  */
 const recordSuccess = (record: CustomRecord | undefined): boolean =>
@@ -97,6 +97,7 @@ class CustomCore {
         const known   = new Map(items.map((item) => [ item.id, item.keys ]))
         const now     = Date.now()
         const waiting = new Map([ ...selected.waiting ].filter(([ id ]) => this.selectable(known.get(id) ?? new Map())))
+        const notices = new Map([ ...(selected.notices ?? []) ].filter(([ id ]) => this.selectable(known.get(id) ?? new Map())))
         const tasks   = selected.tasks.filter((task) => {
             if (!this.selectable(task.keys))
                 return false
@@ -106,7 +107,7 @@ class CustomCore {
             waiting.set(task.id, `its retry after a failed processing (in ${Math.ceil((until - now) / 1000)}s)`)
             return false
         })
-        return { tasks, waiting }
+        return { tasks, waiting, notices }
     }
 
     /*  whether a task is left unclaimed by an attachment (see "--attach-skip")  */

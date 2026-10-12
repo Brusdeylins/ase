@@ -875,15 +875,33 @@ requests of tasks, and of fully configured behavior:
   for `planner` (`ase-agent-planner-<mode>`, i.e., `ase-agent-planner-reboot` by default)
   and for `implementer` in mode `draft` (`ase-agent-implementer-draft`) --
   (plain or with any value) in their
-  `Tags:` frontmatter key yet and whose `After:` predecessors all passed
-  its phase (or no longer exist), and whose `Assignee:` frontmatter key
+  `Tags:` frontmatter key yet and whose predecessors all passed
+  its phase (or no longer exist) -- the tasks of its `After:` frontmatter key
+  and, for an explicit epic (a task whose `Group:` is its own id), implicitly
+  all other tasks of its group, where a predecessor still tagged by an agent
+  of this kind with the value `active` (while in the *success* state of the
+  phase or not finished) resp. `failed` (while still in the *success* state
+  of the phase) has not passed it yet, a cancelled `After:` predecessor never
+  passes it (as the task might depend on its never delivered result), while a
+  cancelled member of an epic counts as dropped from it, a predecessor status
+  foreign to the lifecycle model counts as the state it maps onto, and for
+  `implementer` (in both modes) a predecessor passes only once *integrated*
+  (and not still tagged by `integrator` with the value `active` or `failed`),
+  as the task is implemented resp. drafted from its `Source:`, which contains
+  the change set of the predecessor only then, except for a task *stacked*
+  onto the predecessor (with the `branch:` changeset of the predecessor as its
+  `Source:`), for which the predecessor passes already once *implemented* --,
+  and whose `Assignee:` frontmatter key
   is either still empty or already the agent name of `--name` (so a task
   can be pre-assigned to a particular agent of a pool, and a task assigned
   to anybody else, e.g. a human, is left alone), where an agent can
   require a task to be already assigned to it (see `planner`). It claims each such task
   (in natural task id order, re-checked on every change
   of the task store, while a task still waiting for its predecessors is
-  reported once) in a single conditional save of the task (retried on a
+  reported once, a task referencing unknown predecessors, waiting for
+  cancelled predecessors, or waiting in a dependency cycle is warned about
+  once, and a task with predecessors is re-checked against a fresh listing
+  right before its claim) in a single conditional save of the task (retried on a
   concurrent change), which moves it into its *activity* state, tags it with
   its tag with the value `active` (so no other
   agent of this kind picks it up, even if the skill itself puts it back
