@@ -41,9 +41,21 @@ if (stat2 === undefined)
     "__dirname", but keeps them in "process.argv[1]")  */
 const basedir = path.resolve(path.dirname(process.argv[1]), "..")
 
-/*  pass-through execution to real "ase" CLI  */
-run(process.execPath, [ asejs, ...process.argv.slice(2) ], {
-    env: { ...process.env, ASE_SETUP_DEV: "1", ASE_SETUP_DEV_BASEDIR: basedir }
+/*  pass-through execution to real "ase" CLI, terminating only after it: the
+    interrupt signals of the terminal are ignored (as they reach the CLI directly through
+    the shared process group) and all other terminating signals are forwarded to it  */
+const child = childProcess.spawn(process.execPath, [ asejs, ...process.argv.slice(2) ], {
+    stdio: "inherit",
+    env:   { ...process.env, ASE_SETUP_DEV: "1", ASE_SETUP_DEV_BASEDIR: basedir }
 })
-process.exit(0)
+for (const signal of [ "SIGINT", "SIGQUIT" ])
+    process.on(signal, () => {})
+for (const signal of [ "SIGTERM", "SIGHUP" ])
+    process.on(signal, () => { child.kill(signal) })
+child.on("error", (err) => {
+    throw err
+})
+child.on("exit", (code) => {
+    process.exit(code ?? 1)
+})
 
