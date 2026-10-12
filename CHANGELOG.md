@@ -5,6 +5,14 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   FEATURE [tool]: Container Image
+    The new `build-container` build target uses `docker buildx` and `etc/ase.dockerfile` to build
+    and push the multi-architecture container image `ghcr.io/rse/ase`. The image is based on Alpine
+    Linux, contains Node.js, ASE, Git, Bash, and the Claude Code CLI with the ASE plugin
+    pre-installed, and runs `ase` by default or any other given command, like `bash` or `claude`.
+    It runs as user `ase:ase` with the home directory `/ase` on an external volume, which holds
+    the projects and the Claude Code credentials.
+
 -   FEATURE [tool]: Individually Managed Agents and Supervised Agent Fleets
     Each agent now runs in its own process, managed via `ase agent <kind> start|status|log|stop`,
     replacing the former form running multiple agents in one process. The new `ase agent fleet
