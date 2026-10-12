@@ -209,9 +209,11 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
     const type = att.type.split(";")[0].trim().toLowerCase()
 
     /*  embed images (including SVG, as an image context never runs
-        its scripts and never loads its external resources)  */
+        its scripts and never loads its external resources, marked
+        to fit the tab width, as it may lack an intrinsic size)  */
     if (type.startsWith("image/"))
-        return fieldsDocument(fields, `<div class="embedding"><img src="${url}" alt="${escapeHTML(att.desc || att.type)}"></div>`)
+        return fieldsDocument(fields, `<div class="embedding"><img${type === "image/svg+xml" ? " class=\"svg\"" : ""} ` +
+            `src="${url}" alt="${escapeHTML(att.desc || att.type)}"></div>`)
     let text = att.data
     if (text === undefined) {
         const a = await Task.attachmentContent(log, id, n)
