@@ -1151,15 +1151,17 @@ export abstract class Agent {
         await fs.promises.writeFile(path.join(this.temp!.dir, tempPreserved), `${note}\n`, { flag: "a" })
     }
 
-    /*  write a processing log line in the style of the regular logger to stdout,
+    /*  write a processing log line in the style of the regular logger to stdout (each
+        line of a multi-line message as a full log line, with the line prefix of the logger,
+        e.g. of an agent fleet member, and with the level tag styled on a terminal only),
         optionally collecting it for the processing log attachment of a task,
         and record it (of the task, or of the agent itself) in the presence of the agent  */
     protected async write (level: LineLevel, prefix: string, msg: string, lines?: string[], task = ""): Promise<void> {
         const timestamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss.SSS")
-        const line = `ase: [${timestamp}]: [${level.toUpperCase()}]: ${prefix}: ${msg}`
-        lines?.push(line)
+        lines?.push(`ase: [${timestamp}]: [${level.toUpperCase()}]: ${prefix}: ${msg}`)
         this.presence?.line(level, task, msg)
-        await writeStdout(`${line}\n`)
+        const head = `${this.log.prefix()}ase: [${timestamp}]: ${this.log.tag(level, process.stdout.isTTY)}: ${prefix}: `
+        await writeStdout(msg.split("\n").map((l) => `${head}${l}\n`).join(""))
     }
 
     /*  select the dispatchable tasks among all listed tasks <items> (except the

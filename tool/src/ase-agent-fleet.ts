@@ -16,6 +16,7 @@ import textframe                         from "textframe"
 import chalk                             from "chalk"
 
 import type Log                          from "./ase-lib-log.js"
+import type { LogLevel }                 from "./ase-lib-log.js"
 import { writeStdout }                   from "./ase-lib-stdio.js"
 import { DaemonCommand }                 from "./ase-lib-daemon-cli.js"
 import { DEFAULT_ADDRESS, connectHost, isLocal } from "./ase-lib-server-cli.js"
@@ -43,18 +44,16 @@ const AGENT_STARTUP_MS = 30 * 1000
 const SERVE_ENV = "ASE_AGENT_FLEET_SERVE"
 
 /*  the colors of the names of the fleet and its members prefixing their lines
-    in the shared log, picked by a hash of the name (to be stable across runs),
-    whose seed gives "fleet", "relay", and all agent kinds distinct colors  */
-const tints = [ chalk.cyan, chalk.magenta, chalk.yellow, chalk.green, chalk.blue,
-    chalk.cyanBright, chalk.magentaBright, chalk.yellowBright, chalk.greenBright, chalk.blueBright ]
+    in the shared log: bold red for the fleet, red for the relay, and blue for all agents  */
 const tint = (name: string): string =>
-    tints[[ ...name ].reduce((hash, c) => (hash * 31 + c.charCodeAt(0)) >>> 0, 9) % tints.length](name)
+    name === "fleet" ? chalk.red.bold(name) : name === "relay" ? chalk.red(name) : chalk.blue(name)
 
 /*  the prefix of a line in the log of a fleet: the name of the fleet ("fleet") or of
     its member, padded to the width of the longest name, followed by a separator  */
 const logPrefix = (name: string, width: number, colored: boolean): string =>
     `${colored ? tint(name) : name}${" ".repeat(Math.max(width - name.length, 0))} | `
 const logPrefixRe = /^([A-Za-z0-9][A-Za-z0-9_-]*)( *\| )/
+const logLevelRe  = /^([^|]*\| [^:]+: \[[^\]]+\]: )\[(ERROR|WARNING|INFO|DEBUG)\]/
 
 /*  the options of the section "fleet" (those of "ase agent fleet start"), of the section
     "relay" (those of "ase agent relay start"), and of the section "default" (shared by all
@@ -429,6 +428,7 @@ export default class AgentFleetCommand extends DaemonCommand {
                 }
             if (pending.length === 0) {
                 fs.rmSync(stateFile, { force: true })
+                this.log.write("info", `${this.label}: terminated`)
                 finish(0)
             }
         }
@@ -727,10 +727,14 @@ export default class AgentFleetCommand extends DaemonCommand {
             })
 
         /*  register CLI sub-command "log" (of the fleet and all its members,
-            each line prefixed with their name, colored on a terminal only)  */
+            each line prefixed with their name, where the name and the level tag
+            are colored on a terminal only)  */
         this.registerLog(group, () => path.join(runtimeDir(), "fleet.log"), undefined,
             process.stdout.isTTY === true ?
-                (line) => line.replace(logPrefixRe, (_match, name: string, sep: string) => `${tint(name)}${sep}`) :
+                (line) => line
+                    .replace(logLevelRe, (_match, head: string, level: string) =>
+                        `${head}${this.log.tag(level.toLowerCase() as LogLevel, true)}`)
+                    .replace(logPrefixRe, (_match, name: string, sep: string) => `${tint(name)}${sep}`) :
                 undefined)
 
         /*  register CLI sub-command "stop"  */

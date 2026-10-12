@@ -14,7 +14,7 @@ const levels = [
     { name: "error",   style: chalk.red.bold },
     { name: "warning", style: chalk.yellow.bold },
     { name: "info",    style: chalk.blue },
-    { name: "debug",   style: chalk.green }
+    { name: "debug",   style: chalk.grey }
 ] as const
 
 /*  name of a supported log level  */
@@ -87,16 +87,20 @@ export default class Log {
         return this._prefix
     }
 
+    /*  render the tag of a log level, styled for a terminal if <styled>  */
+    tag (level: LogLevel, styled: boolean): string {
+        const tag = `[${level.toUpperCase()}]`
+        const def = levels.find((l) => l.name === level)
+        return styled && def !== undefined ? def.style(tag) : tag
+    }
+
     /*  write a message on a log level, if enabled by the current log level  */
     write (level: LogLevel, msg: string) {
         const idx = levels.findIndex((l) => l.name === level)
         if (idx !== -1 && idx <= this.logLevelIdx) {
             const timestamp = DateTime.now().toFormat("yyyy-LL-dd HH:mm:ss.SSS")
             let line = `${this._prefix}${this._program}: [${timestamp}]: `
-            if (this._logFile === "-" && process.stderr.isTTY)
-                line += `${levels[idx].style("[" + levels[idx].name.toUpperCase() + "]")}`
-            else
-                line += `[${levels[idx].name.toUpperCase()}]`
+            line += this.tag(level, this._logFile === "-" && process.stderr.isTTY)
             line += `: ${msg}\n`
             if (this._logFile === "-" && this.deferred !== null)
                 this.deferred.push(line)
