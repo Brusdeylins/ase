@@ -117,7 +117,7 @@ const initConfig = (tool: string): string => textframe`
 
     #   the integration phase agent (APPROVED > INTEGRATING > INTEGRATED)
     integrator:
-        mode:           squash          # "merge", "rebase", or "squash"
+        mode:           squash          # Git integration operation ("merge", "rebase", or "squash")
     `
 
 /*  the agent relay of a fleet: its "ase agent relay start" options, the token to pass to
