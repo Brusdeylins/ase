@@ -4,7 +4,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import { render, Box, Text, useInput }        from "ink"
+import React                                  from "react"
+import { render, Box, Text, useInput, useStdin } from "ink"
 
 import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
@@ -130,11 +131,75 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         busy !== null ? renderBusy(busy.label, busy.since, busyTick, columns, rows) : null)
 }
 
+/*  pass each pressed SGR mouse report ("ESC[<b;x;y" plus "M"/"m" for press/release, 1-based)
+    with its 0-based column/row, read directly from stdin, as Ink 8 drops them before
+    "useInput"; the "data" events accompany the reads of Ink, so no input is taken away
+    (and none is read while Ink pauses its input)  */
+export const useMouseReports = (onPress: (button: number, col: number, row: number) => void): void => {
+    const { stdin } = useStdin()
+    const handler   = React.useRef(onPress)
+    handler.current = onPress
+    React.useEffect(() => {
+        let rest = ""
+        const onData = (chunk: Buffer | string) => {
+            const parts = (rest + String(chunk)).split("\x1b")
+            const last  = parts.length - 1
+            rest = ""
+            parts.forEach((part, i) => {
+                const report = /^\[<(\d+);(\d+);(\d+)([Mm])/.exec(part)
+                if (report !== null && report[4] === "M")
+                    handler.current(Number(report[1]), Number(report[2]) - 1, Number(report[3]) - 1)
+                else if (report === null && i === last && i > 0 && /^(\[(<[\d;]*)?)?$/.test(part))
+                    rest = "\x1b" + part
+            })
+        }
+
+        /*  listen only alongside the "readable" listener of Ink, which Ink detaches
+            while "suspendTerminal" hands the terminal to a child process (like the
+            $EDITOR), as a sole "data" listener would switch stdin into flowing mode
+            and hence read the input of the child process away; a removed listener is
+            reported after its removal, an added listener before its addition  */
+        let tapped = false
+        const sync = () => {
+            const reading = stdin.listenerCount("readable") > 0
+            if (reading && !tapped)
+                stdin.on("data", onData)
+            else if (!reading && tapped)
+                stdin.off("data", onData)
+            tapped = reading
+        }
+        const onAdded = (event: string | symbol) => {
+            if (event === "readable")
+                queueMicrotask(sync)
+        }
+        const onRemoved = (event: string | symbol) => {
+            if (event === "readable")
+                sync()
+        }
+        stdin.on("newListener",    onAdded)
+        stdin.on("removeListener", onRemoved)
+        sync()
+        return () => {
+            stdin.off("newListener",    onAdded)
+            stdin.off("removeListener", onRemoved)
+            if (tapped)
+                stdin.off("data", onData)
+            tapped = false
+        }
+    }, [ stdin ])
+}
+
 /*  the root component of the terminal board  */
 const App = ({ log, initial, project, relay }: { log: Log, initial: Board, project: string, relay?: string }) => {
     const ctx = useBoardState(log, initial, relay)
 
-    /*  handle the keyboard and the mouse  */
+    /*  handle the mouse, but ignore it while the modal busy popup is shown  */
+    useMouseReports((button, col, row) => {
+        if (ctx.busy === null)
+            handleMouse(ctx, button, col, row)
+    })
+
+    /*  handle the keyboard  */
     useInput((input, key) => {
         /*  ignore key releases (reported under the kitty keyboard protocol),
             as otherwise every toggling key would toggle twice  */
@@ -145,13 +210,9 @@ const App = ({ log, initial, project, relay }: { log: Log, initial: Board, proje
         if (ctx.busy !== null)
             return
 
-        /*  handle a mouse report (1-based column/row, "M" for press, "m" for release)  */
-        const report = /^\[<(\d+);(\d+);(\d+)([Mm])$/.exec(input)
-        if (report !== null) {
-            if (report[4] === "M")
-                handleMouse(ctx, Number(report[1]), Number(report[2]) - 1, Number(report[3]) - 1)
+        /*  never take a mouse report for keys (handled by "useMouseReports" above)  */
+        if (/^\[<\d+;\d+;\d+[Mm]$/.test(input))
             return
-        }
         handleKey(ctx, input, key)
     })
     return renderScreen(ctx, project)
