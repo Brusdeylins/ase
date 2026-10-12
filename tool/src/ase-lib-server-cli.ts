@@ -286,7 +286,7 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
             if (stopping)
                 return
             stopping = true
-            this.log.write("info", `${this.label}: received ${signal}, stopping`)
+            this.log.write("info", `${this.label}: interrupted (received ${signal})`)
             server.stop()
                 .catch((err: unknown) => {
                     const message = err instanceof Error ? err.message : String(err)

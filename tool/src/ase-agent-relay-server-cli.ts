@@ -36,7 +36,7 @@ export const relayTls = (cfg: Config): { cert: string | null, key: string | null
 
 /*  CLI command group "ase agent relay"  */
 export default class AgentRelayCommand extends ServerCommand<ServerContext, ServerStartOptions> {
-    protected readonly label       = "agent relay"
+    protected readonly label       = "relay"
     protected readonly description = "Manage the per-user agent relay server, passing the live presence of the agents to the task boards"
     protected readonly name        = "relay"
     protected readonly schema      = relaySchema

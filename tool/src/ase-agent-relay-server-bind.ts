@@ -74,7 +74,7 @@ export class AgentRelayBinding {
         for (const [ prjId, subs ] of this.subs)
             for (const ws of subs) {
                 if (this.unanswered.has(ws)) {
-                    this.log.write("debug", `agent relay: terminating unresponsive subscriber of project "${prjId}"`)
+                    this.log.write("debug", `relay: terminating unresponsive subscriber of project "${prjId}"`)
                     ws.terminate()
                     continue
                 }
@@ -92,7 +92,7 @@ export class AgentRelayBinding {
             if (ws.readyState !== ws.OPEN)
                 continue
             if (ws.bufferedAmount > BUFFER_MAX) {
-                this.log.write("debug", `agent relay: terminating congested subscriber of project "${prjId}"`)
+                this.log.write("debug", `relay: terminating congested subscriber of project "${prjId}"`)
                 ws.terminate()
                 continue
             }
@@ -134,7 +134,7 @@ export class AgentRelayBinding {
                 this.subs.set(prjId, subs)
             }
             subs.add(ws)
-            this.log.write("debug", `agent relay: subscribed to agents of project "${prjId}"`)
+            this.log.write("debug", `relay: subscribed to agents of project "${prjId}"`)
             const agents = Object.fromEntries(this.core.list(prjId).map((agent) => [ agent.id, agent ]))
             ws.send(JSON.stringify({ reset: true, agents } satisfies Relay.RelayFrame))
             ws.on("pong", () => {
@@ -149,7 +149,7 @@ export class AgentRelayBinding {
                 }
             })
             ws.on("error", (err) => {
-                this.log.write("debug", `agent relay: WebSocket error on agents of project "${prjId}": ${err.message}`)
+                this.log.write("debug", `relay: WebSocket error on agents of project "${prjId}": ${err.message}`)
             })
         })
     }
@@ -224,7 +224,7 @@ export class AgentRelayServer {
         /*  install the common extensions, logging the requests at debug level
             only (as the agents announce frequently), and the agent relay endpoints  */
         const guard = new ServerGuard(log, {
-            label:   "agent relay",
+            label:   "relay",
             token:   options.token,
             failure: "internal agent relay failure (see relay log for details)",
             level:   () => "debug",
@@ -254,14 +254,14 @@ export class AgentRelayServer {
             throw err
         }
         const scheme = this.options.tls !== null ? "https" : "http"
-        this.log.write("info", `agent relay: listening on ${scheme}://${urlHost(this.options.address)}:${this.options.port}`)
+        this.log.write("info", `relay: listening on ${scheme}://${urlHost(this.options.address)}:${this.options.port}`)
     }
 
     /*  stop the server: stop the agent relay and unbind the listener  */
     async stop (): Promise<void> {
         this.binding.stop()
         await this.server.stop({ timeout: 1000 })
-        this.log.write("info", "agent relay: stopped")
+        this.log.write("info", "relay: terminated")
     }
 }
 

@@ -178,14 +178,14 @@ const given = (values: Section, key: string): boolean =>
 const sectionArgs = (section: string, values: Section): string[] =>
     Object.entries(values).flatMap(([ key, value ]) => {
         if (!/^[a-z][a-z0-9-]*$/.test(key))
-            throw new Error(`agent fleet: section "${section}": invalid option name "${key}"`)
+            throw new Error(`fleet: section "${section}": invalid option name "${key}"`)
         if (value === false || value === null)
             return []
         if (value === true)
             return [ `--${key}` ]
         return (Array.isArray(value) ? value : [ value ]).flatMap((item: unknown) => {
             if (typeof item !== "string" && typeof item !== "number")
-                throw new Error(`agent fleet: section "${section}": invalid value of option "${key}"`)
+                throw new Error(`fleet: section "${section}": invalid value of option "${key}"`)
             return [ `--${key}`, String(item) ]
         })
     })
@@ -194,7 +194,7 @@ const sectionArgs = (section: string, values: Section): string[] =>
     agent relay they report to) of a configuration file through a supervising process,
     which runs each member as its own child process and restarts it whenever it exits  */
 export default class AgentFleetCommand extends DaemonCommand {
-    protected readonly label       = "agent fleet"
+    protected readonly label       = "fleet"
     protected readonly words       = "agent fleet"
     protected readonly description = "Manage a fleet of agents (and of the agent relay they report to), " +
         "running each in its own process and restarting it whenever it exits"
@@ -211,17 +211,17 @@ export default class AgentFleetCommand extends DaemonCommand {
             data = YAML.parse(text ?? fs.readFileSync(file, "utf8"))
         }
         catch (err: unknown) {
-            throw new Error(`agent fleet: cannot read configuration "${file}": ` +
+            throw new Error(`fleet: cannot read configuration "${file}": ` +
                 `${err instanceof Error ? err.message : String(err)}`, { cause: err })
         }
         if (!isSection(data))
-            throw new Error(`agent fleet: configuration "${file}" carries no sections`)
+            throw new Error(`fleet: configuration "${file}" carries no sections`)
         const section = (name: string): Section => {
             const value = data[name]
             if (value === null || value === undefined)
                 return {}
             if (!isSection(value))
-                throw new Error(`agent fleet: section "${name}" carries no options`)
+                throw new Error(`fleet: section "${name}" carries no options`)
             return value
         }
 
@@ -229,17 +229,17 @@ export default class AgentFleetCommand extends DaemonCommand {
         const fleet = section("fleet")
         for (const key of Object.keys(fleet))
             if (!fleetKeys.includes(key))
-                throw new Error(`agent fleet: section "fleet": unsupported option "${key}" ` +
+                throw new Error(`fleet: section "fleet": unsupported option "${key}" ` +
                     `(expected ${fleetKeys.map((name) => `"${name}"`).join(", ")})`)
         const foreground = fleet.foreground ?? false
         if (typeof foreground !== "boolean")
-            throw new Error("agent fleet: section \"fleet\": invalid value of option \"foreground\" (expected a boolean)")
+            throw new Error("fleet: section \"fleet\": invalid value of option \"foreground\" (expected a boolean)")
 
         /*  the default options of the agents  */
         const defaults = section("default")
         for (const key of Object.keys(defaults))
             if (!defaultKeys.includes(key))
-                throw new Error(`agent fleet: section "default": unsupported option "${key}" ` +
+                throw new Error(`fleet: section "default": unsupported option "${key}" ` +
                     `(expected ${defaultKeys.map((name) => `"${name}"`).join(", ")})`)
 
         /*  the options of the agent relay  */
@@ -248,10 +248,10 @@ export default class AgentFleetCommand extends DaemonCommand {
             const values = { ...section("relay") }
             for (const key of Object.keys(values))
                 if (!relayKeys.includes(key))
-                    throw new Error(`agent fleet: section "relay": unsupported option "${key}" ` +
+                    throw new Error(`fleet: section "relay": unsupported option "${key}" ` +
                         `(expected ${relayKeys.map((name) => `"${name}"`).join(", ")})`)
             if (given(defaults, "agent-relay"))
-                throw new Error("agent fleet: section \"default\": option \"agent-relay\" not allowed with the section \"relay\"")
+                throw new Error("fleet: section \"default\": option \"agent-relay\" not allowed with the section \"relay\"")
 
             /*  read the configured agent relay URL and token  */
             const cfg = new Config("config", configSchema, this.log)
@@ -274,12 +274,12 @@ export default class AgentFleetCommand extends DaemonCommand {
                 const spec  = parseRelayURL(configured)
                 const host  = spec.url.hostname.replace(/^\[|\]$/g, "")
                 if (!isLocal(host))
-                    this.log.write("warning", `agent fleet: configured "project.relay.url" "${label}" ` +
+                    this.log.write("warning", `fleet: configured "project.relay.url" "${label}" ` +
                         "addresses no local address -- not adopted by the agent relay of the fleet " +
                         "(the task boards following it will not see the agents of the fleet)")
                 else {
                     const deviates = (key: string) =>
-                        this.log.write("warning", `agent fleet: section "relay": option "${key}" deviates ` +
+                        this.log.write("warning", `fleet: section "relay": option "${key}" deviates ` +
                             `from the configured "project.relay.url" "${label}" ` +
                             "(the task boards following it will not see the agents of the fleet)")
                     if (!given(values, "address"))
@@ -310,7 +310,7 @@ export default class AgentFleetCommand extends DaemonCommand {
             if (!given(values, "tls-key") && tls.key !== null)
                 values["tls-key"] = tls.key
             if (secure === true && (!given(values, "tls-cert") || !given(values, "tls-key")))
-                throw new Error("agent fleet: configured \"project.relay.url\" selects HTTPS, but no TLS certificate and key " +
+                throw new Error("fleet: configured \"project.relay.url\" selects HTTPS, but no TLS certificate and key " +
                     "(set the options \"tls-cert\" and \"tls-key\" of the section \"relay\", " +
                     "or \"project.relay.crt\" and \"project.relay.key\")")
             relay = { args: sectionArgs("relay", values), token, insecure }
@@ -324,12 +324,12 @@ export default class AgentFleetCommand extends DaemonCommand {
                 continue
             const { kind = name, ...values } = section(name)
             if (typeof kind !== "string" || !this.kinds.has(kind))
-                throw new Error(`agent fleet: section "${name}": unknown agent kind "${String(kind)}" ` +
+                throw new Error(`fleet: section "${name}": unknown agent kind "${String(kind)}" ` +
                     `(expected ${kinds.map((name) => `"${name}"`).join(", ")})`)
             validateName(name, kind, kinds)
             for (const key of [ ...deniedKeys, ...(relay !== null ? [ "agent-relay" ] : []) ])
                 if (given(values, key))
-                    throw new Error(`agent fleet: section "${name}": option "${key}" not allowed in a fleet` +
+                    throw new Error(`fleet: section "${name}": option "${key}" not allowed in a fleet` +
                         (key === "agent-relay" ? " with the section \"relay\"" : ""))
             const cmd    = this.kinds.get(kind)!().command()
             const known  = new Set(cmd.options.map((option) => option.long))
@@ -341,19 +341,19 @@ export default class AgentFleetCommand extends DaemonCommand {
                 cmd.parse(args, { from: "user" })
             }
             catch (err: unknown) {
-                throw new Error(`agent fleet: section "${name}": ` +
+                throw new Error(`fleet: section "${name}": ` +
                     `${(err instanceof Error ? err.message : String(err)).replace(/^error: /, "")}`, { cause: err })
             }
             agents.push({ name, kind, args })
         }
         if (agents.length === 0)
-            throw new Error(`agent fleet: configuration "${file}" defines no agents`)
+            throw new Error(`fleet: configuration "${file}" defines no agents`)
 
         /*  an agent processing tasks serially only cannot be run multiple times  */
         for (const [ kind, create ] of this.kinds) {
             const count = agents.filter((agent) => agent.kind === kind).length
             if (count > 1 && create().serialOnly)
-                throw new Error(`agent fleet: ${kind} processes tasks serially only -- cannot run ${count} agents of it`)
+                throw new Error(`fleet: ${kind} processes tasks serially only -- cannot run ${count} agents of it`)
         }
         return { foreground, relay, agents }
     }
@@ -438,13 +438,13 @@ export default class AgentFleetCommand extends DaemonCommand {
             to all remaining members (terminating the agents at once, see "ase agent")  */
         const shutdown = (signal: string) => {
             if (stopping) {
-                this.log.write("warning", `${this.label}: received ${signal} again -- forwarding it to the members`)
+                this.log.write("warning", `${this.label}: interrupted again (received ${signal}) -- forwarding it to the members`)
                 for (const m of members)
                     m.child?.kill("SIGTERM")
                 return
             }
             stopping = true
-            this.log.write("info", `${this.label}: received ${signal}, stopping`)
+            this.log.write("info", `${this.label}: interrupted (received ${signal})`)
             for (const m of members)
                 clearTimeout(m.timer)
             proceed()

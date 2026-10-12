@@ -1502,12 +1502,14 @@ export abstract class Agent {
             dirty = true
             wake()
         }
-        const interrupt = () => {
+        const interrupt = (signal: NodeJS.Signals) => {
             if (abort.signal.aborted)
                 return
             abort.abort()
-            this.write("warning", this.name, "interrupted -- aborting running processings")
-                .catch(() => {})
+            const write = running.size > 0 ?
+                this.write("warning", this.name, `interrupted (received ${signal}) -- aborting ${running.size} running processing(s)`) :
+                this.write("info", this.name, `interrupted (received ${signal})`)
+            write.catch(() => {})
             notify()
         }
 
@@ -1516,10 +1518,10 @@ export abstract class Agent {
             leaving the claimed tasks to the recovery by a later run of an agent of its kind  */
         const signalled = (signal: NodeJS.Signals) => {
             if (abort.signal.aborted) {
-                this.log.write("warning", `agent: ${this.name}: interrupted again -- terminating immediately`)
+                this.log.write("warning", `agent: ${this.name}: interrupted again (received ${signal}) -- terminating immediately`)
                 process.exit(128 + (os.constants.signals[signal] ?? 0))
             }
-            interrupt()
+            interrupt(signal)
         }
 
         /*  the state of the run shared with its dispatching  */
