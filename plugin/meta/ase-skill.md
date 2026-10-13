@@ -107,6 +107,15 @@ Skill Output
 Skill Sequential Processing
 ---------------------------
 
+-   *IMPORTANT*: The task tracking rules below apply *only* if the
+    `TaskCreate` and `TaskUpdate` tools are actually available to you.
+    If they are *not* available (as with some agent tools or models),
+    silently skip *all* task tracking -- the creation of tasks, their
+    chaining via `addBlockedBy`, and their status updates -- and do
+    *not* search for these tools (e.g. via `ToolSearch`), do *not*
+    emulate them, and do *not* mention their absence. The strictly
+    sequential processing of every <step/> stays mandatory regardless.
+
 -   *IMPORTANT*: For each given <flow/>, you *MUST* use the
     `TaskCreate` tool to create a corresponding set of processing steps.
 
