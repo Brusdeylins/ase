@@ -171,7 +171,9 @@ ase setup statusline deactivate  # deactivate ASE statusline
 
 All `ase setup` sub-commands -- except `ase setup mcp list` -- accept
 `--tool claude|copilot|codex` (default: `claude`, or `$ASE_TOOL`) and,
-for `claude` only, `--scope user|project|local` (default: `user`).
+for `claude` only, `--scope user|project|local` (default: `user`,
+except for `update`, `uninstall`, `enable`, and `disable`, which
+auto-detect the scope of the existing plugin installation).
 The exception is `ase setup status`, which reports *all* scopes at once
 and hence takes no `--scope`.
 

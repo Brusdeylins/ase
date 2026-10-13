@@ -5,6 +5,14 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   IMPROVEMENT [tool]: Auto-Detected Plugin Installation Scope
+    The `ase setup update`, `ase setup uninstall`, `ase setup enable`, and `ase setup disable`
+    commands now auto-detect the scope of the existing ASE plugin installation when `--scope` is
+    omitted, instead of blindly assuming the `user` scope: the scopes `local`, `project`, and `user`
+    are probed in this order, and the first one whose settings file registers `ase@ase` under
+    `enabledPlugins` (whether enabled or disabled) is used, with `user` as the fallback. The
+    `ase setup install` command still defaults to the `user` scope.
+
 -   BUGFIX [tool]: Project directory of GitHub Copilot CLI sessions
     GitHub Copilot CLI runs the hooks and starts the MCP server in the plugin installation
     directory instead of the project, so every working-directory-relative lookup missed the

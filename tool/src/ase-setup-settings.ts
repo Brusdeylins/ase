@@ -390,5 +390,46 @@ export class SetupSettings {
         }
         return entries
     }
+
+    /*  auto-detect the scope in which the ASE plugin is currently
+        installed, so an omitted --scope targets the existing installation
+        instead of blindly assuming the per-user scope; only the Anthropic
+        Claude Code CLI has a scope concept, so every other tool resolves to
+        "user"; the scopes are probed from the strongest ("local") down to
+        the weakest ("user"), and a scope counts as a match when its
+        settings file registers the plugin under "enabledPlugins" (the value
+        may be true or false, since even a disabled plugin is registered in
+        that scope)  */
+    async detectPluginScope (tool: Tool): Promise<Scope> {
+        if (tool !== "claude")
+            return "user"
+        const scopes: Scope[] = [ "local", "project", "user" ]
+        for (const scope of scopes) {
+            const file = this.settingsFile(tool, scope)
+
+            /*  read and parse the settings file, skipping the scope on any
+                read or parse error (a missing or malformed file simply
+                cannot register the plugin)  */
+            let settings: unknown
+            try {
+                const text = await fs.readFile(file, "utf8")
+                settings = JSON.parse(text)
+            }
+            catch {
+                continue
+            }
+
+            /*  a match is the presence of the "ase@ase" key under
+                "enabledPlugins", regardless of its true/false value  */
+            const plugins = (settings as { enabledPlugins?: Record<string, unknown> })?.enabledPlugins
+            if (plugins !== undefined && plugins !== null
+                && Object.prototype.hasOwnProperty.call(plugins, "ase@ase")) {
+                if (scope !== "user")
+                    this.log.write("info", `setup: detected ASE plugin installation in scope "${scope}"`)
+                return scope
+            }
+        }
+        return "user"
+    }
 }
 
