@@ -248,6 +248,31 @@ final commit.
 
 </define>
 
+<define name="changeset-baseline">
+
+Capture the *baseline* of the working tree of the Git working copy in
+the directory <arg1/> *before* a change set is made in it, so that the
+change set snapshot can later exclude *foreign* uncommitted changes,
+i.e., changes which already existed and do not belong to the change
+set. Do not output anything.
+
+1.  If the command
+    `git -C "<arg1/>" status --porcelain -- . ":(exclude).ase"`
+    (taken exactly as given) reports *no* output, the working tree is
+    clean, so the change set is already isolated: set
+    <changeset-baseline></changeset-baseline> (empty) and *skip* the
+    remaining sub-steps of this definition.
+
+2.  Otherwise, capture the current state of the working tree, including
+    the *untracked* files, as a Git tree object through a *temporary*
+    index, so the index of <arg1/> stays *untouched*, by running the
+    command
+    `index="$(mktemp)" && cp "$(git -C "<arg1/>" rev-parse --path-format=absolute --git-path index)" "$index" && GIT_INDEX_FILE="$index" git -C "<arg1/>" add --all -- . ":(exclude).ase" && GIT_INDEX_FILE="$index" git -C "<arg1/>" write-tree; rm -f "$index"`
+    (taken exactly as given), and set <changeset-baseline/> to its
+    output, or to empty if it failed.
+
+</define>
+
 <define name="changeset-snapshot">
 
 Attach the *change set snapshot* -- the *view-only* unified diff of the
@@ -258,8 +283,10 @@ where <arg1/> is the directory of the Git working copy to run the
 commands in, <arg2/> is the commit the change set is *based* on,
 <arg3/> is the *head* commit of the change set (or empty for the
 *working tree* of <arg1/>), <arg4/> is a suffix of its `Desc` key (or
-empty), and <arg5/> is the timestamp of its `Modified` key. Do not
-output anything.
+empty), <arg5/> is the timestamp of its `Modified` key, and <arg6/> is
+the *baseline* tree of the working tree of <arg1/>, captured *before*
+the change set was made with the `changeset-baseline` definition (or
+empty). Do not output anything.
 
 1.  Capture the output of the command
     `git -C "<arg1/>" merge-base "<arg2/>" "<head/>"` (with <head/>
@@ -271,14 +298,25 @@ output anything.
     state in `.ase`, and as a *text-only* diff, i.e., binary files
     appear as `Binary files ... differ` lines only:
 
-    -   <if condition="<arg3/> is empty">
+    -   <if condition="<arg3/> is empty and <arg6/> is not empty">
+        The working tree already carried *foreign* uncommitted changes
+        before the change set was made, so the diff starts at the
+        baseline tree <arg6/> instead of <snapshot-base/>, which
+        excludes these foreign changes and covers the change set only.
+        The current state of the working tree, including the
+        *untracked* files, is captured through a *temporary* index, so
+        the index of <arg1/> stays *untouched*. Run the command
+        `index="$(mktemp)" && cp "$(git -C "<arg1/>" rev-parse --path-format=absolute --git-path index)" "$index" && GIT_INDEX_FILE="$index" git -C "<arg1/>" add --all -- . ":(exclude).ase" && GIT_INDEX_FILE="$index" git -C "<arg1/>" diff --cached --no-color "<arg6/>" -- . ":(exclude).ase"; rm -f "$index"`
+        (taken exactly as given).
+        </if>
+        <elseif condition="<arg3/> is empty">
         The diff covers the commits and the *uncommitted* changes of
         the working tree, including the *untracked* files, which are
         captured through a *temporary* index, so the index of <arg1/>
         stays *untouched*. Run the command
         `index="$(mktemp)" && cp "$(git -C "<arg1/>" rev-parse --path-format=absolute --git-path index)" "$index" && GIT_INDEX_FILE="$index" git -C "<arg1/>" add --all -- . ":(exclude).ase" && GIT_INDEX_FILE="$index" git -C "<arg1/>" diff --cached --no-color "<snapshot-base/>" -- . ":(exclude).ase"; rm -f "$index"`
         (taken exactly as given).
-        </if>
+        </elseif>
         <else>
         Run the command
         `git -C "<arg1/>" diff --no-color "<snapshot-base/>" "<arg3/>" -- . ":(exclude).ase"`
@@ -297,16 +335,18 @@ output anything.
     <timestamp-snapshot-created/> to the value of the `Created` key of the
     *replaced* attachment block, so the creation time of the snapshot
     survives its replacement, or to <arg5/> if no such block or key
-    exists. Set <payload/> to <snapshot-diff/> with *every* line --
-    including empty lines -- indented by *exactly* 4 spaces, so the YAML
-    literal block scalar of the `Data` key carries the diff *verbatim*.
-    The "body" keeps its trailing empty line directly before the `---`
-    line of the first attachment block.
+    exists. Set <snapshot-baseline/> to `, baseline <arg6/>` if <arg3/>
+    is empty and <arg6/> is not empty, or to empty otherwise. Set
+    <payload/> to <snapshot-diff/> with *every* line -- including empty
+    lines -- indented by *exactly* 4 spaces, so the YAML literal block
+    scalar of the `Data` key carries the diff *verbatim*. The "body"
+    keeps its trailing empty line directly before the `---` line of the
+    first attachment block.
 
     <template>
     ---
     Type:      text/x-diff; charset=utf-8; kind="changeset"
-    Desc:      base <snapshot-base/><arg4/>
+    Desc:      base <snapshot-base/><snapshot-baseline/><arg4/>
     Created:   <timestamp-snapshot-created/>
     Modified:  <arg5/>
     Data:      |4+

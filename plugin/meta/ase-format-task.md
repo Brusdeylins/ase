@@ -276,7 +276,12 @@ You *MUST* honor the following hints on this *task* format:
     every run (keeping its `Created` key), and its `Desc` key carries
     `base <commit/>` (plus `, partial` for an incomplete change set) after an
     implementation, resp. `base <commit/>, merged <commit/>` after an
-    integration. It is *never* delivered by `ase-task-integrate`, unless the
+    integration. If the change set was made in a working copy which already
+    carried *foreign* uncommitted changes, the diff starts at the *baseline*
+    tree of the working copy, captured right before the implementation, instead
+    of at the base commit, so it excludes these foreign changes, and its `Desc`
+    key additionally carries `, baseline <tree/>`, the full Git tree id of this
+    baseline. It is *never* delivered by `ase-task-integrate`, unless the
     `Changeset` is `attachment:changeset`, in which case this attachment *is*
     the change set itself. A stale snapshot just shows an outdated change set.
 

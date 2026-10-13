@@ -481,7 +481,8 @@ Procedure
                 arg2="<target-before/>"
                 arg3="<target-after/>"
                 arg4=", merged <target-after/>"
-                arg5="<timestamp-snapshot/>"></expand>
+                arg5="<timestamp-snapshot/>"
+                arg6=""></expand>
             </if>
 
         The `Modified:` key stays *untouched*, as the "body" is not

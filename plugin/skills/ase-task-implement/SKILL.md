@@ -366,6 +366,21 @@ Procedure
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ ERROR: temporary worktree for attachment **<changeset-name/>** cannot be prepared
             </template>
 
+    6.  <if condition="<changeset-type/> is `worktree` and <work-dir/> is equal to <origin-dir/>">
+        The change set stays uncommitted in the *origin working copy*,
+        which may already carry *foreign* uncommitted changes (e.g.
+        other work in progress), which do not belong to the change set
+        and hence *MUST* *NOT* show up in its snapshot. So, capture the
+        baseline of the working tree before the implementation:
+
+        <expand name="changeset-baseline" arg1="<work-dir/>"></expand>
+        </if>
+        <else>
+        A context worktree, a branch, or a temporary worktree carries
+        nothing but the change set (of this and earlier runs), so set
+        <changeset-baseline></changeset-baseline> (empty).
+        </else>
+
 4.  **Create Implementation:**
 
     1.  <if condition="<getopt-option-stateless/> is not equal `true` and <ase-project-task-lifecycle/> is `team` or `enterprise`">
@@ -553,7 +568,8 @@ Procedure
                 arg2="<source-commit/>"
                 arg3=""
                 arg4="<snapshot-suffix/>"
-                arg5="<timestamp-modified/>"></expand>
+                arg5="<timestamp-modified/>"
+                arg6="<changeset-baseline/>"></expand>
 
             For <changeset-type/> `branch`, expand the following instead:
 
@@ -562,7 +578,8 @@ Procedure
                 arg2="<source-commit/>"
                 arg3="<changeset-name/>"
                 arg4="<snapshot-suffix/>"
-                arg5="<timestamp-modified/>"></expand>
+                arg5="<timestamp-modified/>"
+                arg6=""></expand>
             </if>
             <elseif condition="<changeset-name/> is not `changeset`">
             The change set is an attachment itself, so it needs no

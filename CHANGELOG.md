@@ -31,7 +31,9 @@ ChangeLog
     in place, with `base <commit>` (plus `, partial` for an incomplete change set) resp. `base
     <commit>, merged <commit>` for the change set which finally landed on the target in its `Desc:`
     key. This makes the change set viewable wherever the task is visible, especially during its
-    approval. The task boards now color every diff attachment per line and mark an outdated
+    approval. If the origin working copy already carries foreign uncommitted changes (e.g. other
+    work in progress), the snapshot starts at a baseline tree of the working copy, captured right
+    before the implementation, and hence excludes these changes (marked by `, baseline <tree>`). The task boards now color every diff attachment per line and mark an outdated
     snapshot tab with `(stale)`, and `ase agent implementer` keeps the `Source:` of the plan for a
     `branch:` changeset, so its snapshot covers the entire branch.
 
