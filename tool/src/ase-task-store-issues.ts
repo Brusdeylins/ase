@@ -208,3 +208,77 @@ export const attachmentComment = (attachment: API.TaskAttachment): string => {
     return `<!-- ase:attachment\n${lines.join("\n")}\n-->\n${text}`
 }
 
+/*  an operation synchronizing the comments of an issue with the attachments of a
+    task plan, referencing an existing comment by its position among the comments  */
+export type SyncOp =
+    { op: "update", index: number, attachment: API.TaskAttachment } |
+    { op: "delete", index: number } |
+    { op: "create", attachment: API.TaskAttachment }
+
+/*  determine the operations synchronizing the comments (given by their attachments)
+    with the wanted attachments: the attachments of their longest common subsequence
+    keep their comments untouched, and in each gap before a kept attachment (and in the
+    final gap) the remaining ones are paired by position and updated, with surplus
+    comments deleted and surplus attachments created, so deleting or changing an
+    attachment touches its own comment only (and never the ones of others, like the
+    comments of humans); as comments can only be appended, an attachment inserted
+    before a kept one falls back to the rewriting of all comments by position  */
+export const attachmentSync = (current: API.TaskAttachment[], wanted: API.TaskAttachment[]): SyncOp[] => {
+    /*  determine the equality of all attachment pairs and the lengths
+        of the longest common subsequences of all suffix pairs  */
+    const n   = current.length
+    const m   = wanted.length
+    const eq  = Array.from({ length: n }, () => new Array<boolean>(m).fill(false))
+    const lcs = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0))
+    for (let i = n - 1; i >= 0; i--)
+        for (let j = m - 1; j >= 0; j--) {
+            eq[i][j]  = same(current[i], wanted[j])
+            lcs[i][j] = eq[i][j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1])
+        }
+
+    /*  determine the pairs of the longest common subsequence (plus the end as sentinel)  */
+    const pairs: [ number, number ][] = []
+    for (let i = 0, j = 0; i < n && j < m;) {
+        if (eq[i][j])
+            pairs.push([ i++, j++ ])
+        else if (lcs[i + 1][j] >= lcs[i][j + 1])
+            i++
+        else
+            j++
+    }
+    pairs.push([ n, m ])
+
+    /*  synchronize the gaps before the pairs  */
+    const ops: SyncOp[] = []
+    let i = 0
+    let j = 0
+    for (const [ pi, pj ] of pairs) {
+        const olds = pi - i
+        const news = pj - j
+        if (news > olds && pi < n) {
+            /*  fallback: rewrite all comments by position  */
+            ops.length = 0
+            for (let k = 0; k < Math.max(n, m); k++) {
+                if (k >= m)
+                    ops.push({ op: "delete", index: k })
+                else if (k >= n)
+                    ops.push({ op: "create", attachment: wanted[k] })
+                else if (!eq[k][k])
+                    ops.push({ op: "update", index: k, attachment: wanted[k] })
+            }
+            break
+        }
+        for (let k = 0; k < Math.max(olds, news); k++) {
+            if (k >= news)
+                ops.push({ op: "delete", index: i + k })
+            else if (k >= olds)
+                ops.push({ op: "create", attachment: wanted[j + k] })
+            else
+                ops.push({ op: "update", index: i + k, attachment: wanted[j + k] })
+        }
+        i = pi + 1
+        j = pj + 1
+    }
+    return ops
+}
+

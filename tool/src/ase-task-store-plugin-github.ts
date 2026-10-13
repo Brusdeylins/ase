@@ -553,16 +553,18 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
         return native
     }
 
-    /*  synchronize the comments with the attachments by position, rewriting changed ones only  */
+    /*  synchronize the comments with the attachments, touching changed ones only
+        (see the common issue tracker parts)  */
     private async syncComments (loc: Repo, issue: Issue, attachments: API.TaskAttachment[]): Promise<void> {
         const comments = await this.comments(loc, issue)
-        for (let i = 0; i < Math.max(comments.length, attachments.length); i++) {
-            if (i >= attachments.length)
-                await this.gh.rest.issues.deleteComment({ ...loc, comment_id: comments[i].id })
-            else if (i >= comments.length)
-                await this.gh.rest.issues.createComment({ ...loc, issue_number: issue.number, body: TaskIssues.attachmentComment(attachments[i]) })
-            else if (!TaskIssues.same(this.attachment(comments[i]), attachments[i]))
-                await this.gh.rest.issues.updateComment({ ...loc, comment_id: comments[i].id, body: TaskIssues.attachmentComment(attachments[i]) })
+        const ops = TaskIssues.attachmentSync(comments.map((comment) => this.attachment(comment)), attachments)
+        for (const op of ops) {
+            if (op.op === "delete")
+                await this.gh.rest.issues.deleteComment({ ...loc, comment_id: comments[op.index].id })
+            else if (op.op === "create")
+                await this.gh.rest.issues.createComment({ ...loc, issue_number: issue.number, body: TaskIssues.attachmentComment(op.attachment) })
+            else
+                await this.gh.rest.issues.updateComment({ ...loc, comment_id: comments[op.index].id, body: TaskIssues.attachmentComment(op.attachment) })
         }
     }
 

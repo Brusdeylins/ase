@@ -544,16 +544,18 @@ class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
         return native
     }
 
-    /*  synchronize the notes with the attachments by position, rewriting changed ones only  */
+    /*  synchronize the notes with the attachments, touching changed ones only
+        (see the common issue tracker parts)  */
     private async syncNotes (path: string, issue: Issue, attachments: API.TaskAttachment[]): Promise<void> {
         const notes = issue.user_notes_count > 0 ? await this.comments(path, issue.iid) : []
-        for (let i = 0; i < Math.max(notes.length, attachments.length); i++) {
-            if (i >= attachments.length)
-                await this.notes.remove(path, issue.iid, notes[i].id)
-            else if (i >= notes.length)
-                await this.notes.create(path, issue.iid, TaskIssues.attachmentComment(attachments[i]))
-            else if (!TaskIssues.same(this.attachment(notes[i]), attachments[i]))
-                await this.notes.edit(path, issue.iid, notes[i].id, { body: TaskIssues.attachmentComment(attachments[i]) })
+        const ops = TaskIssues.attachmentSync(notes.map((note) => this.attachment(note)), attachments)
+        for (const op of ops) {
+            if (op.op === "delete")
+                await this.notes.remove(path, issue.iid, notes[op.index].id)
+            else if (op.op === "create")
+                await this.notes.create(path, issue.iid, TaskIssues.attachmentComment(op.attachment))
+            else
+                await this.notes.edit(path, issue.iid, notes[op.index].id, { body: TaskIssues.attachmentComment(op.attachment) })
         }
     }
 

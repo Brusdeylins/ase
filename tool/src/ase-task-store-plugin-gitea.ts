@@ -557,18 +557,20 @@ class GiteaTaskStoragePlugin implements API.TaskStoragePlugin {
                 await found(this.call(loc, this.gt.repos.issueRemoveIssueDependencies(loc.owner, loc.repo, String(issue.number), meta(blocker))))
     }
 
-    /*  synchronize the comments with the attachments by position, rewriting changed ones only  */
+    /*  synchronize the comments with the attachments, touching changed ones only
+        (see the common issue tracker parts)  */
     private async syncComments (loc: Repo, issue: Issue, attachments: API.TaskAttachment[]): Promise<void> {
         const comments = issue.comments > 0 ? await this.comments(loc, issue.number) : []
-        for (let i = 0; i < Math.max(comments.length, attachments.length); i++) {
-            if (i >= attachments.length)
-                await this.call(loc, this.gt.repos.issueDeleteComment(loc.owner, loc.repo, comments[i].id))
-            else if (i >= comments.length)
+        const ops = TaskIssues.attachmentSync(comments.map((comment) => this.attachment(comment)), attachments)
+        for (const op of ops) {
+            if (op.op === "delete")
+                await this.call(loc, this.gt.repos.issueDeleteComment(loc.owner, loc.repo, comments[op.index].id))
+            else if (op.op === "create")
                 await this.call(loc, this.gt.repos.issueCreateComment(loc.owner, loc.repo, issue.number,
-                    { body: TaskIssues.attachmentComment(attachments[i]) }))
-            else if (!TaskIssues.same(this.attachment(comments[i]), attachments[i]))
-                await this.call(loc, this.gt.repos.issueEditComment(loc.owner, loc.repo, comments[i].id,
-                    { body: TaskIssues.attachmentComment(attachments[i]) }))
+                    { body: TaskIssues.attachmentComment(op.attachment) }))
+            else
+                await this.call(loc, this.gt.repos.issueEditComment(loc.owner, loc.repo, comments[op.index].id,
+                    { body: TaskIssues.attachmentComment(op.attachment) }))
         }
     }
 
