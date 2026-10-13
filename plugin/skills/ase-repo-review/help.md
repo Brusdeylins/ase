@@ -9,7 +9,8 @@
     [`--help`|`-h`]
     [`--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`)]
     [`--thorough`|`-t`]
-    [`--working-copy`|`-w`]
+    [`--staged`]
+    [`--unstaged`]
     [`--branch`|`-b` *branch*]
     [`--commit`|`-c` *commit*]
 
@@ -17,9 +18,10 @@
 
 The `ase-repo-review` skill performs a *holistic*,
 *human-reviewer-style* critique of the *staged* Git changes (or, with
-`--working-copy`, of *all* uncommitted changes, with `--branch`, of the
-changes of a *branch* against its *base*, or, with `--commit`, of a
-*single commit*) and emits a single
+`--unstaged`, of the *unstaged* and *untracked* changes, with both
+`--staged` and `--unstaged`, of *all* uncommitted changes, with
+`--branch`, of the changes of a *branch* against its *base*, or, with
+`--commit`, of a *single commit*) and emits a single
 *approve* / *reject* **verdict** backed by *prioritized*,
 *severity-tagged*, *line-cited* **findings**. Rather than scanning the
 code mechanically, it first *reconstructs the change's own intent* and
@@ -86,12 +88,20 @@ before it is committed or merged.
     and additionally *plausible* concerns whose impact cannot be fully
     proven, marked with "*Plausible:*" and rated at most `MEDIUM`.
 
--   `--working-copy`|`-w`:
-    Review *all* uncommitted changes of the working copy - staged,
-    unstaged, and untracked files (except *ASE*'s own state below
-    `.ase/`) - instead of only the *staged* changes. Combined with
-    `--branch`, additionally review the uncommitted changes of the
-    worktree where the *branch* is checked out.
+-   `--staged`:
+    Review the *staged* changes of the working copy. This is the default
+    if neither `--unstaged`, `--branch`, nor `--commit` is given.
+    Combined with `--unstaged`, review *all* uncommitted changes.
+    Combined with `--branch`, additionally review the staged changes of
+    the worktree where the *branch* is checked out.
+
+-   `--unstaged`:
+    Review the *unstaged* changes and the *untracked* files of the
+    working copy (except *ASE*'s own state below `.ase/`) instead of the
+    *staged* changes. Combined with `--staged`, review *all* uncommitted
+    changes. Combined with `--branch`, additionally review the unstaged
+    changes and untracked files of the worktree where the *branch* is
+    checked out.
 
 -   `--branch`|`-b` *branch*:
     Review the commits of *branch* (any Git revision) since its fork
@@ -105,12 +115,13 @@ before it is committed or merged.
     Review the single *commit* (any Git revision) against its first
     parent, instead of the *staged* changes. Its commit message is
     checked for mismatches against the diff. This option cannot be
-    combined with `--branch` or `--working-copy`.
+    combined with `--branch`, `--staged`, or `--unstaged`.
 
 ##  ARGUMENTS
 
 The `ase-repo-review` skill takes no positional arguments; it reviews the
-currently *staged* Git changes, with `--working-copy` all uncommitted
+currently *staged* Git changes, with `--unstaged` the unstaged and
+untracked changes, with both `--staged` and `--unstaged` all uncommitted
 changes, with `--branch` a branch against its base, or with `--commit` a
 single commit.
 
@@ -120,6 +131,7 @@ single commit.
 -   You want an approve or reject verdict before committing
 -   You want severity-tagged, line-cited findings on a diff
 -   You want a holistic judgment instead of a mechanical lint
+-   You want your not yet staged changes reviewed
 -   You want an exhaustive review of all uncommitted changes
 -   You want a feature branch reviewed before merging it
 -   You want a single, already committed change reviewed
@@ -138,17 +150,23 @@ Review the staged changes, reporting only `MEDIUM` and `HIGH` findings:
 ❯ /ase-repo-review -S MEDIUM
 ```
 
+Review the unstaged and untracked changes only:
+
+```text
+❯ /ase-repo-review --unstaged
+```
+
 Review all uncommitted changes exhaustively, reporting all findings:
 
 ```text
-❯ /ase-repo-review -w -t -S LOW
+❯ /ase-repo-review --staged --unstaged -t -S LOW
 ```
 
 Review the branch `feature` against its base, including the uncommitted
 changes of its worktree:
 
 ```text
-❯ /ase-repo-review -b feature -w
+❯ /ase-repo-review -b feature --staged --unstaged
 ```
 
 Review the last commit:

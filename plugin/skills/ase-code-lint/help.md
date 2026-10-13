@@ -81,12 +81,14 @@ the code, and comments contradicting the code.
 -   `--staged`:
     Restrict the linting to the source files with *staged* Git changes.
     Deleted files are skipped, and the files are linted in their current
-    working copy state. Mutually exclusive with `--unstaged`.
+    working copy state. Combined with `--unstaged`, lint the source
+    files with *any* uncommitted Git changes.
 
 -   `--unstaged`:
     Restrict the linting to the source files with *unstaged* Git changes
     plus the *untracked* source files. Deleted files are skipped.
-    Mutually exclusive with `--staged`.
+    Combined with `--staged`, lint the source files with *any*
+    uncommitted Git changes.
 
 ##  ARGUMENTS
 

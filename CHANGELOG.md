@@ -72,8 +72,9 @@ ChangeLog
 -   FEATURE [plugin]: Change-Restricted Analyzing and Linting
     The `ase-code-analyze` and `ase-code-lint` skills support the new `--staged` and
     `--unstaged` options, which restrict the analyzing resp. linting to the source files with
-    staged Git changes resp. with unstaged Git changes plus the untracked files, optionally
-    further restricted to the given source reference.
+    staged Git changes resp. with unstaged Git changes plus the untracked files (or, with both
+    options combined, with any uncommitted Git changes), optionally further restricted to the
+    given source reference.
 
 -   FEATURE [tool,plugin]: Prompt-Driven Task Editing from the Task Board
     In the terminal and web task boards, key `E` requests the edit of a task by a prompt, stored
@@ -106,17 +107,19 @@ ChangeLog
     suppressed findings, but always reports the number of suppressed findings. The new default
     `--severity AUTO` keeps the floor `MEDIUM` under `grey` boxing, while an explicitly given
     floor now wins over the boxing. The new `--thorough` option reports exhaustively (including
-    minor and plausible concerns), the new `--working-copy` option reviews all uncommitted
-    changes, and the new `PROPAGATION`, `COVERAGE`, and `RESIDUE` dimensions check for a fully
-    and consistently propagated change, for all special and edge cases being covered, and for
-    leftovers which do not belong into the change.
+    minor and plausible concerns), the new `--unstaged` option (aligned with the `--staged` and
+    `--unstaged` options of `ase-code-lint` and `ase-code-analyze`) reviews the unstaged and
+    untracked changes, both `--staged` and `--unstaged` review all uncommitted changes, and the
+    new `PROPAGATION`, `COVERAGE`, and `RESIDUE` dimensions check for a fully and consistently
+    propagated change, for all special and edge cases being covered, and for leftovers which do
+    not belong into the change.
 
 -   FEATURE [plugin]: Branch and Commit Review
     The `ase-repo-review` skill (now titled "Review Changes") reviews with the new `--branch`
     option the commits of a branch against its automatically determined base branch (plus, with
-    `--working-copy`, the uncommitted changes of its worktree), and with the new `--commit`
-    option a single commit against its first parent. In both cases, the commit messages are
-    additionally checked for mismatches against the diff.
+    `--staged` and/or `--unstaged`, the uncommitted changes of its worktree), and with the new
+    `--commit` option a single commit against its first parent. In both cases, the commit
+    messages are additionally checked for mismatches against the diff.
 
 -   FEATURE [tool]: Live Agent Presence on the Task Board
     The new `ase agent relay start|status|stop` runs a per-user agent relay server (configured

@@ -56,7 +56,8 @@ files. Deleted files are skipped, and the files are analyzed in their
 current working copy state. With a *source-reference*, only the changed
 files within it are analyzed; without one, all changed files of the
 repository are analyzed. If no such file exists, nothing is analyzed.
-The `--staged` and `--unstaged` options are *mutually exclusive*.
+Both options can be combined to analyze the source files with *any*
+uncommitted Git changes.
 
 The skill investigates the code base silently, reports each detected
 problem as a `PROBLEM` entry with severity (`LOW`, `MEDIUM`, `HIGH`) and

@@ -12,11 +12,12 @@ Your objective is to *reconstruct the change's intent* and *critique the
 diff as a whole* against a fixed set of reviewer dimensions, producing
 *prioritized*, *severity-tagged*, *line-cited* findings.
 
-The prompt gives the *scope* (`staged`, `working copy`, `branch <branch/>
-since base commit <base-commit/>` optionally followed by `plus the
-uncommitted changes in worktree <worktree-dir/>`, or `commit
-<commit-id/>`) and the reporting *mode* (`focused` or `thorough`) of the
-review.
+The prompt gives the *scope* (`staged`, `unstaged`, `staged and
+unstaged`, `branch <branch/> since base commit <base-commit/>`
+optionally followed by `plus the <changes/> changes in worktree
+<worktree-dir/>`, where <changes/> is one of `staged`, `unstaged`, or
+`staged and unstaged`, or `commit <commit-id/>`) and the reporting
+*mode* (`focused` or `thorough`) of the review.
 
 Workflow
 --------
@@ -30,11 +31,11 @@ Workflow
 
         `git diff --cached HEAD`
 
-    -   For the `working copy` scope, capture the staged *and* unstaged
-        changes, and additionally list the *untracked* files, which are
-        part of the change set, but carry no diff of their own:
+    -   For the `unstaged` scope, capture the unstaged changes, and
+        additionally list the *untracked* files, which are part of the
+        change set, but carry no diff of their own:
 
-        `git diff HEAD`
+        `git diff`
 
         `git ls-files --others --exclude-standard`
 
@@ -43,17 +44,40 @@ Workflow
         set. Treat every remaining untracked file as *newly added* in its
         entirety.
 
+    -   For the `staged and unstaged` scope, capture the staged *and*
+        unstaged changes, and list the *untracked* files, treated exactly
+        as for the `unstaged` scope:
+
+        `git diff HEAD`
+
+        `git ls-files --others --exclude-standard`
+
     -   For the `branch` scope, capture the commits of the branch since
         its base commit:
 
         `git diff "<base-commit/>..<branch/>"`
 
-        If the scope additionally names a worktree, capture instead the
-        commits *plus* the staged and unstaged changes of that worktree,
-        and list its *untracked* files, treated exactly as for the
-        `working copy` scope:
+        If the scope additionally names the `staged and unstaged` changes
+        of a worktree, capture instead the commits *plus* the staged and
+        unstaged changes of that worktree, and list its *untracked*
+        files, treated exactly as for the `unstaged` scope:
 
         `git -C "<worktree-dir/>" diff "<base-commit/>"`
+
+        `git -C "<worktree-dir/>" ls-files --others --exclude-standard`
+
+        If the scope additionally names the `staged` changes of a
+        worktree, capture instead the commits *plus* the staged changes
+        of that worktree:
+
+        `git -C "<worktree-dir/>" diff --cached "<base-commit/>"`
+
+        If the scope additionally names the `unstaged` changes of a
+        worktree, capture additionally the unstaged changes of that
+        worktree, and list its *untracked* files, treated exactly as for
+        the `unstaged` scope:
+
+        `git -C "<worktree-dir/>" diff`
 
         `git -C "<worktree-dir/>" ls-files --others --exclude-standard`
 

@@ -1,11 +1,11 @@
 ---
 name: ase-repo-review
-argument-hint: "[--help|-h] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--thorough|-t] [--working-copy|-w] [--branch|-b <branch>] [--commit|-c <commit>]"
+argument-hint: "[--help|-h] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--thorough|-t] [--staged] [--unstaged] [--branch|-b <branch>] [--commit|-c <commit>]"
 description: >
     Perform a holistic, human-reviewer-style critique of the currently
-    staged Git changes (or, with `--working-copy`, of all uncommitted
-    changes, with `--branch`, of a branch against its base, or, with
-    `--commit`, of a single commit) and emit an approve/reject verdict
+    staged Git changes (or, with `--unstaged`, of the unstaged and
+    untracked changes, with `--branch`, of a branch against its base,
+    or, with `--commit`, of a single commit) and emit an approve/reject verdict
     with prioritized, severity-tagged, line-cited findings. Use when the
     user wants the staged diff, a branch, or a commit "reviewed",
     "critiqued", or "code-reviewed".
@@ -36,12 +36,12 @@ Review Changes
 
 <expand name="getopt"
     arg1="ase-repo-review"
-    arg2="--severity|-S=(AUTO|LOW|MEDIUM|HIGH) --thorough|-t --working-copy|-w --branch|-b= --commit|-c=">
+    arg2="--severity|-S=(AUTO|LOW|MEDIUM|HIGH) --thorough|-t --staged --unstaged --branch|-b= --commit|-c=">
     $ARGUMENTS
 </expand>
 
 <objective>
-Review the currently staged (or all uncommitted) Git changes, the changes
+Review the currently staged (and/or unstaged) Git changes, the changes
 of a branch against its base, or a single commit the way an
 *experienced human reviewer* would - judging them *holistically* against
 the change's *own intent* and against *correctness*, *design fit*,
@@ -60,13 +60,20 @@ Procedure
 
 1.  <step id="STEP 1: Determine Change Set">
 
-    1.  <if condition="<getopt-option-commit/> is not empty and (<getopt-option-branch/> is not empty or <getopt-option-working-copy/> is equal `true`)">
+    1.  <if condition="<getopt-option-commit/> is not empty and (<getopt-option-branch/> is not empty or <getopt-option-staged/> is equal `true` or <getopt-option-unstaged/> is equal `true`)">
         Only output the following <template/> and then *STOP* immediately:
 
         <template>
-        ⧉ **ASE**: ✪ skill: **ase-repo-review**, ▶ ERROR: option `--commit` cannot be combined with `--branch` or `--working-copy`
+        ⧉ **ASE**: ✪ skill: **ase-repo-review**, ▶ ERROR: option `--commit` cannot be combined with `--branch`, `--staged`, or `--unstaged`
         </template>
         </if>
+
+        Set <changes/> to the *uncommitted* changes to review: to
+        `staged and unstaged` if both <getopt-option-staged/> and
+        <getopt-option-unstaged/> are equal `true`, to `staged` if only
+        <getopt-option-staged/> is equal `true`, to `unstaged` if only
+        <getopt-option-unstaged/> is equal `true`, and to empty otherwise.
+        Here, the `unstaged` changes always include the *untracked* files.
 
     2.  <if condition="<getopt-option-branch/> is not empty">
         Determine the *base* of the branch:
@@ -127,7 +134,7 @@ Procedure
         by the sub-agent in STEP 2, so capturing only the file-name list
         here is sufficient:
 
-        <if condition="<getopt-option-branch/> is not empty and <getopt-option-working-copy/> is equal `true`">
+        <if condition="<getopt-option-branch/> is not empty and <changes/> is not empty">
         Determine the *worktree* of the branch by running the command
         `git worktree list --porcelain` and setting <worktree-dir/> to the
         `worktree` path of the entry whose `branch` line is
@@ -137,13 +144,27 @@ Procedure
 
         If <worktree-dir/> is not empty, set <scope>branch
         <getopt-option-branch/> since base commit <base-commit/> plus the
-        uncommitted changes in worktree <worktree-dir/></scope> and run:
+        <changes/> changes in worktree <worktree-dir/></scope> and run:
 
-        `git -C "<worktree-dir/>" diff --name-only "<base-commit/>"`
+        -   If <changes/> is equal `staged and unstaged`:
 
-        `git -C "<worktree-dir/>" ls-files --others --exclude-standard`
+            `git -C "<worktree-dir/>" diff --name-only "<base-commit/>"`
 
-        From the output of the second command, *skip* every listed
+            `git -C "<worktree-dir/>" ls-files --others --exclude-standard`
+
+        -   If <changes/> is equal `staged`:
+
+            `git -C "<worktree-dir/>" diff --cached --name-only "<base-commit/>"`
+
+        -   If <changes/> is equal `unstaged`:
+
+            `git diff --name-only "<base-commit/>..<getopt-option-branch/>"`
+
+            `git -C "<worktree-dir/>" diff --name-only`
+
+            `git -C "<worktree-dir/>" ls-files --others --exclude-standard`
+
+        From the output of the `ls-files` command, *skip* every listed
         entry below the `.ase/` directory -- it carries *ASE*'s own
         state, and hence is never part of the user's change set.
 
@@ -163,10 +184,21 @@ Procedure
 
         `git show --format= --name-only --diff-merges=first-parent "<commit-id/>"`
         </elseif>
-        <elseif condition="<getopt-option-working-copy/> is equal `true`">
-        Set <scope>working copy</scope> and run:
+        <elseif condition="<changes/> is equal `staged and unstaged`">
+        Set <scope>staged and unstaged</scope> and run:
 
         `git diff --name-only HEAD`
+
+        `git ls-files --others --exclude-standard`
+
+        From the output of the second command, *skip* every listed
+        entry below the `.ase/` directory -- it carries *ASE*'s own
+        state, and hence is never part of the user's change set.
+        </elseif>
+        <elseif condition="<changes/> is equal `unstaged`">
+        Set <scope>unstaged</scope> and run:
+
+        `git diff --name-only`
 
         `git ls-files --others --exclude-standard`
 
@@ -353,8 +385,10 @@ Procedure
         </if>
 
         <if condition="<hidden/> is greater than `0`">
-        Set <rerun>/ase-repo-review -S LOW</rerun>, append ` -w` to
-        <rerun/> if <getopt-option-working-copy/> is equal `true`, append
+        Set <rerun>/ase-repo-review -S LOW</rerun>, append ` --staged`
+        to <rerun/> if <getopt-option-staged/> is equal `true`, append
+        ` --unstaged` to <rerun/> if <getopt-option-unstaged/> is equal
+        `true`, append
         ` -b <getopt-option-branch/>` to <rerun/> if
         <getopt-option-branch/> is not empty, append
         ` -c <getopt-option-commit/>` to <rerun/> if

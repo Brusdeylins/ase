@@ -89,18 +89,19 @@ The following ASE commands/skills exist on the meta-level:
   risk report with mitigations. With `--blast`, additionally render a
   blast-radius map of the touched modules and their reverse dependencies.
 
-- **/ase-repo-review** \[`--severity`|`-S` `AUTO`|`LOW`|`MEDIUM`|`HIGH`\] \[`--thorough`|`-t`\] \[`--working-copy`|`-w`\] \[`--branch`|`-b` *branch*\] \[`--commit`|`-c` *commit*\]:<br/>
+- **/ase-repo-review** \[`--severity`|`-S` `AUTO`|`LOW`|`MEDIUM`|`HIGH`\] \[`--thorough`|`-t`\] \[`--staged`\] \[`--unstaged`\] \[`--branch`|`-b` *branch*\] \[`--commit`|`-c` *commit*\]:<br/>
   Perform a holistic, human-reviewer-style critique of the currently
   staged Git changes and emit an approve/reject verdict with
   prioritized, severity-tagged, line-cited findings. `--severity` sets
   the minimum severity of findings to report (default `AUTO`: `MEDIUM`
   under `grey` boxing, else `LOW`), and the number of suppressed findings
   is always reported. With `--thorough`, report exhaustively, including
-  minor and plausible concerns. With `--working-copy`, review all
-  uncommitted changes (staged, unstaged, and untracked files). With
-  `--branch`, review the commits of a branch against its automatically
-  determined base branch (plus, with `--working-copy`, the uncommitted
-  changes of its worktree), and with `--commit`, review a single commit
+  minor and plausible concerns. With `--unstaged`, review the unstaged
+  changes and untracked files instead, and with both `--staged` and
+  `--unstaged`, review all uncommitted changes. With `--branch`, review
+  the commits of a branch against its automatically determined base
+  branch (plus, with `--staged` and/or `--unstaged`, the corresponding
+  uncommitted changes of its worktree), and with `--commit`, review a single commit
   against its first parent, both also checking the commit messages
   against the diff.
 
@@ -311,8 +312,9 @@ The following ASE commands/skills exist on the code-level:
   performance and efficiency; with `--security`, additionally analyze
   security. `--severity` sets the minimum severity of findings to
   report. With `--staged` resp. `--unstaged`, only the source files
-  with staged resp. unstaged (including untracked) Git changes are
-  analyzed, optionally restricted to *source-reference*. Usually, for each reported problem you want to resolve it with
+  with staged resp. unstaged (including untracked) Git changes (or,
+  with both, with any uncommitted Git changes) are analyzed, optionally
+  restricted to *source-reference*. Usually, for each reported problem you want to resolve it with
   **/ase-code-resolve** or directly fix it with **/ase-code-edit**.
 
 - **/ase-code-resolve** \[`--auto`|`-a`\] \[`--dry`|`-d`\] \[`--direct`|`-D`\] \[`--quick`|`-Q`\] \[`--next`|`-n` *option*\[,...\]\] \[*task-id*`:`\] *problem*:<br/>
@@ -353,8 +355,9 @@ The following ASE commands/skills exist on the code-level:
   alone keeps just the listed ones, `--exclude` alone keeps all others,
   and both together keep the included ones minus the excluded ones.
   With `--staged` resp. `--unstaged`, only the source files with staged
-  resp. unstaged (including untracked) Git changes are linted,
-  optionally restricted to *source-reference*.
+  resp. unstaged (including untracked) Git changes (or, with both, with
+  any uncommitted Git changes) are linted, optionally restricted to
+  *source-reference*.
 
 ### Documentation Commands
 

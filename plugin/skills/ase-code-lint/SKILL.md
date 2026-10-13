@@ -36,17 +36,6 @@ related to a set of code quality aspects.
 
 1.  <step id="STEP 1: Investigation">
 
-    <if condition="<getopt-option-staged/> is equal `true` and <getopt-option-unstaged/> is equal `true`">
-
-    Only output the following <template/> and then *STOP* the entire flow
-    (do not perform any further steps):
-
-    <template>
-    ⧉ **ASE**: ✪ skill: **ase-code-lint**, ▶ ERROR: options `--staged` and `--unstaged` are mutually exclusive
-    </template>
-
-    </if>
-
     <if condition="<ase-project-boxing/> is equal `black`">
 
     The project source artifacts are classified as a *black box*, so
@@ -100,24 +89,27 @@ related to a set of code quality aspects.
     <if condition="<getopt-option-staged/> is equal `true` or <getopt-option-unstaged/> is equal `true`">
 
     For this, first *silently* restrict the linting to the *changed*
-    files of the Git working copy. Set <changes>staged</changes> if
-    <getopt-option-staged/> is equal `true`, and set
-    <changes>unstaged</changes> otherwise. Determine the *repository
-    root* by running the command `git rev-parse --show-toplevel`
-    (taken exactly as given) and capturing its output into
-    <repo-root/>. Then determine the changed files by running the
+    files of the Git working copy. Set <changes>staged and
+    unstaged</changes> if both <getopt-option-staged/> and
+    <getopt-option-unstaged/> are equal `true`, set
+    <changes>staged</changes> if only <getopt-option-staged/> is equal
+    `true`, and set <changes>unstaged</changes> otherwise. Determine the
+    *repository root* by running the command `git rev-parse
+    --show-toplevel` (taken exactly as given) and capturing its output
+    into <repo-root/>. Then determine the changed files by running the
     corresponding commands (taken exactly as given), each listing one
     path relative to <repo-root/> per line, and collect all listed
-    paths:
+    paths, dropping duplicates:
 
     <if condition="<getopt-option-staged/> is equal `true`">
     `git -C "<repo-root/>" -c core.quotepath=off diff --cached --name-only --diff-filter=d`
     </if>
-    <else>
+
+    <if condition="<getopt-option-unstaged/> is equal `true`">
     `git -C "<repo-root/>" -c core.quotepath=off diff --name-only --diff-filter=d`
 
     `git -C "<repo-root/>" -c core.quotepath=off ls-files --others --exclude-standard`
-    </else>
+    </if>
 
     *Skip* every listed path below the `.ase/` directory (it carries
     *ASE*'s own state) and every path which is not a source code file
