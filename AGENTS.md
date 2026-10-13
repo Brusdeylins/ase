@@ -58,9 +58,10 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         for the statusline and output style settings), the parts of
         `ase config` (`config-scope` for the scope chain and directory
         resolution, `config-schema` for the schema, presets, and write
-        policies, `config-core` for the layered `Config` class), the MCP-only tool modules of the
+        policies, `config-core` for the layered `Config` class and the
+        internal session state), the MCP-only tool modules of the
         service (`service-kv`, `service-getopt`, `service-markdown`,
-        `service-skills`, `service-sleep`, `service-timestamp`),
+        `service-skills`, `service-sleep`, `service-state`, `service-timestamp`),
         the task board (`task-board` for
         the `ase task board` CLI command plus its `task-board-core`,
         `task-board-graph`, `task-board-filter`, `task-board-tui` (split into its

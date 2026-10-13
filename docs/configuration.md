@@ -281,10 +281,6 @@ The following configuration parameters control the agent:
     -    `normal`:  ...normal: the essential help hints only.
     -    `verbose`: ...verbose: all available help hints.
 
--   **agent.task**: the Agentic AI *task* unique id
-
--   **agent.skill**: the Agentic AI *skill* unique id of the currently active skill
-
 The following configuration parameters control the terminal and web
 user interfaces of the task board (`ase task board`), and are writable
 on the `user` and `project` scopes only:

@@ -15,8 +15,8 @@ import * as v                                             from "valibot"
 
 import type Log                                           from "./ase-lib-log.js"
 import Version                                            from "./ase-lib-version.js"
-import { Config }                                         from "./ase-config-core.js"
-import { configSchema, sessionStateSchema }               from "./ase-config-schema.js"
+import { Config, sessionState }                           from "./ase-config-core.js"
+import { configSchema }                                   from "./ase-config-schema.js"
 import { parseScope, userStateDir }                       from "./ase-config-scope.js"
 import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
 import { Task }                                           from "./ase-task.js"
@@ -382,25 +382,21 @@ export default class HookCommand {
             directory, long before this hook runs, so the server can only learn it from here  */
         const projectDir = this.determineProjectDir(input.cwd ?? process.cwd())
 
-        /*  determine task id (only persist when scoped to a real session)  */
-        const taskId = process.env.ASE_TASK_ID ?? "default"
-        if (hasSession)
-            cfg.lock(() => {
-                cfg.read()
-                cfg.set("agent.task", taskId)
-                cfg.write()
-            })
-        else
-            cfg.read()
+        cfg.read()
 
-        /*  persist the project directory into the internal session state
-            (GitHub Copilot CLI only, see above), normalizing the path separators,
-            as Git reports the top-level directory with forward slashes even on Windows  */
-        if (hasSession && tool === "copilot") {
-            const state = new Config("state", sessionStateSchema, this.log, parseScope(`session:${sessionId}`))
+        /*  determine task id and persist it, together with the project directory
+            (GitHub Copilot CLI only, see above), into the internal session state
+            (only when scoped to a real session), normalizing the path separators
+            of the project directory, as Git reports the top-level directory with
+            forward slashes even on Windows  */
+        const taskId = process.env.ASE_TASK_ID ?? "default"
+        if (hasSession) {
+            const state = sessionState(this.log, sessionId)
             state.lock(() => {
                 state.read()
-                state.set("basedir", path.resolve(projectDir))
+                state.set("task", taskId)
+                if (tool === "copilot")
+                    state.set("basedir", path.resolve(projectDir))
                 state.write()
             })
         }
@@ -620,16 +616,16 @@ export default class HookCommand {
         return this.pickSessionId(input)
     }
 
-    /*  read the session-scoped "agent.skill" config value  */
+    /*  read the "skill" value of the internal session state  */
     private readActiveSkill (sessionId: string): string {
         if (!this.isValidSessionId(sessionId))
             return ""
         try {
-            const cfg = new Config("config", configSchema, this.log, parseScope(`session:${sessionId}`))
+            const state = sessionState(this.log, sessionId)
             let val = ""
-            cfg.lock(() => {
-                cfg.read()
-                const skill = cfg.get("agent.skill")
+            state.lock(() => {
+                state.read()
+                const skill = state.get("skill")
                 if (typeof skill === "string")
                     val = skill
             })

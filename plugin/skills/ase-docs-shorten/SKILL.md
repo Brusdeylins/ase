@@ -215,8 +215,8 @@ than the user asked for.
     1.  *Mark this skill as the active edit-capable skill* so that the
         ASE `pre-tool-use` hook auto-approves the subsequent `Edit`
         invocations on *any* invocation path (slash command *or* `Skill`
-        tool). Call the `ase_config_set(key: "agent.skill", val:
-        "ase-docs-shorten", scope: "session:<ase-session-id/>")` tool
+        tool). Call the `ase_state_set(key: "skill", val:
+        "ase-docs-shorten", session: "<ase-session-id/>")` tool
         from the `ase` MCP server. Do not output anything in this substep.
 
         *Critical safety invariant*: the marker set here grants `Edit`
@@ -454,8 +454,8 @@ than the user asked for.
 
     3.  *Clear the active edit-capable skill marker* now that all `Edit`
         invocations are done, so a later unrelated `Edit` is *not*
-        auto-approved. Call the `ase_config_delete(key: "agent.skill",
-        scope: "session:<ase-session-id/>")` tool from the `ase` MCP
+        auto-approved. Call the `ase_state_delete(key: "skill",
+        session: "<ase-session-id/>")` tool from the `ase` MCP
         server. Do not output anything in this substep.
 
     </step>

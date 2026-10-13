@@ -15,7 +15,7 @@ import { Chalk }                                    from "chalk"
 import type { ForegroundColorName }                 from "chalk"
 
 import type Log                                     from "./ase-lib-log.js"
-import { Config }                                   from "./ase-config-core.js"
+import { Config, sessionState }                     from "./ase-config-core.js"
 import { configSchema }                             from "./ase-config-schema.js"
 import { parseScope, userStateDir, projectIdOf }    from "./ase-config-scope.js"
 import { readStdin, writeStdout }                   from "./ase-lib-stdio.js"
@@ -493,7 +493,7 @@ export default class StatuslineCommand {
                     post-loop tmux publish for the Config cascade)  */
                 const getSession = memoize((): string => data.session_id ?? "unknown")
                 const getCfg = memoize((): { taskId: string, persona: string, guidance: string, boxing: string, lifecycle: string } => {
-                    let taskId    = process.env.ASE_TASK_ID                ?? ""
+                    let taskId    = process.env.ASE_TASK_ID                ?? "default"
                     let persona   = process.env.ASE_PERSONA_STYLE          ?? ""
                     let guidance  = process.env.ASE_GUIDANCE_LEVEL         ?? ""
                     let boxing    = process.env.ASE_PROJECT_BOXING         ?? ""
@@ -504,7 +504,6 @@ export default class StatuslineCommand {
                         cfg.read("lenient")
                         const get = (key: string, fallback: string): string =>
                             String(cfg.get(key) ?? "").trim() || fallback
-                        taskId    = get("agent.task",             taskId)
                         persona   = get("agent.persona",          persona)
                         guidance  = get("agent.guidance",         guidance)
                         boxing    = get("project.boxing",         boxing)
@@ -512,6 +511,14 @@ export default class StatuslineCommand {
                     }
                     catch (_e) {
                         /*  cascade unavailable; keep env-var fallbacks  */
+                    }
+                    try {
+                        const state = sessionState(this.log, getSession())
+                        state.read("lenient")
+                        taskId = String(state.get("task") ?? "").trim() || taskId
+                    }
+                    catch (_e) {
+                        /*  session state unavailable; keep env-var fallback  */
                     }
                     return { taskId, persona, guidance, boxing, lifecycle }
                 })

@@ -62,8 +62,7 @@ The following top-level commands exist for configuration handling:
   `project.*` (project identity, classification, and artifact
   globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.default.{source,changeset,target}`, `project.task.store.url`, `project.task.store.token` (masked as `***` by `list`), `project.task.store.crt`, `project.task.store.key`, `project.relay.url`, `project.relay.token` (masked as `***` by `list`), `project.relay.crt`, `project.relay.key`, and the
   `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
-  (`agent.persona`, `agent.guidance`, `agent.task` -- the active
-  task identifier -- and `agent.skill`), and `board.*`
+  (`agent.persona` and `agent.guidance`), and `board.*`
   (`board.tui.color.{dim,normal,accent,signal}` -- the colors of
   the terminal task board, `board.web.color.{dim,normal,accent,signal}`
   -- the base colors of the web task board, and `board.web.editor.keymap`

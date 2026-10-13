@@ -198,7 +198,7 @@ export class ConfigMCP {
                 "returns an empty string if no value is set.",
             inputSchema: {
                 key: z.string()
-                    .describe("dotted configuration key (e.g. \"agent.skill\")"),
+                    .describe("dotted configuration key (e.g. \"agent.persona\")"),
                 scope: z.string()
                     .describe("scope chain (e.g. \"session:<id>\", \"task:<id>\", \"project\", \"user\")")
             }
@@ -225,7 +225,7 @@ export class ConfigMCP {
                 "the configuration schema before being persisted.",
             inputSchema: {
                 key: z.string()
-                    .describe("dotted configuration key (e.g. \"agent.skill\")"),
+                    .describe("dotted configuration key (e.g. \"agent.persona\")"),
                 val: z.union([ z.string(), z.number(), z.boolean(), z.null(), z.array(z.any()), z.record(z.string(), z.any()) ])
                     .describe("value to store under `key`"),
                 scope: z.string()
@@ -255,7 +255,7 @@ export class ConfigMCP {
                 "(the strongest scope term in the chain). No-op if the key is not present.",
             inputSchema: {
                 key: z.string()
-                    .describe("dotted configuration key (e.g. \"agent.skill\")"),
+                    .describe("dotted configuration key (e.g. \"agent.persona\")"),
                 scope: z.string()
                     .describe("scope chain (e.g. \"session:<id>\", \"task:<id>\", \"project\", \"user\")")
             }

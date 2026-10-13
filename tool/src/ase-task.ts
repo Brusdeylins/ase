@@ -17,7 +17,7 @@ import { LRUCache }                                       from "lru-cache"
 import type { McpServer }                                 from "@modelcontextprotocol/sdk/server/mcp.js"
 
 import type Log                                           from "./ase-lib-log.js"
-import { Config }                                         from "./ase-config-core.js"
+import { Config, sessionState }                           from "./ase-config-core.js"
 import { configSchema }                                   from "./ase-config-schema.js"
 import { parseScope, userStateDir, projectIdOf }          from "./ase-config-scope.js"
 import { Markdown }                                       from "./ase-service-markdown.js"
@@ -720,15 +720,14 @@ export class Task {
         return Task.with(log, (client) => client.purge(age))
     }
 
-    /*  get the active task id for a given session, or empty string if none  */
+    /*  get the active task id for a given session, or "default" if none  */
     static getId (log: Log, session: string): string {
         Task.validateSession(session)
-        const scope = parseScope(`session:${session}`)
-        const cfg = new Config("config", configSchema, log, scope)
-        cfg.read()
-        const val = cfg.get("agent.task")
+        const state = sessionState(log, session)
+        state.read()
+        const val = state.get("task")
         if (val === undefined)
-            return ""
+            return "default"
         return String(isScalar(val) ? val.value : val)
     }
 
@@ -738,12 +737,11 @@ export class Task {
     static async setId (log: Log, session: string, id: string): Promise<string> {
         Task.validateSession(session)
         Task.validateId(id)
-        const scope   = parseScope(`session:${session}`)
-        const cfg = new Config("config", configSchema, log, scope)
-        cfg.lock(() => {
-            cfg.read()
-            cfg.set("agent.task", id)
-            cfg.write()
+        const state = sessionState(log, session)
+        state.lock(() => {
+            state.read()
+            state.set("task", id)
+            state.write()
         })
         let idscheme: string
         try {
@@ -1524,7 +1522,7 @@ export class TaskMCP {
             try {
                 if (args.id !== undefined) {
                     const warning = await Task.setId(this.log, args.session, args.id)
-                    const msg = `OK: set agent.task to "${args.id}" ` +
+                    const msg = `OK: set active task id to "${args.id}" ` +
                         `for session "${args.session}"` + notice(warning)
                     return {
                         content: [ { type: "text", text: msg } ]

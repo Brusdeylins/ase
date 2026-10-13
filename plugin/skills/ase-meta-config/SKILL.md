@@ -5,7 +5,7 @@ description: >
     List, get, set, or delete the layered ASE configuration values across
     the user/project/task/session scope chain.
     Use when the user wants to "configure" ASE, or to inspect or change a
-    configuration key like `agent.persona`, `agent.guidance`, `agent.task`,
+    configuration key like `agent.persona`, `agent.guidance`,
     `project.boxing`, or `project.task.lifecycle`.
 user-invocable: true
 disable-model-invocation: false
@@ -53,8 +53,7 @@ Procedure
         <if condition="<getopt-option-scope/> is empty">
         Set <scope>session:<ase-session-id/></scope>. Reads then cascade
         `user` -> `project` -> `session`, and writes land on the *session*
-        layer -- the only layer on which the `agent.task` and `agent.skill`
-        keys are writable at all.
+        layer.
         </if>
         <else>
         Set <scope><getopt-option-scope/></scope>, forwarding the given

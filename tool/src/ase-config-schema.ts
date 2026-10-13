@@ -52,7 +52,6 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.boxing":  "white"
     },
     default: {
-        "agent.task":      "default",
         "agent.persona":   "engineer",
         "agent.guidance":  "normal",
         "project.name":    "Example Project",
@@ -93,8 +92,6 @@ export const projectClassificationPresets: Record<string, Record<string, string>
     (reads always cascade through the full chain; this restricts writes only);
     keys absent from this map default to all non-"default" scope kinds  */
 export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"]>> = {
-    "agent.task":                     [ "session" ],
-    "agent.skill":                    [ "session" ],
     "project.task.store.url":         [ "user", "project" ],
     "project.task.store.token":       [ "user" ],
     "project.task.store.crt":         [ "user", "project" ],
@@ -239,9 +236,7 @@ export const configSchema = v.nullish(v.strictObject({
     })),
     agent: v.optional(v.strictObject({
         persona:  v.optional(v.picklist(agentClassification.persona)),
-        guidance: v.optional(v.picklist(agentClassification.guidance)),
-        task:     v.optional(v.pipe(v.string(), v.minLength(1))),
-        skill:    v.optional(v.pipe(v.string(), v.minLength(1)))
+        guidance: v.optional(v.picklist(agentClassification.guidance))
     })),
     board: v.optional(v.strictObject({
         tui: v.optional(v.strictObject({
@@ -267,9 +262,12 @@ export const configSchema = v.nullish(v.strictObject({
 }))
 
 /*  schema for the session-scoped internal "state.yaml", carrying the machine-local
-    runtime state passed from the hooks to the MCP server, which is intentionally
-    not part of the user-facing configuration: "basedir" is the project directory,
-    recorded for GitHub Copilot CLI only  */
+    runtime state shared between the hooks, the MCP server, and the skills, which is
+    intentionally not part of the user-facing configuration: "basedir" is the project
+    directory (recorded for GitHub Copilot CLI only), "task" is the id of the active
+    task, and "skill" is the id of the active edit-capable skill  */
 export const sessionStateSchema = v.nullish(v.strictObject({
-    basedir: v.optional(v.pipe(v.string(), v.minLength(1)))
+    basedir: v.optional(v.pipe(v.string(), v.minLength(1))),
+    task:    v.optional(v.pipe(v.string(), v.minLength(1))),
+    skill:   v.optional(v.pipe(v.string(), v.minLength(1)))
 }))

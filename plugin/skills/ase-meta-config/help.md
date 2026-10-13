@@ -30,12 +30,11 @@ The recognized keys are grouped under `project.*` (`project.id`,
 `project.name`, `project.boxing`, `project.task.lifecycle`,
 `project.task.idscheme`, `project.task.default.{source,changeset,target}`,
 and the `project.artifact.`*kind*`.{basedir,files}`
-globs) and `agent.*` (`agent.persona`, `agent.guidance`, `agent.task`, and
-`agent.skill`).
+globs) and `agent.*` (`agent.persona` and `agent.guidance`).
 Some keys are writable on selected scopes only; in particular
-`agent.task` and `agent.skill` are writable on a `session` scope only,
-and the `project.artifact.*` globs are writable on the `user` and
-`project` scopes only.
+the `project.artifact.*` globs are writable on the `user` and
+`project` scopes only. The internal session state, like the active
+task id (see `ase-task-id`), is not part of the configuration.
 
 The three keys steering the behaviour of the agent itself accept fixed
 value sets: `agent.persona` selects the *communication style* and is one
@@ -97,8 +96,7 @@ preset-bootstrapping operation that stays a shell concern next to
     the strongest explicitly requested term. If the option is
     omitted, the chain of the *current session* (`session:`*id*) is used,
     so that reads see the full `user` -> `project` -> `session` cascade
-    and writes -- including those to the session-only keys `agent.task`
-    and `agent.skill` -- land on the session layer.
+    and writes land on the session layer.
 
 ##  ARGUMENTS
 

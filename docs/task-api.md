@@ -218,7 +218,7 @@ deliberately agnostic of them:
   `ase-task-edit` (which saves a not yet existing plan with `create`).
 
 - **Active task id**: the session-scoped active task id
-  (`ase_task_id`, `agent.task`) is kept in the client's configuration.
+  (`ase_task_id`) is kept in the internal session state of the client.
 
 CONVENTIONS
 -----------

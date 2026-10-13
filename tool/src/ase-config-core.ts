@@ -19,7 +19,8 @@ import {
     projectClassificationPresets,
     configWritableScopes,
     configWritableScopesDefault,
-    configSecretKeys
+    configSecretKeys,
+    sessionStateSchema
 }                                                   from "./ase-config-schema.js"
 
 /*  single layer inside the scope-inheritance stack  */
@@ -165,7 +166,7 @@ export class Config {
                     const empty = isMap(disk.contents) && disk.contents.items.length === 0
                     writeFileAtomic.sync(filename, empty ? "" : disk.toString({ indent: 4 }),
                         { encoding: "utf8", mode: this.fileMode(sc, disk) })
-                    this.log.write("info", `migrated obsolete "project.artifact.task" entries in ${filename}`)
+                    this.log.write("info", `migrated obsolete configuration entries in ${filename}`)
                 }
                 try {
                     if (this.locked === filename)
@@ -181,7 +182,7 @@ export class Config {
                     }
                 }
                 catch (err) {
-                    this.log.write("warning", `failed to migrate obsolete "project.artifact.task" entries in ${filename}: ` +
+                    this.log.write("warning", `failed to migrate obsolete configuration entries in ${filename}: ` +
                         (err instanceof Error ? err.message : String(err)))
                 }
             }
@@ -198,23 +199,33 @@ export class Config {
         }
     }
 
-    /*  migrate a configuration document in place from the obsolete (pre-1.1.0)
-        "project.artifact.task.{basedir,files}" variables: "basedir" becomes
+    /*  migrate a configuration document in place from obsolete variables: the
+        (pre-1.1.0) "project.artifact.task.{basedir,files}", where "basedir" becomes
         "project.task.store.url" (as "ase:<basedir>") unless the latter is already
-        set, "files" is dropped; returns whether the document was changed  */
+        set and "files" is dropped, and the (pre-1.1.0) "agent.{task,skill}", which
+        are dropped, as they moved into the internal session state;
+        returns whether the document was changed  */
     private migrate (doc: Document): boolean {
+        let changed = false
         const task = [ "project", "artifact", "task" ]
-        if (!isMap(doc.getIn(task)))
+        if (isMap(doc.getIn(task))) {
+            const basedir = doc.getIn([ ...task, "basedir" ])
+            const parent  = doc.getIn([ "project", "task" ])
+            const store   = doc.getIn([ "project", "task", "store" ])
+            if (typeof basedir === "string" && basedir !== ""
+                && (parent === undefined || isMap(parent)) && (store === undefined || isMap(store))
+                && !doc.hasIn([ "project", "task", "store", "url" ]))
+                doc.setIn([ "project", "task", "store", "url" ], `ase:${basedir}`)
+            doc.deleteIn(task)
+            changed = true
+        }
+        if (isMap(doc.getIn([ "agent" ])))
+            for (const key of [ "task", "skill" ])
+                if (doc.deleteIn([ "agent", key ]))
+                    changed = true
+        if (!changed)
             return false
-        const basedir = doc.getIn([ ...task, "basedir" ])
-        const parent  = doc.getIn([ "project", "task" ])
-        const store   = doc.getIn([ "project", "task", "store" ])
-        if (typeof basedir === "string" && basedir !== ""
-            && (parent === undefined || isMap(parent)) && (store === undefined || isMap(store))
-            && !doc.hasIn([ "project", "task", "store", "url" ]))
-            doc.setIn([ "project", "task", "store", "url" ], `ase:${basedir}`)
-        doc.deleteIn(task)
-        for (const p of [ [ "project", "artifact" ], [ "project" ] ]) {
+        for (const p of [ [ "project", "artifact" ], [ "project" ], [ "agent" ] ]) {
             const node = doc.getIn(p)
             if (isMap(node) && node.items.length === 0)
                 doc.deleteIn(p)
@@ -492,4 +503,12 @@ export class Config {
             throw err
         }
     }
+}
+
+/*  access the internal "state.yaml" of a session, which, unlike the
+    configuration, does not cascade through any weaker scope  */
+export const sessionState = (log: Log, sessionId: string): Config => {
+    if (!/^[A-Za-z0-9._-]+$/.test(sessionId))
+        throw new Error(`invalid session id "${sessionId}"`)
+    return new Config("state", sessionStateSchema, log, [ { kind: "session", id: sessionId } ])
 }

@@ -36,6 +36,7 @@ import { MarkdownMCP }                   from "./ase-service-markdown.js"
 import { ArtifactMCP }                   from "./ase-artifact.js"
 import { SpecMCP }                       from "./ase-spec.js"
 import { KVMCP }                         from "./ase-service-kv.js"
+import { StateMCP }                      from "./ase-service-state.js"
 import { TimestampMCP }                  from "./ase-service-timestamp.js"
 import { SleepMCP }                      from "./ase-service-sleep.js"
 import { GetoptMCP }                     from "./ase-service-getopt.js"
@@ -334,6 +335,7 @@ export default class ServiceCommand {
         new MintMCP().register(mcp)
         new MetricMCP().register(mcp)
         new ConfigMCP(log).register(mcp)
+        new StateMCP(log).register(mcp)
         return mcp
     }
 
