@@ -11,9 +11,14 @@ import { execa }              from "execa"
 
 import { StdioServerTransport }          from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
+import { InMemoryTransport }             from "@modelcontextprotocol/sdk/inMemory.js"
 import type { JSONRPCMessage }           from "@modelcontextprotocol/sdk/types.js"
 
 import type Log                 from "./ase-lib-log.js"
+import { Config }               from "./ase-config-core.js"
+import { configSchema }         from "./ase-config-schema.js"
+import { parseScope }           from "./ase-config-scope.js"
+import ServiceCommand           from "./ase-service.js"
 import { SERVICE_HOST as HOST, probe, isConnRefused, loadServiceContext } from "./ase-service.js"
 
 /*  CLI command "ase mcp"  */
@@ -53,6 +58,40 @@ export default class MCPCommand {
         return { projectId: ctx.projectId, port: ctx.port }
     }
 
+    /*  determine the GitHub Copilot CLI session id from the environment: unlike
+        the hook handlers, which receive it in their event payload, the bridge can
+        only learn it from the environment of its MCP server process, where GitHub
+        Copilot CLI (and only it) exports both COPILOT_PLUGIN_ROOT and the session id
+        in COPILOT_AGENT_SESSION_ID; an empty result (always the case under the
+        other tools) disables the project directory lookup  */
+    private sessionIdFromEnv (): string {
+        if ((process.env.COPILOT_PLUGIN_ROOT ?? "") === "")
+            return ""
+        const value = process.env.COPILOT_AGENT_SESSION_ID ?? ""
+        return /^[A-Za-z0-9._-]+$/.test(value) ? value : ""
+    }
+
+    /*  read the project directory which the session-start hook recorded for a
+        session; the session scope resolves below the home directory and hence
+        does not itself depend on the working directory to be correct already  */
+    private readSessionProjectDir (sessionId: string): string | null {
+        try {
+            /*  read without locking: this is polled until the session-start
+                hook has recorded the directory, and locking would both create
+                the session files prematurely and contend with that very hook --
+                writers use atomic replacement, so a plain read can never
+                observe a partial file  */
+            const cfg = new Config("config", configSchema, this.log, parseScope(`session:${sessionId}`))
+            cfg.read()
+            const value = cfg.getExplicit("project.basedir")
+            return typeof value === "string" && value !== "" ? value : null
+        }
+        catch (_e) {
+            /*  best-effort: an unreadable session config just defers the lookup  */
+            return null
+        }
+    }
+
     /*  coerce an unknown thrown value into an Error  */
     private asError (e: unknown): Error {
         return e instanceof Error ? e : new Error(String(e))
@@ -60,8 +99,23 @@ export default class MCPCommand {
 
     /*  bridge stdio to a Streamable HTTP MCP endpoint on the local service  */
     private async runBridge (): Promise<void> {
-        /*  ensure the service is running  */
-        let { projectId, port } = await this.ensureService()
+        /*  determine whether the service has to be deferred: GitHub Copilot CLI
+            starts the MCP server in the plugin installation directory and reveals
+            the project only to its hooks, so the service of the project can be
+            started only once the session-start hook recorded the project directory
+            (GitHub Copilot CLI only -- the other tools already start the bridge
+            inside the project, so their service is started right away)  */
+        const sessionId = this.sessionIdFromEnv()
+        const deferred  = sessionId !== ""
+
+        /*  ensure the service is running (unless deferred)  */
+        let projectId = ""
+        let port: number | null = null
+        if (!deferred) {
+            const ctx = await this.ensureService()
+            projectId = ctx.projectId
+            port      = ctx.port
+        }
 
         /*  create MCP STDIO server (lives for the entire bridge lifetime)  */
         const server = new StdioServerTransport()
@@ -95,6 +149,8 @@ export default class MCPCommand {
 
         /*  (re-)connect the HTTP client to the service  */
         const connectClient = async () => {
+            if (port === null)
+                throw new Error("mcp: no service port known")
             const url    = new URL(`http://${HOST}:${port}/mcp`)
             const next   = new StreamableHTTPClientTransport(url)
 
@@ -191,8 +247,95 @@ export default class MCPCommand {
             })
         }
 
+        /*  while deferred, answer all messages in-process through the same MCP
+            server the service would use -- this covers the MCP handshake and
+            the tool listing, which GitHub Copilot CLI insists on before it even
+            runs the session-start hook -- except the tool calls, which are held
+            back in the pending buffer until the service is connected  */
+        let local: InMemoryTransport | null = null
+        if (deferred) {
+            const [ localClient, localServer ] = InMemoryTransport.createLinkedPair()
+            await ServiceCommand.buildMcpServer(this.log, { projectId: "", port: 0 }, Date.now()).connect(localServer)
+            localClient.onmessage = (msg: JSONRPCMessage) => {
+                server.send(msg).catch((err: unknown) => {
+                    this.log.write("error", `mcp: stdout send: ${this.asError(err).message}`)
+                })
+            }
+            await localClient.start()
+            local = localClient
+        }
+
+        /*  stop deferring: switch into the recorded project directory (if any),
+            so the service is looked up -- and if needed started -- inside the
+            project, then connect to it and flush the held tool calls  */
+        const POLL_INTERVAL_MS = 250
+        const FALLBACK_MS      = 30_000
+        let pollTimer:     ReturnType<typeof setInterval> | null = null
+        let fallbackTimer: ReturnType<typeof setTimeout>  | null = null
+        const undefer = (dir: string | null) => {
+            if (local === null)
+                return
+            local.close().catch(() => {})
+            local = null
+            if (pollTimer !== null)
+                clearInterval(pollTimer)
+            if (fallbackTimer !== null)
+                clearTimeout(fallbackTimer)
+            if (dir === null)
+                this.log.write("warning", "mcp: no project directory recorded by session-start hook " +
+                    `-- falling back to the current directory "${process.cwd()}"`)
+            else {
+                try {
+                    process.chdir(dir)
+                }
+                catch (err: unknown) {
+                    this.log.write("warning", `mcp: cannot switch to recorded project directory "${dir}": ` +
+                        `${this.asError(err).message} -- falling back to the current directory`)
+                }
+            }
+            server.onmessage = sendToClient
+            const run = async () => {
+                const ctx = await this.ensureService()
+                port      = ctx.port
+                projectId = ctx.projectId
+                await connectClient()
+                this.log.write("info", `mcp: connected to service of project "${projectId}" on port ${port}`)
+            }
+            run().catch((err: unknown) => {
+                triggerReconnect(`deferred connect failed: ${this.asError(err).message}`)
+            })
+        }
+
+        /*  look for the recorded project directory  */
+        const checkProjectDir = () => {
+            const dir = this.readSessionProjectDir(sessionId)
+            if (dir !== null)
+                undefer(dir)
+        }
+
         /*  wire stdio server  */
-        server.onmessage = sendToClient
+        if (!deferred)
+            server.onmessage = sendToClient
+        else
+            server.onmessage = (msg: JSONRPCMessage) => {
+                if (local === null)
+                    sendToClient(msg)
+                else if ("method" in msg && msg.method === "tools/call") {
+                    /*  hold back tool calls, and in case the session-start hook
+                        never records a project directory, do not hold them back
+                        forever (measured from the first held call and not from
+                        the start, as an interactive session can idle arbitrarily
+                        long before the hook runs with its first prompt)  */
+                    sendToClient(msg)
+                    if (fallbackTimer === null)
+                        fallbackTimer = setTimeout(() => { undefer(null) }, FALLBACK_MS)
+                    checkProjectDir()
+                }
+                else
+                    local.send(msg).catch((err: unknown) => {
+                        this.log.write("error", `mcp: local send: ${this.asError(err).message}`)
+                    })
+            }
         server.onerror = (err: Error) => {
             this.log.write("error", `mcp: stdio: ${err.message}`)
         }
@@ -200,20 +343,26 @@ export default class MCPCommand {
             shutdown().catch(() => {})
         }
 
-        /*  start server and initial client  */
+        /*  start server and initial client (or the polling for the recorded project directory)  */
         await server.start()
-        try {
-            await connectClient()
+        if (!deferred) {
+            try {
+                await connectClient()
+            }
+            catch (err: unknown) {
+                /*  service vanished between probe and connect — recover instead of crashing  */
+                triggerReconnect(`initial connect failed: ${this.asError(err).message}`)
+            }
         }
-        catch (err: unknown) {
-            /*  service vanished between probe and connect — recover instead of crashing  */
-            triggerReconnect(`initial connect failed: ${this.asError(err).message}`)
+        else {
+            pollTimer = setInterval(checkProjectDir, POLL_INTERVAL_MS)
+            pollTimer.unref()
         }
 
         /*  periodically probe the service; trigger reconnect if it is gone  */
         const HEALTH_INTERVAL_MS = 30_000
         const healthTimer = setInterval(async () => {
-            if (bridgeDone || reconnecting)
+            if (bridgeDone || reconnecting || port === null)
                 return
             try {
                 const match = await probe(port, projectId)

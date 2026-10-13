@@ -313,16 +313,18 @@ export default class ServiceCommand {
         return loadServiceContext(this.log)
     }
 
-    /*  build a fresh MCP server instance with all registered tools  */
-    private buildMcpServer (ctx: Context & { port: number }, startTime: number): McpServer {
+    /*  build a fresh MCP server instance with all registered tools
+        (also used by the "ase mcp" bridge for answering the MCP handshake
+        and tool listing in-process before the service is started)  */
+    static buildMcpServer (log: Log, ctx: { projectId: string, port: number }, startTime: number): McpServer {
         const mcp = new McpServer({ name: "ase", version: pkg.version })
         new ServiceMCP({ projectId: ctx.projectId, port: ctx.port, startTime }).register(mcp)
         new CompatMCP().register(mcp)
         new DiagramMCP().register(mcp)
-        new TaskMCP(this.log).register(mcp)
+        new TaskMCP(log).register(mcp)
         new MarkdownMCP().register(mcp)
-        new ArtifactMCP(this.log).register(mcp)
-        new SpecMCP(this.log).register(mcp)
+        new ArtifactMCP(log).register(mcp)
+        new SpecMCP(log).register(mcp)
         new KVMCP().register(mcp)
         new TimestampMCP().register(mcp)
         new SleepMCP().register(mcp)
@@ -331,7 +333,7 @@ export default class ServiceCommand {
         new WorktreeMCP().register(mcp)
         new MintMCP().register(mcp)
         new MetricMCP().register(mcp)
-        new ConfigMCP(this.log).register(mcp)
+        new ConfigMCP(log).register(mcp)
         return mcp
     }
 
@@ -427,7 +429,7 @@ export default class ServiceCommand {
             const level = bMethod === "tools/call" ? "info" : "debug"
             this.log.write(level, `mcp: ${request.method.toUpperCase()} ${request.path}${bodyInfo}`)
             const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-            const mcp       = this.buildMcpServer(ctx, startTime)
+            const mcp       = ServiceCommand.buildMcpServer(this.log, ctx, startTime)
             request.raw.res.on("close", () => {
                 /*  "h.abandon" (see below) bypasses "onPreResponse",
                     so undo the "onRequest" accounting here instead  */

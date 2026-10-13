@@ -5,6 +5,17 @@ ChangeLog
 1.1.0 (2026-09-XX)
 ------------------
 
+-   BUGFIX [tool]: Project directory of GitHub Copilot CLI sessions
+    GitHub Copilot CLI runs the hooks and starts the MCP server in the plugin installation
+    directory instead of the project, so every working-directory-relative lookup missed the
+    project. The session-start hook now adopts the `cwd` of its event payload and records the
+    resolved project directory in the new session-scoped configuration key `project.basedir`.
+    The MCP bridge, recognizing GitHub Copilot CLI by its `COPILOT_PLUGIN_ROOT` and
+    `COPILOT_AGENT_SESSION_ID` environment variables, defers the service until this key shows
+    up: meanwhile, it answers the MCP handshake and tool listing in-process and holds back the
+    tool calls, and only then starts or connects the service inside the project. All this
+    happens for GitHub Copilot CLI only.
+
 -   FEATURE [plugin,tool]: Change Set Snapshot Attachment
     The `ase-task-implement` and `ase-task-integrate` skills now maintain a change set snapshot for
     `worktree` and `branch:` changesets: a view-only, text-only unified diff of the change set in
