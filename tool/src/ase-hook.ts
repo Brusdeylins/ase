@@ -16,7 +16,7 @@ import * as v                                             from "valibot"
 import type Log                                           from "./ase-lib-log.js"
 import Version                                            from "./ase-lib-version.js"
 import { Config }                                         from "./ase-config-core.js"
-import { configSchema }                                   from "./ase-config-schema.js"
+import { configSchema, sessionStateSchema }               from "./ase-config-schema.js"
 import { parseScope, userStateDir }                       from "./ase-config-scope.js"
 import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
 import { Task }                                           from "./ase-task.js"
@@ -388,14 +388,22 @@ export default class HookCommand {
             cfg.lock(() => {
                 cfg.read()
                 cfg.set("agent.task", taskId)
-                /*  normalize the path separators, as Git reports the top-level
-                    directory with forward slashes even on Windows  */
-                if (tool === "copilot")
-                    cfg.set("project.basedir", path.resolve(projectDir))
                 cfg.write()
             })
         else
             cfg.read()
+
+        /*  persist the project directory into the internal session state
+            (GitHub Copilot CLI only, see above), normalizing the path separators,
+            as Git reports the top-level directory with forward slashes even on Windows  */
+        if (hasSession && tool === "copilot") {
+            const state = new Config("state", sessionStateSchema, this.log, parseScope(`session:${sessionId}`))
+            state.lock(() => {
+                state.read()
+                state.set("basedir", path.resolve(projectDir))
+                state.write()
+            })
+        }
 
         /*  initialize agent activity status  */
         this.writeAgentStatus("ready")

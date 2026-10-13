@@ -16,7 +16,7 @@ import type { JSONRPCMessage }           from "@modelcontextprotocol/sdk/types.j
 
 import type Log                 from "./ase-lib-log.js"
 import { Config }               from "./ase-config-core.js"
-import { configSchema }         from "./ase-config-schema.js"
+import { sessionStateSchema }   from "./ase-config-schema.js"
 import { parseScope }           from "./ase-config-scope.js"
 import ServiceCommand           from "./ase-service.js"
 import { SERVICE_HOST as HOST, probe, isConnRefused, loadServiceContext } from "./ase-service.js"
@@ -81,9 +81,9 @@ export default class MCPCommand {
                 the session files prematurely and contend with that very hook --
                 writers use atomic replacement, so a plain read can never
                 observe a partial file  */
-            const cfg = new Config("config", configSchema, this.log, parseScope(`session:${sessionId}`))
-            cfg.read()
-            const value = cfg.getExplicit("project.basedir")
+            const state = new Config("state", sessionStateSchema, this.log, parseScope(`session:${sessionId}`))
+            state.read()
+            const value = state.getExplicit("basedir")
             return typeof value === "string" && value !== "" ? value : null
         }
         catch (_e) {
