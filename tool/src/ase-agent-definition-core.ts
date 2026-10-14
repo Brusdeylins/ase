@@ -115,6 +115,7 @@ export const definitionOptions: DefinitionOption[] = [
     opt("lifecycle",         "list",  "model",         "supported task lifecycle model (repeatable) " +
         "(default: every model containing all given states)"),
     opt("serial",            "flag",  "",              "process the tasks serially only (ignoring \"--parallel\")"),
+    opt("params",            "list",  "name=value",    "value of a parameter declared by the definition (repeatable)"),
     opt("state-incoming",    "value", "state",         "state of the tasks to claim (mandatory for \"phase\")"),
     opt("state-activity",    "value", "state",         "state of a task during its processing (default: incoming)"),
     opt("state-success",     "value", "state",         "target state on success (default: incoming)"),
@@ -177,24 +178,34 @@ type TemplateNode = { text: string } | { name: string } | { cond: string, equals
 /*  a parsed template: its nodes and the names of all its placeholders  */
 export type Template = { nodes: TemplateNode[], names: Set<string> }
 
-/*  the placeholders of the templates (besides "key:<Header>")  */
+/*  the placeholders of the templates (besides "key:<Header>" and "param:<name>")  */
 const placeholders = [
     "id", "title", "prompt", "source", "changeset", "target",
     "source-type", "source-name", "changeset-type", "changeset-name", "target-type", "target-name",
     "workdir", "source-dir", "changeset-worktree"
 ]
 
+/*  the name of a parameter, and the name of the environment variable carrying its value  */
+const paramNameRe = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/
+export const paramEnv = (name: string): string =>
+    `ASE_AGENT_PARAM_${name.toUpperCase().replace(/-/g, "_")}`
+
 /*  parse a template of the option <option>: placeholders "{<name>}" (where "{prompt}" is
-    known for "request" only), conditionals "{?<name>:<text>}" and "{?<name>=<value>:<text>}"
-    (with placeholders, but without nested conditionals in <text>), and "{{" and "}}" for
-    literal braces, keeping all other text verbatim  */
-export const parseTemplate = (spec: string, option: string, type: DefinitionType): Template => {
+    known for "request" only, and "{param:<name>}" for the declared parameters <params> only),
+    conditionals "{?<name>:<text>}" and "{?<name>=<value>:<text>}" (with placeholders, but
+    without nested conditionals in <text>), and "{{" and "}}" for literal braces, keeping
+    all other text verbatim  */
+export const parseTemplate = (spec: string, option: string, type: DefinitionType, params: string[]): Template => {
     const fail = (msg: string): never => {
         throw new Error(`agent: option "--${option}": ${msg}`)
     }
     const names = new Set<string>()
     const known = (name: string): string => {
-        if (!/^key:[A-Za-z][A-Za-z0-9-]*$/.test(name) && !(placeholders.includes(name) && (name !== "prompt" || type === "request")))
+        if (name.startsWith("param:")) {
+            if (!params.includes(name.slice(6)))
+                fail(`unknown placeholder "${name}" (no declared parameter "${name.slice(6)}")`)
+        }
+        else if (!/^key:[A-Za-z][A-Za-z0-9-]*$/.test(name) && !(placeholders.includes(name) && (name !== "prompt" || type === "request")))
             fail(`unknown placeholder "${name}"` + (name === "prompt" ? " (known for \"--type request\" only)" : ""))
         names.add(name)
         return name
@@ -225,7 +236,7 @@ export const parseTemplate = (spec: string, option: string, type: DefinitionType
             else if (spec.startsWith("{?", i)) {
                 if (open >= 0)
                     fail(`nested conditional at position ${i + 1}`)
-                const m = /^\{\?(key:[A-Za-z][A-Za-z0-9-]*|[a-z][a-z-]*)(?:=([^:}]*))?:/.exec(spec.slice(i))
+                const m = /^\{\?(key:[A-Za-z][A-Za-z0-9-]*|param:[A-Za-z][A-Za-z0-9_-]*|[a-z][a-z-]*)(?:=([^:}]*))?:/.exec(spec.slice(i))
                 if (m === null)
                     fail(`invalid conditional at position ${i + 1} (expected "{?<name>:<text>}" or "{?<name>=<value>:<text>}")`)
                 const cond = known(m![1])
@@ -235,7 +246,7 @@ export const parseTemplate = (spec: string, option: string, type: DefinitionType
                 nodes.push({ cond, equals: m![2] ?? null, body: parse(at) })
             }
             else if (spec[i] === "{") {
-                const m = /^\{(key:[A-Za-z][A-Za-z0-9-]*|[a-z][a-z-]*)\}/.exec(spec.slice(i))
+                const m = /^\{(key:[A-Za-z][A-Za-z0-9-]*|param:[A-Za-z][A-Za-z0-9_-]*|[a-z][a-z-]*)\}/.exec(spec.slice(i))
                 if (m === null)
                     fail(`invalid placeholder at position ${i + 1} (use "{{" for a literal brace)`)
                 flush()
@@ -296,11 +307,13 @@ export type ResolvedDefinition = {
     verdict: { label: string, allow: string[] }
     attach:  { log: string, output: string, expect: AttachSpec | null, skip: AttachSpec | null }
     finish:  { commit: boolean, success: string, failure: string }
+    params:  Record<string, string>
     hooks:   AgentHooks
 }
 
 /*  flatten the nested option groups of a definition (e.g. "state: { incoming: PLANNED }"
-    into "state-incoming: PLANNED"), where <where> names the definition in errors  */
+    into "state-incoming: PLANNED"), where the map "params" is kept as-is, and where
+    <where> names the definition in errors  */
 export const flattenDefinition = (data: Record<string, unknown>, where: string): Record<string, unknown> => {
     const flat: Record<string, unknown> = {}
     const set = (key: string, value: unknown) => {
@@ -309,7 +322,7 @@ export const flattenDefinition = (data: Record<string, unknown>, where: string):
         flat[key] = value
     }
     for (const [ key, value ] of Object.entries(data)) {
-        if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+        if (key !== "params" && value !== null && typeof value === "object" && !Array.isArray(value)) {
             if (!definitionGroups.includes(key))
                 throw new Error(`${where}: option "${key}" is no option group (expected one of ` +
                     `${definitionGroups.map((group) => `"${group}"`).join(", ")})`)
@@ -325,21 +338,75 @@ export const flattenDefinition = (data: Record<string, unknown>, where: string):
 /*  the names of the hooks of a definition (see "AgentHooks")  */
 const hookNames = [ "start", "order", "passes", "ready", "prepare", "prompt", "verdict", "success", "settle", "finish", "stop" ]
 
+/*  a normalized parameter declaration of a definition (see "AgentParam"),
+    with only the fields given by the definition (to extend those of its base)  */
+type ParamDecl = { desc?: string, default?: string, required?: boolean, allow?: string[] }
+
 /*  a loaded definition: its flattened and normalized option values (by long option name,
-    where a false flag only unsets the flag of its base definition), its hooks, and the
-    specification of its base definition (if any)  */
-type LoadedDefinition = { values: Record<string, string | string[] | boolean>, hooks: AgentHooks, base?: string }
+    where a false flag only unsets the flag of its base definition), its parameter
+    declarations, its hooks, and the specification of its base definition (if any)  */
+type LoadedDefinition = {
+    values: Record<string, string | string[] | boolean>
+    params: Record<string, ParamDecl>
+    hooks:  AgentHooks
+    base?:  string
+}
+
+/*  normalize the parameter declarations <spec> of a definition (see "AgentParam"),
+    where <where> names the definition in errors  */
+const definitionParams = (spec: unknown, where: string): Record<string, ParamDecl> => {
+    const params: Record<string, ParamDecl> = {}
+    if (spec === undefined || spec === null)
+        return params
+    if (typeof spec !== "object" || Array.isArray(spec))
+        throw new Error(`${where}: invalid parameters (expected an object of parameter declarations)`)
+    const scalar = (val: unknown): val is string | number | boolean =>
+        typeof val === "string" || typeof val === "number" || typeof val === "boolean"
+    for (const [ name, decl ] of Object.entries(spec)) {
+        const fail = (msg: string): never => {
+            throw new Error(`${where}: parameter "${name}": ${msg}`)
+        }
+        if (!paramNameRe.test(name))
+            fail("invalid name (expected up to 64 letters, digits, underscores, and dashes, starting with a letter)")
+        if (scalar(decl)) {
+            params[name] = { default: String(decl) }
+            continue
+        }
+        if (decl === null || typeof decl !== "object" || Array.isArray(decl))
+            fail("invalid declaration (expected its default value or an object of \"desc\", \"default\", \"required\", and \"allow\")")
+        const param: ParamDecl = {}
+        for (const [ key, val ] of Object.entries(decl as Record<string, unknown>)) {
+            if (val === undefined || val === null)
+                continue
+            else if (key === "desc" && typeof val === "string")
+                param.desc = val
+            else if (key === "default" && scalar(val))
+                param.default = String(val)
+            else if (key === "required" && typeof val === "boolean")
+                param.required = val
+            else if (key === "allow" && (Array.isArray(val) ? val : [ val ]).every((item) => scalar(item)))
+                param.allow = (Array.isArray(val) ? val : [ val ]).map((item) => String(item))
+            else if ([ "desc", "default", "required", "allow" ].includes(key))
+                fail(`invalid value of "${key}"`)
+            else
+                fail(`unknown field "${key}" (expected "desc", "default", "required", or "allow")`)
+        }
+        params[name] = param
+    }
+    return params
+}
 
 /*  normalize the (parsed or imported) data of a definition into its flattened option values,
-    its hooks, and its base definition, where <where> names the definition in errors, and a
-    relative "prompt-file" and a relative base definition file are resolved against the
-    directory <dir> (if given)  */
+    its parameter declarations, its hooks, and its base definition, where <where> names the
+    definition in errors, and a relative "prompt-file" and a relative base definition file
+    are resolved against the directory <dir> (if given)  */
 const definitionValues = (data: unknown, where: string, dir: string): LoadedDefinition => {
     if (data === null || typeof data !== "object" || Array.isArray(data))
         throw new Error(`${where} carries no options`)
-    const { hooks: spec, definition: base, ...options } = data as Record<string, unknown>
+    const { hooks: spec, definition: base, params: decls, ...options } = data as Record<string, unknown>
     if (base !== undefined && base !== null && (typeof base !== "string" || base === ""))
         throw new Error(`${where}: invalid base definition (expected a file or "builtin:<kind>[-<mode>]")`)
+    const params = definitionParams(decls, where)
     const hooks: AgentHooks = {}
     if (spec !== undefined && spec !== null) {
         if (typeof spec !== "object" || Array.isArray(spec))
@@ -379,8 +446,8 @@ const definitionValues = (data: unknown, where: string, dir: string): LoadedDefi
     if (typeof values["prompt-file"] === "string" && dir !== "")
         values["prompt-file"] = path.resolve(dir, values["prompt-file"])
     if (typeof base !== "string")
-        return { values, hooks }
-    return { values, hooks, base: base.startsWith("builtin:") || dir === "" ? base : path.resolve(dir, base) }
+        return { values, params, hooks }
+    return { values, params, hooks, base: base.startsWith("builtin:") || dir === "" ? base : path.resolve(dir, base) }
 }
 
 /*  the mutually exclusive alternatives of the options, which a given option replaces in the
@@ -409,8 +476,9 @@ const overlayValues = <T> (lower: Record<string, T>, upper: Record<string, T>): 
     definition or a (possibly asynchronous) function returning it, where a definition
     with a base definition (its key "definition") extends the latter: its options override
     those of the base definition (also replacing their mutually exclusive alternatives,
-    and with a false flag unsetting the flag of the base definition), and its hooks
-    replace those of the same name of the base definition, while <chain> carries the
+    and with a false flag unsetting the flag of the base definition), its parameter
+    declarations extend those of the same name of the base definition field-wise, and its
+    hooks replace those of the same name of the base definition, while <chain> carries the
     already loading definitions of a chain of base definitions (to detect a cycle)  */
 const loadDefinition = async (spec: string, chain: string[] = []): Promise<LoadedDefinition> => {
     let loaded: LoadedDefinition
@@ -435,8 +503,12 @@ const loadDefinition = async (spec: string, chain: string[] = []): Promise<Loade
             throw new Error(`agent: option "--definition": definition "${id}": cyclic base definitions ` +
                 `(${[ ...chain.slice(chain.indexOf(id)), id ].map((def) => `"${def}"`).join(" > ")})`)
         const base = await loadDefinition(loaded.base, [ ...chain, id ])
+        const params = { ...base.params }
+        for (const [ name, param ] of Object.entries(loaded.params))
+            params[name] = { ...params[name], ...param }
         loaded = {
             values: overlayValues(base.values, loaded.values),
+            params,
             hooks:  { ...base.hooks, ...loaded.hooks }
         }
     }
@@ -482,7 +554,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         if (value !== undefined && value !== false)
             given[option.key] = value as string | string[] | boolean
     }
-    const loaded = typeof given.definition === "string" ? await loadDefinition(given.definition) : { values: {}, hooks: {} }
+    const loaded = typeof given.definition === "string" ? await loadDefinition(given.definition) : { values: {}, params: {}, hooks: {} }
     const values = overlayValues(loaded.values, given)
     const str    = (key: string, def = ""): string => typeof values[key] === "string" ? values[key] as string : def
     const list   = (key: string): string[] => Array.isArray(values[key]) ? values[key] as string[] : []
@@ -622,6 +694,37 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     }
     const handover = type === "phase" ? "none" : "previous"
 
+    /*  the parameters: their given values (where a later value of the same name wins), else
+        their default values, else empty, validated against their declarations  */
+    const decls  = loaded.params
+    const params: Record<string, string> = {}
+    const envs   = new Map<string, string>()
+    for (const [ name, decl ] of Object.entries(decls)) {
+        const other = envs.get(paramEnv(name))
+        if (other !== undefined)
+            fail("definition", `parameters "${other}" and "${name}" clash in their environment variable "${paramEnv(name)}"`)
+        envs.set(paramEnv(name), name)
+        params[name] = decl.default ?? ""
+    }
+    const declared = Object.keys(decls).map((name) => `"${name}"`).join(", ")
+    for (const spec of list("params")) {
+        const m = /^([^=]+)=(.*)$/s.exec(spec)
+        if (m === null)
+            fail("params", `invalid value "${spec}" (expected "<name>=<value>")`)
+        else if (!Object.hasOwn(decls, m[1]))
+            fail("params", `unknown parameter "${m[1]}" ` +
+                (declared !== "" ? `(expected ${declared})` : "(the definition declares no parameters)"))
+        params[m![1]] = m![2]
+    }
+    for (const [ name, decl ] of Object.entries(decls)) {
+        const value = params[name]
+        if (decl.required === true && value === "")
+            fail("params", `parameter "${name}" is required` + (decl.desc !== undefined ? ` (${decl.desc})` : ""))
+        else if (decl.allow !== undefined && value !== "" && !decl.allow.includes(value))
+            fail("params", `invalid value "${value}" of parameter "${name}" ` +
+                `(expected ${decl.allow.map((val) => `"${val}"`).join(", ")})`)
+    }
+
     /*  the prompt  */
     const prompts = [ "prompt-skill", "prompt-text", "prompt-file" ].filter((key) => has(key))
     if (prompts.length !== 1)
@@ -633,9 +736,9 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         fail("prompt-skill", `invalid skill name "${skill}"`)
     let template: Template
     if (has("prompt-skill"))
-        template = parseTemplate(str("prompt-args", type === "phase" ? "{id}" : "{id}: {prompt}"), "prompt-args", type)
+        template = parseTemplate(str("prompt-args", type === "phase" ? "{id}" : "{id}: {prompt}"), "prompt-args", type, Object.keys(decls))
     else if (has("prompt-text"))
-        template = parseTemplate(str("prompt-text"), "prompt-text", type)
+        template = parseTemplate(str("prompt-text"), "prompt-text", type, Object.keys(decls))
     else {
         let text = ""
         try {
@@ -644,7 +747,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         catch (err: unknown) {
             fail("prompt-file", `cannot read prompt file: ${err instanceof Error ? err.message : String(err)}`)
         }
-        template = parseTemplate(text, "prompt-file", type)
+        template = parseTemplate(text, "prompt-file", type, Object.keys(decls))
     }
 
     /*  the success criteria and the verdict  */
@@ -723,6 +826,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         verdict: { label: str("verdict-label"), allow },
         attach:  { log: attachLog, output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip") },
         finish:  { commit: flag("finish-commit"), success: str("finish-success"), failure: str("finish-failure") },
+        params,
         hooks:   loaded.hooks
     }
 }

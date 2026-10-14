@@ -141,6 +141,9 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--serial`\]: Process the tasks serially only, ignoring
       `--parallel`. Built-in: not set.
 
+    - \[`--params` *name*`=`*value*\]: The value of a parameter
+      declared by the definition (repeatable). Built-in: none declared.
+
     - \[`--state-incoming` *state*\]: The state of the tasks to claim
       (mandatory for `phase`). Built-in: `DRAFTED`.
 

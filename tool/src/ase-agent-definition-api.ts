@@ -20,14 +20,28 @@ export type AgentType      = "phase" | "request"
 export type AgentWorkdir   = "project" | "source" | "changeset" | "changeset-read" | "target"
 export type AgentCriterion = "exit" | "clean" | "changed" | "verdict" | "attachment" | "status"
 
+/*  the declaration of a parameter of an agent, whose value is given by the repeatable option
+    "--params <name>=<value>" of "ase agent <kind> start" (resp. by the map "params" of the
+    section of the agent in a fleet configuration): its description, its default value, whether
+    a non-empty value is required, and the allowed values (else any), where a plain scalar
+    declares just the default value  */
+export interface AgentParam {
+    desc?:     string
+    default?:  string | number | boolean
+    required?: boolean
+    allow?:    Many<string>
+}
+
 /*  the definition of an agent, with the same option groups and options as the options
     "--<group>-<item>" of "ase agent <kind> start" (see its manual page for their semantics),
-    plus the hooks, the code-based escape hatches beyond the declarative options, and the
-    base definition it extends (a definition file, relative to this one, or the definition
-    "builtin:<kind>[-<mode>]" of a built-in agent), whose options it overrides (where a false
-    flag unsets the flag of the base definition) and whose hooks of the same name it replaces  */
+    plus the declarations of its parameters (by their names), the hooks, the code-based escape
+    hatches beyond the declarative options, and the base definition it extends (a definition
+    file, relative to this one, or the definition "builtin:<kind>[-<mode>]" of a built-in agent),
+    whose options it overrides (where a false flag unsets the flag of the base definition), whose
+    parameter declarations it extends field-wise, and whose hooks of the same name it replaces  */
 export interface AgentDefinition {
     definition?: string
+    params?:     Record<string, AgentParam | string | number | boolean>
     type?:       AgentType
     workdir?:    AgentWorkdir
     lifecycle?:  Many<string>
@@ -156,6 +170,7 @@ export interface AgentHookUpdate {
 
 /*  the context passed to a hook:
     - the identity of the agent (its name, kind, mode, and the tag of its processed tasks)
+    - the values of all declared parameters of the agent (empty if neither given nor defaulted)
     - the task lifecycle model of the project
     - the cancellation signal, aborted on the interrupt of the agent (and, within the hooks
       "prepare", "prompt", "verdict", "success", "settle", and "finish", on the timeout of
@@ -172,6 +187,7 @@ export interface AgentHookUpdate {
       job, else into the log of the agent)  */
 export interface AgentHookContext {
     readonly agent:     { readonly name: string, readonly kind: string, readonly mode: string, readonly tag: string }
+    readonly params:    Readonly<Record<string, string>>
     readonly lifecycle: { readonly name: string, readonly states: readonly string[] }
     readonly signal:    AbortSignal
     flow (task: AgentHookTask, key: "Source" | "Changeset" | "Target"): AgentHookFlow | null

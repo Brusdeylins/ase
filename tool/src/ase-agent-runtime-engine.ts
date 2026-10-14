@@ -30,7 +30,7 @@ import type {
 import type { ResolvedDefinition, AgentKind, DefinitionKind } from "./ase-agent-definition-core.js"
 import {
     definitionOptions, resolveDefinition,
-    renderTemplate, attachMatches
+    renderTemplate, attachMatches, paramEnv
 }                                   from "./ase-agent-definition-core.js"
 
 /*  the identity of an agent of a definition: its kind ("ase agent <kind>"), its mode (as
@@ -147,6 +147,7 @@ class DefinedCore {
             .map((item) => hookTask(item, TaskFormat.adaptStatus(lifecycle, item.status)))
         return Object.freeze({
             agent:     Object.freeze({ name, kind, mode, tag: this.def.tag.name }),
+            params:    Object.freeze({ ...this.def.params }),
             lifecycle: Object.freeze({ name: lifecycle.name, states: Object.freeze([ ...lifecycle.states ]) }),
             signal:    cancel,
             flow:      (task: AgentHookTask, key: "Source" | "Changeset" | "Target") => {
@@ -400,9 +401,10 @@ class DefinedCore {
         return (await Task.inspect(this.log, task.id, (plan, lifecycle) => TaskFormat.taskStatus(plan.header, lifecycle))) ?? ""
     }
 
-    /*  the environment variables of the shell commands  */
+    /*  the environment variables of the shell commands (including those of the parameters)  */
     private env (task: AgentTask, cwd: string): Record<string, string> {
         return {
+            ...Object.fromEntries(Object.entries(this.def.params).map(([ name, value ]) => [ paramEnv(name), value ])),
             ASE_TASK_ID:        task.id,
             ASE_TASK_TITLE:     task.title,
             ASE_TASK_SOURCE:    taskFlowRaw(this.log, task, "Source"),
@@ -428,6 +430,8 @@ class DefinedCore {
             const value = (name: string): string => {
                 if (name.startsWith("key:"))
                     return task.keys.get(name.slice(4)) ?? ""
+                else if (name.startsWith("param:"))
+                    return this.def.params[name.slice(6)] ?? ""
                 switch (name) {
                     case "id":                 return task.id
                     case "title":              return task.title

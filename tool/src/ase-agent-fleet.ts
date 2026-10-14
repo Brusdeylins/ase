@@ -128,6 +128,7 @@ const initConfig = (tool: string): string => textframe`
     #    kind:           adhoc           # agent kind
     #    type:           request         # processing type ("phase" or "request")
     #    #definition:    <file>          # YAML, TypeScript, or JavaScript definition file (relative to this file)
+    #    #params:        { <name>: <value> } # values of the parameters declared by the definition
     #    prompt:
     #        text:       "Lint the source code of task {id} with focus on: {prompt}"
     #    success:
@@ -191,7 +192,8 @@ const given = (values: Section, key: string): boolean =>
 
 /*  the command-line arguments of the options of a configuration section, given by
     their long option names, where "true" enables a flag, "false" or an empty value
-    omits an option, and a list of values repeats an option  */
+    omits an option, a list of values repeats an option, and the map "params" repeats
+    the option "--params <name>=<value>" per parameter  */
 const sectionArgs = (section: string, values: Section): string[] =>
     Object.entries(values).flatMap(([ key, value ]) => {
         if (!/^[a-z][a-z0-9-]*$/.test(key))
@@ -200,6 +202,14 @@ const sectionArgs = (section: string, values: Section): string[] =>
             return []
         if (value === true)
             return [ `--${key}` ]
+        if (key === "params" && isSection(value))
+            return Object.entries(value).flatMap(([ name, item ]) => {
+                if (item === null || item === undefined)
+                    return []
+                if (typeof item !== "string" && typeof item !== "number" && typeof item !== "boolean")
+                    throw new Error(`fleet: section "${section}": invalid value of parameter "${name}"`)
+                return [ `--${key}`, `${name}=${String(item)}` ]
+            })
         return (Array.isArray(value) ? value : [ value ]).flatMap((item: unknown) => {
             if (typeof item !== "string" && typeof item !== "number")
                 throw new Error(`fleet: section "${section}": invalid value of option "${key}"`)

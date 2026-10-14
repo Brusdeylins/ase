@@ -189,7 +189,10 @@ value omits an option, and a list repeats an option:
   defined inline by a section with `kind: adhoc`. The options of the
   definitions can also be nested by group, like in a definition file
   (e.g., `prompt: { text: ... }`), where a key must not be given both
-  flat and nested. The `definition` of `kind: adhoc` (unless a
+  flat and nested. The values of the parameters declared by the
+  definition are given by the map `params` (e.g., `params: { severity:
+  high }`), which repeats the option `--params` *name*`=`*value* per
+  parameter. The `definition` of `kind: adhoc` (unless a
   `builtin:` one) is relative to the configuration file, where hooks
   can be given only through a TypeScript or JavaScript definition
   file. A section without any options (an empty value) runs the agent
@@ -205,7 +208,8 @@ resolved and validated on the start of the fleet:
 - an unknown section option of `fleet`, `relay`, or `default`, an
   invalid option name (other than lower-case letters, digits, and
   dashes), and a value other than a string, a number, a boolean, or a
-  list of strings and numbers;
+  list of strings and numbers (resp., for `params`, a map of strings,
+  numbers, and booleans);
 
 - an unknown agent kind, and an option unknown to the `start` command
   of the agent kind;
@@ -298,6 +302,8 @@ editor-codex:
     tool:     codex
 reviewer:
     parallel: 2
+    params:
+        severity: high
 lint:
     kind:     adhoc
     type:     request

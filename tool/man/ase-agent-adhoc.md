@@ -16,6 +16,7 @@
 \[`--workdir` *kind*\]
 \[`--lifecycle` *model*\]
 \[`--serial`\]
+\[`--params` *name*`=`*value*\]
 \[`--state-`*item* *state*\]
 \[`--tag-`*item* *tag*\]
 \[`--assign-`*item* *who*\]
@@ -349,6 +350,11 @@ other.
   Process the tasks serially only, ignoring `--parallel`. A fleet
   refuses two serially processing agents of the same tag.
 
+- \[`--params` *name*`=`*value*\]:
+  (repeatable) The value of the parameter *name* declared by the
+  definition (see **PARAMETERS**), where a later value of the same
+  name wins. An undeclared *name* is refused.
+
 #### State (`--type phase` only)
 
 All states are case-insensitive (upper-cased), have to exist in the
@@ -510,7 +516,8 @@ implicitly, but always have to be given explicitly.
   without running the prompt. It gets the environment variables
   `ASE_TASK_ID`, `ASE_TASK_TITLE`, `ASE_TASK_SOURCE`,
   `ASE_TASK_CHANGESET`, `ASE_TASK_TARGET` (the raw flow values or their
-  configured defaults), `ASE_AGENT_NAME`, and `ASE_AGENT_WORKDIR`.
+  configured defaults), `ASE_AGENT_NAME`, `ASE_AGENT_WORKDIR`, and
+  `ASE_AGENT_PARAM_`*NAME* per parameter (see **PARAMETERS**).
   Empty commands are refused.
 
 #### Success
@@ -645,6 +652,10 @@ expand the following placeholders:
 - `{key:`*Header*`}`:
   A frontmatter key *Header* of the task.
 
+- `{param:`*name*`}`:
+  The value of the parameter *name* declared by the definition (see
+  **PARAMETERS**).
+
 - `{?`*cond*`:`*text*`}`:
   A conditional, which emits *text* (with placeholders, but without
   nested conditionals) only if *cond* holds, either *placeholder* (the
@@ -681,13 +692,19 @@ either:
   erased). Only such a file can additionally carry *hooks* (its key
   `hooks`, see **HOOKS**).
 
+Every definition file can additionally declare *parameters* (its key
+`params`, see **PARAMETERS**).
+
 A definition file can extend a *base definition* via its key
 `definition`: a further definition file (relative to the definition
 file) or, as `builtin:`*kind*`-`*mode* (resp. `builtin:`*kind*), the
 definition of a built-in agent. Its options override those of the base
 definition (also replacing their mutually exclusive alternatives, and
-with a false flag unsetting the flag of the base definition), and its
-hooks replace those of the same name of the base definition. Base
+with a false flag unsetting the flag of the base definition), its
+parameter declarations extend those of the same name of the base
+definition field-wise (e.g., `params: { severity: LOW }` changes just
+the default value), and its hooks replace those of the same name of
+the base definition. Base
 definitions can be chained arbitrarily deep, but never cyclic. For
 example, a `.ase/agents/implementer.mts` of `definition:
 "builtin:implementer-implement"` plus a `ready` hook shadows the
@@ -695,6 +712,46 @@ built-in `implementer` while keeping its definition and its `passes`
 hook, and a `.ase/agents/reviewer.yaml` of `definition:
 builtin:approver-judge` plus its own `tag: { name: ase-agent-reviewer
 }` runs a further judging agent of its own tag.
+
+## PARAMETERS
+
+A definition can declare *parameters* (its key `params`, typed via
+`AgentParam` of the package `@rse/ase`): custom options of the agent,
+whose values are given on its start via `--params` *name*`=`*value*
+(resp. via the map `params` of its section of a fleet configuration,
+see `ase-agent-fleet`(1)). A parameter *name* consists of up to 64
+letters, digits, underscores, and dashes, starting with a letter, and
+is declared by an object of the optional fields:
+
+- `desc`:
+  The description of the parameter, cited in its errors.
+
+- `default`:
+  The default value of the parameter (else empty).
+
+- `required`:
+  Whether a non-empty value is required (default: `false`).
+
+- `allow`:
+  The allowed values (a single value or a list), where an empty value
+  is always allowed unless `required`.
+
+A plain scalar instead of the object declares just the default value
+(e.g., `params: { severity: HIGH }`). The values of all parameters are
+validated on the start, where an undeclared parameter, a missing
+required value, and a value not allowed are refused. Each declared
+parameter provides its value (empty if neither given nor defaulted) as:
+
+- the placeholder `{param:`*name*`}` of the templates (see **TEMPLATES**),
+  also usable in a conditional like `{?param:`*name*`:`*text*`}`;
+
+- `ctx.params.`*name* (resp. `ctx.params["`*name*`"]`) of the hooks (see
+  **HOOKS**);
+
+- the environment variable `ASE_AGENT_PARAM_`*NAME* of the commands of
+  `--prepare-run`, `--finish-success`, and `--finish-failure`, with
+  *NAME* the upper-cased *name* with every `-` replaced by `_`, where
+  two parameters of the same such variable are refused.
 
 ## HOOKS
 
@@ -711,6 +768,10 @@ provides:
 - `agent` and `lifecycle`:
   The agent (its `name`, `kind`, `mode`, and `tag`) and the task
   lifecycle model of the project (its `name` and its `states`).
+
+- `params`:
+  The values of all declared parameters, by their names (see
+  **PARAMETERS**).
 
 - `signal`:
   An `AbortSignal`, aborted on the interrupt of the agent (and, within
@@ -849,7 +910,7 @@ recoveries of differently configured agents never affect each other.
 - `ASE_HEADLESS`:
   Set to `true` for the agent tool processes spawned by the agent.
 
-- `ASE_TASK_ID`, `ASE_TASK_TITLE`, `ASE_TASK_SOURCE`, `ASE_TASK_CHANGESET`, `ASE_TASK_TARGET`, `ASE_AGENT_NAME`, `ASE_AGENT_WORKDIR`, `ASE_TASK_STATUS`:
+- `ASE_TASK_ID`, `ASE_TASK_TITLE`, `ASE_TASK_SOURCE`, `ASE_TASK_CHANGESET`, `ASE_TASK_TARGET`, `ASE_AGENT_NAME`, `ASE_AGENT_WORKDIR`, `ASE_AGENT_PARAM_`*NAME*, `ASE_TASK_STATUS`:
   Set for the commands of `--prepare-run`, `--finish-success`, and
   `--finish-failure` (the latter only for the finishing commands).
 
@@ -937,12 +998,21 @@ export default {
     prompt:    { skill: "ase-repo-review", args: "{?changeset-type=branch:--branch {changeset-name}}" },
     verdict:   { label: "REVIEW VERDICT", allow: [ "APPROVE", "REJECT" ] },
     success:   { criterion: [ "exit", "verdict" ] },
+    params: {
+        severity: { desc: "severity of the findings a rejecting review has to cite", default: "HIGH", allow: [ "LOW", "MEDIUM", "HIGH" ] }
+    },
     hooks: {
         ready: (task, ctx) =>
-            ctx.flow(task, "Changeset")?.type === "branch" ? true : "a \"branch:\" changeset"
+            ctx.flow(task, "Changeset")?.type === "branch" ? true : "a \"branch:\" changeset",
+        success: (_task, result, ctx) =>
+            result.verdict !== "REJECT" || result.output.some((line) => new RegExp(`\\b${ctx.params.severity}\\b`).test(line)) ||
+            `rejecting review without ${ctx.params.severity} findings`
     }
 } satisfies AgentDefinition
 ```
+
+Started via `ase agent reviewer start --params severity=MEDIUM` (resp. with
+`params: { severity: MEDIUM }` in its section of a fleet configuration).
 
 See `docs/agent-definition/` of the **ase** sources for these example
 definitions.
