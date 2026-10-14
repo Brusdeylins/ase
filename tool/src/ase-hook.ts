@@ -376,27 +376,27 @@ export default class HookCommand {
         const cfg = new Config("config", configSchema, this.log,
             hasSession ? parseScope(`session:${sessionId}`) : parseScope(undefined))
 
-        /*  determine the project directory, persisted below for GitHub Copilot CLI
-            only, because it is the single piece of context this agent tool withholds
-            from the MCP server: it starts the MCP server in the plugin installation
-            directory, long before this hook runs, so the server can only learn it from here  */
+        /*  determine the project directory, persisted below, because for GitHub Copilot
+            CLI it is the single piece of context this agent tool withholds from the MCP
+            server: it starts the MCP server in the plugin installation directory, long
+            before this hook runs, so the server can only learn it from here (and for all
+            agent tools, the project service determines the sessions of its project by it,
+            in order to attach them to the usage windows of their tasks assigned elsewhere)  */
         const projectDir = this.determineProjectDir(input.cwd ?? process.cwd())
 
         cfg.read()
 
         /*  determine task id and persist it, together with the project directory
-            (GitHub Copilot CLI only, see above), into the internal session state
-            (only when scoped to a real session), normalizing the path separators
-            of the project directory, as Git reports the top-level directory with
-            forward slashes even on Windows  */
+            (see above), into the internal session state (only when scoped to a real
+            session), normalizing the path separators of the project directory, as Git
+            reports the top-level directory with forward slashes even on Windows  */
         const taskId = process.env.ASE_TASK_ID ?? "default"
         if (hasSession) {
             const state = sessionState(this.log, sessionId)
             state.lock(() => {
                 state.read()
                 state.set("task", taskId)
-                if (tool === "copilot")
-                    state.set("basedir", path.resolve(projectDir))
+                state.set("basedir", path.resolve(projectDir))
                 state.write()
             })
         }
@@ -595,6 +595,19 @@ export default class HookCommand {
             }
             catch (_e) {
                 /*  best-effort: ignore failures  */
+            }
+
+            /*  detach the session from its AI usage window (if any), which closes
+                and books the window once no other session remains attached to it
+                (noting the session end and starting the owning project service in the
+                background, if it is not reachable in time, and imported dynamically
+                to keep it out of all other hooks)  */
+            try {
+                const { UsageTracker } = await import("./ase-service-otel.js")
+                await UsageTracker.detachRemote(sessionId)
+            }
+            catch (err: unknown) {
+                this.log.write("warning", `hook: failed to detach session from its usage window: ${err instanceof Error ? err.message : String(err)}`)
             }
         }
         return 0

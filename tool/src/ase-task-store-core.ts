@@ -45,10 +45,17 @@ export const problemBody = (status: number, detail: string, instance: string) =>
     instance
 })
 
-/*  the entity tag of a task plan (the SHA-1 of its text format), for
-    detecting a change in the meantime on a conditional save  */
+/*  the entity tag of a task plan (the SHA-1 of its text format, without its usage
+    attachments, so a booking does not count as a change), for detecting a change in the
+    meantime on a conditional save (which keeps the stored usage attachments), and the
+    entity tag of the complete task plan, for a conditional save of its usage attachments
+    by a booking (which therefore also detects a concurrent booking), where the latter
+    is the SHA-1 of a prefixed text format, so both never coincide (not even for a plan
+    without usage attachments), and only a booking can save usage attachments  */
 export const taskTag = (plan: API.TaskPlan): string =>
-    crypto.createHash("sha1").update(TaskFormat.formatTaskText(plan)).digest("hex")
+    crypto.createHash("sha1").update(TaskFormat.formatTaskText(TaskFormat.withoutUsage(plan))).digest("hex")
+export const taskTagFull = (plan: API.TaskPlan): string =>
+    crypto.createHash("sha1").update("usage\n" + TaskFormat.formatTaskText(plan)).digest("hex")
 
 /*  the change events of a single modifying request  */
 export type EventEntry = { status: string, title: string }
@@ -231,6 +238,12 @@ export class TaskStoreCore {
         if ((attachment.Data === undefined) === (attachment.File === undefined))
             throw problem(422, "attachment requires exactly one of the keys \"Data\" or \"File\"")
         return attachment
+    }
+
+    /*  reject a change of the usage attachment, which only a booking may change  */
+    private guardUsage (attachment: API.TaskAttachment): void {
+        if (TaskFormat.isUsage(attachment))
+            throw problem(422, "the usage attachment of a task plan can be changed by a booking only")
     }
 
     /*  validate an entire task plan structure  */
@@ -473,17 +486,23 @@ export class TaskStoreCore {
     /*  create or overwrite an entire task plan, rejecting an unreachable status,
         on a conditional save (with the entity tag of the plan it is based
         on) also rejecting a plan which was changed or deleted in the meantime,
-        and on a create-only save also rejecting an already existing plan  */
+        and on a create-only save also rejecting an already existing plan,
+        where an overwrite keeps the stored usage attachments, unless it is
+        conditional on the entity tag of the complete plan (i.e., a booking),
+        and a create drops any usage attachments  */
     async taskSave (prjId: string, taskId: string, raw: unknown, ifMatch?: string, createOnly = false): Promise<TaskSaveResult> {
         return this.serialize(prjId, async () => {
             const { lifecycle } = await this.project(prjId)
             this.validateId("task", taskId)
             const prev   = await this.store.taskLoad(prjId, taskId)
-            if (ifMatch !== undefined && (prev === null || taskTag(prev) !== ifMatch))
+            const full   = ifMatch !== undefined && prev !== null && taskTagFull(prev) === ifMatch
+            if (ifMatch !== undefined && !full && (prev === null || taskTag(prev) !== ifMatch))
                 throw problem(412, `task "${taskId}" was ${prev === null ? "deleted" : "changed"} meanwhile in project "${prjId}"`)
             if (createOnly && prev !== null)
                 throw problem(412, `task "${taskId}" already exists in project "${prjId}"`)
-            const plan   = this.validatePlan(taskId, raw)
+            let plan     = this.validatePlan(taskId, raw)
+            if (!full)
+                plan = prev !== null ? TaskFormat.keepUsage(plan, prev) : TaskFormat.withoutUsage(plan)
             const from   = prev !== null ? TaskFormat.taskStatus(prev.header, lifecycle) : lifecycle.initial
             const status = TaskFormat.taskStatus(plan.header, lifecycle)
             this.checkStatus(lifecycle, from, status)
@@ -713,6 +732,7 @@ export class TaskStoreCore {
         "Created"); returns the index and whether the attachment was newly created  */
     async attachmentAdd (prjId: string, taskId: string, raw: unknown, append = false): Promise<{ index: number, created: boolean }> {
         const attachment = this.validateAttachment(raw)
+        this.guardUsage(attachment)
         return this.modify(prjId, taskId, "attachment", (plan) => {
             const index = append && attachment.Data !== undefined ?
                 plan.attachment.findLastIndex((a) => a.Type === attachment.Type && a.Data !== undefined) : -1
@@ -750,13 +770,18 @@ export class TaskStoreCore {
     }
     async attachmentSet (prjId: string, taskId: string, index: string, raw: unknown): Promise<void> {
         const attachment = this.validateAttachment(raw)
+        this.guardUsage(attachment)
         await this.modify(prjId, taskId, "attachment", (plan) => {
-            plan.attachment[this.validateIndex(plan, index)] = attachment
+            const i = this.validateIndex(plan, index)
+            this.guardUsage(plan.attachment[i])
+            plan.attachment[i] = attachment
         })
     }
     async attachmentDelete (prjId: string, taskId: string, index: string): Promise<void> {
         await this.modify(prjId, taskId, "attachment", (plan) => {
-            plan.attachment.splice(this.validateIndex(plan, index), 1)
+            const i = this.validateIndex(plan, index)
+            this.guardUsage(plan.attachment[i])
+            plan.attachment.splice(i, 1)
         })
     }
     async attachmentKeyGet (prjId: string, taskId: string, index: string, key: string): Promise<string> {
@@ -780,6 +805,8 @@ export class TaskStoreCore {
                 delete attachment.File
             else if (key === "File")
                 delete attachment.Data
+            this.guardUsage(plan.attachment[i])
+            this.guardUsage(attachment)
             plan.attachment[i] = this.validateAttachment(attachment)
             return { created, key, value: plan.attachment[i][key] }
         })
@@ -789,6 +816,7 @@ export class TaskStoreCore {
             throw problem(422, `attachment key "${key}" cannot be deleted (delete the entire attachment instead)`)
         await this.modify(prjId, taskId, "attachment", (plan) => {
             const attachment = plan.attachment[this.validateIndex(plan, index)]
+            this.guardUsage(attachment)
             if (!Object.hasOwn(attachment, key))
                 throw problem(404, `no attachment key "${key}"`)
             Reflect.deleteProperty(attachment, key)

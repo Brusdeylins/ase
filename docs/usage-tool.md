@@ -58,11 +58,27 @@ The following top-level commands exist for configuration handling:
   The file is validated against a schema: on read, unknown or
   invalid entries are warned about and silently dropped from the
   in-memory view; on set/write, they cause a fatal error.
-  Recognized keys are grouped under three top-level sections:
+  Recognized keys are grouped under four top-level sections:
   `project.*` (project identity, classification, and artifact
   globs: `project.id`, `project.name`, `project.boxing`, `project.task.lifecycle`, `project.task.idscheme`, `project.task.default.{source,changeset,target}`, `project.task.store.url`, `project.task.store.token` (masked as `***` by `list`), `project.task.store.crt`, `project.task.store.key`, `project.relay.url`, `project.relay.token` (masked as `***` by `list`), `project.relay.crt`, `project.relay.key`, and the
-  `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list) and `agent.*`
-  (`agent.persona` and `agent.guidance`), and `board.*`
+  `project.artifact.`*kind*`.{basedir,files}` globs plus the `project.artifact.spec.schema` file list), `agent.*`
+  (`agent.persona` and `agent.guidance`), `telemetry.*` (the AI usage accounting:
+  `telemetry.enabled` -- `true` enables it as a whole, default `false`,
+  `telemetry.service.port` -- the port of the OTLP ingress, default `44318`,
+  `telemetry.service.token` -- its bearer token (masked as `***` by `list`),
+  `telemetry.service.interval` -- the interim booking interval in minutes,
+  default `10`, `0` disables, `telemetry.service.idle` -- the idle time
+  in minutes after which a usage window pauses, default `30`, `0`
+  disables,
+  `telemetry.prices.ai` -- the price table
+  `<model>=<input>/<output>[/<cread>/<cwrite>][ ...]` in USD per million
+  input, output, cache read, and cache write tokens (the cache prices
+  defaulting to the input price) for tools reporting no costs (keyed by the
+  model, or by the tool name like `codex` for the jobs of `ase agent`, with
+  `*` for all others, default `*=4.00/20.00/0.20/5.00`), and
+  `telemetry.prices.hr` -- the hourly rate table
+  `<user-id>=<usd-per-hour>[,...]` of the human time, keyed by the
+  assignee, with `*` for all others, default `*=110`), and `board.*`
   (`board.tui.color.{dim,normal,accent,signal}` -- the colors of
   the terminal task board, `board.web.color.{dim,normal,accent,signal}`
   -- the base colors of the web task board, and `board.web.editor.keymap`
@@ -439,9 +455,11 @@ uninstalling the *ASE* tool and its companion *Anthropic Claude Code CLI* plugin
   unregistered servers omitted entirely; one `OUTPUTSTYLE` row per
   settings file carrying an `outputStyle` entry shows whether it is
   `selected` (the *ASE* output style `ase:ase-terse`) or `foreign` (hand-selected);
-  and one `STATUSLINE` row per settings file carrying a `statusLine`
+  one `STATUSLINE` row per settings file carrying a `statusLine`
   entry shows whether it is `activated` (owned by *ASE*) or `foreign`
-  (hand-crafted). The command
+  (hand-crafted); and one `TELEMETRY` row per configuration file carrying
+  a telemetry export shows whether it is `activated` (towards the *ASE*
+  OTLP ingress) or `foreign`. The command
   is purely read-only and always exits with status 0, so a missing
   registration is reported rather than signalled through the exit code.
   It takes no `--scope`, since it deliberately reports *all* scopes at
@@ -493,6 +511,33 @@ uninstalling the *ASE* tool and its companion *Anthropic Claude Code CLI* plugin
   `user`|`project`|`local`\] (default: `user`) to select the MCP server
   registration scope, with the same `--tool claude`-only restriction as
   for the plugin subcommands above.
+
+- `ase setup telemetry activate`:
+  Activate the *OpenTelemetry* (OTLP/HTTP) export of the agent tool
+  towards the per-user *ASE* OTLP ingress `http://127.0.0.1:`*port*
+  (`telemetry.service.port`, default `44318`), which feeds the AI usage
+  accounting of the task assignments (see `ase task assign`). As the AI
+  usage accounting is opt-in, this requires `telemetry.enabled` to be
+  `true` (e.g. via `ase config set telemetry.enabled true`). A missing
+  bearer token `telemetry.service.token` is generated on scope `user`. For
+  `--tool claude`, the `OTEL_*` and `CLAUDE_CODE_ENABLE_TELEMETRY`
+  variables are set in the `env` of `~/.claude/settings.json`; for `--tool
+  codex`, a marked `[otel]` block is written into `~/.codex/config.toml`;
+  for `--tool copilot` (configurable via environment variables only), a
+  marked block with a `copilot` shell function is appended to the shell
+  profile (`~/.zshrc` or `~/.bashrc`), which passes the variables to the
+  `copilot` command only instead of exporting them to every other
+  program. Telemetry configured by the user for other
+  receivers (for `--tool claude`, any of these variables already set by
+  the user) is preserved and reported as `foreign`. The export always
+  is user-level, as the agent tools ignore these settings on repository
+  level, so a single ingress serves the sessions of all projects: every
+  running `ase service` tries to hold its port, and the holder routes the
+  records by their session to the service of the owning project.
+
+- `ase setup telemetry deactivate`:
+  Remove the telemetry export configured by `ase setup telemetry
+  activate` again, preserving any `foreign` telemetry configuration.
 
 All `ase setup` subcommands -- except `ase setup mcp list` -- accept
 the host selector \[`-t`|`--tool` `claude`|`copilot`|`codex`\] (default:
@@ -566,6 +611,57 @@ with the Gitea token from `project.task.store.token`, else `$GITEA_TOKEN`):
   of the name. Refused (with exit status 1) for a missing or finished
   task, and while a request of the name is being processed. The MCP tool
   `ase_task_request` provides the same.
+
+- `ase task assign` \[*id*\[`:`\]\] *assignee* \[`-s`|`--session` *id*\]:
+  Assign the task plan with the given *id* (default: `$ASE_TASK_ID`, else
+  `default`) by setting its `Assignee:` frontmatter key (in a conditional
+  save, retried on a concurrent change, leaving the `Modified:` key
+  alone) to *assignee*, where `me` stands for the current user and `none`
+  removes the key. With `--session`, the assignment is done on behalf of
+  the agent tool session *id* through the running `ase service` of the
+  project, which handles the *AI usage window* of the task, too (only if
+  the AI usage accounting is enabled via `telemetry.enabled`):
+  assigning it to oneself opens the window (or attaches the session to an
+  open one), assigning it to anybody else closes it and, after a grace
+  period of 10 seconds for late telemetry, atomically adds the usage
+  accumulated from the OTLP records of its sessions (see `ase setup
+  telemetry activate`) to the YAML data of the usage attachment of the task
+  (`Type: application/yaml; kind="usage"`, created on the first booking):
+  `time.ai` *minutes* (the AI request time, which can exceed the real time
+  with parallel sessions), `time.hr` *minutes* (the human time, i.e., the
+  whole real time of the window, as the engineer costs money even while
+  waiting for the AI), `time.real` *minutes* (the wall-clock time of the
+  window), `token.cread` *count* (the tokens read from the prompt cache),
+  `token.cwrite` *count* (the tokens written to the prompt cache),
+  `token.input` *count* (the uncached input tokens), `token.output`
+  *count*, `cost.ai` *usd* (as reported by the agent tool, else derived
+  from `telemetry.prices.ai`), and `cost.hr` *usd* (the human time
+  at the hourly rate of the assignee in `telemetry.prices.hr`, in addition
+  to the AI costs). The four token counts are
+  disjoint: as Codex and the *GenAI* semantic conventions of Copilot
+  include the cache tokens in their input tokens (unlike Claude Code),
+  these are subtracted from them. A window
+  also closes when its last session ends, and when the `Assignee:` of
+  its task is changed elsewhere while the task is the active task of an
+  attached session. Conversely, once the `Assignee:` of a task is changed
+  to oneself elsewhere (e.g. on the task board, i.e., outside of any
+  session), the service opens its window (starting *paused*, i.e.,
+  accounting from the next AI request of its sessions on) and attaches
+  every session of the project whose active task it is, including a
+  session switching to it, or starting with it, later on (once per
+  self-assignment, so an explicit assignment of another task to the
+  session takes precedence); open windows additionally book every
+  `telemetry.service.interval` minutes. Without any activity (an AI
+  request of an attached session) for `telemetry.service.idle` minutes,
+  a window *pauses*: its real and human time stop at that point, and the
+  next AI request silently *resumes* it, without accounting the paused
+  gap. A window without any activity for 7 days (e.g. of a crashed agent
+  tool, whose session end never got reported) is closed and booked. The
+  jobs of `ase agent` book their
+  usage, as reported by the result events of their agent tool, directly
+  onto their tasks (without any human time and costs, as they run
+  unattended). This is what the `ase_task_assign` MCP tool of the
+  `ase-task-assign` skill does for the current session.
 
 - `ase task load` *id*:
   Load the task plan with the given *id* and write it to standard
@@ -1751,7 +1847,11 @@ integration:
   style natively.
 
 - `ase hook session-end`:
-  Handle the *Anthropic Claude Code CLI* `SessionEnd` hook event. This
+  Handle the *Anthropic Claude Code CLI* `SessionEnd` hook event, which
+  also detaches the session from its AI usage window (if any). If the
+  owning project service is not reachable in time, the session end is
+  noted in the session registry instead, and the service is started in
+  the background, which then detaches the session as of its noted end. This
   subcommand is intended to be invoked by *Anthropic Claude Code CLI*
   internally as a configured hook handler only, not directly
   by end users.
@@ -1824,6 +1924,25 @@ STATE FILES
   processes. On termination, the lock is removed, and so is the
   record, unless it still records claimed tasks.
 
+- *per-user state directory*`/telemetry.json`:
+  Telemetry state of the AI usage accounting, shared by the services of
+  all projects. Under its `session` field, the session registry: for
+  each agent tool session attached to a usage window, the root directory
+  and id of the project whose service owns the window, by which the OTLP
+  ingress routes the records of the session, plus the time the session
+  ended, if its end could not be reported to the service. Under its `booked` field,
+  the journal of the AI usage windows of each project service, keyed by
+  `<project-id>-<root-hash>` (*root-hash* being the first 12 hex digits
+  of the SHA-1 digest of the project root directory): the windows, their
+  attached sessions, their not yet booked usage and time of the last
+  booking, and the keys of the recently counted records (de-duplicating
+  re-sent batches), so a service restart loses no usage. Each service
+  changes only its own sessions and journal, under a file lock and
+  atomically, and removes its journal once it holds no windows anymore.
+  With `ASE_OTEL_CAPTURE=1`, the service holding the OTLP ingress
+  additionally dumps the raw OTLP requests into `.ase/otel-capture/` of
+  its project.
+
 - `.ase/service.yaml`:
   Per-project service state.
 
@@ -1873,8 +1992,8 @@ STATE FILES
 - `<project>/.ase/.gitignore`:
   Self-ignoring Git ignore file, created on first write of any of the
   machine-local runtime files above (`service.yaml`, `service.log`,
-  `board.yaml`, and `agent/`), which it covers together with lock files and
-  `worktree/`, so they never show up as untracked files. An existing
+  `board.yaml`, and `agent/`), which it covers together with lock files,
+  `otel-capture/`, and `worktree/`, so they never show up as untracked files. An existing
   file is never overwritten.
 
 HISTORY

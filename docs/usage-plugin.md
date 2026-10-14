@@ -223,6 +223,18 @@ The following ASE commands/skills exist on the task-level:
   key alone as it tracks body changes only. A status not reachable via
   one or more transitions of the model is rejected.
 
+- **/ase-task-assign** \[*id*`:`\] *assignee*:<br/>
+  Assign the current or given task plan (`Assignee:` frontmatter key) to
+  *assignee*: `me` (oneself), `none` (nobody), or any other name.
+  Assigning it to oneself opens the AI usage window of the task, which
+  accounts the AI request time, tokens, and costs of all turns of the
+  session (as reported via *OpenTelemetry*, see `ase setup telemetry
+  activate`), plus the human time and costs. Giving it back closes the
+  window and atomically adds the accumulated usage to the
+  `time.{ai,hr,real}` (minutes), `token.{cread,cwrite,input,output}`,
+  and `cost.{ai,hr}` (USD) amounts of the usage attachment of the task
+  (`Type: application/yaml; kind="usage"`).
+
 - **/ase-task-rename** \[*old-id*\] *new-id*:<br/>
   Rename the current or given task plan to *new-id*. When *old-id* is
   omitted, the current task is renamed.

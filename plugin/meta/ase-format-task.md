@@ -285,6 +285,20 @@ You *MUST* honor the following hints on this *task* format:
     `Changeset` is `attachment:changeset`, in which case this attachment *is*
     the change set itself. A stale snapshot just shows an outdated change set.
 
+    The *usage attachment* carries the *accumulated AI and human usage* of the
+    task, as booked by `ase-task-assign` and the `ase agent` jobs. It carries the
+    `Type` key value `application/yaml; kind="usage"`, is created on the first
+    booking, and is *replaced* in place on every booking (keeping its `Created`
+    key and refreshing its `Modified` key, but leaving the `Modified` key of the
+    frontmatter alone). Its `Data` is YAML with the amounts `time: { ai, hr,
+    real }` (AI request, human, and real time, in minutes), `token: { cread,
+    cwrite, input, output }` (cache read, cache write, uncached input, and output
+    tokens), and `cost: { ai, hr }` (AI and human costs, in USD). As it does not
+    depend on the "body", it is *never* stale, and a skill *never* changes it:
+    the task store keeps it on every overwrite of the plan (silently ignoring a
+    changed, removed, or added usage attachment), and the entity tag of a
+    conditional save does not cover it, so a booking meanwhile never fails a save.
+
     A skill which changes the content of an attachment refreshes its `Modified`
     key with the current timestamp -- the very same value it writes into the
     `Modified` key of the frontmatter if it changes the "body", too. Hence,

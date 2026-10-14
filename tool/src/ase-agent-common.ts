@@ -21,10 +21,10 @@ import lockfile                     from "proper-lockfile"
 import type Log                     from "./ase-lib-log.js"
 import { Task }                     from "./ase-task.js"
 import * as TaskFormat              from "./ase-task-format.js"
-import * as Core                    from "./ase-task-store-core.js"
 import type * as API                from "./ase-task-store-plugin-api.js"
 import { Config }                   from "./ase-config-core.js"
-import { configSchema }             from "./ase-config-schema.js"
+import { configSchema, parsePrices, modelPrice, tokenCost } from "./ase-config-schema.js"
+import type { TokenCounts }         from "./ase-config-schema.js"
 import { userStateDir }             from "./ase-config-scope.js"
 import { Worktree }                 from "./ase-util-worktree.js"
 import { writeStdout }              from "./ase-lib-stdio.js"
@@ -33,6 +33,7 @@ import { parseTool, toolSpecs }     from "./ase-setup-common.js"
 import { AgentPresenceReporter }    from "./ase-agent-relay-client.js"
 import type { AgentRelayClient }    from "./ase-agent-relay-client.js"
 import type { AgentUsage }          from "./ase-agent-relay-core.js"
+import { telemetryEnabled }         from "./ase-service-otel.js"
 
 /*  command options type of all agents  */
 export interface AgentOpts {
@@ -220,8 +221,10 @@ const toolEvents: Record<Tool, (ev: any) => ToolEntry[]> = {
 }
 
 /*  the output tokens and the costs (in USD) of the usage of the agent tool,
-    each staying null as long as the tool reports nothing about it  */
-type ToolCosts = Pick<AgentUsage, "costToken" | "costUSD">
+    each staying null as long as the tool reports nothing about it, plus the
+    cache read, cache write, and (uncached) input tokens and the AI request time
+    (in ms, null if the tool reports none), for the AI usage accounting of the task  */
+type ToolCosts = Pick<AgentUsage, "costToken" | "costUSD"> & Omit<TokenCounts, "output"> & { apiMs: number | null }
 
 /*  a reported amount (where a missing or invalid one counts as zero)  */
 const amount = (value: unknown): number =>
@@ -231,21 +234,37 @@ const amount = (value: unknown): number =>
     (as the input tokens are dominated by the context re-sent on every turn) and the costs in USD
     of Claude (over all its models, i.e. including its sub-agents, from its final result), nothing
     of Copilot (as it reports premium requests only), and the output tokens of Codex (summed over
-    its turns)  */
+    its turns), plus the cache and input tokens and the AI request time where reported (where
+    the input tokens of Claude exclude the cache tokens, while those of Codex include them)  */
 const toolCosts: Record<Tool, (ev: any, costs: ToolCosts) => void> = {
     "claude": (ev, costs) => {
         if (ev.type !== "result")
             return
         const models: any[] = ev.modelUsage !== null && typeof ev.modelUsage === "object" ? Object.values(ev.modelUsage) : []
-        costs.costToken = models.length > 0 ?
-            models.reduce((sum, u) => sum + amount(u?.outputTokens), 0) :
-            amount(ev.usage?.output_tokens)
-        costs.costUSD = amount(ev.total_cost_usd)
+        const sum = (key: string, fallback: string) => models.length > 0 ?
+            models.reduce((acc, u) => acc + amount(u?.[key]), 0) :
+            amount(ev.usage?.[fallback])
+        costs.costToken = sum("outputTokens",             "output_tokens")
+        costs.cread     = sum("cacheReadInputTokens",     "cache_read_input_tokens")
+        costs.cwrite    = sum("cacheCreationInputTokens", "cache_creation_input_tokens")
+        costs.input     = sum("inputTokens",              "input_tokens")
+        costs.costUSD   = amount(ev.total_cost_usd)
+        costs.apiMs     = typeof ev.duration_api_ms === "number" ? amount(ev.duration_api_ms) : null
     },
-    "copilot": () => { /*  no tokens and costs reported  */ },
+    "copilot": (ev, costs) => {
+        /*  no tokens and costs reported  */
+        if (ev.type === "result" && ev.usage?.sessionDurationMs !== undefined)
+            costs.apiMs = amount(ev.usage.sessionDurationMs)
+    },
     "codex": (ev, costs) => {
-        if (ev.type === "turn.completed")
+        if (ev.type === "turn.completed") {
+            const cread  = amount(ev.usage?.cached_input_tokens)
+            const cwrite = amount(ev.usage?.cache_write_input_tokens)
             costs.costToken = (costs.costToken ?? 0) + amount(ev.usage?.output_tokens)
+            costs.cread    += cread
+            costs.cwrite   += cwrite
+            costs.input    += Math.max(0, amount(ev.usage?.input_tokens) - cread - cwrite)
+        }
     }
 }
 
@@ -334,22 +353,10 @@ export const setPlanTag = (plan: API.TaskPlan, key: string, value?: string | nul
     concurrent change of the task (HTTP 412), so <op> has to (re)compute all its results,
     where <rejected> is called whenever a save was surely not done (on HTTP 412), unlike
     on other failures (e.g. a lost response), where the save might have been done  */
-export const updateTask = async (log: Log, id: string,
+export const updateTask = (log: Log, id: string,
     op: (plan: API.TaskPlan, lifecycle: TaskFormat.TaskLifecycle) => boolean,
-    rejected?: () => void): Promise<boolean> => {
-    for (let attempt = 1; ; attempt++) {
-        try {
-            return await Task.update(log, id, op)
-        }
-        catch (err: unknown) {
-            if (err instanceof Core.Problem && err.status === 412)
-                rejected?.()
-            if (attempt >= 5)
-                throw err
-            await new Promise((resolve) => setTimeout(resolve, 100 * attempt))
-        }
-    }
-}
+    rejected?: () => void): Promise<boolean> =>
+    Task.updateRetry(log, id, op, rejected)
 
 /*  the last verdict word following the label <label> in the output lines of a skill
     (e.g. "APPROVE" of "**REVIEW VERDICT**: **APPROVE**"), or empty if none  */
@@ -951,6 +958,10 @@ export abstract class Agent {
     /*  the client of the agent relay (if any) and the presence of the running agent announced to it  */
     private relay:       AgentRelayClient | null         = null
     private presence:    AgentPresenceReporter | null    = null
+
+    /*  per processed task id: the remainders of its AI request time and its real time (in
+        milliseconds) not yet booked onto it, as the bookings carry whole minutes only  */
+    private unbooked                                     = new Map<string, { aiMs: number, realMs: number }>()
 
     /*  per processed task id: its working directory in the temporary clone
         of "--repo" (see "workdir"), the Git working copy and branches held exclusively
@@ -1605,7 +1616,7 @@ export abstract class Agent {
         events in real-time and collecting its agent message text lines as the <output> (without
         buffering them, as the output of the agent tool can be huge), where the quiet entries are
         only echoed (i.e., not kept in the processing log attachment of the task), and return its success  */
-    private async invoke (job: AgentJob, abort: AbortSignal, log: AgentLog, echo: AgentLog, output: string[]): Promise<boolean> {
+    private async invoke (taskId: string, job: AgentJob, abort: AbortSignal, log: AgentLog, echo: AgentLog, output: string[]): Promise<boolean> {
         const { tool, timeout, timeoutSpec } = this
         const { cwd } = job
         const cli  = toolSpecs[tool].cli
@@ -1616,7 +1627,7 @@ export abstract class Agent {
             .flatMap((dir) => [ "--add-dir", dir ]))
         await log("info", `running: ${cli} ${args.map((arg) => arg.includes(" ") ? `"${arg}"` : arg).join(" ")}`)
         const started = Date.now()
-        const costs: ToolCosts = { costToken: null, costUSD: null }
+        const costs: ToolCosts = { costToken: null, costUSD: null, cread: 0, cwrite: 0, input: 0, apiMs: null }
         const subprocess = execa(cli, args, {
             cwd,
             env:                 { ASE_HEADLESS: "true" },
@@ -1648,12 +1659,50 @@ export abstract class Agent {
             await log(result.exitCode === 0 ? "info" : "warning", `${cli} finished with exit code ${result.exitCode}`)
 
         /*  report the usage of the agent tool, with its wall time measured locally  */
-        const usage: AgentUsage = { walltimeSec: Math.round((Date.now() - started) / 1000), ...costs }
+        const walltimeMs = Date.now() - started
+        const usage: AgentUsage = { walltimeSec: Math.round(walltimeMs / 1000), costToken: costs.costToken, costUSD: costs.costUSD }
         await log("info", `${cli} usage: walltime: ${usage.walltimeSec}s, ` +
             `tokens: ${usage.costToken ?? "n/a"}, ` +
             `cost: ${usage.costUSD !== null ? `$${usage.costUSD.toFixed(2)}` : "n/a"}`)
         this.presence?.used(usage)
-        return !abort.aborted && !result.timedOut && result.exitCode === 0
+
+        /*  book the usage onto the task, if the AI usage accounting is enabled ("telemetry.enabled"),
+            (the AI request time falling back to the wall time and an unreported cost to the price
+            table entry of the tool, as its model is unknown), without any human time and costs,
+            as the headless agent tool runs unattended; the times are booked in rounded minutes,
+            with the (signed) rounding remainder carried over to the next booking onto the task,
+            where a failed booking is only reported  */
+        const ok = !abort.aborted && !result.timedOut && result.exitCode === 0
+        try {
+            if (!telemetryEnabled(this.log))
+                return ok
+            const tokens: TokenCounts = { cread: costs.cread, cwrite: costs.cwrite, input: costs.input, output: costs.costToken ?? 0 }
+            let cost = costs.costUSD
+            if (cost === null) {
+                const cfg = new Config("config", configSchema, this.log)
+                cfg.read()
+                cost = tokenCost(modelPrice(parsePrices(String(cfg.get("telemetry.prices.ai") ?? "")), tool), tokens)
+            }
+            const carry    = this.unbooked.get(taskId) ?? { aiMs: 0, realMs: 0 }
+            const aiMs     = carry.aiMs   + (costs.apiMs ?? walltimeMs)
+            const realMs   = carry.realMs + walltimeMs
+            const timeAI   = Math.max(0, Math.round(aiMs   / (60 * 1000)))
+            const timeReal = Math.max(0, Math.round(realMs / (60 * 1000)))
+            this.unbooked.set(taskId, { aiMs: aiMs - timeAI * 60 * 1000, realMs: realMs - timeReal * 60 * 1000 })
+            await Task.addUsage(this.log, taskId, {
+                "time.ai":      timeAI,
+                "time.real":    timeReal,
+                "token.cread":  tokens.cread,
+                "token.cwrite": tokens.cwrite,
+                "token.input":  tokens.input,
+                "token.output": tokens.output,
+                "cost.ai":      Number(cost.toFixed(4))
+            })
+        }
+        catch (err: unknown) {
+            await log("warning", `usage not booked onto task: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        return ok
     }
 
     /*  process a claimed task via the skill of the headless agent tool in a worker slot
@@ -1681,7 +1730,7 @@ export abstract class Agent {
                         .then((orphan) => orphan.cleanup?.(log))
                         .catch(() => {})
                 })
-                ok = await this.invoke(job, abort, log, echo, output)
+                ok = await this.invoke(task.id, job, abort, log, echo, output)
             }
             catch (err: unknown) {
                 await log("error", err instanceof Error ? err.message : String(err))

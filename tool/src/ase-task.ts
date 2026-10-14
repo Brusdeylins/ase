@@ -11,7 +11,8 @@ import readline                                           from "node:readline/pr
 
 import { Command }                                        from "commander"
 import { execaSync }                                      from "execa"
-import { isScalar }                                       from "yaml"
+import YAML, { isScalar }                                 from "yaml"
+import { DateTime }                                       from "luxon"
 import { z }                                              from "zod"
 import { LRUCache }                                       from "lru-cache"
 import type { McpServer }                                 from "@modelcontextprotocol/sdk/server/mcp.js"
@@ -31,6 +32,7 @@ import * as TaskFormat                                    from "./ase-task-forma
 import type { TaskStoreClient }                           from "./ase-task-store-client.js"
 import { LocalTaskStoreClient, RemoteTaskStoreClient }    from "./ase-task-store-client.js"
 import { requestsOf }                                     from "./ase-task-request.js"
+import type { AssignResult, UsageTracker }                from "./ase-service-otel.js"
 
 /*  a configuration value together with the label of its supplying scope  */
 type ScopedValue = { value: string, scope: string }
@@ -39,6 +41,55 @@ type ScopedValue = { value: string, scope: string }
 type TaskStoreSpec = {
     projectId: string, projectIdExplicit: boolean, store: ScopedValue, token: ScopedValue,
     lifecycle: TaskFormat.TaskLifecycle, idscheme: string
+}
+
+/*  the amounts of the AI usage accounting of a task, as "<group>.<field>" of the YAML data of
+    its usage attachment: the AI request time, the human time, and the real (wall-clock) time
+    (in minutes), the cache read, cache write, (uncached) input, and output tokens, and the AI
+    and human costs (in USD)  */
+export const usageKeys = [
+    "time.ai", "time.hr", "time.real",
+    "token.cread", "token.cwrite", "token.input", "token.output",
+    "cost.ai", "cost.hr"
+] as const
+
+/*  an amount of AI usage, to be added to the usage attachment of a task  */
+export type TaskUsage = Partial<Record<(typeof usageKeys)[number], number>>
+
+/*  the failure of a booking whose save might have been done nevertheless (e.g. on a lost
+    response, a timeout, or a partially done save of an issue tracker), so the booking must
+    not be retried, as it would then be booked twice  */
+export class UsageUncertain extends Error {}
+
+/*  parse the YAML data of a usage attachment into its amounts (leniently,
+    i.e., with unparsable data and non-numeric amounts taken as absent)  */
+const usageOf = (data: string): TaskUsage => {
+    let doc: unknown
+    try {
+        doc = YAML.parse(data)
+    }
+    catch {
+        doc = null
+    }
+    const groups = (typeof doc === "object" && doc !== null ? doc : {}) as Record<string, Record<string, unknown> | undefined>
+    const usage: TaskUsage = {}
+    for (const key of usageKeys) {
+        const [ group, field ] = key.split(".")
+        const amount = Number(groups[group]?.[field])
+        if (Number.isFinite(amount))
+            usage[key] = amount
+    }
+    return usage
+}
+
+/*  render the amounts of a usage attachment as its YAML data: one flow mapping per group  */
+const usageData = (usage: TaskUsage): string => {
+    const groups = new Map<string, string[]>()
+    for (const key of usageKeys) {
+        const [ group, field ] = key.split(".")
+        groups.set(group, [ ...(groups.get(group) ?? []), `${field}: ${String(usage[key] ?? 0)}` ])
+    }
+    return Array.from(groups, ([ group, fields ]) => `${(group + ":").padEnd(7)} { ${fields.join(", ")} }\n`).join("")
 }
 
 /*  reusable functionality: the task plans of the current project,
@@ -537,12 +588,14 @@ export class Task {
         itself and its members; returns null if the source task
         does not exist, else the number of updated referring tasks plus a
         warning (else empty) if the new id does not conform to the task id
-        scheme; throws if the target id already exists  */
+        scheme; throws if the target id already exists; the rename is reported
+        to the service of the project, so its usage windows follow it  */
     static async rename (log: Log, oldId: string, newId: string): Promise<{ warning: string, references: number } | null> {
         Task.validateId(oldId)
         Task.validateId(newId)
+        let renamed: { warning: string, references: number } | null
         try {
-            return await Task.with(log, async (client) => {
+            renamed = await Task.with(log, async (client) => {
                 const result = await client.patch(oldId, { id: newId })
                 return result === null ? null :
                     { warning: TaskFormat.idWarning(client.idscheme, newId), references: result.references ?? 0 }
@@ -553,6 +606,14 @@ export class Task {
                 throw new Error(`task: target id "${newId}" already exists`, { cause: err })
             throw err
         }
+        if (renamed !== null) {
+            const Usage = await import("./ase-service-otel.js")
+            await Usage.UsageTracker.renameRemote(Task.projectRoot(), oldId, newId).catch((err: unknown) => {
+                log.write("warning", `task: failed to report rename of "${oldId}" to "${newId}" to the ASE service: ` +
+                    `${err instanceof Error ? err.message : String(err)}`)
+            })
+        }
+        return renamed
     }
 
     /*  flatten a task plan header into string values (joining the
@@ -670,19 +731,113 @@ export class Task {
 
     /*  update a task plan by the operation <op>, which modifies the loaded plan in
         place and returns whether it changed it, where the plan is saved conditionally
-        (throwing if it was changed meanwhile), and only if changed; returns false
-        if no task exists  */
-    static async update (log: Log, id: string, op: (plan: API.TaskPlan, lifecycle: TaskFormat.TaskLifecycle) => boolean): Promise<boolean> {
+        (throwing if it was changed meanwhile), and only if changed, where with <usage>
+        (i.e., for a booking) the plan is saved conditionally on the complete plan
+        (throwing on a concurrent booking, too), as only then the usage attachment of
+        the plan is saved and not kept by the task store, and where a booking failing
+        once its save was started throws a "UsageUncertain" error, unless the task store
+        surely rejected the save (by a client error, like HTTP 412), as it might have
+        been done nevertheless; returns false if no task exists  */
+    static async update (log: Log, id: string, op: (plan: API.TaskPlan, lifecycle: TaskFormat.TaskLifecycle) => boolean,
+        usage = false): Promise<boolean> {
         Task.validateId(id)
-        return Task.with(log, async (client) => {
-            const plan = await client.load(id)
-            if (plan === null)
+        let saving = false
+        try {
+            return await Task.with(log, async (client) => {
+                const plan = await client.load(id)
+                if (plan === null)
+                    return false
+                const etag = usage ? Core.taskTagFull(plan) : Core.taskTag(plan)
+                if (op(plan, client.lifecycle)) {
+                    saving = true
+                    await client.save(id, plan, etag)
+                }
+                return true
+            })
+        }
+        catch (err: unknown) {
+            if (usage && saving && !(err instanceof Core.Problem && err.status >= 400 && err.status < 500))
+                throw new UsageUncertain(err instanceof Error ? err.message : String(err), { cause: err })
+            throw err
+        }
+    }
+
+    /*  update a task plan by the operation <op> in a single conditional save (see "update"),
+        retrying (with a growing delay, on a freshly loaded plan) on a failure, especially on a
+        concurrent change of the task (HTTP 412), so <op> has to (re)compute all its results,
+        where <rejected> is called whenever a save was surely not done (on HTTP 412), unlike
+        on other failures (e.g. a lost response), where the save might have been done,
+        and <usage> is passed through (retrying a booking on HTTP 412 only, as a retried
+        booking whose save might have been done would be booked twice)  */
+    static async updateRetry (log: Log, id: string,
+        op: (plan: API.TaskPlan, lifecycle: TaskFormat.TaskLifecycle) => boolean,
+        rejected?: () => void, usage = false): Promise<boolean> {
+        for (let attempt = 1; ; attempt++) {
+            try {
+                return await Task.update(log, id, op, usage)
+            }
+            catch (err: unknown) {
+                if (err instanceof Core.Problem && err.status === 412)
+                    rejected?.()
+                else if (usage)
+                    throw err
+                if (attempt >= 5)
+                    throw err
+                await new Promise((resolve) => setTimeout(resolve, 100 * attempt))
+            }
+        }
+    }
+
+    /*  assign a task plan by setting its "Assignee:" frontmatter key (or deleting it for a
+        null assignee) in a conditional save, leaving the "Modified:" key alone, as it tracks
+        body changes only; returns the previous assignee (or empty); throws if no task exists  */
+    static async assign (log: Log, id: string, assignee: string | null): Promise<string> {
+        if (assignee !== null && (assignee.trim() === "" || /[\r\n,]/.test(assignee)))
+            throw new Error("task: assignee must be a non-empty single-line name without commas")
+        let prev = ""
+        const exists = await Task.updateRetry(log, id, (plan) => {
+            prev = String(plan.header.Assignee ?? "").trim()
+            if (assignee === null) {
+                if (plan.header.Assignee === undefined)
+                    return false
+                delete plan.header.Assignee
+            }
+            else if (prev === assignee.trim())
                 return false
-            const etag = Core.taskTag(plan)
-            if (op(plan, client.lifecycle))
-                await client.save(id, plan, etag)
+            else
+                plan.header.Assignee = assignee.trim()
             return true
         })
+        if (!exists)
+            throw new Error(`task: no task "${id}"`)
+        return prev
+    }
+
+    /*  accumulate the AI usage of a task plan: add each positive amount of the delta to its
+        amount in the YAML data of the usage attachment (created on the first booking, and
+        rounded to the precision of the amount) in a conditional save on the complete plan
+        (retried on a concurrent change, so no concurrent change and no booking gets lost),
+        refreshing the "Modified:" key of the attachment, but leaving the one of the frontmatter
+        alone; returns false if no task exists; throws a "UsageUncertain" error if it failed,
+        but might have been done nevertheless, so it must not be retried  */
+    static async addUsage (log: Log, id: string, delta: TaskUsage): Promise<boolean> {
+        return Task.updateRetry(log, id, (plan) => {
+            if (!usageKeys.some((key) => (delta[key] ?? 0) > 0))
+                return false
+            const at    = plan.attachment.findIndex((att) => TaskFormat.isUsage(att) && att.Data !== undefined)
+            const usage = at >= 0 ? usageOf(plan.attachment[at].Data) : {}
+            for (const key of usageKeys) {
+                const sum = (usage[key] ?? 0) + Math.max(0, delta[key] ?? 0)
+                usage[key] = Number(sum.toFixed(key.startsWith("cost.") ? 4 : 0))
+            }
+            const now  = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
+            const data = usageData(usage)
+            if (at >= 0)
+                plan.attachment[at] = { ...plan.attachment[at], Modified: now, Data: data }
+            else
+                plan.attachment.push({ Type: TaskFormat.USAGE_TYPE, Created: now, Modified: now, Data: data })
+            return true
+        }, undefined, true)
     }
 
     /*  list all persisted tasks in lexicographic id order, each with the
@@ -934,6 +1089,44 @@ export default class TaskCommand {
                 process.exit(0)
             })
 
+        /*  register CLI sub-command "ase task assign"  */
+        task
+            .command("assign")
+            .description("Assign a task: set its \"Assignee:\" to <assignee> (\"me\" for the current user, " +
+                "\"none\" removes it); with --session the AI usage window of the session is handled, too " +
+                "(through the running ASE service of the project); <id> defaults to $ASE_TASK_ID")
+            .argument("[<id>[:]]", "Task identifier (optionally colon-suffixed)")
+            .argument("[<assignee>]", "Assignee (\"me\", \"none\", or any other name)")
+            .option("-s, --session <id>", "agent tool session on whose behalf the task is assigned")
+            .action(async (arg1: string | undefined, arg2: string | undefined, opts: { session?: string }) => {
+                let id       = process.env.ASE_TASK_ID ?? "default"
+                let assignee = arg2
+                if (arg2 !== undefined)
+                    id = arg1!
+                else if (arg1?.endsWith(":"))
+                    id = arg1
+                else
+                    assignee = arg1
+                if (assignee === undefined)
+                    throw new Error("task: missing <assignee>")
+                id = id.replace(/:$/, "")
+                const Usage = await import("./ase-service-otel.js")
+                if (opts.session !== undefined) {
+                    const result = await Usage.UsageTracker.request(Task.projectRoot(), "/usage/assign",
+                        { id, assignee, session: opts.session }) as AssignResult
+                    if (result.notice !== "")
+                        this.log.write("warning", `task: ${result.notice}`)
+                    this.log.write("info", `task: assigned "${id}" from "${result.from}" to "${result.to}" ` +
+                        `(usage window: ${result.action}, booked: ${usageText(result.booked)})`)
+                }
+                else {
+                    const to   = assignee === "me" ? Usage.userId() : assignee
+                    const from = await Task.assign(this.log, id, to === "none" ? null : to)
+                    this.log.write("info", `task: assigned "${id}" from "${from}" to "${to === "none" ? "" : to}"`)
+                }
+                process.exit(0)
+            })
+
         /*  register CLI sub-command "ase task load"  */
         task
             .command("load")
@@ -1111,14 +1304,24 @@ const mcpError = (err: unknown) => {
     }
 }
 
+/*  render a text as an MCP tool result  */
+const mcpText = (text: string) =>
+    ({ content: [ { type: "text" as const, text } ] })
+
 /*  render a task id scheme warning as a trailing notice line of an MCP tool result
     (not as "WARNING:", as callers treat such a result as a failed operation)  */
 const notice = (warning: string): string =>
     warning !== "" ? `\nNOTICE: ${warning}` : ""
 
-/*  MCP registration entry point for task tools  */
+/*  render the positive amounts of a booked AI usage, e.g. "time.ai +12, cost.ai +0.4213"  */
+const usageText = (usage: TaskUsage | null): string =>
+    Object.entries(usage ?? {}).filter(([ , amount ]) => amount > 0)
+        .map(([ key, amount ]) => `${key} +${amount}`).join(", ") || "nothing"
+
+/*  MCP registration entry point for task tools (with the task assignment
+    handling the AI usage windows through the usage tracker of the service)  */
 export class TaskMCP {
-    constructor (private log: Log) {}
+    constructor (private log: Log, private usage?: UsageTracker) {}
 
     /*  register MCP tools  */
     register (mcp: McpServer): void {
@@ -1216,9 +1419,7 @@ export class TaskMCP {
                         `<task-plan-render>\n${Markdown.prepare(source)}\n</task-plan-render>\n`
                 if (loaded !== null && args.tag === true)
                     text += `\n<task-plan-tag>${loaded.tag}</task-plan-tag>\n`
-                return {
-                    content: [ { type: "text", text } ]
-                }
+                return mcpText(text)
             }
             catch (err: unknown) {
                 return mcpError(err)
@@ -1297,9 +1498,7 @@ export class TaskMCP {
                 const text   = (render ? Markdown.prepare(source) : `OK: saved task "${args.id}"`) +
                     notice(result.warning) +
                     (base !== undefined || args.tag === true ? `\n<task-plan-tag>${result.tag}</task-plan-tag>\n` : "")
-                return {
-                    content: [ { type: "text", text } ]
-                }
+                return mcpText(text)
             }
             catch (err: unknown) {
                 return mcpError(err)
@@ -1326,9 +1525,7 @@ export class TaskMCP {
                 const attachment = (await Task.attachments(this.log, args.id)).findLast((a) => a.type === args.type)
                 const text = attachment?.data !== undefined ? attachment.data :
                     `WARNING: no attachment of type "${args.type}" with an embedded payload in task "${args.id}"`
-                return {
-                    content: [ { type: "text", text } ]
-                }
+                return mcpText(text)
             }
             catch (err: unknown) {
                 return mcpError(err)
@@ -1351,9 +1548,7 @@ export class TaskMCP {
                 const msg     = removed ?
                     `OK: removed task "${args.id}"` :
                     `WARNING: no task "${args.id}" to remove`
-                return {
-                    content: [ { type: "text", text: msg } ]
-                }
+                return mcpText(msg)
             }
             catch (err: unknown) {
                 return mcpError(err)
@@ -1383,9 +1578,7 @@ export class TaskMCP {
                     `OK: renamed task "${args.old}" to "${args.new}" ` +
                     `(updated references in ${result.references} other task(s))` + notice(result.warning) :
                     `WARNING: no task "${args.old}" to rename`
-                return {
-                    content: [ { type: "text", text: msg } ]
-                }
+                return mcpText(msg)
             }
             catch (err: unknown) {
                 return mcpError(err)
@@ -1415,14 +1608,10 @@ export class TaskMCP {
                 if (args.status !== undefined) {
                     const result = await Task.setStatus(this.log, args.id, args.status)
                     const text   = `OK: set status of task "${args.id}" from "${result.from}" to "${result.to}"`
-                    return {
-                        content: [ { type: "text", text } ]
-                    }
+                    return mcpText(text)
                 }
                 const text = await Task.getStatus(this.log, args.id)
-                return {
-                    content: [ { type: "text", text } ]
-                }
+                return mcpText(text)
             }
             catch (err: unknown) {
                 return mcpError(err)
@@ -1449,9 +1638,56 @@ export class TaskMCP {
         }, async (args) => {
             try {
                 await requestsOf(args.name).request(this.log, args.id, args.prompt)
-                return {
-                    content: [ { type: "text", text: `OK: requested "${args.name}" of task "${args.id}"` } ]
+                return mcpText(`OK: requested "${args.name}" of task "${args.id}"`)
+            }
+            catch (err: unknown) {
+                return mcpError(err)
+            }
+        })
+
+        /*  task assignment (with AI usage accounting)  */
+        mcp.registerTool("ase_task_assign", {
+            title: "ASE task assignment",
+            description:
+                "Assign the task plan `id` to `assignee` (its `Assignee:` frontmatter key, leaving the " +
+                "`Modified:` key alone) on behalf of the agent tool `session`. The assignee `me` (or the " +
+                "current user id) assigns it to oneself and opens (or attaches the session to) the AI usage " +
+                "window of the task, which accounts the AI request time, tokens, and costs of all turns of the " +
+                "session (received via OpenTelemetry), plus the human time and costs. Any other assignee, or " +
+                "`none` (removing the `Assignee:` key), gives the task back: it closes the usage window and, " +
+                "after a grace period of 10 seconds for late telemetry, atomically adds the accumulated usage " +
+                "to the `time.{ai,hr,real}` (minutes), `token.{cread,cwrite,input,output}`, and `cost.{ai,hr}` " +
+                "(USD) amounts of the usage attachment (`Type: application/yaml; kind=\"usage\"`) of the task. " +
+                "Returns a status `text` with the previous and new assignee, the window action " +
+                "(`opened`, `attached`, `closed`, or `none`), and the booked usage, plus a trailing " +
+                "`NOTICE: <info>` line if telemetry seems not to be activated.",
+            inputSchema: {
+                id: z.string()
+                    .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
+                assignee: z.string()
+                    .describe("assignee: `me` (oneself), `none` (unassign), or any other name"),
+                session: z.string()
+                    .describe("session identifier of the agent tool (allowed characters: A-Z, a-z, 0-9, '_', '-')"),
+                tool: z.enum([ "claude", "codex", "copilot" ]).optional()
+                    .describe("agent tool of the session, for checking its telemetry activation (default: none)")
+            }
+        }, async (args) => {
+            try {
+                if (this.usage === undefined)
+                    throw new Error("task: assignment requires the usage tracker of the ASE service")
+                const result = await this.usage.assign(args.id, args.assignee, args.session)
+                let warning  = result.notice
+                if (warning === "" && args.tool !== undefined && (result.action === "opened" || result.action === "attached")) {
+                    const { SetupSettings } = await import("./ase-setup-settings.js")
+                    if (!await new SetupSettings(this.log).telemetryActive(args.tool))
+                        warning = `telemetry is not activated for tool "${args.tool}" ` +
+                            `(run "ase setup telemetry activate --tool ${args.tool}"), so no usage is accounted`
                 }
+                const text = `OK: assigned task "${args.id}" from "${result.from || "(nobody)"}" ` +
+                    `to "${result.to || "(nobody)"}", usage window: ${result.action}` +
+                    (result.action === "closed" ? `, booked: ${usageText(result.booked)}` : "") +
+                    notice(warning)
+                return mcpText(text)
             }
             catch (err: unknown) {
                 return mcpError(err)
@@ -1524,14 +1760,10 @@ export class TaskMCP {
                     const warning = await Task.setId(this.log, args.session, args.id)
                     const msg = `OK: set active task id to "${args.id}" ` +
                         `for session "${args.session}"` + notice(warning)
-                    return {
-                        content: [ { type: "text", text: msg } ]
-                    }
+                    return mcpText(msg)
                 }
                 const text = Task.getId(this.log, args.session)
-                return {
-                    content: [ { type: "text", text } ]
-                }
+                return mcpText(text)
             }
             catch (err: unknown) {
                 return mcpError(err)

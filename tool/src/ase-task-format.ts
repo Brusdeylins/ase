@@ -706,6 +706,35 @@ export const restoreAttachments = (plan: API.TaskPlan, stored: API.TaskPlan | nu
     }
 }
 
+/*  the type of the usage attachment of a task plan, carrying its AI usage accounting,
+    which is owned by the task store: changed by bookings only, but never by any other save  */
+export const USAGE_TYPE = "application/yaml; kind=\"usage\""
+
+/*  whether an attachment is the usage attachment of a task plan  */
+export const isUsage = (att: API.TaskAttachment): boolean =>
+    (att.Type ?? "").trim() === USAGE_TYPE
+
+/*  a task plan without its usage attachments  */
+export const withoutUsage = (plan: API.TaskPlan): API.TaskPlan =>
+    plan.attachment.some(isUsage) ? { ...plan, attachment: plan.attachment.filter((att) => !isUsage(att)) } : plan
+
+/*  keep the usage attachments of the stored plan in a task plan to be saved: each usage
+    attachment of the plan is replaced (in place) by the next stored one or else dropped,
+    and the remaining stored ones are appended, so no save can change them  */
+export const keepUsage = (plan: API.TaskPlan, stored: API.TaskPlan): API.TaskPlan => {
+    const kept = stored.attachment.filter(isUsage)
+    if (kept.length === 0 && !plan.attachment.some(isUsage))
+        return plan
+    const attachment: API.TaskAttachment[] = []
+    for (const att of plan.attachment) {
+        if (!isUsage(att))
+            attachment.push(att)
+        else if (kept.length > 0)
+            attachment.push(kept.shift()!)
+    }
+    return { ...plan, attachment: [ ...attachment, ...kept ] }
+}
+
 /*  derive the title of a task plan from its body as defined by the
     "Task titles" convention: the text following "TASK:" on the first
     "#   TASK: <title>" heading line, or the empty string if absent  */

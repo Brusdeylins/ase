@@ -44,6 +44,8 @@ import { SkillsMCP }                     from "./ase-service-skills.js"
 import { WorktreeMCP }                   from "./ase-util-worktree.js"
 import { MintMCP }                       from "./ase-util-mint.js"
 import { MetricMCP }                     from "./ase-util-metric.js"
+import { UsageTracker }                  from "./ase-service-otel.js"
+import type { UsageRecord }              from "./ase-service-otel.js"
 import pkg                               from "../package.json" with { type: "json" }
 
 /*  shared service host  */
@@ -317,12 +319,12 @@ export default class ServiceCommand {
     /*  build a fresh MCP server instance with all registered tools
         (also used by the "ase mcp" bridge for answering the MCP handshake
         and tool listing in-process before the service is started)  */
-    static buildMcpServer (log: Log, ctx: { projectId: string, port: number }, startTime: number): McpServer {
+    static buildMcpServer (log: Log, ctx: { projectId: string, port: number }, startTime: number, usage?: UsageTracker): McpServer {
         const mcp = new McpServer({ name: "ase", version: pkg.version })
         new ServiceMCP({ projectId: ctx.projectId, port: ctx.port, startTime }).register(mcp)
         new CompatMCP().register(mcp)
         new DiagramMCP().register(mcp)
-        new TaskMCP(log).register(mcp)
+        new TaskMCP(log, usage).register(mcp)
         new MarkdownMCP().register(mcp)
         new ArtifactMCP(log).register(mcp)
         new SpecMCP(log).register(mcp)
@@ -391,6 +393,11 @@ export default class ServiceCommand {
             return h.continue
         })
 
+        /*  establish the usage tracker of the AI usage accounting (and the OTLP ingress)  */
+        const usage = new UsageTracker(this.log, Task.projectRoot(), ctx.projectId, ctx.aseDir, () => {
+            lastActivity = Date.now()
+        })
+
         /*  listen to HTTP/REST endpoints  */
         server.route({
             method:  "OPTIONS",
@@ -417,6 +424,7 @@ export default class ServiceCommand {
                         const e = err as Error
                         this.log.write("error", `service: stop failed: ${e.message}`)
                     }
+                    await usage.stop()
                     process.exit(0)
                 })
                 return h.response({ ok: true }).code(200)
@@ -431,7 +439,7 @@ export default class ServiceCommand {
             const level = bMethod === "tools/call" ? "info" : "debug"
             this.log.write(level, `mcp: ${request.method.toUpperCase()} ${request.path}${bodyInfo}`)
             const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined })
-            const mcp       = ServiceCommand.buildMcpServer(this.log, ctx, startTime)
+            const mcp       = ServiceCommand.buildMcpServer(this.log, ctx, startTime, usage)
             request.raw.res.on("close", () => {
                 /*  "h.abandon" (see below) bypasses "onPreResponse",
                     so undo the "onRequest" accounting here instead  */
@@ -487,6 +495,67 @@ export default class ServiceCommand {
             }
         })
 
+        /*  listen to the endpoints of the AI usage accounting: the usage records forwarded
+            by the OTLP ingress, the session end, the task assignment on behalf of a session,
+            and the task rename  */
+        server.route({
+            method:  "POST",
+            path:    "/usage/records",
+            options: { payload: { parse: true, allow: "application/json", maxBytes: 32 * 1024 * 1024 } },
+            handler: (request, h) => {
+                const payload = request.payload as { records?: unknown } | null
+                if (!Array.isArray(payload?.records))
+                    return h.response({ error: "missing or invalid 'records' field" }).code(400)
+                usage.ingest(payload.records as UsageRecord[])
+                return h.response({ ok: true }).code(200)
+            }
+        })
+        server.route({
+            method:  "POST",
+            path:    "/usage/detach",
+            options: { payload: { parse: true, allow: "application/json" } },
+            handler: (request, h) => {
+                const payload = request.payload as { session?: unknown } | null
+                if (typeof payload?.session !== "string")
+                    return h.response({ error: "missing or invalid 'session' field" }).code(400)
+                usage.detach(payload.session)
+                return h.response({ ok: true }).code(200)
+            }
+        })
+        server.route({
+            method:  "POST",
+            path:    "/usage/rename",
+            options: { payload: { parse: true, allow: "application/json" } },
+            handler: (request, h) => {
+                const payload = request.payload as { old?: unknown, new?: unknown } | null
+                if (typeof payload?.old !== "string" || typeof payload.new !== "string")
+                    return h.response({ error: "missing or invalid 'old' or 'new' field" }).code(400)
+                try {
+                    usage.rename(payload.old, payload.new)
+                }
+                catch (err: unknown) {
+                    return h.response({ error: err instanceof Error ? err.message : String(err) }).code(422)
+                }
+                return h.response({ ok: true }).code(200)
+            }
+        })
+        server.route({
+            method:  "POST",
+            path:    "/usage/assign",
+            options: { payload: { parse: true, allow: "application/json" } },
+            handler: async (request, h) => {
+                const payload = request.payload as { id?: unknown, assignee?: unknown, session?: unknown } | null
+                if (typeof payload?.id !== "string" || typeof payload.assignee !== "string" || typeof payload.session !== "string")
+                    return h.response({ error: "missing or invalid 'id', 'assignee', or 'session' field" }).code(400)
+                try {
+                    return h.response(await usage.assign(payload.id, payload.assignee, payload.session)).code(200)
+                }
+                catch (err: unknown) {
+                    return h.response({ error: err instanceof Error ? err.message : String(err) }).code(422)
+                }
+            }
+        })
+
         /*  serve the web board of the project (imported dynamically to keep it out of all
             other CLI commands; its rendering dependencies marked, MRCS, and ELK load on
             first request only, its board core dependencies at service startup)  */
@@ -498,6 +567,7 @@ export default class ServiceCommand {
             await server.start()
             Service.persistPort(ctx.svc, ctx.port)
             this.log.write("info", `service: listening on port ${ctx.port}`)
+            usage.start()
         }
         catch (err: unknown) {
             const e = err as Error & { code?: string }
@@ -528,6 +598,7 @@ export default class ServiceCommand {
                     const e = err as Error
                     this.log.write("error", `service: stop failed: ${e.message}`)
                 }
+                await usage.stop()
                 Service.clearPort(ctx.svc)
                 process.exit(0)
             }
@@ -544,17 +615,23 @@ export default class ServiceCommand {
                 return
             if (inFlight > 0)
                 return
+
+            /*  never idle out while holding usage windows, as their sessions keep on reporting  */
+            if (usage.active())
+                return
             if (Date.now() - lastActivity > IDLE_MS) {
                 stopping = true
                 this.log.write("info", "service: idle timeout reached, stopping")
                 try {
                     await server.stop({ timeout: 1000 })
+                    await usage.stop()
                     Service.clearPort(ctx.svc)
                     process.exit(0)
                 }
                 catch (err: unknown) {
                     const e = err as Error
                     this.log.write("error", `service: stop failed: ${e.message}`)
+                    await usage.stop()
                     Service.clearPort(ctx.svc)
                     process.exit(1)
                 }

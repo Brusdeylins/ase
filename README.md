@@ -222,11 +222,13 @@ see whether **ASE** is right for you:
 
 - **Task Plan Life-Cycle**:
   You want your named, persisted task plans switched, listed, watched on a board, viewed,
-  status-changed, renamed, condensed, rebooted, or deleted right from within the session?
+  status-changed, assigned (with their AI usage accounted), renamed, condensed, rebooted, or
+  deleted right from within the session?
   &rarr; [`/ase-task-id`](plugin/skills/ase-task-id/help.md),
   [`/ase-task-list`](plugin/skills/ase-task-list/help.md),
   [`/ase-task-view`](plugin/skills/ase-task-view/help.md),
   [`/ase-task-status`](plugin/skills/ase-task-status/help.md),
+  [`/ase-task-assign`](plugin/skills/ase-task-assign/help.md),
   [`/ase-task-rename`](plugin/skills/ase-task-rename/help.md),
   [`/ase-task-condense`](plugin/skills/ase-task-condense/help.md),
   [`/ase-task-reboot`](plugin/skills/ase-task-reboot/help.md),

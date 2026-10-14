@@ -740,7 +740,8 @@ Response `200`: the task plan structure (see *Task plans* above):
 - `attachment`: the attachments of the plan.
 
 The response carries the entity tag of the plan (the SHA-1 of its
-textual task plan format) in its `ETag` header, for a conditional
+textual task plan format, without its usage attachment of type
+`application/yaml; kind="usage"`) in its `ETag` header, for a conditional
 `PUT` via `If-Match`.
 
 Errors: `404` if no project *prjId* or no task plan *taskId* exists,
@@ -788,6 +789,16 @@ entity tag, i.e., was neither changed nor deleted in the meantime; the
 check and the save happen atomically. With the request header
 `If-None-Match: *`, the plan is saved only if no plan *taskId* exists
 yet (atomically, too), e.g. for the first save of a newly allocated id.
+
+The usage attachment (of type `application/yaml; kind="usage"`) of the
+plan is owned by the task store: an overwrite keeps the stored usage
+attachment (silently ignoring a changed, removed, or added one), and the
+entity tag does not cover it, so a booking in the meantime does not fail
+a conditional save. Only a booking changes it, by an overwrite under
+`If-Match` with the entity tag of the *complete* plan (the SHA-1 of
+`usage` plus a newline, followed by its entire textual task plan format,
+so it never coincides with the regular entity tag), which therefore also
+fails on a concurrent booking.
 
 Response `201` (created) or `200` (overwritten):
 

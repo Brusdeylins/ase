@@ -180,10 +180,9 @@ export const commentAttachment = (body: string | null | undefined, author: strin
             attachment[kv[1]] = unescapeValue(kv[2].trimEnd())
     }
     if (chomp !== undefined) {
-        let data = m[2]
-        if (!isMarkdown(attachment.Type))
-            data = data.replace(/^[^\n]*\n/, "").replace(/\n?[^\n]*$/, "")
-        data = data.replace(/\n+$/, "")
+        const data = isMarkdown(attachment.Type) ?
+            m[2].replace(/\n+$/, "") :
+            m[2].replace(/^[^\n]*\n/, "").replace(/\n?[^\n]*$/, "")
         attachment.Data = data !== "" && chomp !== "|4-" ? `${data}\n` : data
     }
     return TaskFormat.migrateAttachment(attachment)
@@ -202,7 +201,8 @@ export const attachmentComment = (attachment: API.TaskAttachment): string => {
             text = data
         else {
             const fence = "`".repeat(Math.max(3, ...Array.from(data.matchAll(/`+/g), (run) => run[0].length + 1)))
-            text = `${fence}${/diff/i.test(attachment.Type ?? "") ? "diff" : ""}\n${data}${data !== "" ? "\n" : ""}${fence}`
+            const lang  = /diff/i.test(attachment.Type ?? "") ? "diff" : /yaml/i.test(attachment.Type ?? "") ? "yaml" : ""
+            text = `${fence}${lang}\n${data}${data !== "" ? "\n" : ""}${fence}`
         }
     }
     return `<!-- ase:attachment\n${lines.join("\n")}\n-->\n${text}`

@@ -209,6 +209,10 @@ export default class SetupCommand {
         for (const statusline of await this.settings.statuslineStatus(tool))
             rows.push([ "STATUSLINE", chalk.bold(statusline.file), statusline.scope, statusline.status ])
 
+        /*  report the ASE telemetry configurations  */
+        for (const telemetry of await this.settings.telemetryStatus(tool))
+            rows.push([ "TELEMETRY", chalk.bold(telemetry.file), telemetry.scope, telemetry.status ])
+
         process.stdout.write(renderTable([ "KIND", "ID", "SCOPE", "STATUS" ], rows))
         return 0
     }
@@ -348,7 +352,7 @@ export default class SetupCommand {
         /*  register CLI sub-command "ase setup status"  */
         setupCmd
             .command("status")
-            .description("report the ASE plugin, MCP server, output style, and statusline registrations for a tool")
+            .description("report the ASE plugin, MCP server, output style, statusline, and telemetry registrations for a tool")
             .option("-t, --tool <tool>",   "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
             .action(async (opts: { tool: string }) => {
                 process.exit(await this.doStatus(parseTool(opts.tool)))
@@ -438,6 +442,33 @@ export default class SetupCommand {
             .option("-s, --scope <scope>", "target scope (\"user\", \"project\", or \"local\")", "user")
             .action(async (opts: { tool: string, scope: string }) => {
                 process.exit(await this.settings.doStatuslineDeactivate(parseTool(opts.tool), parseScope(opts.scope)))
+            })
+
+        /*  register CLI sub-command "ase setup telemetry"  */
+        const telemetryCmd = setupCmd
+            .command("telemetry")
+            .description("activate or deactivate the ASE telemetry (AI usage accounting) for a tool")
+            .action(() => {
+                telemetryCmd.outputHelp()
+                process.exit(1)
+            })
+
+        /*  register CLI sub-command "ase setup telemetry activate"  */
+        telemetryCmd
+            .command("activate")
+            .description("activate the ASE telemetry (OpenTelemetry export to the ASE ingress)")
+            .option("-t, --tool <tool>",   "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
+            .action(async (opts: { tool: string }) => {
+                process.exit(await this.settings.doTelemetryActivate(parseTool(opts.tool)))
+            })
+
+        /*  register CLI sub-command "ase setup telemetry deactivate"  */
+        telemetryCmd
+            .command("deactivate")
+            .description("deactivate the ASE telemetry")
+            .option("-t, --tool <tool>",   "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
+            .action(async (opts: { tool: string }) => {
+                process.exit(await this.settings.doTelemetryDeactivate(parseTool(opts.tool)))
             })
     }
 }

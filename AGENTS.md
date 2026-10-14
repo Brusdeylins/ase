@@ -16,7 +16,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
 **ASE (Agentic Software Engineering)** ships three deliverables from one repo:
 
 -   `plugin/`: the agent tool plugin
-    -   `plugin/skills/ase-xxx-xxx/`: the 57 skills, each with a `SKILL.md`
+    -   `plugin/skills/ase-xxx-xxx/`: the 58 skills, each with a `SKILL.md`
         (agent instructions) and a `help.md` (Unix-style manual page)
     -   `plugin/agents/`: the sub-agent definitions leveraged by the skills
     -   `plugin/meta/`: the shared meta files (constitution, tenets, persona,
@@ -61,7 +61,10 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         policies, `config-core` for the layered `Config` class and the
         internal session state), the MCP-only tool modules of the
         service (`service-kv`, `service-getopt`, `service-markdown`,
-        `service-skills`, `service-sleep`, `service-state`, `service-timestamp`),
+        `service-skills`, `service-sleep`, `service-state`, `service-timestamp`), the AI
+        usage accounting of the service (`service-otel` for the OTLP
+        ingress, the usage windows of the task assignments, and their
+        bookings onto the usage attachments of the tasks),
         the task board (`task-board` for
         the `ase task board` CLI command plus its `task-board-core`,
         `task-board-graph`, `task-board-filter`, `task-board-tui` (split into its
@@ -168,6 +171,8 @@ ase setup mcp activate           # activate   foreign MCP servers (keys in ASE_M
 ase setup mcp deactivate         # deactivate foreign MCP servers
 ase setup statusline activate    # activate   ASE statusline
 ase setup statusline deactivate  # deactivate ASE statusline
+ase setup telemetry activate     # activate   OTLP export towards ASE
+ase setup telemetry deactivate   # deactivate OTLP export towards ASE
 ```
 
 All `ase setup` sub-commands -- except `ase setup mcp list` -- accept
@@ -175,8 +180,9 @@ All `ase setup` sub-commands -- except `ase setup mcp list` -- accept
 for `claude` only, `--scope user|project|local` (default: `user`,
 except for `update`, `uninstall`, `enable`, and `disable`, which
 auto-detect the scope of the existing plugin installation).
-The exception is `ase setup status`, which reports *all* scopes at once
-and hence takes no `--scope`.
+The exceptions are `ase setup status`, which reports *all* scopes at once,
+and `ase setup telemetry activate|deactivate`, which always writes
+user-level configuration, and hence both take no `--scope`.
 
 ## CLI Commands
 

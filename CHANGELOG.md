@@ -2,8 +2,15 @@
 ChangeLog
 =========
 
-1.1.0 (2026-09-XX)
+1.1.0 (2026-10-XX)
 ------------------
+
+-   FEATURE [tool,plugin]: Usage Accounting for Task Assignments
+    The new `ase-task-assign` skill (and `ase task assign` command) assigns a task. Assigning it
+    to oneself opens a usage window, which accounts the AI time, tokens, and costs reported via
+    *OpenTelemetry* by the agent tools to the `ase service`, plus the human time and its costs.
+    Giving the task back or ending the session books the usage onto the usage attachment of the
+    task. Opt-in via `telemetry.enabled` and the new `ase setup telemetry activate` command.
 
 -   IMPROVEMENT [tool]: Auto-Detected Plugin Installation Scope
     The `ase setup update`, `ase setup uninstall`, `ase setup enable`, and `ase setup disable`

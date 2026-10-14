@@ -79,7 +79,10 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "board.web.color.normal":        webColorDefaults.normal,
         "board.web.color.accent":        webColorDefaults.accent,
         "board.web.color.signal":        webColorDefaults.signal,
-        "board.web.editor.keymap":       "default"
+        "board.web.editor.keymap":       "default",
+        "telemetry.enabled":             "false",
+        "telemetry.prices.ai":           "*=4.00/20.00/0.20/5.00",
+        "telemetry.prices.hr":           "*=110"
     },
     industry: {
         "agent.persona":   "engineer",
@@ -122,7 +125,14 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "board.web.color.normal":        [ "user", "project" ],
     "board.web.color.accent":        [ "user", "project" ],
     "board.web.color.signal":        [ "user", "project" ],
-    "board.web.editor.keymap":       [ "user", "project" ]
+    "board.web.editor.keymap":       [ "user", "project" ],
+    "telemetry.enabled":             [ "user", "project" ],
+    "telemetry.service.port":        [ "user" ],
+    "telemetry.service.token":       [ "user" ],
+    "telemetry.service.interval":    [ "user", "project" ],
+    "telemetry.service.idle":        [ "user", "project" ],
+    "telemetry.prices.ai":           [ "user" ],
+    "telemetry.prices.hr":           [ "user", "project" ]
 }
 
 /*  default set of scope kinds writable for any unrestricted key  */
@@ -130,7 +140,81 @@ export const configWritableScopesDefault: ReadonlyArray<ScopeTerm["kind"]> =
     [ "user", "project", "task", "session" ]
 
 /*  keys carrying secrets, whose values are masked in listings  */
-export const configSecretKeys: ReadonlyArray<string> = [ "project.task.store.token", "project.relay.token" ]
+export const configSecretKeys: ReadonlyArray<string> = [ "project.task.store.token", "project.relay.token", "telemetry.service.token" ]
+
+/*  the token counts of the AI usage accounting: the tokens read from resp. written to
+    the prompt cache, the (uncached) input tokens, and the output tokens  */
+export type TokenCounts = { cread: number, cwrite: number, input: number, output: number }
+
+/*  a price of the AI usage accounting (USD per million tokens of each token count)  */
+export type TokenPrice = TokenCounts
+
+/*  parse the per-model price table "<model>=<input>/<output>[/<cread>/<cwrite>][ ...]"
+    of the AI usage accounting (USD per million input, output, cache read, and cache
+    write tokens, where missing cache prices fall back to the input price), keyed by model  */
+export const parsePrices = (spec: string): Map<string, TokenPrice> => {
+    const prices = new Map<string, TokenPrice>()
+    for (const entry of spec.split(/\s+/).filter((e) => e !== "")) {
+        const m = /^([^=\s]+)=(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?)(?:\/(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?))?$/.exec(entry)
+        if (m === null)
+            throw new Error(`invalid price entry "${entry}"`)
+        prices.set(m[1], {
+            input:  Number(m[2]),
+            output: Number(m[3]),
+            cread:  Number(m[4] ?? m[2]),
+            cwrite: Number(m[5] ?? m[2])
+        })
+    }
+    return prices
+}
+
+/*  the price of a model (or tool): its own one, else the one of "*", else none  */
+export const modelPrice = (prices: Map<string, TokenPrice>, model: string): TokenPrice | undefined =>
+    prices.get(model) ?? prices.get("*")
+
+/*  the cost (in USD) of token counts at a price (zero without a price)  */
+export const tokenCost = (price: TokenPrice | undefined, tokens: TokenCounts): number =>
+    price === undefined ? 0 : (tokens.cread * price.cread + tokens.cwrite * price.cwrite +
+        tokens.input * price.input + tokens.output * price.output) / 1e6
+
+/*  check a price table, returning an error message or empty string  */
+const checkPrices = (spec: string): string => {
+    try {
+        parsePrices(spec)
+        return ""
+    }
+    catch (err: unknown) {
+        return err instanceof Error ? err.message : String(err)
+    }
+}
+
+/*  parse the per-user hourly rate table "<user-id>=<usd-per-hour>[,...]" of the
+    human time of the AI usage accounting, keyed by user id (with "*" for all others)  */
+export const parseRates = (spec: string): Map<string, number> => {
+    const rates = new Map<string, number>()
+    for (const entry of spec.split(",").map((e) => e.trim()).filter((e) => e !== "")) {
+        const m = /^([^=,\s]+)=(\d+(?:\.\d+)?)$/.exec(entry)
+        if (m === null)
+            throw new Error(`invalid hourly rate entry "${entry}"`)
+        rates.set(m[1], Number(m[2]))
+    }
+    return rates
+}
+
+/*  the hourly rate (in USD) of a user: its own one, else the one of "*", else zero  */
+export const userRate = (rates: Map<string, number>, user: string): number =>
+    rates.get(user) ?? rates.get("*") ?? 0
+
+/*  check an hourly rate table, returning an error message or empty string  */
+const checkRates = (spec: string): string => {
+    try {
+        parseRates(spec)
+        return ""
+    }
+    catch (err: unknown) {
+        return err instanceof Error ? err.message : String(err)
+    }
+}
 
 /*  schema for a single artifact kind's "basedir"/"files" specification  */
 const artifactSchema = v.optional(v.strictObject({
@@ -238,6 +322,24 @@ export const configSchema = v.nullish(v.strictObject({
         persona:  v.optional(v.picklist(agentClassification.persona)),
         guidance: v.optional(v.picklist(agentClassification.guidance))
     })),
+    telemetry: v.optional(v.strictObject({
+        enabled: v.optional(v.union([ v.boolean(), v.picklist([ "true", "false" ]) ])),
+        service: v.optional(v.strictObject({
+            port:     v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
+                /^\d+$/.test(String(s)) && Number(s) >= 1024 && Number(s) <= 65535, "expected a port number (1024-65535)"))),
+            token:    v.optional(v.pipe(v.string(), v.minLength(1))),
+            interval: v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
+                /^\d+$/.test(String(s)), "expected a number of minutes (0 disables)"))),
+            idle:     v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
+                /^\d+$/.test(String(s)), "expected a number of minutes (0 disables)")))
+        })),
+        prices: v.optional(v.strictObject({
+            ai: v.optional(v.pipe(v.string(), v.check((s) => checkPrices(s) === "",
+                "expected \"<model>=<input>/<output>[/<cread>/<cwrite>][ ...]\" (USD per million tokens, with \"*\" as the model of all others)"))),
+            hr: v.optional(v.pipe(v.string(), v.check((s) => checkRates(s) === "",
+                "expected \"<user-id>=<usd-per-hour>[,...]\" (with \"*\" as the user id of all others)")))
+        }))
+    })),
     board: v.optional(v.strictObject({
         tui: v.optional(v.strictObject({
             color: v.optional(v.strictObject({
@@ -264,7 +366,7 @@ export const configSchema = v.nullish(v.strictObject({
 /*  schema for the session-scoped internal "state.yaml", carrying the machine-local
     runtime state shared between the hooks, the MCP server, and the skills, which is
     intentionally not part of the user-facing configuration: "basedir" is the project
-    directory (recorded for GitHub Copilot CLI only), "task" is the id of the active
+    directory, "task" is the id of the active
     task, and "skill" is the id of the active edit-capable skill  */
 export const sessionStateSchema = v.nullish(v.strictObject({
     basedir: v.optional(v.pipe(v.string(), v.minLength(1))),
