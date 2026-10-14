@@ -15,7 +15,7 @@ import type Log                          from "./ase-lib-log.js"
 import { writeStdout }                   from "./ase-lib-stdio.js"
 import { DaemonCommand }                 from "./ase-lib-daemon-cli.js"
 import { projectRoot, ensureAseGitignore } from "./ase-config-scope.js"
-import { pidAlive, pidStart }            from "./ase-agent-runtime.js"
+import { pidAlive, pidStart }            from "./ase-agent-runtime-exec.js"
 import type { Agent, AgentOpts }         from "./ase-agent-runtime.js"
 import { relaySpec, AgentRelayClient }   from "./ase-agent-relay-client.js"
 

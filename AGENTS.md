@@ -99,7 +99,11 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             application bundled by Vite
     -   `tool/src/ase-agent-*.ts`: the parts of `ase agent`:
         -   `agent-runtime` for the runtime base of all agents,
-            `agent-runtime-{phase,request}` for the runtime bases of the
+            `agent-runtime-tool` for the headless agent tool invocation
+            and the decoding of its output, `agent-runtime-exec` for the
+            processes, temporary directories, jobs, and Git operations,
+            `agent-runtime-claim` for the run locks and task claims of the
+            crash recovery, `agent-runtime-{phase,request}` for the runtime bases of the
             phase resp. request agents, and `agent-runtime-engine` for the
             engine running every agent of a definition (its phase and
             request agents) and its facades: the built-in agents, the agents

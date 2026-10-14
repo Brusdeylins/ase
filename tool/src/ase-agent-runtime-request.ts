@@ -11,10 +11,9 @@ import { Task }                     from "./ase-task.js"
 import * as TaskFormat              from "./ase-task-format.js"
 import type * as API                from "./ase-task-store-plugin-api.js"
 import type { AgentTask, AgentItem, AgentLog } from "./ase-agent-runtime.js"
-import {
-    Agent, updateTask, runOwner,
-    tagsOf, flatKeys, skillErrored
-}                                   from "./ase-agent-runtime.js"
+import { Agent, updateTask, tagsOf, flatKeys } from "./ase-agent-runtime.js"
+import { skillErrored }             from "./ase-agent-runtime-tool.js"
+import { runOwner }                 from "./ase-agent-runtime-claim.js"
 import type { TaskRequests }        from "./ase-task-request.js"
 import {
     typeParam, attachmentTime,

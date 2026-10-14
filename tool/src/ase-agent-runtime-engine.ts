@@ -14,10 +14,9 @@ import type {
     AgentOpts, AgentTask, AgentItem, AgentJob,
     AgentLog, AgentResult, AgentWork, AgentSelection, LineLevel
 }                                   from "./ase-agent-runtime.js"
-import {
-    Agent, taskFlow, taskFlowRaw, tagsOf, setPlanTag,
-    skillErrored, verdictOf, shellJob, updateTask, jobSignal, execHook
-}                                   from "./ase-agent-runtime.js"
+import { Agent, taskFlow, taskFlowRaw, tagsOf, setPlanTag, updateTask } from "./ase-agent-runtime.js"
+import { skillErrored, verdictOf }  from "./ase-agent-runtime-tool.js"
+import { shellJob, jobSignal, execHook } from "./ase-agent-runtime-exec.js"
 import { PhaseAgent }               from "./ase-agent-runtime-phase.js"
 import type { AgentStates }         from "./ase-agent-runtime-phase.js"
 import { RequestAgent }             from "./ase-agent-runtime-request.js"
