@@ -95,11 +95,15 @@ export type PlanParts  = { keys: Map<string, string>, body: string, atts: Attach
 type DialogLine = { text: string, color?: string, bold?: boolean, mask?: number[] }
 
 /*  the key/value header lines of the read dialog, separated from the
-    content by a line, so that the content starts after a blank line  */
-const headerLines = (keys: [ string, string ][], width: number): DialogLine[] => {
+    content by a line, so that the content starts directly after it,
+    resp. (for Markdown content) after a blank line  */
+const headerLines = (keys: [ string, string ][], width: number, blank: boolean): DialogLine[] => {
     const out = keys.map(([ key, val ]): DialogLine => ({ text: `${(key + ":").padEnd(11)}${sanitize(val)}`, color: palette.dim }))
-    if (out.length > 0)
-        out.push({ text: "─".repeat(width), color: palette.dim }, { text: "" })
+    if (out.length > 0) {
+        out.push({ text: "─".repeat(width), color: palette.dim })
+        if (blank)
+            out.push({ text: "" })
+    }
     return out
 }
 
@@ -125,7 +129,7 @@ export const planLines = (parts: PlanParts, id: string, width: number): DialogLi
     if (parts instanceof Error)
         return [ { text: `loading task "${id}" failed: ${parts.message}`, color: palette.signal } ]
     return [
-        ...headerLines([ ...parts.keys ].filter(([ key ]) => key !== "Type"), width),
+        ...headerLines([ ...parts.keys ].filter(([ key ]) => key !== "Type"), width, true),
         ...markdownLines(parts.body, width)
     ]
 }
@@ -135,9 +139,10 @@ export const planLines = (parts: PlanParts, id: string, width: number): DialogLi
     Markdown type, syntax-highlighted for a YAML or JSON type, colored per
     line for a diff, as a placeholder if binary, and else verbatim  */
 export const attachmentLines = (att: Attachment, content: Buffer | Error | undefined, width: number): DialogLine[] => {
-    const out = headerLines(([
+    const markdown = /^text\/markdown\b/i.test(att.type.trim())
+    const out      = headerLines(([
         [ "Type", att.type ], [ "Desc", att.desc ], [ "Created", att.created ?? "" ], [ "Modified", att.modified ?? "" ]
-    ] as [ string, string ][]).filter(([ , val ]) => val !== ""), width)
+    ] as [ string, string ][]).filter(([ , val ]) => val !== ""), width, markdown)
     let text = att.data
     if (text === undefined) {
         if (content === undefined)
@@ -153,7 +158,7 @@ export const attachmentLines = (att: Attachment, content: Buffer | Error | undef
         if (text.includes("\0"))
             return [ ...out, { text: `(binary content: ${sanitize(att.type)}, ${content.length} bytes)`, color: palette.dim } ]
     }
-    if (/^text\/markdown\b/i.test(att.type.trim()))
+    if (markdown)
         return [ ...out, ...markdownLines(text, width) ]
 
     /*  YAML or JSON data is syntax-highlighted: keys accented, numbers and
