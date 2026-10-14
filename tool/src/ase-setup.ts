@@ -226,14 +226,16 @@ export default class SetupCommand {
         const entries: { scope: string, status: string }[] = []
         if (tool === "claude") {
             /*  the Anthropic Claude Code CLI renders one indented block per
-                plugin, carrying an explicit "Scope:" and "Status:" field  */
+                plugin, carrying an explicit "Scope:" and "Status:" field
+                (field labels can consist of multiple words, e.g. the
+                "Read from:" field of directory-based marketplaces)  */
             for (let i = 0; i < lines.length; i++) {
                 if (!/(^|\s)ase@ase\s*$/.test(lines[i]))
                     continue
                 let scope  = "(unknown)"
                 let status = "(unknown)"
                 for (let j = i + 1; j < lines.length; j++) {
-                    const m = lines[j].match(/^\s+(\w+):\s*(.+?)\s*$/)
+                    const m = lines[j].match(/^\s+(\w[\w ]*):\s*(.+?)\s*$/)
                     if (m === null)
                         break
 
