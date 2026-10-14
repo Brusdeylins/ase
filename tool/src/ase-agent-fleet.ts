@@ -25,13 +25,13 @@ import { Config }                        from "./ase-config-core.js"
 import { configSchema }                  from "./ase-config-schema.js"
 import { parseScope }                    from "./ase-config-scope.js"
 import { parseRelayURL, redactURL }      from "./ase-agent-relay-client.js"
-import { pidAlive, pidStart }            from "./ase-agent-common.js"
-import type { Agent }                    from "./ase-agent-common.js"
+import { pidAlive, pidStart }            from "./ase-agent-runtime.js"
 import { relaySchema, relayTls }         from "./ase-agent-relay-server-cli.js"
-import { flattenDefinition, resolveDefinition } from "./ase-agent-custom-config.js"
-import type { CustomDefinition }         from "./ase-agent-custom-config.js"
-import { runtimeDir, readState, writeState, stateAlive, validateName, agentDefaults } from "./ase-agent-instance.js"
-import type { RuntimeState }             from "./ase-agent-instance.js"
+import { flattenDefinition }             from "./ase-agent-definition-core.js"
+import type { ResolvedDefinition }       from "./ase-agent-definition-core.js"
+import type { DefinedAgent }             from "./ase-agent-runtime-engine.js"
+import { processDir, readState, writeState, stateAlive, validateName, agentDefaults } from "./ase-agent-process.js"
+import type { ProcessState }             from "./ase-agent-process.js"
 
 /*  the minimum and maximum delay of restarting an exited member (doubled on each restart
     in a row), the run duration after which a member counts as stable again (resetting its
@@ -120,16 +120,18 @@ const initConfig = (tool: string): string => textframe`
     integrator:
         mode:           squash          # Git integration operation ("merge", "rebase", or "squash")
 
-    #   a custom agent of fully configured behavior (see "ase agent custom start"), e.g. one
-    #   processing the requests "lint" (attached via "ase task request <id> lint <prompt>")
+    #   an agent of a definition file ".ase/agents/<kind>.{yaml,ts,js}" of the project (or of
+    #   the user) is configured by a section named after its kind (or with "kind: <kind>"),
+    #   while an ad-hoc agent is entirely configured by its section (see "ase agent adhoc start"),
+    #   e.g. one processing the requests "lint" (attached via "ase task request <id> lint <prompt>")
     #lint:
-    #    kind:           custom          # agent kind
+    #    kind:           adhoc           # agent kind
     #    type:           request         # processing type ("phase" or "request")
-    #    #definition:    <file>          # YAML file with the definition (relative to this file)
+    #    #definition:    <file>          # YAML, TypeScript, or JavaScript definition file (relative to this file)
     #    prompt:
     #        text:       "Lint the source code of task {id} with focus on: {prompt}"
     #    success:
-    #        criterion:  [ clean ]       # success criteria ("exit", "clean", "changed", ...)
+    #        criterion:  [ exit, clean ] # success criteria ("exit", "clean", "changed", ...)
     #    attach:
     #        output:     lint-report     # kind of the attachment storing the output
     `
@@ -169,10 +171,10 @@ type FleetMember = {
     signalled: boolean
 }
 
-/*  the runtime state of a running fleet: its configuration file, whether all its members
+/*  the process state of a running fleet: its configuration file, whether all its members
     completed their initial startup, and the kind, process id (null while awaiting its
     restart), and number of restarts of each member  */
-type FleetState = RuntimeState & {
+type FleetState = ProcessState & {
     config:  string
     ready:   boolean
     members: Record<string, { kind: string, pid: number | null, restarts: number }>
@@ -214,13 +216,13 @@ export default class AgentFleetCommand extends DaemonCommand {
     protected readonly description = "Manage a fleet of agents (and of the agent relay they report to), " +
         "running each in its own process and restarting it whenever it exits"
 
-    constructor (log: Log, private kinds: Map<string, () => Agent>) {
+    constructor (log: Log, private kinds: Map<string, () => DefinedAgent>) {
         super(log)
     }
 
     /*  load and validate the configuration file (or the configuration <text> of it), where the
         options of each agent are validated by parsing them with the "start" command of a fresh agent  */
-    private load (file: string, text?: string): FleetPlan {
+    private async load (file: string, text?: string): Promise<FleetPlan> {
         let data: unknown
         try {
             data = YAML.parse(text ?? fs.readFileSync(file, "utf8"))
@@ -317,8 +319,8 @@ export default class AgentFleetCommand extends DaemonCommand {
             }
 
             /*  let the options "tls-cert" and "tls-key" not given fall back to the configured
-                "project.relay.crt" and "project.relay.key" (unless an adopted "project.relay.url"
-                selects HTTP), where an adopted "project.relay.url" selecting HTTPS requires both  */
+                "project.relay.crt" and "project.relay.key" (as the agent relay itself would),
+                where an adopted "project.relay.url" selecting HTTPS requires both  */
             const tls = relayTls(cfg)
             if (!given(values, "tls-cert") && tls.cert !== null)
                 values["tls-cert"] = tls.cert
@@ -344,16 +346,18 @@ export default class AgentFleetCommand extends DaemonCommand {
                     `(expected ${kinds.map((name) => `"${name}"`).join(", ")})`)
             validateName(name, kind, kinds)
 
-            /*  the options of a custom agent can be nested by group, and its
-                definition file is relative to the configuration file  */
-            const values = kind === "custom" ? flattenDefinition(options, `fleet: section "${name}"`) : options
-            if (kind === "custom" && typeof values.definition === "string")
+            /*  the options of the definition of an agent can be nested by group, and the
+                definition file of an ad-hoc agent (but not a built-in definition) is
+                relative to the configuration file  */
+            const values = flattenDefinition(options, `fleet: section "${name}"`)
+            if (typeof values.definition === "string" && !values.definition.startsWith("builtin:"))
                 values.definition = path.resolve(path.dirname(file), values.definition)
             for (const key of [ ...deniedKeys, ...(relay !== null ? [ "agent-relay" ] : []) ])
                 if (given(values, key))
                     throw new Error(`fleet: section "${name}": option "${key}" not allowed in a fleet` +
                         (key === "agent-relay" ? " with the section \"relay\"" : ""))
-            const cmd    = this.kinds.get(kind)!().command()
+            const agent  = this.kinds.get(kind)!()
+            const cmd    = agent.command()
             const known  = new Set(cmd.options.map((option) => option.long))
             const shared = Object.fromEntries(Object.entries(defaults).filter(([ key ]) => known.has(`--${key}`)))
             const args   = [ ...sectionArgs("default", shared), ...sectionArgs(name, values),
@@ -368,24 +372,20 @@ export default class AgentFleetCommand extends DaemonCommand {
             }
             agents.push({ name, kind, args })
 
-            /*  the tag of an agent processing tasks serially only: the resolved one of a custom
-                agent processing serially, and the one of a built-in agent of a serial kind  */
-            let tag = ""
-            if (kind === "custom") {
-                let def: CustomDefinition
-                try {
-                    def = resolveDefinition(cmd.opts(), name)
-                }
-                catch (err: unknown) {
-                    throw new Error(`fleet: section "${name}": ` +
-                        `${(err instanceof Error ? err.message : String(err)).replace(/^agent: /, "")}`, { cause: err })
-                }
-                tag = def.serial ? def.tag.name : ""
+            /*  the resolved definition of the agent, validating it  */
+            let def: ResolvedDefinition
+            try {
+                def = await agent.definition(cmd.opts(), name)
             }
-            else if (this.kinds.get(kind)!().serialOnly)
-                tag = `ase-agent-${kind}`
+            catch (err: unknown) {
+                throw new Error(`fleet: section "${name}": ` +
+                    `${(err instanceof Error ? err.message : String(err)).replace(/^agent: /, "")}`, { cause: err })
+            }
+
+            /*  the tag of an agent processing tasks serially only  */
+            const tag   = def.serial ? def.tag.name : ""
             const other = serial.get(tag)
-            if (tag !== "" && other !== undefined && (kind === "custom" || agents.find((agent) => agent.name === other)?.kind === "custom"))
+            if (tag !== "" && other !== undefined)
                 throw new Error(`fleet: sections "${other}" and "${name}" both process the tasks of tag "${tag}" serially only ` +
                     "-- cannot run both")
             if (tag !== "")
@@ -394,7 +394,8 @@ export default class AgentFleetCommand extends DaemonCommand {
         if (agents.length === 0)
             throw new Error(`fleet: configuration "${file}" defines no agents`)
 
-        /*  an agent processing tasks serially only cannot be run multiple times  */
+        /*  an agent of a built-in kind processing tasks serially only cannot be run multiple
+            times (even with different tags, e.g. as merging into the same target branches)  */
         for (const [ kind, create ] of this.kinds) {
             const count = agents.filter((agent) => agent.kind === kind).length
             if (count > 1 && create().serialOnly)
@@ -431,7 +432,7 @@ export default class AgentFleetCommand extends DaemonCommand {
         each as its own child process, and restart each one exited with an exponential backoff,
         until a terminating signal arrives, which stops first all agents and then the relay  */
     private async supervise (file: string, plan: FleetPlan): Promise<number> {
-        const stateFile = path.join(runtimeDir(), "fleet.yaml")
+        const stateFile = path.join(processDir(), "fleet.yaml")
         const entry     = fileURLToPath(new URL("./ase.js", import.meta.url))
         const start     = await pidStart(process.pid)
         const member    = (name: string, kind: string, args: string[], env: Record<string, string> = {}): FleetMember =>
@@ -528,6 +529,8 @@ export default class AgentFleetCommand extends DaemonCommand {
             m.since     = Date.now()
             m.timer     = undefined
             m.signalled = false
+            child.on("error", (err) =>
+                this.log.write("error", `${this.label}: ${m.name} failed (${err.message})`))
             child.once("exit", (code, signal) => {
                 m.child = null
                 if (stopping) {
@@ -568,7 +571,7 @@ export default class AgentFleetCommand extends DaemonCommand {
                         m.env.ASE_AGENT_RELAY_TOKEN = target.token
                 }
                 const child = launch(m)
-                const state = path.join(runtimeDir(), `${m.name}.yaml`)
+                const state = path.join(processDir(), `${m.name}.yaml`)
                 return this.awaitChild(child, () => readState(state)?.pid === child.pid, AGENT_STARTUP_MS)
                     .then((fail) => fail !== null ? `${m.name} ${fail}` : null)
             }))
@@ -595,11 +598,11 @@ export default class AgentFleetCommand extends DaemonCommand {
 
     /*  stop the orphaned members of a fleet whose process is gone without stopping them (e.g.
         killed by SIGKILL, as the members run in their own process groups), in order: first all
-        agents, then the agent relay, where a member counts as orphaned only if its own runtime
+        agents, then the agent relay, where a member counts as orphaned only if its own process
         state (resp. the per-user relay configuration) still records the process of the fleet
         state, and resolve to the names of the stopped members  */
     private async reap (state: FleetState): Promise<string[]> {
-        const dir     = runtimeDir()
+        const dir     = processDir()
         const members = Object.entries(state.members ?? {}).flatMap(([ name, m ]) =>
             m.pid !== null ? [ { name, kind: m.kind, pid: m.pid } ] : [])
         const stopped: string[] = []
@@ -625,14 +628,14 @@ export default class AgentFleetCommand extends DaemonCommand {
     /*  init flow: create the initial configuration file (validated like on start),
         where an already existing configuration file is overwritten only on request  */
     private async doInit (opts: { config?: string, tool?: string, force?: boolean }): Promise<number> {
-        const file = path.resolve(opts.config ?? path.join(path.dirname(runtimeDir()), "fleet.yaml"))
+        const file = path.resolve(opts.config ?? path.join(path.dirname(processDir()), "fleet.yaml"))
         const tool = opts.tool ?? agentDefaults().tool
         if (![ "claude", "copilot", "codex" ].includes(tool))
             throw new Error(`${this.label}: invalid agent tool "${tool}" (expected "claude", "copilot", or "codex")`)
         if (fs.existsSync(file) && !opts.force)
             throw new Error(`${this.label}: configuration "${file}" already exists (overwrite it with "--force")`)
         const text = initConfig(tool)
-        this.load(file, text)
+        await this.load(file, text)
         fs.mkdirSync(path.dirname(file), { recursive: true })
         fs.writeFileSync(file, text, "utf8")
         this.log.write("info", `${this.label}: created configuration "${file}" ` +
@@ -642,7 +645,7 @@ export default class AgentFleetCommand extends DaemonCommand {
 
     /*  start flow: validate the configuration and detach the fleet (or run it in the foreground or as the detached process)  */
     private async doStart (opts: { config?: string, foreground?: boolean }): Promise<number> {
-        const dir       = runtimeDir()
+        const dir       = processDir()
         const stateFile = path.join(dir, "fleet.yaml")
         const file      = path.resolve(opts.config ?? path.join(path.dirname(dir), "fleet.yaml"))
         const serve     = process.env[SERVE_ENV] === "1"
@@ -650,7 +653,7 @@ export default class AgentFleetCommand extends DaemonCommand {
 
         /*  validate the configuration, where the fleet runs in the foreground
             if requested either on the command line or in the configuration  */
-        const plan       = this.load(file)
+        const plan       = await this.load(file)
         const foreground = opts.foreground === true || plan.foreground
 
         /*  idempotent start: an already running fleet is left alone  */
@@ -697,7 +700,7 @@ export default class AgentFleetCommand extends DaemonCommand {
 
     /*  status flow: report whether the fleet is running, and the state of its members  */
     private async doStatus (): Promise<number> {
-        const state = readState<FleetState>(path.join(runtimeDir(), "fleet.yaml"))
+        const state = readState<FleetState>(path.join(processDir(), "fleet.yaml"))
         if (state === null || !(await stateAlive(state))) {
             await writeStdout(`${this.label}: not running\n`)
             return 1
@@ -713,7 +716,7 @@ export default class AgentFleetCommand extends DaemonCommand {
     /*  stop flow: terminate the fleet process and wait until it (and hence all its members) is gone,
         or, with the fleet process already gone, stop its orphaned members  */
     private async doStop (): Promise<number> {
-        const stateFile = path.join(runtimeDir(), "fleet.yaml")
+        const stateFile = path.join(processDir(), "fleet.yaml")
         const state     = readState<FleetState>(stateFile)
         if (state === null || !(await stateAlive(state))) {
             const stopped = state !== null ? await this.reap(state) : []
@@ -775,7 +778,7 @@ export default class AgentFleetCommand extends DaemonCommand {
         /*  register CLI sub-command "log" (of the fleet and all its members,
             each line prefixed with their name, where the name and the level tag
             are colored on a terminal only)  */
-        this.registerLog(group, () => path.join(runtimeDir(), "fleet.log"), undefined,
+        this.registerLog(group, () => path.join(processDir(), "fleet.log"), undefined,
             process.stdout.isTTY === true ?
                 (line) => line
                     .replace(logLevelRe, (_match, head: string, level: string) =>

@@ -41,15 +41,22 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         agents, and the agent fleet) for their start/status/log/stop CLI commands,
         and the `lib-server-cli` and `lib-server-bind` parts shared by the task store
         and agent relay servers for their CLI commands and their HTTP
-        binding), the parts of `ase agent` (`agent-common` for the common
-        agent base, `agent-common-phase` for the common base of the lifecycle
-        phase agents `agent-planner`, `agent-implementer`, `agent-approver`,
-        and `agent-integrator`, `agent-common-request` for the common base
-        of the task request agent `agent-editor`, `agent-custom` for the
-        `custom` agent of a configured behavior (a facade to its phase or
-        request delegate) with `agent-custom-config` for its definition
-        model (options, YAML loading, validation, and templates),
-        `agent-instance` for the `ase agent <kind> start|status|log|stop`
+        binding), the parts of `ase agent` (`agent-runtime` for the runtime
+        base of all agents, `agent-runtime-phase` for the runtime base of the
+        phase agents, `agent-runtime-request` for the runtime base of the
+        request agents, `agent-runtime-engine` for the engine running every
+        agent of a definition (its phase and request agents) and its
+        facades, the built-in agents, the agents of the definition kinds,
+        and the `adhoc` agent, `agent-definition-api` for the public,
+        self-contained types of the agent definitions and their hooks
+        (exported as the types of the `@rse/ase` package),
+        `agent-definition-core` for the definition model (options, YAML,
+        TypeScript, JavaScript, and built-in definition loading, discovery
+        of the definition kinds, hooks, validation, and templates),
+        `agent-definition-builtin/{planner,implementer,approver,integrator,editor}`
+        for the declarative definitions of the modes of the built-in agents
+        we ship,
+        `agent-process` for the `ase agent <kind> start|status|log|stop`
         commands of a single agent, and
         `agent-fleet` for the `ase agent fleet` supervisor of multiple agents
         and the agent relay), the parts of
@@ -196,8 +203,11 @@ autonomous task lifecycle agents `planner`, `implementer`, `approver`,
 and `integrator`, which together drive the `enterprise` task lifecycle
 model headless, the `editor` agent, which processes the
 prompt-driven edit requests of the task boards in any lifecycle model,
-and the `custom` agent, whose entire behavior is configured (with the
-reference definitions of all built-in agent modes in `docs/agent-custom/`);
+and the agents of the definition kinds, whose entire behavior is
+configured by a definition file `.ase/agents/<kind>.{yaml,ts,js}` of the
+project (or of the user), resp. by the options of the `adhoc` agent (with
+example definitions in `docs/agent-definition/`), where the built-in
+agents are themselves declarative definitions run by the same agent engine;
 each agent runs in its own process, managed individually via `ase agent
 <kind> start|status|log|stop`, e.g. `ase agent implementer start -p 2`;
 additionally, `ase agent relay` runs the per-user agent relay server,

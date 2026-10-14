@@ -1078,7 +1078,7 @@ export default class TaskCommand {
             .command("request")
             .description("Request the processing of a task by a prompt, attached as a request of a name " +
                 "(\"edit\" for the edit requests of \"ase agent editor\", any other name for the requests " +
-                "of a custom request agent of \"ase agent custom\"), replacing its failed requests of the name " +
+                "of a request agent of a definition), replacing its failed requests of the name " +
                 "(refused for a finished task, and while a request of the name is being processed)")
             .argument("<id>", "Task identifier")
             .argument("<name>", "Request name")
@@ -1624,7 +1624,7 @@ export class TaskMCP {
             description:
                 "Request the processing of the persisted task `id` by a `prompt`, attached as a request of the " +
                 "`name` (`edit` for the edit requests of the `ase agent editor`, any other name for the requests " +
-                "of a custom request agent of `ase agent custom`), replacing its failed requests of the name. " +
+                "of a request agent of a definition), replacing its failed requests of the name. " +
                 "Returns a status `text`. Fails with an error if the task does not exist or is finished, " +
                 "or while a request of the name is being processed.",
             inputSchema: {

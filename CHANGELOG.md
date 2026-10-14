@@ -12,6 +12,12 @@ ChangeLog
     are now also shown in the graph views and use the normal color, the accent color for active
     tasks, and the signal color for the selected task.
 
+-   BUGFIX [tool]: Failed or Interrupted Request Agent Runs Counted as Success
+    The `linter` example definition (and its counterparts in the manual page
+    and the `.ase/fleet.yaml` template) now also requires the `exit` success criterion, so a
+    crashed or timed-out agent tool no longer removes the `lint` request. Additionally, an
+    interrupted processing of a request now counts as success only once it changed the task plan.
+
 -   FEATURE [tool,plugin]: Usage Accounting for Task Assignments
     The new `ase-task-assign` skill (and `ase task assign` command) assigns a task. Assigning it
     to oneself opens a usage window, which accounts the AI time, tokens, and costs reported via
@@ -59,15 +65,36 @@ ChangeLog
     It runs as user `ase:ase` with the home directory `/ase` on an external volume, which holds
     the projects and the Claude Code credentials.
 
--   FEATURE [tool]: Fully Configurable Custom Agents
-    The new `ase agent custom` runs agents whose entire behavior is configured instead of
-    hard-coded, via flat `--<group>-<item>` options or a YAML definition (`--definition`): either
+-   FEATURE [tool]: Fully Configurable Agents of Definitions
+    Agents can now be entirely configured instead of hard-coded: each definition file
+    `.ase/agents/<kind>.{yaml,ts,js}` of the project (or `agents/` in the per-user configuration
+    directory) yields an agent kind of its own (`ase agent <kind> start`), shadowing a built-in
+    one of the same kind, while the new `ase agent adhoc` runs an agent given entirely by flat
+    `--<group>-<item>` options, optionally based on a definition (`--definition`): either
     claiming tasks by their lifecycle status (`--type phase`) or processing attached prompt requests
     (`--type request`), with configurable states, tags, assignees, skill or text prompts with
-    placeholder templates, working directories, preparing and finishing commands, success criteria,
-    verdicts, and attachments. Every mode of the five built-in agents is expressible as a reference
-    definition. Requests of any name are attached via the new `ase task request` command, the new
-    `ase_task_request` MCP tool, or key `R` of the task boards.
+    placeholder templates, working directories, preparing and finishing commands, success criteria
+    (like an expected attachment created or changed by the processing, where a leftover of an
+    earlier processing does not count), verdicts, and attachments. A definition is a YAML file, or a TypeScript or JavaScript file
+    (typed via `AgentDefinition` of the `@rse/ase` package) which additionally carries hooks along
+    the entire processing: `start` and `stop` (agent setup and teardown), `order` (prioritization),
+    `passes` and `ready` (claiming), `prepare` and `prompt` (code-based preparing and computed
+    prompts), `verdict` and `success` (evaluation), `settle` (per-task target state, tag, and
+    assignee), and `finish` (code-based finishing), with a context reading the plans and all
+    tasks, changing tasks (frontmatter keys, tags, and attachments), running commands, and
+    honoring a cancellation signal. The five built-in agents are no
+    longer hard-coded, but declarative definitions run by the same engine, reusable via
+    `--definition builtin:<kind>-<mode>`. A definition file can extend a base definition (another
+    definition file or a built-in one) via its key `definition`, overriding its options and
+    replacing its hooks of the same name. All agents accept the `--<group>-<item>` options,
+    which win over their definition, where a given
+    prompt source (`--prompt-skill`, `--prompt-text`, or `--prompt-file`) resp. `--tag-retry` or
+    `--tag-failure` also replaces its mutually exclusive alternative of the definition. A verdict
+    decides the tag and target state of a successfully processed task only, so a failed one (an
+    unmet success criterion or a failed finishing command) is consistently settled as a failure.
+    Requests of any name are attached via the new `ase task request` command, the new
+    `ase_task_request` MCP tool, or key `R` of the task boards. The tool now requires Node.js
+    22.18.0 or newer.
 
 -   FEATURE [tool]: Individually Managed Agents and Supervised Agent Fleets
     Each agent now runs in its own process, managed via `ase agent <kind> start|status|log|stop`,

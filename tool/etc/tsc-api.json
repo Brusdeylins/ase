@@ -1,0 +1,12 @@
+{
+    "extends": "./tsc.json",
+    "compilerOptions": {
+        "declaration":         true,
+        "emitDeclarationOnly": true
+    },
+    "include": [
+        "../src/ase-agent-definition-api.ts"
+    ],
+    "exclude": []
+}
+

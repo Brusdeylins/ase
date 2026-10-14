@@ -529,6 +529,31 @@ export const execaJob = (file: string, args: readonly string[], options: JobOpti
     })
 }
 
+/*  the cancellation of the operation of a job currently run (if any, see "withinJobTimeout")  */
+export const jobSignal = (): AbortSignal | undefined =>
+    jobScope.getStore()
+
+/*  run a command <file> with its arguments <args> without a shell for a hook of a definition
+    (like "execaJob", but cancelled by <signal>), resolving to its exit code (or -1 if it did
+    not exit regularly, e.g. if not found, killed on its timeout, or cancelled) and its outputs  */
+type HookExecOptions = { cwd: string, env?: Readonly<Record<string, string>>, input?: string, signal: AbortSignal }
+type HookExecResult  = { code: number, stdout: string, stderr: string }
+export const execHook = async (file: string, args: readonly string[], options: HookExecOptions): Promise<HookExecResult> => {
+    const result = await execaJobBase(file, args, {
+        cwd:          options.cwd,
+        env:          { GIT_TERMINAL_PROMPT: "0", ...options.env },
+        reject:       false,
+        cancelSignal: options.signal,
+        ...(options.input !== undefined ? { input: options.input } : { stdin: "ignore" as const })
+    })
+    const code = typeof result.exitCode === "number" && !result.isTerminated && !result.isCanceled ? result.exitCode : -1
+    return {
+        code,
+        stdout: String(result.stdout ?? ""),
+        stderr: String(result.stderr ?? "") || (code < 0 ? result.shortMessage ?? "" : "")
+    }
+}
+
 /*  run a shell command of the preparing or the finishing of a job in the working directory
     <cwd> with the additional environment variables <env> (like "execaJob"), logging its
     output lines, and throwing on its failure  */
@@ -984,6 +1009,16 @@ export abstract class Agent {
     protected async init (_opts: AgentOpts): Promise<void> {}
     protected async teardown (): Promise<void> {}
 
+    /*  the interruption of the run of the agent (never aborted before its run)  */
+    protected interruption: AbortSignal = new AbortController().signal
+
+    /*  the prioritization of the dispatchable tasks <tasks> (in natural id order) on each
+        dispatching: the tasks in the order to claim them, where an omitted task is not
+        claimed this time (by default, the natural id order)  */
+    protected async order (tasks: AgentTask[]): Promise<AgentTask[]> {
+        return tasks
+    }
+
     /*  recover the tasks left behind by terminated runs of agents of its kind (see
         "AgentRun"), at the start of the run, and decide whether the run lock has to be
         retained after the run (until the exit of the process, e.g. while still
@@ -1274,7 +1309,7 @@ export abstract class Agent {
         where a "branch:" source is additionally checked out on request (<checkout>) in a
         temporary, detached Git worktree "<id>-<suffix>" (granted to the agent tool), which is
         removed afterwards  */
-    protected async sourceJob (task: AgentTask, suffix: string, checkout: boolean): Promise<AgentWork> {
+    private async sourceJob (task: AgentTask, suffix: string, checkout: boolean): Promise<AgentWork> {
         const source = taskFlow(this.log, task, "Source")
         const root   = await this.workdir(task, [ source ])
         if (source.type !== "branch" || !checkout)
@@ -1306,7 +1341,7 @@ export abstract class Agent {
         for a "branch:" changeset, even be committed onto its branch), so the task is deferred
         (and not claimed) until then (re-checked on the next change of the tasks, e.g. once the
         earlier task was integrated)  */
-    protected async changesetReady (task: AgentTask): Promise<boolean> {
+    private async changesetReady (task: AgentTask): Promise<boolean> {
         let source:    FlowValue
         let changeset: FlowValue
         try {
@@ -1341,7 +1376,7 @@ export abstract class Agent {
         checked out, else in an agent worktree "<id>-<suffix>" (with the branch created from the
         source if missing), and an "attachment:" changeset left to the skill, where the work on a
         "branch:" changeset is committed onto it on request (<commit>) and published  */
-    protected async changesetJob (task: AgentTask, suffix: string, parallel: boolean, commit: boolean): Promise<AgentWork> {
+    private async changesetJob (task: AgentTask, suffix: string, parallel: boolean, commit: boolean): Promise<AgentWork> {
         const source    = taskFlow(this.log, task, "Source")
         const changeset = taskFlow(this.log, task, "Changeset")
         const cwd       = await this.workdir(task, [ source, changeset ])
@@ -1419,7 +1454,7 @@ export abstract class Agent {
         directly in the working copy the agent is started in (and not in an ASE worktree
         of it) is processed (and hence staged) only while the working copy is held for it
         alone (see "holdRoot"), else it is deferred  */
-    protected async changesetReadReady (task: AgentTask): Promise<boolean> {
+    private async changesetReadReady (task: AgentTask): Promise<boolean> {
         let changeset: FlowValue
         try {
             changeset = taskFlow(this.log, task, "Changeset")
@@ -1440,7 +1475,7 @@ export abstract class Agent {
         "branch:" changeset left in place (to be addressed by its name), and an "attachment:"
         changeset applied staged in a temporary worktree "<id>-<name>-<suffix>", detached at
         the commit it is based on, which is removed afterwards  */
-    protected async changesetReadJob (task: AgentTask, suffix: string): Promise<AgentWork> {
+    private async changesetReadJob (task: AgentTask, suffix: string): Promise<AgentWork> {
         const changeset = taskFlow(this.log, task, "Changeset")
         const root      = await this.workdir(task, [ changeset ])
         if (changeset.type === "branch")
@@ -1483,7 +1518,7 @@ export abstract class Agent {
         the same changeset branch, or into this target branch) would otherwise be processed in
         the same worktree at once (mixing their change sets, and merging, rebasing, or removing
         the worktree under each other), else it is deferred  */
-    protected async targetReady (task: AgentTask): Promise<boolean> {
+    private async targetReady (task: AgentTask): Promise<boolean> {
         let changeset: FlowValue
         let target:    FlowValue
         try {
@@ -1515,7 +1550,7 @@ export abstract class Agent {
         of a "worktree" changeset (whose ASE worktree id the skill selects) and to the worktrees in
         which the changeset and target branches are checked out, where a target branch not checked
         out anywhere yet is checked out in a temporary worktree "<id>-<suffix>"  */
-    protected async targetJob (task: AgentTask, suffix: string): Promise<AgentWork> {
+    private async targetJob (task: AgentTask, suffix: string): Promise<AgentWork> {
         const changeset = taskFlow(this.log, task, "Changeset")
         const target    = taskFlow(this.log, task, "Target")
         const root      = await this.workdir(task, [ changeset, target ])
@@ -1803,7 +1838,7 @@ export abstract class Agent {
                 .description(this.description)
                 .exitOverride()
                 .option("-n, --name <name>",        "name of the agent in its log lines, its processing log " +
-                    `attachment "agent:<name>", the "Assignee:" of its tasks, and its runtime files (default: "${this.kind}")`)
+                    `attachment "agent:<name>", the "Assignee:" of its tasks, and its process files (default: "${this.kind}")`)
                 .option("-t, --tool <tool>",        "agent tool (\"claude\", \"copilot\", or \"codex\"; " +
                     "default: $ASE_TOOL, else \"claude\")")
                 .option("-p, --parallel <num>",     "maximum number of tasks processed in parallel (default: 1)")
@@ -1825,7 +1860,7 @@ export abstract class Agent {
 
     /*  validate the own options of the agent ahead of its setup (e.g. before detaching it),
         throwing on an invalid one  */
-    validate (_own: Partial<AgentOpts>): void {}
+    async validate (_own: Partial<AgentOpts>): Promise<void> {}
 
     /*  configure the agent from the default options, overridden by its own options,
         validate its configuration, and initialize it, where <relay> is the client
@@ -1920,7 +1955,7 @@ export abstract class Agent {
                 await this.write("info", this.name, `task "${id}" waits for ${reason}`)
         state.waiting = selected.waiting
         tasks.sort((a, b) => TaskFormat.compareIds(a.id, b.id))
-        for (const task of tasks) {
+        for (const task of await this.order(tasks)) {
             if (slots.size >= this.parallel || abort.signal.aborted)
                 break
             let claimed: string | null = null
@@ -1983,6 +2018,7 @@ export abstract class Agent {
             dirty = true
             wake()
         }
+        this.interruption = abort.signal
         const interrupt = (signal: NodeJS.Signals) => {
             if (abort.signal.aborted)
                 return

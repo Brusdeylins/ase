@@ -603,8 +603,8 @@ with the Gitea token from `project.task.store.token`, else `$GITEA_TOKEN`):
   word of letters, digits, and dashes, not ending in `-running` or
   `-failed`, and none of the built-in agent kinds): `edit` for the edit
   requests of `ase agent editor` (like key `E` of the task board), any
-  other name for the requests of a request agent of `ase agent custom`
-  (see `--type request`). The request is attached to the task as an
+  other name for the requests of a request agent of a definition kind or
+  of `ase agent adhoc` (see `--type request`). The request is attached to the task as an
   attachment of type `text/plain; charset=utf-8; kind="<name>"` (with the
   prompt as its data), mirrored in the tag `ase-agent-<name>:pending`
   (`ase-agent-editor:pending` for `edit`), replacing all failed requests
@@ -854,7 +854,7 @@ the persisted task plans of the current project:
   same views, `R` requests the selected task by a prompt under a request
   name (see `ase task request`), suggested from the request agents
   announced to the agent relay (`edit` for `ase agent editor`, else the
-  request name of a request agent of `ase agent custom`; terminal: `⇥`
+  request name of any other request agent; terminal: `⇥`
   switches between the request name and the prompt, and `↑`/`↓` cycle
   through the suggestions; web: a request name field with the
   suggestions as its completions), which the request agent of the name
@@ -928,8 +928,10 @@ the persisted task plans of the current project:
   with its host and process id, its state with the duration for which it
   has been in it, and the age of its latest heartbeat. Without an agent relay, the agents view is
   skipped. Additionally,
-  the card of each task an agent is busy with carries an inverse ` ⚉ <name> ` box per agent on its top border
-  (lanes view; in accent color, rounded in the web board), the status line shows the number of agents and the
+  the card of each task an agent is busy with carries an inverse ` ⚉ <name> ` badge per agent on its top border,
+  where the card of any other assigned task carries the badge ` ⚉ <name> ` for an agent resp. ` ☺ <name> ` for
+  a person (lanes and graph views; in signal color when selected, in accent color when active, else in normal
+  color, rounded in the web board), the status line shows the number of agents and the
   connection state of the relay, and `--text` appends the agents with
   their current operation. An agent stopping vanishes from the board
   immediately, while an agent missing its heartbeat vanishes after 30
@@ -939,24 +941,28 @@ the persisted task plans of the current project:
 
 The following top-level commands exist for autonomous agents driving the
 phases of the `enterprise` task lifecycle model, processing the edit
-requests of tasks, and of fully configured behavior:
+requests of tasks, and of configured behavior:
 
 - `ase agent` *agent* `start` \[*agent-options*\] \[`-f`|`--foreground`\]:
-  Start one of the agents `planner`, `implementer`, `approver`,
-  `integrator`, `editor`, and `custom` in the background, each running
-  in its own process, e.g., `ase agent implementer start -p 2`. The *agent-options*
+  Start one of the built-in agents `planner`, `implementer`, `approver`,
+  `integrator`, and `editor`, an agent of a *definition kind* of the
+  project or the user, or an `adhoc` agent (see below) in the background,
+  each running in its own process, e.g., `ase agent implementer start -p 2`.
+  The *agent-options*
   \[`-n`|`--name` *name*\] \[`-t`|`--tool` `claude`|`copilot`|`codex`\]
   \[`-p`|`--parallel` *num*\] \[`-T`|`--timeout` *duration*\]
   \[`-o`|`--one-shot`\] \[`-r`|`--repo` *url*\] \[`-d`|`--tempdir` *dir*\]
   \[`--agent-relay` *url*\] (where `--repo` and `--tempdir` are not
   accepted for `planner`, which never processes tasks in a clone, and
-  silently ignored for `custom` with `--workdir project`)
-  additionally carry the individual options of an agent (if any).
-  `--name` names the agent (default: its kind, i.e., `planner`,
-  `implementer`, `approver`, `integrator`, `editor`, or `custom`; at most 64
+  silently ignored for a definition kind and `adhoc` with `--workdir project`)
+  additionally carry the individual options of an agent (if any), plus,
+  for every agent, the options `--<group>-<item>` of the definitions
+  (see below), which override the definition of the agent.
+  `--name` names the agent (default: its kind, e.g., `planner`,
+  `implementer`, `approver`, `integrator`, `editor`, or `adhoc`; at most 64
   characters) in its log lines, its processing log attachment, the
   `Assignee:` of the tasks it processes, its temporary directory, and
-  its runtime files `.ase/agent/<name>.yaml` (its process id) and
+  its process files `.ase/agent/<name>.yaml` (its process id) and
   `.ase/agent/<name>.log` (its log), so multiple agents of the same kind
   are started under different names, e.g., `ase agent implementer start
   -n impl-claude -t claude` and `ase agent implementer start -n
@@ -974,7 +980,7 @@ requests of tasks, and of fully configured behavior:
   best run together as a fleet (see `ase agent fleet start`). `ase agent
   <agent> start --help` shows the options of a single agent.
 
-  Each agent except `editor` and `custom` (see below) drives one phase of the `enterprise` task lifecycle model
+  Each built-in agent except `editor` (see below) drives one phase of the `enterprise` task lifecycle model
   (refused for any other model) until interrupted, so that the four
   agents together realize the entire model. Each agent observes the tasks in its
   *incoming* state which do not carry the *tag* of its kind -- `ase-agent-<kind>`, resp. per mode
@@ -1169,6 +1175,25 @@ requests of tasks, and of fully configured behavior:
   | `approver`    | Approval       | `IMPLEMENTED` | `APPROVING`    | `IMPLEMENTED` (`judge`) or `APPROVED` (`approve`) | `IMPLEMENTED` (or `DECLINED` with `approve`) | `APPROVED` or later                         |
   | `integrator`  | Integration    | `APPROVED`    | `INTEGRATING`  | `INTEGRATED`                                      | `DEFERRED`                                   | `INTEGRATED` or `CANCELLED`                 |
 
+  The five built-in agents are not hard-coded, but each mode of them is
+  a declarative *definition* in the format of the definition files
+  (see below), run by the same agent engine as the agents of the
+  definition kinds: the sources
+  `tool/src/ase-agent-definition-builtin/<kind>.ts` of the tool carry
+  them, where the predecessor rule of `implementer` is its only hook
+  (`passes`, recognizing the implementing of a stacked predecessor by
+  the tag of the agent itself in mode `implement`, so it also holds
+  for the definition reused under another tag, resp. by the tag
+  `ase-agent-implementer` in mode `draft`, and its integrating by the
+  tag `ase-agent-integrator`). Each built-in agent keeps the identity of its kind: its
+  runs, its presence (with its mode), and the agent-owned worktrees
+  (`<id>-<kind>`) are named after its kind, even if its definition is
+  overridden by the options `--<group>-<item>`. An `adhoc` agent reuses a
+  built-in definition via `--definition builtin:<kind>-<mode>` (see
+  below), e.g., to run a further approval agent of its own tag. A
+  definition kind of the same name as a built-in kind replaces the
+  latter (see below).
+
   - `ase agent planner`:
     Claims only the `DRAFTED` tasks whose `Assignee:` frontmatter key
     already is its agent name of `--name` (default: `planner`), so a plan
@@ -1306,11 +1331,28 @@ requests of tasks, and of fully configured behavior:
     process is no longer alive) are turned into `kind="edit-failed"`,
     and the previous assignees of their tasks are restored.
 
-  - `ase agent custom`:
-    Unlike the other agents, its *entire* behavior is *configured*
-    instead of hard-coded, so several custom agents of different
-    behavior run side by side under distinct names (`--name`), individually
-    and in a fleet. With `--type phase` (default), it claims tasks by
+  - `ase agent` *kind* (of a definition kind) and `ase agent adhoc`:
+    The *entire* behavior of these agents is *configured* by a
+    *definition* instead of hard-coded, so several agents of different
+    behavior run side by side, individually and in a fleet. A
+    *definition kind* is an agent kind of its own, discovered from the
+    definition file *kind*`.`*ext* of the project (`.ase/agents/`,
+    intended to be versioned) or of the user (*per-user configuration
+    directory*`/agents/`, see *CONFIGURATION FILES*), where a definition
+    kind of the project shadows one of the user, and both shadow a
+    built-in agent of the same kind (whose `--mode` then no longer
+    exists), e.g., `.ase/agents/reviewer.mts` yields `ase agent reviewer
+    start`. The definition files are discovered only on the commands `ase
+    agent` ..., where a file of an invalid kind name (other than up to
+    64 letters, digits, underscores, and dashes, starting with a letter
+    or digit), of the kind name `adhoc`, `relay`, or `fleet`, or of an
+    already discovered kind name in the same directory (by the
+    precedence of the extensions in the order listed below) is skipped
+    with a warning. An `adhoc` agent, instead, has no definition file of
+    its own: its definition is given entirely by its options (optionally
+    based on the definition file or built-in definition of `--definition`),
+    e.g., for a one-off agent or for an agent defined inline in a fleet.
+    With `--type phase` (default), such an agent claims tasks by
     their *lifecycle status*, like the phase agents, and with `--type
     request`, it processes the *prompt requests* attached to tasks in
     any lifecycle status (see `ase task request`), like `editor`. Only
@@ -1320,17 +1362,48 @@ requests of tasks, and of fully configured behavior:
     `ase-agent-<name>` and unassigned, while a `request` task keeps its
     status and tags (except the request state tag) and gets its
     previous assignee back. Every option is a flat long option of the
-    form `--<group>-<item>` (except the ungrouped ones), where
-    `--definition`|`-D` *file* loads a YAML file with the same keys
-    (the given options win), either flat (`state-incoming: PLANNED`) or
+    form `--<group>-<item>` (except the ungrouped ones), accepted by all
+    agents (including the built-in ones), where the given options
+    override the definition of the agent. A definition file carries the
+    same keys, either flat (`state-incoming: PLANNED`) or
     nested by group (`state: { incoming: PLANNED }`), where a list value
     repeats a repeatable option, a flag takes a boolean, and a relative
-    `prompt-file` is relative to the definition file. The options are
-    validated on the start (also before detaching the agent), where an
-    error names the offending option. The options are:
+    `prompt-file` is relative to the definition file. A definition file
+    is either a YAML file (`.yaml` or `.yml`), or a TypeScript (`.ts`
+    or `.mts`, run via the type stripping of Node.js) or
+    JavaScript file (`.js`, `.mjs`, or `.cjs`), whose default export is
+    the definition object or a (possibly asynchronous) function returning
+    it, where `.mts` resp. `.mjs` avoid the reparsing warning of Node.js
+    outside of a package of `"type": "module"`. Typed via the type
+    `AgentDefinition` of the package `@rse/ase` (`import type {
+    AgentDefinition } from "@rse/ase"` and `export default { ... }
+    satisfies AgentDefinition`, with `@rse/ase` as a development
+    dependency for the editor only, as the type import is erased), only
+    such a file can additionally carry *hooks* (see below). A definition
+    file can extend a *base definition* via its key `definition`: a
+    further definition file (relative to the definition file) or, as
+    `builtin:<kind>-<mode>` (resp. `builtin:<kind>`), the definition of
+    a built-in agent, where its options override those of the base
+    definition (also replacing their mutually exclusive alternatives,
+    see below, and with a false flag unsetting the flag of the base
+    definition) and its hooks replace those of the same name of the base
+    definition (with base definitions chained arbitrarily deep, but
+    never cyclic), e.g., a `.ase/agents/implementer.mts` of `definition:
+    "builtin:implementer-implement"` plus a `ready` hook shadows the
+    built-in `implementer` while keeping its definition and its `passes`
+    hook, resp. a `.ase/agents/reviewer.yaml` of `definition:
+    builtin:approver-judge` plus its own `tag: { name: ase-agent-reviewer
+    }` runs a further judging agent of its own tag. The option
+    `--definition`|`-D` *file* (`adhoc` only) loads such a definition file,
+    or, as `builtin:<kind>-<mode>` (resp. `builtin:<kind>` for its default
+    mode), the definition of a built-in agent, e.g., `ase agent
+    adhoc start -n reviewer -D builtin:approver-approve --tag-name
+    ase-agent-reviewer`. The options are validated on the start (also
+    before detaching the agent), where an error names the offending
+    option. The options are:
 
     - *ungrouped*: `--type phase`|`request`; `--definition`|`-D`
-      *file*; `--workdir project`|`source`|`changeset`|`changeset-read`|`target`
+      *file*|`builtin:<kind>[-<mode>]`; `--workdir project`|`source`|`changeset`|`changeset-read`|`target`
       (default: `project`, see below); `--lifecycle` *model* (repeatable,
       the supported task lifecycle models, default: every model containing
       all given states, resp. all models for `request`); `--serial`
@@ -1348,7 +1421,8 @@ requests of tasks, and of fully configured behavior:
       `--state-passed` *state* (the first state from which on a task
       has passed the phase, default: phase); `--state-verdict`
       *VERDICT*`=`*state* (repeatable, the target state per verdict,
-      overriding the success/failure target state). All states have to
+      overriding the success target state, but never the failure
+      target state of a failed processing). All states have to
       exist in the task lifecycle models, and the transitions from the
       incoming into the activity state, back (on interrupt), and from the
       activity into the target states have to be reachable.
@@ -1374,7 +1448,7 @@ requests of tasks, and of fully configured behavior:
 
     - *assign*: `--assign-name` *who* (the assignee under which the agent
       claims, holds, recognizes, and releases the tasks, and which names
-      its agent-owned worktrees, so a custom agent can act as, e.g.,
+      its agent-owned worktrees, so a configured agent can act as, e.g.,
       `planner`, although its agent name must not clash with a built-in
       kind, default: the agent name); `--assign-required` (`phase` only,
       claim only the tasks explicitly assigned to *who*);
@@ -1421,26 +1495,32 @@ requests of tasks, and of fully configured behavior:
       interrupt, `clean` no `▶ ERROR:` output line, `changed` a plan content
       changed since the claim (`request` only, hence also succeeding on
       an interrupt after the plan was saved, like `editor`), `verdict` a
-      found verdict, `attachment` an existing attachment of
-      `--attach-expect`, and `status` the move into the phase success
-      state by the skill itself (`phase` only); `--success-match` *regex*
+      found verdict, `attachment` an attachment of `--attach-expect`
+      created or changed by the processing (a leftover of an earlier
+      processing does not count), and `status` the move into the phase
+      success state by the skill itself (`phase` only); `--success-match`
+      *regex*
       (repeatable, an output line has to match it, e.g.
       `status:\W*plan integrated\b`). An unmet criterion is logged, and a
       failed request is described in its `<name>-failed` attachment by
       the first applicable reason: a failed preparing or finishing
       command, `skill reported an error`, `agent tool failed`, else the
       reason of the first unmet criterion (e.g. `plan not changed`, `no
-      verdict`, `no attachment "<spec>"`, or `no output line matching
-      "<regex>"`).
+      verdict`, `no new or changed attachment "<spec>"`, or `no output
+      line matching "<regex>"`).
 
     - *verdict*: `--verdict-label` *label* (extracts the last upper-case
       word after the label in the output of a successfully exited agent
-      tool, e.g. `REVIEW VERDICT` for `**REVIEW VERDICT**: **APPROVE**`),
+      tool, e.g. `REVIEW VERDICT` for `**REVIEW VERDICT**: **APPROVE**`,
+      or determined by the hook `verdict` instead, see below),
       accepted only if listed by the repeatable `--verdict-allow`
       *VERDICT* (default: the verdicts of `--state-verdict`, else any),
       stored lower-cased as the tag value (e.g. `ase-agent-approver:approve`,
-      instead of `--tag-success` resp. `--tag-failure`) and mapped to a
-      target state via `--state-verdict`.
+      instead of `--tag-success`) and mapped to a target state via
+      `--state-verdict`. A verdict is honored on success only: on a
+      failed processing (an unmet success criterion or a failed
+      finishing command), the task is settled by `--tag-failure` and
+      `--state-failure` instead.
 
     - *attach*: `--attach-log` *name* (the processing log attachment
       `agent:<name>`, also wherever it is referenced, e.g. in the failure
@@ -1449,7 +1529,8 @@ requests of tasks, and of fully configured behavior:
       the task attachment of type `text/plain; charset=utf-8;
       kind="<kind>"`, replacing the one of an earlier processing);
       `--attach-expect` *spec* (the attachment the criterion `attachment`
-      requires); `--attach-skip` *spec* (`phase` only, leaves every task
+      requires, which must not match the attachment of `--attach-output`,
+      as this one is always created); `--attach-skip` *spec* (`phase` only, leaves every task
       already carrying such an attachment unclaimed), where *spec* is
       *kind* or *mime-type*`;`*kind* (e.g. `text/x-diff;draft`), matching
       the `kind` parameter of the attachment type exactly and, if given,
@@ -1493,7 +1574,7 @@ requests of tasks, and of fully configured behavior:
     deferrals of the tasks, and the values of `{source-dir}` and
     `{changeset-worktree}`, where `--repo` and `--tempdir` apply to all but
     `project` (and are ignored silently there, so the section `default` of
-    a fleet applies uniformly to all its custom agents), and where the
+    a fleet applies uniformly to all its configured agents), and where the
     worktrees the agent creates itself are named
     `<id>-<assign-name>` resp. `<id>-<changeset-name>-<assign-name>` (with
     every `#` of the task id replaced by `_`), so they equal those of the
@@ -1532,34 +1613,131 @@ requests of tasks, and of fully configured behavior:
       not publishable), and the merged `branch:` changeset is deleted from
       the origin.
 
-    A custom agent announces itself to the agent relay with the kind
-    `custom`, its `--assign-name` as its mode (e.g. `planner`), and, for
-    `request`, its request name (suggested by key `R` of the task boards).
-    Its runs are recorded per tag (`agent-custom-<tag-name>/<store-hash>`,
-    see *STATE FILES*), so the recoveries of differently configured custom
-    agents never affect each other, while the five built-in agents stay
-    hard-coded, but every mode of them is exactly expressible as a custom
-    definition, except for the agent name in the processing log lines,
-    the agent presence, and a few informational log lines (see the
-    reference definitions in `docs/agent-custom/`, e.g., `ase agent custom
-    start -n c-implementer -D docs/agent-custom/implementer-draft.yaml`).
-    Examples:
+    The *hooks* of a TypeScript or JavaScript definition file (its key
+    `hooks`, typed via `AgentHooks` of the package `@rse/ase`) are the
+    code-based extensions beyond the declarative options, which not only
+    gate, but also shape the processing. They receive the task (its `id`,
+    `title`, `status` adapted to the task lifecycle model, flattened
+    frontmatter `keys`, and `tags`) and a context *ctx*, where a thrown
+    error never terminates a running agent, but counts like a negative
+    result with the error as its reason. The context provides:
+
+    - `agent` (its `name`, `kind`, `mode`, and `tag`) and `lifecycle` (the
+      task lifecycle model with its `states`).
+    - `signal`: an `AbortSignal`, aborted on the interrupt of the agent
+      (and within the hooks of a job on the timeout of its preparing resp.
+      finishing), which a long-running hook should honor.
+    - `flow(task, key)`: the parsed `Source:`, `Changeset:`, or `Target:`
+      value (`type` and `name`), else `null` if invalid.
+    - `attachments(task)` (their `type`, `desc`, and inline `data`),
+      `plan(task)` (the plan body, else `null`), `task(id)` (a task, else
+      `null`), and `tasks()` (all tasks), where *task* is a task or its id.
+    - `update(task, change)`: a change of a task in a single conditional
+      update (retried on a concurrent change, resolving to `false` if the
+      task vanished): `keys` to set (or to remove with `null`, except
+      `Status`, `Assignee`, `Tags`, and `Modified`), `tags` to `add`
+      (`<tag>` or `<tag>:<value>`, replacing the other occurrences of
+      `<tag>`) and to `remove` (`<tag>` with any value, or exactly
+      `<tag>:<value>`), except the tag of the agent itself, and `attach`
+      attachments (`kind`, `mime` (default: `text/plain`), `desc`, `data`,
+      replacing those of the same kind unless `replace: false`), except
+      the processing logs and the processed requests of the agent.
+    - `exec(cmd, args, options)`: the run of a command without a shell (in
+      the working directory of the job within the hooks of a job, else in
+      the current directory, or in `options.cwd`, with the additional
+      environment variables `options.env` and the standard input
+      `options.input`), limited to 240s and cancelled by `signal`, resolving
+      to its exit `code` (or `-1` if it did not exit regularly), `stdout`,
+      and `stderr`.
+    - `log(level, message)`: a log line (into the processing log of the
+      task within the hooks of a job, else into the log of the agent).
+
+    The hooks of a job additionally receive the *job* (its working
+    directory `dir`, the additional directories `dirs` granted to the
+    agent tool, the temporary worktree `sourceDir` of a `branch:` source,
+    the ASE worktree id `changesetWorktree` of the changeset, and, for
+    `request`, the raw `request` prompt). The hooks are, in the order of
+    their invocation:
+
+    - `start(ctx)`: the initialization of the agent (e.g. opening a
+      connection) on its start, where a thrown error refuses the start.
+    - `order(tasks, ctx)`: the prioritization of the dispatchable tasks
+      (given in natural id order) on each dispatching: the tasks (or their
+      ids) in the order to claim them, where an omitted task is not claimed
+      this time (a failed hook keeps the natural id order and is warned
+      about once per change).
+    - `passes(pred, succ, ctx)` (`phase` only, synchronous): whether the
+      predecessor *pred* passed the phase of the agent for its successor
+      *succ*, or `undefined` for the default decision by `--state-phase`
+      and `--state-passed` (a failed hook lets the successor wait and is
+      warned about once).
+    - `ready(task, ctx)`: whether a dispatchable task is claimed now,
+      checked right before its claim (after `--attach-skip`): `true` to
+      claim it, `false` to silently skip it, or the reason to wait for
+      (reported once per change of it).
+    - `prepare(task, job, ctx)`: the preparing of the job in its working
+      directory, after the commands of `--prepare-run`, where a thrown error
+      fails the processing without invoking the agent tool.
+    - `prompt(task, prompt, job, ctx)`: the prompt of the job, given the
+      configured *prompt* rendered from its template (`{ skill, args }` or
+      `{ text }`): `{ skill, args }`, `{ text }`, a plain prompt text, or
+      `undefined` to keep the configured one, where a thrown error fails the
+      processing (like `prepare`).
+    - `verdict(task, result, ctx)` (after a successful agent tool only): the
+      verdict of the result (an upper-case word, accepted only if listed by
+      `--verdict-allow`), an empty string for none, or `undefined` to keep
+      the one found after `--verdict-label` (if any), where this hook can
+      stand in for `--verdict-label` (also for the criterion `verdict` and
+      for `--state-verdict`).
+    - `success(task, result, ctx)`: an additional success criterion after
+      all others (where `result` carries `ok`, the `output` lines, and the
+      found `verdict`): `true` if met, else `false` or the reason why it
+      is not met.
+    - `settle(task, outcome, ctx)`: the settling of the processed task
+      (where `outcome` carries its `success`, the `reasons` of the unmet
+      success criteria, and the `result`), overriding the configured one:
+      its target `state` (`phase` only, still required to be reachable
+      from the activity state), the value of its `tag` (`phase` only, a
+      lower-case value, or `null` to untag it, refused if the task would
+      return into its incoming state unguarded by `--attach-skip`), and its
+      `assignee` (a name, `none`, or `previous`), where an omitted field (or
+      `undefined` for all) keeps the configured settling, and a failed hook
+      keeps the configured settling (and is warned about).
+    - `finish(task, outcome, job, ctx)`: the finishing of the job in its
+      working directory, after the finishing of its work (e.g. the commit
+      of `--finish-commit`) and before `--finish-success` resp.
+      `--finish-failure`, where a thrown error fails the finishing of a
+      successful processing (like a failed `--finish-success`), but is only
+      reported for a failed one.
+    - `stop(ctx)`: the teardown of the agent (e.g. closing a connection) on
+      its termination, with a fresh `signal` (a failed hook is only reported).
+
+    An agent of a definition kind resp. an `adhoc` agent announces itself
+    to the agent relay with its kind (resp. `adhoc`), its `--assign-name`
+    as its mode (e.g. `planner`), and, for `request`, its request name
+    (suggested by key `R` of the task boards). Its runs are recorded per
+    tag (`agent-tag-<word>/<store-hash>` for the tag `ase-agent-<word>`,
+    see *STATE FILES*), so the recoveries of differently configured
+    agents never affect each other. See `docs/agent-definition/` for example
+    definitions, e.g., copied to `.ase/agents/reviewer.mts` for `ase agent
+    reviewer start`, or used as-is via `ase agent adhoc start -n reviewer -D
+    docs/agent-definition/reviewer.mts`. Examples:
 
     ```sh
     # an approval agent deciding on the task status by its verdict
-    ase agent custom start -n reviewer --state-incoming IMPLEMENTED \
+    ase agent adhoc start -n reviewer --state-incoming IMPLEMENTED \
         --state-activity APPROVING --state-phase APPROVED --workdir changeset-read \
         --prompt-skill ase-repo-review --prompt-args "{?changeset-type=branch:--branch {changeset-name}}" \
         --verdict-label "REVIEW VERDICT" --state-verdict APPROVE=APPROVED --state-verdict REJECT=DECLINED \
         --success-criterion exit --success-criterion verdict
 
     # a request agent attaching a lint report (requested via "ase task request <id> lint <prompt>")
-    ase agent custom start -n linter --type request --request-name lint --workdir source \
+    ase agent adhoc start -n linter --type request --request-name lint --workdir source \
         --prompt-text "Lint the source code changed by task {id} with focus on: {prompt}" \
-        --success-criterion clean --attach-output lint-report
+        --success-criterion exit --success-criterion clean --attach-output lint-report
 
     # an agent running a project skill generated by "ase-meta-workflow" on the planned tasks
-    ase agent custom start -n workflow --state-incoming PLANNED --tag-require workflow \
+    ase agent adhoc start -n workflow --state-incoming PLANNED --tag-require workflow \
         --prompt-skill my-workflow --prompt-args "{id}"
     ```
 
@@ -1628,8 +1806,8 @@ requests of tasks, and of fully configured behavior:
   all with the agent tool *tool* (default: `claude`, or the `ASE_TOOL`
   environment variable if set), where the section `default` lists all
   its options with their default values (an empty value for the options
-  without a fixed default), plus a commented-out example of a custom
-  agent (see `ase agent custom`). The configuration is checked like on
+  without a fixed default), plus a commented-out example of an ad-hoc
+  agent (see `ase agent adhoc`). The configuration is checked like on
   `ase agent fleet start` before it is written, and an already existing
   *file* is overwritten only with `--force`.
 
@@ -1656,9 +1834,13 @@ requests of tasks, and of fully configured behavior:
   its agent options and an optional `kind` (default: the section name),
   all options given by their long names, where `true` enables a flag,
   `false` or an empty value omits an option, and a list repeats an
-  option (for `kind: custom`, the options can also be nested by group,
-  like in a definition file, whose `definition` is relative to the
-  configuration file), e.g.:
+  option (where the options of the definitions can also be nested by
+  group, like in a definition file, and the `definition` of `kind: adhoc`
+  is relative to the configuration file, where hooks can be given only
+  through a TypeScript or JavaScript definition file), so an agent of a
+  definition kind is given by a section of its kind (or with `kind:`
+  *kind*), and an agent defined inline by a section with `kind: adhoc`,
+  e.g.:
 
   ```yaml
   fleet:
@@ -1675,15 +1857,22 @@ requests of tasks, and of fully configured behavior:
   editor-codex:
       kind:     editor
       tool:     codex
+  reviewer:                 # of the definition file ".ase/agents/reviewer.mts"
+      parallel: 2
+  lint:
+      kind:     adhoc
+      type:     request
+      prompt:
+          text: "Lint the source code of task {id} with focus on: {prompt}"
   ```
 
   The options `name` (given by the section name), `one-shot` (as the
   members are restarted), and `foreground` are not allowed, neither is
   a non-empty `agent-relay` together with the section `relay`, `integrator`
   can be given only once, and two agents processing serially only on the
-  same tag (two `--serial` custom agents of the same resolved `--tag-name`,
-  or one next to `integrator` with its tag `ase-agent-integrator`) are
-  refused, as the definitions of the custom agents are resolved and
+  same tag (e.g., two agents of `--serial` definitions of the same resolved
+  `--tag-name`, or one next to `integrator` with its tag `ase-agent-integrator`)
+  are refused, as the definitions of all agents are resolved and
   validated already. Before the fleet starts, the structure of the
   configuration, the option names, and the option syntax are checked,
   while the option values (e.g., `parallel` or `tool`) are checked only
@@ -1900,6 +2089,12 @@ CONFIGURATION FILES
   Per-session *ASE* configuration (scope `session:`*id*), located
   independent of any project context and removed on session end.
 
+- **agents**: `.ase/agents/`*kind*`.`*ext* and *per-user configuration directory*`/agents/`*kind*`.`*ext*:
+  Agent definition files of the project (intended to be versioned)
+  resp. of the user, each yielding the definition kind *kind* of `ase
+  agent` *kind*, where one of the project shadows one of the user, and
+  both shadow a built-in agent kind (see `ase agent` *agent* `start`).
+
 STATE FILES
 -----------
 
@@ -1915,7 +2110,8 @@ STATE FILES
   after 30 seconds without refresh) and run record (process id, process
   start time, and claimed tasks) of each agent process of agent
   *kind* (`planner`, `implementer`, `approver`, `integrator`, or
-  `editor`, resp. `custom-<tag-name>` per tag of the custom agents), below
+  `editor`, resp. `tag-<word>` per tag `ase-agent-<word>` of the
+  agents of the definition kinds and of `adhoc`), below
   a sub-directory per task store, where *store-hash*
   is the first 12 hex digits of the SHA-1 digest of the absolute base
   directory of an `ase:` task store, the scheme, host, and port of an `ase://`
@@ -1974,12 +2170,12 @@ STATE FILES
   browsers and tabs showing the web board. It never holds task content.
 
 - `<project>/.ase/agent/`*name*`.yaml` and `.log`:
-  Runtime state (process id and process start time) and log (of a
+  Process state (process id and process start time) and log (of a
   detached agent only) of the agent named *name* (see `ase agent`
   *agent* `start`), where the state exists while the agent runs.
 
 - `<project>/.ase/agent/fleet.yaml` and `fleet.log`:
-  Runtime state (process id, process start time, configuration file,
+  Process state (process id, process start time, configuration file,
   and the kind, process id, and number of restarts of each member) and
   log (of a detached fleet only) of the fleet (see `ase agent fleet
   start`), where the state exists while the fleet runs.

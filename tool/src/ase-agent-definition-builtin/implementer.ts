@@ -1,0 +1,96 @@
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+import type { AgentHooks }          from "../ase-agent-definition-api.js"
+import type { AgentKind }           from "../ase-agent-definition-core.js"
+
+/*  a predecessor passed the implementation phase for its successor only once its change
+    set is contained in the "Source:" of the successor, from which the successor is
+    implemented resp. drafted, i.e., once integrated (and its integrated target branch
+    published, i.e., not still held by the integrator or failed there), or, for a
+    successor stacked onto it (with the "branch:" changeset of the predecessor as its
+    "Source:"), already once implemented (and its changeset branch committed and
+    published, i.e., not still held by the implementer or failed there), where an
+    invalid "Source:" or "Changeset:" value never stacks, and where the implementer is
+    recognized by the tag <implementer> (default: the tag of the agent itself, so the
+    definition reused under another tag recognizes its own implementing), while the
+    integrator is recognized by the tag of the built-in integrator by convention  */
+const passes = (implementer?: string): AgentHooks["passes"] => (pred, succ, ctx) => {
+    const held      = (tag: string) => pred.tags.includes(`${tag}:active`) || pred.tags.includes(`${tag}:failed`)
+    const changeset = ctx.flow(pred, "Changeset")
+    const source    = ctx.flow(succ, "Source")
+    const stacked   = changeset?.type === "branch" && source?.type === "branch" && changeset.name === source.name
+    const states    = ctx.lifecycle.states
+    if (stacked)
+        return states.indexOf(pred.status) >= states.indexOf("IMPLEMENTED")
+            && !(pred.status === "IMPLEMENTED" && held(implementer ?? ctx.agent.tag))
+    else
+        return pred.status === "INTEGRATED" && !held("ase-agent-integrator")
+}
+
+/*  agent "ase agent implementer"  */
+export default {
+    kind: "implementer",
+    description:
+        "Drive the \"Implementation\" phase of the \"enterprise\" task lifecycle model: claim " +
+        "every \"PLANNED\" task unassigned or assigned to the implementer, not yet tagged " +
+        "\"ase-agent-implementer\", and with integrated \"After:\" predecessors (or implemented ones, " +
+        "if stacked onto their \"branch:\" changeset by its \"Source:\") into " +
+        "\"IMPLEMENTING\", implement it from its \"Source:\" into its \"Changeset:\" via the " +
+        "\"ase-task-implement\" skill (in a Git worktree where needed), tag it, and put it into " +
+        "\"STALLED\" unless it became \"IMPLEMENTED\" (tagged \"ase-agent-implementer:failed\" " +
+        "if its branch could not be published), or, with \"--mode draft\", only draft the " +
+        "implementation of tasks without a draft yet into their \"draft\" attachment and put " +
+        "them back into \"PLANNED\", logging to stdout and to the \"agent:implementer\" " +
+        "attachment of the task",
+    modeDesc:
+        "\"implement\" to implement the task into its changeset, or \"draft\" " +
+        "to just draft its implementation into its \"draft\" attachment",
+    mode: "implement",
+    modes: {
+        /*  implement the task from its source into its changeset, which the skill itself puts
+            into "IMPLEMENTED" on success (else it is stalled), where a "branch:" changeset is
+            implemented in place in the worktree carrying its branch, while the "Source:" of the
+            plan stays in effect, so the skill bases the change set snapshot on the fork point of
+            the branch from its source (and hence shows the entire branch, also on a re-run of a
+            declined task), and the work on it is afterwards committed onto it and published  */
+        implement: {
+            type:      "phase",
+            lifecycle: "enterprise",
+            workdir:   "changeset",
+            state:     { incoming: "PLANNED", activity: "IMPLEMENTING", success: "IMPLEMENTED", failure: "STALLED", passed: "IMPLEMENTED" },
+            tag:       { name: "ase-agent-implementer" },
+            prompt:    {
+                skill: "ase-task-implement",
+                args:  "--next DONE{?changeset-type=branch: --changeset worktree}" +
+                    "{?changeset-worktree: --worktree {changeset-worktree}} {id}"
+            },
+            success:   { criterion: [ "status" ] },
+            finish:    { commit: true },
+            hooks:     { passes: passes() }
+        },
+
+        /*  draft the implementation of the task into its "draft" attachment only (in a temporary
+            worktree of the skill, from the source commit, without uncommitted changes, so the
+            working copy is used as-is and the drafts are parallel-safe), where the skill leaves
+            the task status untouched, so it is put back into "PLANNED" in any case, untagged
+            if drafted (as its draft attachment itself keeps it from being drafted again), and
+            else tagged with a tag separate from the one of the implementing, so a drafted task
+            is still implemented later  */
+        draft: {
+            type:      "phase",
+            lifecycle: "enterprise",
+            workdir:   "source",
+            state:     { incoming: "PLANNED", activity: "IMPLEMENTING", success: "PLANNED", failure: "PLANNED", phase: "IMPLEMENTED", passed: "IMPLEMENTED" },
+            tag:       { name: "ase-agent-implementer-draft", success: "none" },
+            attach:    { skip: "text/x-diff;draft", expect: "text/x-diff;draft" },
+            prompt:    { skill: "ase-task-implement", args: "--next DONE --draft --stateless {id}" },
+            success:   { criterion: [ "exit", "attachment" ] },
+            hooks:     { passes: passes("ase-agent-implementer") }
+        }
+    }
+} satisfies AgentKind
+

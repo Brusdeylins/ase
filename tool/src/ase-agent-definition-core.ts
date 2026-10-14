@@ -6,30 +6,108 @@
 
 import fs                           from "node:fs"
 import path                         from "node:path"
+import { pathToFileURL }            from "node:url"
 
 import YAML                         from "yaml"
 
+import type Log                     from "./ase-lib-log.js"
+import { projectRoot, userConfigDir } from "./ase-config-scope.js"
 import * as TaskFormat              from "./ase-task-format.js"
 import { requestsOf, typeParam }    from "./ase-task-request.js"
+import type { AgentDefinition, AgentHooks } from "./ase-agent-definition-api.js"
+import planner                      from "./ase-agent-definition-builtin/planner.js"
+import implementer                  from "./ase-agent-definition-builtin/implementer.js"
+import approver                     from "./ase-agent-definition-builtin/approver.js"
+import integrator                   from "./ase-agent-definition-builtin/integrator.js"
+import editor                       from "./ase-agent-definition-builtin/editor.js"
 
-/*  the processing types, the working directory kinds, and the success criteria of a custom agent  */
-export const customTypes    = [ "phase", "request" ] as const
-export const customWorkdirs = [ "project", "source", "changeset", "changeset-read", "target" ] as const
-export const customCriteria = [ "exit", "clean", "changed", "verdict", "attachment", "status" ] as const
-export type CustomType      = typeof customTypes[number]
-export type CustomWorkdir   = typeof customWorkdirs[number]
-export type CustomCriterion = typeof customCriteria[number]
+/*  a built-in agent kind ("ase agent <kind>"): its name, its CLI description, its modes
+    (selected by "--mode", each with its definition, in the format of the definition files),
+    the description of "--mode" (only registered with multiple modes), and its default mode  */
+export type AgentKind = {
+    kind:        string
+    description: string
+    modes:       Record<string, AgentDefinition>
+    modeDesc:    string
+    mode:        string
+}
 
-/*  the groups of the options of a custom agent (their options named "<group>-<item>")  */
-export const customGroups = [ "state", "tag", "assign", "request", "prompt", "prepare", "success", "verdict", "attach", "finish" ]
+/*  the built-in agent kinds  */
+export const builtinKinds: AgentKind[] = [ planner, implementer, approver, integrator, editor ]
 
-/*  the options of a custom agent: their long name (without "--"), their kind (a single
+/*  a definition agent kind ("ase agent <kind>"): its name (the base name of its
+    definition file), its definition file, and the scope of the latter  */
+export type DefinitionKind = {
+    kind:  string
+    file:  string
+    scope: "project" | "user"
+}
+
+/*  the file name extensions of the definition files, by descending precedence  */
+const definitionExts = [ ".yaml", ".yml", ".ts", ".mts", ".js", ".mjs", ".cjs" ]
+
+/*  discover the definition agent kinds of the definition files "<kind>.<ext>" of the user
+    ("<user-config-dir>/agents/") and of the project (".ase/agents/"), where a kind of the
+    project shadows one of the user, and both shadow a built-in agent kind, while a file of
+    an invalid or a <reserved> kind name is skipped with a warning (as are the further files
+    of an already discovered kind name in the same directory)  */
+export const discoverKinds = (log: Log, reserved: string[]): DefinitionKind[] => {
+    const root  = projectRoot()
+    const dirs  = [
+        { scope: "user"    as const, dir: path.join(userConfigDir(), "agents") },
+        ...(root !== null ? [ { scope: "project" as const, dir: path.join(root, ".ase", "agents") } ] : [])
+    ]
+    const kinds = new Map<string, DefinitionKind>()
+    for (const { scope, dir } of dirs) {
+        let entries: string[]
+        try {
+            entries = fs.readdirSync(dir)
+        }
+        catch (_err) {
+            continue
+        }
+        const seen = new Set<string>()
+        const rank = (entry: string) => definitionExts.indexOf(path.extname(entry).toLowerCase())
+        for (const entry of entries.filter((entry) => rank(entry) >= 0).sort((a, b) => rank(a) - rank(b))) {
+            const kind = path.basename(entry, path.extname(entry))
+            const file = path.join(dir, entry)
+            if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(kind) || kind.length > 64)
+                log.write("warning", `agent: definition "${file}": skipped, as "${kind}" is no valid agent kind name ` +
+                    "(expected up to 64 letters, digits, underscores, and dashes, starting with a letter or digit)")
+            else if (reserved.includes(kind))
+                log.write("warning", `agent: definition "${file}": skipped, as "${kind}" clashes with the command "ase agent ${kind}"`)
+            else if (seen.has(kind))
+                log.write("warning", `agent: definition "${file}": skipped, as "${kinds.get(kind)!.file}" ` +
+                    `already defines the agent kind "${kind}"`)
+            else {
+                seen.add(kind)
+                kinds.set(kind, { kind, file, scope })
+            }
+        }
+    }
+    return [ ...kinds.values() ]
+}
+
+/*  the processing types, the working directory kinds, and the success criteria of a definition  */
+export const definitionTypes    = [ "phase", "request" ] as const
+export const definitionWorkdirs = [ "project", "source", "changeset", "changeset-read", "target" ] as const
+export const definitionCriteria = [ "exit", "clean", "changed", "verdict", "attachment", "status" ] as const
+export type DefinitionType      = typeof definitionTypes[number]
+export type DefinitionWorkdir   = typeof definitionWorkdirs[number]
+export type DefinitionCriterion = typeof definitionCriteria[number]
+
+/*  the groups of the options of a definition (their options named "<group>-<item>")  */
+export const definitionGroups = [ "state", "tag", "assign", "request", "prompt", "prepare", "success", "verdict", "attach", "finish" ]
+
+/*  the options of a definition: their long name (without "--"), their kind (a single
     value, a repeatable value, or a flag), the name of their argument, and their description  */
-export type CustomOption = { key: string, kind: "value" | "list" | "flag", arg: string, desc: string }
-const opt = (key: string, kind: CustomOption["kind"], arg: string, desc: string): CustomOption => ({ key, kind, arg, desc })
-export const customOptions: CustomOption[] = [
-    opt("definition",        "value", "file",          "YAML file with the definition of the agent (with the same keys as these options, " +
-        "flat or nested by group, where the given options win)"),
+export type DefinitionOption = { key: string, kind: "value" | "list" | "flag", arg: string, desc: string }
+const opt = (key: string, kind: DefinitionOption["kind"], arg: string, desc: string): DefinitionOption => ({ key, kind, arg, desc })
+export const definitionOptions: DefinitionOption[] = [
+    opt("definition",        "value", "file",          "YAML, TypeScript, or JavaScript file with the definition of the agent " +
+        "(with the same keys as these options, flat or nested by group, plus hooks for TypeScript and JavaScript, " +
+        "and optionally a base definition it extends as \"definition\", where the given options win), " +
+        "or \"builtin:<kind>[-<mode>]\" for the definition of a built-in agent"),
     opt("type",              "value", "type",          "processing type: \"phase\" (claim tasks by their lifecycle status) or " +
         "\"request\" (process the attached prompt requests of tasks) (default: \"phase\")"),
     opt("workdir",           "value", "kind",          "working directory: \"project\", \"source\", \"changeset\", " +
@@ -79,8 +157,8 @@ export const customOptions: CustomOption[] = [
     opt("attach-log",        "value", "name",          "name of the processing log attachment \"agent:<name>\" " +
         "(default: the agent name)"),
     opt("attach-output",     "value", "kind",          "kind of the attachment storing the output lines of the prompt"),
-    opt("attach-expect",     "value", "spec",          "attachment \"[<mime-type>;]<kind>\" required by the " +
-        "\"attachment\" success criterion"),
+    opt("attach-expect",     "value", "spec",          "attachment \"[<mime-type>;]<kind>\" to be created or changed " +
+        "by the processing for the \"attachment\" success criterion"),
     opt("attach-skip",       "value", "spec",          "attachment \"[<mime-type>;]<kind>\" leaving a task unclaimed"),
     opt("finish-commit",     "flag",  "",              "commit the work onto a \"branch:\" changeset and publish it " +
         "(with \"--workdir changeset\" only)"),
@@ -110,7 +188,7 @@ const placeholders = [
     known for "request" only), conditionals "{?<name>:<text>}" and "{?<name>=<value>:<text>}"
     (with placeholders, but without nested conditionals in <text>), and "{{" and "}}" for
     literal braces, keeping all other text verbatim  */
-export const parseTemplate = (spec: string, option: string, type: CustomType): Template => {
+export const parseTemplate = (spec: string, option: string, type: DefinitionType): Template => {
     const fail = (msg: string): never => {
         throw new Error(`agent: option "--${option}": ${msg}`)
     }
@@ -195,11 +273,11 @@ export const attachMatches = (spec: AttachSpec, type: string): boolean =>
     typeParam(type, "kind") === spec.kind
     && (spec.mime === "" || (type.split(";")[0] ?? "").trim().toLowerCase() === spec.mime)
 
-/*  the definition of a custom agent  */
-export type CustomDefinition = {
+/*  the resolved definition of an agent  */
+export type ResolvedDefinition = {
     name:       string
-    type:       CustomType
-    workdir:    CustomWorkdir
+    type:       DefinitionType
+    workdir:    DefinitionWorkdir
     lifecycles: string[]
     serial:     boolean
     state: {
@@ -214,10 +292,11 @@ export type CustomDefinition = {
     request: { name: string, done: string }
     prompt:  { skill: string, template: Template }
     prepare: string[]
-    success: { criteria: CustomCriterion[], match: RegExp[] }
+    success: { criteria: DefinitionCriterion[], match: RegExp[] }
     verdict: { label: string, allow: string[] }
     attach:  { log: string, output: string, expect: AttachSpec | null, skip: AttachSpec | null }
     finish:  { commit: boolean, success: string, failure: string }
+    hooks:   AgentHooks
 }
 
 /*  flatten the nested option groups of a definition (e.g. "state: { incoming: PLANNED }"
@@ -231,9 +310,9 @@ export const flattenDefinition = (data: Record<string, unknown>, where: string):
     }
     for (const [ key, value ] of Object.entries(data)) {
         if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-            if (!customGroups.includes(key))
+            if (!definitionGroups.includes(key))
                 throw new Error(`${where}: option "${key}" is no option group (expected one of ` +
-                    `${customGroups.map((group) => `"${group}"`).join(", ")})`)
+                    `${definitionGroups.map((group) => `"${group}"`).join(", ")})`)
             for (const [ item, val ] of Object.entries(value as Record<string, unknown>))
                 set(`${key}-${item}`, val)
         }
@@ -243,24 +322,42 @@ export const flattenDefinition = (data: Record<string, unknown>, where: string):
     return flat
 }
 
-/*  load a definition file into its flattened and normalized option values (by long option
-    name), where a relative "prompt-file" is resolved against the directory of the file  */
-const loadDefinition = (file: string): Record<string, string | string[] | boolean> => {
-    let data: unknown
-    try {
-        data = YAML.parse(fs.readFileSync(file, "utf8"))
-    }
-    catch (err: unknown) {
-        throw new Error(`agent: option "--definition": cannot read definition "${file}": ` +
-            `${err instanceof Error ? err.message : String(err)}`, { cause: err })
-    }
+/*  the names of the hooks of a definition (see "AgentHooks")  */
+const hookNames = [ "start", "order", "passes", "ready", "prepare", "prompt", "verdict", "success", "settle", "finish", "stop" ]
+
+/*  a loaded definition: its flattened and normalized option values (by long option name,
+    where a false flag only unsets the flag of its base definition), its hooks, and the
+    specification of its base definition (if any)  */
+type LoadedDefinition = { values: Record<string, string | string[] | boolean>, hooks: AgentHooks, base?: string }
+
+/*  normalize the (parsed or imported) data of a definition into its flattened option values,
+    its hooks, and its base definition, where <where> names the definition in errors, and a
+    relative "prompt-file" and a relative base definition file are resolved against the
+    directory <dir> (if given)  */
+const definitionValues = (data: unknown, where: string, dir: string): LoadedDefinition => {
     if (data === null || typeof data !== "object" || Array.isArray(data))
-        throw new Error(`agent: option "--definition": definition "${file}" carries no options`)
-    const where  = `agent: option "--definition": definition "${file}"`
+        throw new Error(`${where} carries no options`)
+    const { hooks: spec, definition: base, ...options } = data as Record<string, unknown>
+    if (base !== undefined && base !== null && (typeof base !== "string" || base === ""))
+        throw new Error(`${where}: invalid base definition (expected a file or "builtin:<kind>[-<mode>]")`)
+    const hooks: AgentHooks = {}
+    if (spec !== undefined && spec !== null) {
+        if (typeof spec !== "object" || Array.isArray(spec))
+            throw new Error(`${where}: invalid hooks (expected an object of functions)`)
+        for (const [ name, fn ] of Object.entries(spec)) {
+            if (!hookNames.includes(name))
+                throw new Error(`${where}: unknown hook "${name}" ` +
+                    `(expected ${hookNames.map((hook) => `"${hook}"`).join(", ")})`)
+            if (typeof fn !== "function")
+                throw new Error(`${where}: hook "${name}" is no function ` +
+                    "(hooks require a TypeScript or JavaScript definition file)")
+        }
+        Object.assign(hooks, spec)
+    }
     const values: Record<string, string | string[] | boolean> = {}
-    for (const [ key, value ] of Object.entries(flattenDefinition(data as Record<string, unknown>, where))) {
-        const option = customOptions.find((opt) => opt.key === key)
-        if (option === undefined || key === "definition")
+    for (const [ key, value ] of Object.entries(flattenDefinition(options, where))) {
+        const option = definitionOptions.find((opt) => opt.key === key)
+        if (option === undefined)
             throw new Error(`${where}: unknown option "${key}"`)
         const scalar = (val: unknown): string => {
             if (typeof val !== "string" && typeof val !== "number")
@@ -272,32 +369,119 @@ const loadDefinition = (file: string): Record<string, string | string[] | boolea
         else if (option.kind === "flag") {
             if (typeof value !== "boolean")
                 throw new Error(`${where}: invalid value of option "${key}" (expected a boolean)`)
-            if (value)
-                values[key] = true
+            values[key] = value
         }
         else if (option.kind === "list")
             values[key] = (Array.isArray(value) ? value : [ value ]).map(scalar)
         else
             values[key] = scalar(value)
     }
-    if (typeof values["prompt-file"] === "string")
-        values["prompt-file"] = path.resolve(path.dirname(file), values["prompt-file"])
-    return values
+    if (typeof values["prompt-file"] === "string" && dir !== "")
+        values["prompt-file"] = path.resolve(dir, values["prompt-file"])
+    if (typeof base !== "string")
+        return { values, hooks }
+    return { values, hooks, base: base.startsWith("builtin:") || dir === "" ? base : path.resolve(dir, base) }
 }
 
-/*  resolve the definition of the custom agent named <name> from its (camel-cased) command-line
-    options <opts>: the defaults, overridden by the definition file of "--definition" (if any),
+/*  the mutually exclusive alternatives of the options, which a given option replaces in the
+    definition (instead of being merged with them)  */
+const alternatives: Record<string, string[]> = {
+    "prompt-skill": [ "prompt-text", "prompt-file" ],
+    "prompt-text":  [ "prompt-skill", "prompt-args", "prompt-file" ],
+    "prompt-file":  [ "prompt-skill", "prompt-args", "prompt-text" ],
+    "tag-retry":    [ "tag-failure" ],
+    "tag-failure":  [ "tag-retry" ]
+}
+
+/*  overlay the option values <upper> onto the option values <lower>, where an option of
+    <upper> also replaces its mutually exclusive alternatives of <lower>  */
+const overlayValues = <T> (lower: Record<string, T>, upper: Record<string, T>): Record<string, T> => {
+    const masked = new Set(Object.keys(upper).flatMap((key) => alternatives[key] ?? []))
+    return { ...Object.fromEntries(Object.entries(lower).filter(([ key ]) => !masked.has(key))), ...upper }
+}
+
+/*  load the definition of "--definition": the definition of a built-in agent of the
+    specification "builtin:<kind>[-<mode>]" (default: its default mode), else a YAML file
+    (".yaml" or ".yml"), or a TypeScript (".ts" or ".mts", via the type stripping of
+    Node.js) or JavaScript file (".js", ".mjs", or ".cjs"), whose default export is the
+    definition or a (possibly asynchronous) function returning it, where a definition
+    with a base definition (its key "definition") extends the latter: its options override
+    those of the base definition (also replacing their mutually exclusive alternatives,
+    and with a false flag unsetting the flag of the base definition), and its hooks
+    replace those of the same name of the base definition, while <chain> carries the
+    already loading definitions of a chain of base definitions (to detect a cycle)  */
+const loadDefinition = async (spec: string, chain: string[] = []): Promise<LoadedDefinition> => {
+    let loaded: LoadedDefinition
+    let id:     string
+    if (spec.startsWith("builtin:")) {
+        const where = `agent: option "--definition": definition "${spec}"`
+        const m     = /^builtin:([a-z]+)(?:-([a-z]+))?$/.exec(spec)
+        const kind  = builtinKinds.find((kind) => kind.kind === m?.[1])
+        const mode  = m?.[2] ?? kind?.mode ?? ""
+        if (m === null || kind === undefined || !Object.hasOwn(kind.modes, mode))
+            throw new Error(`${where}: unknown built-in definition (expected ` +
+                builtinKinds.flatMap((kind) => Object.keys(kind.modes).map((mode) => `"builtin:${kind.kind}-${mode}"`)).join(", ") + ")")
+        id     = `builtin:${kind.kind}-${mode}`
+        loaded = definitionValues(kind.modes[mode], where, "")
+    }
+    else {
+        id     = path.resolve(spec)
+        loaded = await loadDefinitionFile(id)
+    }
+    if (loaded.base !== undefined) {
+        if (chain.includes(id))
+            throw new Error(`agent: option "--definition": definition "${id}": cyclic base definitions ` +
+                `(${[ ...chain.slice(chain.indexOf(id)), id ].map((def) => `"${def}"`).join(" > ")})`)
+        const base = await loadDefinition(loaded.base, [ ...chain, id ])
+        loaded = {
+            values: overlayValues(base.values, loaded.values),
+            hooks:  { ...base.hooks, ...loaded.hooks }
+        }
+    }
+    if (chain.length === 0)
+        loaded.values = Object.fromEntries(Object.entries(loaded.values).filter(([ , value ]) => value !== false))
+    return loaded
+}
+
+/*  load the definition file <file>: a YAML, TypeScript, or JavaScript file (see "loadDefinition")  */
+const loadDefinitionFile = async (file: string): Promise<LoadedDefinition> => {
+    let data: unknown
+    try {
+        if (/\.ya?ml$/i.test(file))
+            data = YAML.parse(fs.readFileSync(file, "utf8"))
+        else if (/\.(?:[cm]?js|m?ts)$/i.test(file)) {
+            if (/ts$/i.test(file) && !(process.features as { typescript?: unknown }).typescript)
+                throw new Error("TypeScript requires the type stripping of Node.js (Node.js 22.18.0 or newer)")
+            const mod = await import(pathToFileURL(file).href) as { default?: unknown }
+            data = typeof mod.default === "function" ? await (mod.default as () => unknown)() : mod.default
+            if (data === undefined)
+                throw new Error("no default export")
+        }
+        else
+            throw new Error("unknown file type (expected \".yaml\", \".yml\", \".ts\", \".mts\", " +
+                "\".js\", \".mjs\", or \".cjs\")")
+    }
+    catch (err: unknown) {
+        throw new Error(`agent: option "--definition": cannot read definition "${file}": ` +
+            `${err instanceof Error ? err.message : String(err)}`, { cause: err })
+    }
+    return definitionValues(data, `agent: option "--definition": definition "${file}"`, path.dirname(file))
+}
+
+/*  resolve the definition of the agent named <name> from its (camel-cased) command-line
+    options <opts>: the defaults, overridden by the definition of "--definition" (if any),
     overridden by the given options, validated against the task lifecycle models  */
-export const resolveDefinition = (opts: Record<string, unknown>, name: string): CustomDefinition => {
-    /*  merge the values of the definition file and of the given options  */
+export const resolveDefinition = async (opts: Record<string, unknown>, name: string): Promise<ResolvedDefinition> => {
+    /*  merge the values of the definition and of the given options, where a given
+        option also replaces its mutually exclusive alternatives of the definition  */
     const given: Record<string, string | string[] | boolean> = {}
-    for (const option of customOptions) {
+    for (const option of definitionOptions) {
         const value = opts[optionAttr(option.key)]
         if (value !== undefined && value !== false)
             given[option.key] = value as string | string[] | boolean
     }
-    const file   = typeof given.definition === "string" ? path.resolve(given.definition) : ""
-    const values = { ...(file !== "" ? loadDefinition(file) : {}), ...given }
+    const loaded = typeof given.definition === "string" ? await loadDefinition(given.definition) : { values: {}, hooks: {} }
+    const values = overlayValues(loaded.values, given)
     const str    = (key: string, def = ""): string => typeof values[key] === "string" ? values[key] as string : def
     const list   = (key: string): string[] => Array.isArray(values[key]) ? values[key] as string[] : []
     const flag   = (key: string): boolean => values[key] === true
@@ -313,8 +497,8 @@ export const resolveDefinition = (opts: Record<string, unknown>, name: string): 
     }
 
     /*  the processing type, the working directory, and the type-specific options  */
-    const type    = choice("type", customTypes, "phase")
-    const workdir = choice("workdir", customWorkdirs, "project")
+    const type    = choice("type", definitionTypes, "phase")
+    const workdir = choice("workdir", definitionWorkdirs, "project")
     const phaseOnly = [ "state-incoming", "state-activity", "state-success", "state-failure", "state-phase",
         "state-passed", "state-verdict", "tag-success", "tag-failure", "tag-retry", "assign-required", "attach-skip" ]
     const requestOnly = [ "request-name", "request-done" ]
@@ -323,6 +507,11 @@ export const resolveDefinition = (opts: Record<string, unknown>, name: string): 
             fail(key, `not allowed with "--type ${type}" (for "--type ${type === "request" ? "phase" : "request"}" only)`)
     if (has("finish-commit") && workdir !== "changeset")
         fail("finish-commit", `not allowed with "--workdir ${workdir}" (for "--workdir changeset" only)`)
+    if (loaded.hooks.passes !== undefined && type !== "phase")
+        fail("definition", "hook \"passes\" is for \"--type phase\" only")
+
+    /*  whether a verdict is determined (by "--verdict-label" or the hook "verdict")  */
+    const verdicting = has("verdict-label") || loaded.hooks.verdict !== undefined
 
     /*  the states, validated against the task lifecycle models  */
     const verdicts: Record<string, string> = {}
@@ -460,15 +649,15 @@ export const resolveDefinition = (opts: Record<string, unknown>, name: string): 
     const criteria = has("success-criterion") ? [ ...new Set(list("success-criterion")) ] :
         (type === "phase" ? [ "exit", "clean" ] : [ "clean", "changed" ])
     for (const criterion of criteria) {
-        if (!(customCriteria as readonly string[]).includes(criterion))
+        if (!(definitionCriteria as readonly string[]).includes(criterion))
             fail("success-criterion", `invalid criterion "${criterion}" ` +
-                `(expected ${customCriteria.map((c) => `"${c}"`).join(", ")})`)
+                `(expected ${definitionCriteria.map((c) => `"${c}"`).join(", ")})`)
         else if (criterion === "changed" && type !== "request")
             fail("success-criterion", "criterion \"changed\" is for \"--type request\" only")
         else if (criterion === "status" && type !== "phase")
             fail("success-criterion", "criterion \"status\" is for \"--type phase\" only")
-        else if (criterion === "verdict" && !has("verdict-label"))
-            fail("success-criterion", "criterion \"verdict\" requires \"--verdict-label\"")
+        else if (criterion === "verdict" && !verdicting)
+            fail("success-criterion", "criterion \"verdict\" requires \"--verdict-label\" (or the hook \"verdict\")")
         else if (criterion === "attachment" && !has("attach-expect"))
             fail("success-criterion", "criterion \"attachment\" requires \"--attach-expect\"")
     }
@@ -480,8 +669,8 @@ export const resolveDefinition = (opts: Record<string, unknown>, name: string): 
             return fail("success-match", `invalid regular expression "${spec}": ${err instanceof Error ? err.message : String(err)}`)
         }
     })
-    if ((Object.keys(verdicts).length > 0 || has("verdict-allow")) && !has("verdict-label"))
-        fail(Object.keys(verdicts).length > 0 ? "state-verdict" : "verdict-allow", "requires \"--verdict-label\"")
+    if ((Object.keys(verdicts).length > 0 || has("verdict-allow")) && !verdicting)
+        fail(Object.keys(verdicts).length > 0 ? "state-verdict" : "verdict-allow", "requires \"--verdict-label\" (or the hook \"verdict\")")
     const allow = has("verdict-allow") ? list("verdict-allow") : Object.keys(verdicts)
     for (const verdict of allow)
         if (!/^[A-Z]+$/.test(verdict))
@@ -508,6 +697,10 @@ export const resolveDefinition = (opts: Record<string, unknown>, name: string): 
         fail("attach-log", `invalid name "${attachLog}"`)
     if (has("attach-output") && !kindRe.test(str("attach-output")))
         fail("attach-output", `invalid kind "${str("attach-output")}"`)
+    const attachExpect = attachSpec("attach-expect")
+    if (attachExpect !== null && has("attach-output")
+        && attachMatches(attachExpect, `text/plain; kind="${str("attach-output")}"`))
+        fail("attach-expect", `attachment "${str("attach-expect")}" is always met by the output attachment of "--attach-output"`)
     for (const key of [ "prepare-run", "finish-success", "finish-failure" ])
         if ((has(key) && str(key, "-") === "") || list(key).some((cmd) => cmd.trim() === ""))
             fail(key, "empty shell command")
@@ -524,10 +717,11 @@ export const resolveDefinition = (opts: Record<string, unknown>, name: string): 
         request: { name: requestName, done: str("request-done", "processed") },
         prompt:  { skill, template },
         prepare: list("prepare-run"),
-        success: { criteria: criteria as CustomCriterion[], match },
+        success: { criteria: criteria as DefinitionCriterion[], match },
         verdict: { label: str("verdict-label"), allow },
-        attach:  { log: attachLog, output: str("attach-output"), expect: attachSpec("attach-expect"), skip: attachSpec("attach-skip") },
-        finish:  { commit: flag("finish-commit"), success: str("finish-success"), failure: str("finish-failure") }
+        attach:  { log: attachLog, output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip") },
+        finish:  { commit: flag("finish-commit"), success: str("finish-success"), failure: str("finish-failure") },
+        hooks:   loaded.hooks
     }
 }
 

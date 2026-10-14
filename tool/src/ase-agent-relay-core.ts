@@ -28,7 +28,7 @@ export type AgentUsages = { total: AgentUsage, last: AgentUsage } | null
 
 /*  the presence of an agent as announced by itself: its kind, name, and mode of
     operation (e.g. "draft", or empty), the name of the requests it processes (of a
-    request agent of "ase agent custom", else absent), its host and process id, its start
+    request agent of a definition, else absent), its host and process id, its start
     time (in ms since the epoch, by the clock of the agent), its state, the ids of the tasks
     it is busy with, its usage of the agent tool, and its processing log lines added since
     its previous announcement (a delta only)  */

@@ -7,11 +7,11 @@
 import { Task }                     from "./ase-task.js"
 import * as TaskFormat              from "./ase-task-format.js"
 import type * as API               from "./ase-task-store-plugin-api.js"
-import type { AgentTask, AgentItem, AgentSelection, AgentLog, LineLevel } from "./ase-agent-common.js"
+import type { AgentTask, AgentItem, AgentSelection, AgentLog, LineLevel } from "./ase-agent-runtime.js"
 import {
     Agent, tagsOf, taggedWith,
     flatKeys, setPlanTag, updateTask
-}                                   from "./ase-agent-common.js"
+}                                   from "./ase-agent-runtime.js"
 
 /*  the lifecycle states of the phase of an agent: the "incoming" state of the tasks
     to claim, the "activity" state during processing, the "success" state (set by the
@@ -78,10 +78,10 @@ export abstract class PhaseAgent extends Agent {
         return to === this.states.success || value !== undefined
     }
 
-    /*  decide on the assignee to hand a processed task over to, by its success and
-        its previous assignee <previous> before the claim (or empty to unassign it):
+    /*  decide on the assignee to hand a processed task <task> over to, by its success
+        and its previous assignee <previous> before the claim (or empty to unassign it):
         by default, a processed task is unassigned  */
-    protected handover (_success: boolean, _previous: string): string {
+    protected handover (_success: boolean, _previous: string, _task: AgentTask): string {
         return ""
     }
 
@@ -354,7 +354,7 @@ export abstract class PhaseAgent extends Agent {
             else if (status === success && status !== activity && finished) {
                 const good = this.succeeded(success, value, task)
                 setPlanTag(plan, this.tag, value)
-                reassign(plan, this.assignee, this.handover(good, assignee))
+                reassign(plan, this.assignee, this.handover(good, assignee, task))
                 level  = good ? "info" : "warning"
                 result = `task processed ${good ? "successfully" : "unsuccessfully"} (status "${success}", ${tagged(value)})`
             }
@@ -380,7 +380,7 @@ export abstract class PhaseAgent extends Agent {
                 else {
                     const good = this.succeeded(to, value, task)
                     setPlanTag(plan, this.tag, value)
-                    reassign(plan, this.assignee, this.handover(good, assignee))
+                    reassign(plan, this.assignee, this.handover(good, assignee, task))
                     plan.header.Status = to
                     level  = good ? "info" : "warning"
                     result = `task processed ${good ? "successfully" : "unsuccessfully"} ` +
@@ -391,7 +391,7 @@ export abstract class PhaseAgent extends Agent {
                 /*  tagged, too, as a skill can itself move the task back into the
                     "incoming" state (e.g. "ase-task-integrate" on nothing to integrate)  */
                 setPlanTag(plan, this.tag, value)
-                reassign(plan, this.assignee, this.handover(this.succeeded(status, value, task), assignee))
+                reassign(plan, this.assignee, this.handover(this.succeeded(status, value, task), assignee, task))
                 level  = "warning"
                 result = `task status changed meanwhile to "${status}" -- left untouched (${tagged(value)})`
             }

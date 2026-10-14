@@ -14,16 +14,16 @@ import type Log                          from "./ase-lib-log.js"
 import { writeStdout }                   from "./ase-lib-stdio.js"
 import { DaemonCommand }                 from "./ase-lib-daemon-cli.js"
 import { projectRoot, ensureAseGitignore } from "./ase-config-scope.js"
-import { pidAlive, pidStart }            from "./ase-agent-common.js"
-import type { Agent, AgentOpts }         from "./ase-agent-common.js"
+import { pidAlive, pidStart }            from "./ase-agent-runtime.js"
+import type { Agent, AgentOpts }         from "./ase-agent-runtime.js"
 import { relaySpec, AgentRelayClient }   from "./ase-agent-relay-client.js"
 
-/*  the runtime state of a running agent (or fleet) process: its process id and its start
+/*  the process state of a running agent (or fleet) process: its process id and its start
     time (identifying the process beyond its process id, as the latter is reused)  */
-export type RuntimeState = { pid: number, start: string }
+export type ProcessState = { pid: number, start: string }
 
-/*  the directory of the runtime files of the agents (and of their fleet) of the project  */
-export const runtimeDir = (): string => {
+/*  the directory of the process files of the agents (and of their fleet) of the project  */
+export const processDir = (): string => {
     const root = projectRoot()
     if (root === null)
         throw new Error("agent: no project context " +
@@ -32,8 +32,8 @@ export const runtimeDir = (): string => {
     return path.join(root, ".ase", "agent")
 }
 
-/*  read a runtime state file (or null if missing or invalid)  */
-export const readState = <T extends RuntimeState> (file: string): T | null => {
+/*  read a process state file (or null if missing or invalid)  */
+export const readState = <T extends ProcessState> (file: string): T | null => {
     try {
         const data = YAML.parse(fs.readFileSync(file, "utf8")) as T | null
         return data !== null && typeof data === "object" && typeof data.pid === "number" ? data : null
@@ -43,19 +43,19 @@ export const readState = <T extends RuntimeState> (file: string): T | null => {
     }
 }
 
-/*  write a runtime state file (atomically)  */
-export const writeState = (file: string, state: RuntimeState & Record<string, unknown>): void => {
+/*  write a process state file (atomically)  */
+export const writeState = (file: string, state: ProcessState & Record<string, unknown>): void => {
     fs.mkdirSync(path.dirname(file), { recursive: true })
     fs.writeFileSync(`${file}.tmp`, YAML.stringify(state))
     fs.renameSync(`${file}.tmp`, file)
 }
 
-/*  whether the process of a runtime state is still alive  */
-export const stateAlive = async (state: RuntimeState | null): Promise<boolean> =>
+/*  whether the process recorded in a process state is still alive  */
+export const stateAlive = async (state: ProcessState | null): Promise<boolean> =>
     state !== null && pidAlive(state.pid) && (state.start === "" || await pidStart(state.pid) === state.start)
 
 /*  validate the name of an agent of a kind, which must neither be the name of another
-    agent kind nor of another "ase agent" command, as it names its runtime files  */
+    agent kind nor of another "ase agent" command, as it names its process files  */
 export const validateName = (name: string, kind: string, kinds: string[]): void => {
     if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(name) || name.length > 64)
         throw new Error(`agent: invalid agent name "${name}" ` +
@@ -85,28 +85,28 @@ const givenArgs = (cmd: Command): string[] =>
 
 /*  CLI command group "ase agent <kind>", managing a single agent of a kind
     (named by "--name") in the background or in the foreground  */
-export default class AgentInstanceCommand extends DaemonCommand {
+export default class AgentProcessCommand extends DaemonCommand {
     protected readonly label:       string
     protected readonly words:       string
     protected readonly description: string
 
-    constructor (log: Log, private agent: Agent, private kinds: string[]) {
+    constructor (log: Log, private agent: Agent, private kinds: ReadonlyMap<string, unknown>) {
         super(log)
         this.label       = `agent ${agent.kind}`
         this.words       = `agent ${agent.kind}`
         this.description = agent.command().description()
     }
 
-    /*  the runtime state file and the log file of an agent of the project  */
+    /*  the process state file and the log file of an agent of the project  */
     private file (name: string, ext: "yaml" | "log"): string {
-        return path.join(runtimeDir(), `${name}.${ext}`)
+        return path.join(processDir(), `${name}.${ext}`)
     }
 
     /*  start flow: detach the agent (or run it in the foreground or as the detached process)  */
     private async doStart (start: Command, opts: AgentOpts & { foreground?: boolean }): Promise<number> {
         const kind  = this.agent.kind
         const name  = opts.name ?? kind
-        validateName(name, kind, this.kinds)
+        validateName(name, kind, [ ...this.kinds.keys() ])
         const file  = this.file(name, "yaml")
         const serve = process.env.ASE_AGENT_SERVE === "1"
         delete process.env.ASE_AGENT_SERVE
@@ -124,7 +124,7 @@ export default class AgentInstanceCommand extends DaemonCommand {
         /*  spawn the agent detached (after validating its options), logging into
             its log file, and await its successful setup  */
         if (!opts.foreground && !serve) {
-            this.agent.validate(opts)
+            await this.agent.validate(opts)
             const logFile = this.file(name, "log")
             const child   = this.spawnDetached([ "-l", this.log.logLevel(), "agent", kind, "start", ...givenArgs(start) ],
                 { ASE_AGENT_SERVE: "1" }, logFile)
@@ -134,7 +134,7 @@ export default class AgentInstanceCommand extends DaemonCommand {
         }
 
         /*  run the agent in this process (with the client of the agent relay, if any),
-            recording its runtime state from its successful setup until its termination  */
+            recording its process state from its successful setup until its termination  */
         const spec  = relaySpec(this.log, opts.agentRelay)
         const relay = spec !== null ? new AgentRelayClient(this.log, spec) : null
         await this.agent.setup(agentDefaults(), opts, relay)
@@ -151,7 +151,7 @@ export default class AgentInstanceCommand extends DaemonCommand {
 
     /*  status flow: report whether the agent is running  */
     private async doStatus (name: string): Promise<number> {
-        validateName(name, this.agent.kind, this.kinds)
+        validateName(name, this.agent.kind, [ ...this.kinds.keys() ])
         const state = readState(this.file(name, "yaml"))
         if (state === null || !(await stateAlive(state))) {
             await writeStdout(`agent ${name}: not running\n`)
@@ -164,7 +164,7 @@ export default class AgentInstanceCommand extends DaemonCommand {
     /*  stop flow: terminate the agent process and wait until it is gone
         (where the agent awaits its aborted processings and their cleanups)  */
     private async doStop (name: string): Promise<number> {
-        validateName(name, this.agent.kind, this.kinds)
+        validateName(name, this.agent.kind, [ ...this.kinds.keys() ])
         const file  = this.file(name, "yaml")
         const state = readState(file)
         if (state === null || !(await stateAlive(state))) {
@@ -210,7 +210,7 @@ export default class AgentInstanceCommand extends DaemonCommand {
             as the short form "-n" is the one of the number of lines, like in "tail")  */
         this.registerLog(group, (opts: { name?: string }) => {
             const name = opts.name ?? kind
-            validateName(name, kind, this.kinds)
+            validateName(name, kind, [ ...this.kinds.keys() ])
             return this.file(name, "log")
         }, (cmd) => {
             cmd.option("--name <name>", `name of the agent (default: "${kind}")`)

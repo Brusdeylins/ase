@@ -208,7 +208,7 @@ export const edits = new TaskRequests("edit", "ase-agent-editor", "edited")
 /*  the valid names of requests: lower-case words, not ending in a state suffix of a request kind  */
 export const REQUEST_NAME_RE = /^(?!.*-(?:running|failed)$)[a-z][a-z0-9-]*$/
 
-/*  the requests of a name (e.g. "lint", processed by a request agent of "ase agent custom"),
+/*  the requests of a name (e.g. "lint", processed by a request agent of a definition),
     mirrored in the task header as tag "ase-agent-<name>:<state>", where the edit requests
     ("edit") are the ones of the editor agent  */
 export const requestsOf = (name: string): TaskRequests => {

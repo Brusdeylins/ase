@@ -10,11 +10,11 @@ import os                           from "node:os"
 import { Task }                     from "./ase-task.js"
 import * as TaskFormat              from "./ase-task-format.js"
 import type * as API                from "./ase-task-store-plugin-api.js"
-import type { AgentTask, AgentItem, AgentLog } from "./ase-agent-common.js"
+import type { AgentTask, AgentItem, AgentLog } from "./ase-agent-runtime.js"
 import {
     Agent, updateTask, runOwner,
     tagsOf, flatKeys, skillErrored
-}                                   from "./ase-agent-common.js"
+}                                   from "./ase-agent-runtime.js"
 import type { TaskRequests }        from "./ase-task-request.js"
 import {
     typeParam, attachmentTime,
@@ -67,10 +67,10 @@ export abstract class RequestAgent extends Agent {
         return this.name
     }
 
-    /*  decide on the assignee to hand a processed task over to, by its success and its
-        previous assignee <previous> before the claim (or empty to unassign it): by default,
-        the previous assignee is restored  */
-    protected handover (_success: boolean, previous: string): string {
+    /*  decide on the assignee to hand a processed task <task> over to, by its success
+        and its previous assignee <previous> before the claim (or empty to unassign it):
+        by default, the previous assignee is restored  */
+    protected handover (_success: boolean, previous: string, _task: AgentTask): string {
         return previous
     }
 
@@ -267,7 +267,7 @@ export abstract class RequestAgent extends Agent {
             const changed = this.digest(plan) !== claim.digest
             const reason  = this.failure({ id: task.id, plan, changed, errored, ok, aborted, output })
             if (reason === null) {
-                this.requests.finalize(plan, i, null, undefined, this.handover(true, claim.assignee))
+                this.requests.finalize(plan, i, null, undefined, this.handover(true, claim.assignee, task))
                 result  = `task ${this.requests.done} successfully (request removed)`
                 success = true
             }
@@ -277,7 +277,7 @@ export abstract class RequestAgent extends Agent {
             }
             else {
                 this.requests.finalize(plan, i, "failed", `failed (${reason}, see attachment "agent:${this.logName}")`,
-                    this.handover(false, claim.assignee))
+                    this.handover(false, claim.assignee, task))
                 result = `task not ${this.requests.done} (${reason}, request marked as failed)`
             }
             return true
