@@ -5,6 +5,14 @@ ChangeLog
 1.1.0 (2026-10-XX)
 ------------------
 
+-   FEATURE [tool]: Unix Manual Pages for All CLI Commands
+    The `ase` CLI now ships Unix manual pages for all its commands and command groups, e.g.,
+    `ase`(1), `ase-task`(1), and `ase-agent-fleet`(1), each describing all options and arguments
+    in detail. They are written in Markdown (`tool/man/*.md`), rendered via *remark-man* into
+    `dst/man/*.1` at build-time, and installed by npm for use with `man`(1). The new `ase man`
+    command shows them independent of any installation, e.g., `ase man agent fleet`. They replace
+    the former single `docs/usage-tool.md`, which was removed.
+
 -   FEATURE [tool]: Assignee Badges on Task Board Cards
     The cards of the lanes and graph views of the TUI and WUI task boards now carry, besides the
     ` ⚉ <agent> ` badges of the agents busy with a task, the badge of an assigned task on their

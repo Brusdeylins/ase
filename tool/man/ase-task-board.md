@@ -1,0 +1,428 @@
+# ase-task-board(1) -- Show the interactive task board of the project
+
+## SYNOPSIS
+
+`ase task board`
+\[`-h`|`--help`\]
+\[`-w`|`--web`\]
+\[`-t`|`--text`\]
+\[`--agent-relay` *url*\]
+
+## DESCRIPTION
+
+**ase task board** shows the *task board* of the current project: all
+persisted task plans of the task store of the project (see
+`ase-task`(1)) as *cards* in the *lanes* of the effective task
+lifecycle model (see `ase task lifecycle`), following all changes of
+the task plans live. It comes in three variants:
+
+- the interactive *terminal board* (the default, on a terminal),
+- the *web board* in the browser (with `--web`), and
+- the plain *text overview* (with `--text`, or without an interactive
+  terminal on standard input or output).
+
+The lanes are grouped by the phases of the lifecycle model plus a
+final `Done` group of the finished states, where within a group the
+entry state comes first, the active state second, and the parking
+state last. The cards of the *active* lanes (the states a task is
+actively worked on) are shown in the accent color (default: blue), the
+cards of the *parking* lanes in the normal color, and the cards of the
+finished lanes in the dim color (default: grey), while the selected
+card is shown in the signal color (default: red). A card shows the
+task id (inverse, behind a `≡`, and of an epic, i.e., a task being its
+own group, additionally behind a `♛`), its group (if any, between `♛`
+and `▶`), its markers, and its title, the latter cut onto a single line
+or, toggled with `t`, wrapped onto at most three lines. The markers
+are:
+
+- `⟲`: the task is part of a dependency cycle of its `After:` keys.
+- `✎`: an edit request of the task is pending (see `ase-agent-editor`(1)).
+- `✎…`: an edit request of the task is being processed.
+- `✎✗`: an edit request of the task failed.
+- `⚉` *name*: a badge on the top border of the card, naming an
+  agent busy with the task (inverse), resp. the agent the task is
+  assigned to.
+- `☺` *name*: a badge on the top border of the card, naming the
+  person the task is assigned to.
+
+Besides the *lanes* view, the boards show the *graph* view, the
+dependency graph of the tasks derived from their `After:` keys (where
+an epic implicitly comes after all other tasks of its group), and,
+with an agent relay, the *agents* view. All views are cycled via `v`
+(or a click onto the `view:` value of the header). The last shown
+view, the minimized lanes, the collapsed groups, and the shown flags
+are persisted in `.ase/board.yaml` (separately for the terminal and
+the web board).
+
+### Terminal Board
+
+The terminal board runs in the alternate screen of the terminal and
+requires a window of at least 40 columns and 16 rows. Its header
+shows the project, the task lifecycle model, the number of unfinished
+and of all tasks, the current view, and the `filter:` field (with its
+`✕` clear button), below it the warnings of the board (e.g. on
+dependency cycles), and its footer shows the
+information line, up to three key hint lines (hidden and shown via
+`?`), and the status line with the kind and connection state of the
+task store (`●` connected, `○` disconnected), the number of agents and
+the connection state of the agent relay (if any), and the *ASE*
+version, or a notice instead.
+
+In the lanes view, lanes can be minimized (`m`) and groups collapsed
+(`c`), and the selected lane can be *grown* via `g` to the full board,
+showing all its cards in a grid of at least four columns. A card opens
+its plan in a full-height *task dialog* (`⏎` or a mouse click), which
+shows the frontmatter keys, the predecessors and successors of the
+task (a click onto one opens its task dialog), and the plan body,
+followed by the attachments of the plan as further tabs, where a diff
+attachment (type `text/x-diff`, like the implementation draft or the
+change set snapshot `kind="changeset"` of `ase-task-implement` and
+`ase-task-integrate`) is colored per line, YAML and JSON data are
+syntax-highlighted, and a change set snapshot older than the plan is
+marked `(stale)`.
+
+A task is moved into another state (changing its `Status:`) either by
+picking it up with `SPACE` and dropping it with a second `SPACE` onto
+the selected lane (only lanes whose state is reachable from the current
+state in the lifecycle model accept the task, and are shown in bold),
+or via the *transfer popup* of `T`, which lists all lane states (as
+*group* `▷` *state*, starting at the current state), where the states
+not reachable from the current state are dimmed.
+
+`e` edits the selected task plan with `$EDITOR` (default: `vi`, run
+through the shell, with the file passed as `$ASE_TASK_FILE`), where a
+draft which failed to save is offered again on the next `e`. `N`
+creates a new task by editing a pre-filled task plan (all frontmatter
+keys, a free placeholder id, the initial state, and the section
+template of the task format), which is stored under the id of its `Id:`
+line (refused for an existing id, while an unchanged text creates no
+task at all). `D` deletes the selected task after a confirmation.
+
+`E` requests the edit of the selected task by a prompt (refused for a
+finished task and while an edit of it is in progress), which
+`ase-agent-editor`(1) then processes via the `ase-task-edit` skill. The
+prompt popup is prefilled with the prompt of a cancelled request resp.
+of the most recent failed request (for a retry), and an empty prompt
+is refused. `R` requests the selected task by a prompt under a
+*request name* (see `ase task request`), suggested from the request
+agents announced to the agent relay (`edit` for `ase agent editor`,
+else the request name of any other request agent), which the request
+agent of the name then processes.
+
+`/` focuses the `filter:` field of the header: its keywords are
+matched case-insensitively against the task id and title, AND-combined
+when separated by spaces and OR-combined when separated by commas. Each
+OR-part first matches its keywords as literal substrings, and only if
+this matches no task at all, it matches them *fuzzily* (keywords of at
+least four characters also match words of a similar spelling). The
+lanes show only the matching tasks, the graph additionally their
+direct predecessors and successors (dimmed and dashed).
+
+The terminal board supports the mouse (via SGR mouse reporting): a
+click onto a card opens it, a click onto the `view:` value of the
+header cycles the view, a click onto the `filter:` field focuses it, a
+click onto its `✕` clears it, a click onto the title of a lane minimizes
+or maximizes it (resp. shrinks a grown lane), a click onto the title of
+a group collapses or expands it, a click onto a lane selects it, and
+the mouse wheel over a lane scrolls it. `M` disables the mouse support
+to regain the regular text selection of the terminal (and enables it
+again). The terminal board enables the *kitty keyboard protocol* if
+the terminal supports it, as only then `Shift`+`⏎` is distinguishable
+from `⏎`.
+
+### Web Board
+
+With `--web`, the web board is served through the *ASE* service of the
+project (see `ase-service`(1), started if not yet running) under
+`http://127.0.0.1:`*port*`/task-board`, which is printed on standard
+output and opened in the default browser (via `open`, `xdg-open`, resp.
+`start`). It offers the same views and keys as the terminal board,
+where a task is additionally moved by dragging its card onto a
+reachable lane, the graph is zoomed by the mouse wheel (and `+`, `-`,
+and `0`) and panned by dragging it, and an image attachment is zoomed
+by the mouse wheel. Its minimized lanes and collapsed groups are
+stored once per project, not per browser, so all open web boards share
+them and pick up a change immediately.
+
+In the task dialog of the web board, `e` (or `✎`) edits the task plan
+in a Markdown editor (in the lanes and graph views, `e` opens the
+selected task directly for editing): `Ctrl`/`⌘`+`S` saves it, but only
+if the plan was not changed meanwhile (else it offers to overwrite or
+discard), and `ESC` cancels (after a confirmation if changed). With the
+Vim or Emacs key bindings of `board.web.editor.keymap`, `:w`/`:q` resp.
+`C-x C-s`/`C-x C-c` save resp. cancel instead. A text which failed to
+save is kept as a draft in the browser and offered on the next edit.
+
+A running service with other *ASE* code is never restarted, as this
+would break the MCP connections of the agent sessions using it: an
+older service without the web board fails `--web` (restart it with
+`ase service stop` once no agent session uses it), while a differing
+build is only warned about.
+
+### Text Overview
+
+With `--text`, and also without an interactive terminal, the lane
+overview is printed as plain text and the command exits: a header line
+with the project, the lifecycle model, and the number of tasks, then
+per group (`━` *group*) and lane (*state*, marked `(active)` for an
+active lane, and its number of cards) the cards with their id (plus
+the `⟲` and `✎` markers), title, and the agents busy with them (behind
+`⚙`), followed, with an agent relay, by the agents (`●` busy, `○`
+waiting) with their status and their last processing log line, and
+finally all warnings of the board (behind `⚠`, e.g. on dependency
+cycles).
+
+### Agents View
+
+With an agent relay (see `--agent-relay`), the boards additionally
+follow the running agents (see `ase-agent`(1)) live in the third view
+`agents`: a master/detail view, with the framed master list `Agents` on
+the left, showing each agent as a card with its name (inverse, behind
+a `⚉`), a pulse on its top border while busy (resp. a circle while
+waiting), and the fields `kind:` and `mode:` of its operation (or
+`none` without a mode), `uptime:` with the duration since its start,
+`task:` with the ids of the tasks it is busy with (else `none
+(waiting)`), and `usage:` resp. `last:` with its usage of the agent tool
+in total since its start resp. by its last finished job, each as wall
+time, output tokens, and costs in USD (e.g. `12m, 9.2k tok, $3.41`,
+with `n/a` for what the agent tool does not report, and `none` before
+the first finished job). The framed detail view `Agent: Recent Log
+Entries` on the right shows the recent processing log lines of the
+selected agent, each with its full timestamp, the id of its task (if
+any), and its level and content (warnings and errors in the signal
+color), broken onto multiple rows instead of being cut. The detail
+view follows the bottom of the log while not scrolled up. When the
+selected agent vanishes, its neighbor is selected instead. The
+information line shows the selected agent with its host and process
+id, its state with the duration for which it has been in it, and the
+age of its latest heartbeat. Without an agent relay, the agents view
+is skipped.
+
+An agent stopping vanishes from the board immediately, while an agent
+missing its heartbeat vanishes after 30 to 35 seconds. A relay
+connection without any traffic for 15 to 30 seconds (e.g. after a
+network partition) is detected, reported as disconnected (dropping the
+shown agents), and re-established.
+
+## OPTIONS
+
+- \[`-h`|`--help`\]:
+  Show usage information and exit.
+
+- \[`-w`|`--web`\]:
+  Serve the web board through the *ASE* service of the project, print
+  its URL, open it in the default browser, and exit (see **Web Board**).
+  Takes precedence over `--text`.
+
+- \[`-t`|`--text`\]:
+  Print the lane overview as plain text and exit (see **Text
+  Overview**), instead of starting the interactive terminal board.
+
+- \[`--agent-relay` *url*\]:
+  The agent relay to receive the live presence of the agents from, as
+  `ase://`*addr*`:`*port*\[`/`*token*\] resp.
+  `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\] for HTTPS
+  (optionally without certificate verification), with the bearer token
+  embedded, else from `$ASE_AGENT_RELAY_TOKEN`, else from
+  `project.relay.token`, else of the locally started agent relay
+  (default: the configured `project.relay.url`, else none, i.e.,
+  without agents view). Honored by the terminal board and the text
+  overview only, as the web board always follows the configured
+  `project.relay.url` (and hence warns about the option).
+
+## KEYS
+
+The following keys are supported by the terminal board (and, unless
+noted otherwise, equally by the web board). The keys `D`, `E`, `R`,
+`T`, and `M` are also accepted as `Shift` with the lower-case letter
+under the kitty keyboard protocol.
+
+### Every View
+
+- `v`: Cycle the view: lanes, graph, and (with an agent relay) agents.
+- `/`: Focus the `filter:` field (not in the agents view).
+- `?`: Hide or show the key hint lines (persisted).
+- `D`: Delete the selected task, after a confirmation (not in the
+  agents view).
+- `T`: Transfer the selected task to another state via the transfer
+  popup (not in the agents view).
+- `E`: Request the edit of the selected task by a prompt (not in the
+  agents view).
+- `R`: Request the selected task by a prompt under a request name (not
+  in the agents view).
+- `M`: Disable or enable the mouse support (terminal board only).
+- `q`, `Ctrl`+`C`: Quit (terminal board only).
+
+### Lanes View
+
+- `↑`/`↓`: Select the previous/next card of the group (within a
+  collapsed group, the previous/next lane).
+- `←`/`→`: Select the card of the same lane in the previous/next group.
+- `PgUp`/`PgDn`: Select the upper/lower lane of the group.
+- `Home`/`End`: Select the first/last card of the lane.
+- `Tab`/`Shift`+`Tab`: Step through the lanes of the expanded groups
+  row by row, wrapping around the board.
+- `⏎`: Open the task dialog of the selected task.
+- `e`: Edit the selected task plan (terminal: with `$EDITOR`; web: in
+  the Markdown editor of its task dialog).
+- `N`: Create a new task.
+- `SPACE`: Pick up the selected task, resp. drop the picked-up task
+  onto the selected lane (dropping it onto its own lane cancels).
+- `ESC`: Cancel the move of a picked-up task.
+- `m`: Minimize or maximize the selected lane (persisted).
+- `c`: Collapse or expand the selected group (persisted).
+- `g`: Grow the selected lane to the full board (only a maximized lane
+  of an expanded group), resp. shrink it back again.
+- `t`: Cut the card titles onto a single line, resp. wrap them onto at
+  most three lines (persisted).
+
+### Grown Lane
+
+- `↑`/`↓`/`←`/`→`: Select the card above/below/left/right in the grid.
+- `PgUp`/`PgDn`: Select the card a page of rows above/below.
+- `Home`/`End`: Select the first/last card.
+- `g`, `ESC`: Shrink the lane back again.
+- `⏎`, `e`, `N`, `SPACE`, `t`: As in the lanes view.
+
+### Graph View
+
+- `↑`/`↓`/`←`/`→`: Select the nearest task in the direction of the arrow.
+- `⏎`: Open the task dialog of the selected task.
+- `e`, `N`, `t`: As in the lanes view.
+- `s`: Hide or show the standalone tasks, i.e., the tasks without any
+  predecessors and successors (persisted).
+- `+`/`-`/`0`: Zoom in, out, resp. reset the zoom (web board only).
+
+### Agents View
+
+- `↑`/`↓`: Select the previous/next agent.
+- `Shift`+`↑`/`↓`: Scroll the log of the detail view by one line
+  (terminal board only).
+- `PgUp`/`PgDn`: Scroll the log of the detail view by one page.
+- `Home`/`End`: Scroll to the top/bottom of the log of the detail view,
+  where scrolling down to its bottom follows it again.
+
+### Task Dialog
+
+- `←`/`→`, `Tab`/`Shift`+`Tab`: Select the previous/next tab.
+- `↑`/`↓`: Scroll the content.
+- `PgUp`/`PgDn`: Scroll the content by one page.
+- `e`: Edit the task plan.
+- `D`, `T`, `E`, `R`, `M`: As in every view.
+- `⏎`, `ESC`: Close the task dialog.
+
+### Filter Field
+
+- *character*: Extend the filter query (applied live).
+- `Backspace`: Remove the last character of the filter query.
+- `⏎`: Keep the filter query and leave the field.
+- `ESC`: Clear the filter query and leave the field.
+
+### Prompt Popup
+
+- *character*: Insert the character (also pasted text) at the cursor.
+- `⏎`: Request the edit resp. the request (on the request name field
+  of the web board: switch to the prompt).
+- `Shift`+`⏎`, `Alt`+`⏎`: Insert a line break (terminal: `Shift`+`⏎`
+  only under the kitty keyboard protocol, `Alt`+`⏎` in every terminal).
+- `←`/`→`: Move the cursor by one character.
+- `Home`/`End`: Move the cursor to the start/end of the prompt.
+- `Backspace`/`Delete`: Remove the character before/at the cursor.
+- `Tab`: Switch between the request name and the prompt (`R` only;
+  web: by the regular focus switching).
+- `↑`/`↓`: Cycle through the suggested request names, while on the
+  request name (`R` only, terminal board; web: the suggestions are the
+  completions of the request name field).
+- `ESC`: Cancel, keeping the prompt as a draft for the task.
+
+### Transfer Popup
+
+- `↑`/`↓`: Select the previous/next reachable state.
+- `⏎`: Transfer the task into the selected state (also a click onto it).
+- `ESC`: Cancel (also a click outside of the popup).
+
+### Deletion Confirmation
+
+- `y`: Delete the task.
+- `ESC`: Cancel (web board: also `n`).
+- `←`/`→`, `Tab`: Switch between the `delete` and `cancel` buttons
+  (terminal board; web board: by the regular focus switching).
+- `⏎`: Press the selected button (default: `cancel`).
+
+## CONFIGURATION
+
+The following configuration keys (on scope `user` or `project`, see
+`ase-config`(1)) customize the boards:
+
+- `board.tui.color.dim`, `board.tui.color.normal`,
+  `board.tui.color.accent`, `board.tui.color.signal`:
+  The colors of the four color roles of the terminal board (default:
+  `grey`, `default`, `blue`, and `red`), each either `default` (the
+  foreground color of the terminal), a color name, `#rgb`, `#rrggbb`,
+  `ansi256(`*n*`)`, or `rgb(`*r*`,`*g*`,`*b*`)`.
+
+- `board.web.color.dim`, `board.web.color.normal`,
+  `board.web.color.accent`, `board.web.color.signal`:
+  The base colors of the four color roles of the web board (default:
+  `grey`, `black`, `blue`, and `orange`), each either `default` (the
+  default base color of the role), one of the color names `black`,
+  `grey`, `gray`, `brown`, `red`, `orange`, `yellow`, `green`, `teal`,
+  `cyan`, `blue`, `purple`, or `magenta`, `#rgb`, or `#rrggbb`.
+
+- `board.web.editor.keymap`:
+  The key bindings of the task plan editor of the web board: `default`,
+  `vim`, or `emacs` (default: `default`).
+
+- `project.relay.url`:
+  The default agent relay of the boards (see `--agent-relay`).
+
+## ENVIRONMENT
+
+- `EDITOR`:
+  The text editor of the terminal board for `e` and `N` (default:
+  `vi`), run through the shell, so a value with arguments is supported.
+
+- `ASE_AGENT_RELAY_TOKEN`:
+  The bearer token of an agent relay URL without an embedded token.
+
+## FILES
+
+- `.ase/board.yaml`:
+  The display state of the boards in the project root: separately for
+  the terminal board (`tui`) and the web board (`web`), the shown
+  `view` (`lanes`, `graph`, or `agents`), the `minimized` lanes, the
+  `collapsed` groups, and whether the task `titles` are wrapped onto
+  multiple lines, the key hint lines are shown (`keys`), and the graph
+  shows the `standalone` tasks. The web state is shared by all
+  browsers and tabs showing the web board. It never holds task
+  content, and is covered by the self-ignoring `.ase/.gitignore`.
+
+## EXIT STATUS
+
+The command exits with status `0` once the terminal board is quit, the
+text overview is printed, resp. the web board is opened, and with
+status `1` on any error (e.g. an *ASE* service without web board on
+`--web`).
+
+## EXAMPLES
+
+```sh
+# show the interactive terminal board
+$ ase task board
+
+# show the web board in the browser
+$ ase task board --web
+
+# print the lane overview, including the agents of a remote agent relay
+$ ase task board --text --agent-relay ase://relay.example.com:42043
+```
+
+## SEE ALSO
+
+`ase`(1), `ase-task`(1), `ase-task-store`(1), `ase-agent`(1),
+`ase-agent-editor`(1), `ase-agent-relay`(1), `ase-service`(1),
+`ase-config`(1).
+
+## AUTHOR
+
+Dr. Ralf S. Engelschall <rse@engelschall.com>

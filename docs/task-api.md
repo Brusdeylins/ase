@@ -47,8 +47,8 @@ wiring is proposed as:
   `--without-agent-relay`), the server additionally co-hosts the agent
   relay of `ase agent relay` under the same address, port, and token,
   i.e., its `/agents` and `/projects/{prjId}/agents...` endpoints (see
-  `ase agent relay` in `docs/usage-tool.md`, as they are not part of
-  this API). Idempotent if already running, but restarts the
+  `ase-agent-relay`(1) in `tool/man/ase-agent-relay.md`, as they are
+  not part of this API). Idempotent if already running, but restarts the
   server if an explicitly given option deviates from its configuration. The
   server logs into *per-user config dir*`/store.log`, or, with `--foreground`,
   runs in the current process and logs to the terminal.

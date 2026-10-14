@@ -245,7 +245,7 @@ export const useCases: UseCase[] = [
                           "is compressed to its ranked key points, each backed by a line-cited snippet.",
                 commands: [
                     "**/ase-docs-distill** --top 7 " +
-                    "@docs/usage-tool.md"
+                    "@tool/man/ase-agent.md"
                 ]
             },
             {

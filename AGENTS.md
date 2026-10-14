@@ -35,7 +35,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `tool/src/ase-*.ts`: one module per top-level command (`setup`,
         `config`, `mcp`, `service`, `hook`, `statusline`, `task`, `artifact`,
         `spec`, `util`, `util-meta`, `util-compat`, `util-diagram`, `util-worktree`,
-        `util-mint`, `util-metric`, `agent`) plus generic library modules (`lib-log`,
+        `util-mint`, `util-metric`, `agent`, `man`) plus generic library modules (`lib-log`,
         `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`, the
         `lib-daemon-cli` part shared by all background processes (servers,
         agents, and the agent fleet) for their start/status/log/stop CLI commands,
@@ -104,6 +104,11 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         selected by `project.task.store.url`, through
         the local or remote task store clients of `ase-task-store-client.ts`.
     -   `tool/bin/ase`: the published shim, loading compiled output from `dst/`
+    -   `tool/man/ase{,-xxx{,-yyy}}.md`: the Unix manual pages of all CLI
+        commands (one per command and command group, where the pages of a
+        group with third-level commands like `ase task store` cover them),
+        in the *remark-man* Markdown format, rendered at build-time into
+        `dst/man/*.1` (installed by npm via `directories.man`)
     -   `tool/plugin/` and `tool/.claude-plugin/`: build-time copies of
         `plugin/` and `.claude-plugin/` -- never edit them, they are regenerated
 -   `pages/`: the GitHub Pages site (https://ase.tools), an *Astro* project
@@ -146,8 +151,9 @@ npm start fetch-types   # force re-download of mods/claude-code.d.ts
 
 cd tool
 npm start lint          # eslint over src/*.{ts,vue} + vue-tsc type-check of the web board client
-npm start build         # lint + build-cmd + build-plugin
+npm start build         # lint + build-cmd + build-man + build-plugin
 npm start build-cmd     # tsc + vite build of the web board client (emits into dst/)
+npm start build-man     # remark-man rendering of man/*.md into dst/man/*.1
 npm start build-plugin  # copy ../plugin and ../.claude-plugin into the package
 npm start build-container # build and push the container image (etc/ase.dockerfile)
 npm start build-watch   # nodemon rebuild on src/**/*.{ts,vue,styl,html}
@@ -217,12 +223,13 @@ relay) of a YAML configuration (initially created via `ase agent fleet
 init`) through a supervising process, restarting every exited member
 with an exponential backoff), `ase artifact` (artifact kind
 resolution), `ase spec` (SpecBook specification linting, exporting, and
-previewing), and `ase util` (utility commands: `ase util meta` (plugin
+previewing), `ase man` (showing the manual pages of `tool/man/` shipped
+with the tool via `man`(1)), and `ase util` (utility commands: `ase util meta` (plugin
 meta file output), `ase util diagram` (Mermaid rendering), `ase util
 worktree` (ASE worktree path resolution), `ase util mint` (hash-derived
 identifier minting), `ase util metric` (text length metrics), and `ase
 util compat` (probe values for the `ase-meta-compat` self-test skill)). See
-`docs/usage-tool.md` for the full manual page.
+the manual pages `tool/man/*.md` (e.g. `ase man ase`) for the full details.
 
 ## Code Style
 
