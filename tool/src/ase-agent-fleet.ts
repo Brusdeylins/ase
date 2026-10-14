@@ -74,10 +74,6 @@ const initConfig = (tool: string): string => textframe`
     ##  ASE Agent Fleet Configuration
     ##
 
-    #   the options of the fleet itself
-    fleet:
-        foreground:     false           # run the fleet in the foreground
-
     #   the agent relay, passing the live presence of the agents to the task boards
     #   (the options not given fall back to the configured "project.relay.url",
     #   "project.relay.crt", and "project.relay.key")

@@ -152,8 +152,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `site.ts`, `testimonials.ts`, and `usecases.ts`
 
 Additionally, the repository root carries `docs/` (hand-written
-documentation, diagram sources, and the example agent definitions in
-`docs/agents/`), `etc/` (the top-level `stx.conf` and the
+documentation and diagram sources), `etc/` (the top-level `stx.conf` and the
 version bumping script `version.mts`), `.claude-plugin/marketplace.json`
 and `.github/plugin/marketplace.json` (the plugin marketplace manifests),
 `.github/workflows/static.yml` (the GitHub Pages deployment of `pages/`),
@@ -266,7 +265,7 @@ Beyond `ase setup`, the CLI provides:
         of the project (`.ase/agents/`) or of the user (`agents/` of the
         user configuration directory), where a definition kind replaces a
         built-in kind of the same name, resp. by the options of the `adhoc`
-        agent (with example definitions in `docs/agents/`); the
+        agent (with example definitions in `tool/man/ase-agent-adhoc.md`); the
         built-in agents are themselves declarative definitions run by the
         same agent engine
     -   `ase agent relay`: the per-user agent relay server, passing the

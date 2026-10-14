@@ -962,8 +962,7 @@ $ ase agent adhoc start -n workflow --state-incoming PLANNED --tag-require workf
 # a further approval agent of its own tag, based on a built-in definition
 $ ase agent adhoc start -n reviewer -D builtin:approver-approve --tag-name ase-agent-reviewer
 
-# an agent of a definition kind of the project
-$ cp docs/agent-definition/reviewer.mts .ase/agents/
+# an agent of a definition kind of the project (see .ase/agents/reviewer.mts below)
 $ ase agent reviewer start -p 2
 $ ase agent reviewer log -f
 ```
@@ -1002,8 +1001,11 @@ export default {
         severity: { desc: "severity of the findings a rejecting review has to cite", default: "HIGH", allow: [ "LOW", "MEDIUM", "HIGH" ] }
     },
     hooks: {
+        /*  review a task only once its changeset is a branch  */
         ready: (task, ctx) =>
             ctx.flow(task, "Changeset")?.type === "branch" ? true : "a \"branch:\" changeset",
+
+        /*  require a rejecting review to cite at least one finding of the configured severity  */
         success: (_task, result, ctx) =>
             result.verdict !== "REJECT" || result.output.some((line) => new RegExp(`\\b${ctx.params.severity}\\b`).test(line)) ||
             `rejecting review without ${ctx.params.severity} findings`
@@ -1013,9 +1015,6 @@ export default {
 
 Started via `ase agent reviewer start --params severity=MEDIUM` (resp. with
 `params: { severity: MEDIUM }` in its section of a fleet configuration).
-
-See `docs/agent-definition/` of the **ase** sources for these example
-definitions.
 
 ## SEE ALSO
 

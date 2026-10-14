@@ -342,8 +342,8 @@ is skipped with a warning. An agent of a definition kind accepts the
 same options as `ase agent adhoc start`, except `--definition`, and
 `--repo` and `--tempdir` are silently ignored with `--workdir project`.
 See `ase-agent-adhoc`(1) for the format of the definition files, all
-options of the definitions, their templates, and their hooks, and
-`docs/agent-definition/` for example definitions.
+options of the definitions, their templates, their hooks, and example
+definitions.
 
 ## OPTIONS
 
