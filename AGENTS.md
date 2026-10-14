@@ -17,7 +17,14 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
 
 -   `plugin/`: the agent tool plugin
     -   `plugin/skills/ase-xxx-xxx/`: the 58 skills, each with a `SKILL.md`
-        (agent instructions) and a `help.md` (Unix-style manual page)
+        (agent instructions) and a `help.md` (Unix-style manual page);
+        the `help.md` files document only the user-facing skill surface
+        (purpose, options, arguments, and usage examples), *not* the
+        internals of the skills (the workflow steps of `SKILL.md`, the
+        leveraged sub-agents, meta files, and MCP tools, and their
+        interplay), so consult the `SKILL.md` and its referenced files for
+        the latter and never add implementation details to the `help.md`
+        files
     -   `plugin/agents/`: the sub-agent definitions leveraged by the skills
     -   `plugin/meta/`: the shared meta files (constitution, tenets, persona,
         dialog, getopt, and artifact format conventions), exposed to skills
@@ -108,7 +115,12 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         commands (one per command and command group, where the pages of a
         group with third-level commands like `ase task store` cover them),
         in the *remark-man* Markdown format, rendered at build-time into
-        `dst/man/*.1` (installed by npm via `directories.man`)
+        `dst/man/*.1` (installed by npm via `directories.man`); they
+        document only the user-facing CLI surface (commands, options,
+        arguments, configuration, and files), *not* the internals of
+        `tool/src/` (modules, classes, functions, types, and their
+        interplay), so consult the source code for the latter and never
+        add implementation details to the manual pages
     -   `tool/plugin/` and `tool/.claude-plugin/`: build-time copies of
         `plugin/` and `.claude-plugin/` -- never edit them, they are regenerated
 -   `pages/`: the GitHub Pages site (https://ase.tools), an *Astro* project
