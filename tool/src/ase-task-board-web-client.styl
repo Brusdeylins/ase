@@ -1298,7 +1298,7 @@ body.plan
     margin: 0
 
     /*  the same horizontal padding as the rows of the task dialog, to align on the left  */
-    padding: 1.2rem 20px 2rem 20px
+    padding: 0.8rem 20px 2rem 20px
     font-size: 1rem
     line-height: 1.30
     h1, h2, h3, h4
@@ -1347,7 +1347,11 @@ body.plan
 
         /*  the separator between the task fields and the task plan  */
         &.fields
-            margin: 0 0 1rem 0
+            margin: 0 0 0.6rem 0
+
+            /*  a text attachment directly after the separator without extra top padding  */
+            & + pre.textart
+                padding-top: 0
     blockquote
         padding: 0.1em 0 0.1em 0.9em
         border-left: 3px solid var(--c-accent-border)
@@ -1404,7 +1408,7 @@ body.plan
         th
             background: var(--c-ground)
     table.fields
-        margin-bottom: 1rem
+        margin-bottom: 0.6rem
         line-height: 1.25
         td
             padding: 0 1.2rem 0 0
