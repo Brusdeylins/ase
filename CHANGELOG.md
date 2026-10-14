@@ -5,6 +5,15 @@ ChangeLog
 1.1.0 (2026-10-XX)
 ------------------
 
+-   BUGFIX [tool]: Agent Process Management and Crash Recovery
+    The `ase agent fleet` now stops an orphaned agent relay only if its process still has the
+    recorded start time, so a relay process id reused after a crash or reboot no longer gets an
+    unrelated process terminated. The `ase agent <kind> start|status|stop` commands no longer
+    act on a running agent of another kind sharing the same `--name`, and concurrent starts of
+    an agent of the same name are now serialized, so only one of them runs. Finally, the crash
+    recovery now also treats an agent with a `finish` hook as finishing its processings, so a
+    task whose `finish` hook never ran is tagged as failed instead of processed.
+
 -   FEATURE [tool]: Unix Manual Pages for All CLI Commands
     The `ase` CLI now ships Unix manual pages for all its commands and command groups, e.g.,
     `ase`(1), `ase-task`(1), and `ase-agent-fleet`(1), each describing all options and arguments

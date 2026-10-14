@@ -9,6 +9,7 @@ import fs                                from "node:fs"
 
 import type { Command }                  from "commander"
 import YAML                              from "yaml"
+import lockfile                          from "proper-lockfile"
 
 import type Log                          from "./ase-lib-log.js"
 import { writeStdout }                   from "./ase-lib-stdio.js"
@@ -21,6 +22,14 @@ import { relaySpec, AgentRelayClient }   from "./ase-agent-relay-client.js"
 /*  the process state of a running agent (or fleet) process: its process id and its start
     time (identifying the process beyond its process id, as the latter is reused)  */
 export type ProcessState = { pid: number, start: string }
+
+/*  the process state of a running agent process, additionally recording the kind of the
+    agent (as the process files are named by the agent name, which agents of different
+    kinds can share)  */
+type AgentState = ProcessState & { kind: string }
+
+/*  the duration after which the start lock of an agent counts as stale  */
+const startStale = 10 * 1000
 
 /*  the directory of the process files of the agents (and of their fleet) of the project  */
 export const processDir = (): string => {
@@ -111,9 +120,12 @@ export default class AgentProcessCommand extends DaemonCommand {
         const serve = process.env.ASE_AGENT_SERVE === "1"
         delete process.env.ASE_AGENT_SERVE
 
-        /*  idempotent start: an already running agent is left alone  */
-        const state = readState(file)
+        /*  idempotent start: an already running agent is left alone
+            (unless the name is taken by a running agent of another kind)  */
+        const state = readState<AgentState>(file)
         if (state !== null && await stateAlive(state)) {
+            if (state.kind !== kind)
+                throw new Error(`agent ${name}: name already taken by a running ${state.kind} agent (pid ${state.pid})`)
             if (opts.foreground || serve)
                 throw new Error(`agent ${name}: already running (pid ${state.pid}) ` +
                     `(stop it first with "ase agent ${kind} stop -n ${name}")`)
@@ -134,11 +146,31 @@ export default class AgentProcessCommand extends DaemonCommand {
         }
 
         /*  run the agent in this process (with the client of the agent relay, if any),
-            recording its process state from its successful setup until its termination  */
-        const spec  = relaySpec(this.log, opts.agentRelay)
-        const relay = spec !== null ? new AgentRelayClient(this.log, spec) : null
-        await this.agent.setup(agentDefaults(), opts, relay)
-        writeState(file, { kind, pid: process.pid, start: await pidStart(process.pid) })
+            recording its process state from its successful setup until its termination,
+            where the start lock (held from re-checking the process state until recording
+            it) ensures that of concurrently started agents of the same name only one runs  */
+        fs.mkdirSync(path.dirname(file), { recursive: true })
+        const unlock = await lockfile.lock(file, {
+            realpath: false, stale: startStale, update: startStale / 5,
+            onCompromised: (err: Error) => {
+                this.log.write("warning", `agent ${name}: start lock compromised: ${err.message}`)
+            }
+        }).catch((err: unknown) => {
+            throw (err as NodeJS.ErrnoException).code === "ELOCKED" ?
+                new Error(`agent ${name}: already being started concurrently`) : err
+        })
+        try {
+            const other = readState<AgentState>(file)
+            if (other !== null && await stateAlive(other))
+                throw new Error(`agent ${name}: already running (pid ${other.pid})`)
+            const spec  = relaySpec(this.log, opts.agentRelay)
+            const relay = spec !== null ? new AgentRelayClient(this.log, spec) : null
+            await this.agent.setup(agentDefaults(), opts, relay)
+            writeState(file, { kind, pid: process.pid, start: await pidStart(process.pid) })
+        }
+        finally {
+            await unlock()
+        }
         try {
             await this.agent.run()
         }
@@ -152,9 +184,13 @@ export default class AgentProcessCommand extends DaemonCommand {
     /*  status flow: report whether the agent is running  */
     private async doStatus (name: string): Promise<number> {
         validateName(name, this.agent.kind, [ ...this.kinds.keys() ])
-        const state = readState(this.file(name, "yaml"))
+        const state = readState<AgentState>(this.file(name, "yaml"))
         if (state === null || !(await stateAlive(state))) {
             await writeStdout(`agent ${name}: not running\n`)
+            return 1
+        }
+        if (state.kind !== this.agent.kind) {
+            await writeStdout(`agent ${name}: not running (name taken by a running ${state.kind} agent, pid ${state.pid})\n`)
             return 1
         }
         await writeStdout(`agent ${name}: running (pid ${state.pid})\n`)
@@ -166,10 +202,14 @@ export default class AgentProcessCommand extends DaemonCommand {
     private async doStop (name: string): Promise<number> {
         validateName(name, this.agent.kind, [ ...this.kinds.keys() ])
         const file  = this.file(name, "yaml")
-        const state = readState(file)
+        const state = readState<AgentState>(file)
         if (state === null || !(await stateAlive(state))) {
             this.log.write("info", `agent ${name}: not running`)
             fs.rmSync(file, { force: true })
+            return 0
+        }
+        if (state.kind !== this.agent.kind) {
+            this.log.write("info", `agent ${name}: not running (name taken by a running ${state.kind} agent, pid ${state.pid})`)
             return 0
         }
         if (await this.terminate(state.pid, 5 * 60 * 1000))

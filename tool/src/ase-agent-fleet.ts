@@ -156,15 +156,16 @@ type FleetPlan = {
 
 /*  a member of a running fleet: its name, its kind ("relay" for the agent relay), its
     command-line arguments, its additional environment variables, its process (while
-    running), the time of its last start, its current restart delay, its number of
-    restarts, its pending restart (while awaiting it), and whether its process was
-    already asked to terminate  */
+    running) and the start time of the process (once known, else empty), the time of its
+    last start, its current restart delay, its number of restarts, its pending restart
+    (while awaiting it), and whether its process was already asked to terminate  */
 type FleetMember = {
     name:      string
     kind:      string
     args:      string[]
     env:       Record<string, string>
     child:     ChildProcess | null
+    start:     string
     since:     number
     delay:     number
     restarts:  number
@@ -174,11 +175,12 @@ type FleetMember = {
 
 /*  the process state of a running fleet: its configuration file, whether all its members
     completed their initial startup, and the kind, process id (null while awaiting its
-    restart), and number of restarts of each member  */
+    restart), start time of its process (once known, else empty), and number of restarts
+    of each member  */
 type FleetState = ProcessState & {
     config:  string
     ready:   boolean
-    members: Record<string, { kind: string, pid: number | null, restarts: number }>
+    members: Record<string, { kind: string, pid: number | null, start?: string, restarts: number }>
 }
 
 /*  a configuration section of options  */
@@ -446,7 +448,7 @@ export default class AgentFleetCommand extends DaemonCommand {
         const entry     = fileURLToPath(new URL("./ase.js", import.meta.url))
         const start     = await pidStart(process.pid)
         const member    = (name: string, kind: string, args: string[], env: Record<string, string> = {}): FleetMember =>
-            ({ name, kind, args, env, child: null, since: 0, delay: RESTART_MIN_MS, restarts: 0, timer: undefined, signalled: false })
+            ({ name, kind, args, env, child: null, start: "", since: 0, delay: RESTART_MIN_MS, restarts: 0, timer: undefined, signalled: false })
         const members: FleetMember[] = [
             ...(plan.relay !== null ? [ member("relay", "relay", [ "agent", "relay", "start", "-f", ...plan.relay.args ],
                 plan.relay.token !== null ? { ASE_AGENT_RELAY_TOKEN: plan.relay.token } : {}) ] : []),
@@ -467,7 +469,7 @@ export default class AgentFleetCommand extends DaemonCommand {
             writeState(stateFile, {
                 pid: process.pid, start, config: file, ready,
                 members: Object.fromEntries(members.map((m) =>
-                    [ m.name, { kind: m.kind, pid: m.child?.pid ?? null, restarts: m.restarts } ]))
+                    [ m.name, { kind: m.kind, pid: m.child?.pid ?? null, start: m.start, restarts: m.restarts } ]))
             } satisfies FleetState)
         }
 
@@ -536,13 +538,21 @@ export default class AgentFleetCommand extends DaemonCommand {
                 env:      { ...process.env, ...m.env, ASE_LOG_PREFIX: logPrefix(m.name, width, colored) }
             })
             m.child     = child
+            m.start     = ""
             m.since     = Date.now()
             m.timer     = undefined
             m.signalled = false
+            void pidStart(child.pid ?? 0).then((start) => {
+                if (m.child === child) {
+                    m.start = start
+                    save()
+                }
+            })
             child.on("error", (err) =>
                 this.log.write("error", `${this.label}: ${m.name} failed (${err.message})`))
             child.once("exit", (code, signal) => {
                 m.child = null
+                m.start = ""
                 if (stopping) {
                     proceed()
                     return
@@ -610,11 +620,13 @@ export default class AgentFleetCommand extends DaemonCommand {
         killed by SIGKILL, as the members run in their own process groups), in order: first all
         agents, then the agent relay, where a member counts as orphaned only if its own process
         state (resp. the per-user relay configuration) still records the process of the fleet
-        state, and resolve to the names of the stopped members  */
+        state (and, if recorded, the process still has the start time recorded in the fleet state,
+        so a process id reused meanwhile by an unrelated process does not count), and resolve
+        to the names of the stopped members  */
     private async reap (state: FleetState): Promise<string[]> {
         const dir     = processDir()
         const members = Object.entries(state.members ?? {}).flatMap(([ name, m ]) =>
-            m.pid !== null ? [ { name, kind: m.kind, pid: m.pid } ] : [])
+            m.pid !== null ? [ { name, kind: m.kind, pid: m.pid, start: m.start ?? "" } ] : [])
         const stopped: string[] = []
         await Promise.all(members.filter((m) => m.kind !== "relay").map(async (m) => {
             const file  = path.join(dir, `${m.name}.yaml`)
@@ -627,7 +639,8 @@ export default class AgentFleetCommand extends DaemonCommand {
             fs.rmSync(file, { force: true })
         }))
         const relay = members.find((m) => m.kind === "relay")
-        if (relay !== undefined && Number(this.relayConfig()("pid")) === relay.pid && pidAlive(relay.pid)) {
+        if (relay !== undefined && Number(this.relayConfig()("pid")) === relay.pid &&
+            await stateAlive({ pid: relay.pid, start: relay.start })) {
             this.log.write("info", `${this.label}: stopping orphaned ${relay.name} (process ${relay.pid})`)
             if (await this.terminate(relay.pid, 5000))
                 stopped.push(relay.name)
