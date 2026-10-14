@@ -71,8 +71,14 @@ export class SetupSettings {
         if (!opts.labels)
             parts.push("--no-labels")
         const lines = format.length > 0 ? format : this.statuslineFormatDflt
-        for (const line of lines)
-            parts.push(`'${line.replace(/'/g, "'\\''")}'`)
+        for (const line of lines) {
+            /*  Copilot CLI on Windows spawns via cmd.exe, where single
+                quotes do not quote -- replace with double quotes  */
+            if (process.platform === "win32" && tool === "copilot")
+                parts.push(`"${line.replace(/"/g, "\\\"")}"`)
+            else
+                parts.push(`'${line.replace(/'/g, "'\\''")}'`)
+        }
         return parts.join(" ")
     }
 
