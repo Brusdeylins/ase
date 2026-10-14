@@ -4,8 +4,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import type { AgentHooks }          from "../ase-agent-definition-api.js"
-import type { AgentKind }           from "../ase-agent-definition-core.js"
+import type { AgentHooks } from "../ase-agent-definition-api.js"
+import type { AgentKind }  from "../ase-agent-definition-core.js"
 
 /*  a predecessor passed the implementation phase for its successor only once its change
     set is contained in the "Source:" of the successor, from which the successor is

@@ -4,8 +4,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import type { AgentDefinition }     from "../ase-agent-definition-api.js"
-import type { AgentKind }           from "../ase-agent-definition-core.js"
+import type { AgentDefinition } from "../ase-agent-definition-api.js"
+import type { AgentKind }       from "../ase-agent-definition-core.js"
 
 /*  integrate the changeset of the task into its target by the Git operation <mode>, where
     the skill itself puts the task into "INTEGRATED" on success, so the task counts as
