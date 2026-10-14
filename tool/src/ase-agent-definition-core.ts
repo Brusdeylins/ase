@@ -394,9 +394,11 @@ const alternatives: Record<string, string[]> = {
 }
 
 /*  overlay the option values <upper> onto the option values <lower>, where an option of
-    <upper> also replaces its mutually exclusive alternatives of <lower>  */
+    <upper> (except a false flag) also replaces its mutually exclusive alternatives of <lower>  */
 const overlayValues = <T> (lower: Record<string, T>, upper: Record<string, T>): Record<string, T> => {
-    const masked = new Set(Object.keys(upper).flatMap((key) => alternatives[key] ?? []))
+    const masked = new Set(Object.entries(upper)
+        .filter(([ , value ]) => value !== false)
+        .flatMap(([ key ]) => alternatives[key] ?? []))
     return { ...Object.fromEntries(Object.entries(lower).filter(([ key ]) => !masked.has(key))), ...upper }
 }
 

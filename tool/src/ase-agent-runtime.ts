@@ -1938,7 +1938,7 @@ export abstract class Agent {
         this.clone = ""
     }
 
-    /*  claim all dispatchable tasks in natural id order into free worker slots,
+    /*  claim all dispatchable tasks in natural id order (as reordered by "order") into free worker slots,
         reporting the waiting and the noticed tasks once per change of their reason resp. notice  */
     private async dispatch (state: RunState): Promise<void> {
         const { slots, running, abort, notify } = state

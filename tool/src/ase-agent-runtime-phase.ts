@@ -73,7 +73,7 @@ export abstract class PhaseAgent extends Agent {
 
     /*  decide whether a processed task, moved into the state <to> and tagged with the value
         <value> of its label, was processed successfully (for the level and the wording of
-        the result log line): by default, if moved into the "success" state or labeled  */
+        the result log line): by default, if moved into the "success" state, labeled, or untagged  */
     protected succeeded (to: string, value: string | null | undefined, _task: AgentTask): boolean {
         return to === this.states.success || value !== undefined
     }

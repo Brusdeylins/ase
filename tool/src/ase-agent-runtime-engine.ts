@@ -577,6 +577,7 @@ class DefinedCore {
             }
             catch (err: unknown) {
                 record.fixed = `hook "finish" failed: ${reason(err)}`
+                await failed()
                 throw new Error(`agent: ${record.fixed}`, { cause: err })
             }
         }
@@ -586,6 +587,7 @@ class DefinedCore {
             }
             catch (err: unknown) {
                 record.fixed = `finishing command "${def.finish.success}" failed`
+                await failed()
                 throw err
             }
         }

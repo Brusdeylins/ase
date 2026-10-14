@@ -237,7 +237,8 @@ export abstract class RequestAgent extends Agent {
     /*  settle the processed request in a single update of the task: if the processing succeeded
         (see "failure"), the request is removed, else it is turned back into a requested one on
         interrupt, or into a failed one otherwise, and in all cases the previous assignee of the task
-        is restored; a finalization failing even after its retries is retried in the background
+        is restored (or the task is handed over, see "handover"); a finalization failing even after
+        its retries is retried in the background
         (see "unsettle"), so the request never stays processed  */
     protected async settle (task: AgentTask, ok: boolean, _finished: boolean, aborted: boolean,
         output: string[], log: AgentLog): Promise<void> {
