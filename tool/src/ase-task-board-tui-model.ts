@@ -17,7 +17,7 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf,
-    watchAgents, busyAgents, agentsDigest, requestNames
+    watchAgents, busyAgents, agentsDigest, requestNames, dataLoad
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState, AgentsState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -408,14 +408,15 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }
 
     /*  fetch the plan (with its attachments) of the read dialog whenever it is opened or the board changes
-        (the latter in the background, i.e. without the busy popup)  */
+        (the latter in the background, i.e. without the busy popup), together with loading the
+        syntax highlighter of YAML or JSON attachments (on the first opening only)  */
     const dialogId  = dialog?.id
     const dialogTab = dialog?.tab ?? 0
     React.useEffect(() => {
         if (dialogId === undefined)
             return
         let live = true
-        const load = Promise.all([ Task.parts(log, dialogId), Task.attachments(log, dialogId) ])
+        const load = Promise.all([ Task.parts(log, dialogId), Task.attachments(log, dialogId), dataLoad() ])
         const run  = plan?.id === dialogId ? load : track({ text: "loading task", id: dialogId }, load)
         run.then(([ parts, atts ]) => {
             if (live)

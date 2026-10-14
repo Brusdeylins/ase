@@ -14,6 +14,7 @@ import { DateTime }              from "luxon"
 import writeFileAtomic           from "write-file-atomic"
 import YAML                      from "yaml"
 import * as v                    from "valibot"
+import type { HighlighterCore }  from "shiki/core"
 
 import type Log                  from "./ase-lib-log.js"
 import { ensureAseGitignore }    from "./ase-config-scope.js"
@@ -339,6 +340,74 @@ export const diffTones = (lines: string[]): DiffTone[] => {
         if (!hunk || line.startsWith("@@"))
             return "head"
         return line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : "ctx"
+    })
+}
+
+/*  determine the language of an attachment type of structured data in YAML or JSON
+    (like "application/yaml", "text/x-yaml", "application/json", or "application/ld+json"),
+    or null if it is no such type  */
+export type DataLang = "yaml" | "json"
+export const dataLang = (type: string): DataLang | null => {
+    const m = /^(?:application|text)\/(?:x-|[\w.-]+\+)?(yaml|json)\s*(?:;|$)/i.exec(type.trim())
+    return m !== null ? m[1].toLowerCase() as DataLang : null
+}
+
+/*  the syntax highlighter of structured data in YAML or JSON (via Shiki, with
+    its JavaScript regular expression engine, i.e. without WebAssembly, and
+    with an empty theme, as only the TextMate scopes of the tokens are used),
+    loaded on demand only once  */
+let dataHighlighter: HighlighterCore | null = null
+let dataLoading: Promise<void> | null = null
+export const dataLoad = (): Promise<void> => {
+    if (dataLoading === null) {
+        dataLoading = (async () => {
+            const [ { createHighlighterCore }, { createJavaScriptRegexEngine }, { bundledLanguages } ] = await Promise.all([
+                import("shiki/core"), import("shiki/engine/javascript"), import("shiki/langs")
+            ])
+            dataHighlighter = await createHighlighterCore({
+                themes: [ { name: "ase", type: "dark", settings: [] } ],
+                langs:  [ bundledLanguages.yaml, bundledLanguages.json ],
+                engine: createJavaScriptRegexEngine()
+            })
+        })()
+    }
+    return dataLoading
+}
+
+/*  split the text of structured data in YAML or JSON into lines of syntax-highlighting
+    spans, by the TextMate scopes of the tokens: mapping keys as "key", strings
+    (including block scalar content) as "str", numbers as "num", booleans, nulls,
+    anchors, aliases, and tags as "lit", indicators, directives, and document
+    markers as "punct", comments as "cmt", and everything else as "text"
+    (all as "text" while the highlighter is not loaded yet, see "dataLoad")  */
+export type DataTone = "key" | "str" | "num" | "lit" | "punct" | "cmt" | "text"
+export type DataSpan = { text: string, tone: DataTone }
+const dataScopes: [ DataTone, string[] ][] = [
+    [ "cmt",   [ "comment" ] ],
+    [ "punct", [ "meta.directive" ] ],
+    [ "key",   [ "entity.name.tag", "support.type.property-name" ] ],
+    [ "num",   [ "constant.numeric" ] ],
+    [ "lit",   [ "constant.language", "meta.property", "keyword.control.flow.alias", "variable.other.alias" ] ],
+    [ "str",   [ "string" ] ],
+    [ "punct", [ "punctuation", "keyword", "storage", "entity.other.document" ] ]
+]
+export const dataSpans = (text: string, lang: DataLang): DataSpan[][] => {
+    if (dataHighlighter === null)
+        return text.split(/\r?\n/).map((line) => [ { text: line, tone: "text" } ])
+    const { tokens } = dataHighlighter.codeToTokens(text, { lang, theme: "ase", includeExplanation: "scopeName" })
+    return tokens.map((line) => {
+        const out = [] as DataSpan[]
+        for (const part of line.flatMap((token) => token.explanation ?? [ { content: token.content, scopes: [] } ])) {
+            const scopes = part.scopes.map((scope) => scope.scopeName)
+            const tone   = dataScopes.find(([ , prefixes ]) => scopes.some((scope) =>
+                prefixes.some((prefix) => scope === prefix || scope.startsWith(prefix + "."))))?.[0] ?? "text"
+            const last   = out[out.length - 1]
+            if (last !== undefined && last.tone === tone)
+                last.text += part.content
+            else
+                out.push({ text: part.content, tone })
+        }
+        return out
     })
 }
 

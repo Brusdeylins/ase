@@ -7,7 +7,7 @@
 import { Box, Text }                          from "ink"
 
 import type { Task }                          from "./ase-task.js"
-import { cardLabel, groupLabel, attachmentTabs, isDiff, diffTones, clampLines } from "./ase-task-board-core.js"
+import { cardLabel, groupLabel, attachmentTabs, isDiff, diffTones, dataLang, dataSpans, clampLines } from "./ase-task-board-core.js"
 import type { Card }                          from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine }      from "./ase-agent-relay-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
@@ -15,13 +15,14 @@ import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.
 import type { TransferEntry, BusyLabel, PromptRequest } from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
-    (bit 0: bold, bit 1: italic, bit 2: code, bit 3: accent, bit 4: signal)  */
+    (bit 0: bold, bit 1: italic, bit 2: code, bit 3: accent, bit 4: signal, bit 5: dim)  */
 type Line = { text: string, mask: number[] }
 const BOLD   = 1
 const ITALIC = 2
 const CODE   = 4
 const ACCENT = 8
 const SIGNAL = 16
+const DIM    = 32
 
 /*  strip the Markdown inline markers of a line ("`" for code, "**" and
     "__" for bold, "*" for italic), recording the style of the marked text  */
@@ -131,7 +132,8 @@ export const planLines = (parts: PlanParts, id: string, width: number): DialogLi
 
 /*  the lines of a task plan attachment for the read dialog: its embedded
     data or its (lazily loaded) file content, rendered as Markdown for a
-    Markdown type, as a placeholder if binary, and else verbatim  */
+    Markdown type, syntax-highlighted for a YAML or JSON type, colored per
+    line for a diff, as a placeholder if binary, and else verbatim  */
 export const attachmentLines = (att: Attachment, content: Buffer | Error | undefined, width: number): DialogLine[] => {
     const out = headerLines(([
         [ "Type", att.type ], [ "Desc", att.desc ], [ "Created", att.created ?? "" ], [ "Modified", att.modified ?? "" ]
@@ -153,6 +155,25 @@ export const attachmentLines = (att: Attachment, content: Buffer | Error | undef
     }
     if (/^text\/markdown\b/i.test(att.type.trim()))
         return [ ...out, ...markdownLines(text, width) ]
+
+    /*  YAML or JSON data is syntax-highlighted: keys accented, numbers and
+        literals signaled, indicators and comments dimmed (comments also
+        italic), and strings in the default color  */
+    const lang = dataLang(att.type)
+    if (lang !== null) {
+        const style: Record<string, number> = { key: ACCENT, num: SIGNAL, lit: SIGNAL, punct: DIM, cmt: DIM | ITALIC }
+        for (const spans of dataSpans(text.replace(/^(?:[ \t]*\r?\n)+/, ""), lang)) {
+            const line = { text: "", mask: [] as number[] }
+            for (const span of spans) {
+                const part = sanitize(span.text)
+                line.text += part
+                line.mask.push(...new Array<number>(part.length).fill(style[span.tone] ?? 0))
+            }
+            for (const part of wrap(line, width))
+                out.push({ text: part.text, color: palette.normal, mask: part.mask })
+        }
+        return out
+    }
 
     /*  a diff is colored per line: its file headers up to and
         including the hunk headers dimmed, inserted lines accented, removed
@@ -631,7 +652,8 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
             return h(Box, { key: i },
                 ...runs.map((run, k) => h(Text, {
                     key: k, wrap: "truncate",
-                    color: (run.style & (CODE | ACCENT)) !== 0 ? palette.accent : (run.style & SIGNAL) !== 0 ? palette.signal : line?.color,
+                    color: (run.style & (CODE | ACCENT)) !== 0 ? palette.accent : (run.style & SIGNAL) !== 0 ? palette.signal :
+                        (run.style & DIM) !== 0 ? palette.dim : line?.color,
                     bold: (line?.bold ?? false) || (run.style & BOLD) !== 0, italic: (run.style & ITALIC) !== 0
                 }, run.text)),
                 h(Text, cx("signal"), ` ${bar}`))

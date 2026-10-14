@@ -17,7 +17,7 @@ import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import { Config }                from "./ase-config-core.js"
 import { configSchema, webColorDefaults, webColorNames } from "./ase-config-schema.js"
-import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
+import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, dataLang, dataLoad, dataSpans, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
 import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
@@ -196,7 +196,7 @@ const taskDocument = async (keys: Map<string, string>, body: string): Promise<st
     fieldsDocument([ ...keys ].filter(([ k ]) => k !== "Type"), await renderPlan(body))
 
 /*  render a task plan attachment as a standalone document: its fields and
-    its content, with images embedded, Markdown rendered, a diff
+    its content, with images embedded, Markdown rendered, YAML or JSON data syntax-highlighted, a diff
     colored per line, binary content as a placeholder, and else verbatim text  */
 const attachmentDocument = async (log: Log, id: string, n: number): Promise<string | null> => {
     const att = (await Task.attachments(log, id))[n]
@@ -236,6 +236,14 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
         const tones = diffTones(lines)
         return fieldsDocument(fields, "<pre class=\"textart diff\"><code>" +
             lines.map((line, i) => `<span class="${tones[i]}">${escapeHTML(line)}</span>`).join("\n") + "</code></pre>")
+    }
+    const lang = dataLang(att.type)
+    if (lang !== null) {
+        await dataLoad()
+        return fieldsDocument(fields, "<pre class=\"textart data\"><code>" +
+            dataSpans(text, lang).map((spans) => spans.map((span) =>
+                span.tone === "str" || span.tone === "text" ? escapeHTML(span.text) :
+                    `<span class="${span.tone}">${escapeHTML(span.text)}</span>`).join("")).join("\n") + "</code></pre>")
     }
     return fieldsDocument(fields, `<pre class="textart"><code>${escapeHTML(text)}</code></pre>`)
 }

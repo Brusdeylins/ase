@@ -1380,6 +1380,20 @@ body.plan
             color: var(--c-accent)
         .del
             color: var(--c-signal)
+
+    /*  YAML or JSON data: keys accented, numbers and literals signaled,
+        indicators and comments dimmed, and strings in the text color  */
+    pre.data code
+        color: var(--c-text)
+        .key
+            color: var(--c-accent)
+        .num, .lit
+            color: var(--c-signal)
+        .punct
+            color: var(--c-mute)
+        .cmt
+            color: var(--c-mute)
+            font-style: italic
     table
         border-collapse: collapse
         th, td
