@@ -760,8 +760,8 @@ class DefinedPhaseAgent extends PhaseAgent {
         }))
         this.states     = { incoming: def.state.incoming, activity: def.state.activity, success: def.state.phase, passed: def.state.passed }
         this.assigned   = def.assign.required
-        this.finishing  = def.finish.commit || def.finish.success !== "" || def.workdir === "target" ||
-            def.hooks.finish !== undefined
+        this.finishing  = def.finish.commit || def.finish.success !== "" || def.workdir === "target"
+            || def.hooks.finish !== undefined
         this.serial     = def.serial
         this.worktree   = def.workdir !== "project"
         this.lifecycles = def.lifecycles

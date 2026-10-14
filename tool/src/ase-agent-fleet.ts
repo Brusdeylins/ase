@@ -538,12 +538,12 @@ export default class AgentFleetCommand extends DaemonCommand {
             m.since     = Date.now()
             m.timer     = undefined
             m.signalled = false
-            void pidStart(child.pid ?? 0).then((start) => {
+            pidStart(child.pid ?? 0).then((start) => {
                 if (m.child === child) {
                     m.start = start
                     save()
                 }
-            })
+            }).catch(() => {})
             child.on("error", (err) =>
                 this.log.write("error", `${this.label}: ${m.name} failed (${err.message})`))
             child.once("exit", (code, signal) => {
@@ -635,8 +635,8 @@ export default class AgentFleetCommand extends DaemonCommand {
             fs.rmSync(file, { force: true })
         }))
         const relay = members.find((m) => m.kind === "relay")
-        if (relay !== undefined && Number(this.relayConfig()("pid")) === relay.pid &&
-            await stateAlive({ pid: relay.pid, start: relay.start })) {
+        if (relay !== undefined && Number(this.relayConfig()("pid")) === relay.pid
+            && await stateAlive({ pid: relay.pid, start: relay.start })) {
             this.log.write("info", `${this.label}: stopping orphaned ${relay.name} (process ${relay.pid})`)
             if (await this.terminate(relay.pid, 5000))
                 stopped.push(relay.name)
