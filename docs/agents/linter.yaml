@@ -1,0 +1,18 @@
+##
+##  ASE Agent Example Definition (YAML, declarative only)
+##  a linter of the source code changed by a task, processing the requests "lint"
+##  (attached via "ase task request <id> lint <prompt>" or key "R" of the task boards)
+##  usage: cp docs/agent-definition/linter.yaml .ase/agents/ && ase agent linter start
+##
+
+type:           request
+workdir:        source
+request:
+    name:       lint
+prompt:
+    text:       "Lint the source code changed by task {id} with focus on: {prompt}"
+success:
+    criterion:  [ exit, clean ]
+attach:
+    output:     lint-report
+
