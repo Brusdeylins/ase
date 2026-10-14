@@ -262,7 +262,7 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
             status: l.status, active: l.active, weight: l.weight, dashed: l.dashed, kind: l.kind,
             cards:  (board.lanes.get(l.status) ?? []).map((c) => ({
                 id: c.id, title: c.title, group: c.group, cyclic: board.cyclic.has(c.id), tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c),
-                edit: c.edit, finished: editRefused(lifecycle, c.actual)
+                edit: c.edit, finished: editRefused(lifecycle, c.actual), assignee: c.assignee
             }))
         }))
     }))
@@ -702,7 +702,7 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
     })
 
     /*  request a task by a prompt under a request name (processed by a request agent of
-        "ase agent custom", resp. by "ase agent editor" for "edit"), answering 400 if the
+        a definition, resp. by "ase agent editor" for "edit"), answering 400 if the
         request name is invalid or the prompt is empty, 404 if the task is missing, and 409
         if it is finished or a request of the name is in progress (as checked atomically
         with the request)  */

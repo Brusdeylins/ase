@@ -710,7 +710,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }
 
     /*  request a task by the prompt of its popup under its request name (processed by a
-        request agent of "ase agent custom", resp. by "ase agent editor" for "edit"), dropping
+        request agent of a definition, resp. by "ase agent editor" for "edit"), dropping
         the draft of the task once sent, resp. keeping the request as its draft on failure  */
     const submitRequest = (id: string, text: string, pos: number, name: string): void => {
         let requests: TaskRequests

@@ -49,8 +49,9 @@ type GroupLayout = { title: string, lanes: LaneLayout[] }
 /*  a card of the board: the task id, its title, its group (epic, else empty),
     its lifecycle state (its lane), its actual status (differing from its lifecycle
     state if foreign to the lifecycle model), the state of its edit requests
-    (see "ase agent editor", else empty), and the data needed for ordering and the graph  */
-export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", after: string[], created: string }
+    (see "ase agent editor", else empty), its assignee (else empty), and the data
+    needed for ordering and the graph  */
+export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", assignee: string, after: string[], created: string }
 
 /*  the marker of the state of the edit requests of a card (else empty):
     requested, being processed, or failed  */
@@ -488,7 +489,8 @@ export const buildBoard = async (log: Log): Promise<Board> => {
             warnings.push(`task "${item.id}" has status "${item.status}" unknown to lifecycle model ` +
                 `"${lifecycle.name}" (shown as "${status}")`)
         const group  = (keys.get("Group") ?? "").trim()
-        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), after, created: keys.get("Created") ?? "" })
+        const assignee = (keys.get("Assignee") ?? "").trim()
+        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), assignee, after, created: keys.get("Created") ?? "" })
     }
 
     /*  derive predecessors (known ones only) and successors  */
@@ -751,7 +753,7 @@ const boardRelay = (log: Log, relay: string | undefined): RelaySpec | null => {
 
 /*  the names of the requests processed by the agents announced to the agent relay (for their
     suggestion on requesting a task by prompt): "edit" of the editor agent, and the request
-    names of the request agents of "ase agent custom"  */
+    names of the request agents of the definitions (e.g. of "ase agent adhoc")  */
 export const requestNames = (state: AgentsState | null): string[] =>
     [ ...new Set((state?.agents ?? []).map((agent) => agent.kind === "editor" ? "edit" : agent.request ?? "")
         .filter((name) => name !== "")) ].sort()
@@ -839,5 +841,21 @@ export const busyAgents = (state: AgentsState | null): Map<string, AgentPresence
         for (const id of agent.tasks)
             busy.set(id, [ ...(busy.get(id) ?? []), agent ])
     return busy
+}
+
+/*  the badges of a task, shown on the left part of its top border: the agents busy with
+    it (marked "⚉"), else its assignee (if any), marked "⚉" if it is the name of a known
+    agent and else "☺" (as a person), each name stripped of its control characters
+    (as the agents busy with a task always hold it under their assignee, which
+    might differ from their name, the assignee is not shown besides them)  */
+export type Badge = { icon: string, name: string }
+export const badgesOf = (card: Card, state: AgentsState | null, busy: AgentPresence[] | undefined): Badge[] => {
+    const clean = (text: string) => text.replace(/\p{Cc}/gu, "")
+    if (busy !== undefined && busy.length > 0)
+        return busy.map((agent) => ({ icon: "⚉", name: clean(agent.name) }))
+    if (card.assignee === "")
+        return []
+    const agent = state?.agents.some((a) => a.name === card.assignee) ?? false
+    return [ { icon: agent ? "⚉" : "☺", name: clean(card.assignee) } ]
 }
 

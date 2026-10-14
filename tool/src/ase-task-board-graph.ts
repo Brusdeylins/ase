@@ -7,7 +7,7 @@
 import type { ElkNode, ElkExtendedEdge } from "elkjs/lib/elk-api.js"
 
 import { toneOf, byCreation, cardLabel, groupLabel, clampLines, glueId, glueTitle, glueGroup } from "./ase-task-board-core.js"
-import type { Board }                                                                            from "./ase-task-board-core.js"
+import type { Board, Badge }                                                                     from "./ase-task-board-core.js"
 
 /*  a laid out node box (or group container box, with the group name as its id),
     a laid out edge, and the whole layout  */
@@ -30,14 +30,14 @@ const units = {
 const GROUP = "group:"
 
 /*  the label lines of a node (in cell units only) of a given box width: the
-    task id (of an epic behind "♛") and title, cut onto a single line, or with titles shown, wrapped
+    task id (behind "≡", and of an epic also behind "♛") and title, cut onto a single line, or with titles shown, wrapped
     onto at most three lines, with a placeholder column glued in front of
     the task id to reserve the extra column of its inverse rendering (plus two for
-    the "♛" of an epic), and the arrow in front of the title replaced by a placeholder
+    the "≡", and two more for the "♛" of an epic), and the arrow in front of the title replaced by a placeholder
     column glued to the title  */
 export const nodeLines = (board: Board, id: string, titles: boolean, width: number): string[] => {
     const card = board.cards.get(id)!
-    const pre  = groupLabel(card) === id ? glueGroup.repeat(2) : ""
+    const pre  = glueGroup.repeat(groupLabel(card) === id ? 4 : 2)
     return clampLines(glueId + pre + cardLabel(card).replace(`${id} ▶ `, `${id} ${glueTitle}`), width - 4, titles ? 3 : 1)
 }
 
@@ -171,8 +171,10 @@ const junction: Record<number, string> = {
     an "-id" suffix on the task id, a "-title" suffix on the rest of the label, and
     "edge" or "edge-sel" (an edge touching the selected node), "group-frame" and
     "group-title" on the group containers, with a given pulse
-    glyph (if any) in the top border of the active nodes (like in the lane view)  */
-export const drawGraphText = (board: Board, layout: GraphLayout, selected: string, titles = false, pulse = "") => {
+    glyph (if any) in the top border of the active nodes and the given badges
+    (if any) on the left part of the top border of the nodes (like in the lane view)  */
+export const drawGraphText = (board: Board, layout: GraphLayout, selected: string, titles = false, pulse = "",
+    badges = new Map<string, Badge[]>()) => {
     const W     = layout.width + 2
     const H     = layout.height + 1
     const mask  = Array.from({ length: H }, () => new Array<number>(W).fill(0))
@@ -260,16 +262,41 @@ export const drawGraphText = (board: Board, layout: GraphLayout, selected: strin
         if (pulse !== "" && base === "active")
             chars[n.y][n.x + n.w - 3] = pulse
 
+        /*  the badges as inverse " <icon> <name> " boxes (separated by a border character)
+            in signal color when selected, in accent color when active, and else in normal
+            color, behind one border character and cut before the pulse (with an ellipsis)  */
+        const list = badges.get(n.id) ?? []
+        if (list.length > 0 && n.w > 10) {
+            const room = n.w - 7
+            const tint = tone === "sel" ? "sel" : base === "active" ? "active" : "idle"
+            let x = n.x + 2
+            for (const [ k, badge ] of list.entries()) {
+                if (k > 0)
+                    x++
+                const used = x - n.x - 2
+                if (used >= room)
+                    break
+                const full = ` ${badge.icon} ${badge.name} `
+                const text = used + full.length > room ? full.slice(0, room - used - 1) + "…" : full
+                for (let i = 0; i < text.length && x < W; i++, x++) {
+                    chars[n.y][x] = text[i]
+                    tones[n.y][x] = `${tint}-id`
+                }
+                if (text !== full)
+                    break
+            }
+        }
+
         /*  the label lines, with the task id at the start of the first line
-            (behind the placeholder and, for an epic, behind "♛",
+            (behind the placeholder and "≡" and, for an epic, also behind "♛",
             and with one column of spacing on each side of it)  */
-        const pre = groupLabel(board.cards.get(n.id)!) === n.id ? 2 : 0
+        const pre = groupLabel(board.cards.get(n.id)!) === n.id ? 4 : 2
         nodeLines(board, n.id, titles, n.w).forEach((line, k) => {
             const row = n.y + 1 + k
             if (row >= n.y + n.h - 1 || row >= H)
                 return
             for (let i = 0; i < line.length && n.x + 2 + i < W; i++) {
-                chars[row][n.x + 2 + i] = k === 0 && pre > 0 && i === 1 ? "♛" :
+                chars[row][n.x + 2 + i] = k === 0 && pre > 2 && i === 1 ? "♛" : k === 0 && i === pre - 1 ? "≡" :
                     (k === 0 && i <= pre) || line[i] === glueTitle ? " " : line[i]
                 tones[row][n.x + 2 + i] = k === 0 && i <= pre + n.id.length + 1 ? `${tone}-id` : `${tone}-title`
             }
@@ -314,8 +341,8 @@ const escapeXML = (s: string): string =>
 /*  draw a pixel-unit layout as SVG, with every group a dashed "g.cluster" container
     with its name between "♛" and "▶" in the top-left corner, and every node a "g.node" carrying
     its "data-id" and tone class (plus "context" for a context node of a filtered graph),
-    for the click delegation of the page, and holding the same HTML card
-    (task id sub-box and truncated title) as the lanes  */
+    for the click delegation of the page, and its "data-assignee", for the badges placed
+    by the page, and holding the same HTML card (task id sub-box and truncated title) as the lanes  */
 export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
     const out   = [ `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" ` +
         `height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}">`,
@@ -330,9 +357,10 @@ export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
     }
     for (const n of layout.nodes.values()) {
         const card = board.cards.get(n.id)!
-        out.push(`<g class="node tone-${toneOf(board, card)}${board.context.has(card.id) ? " context" : ""}" data-id="${escapeXML(card.id)}">` +
+        out.push(`<g class="node tone-${toneOf(board, card)}${board.context.has(card.id) ? " context" : ""}" data-id="${escapeXML(card.id)}" ` +
+            `data-assignee="${escapeXML(card.assignee.replace(/\p{Cc}/gu, ""))}">` +
             `<foreignObject x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}">` +
-            `<div xmlns="http://www.w3.org/1999/xhtml" class="card"><div class="cbody"><span class="cid">${groupLabel(card) === card.id ? "♛ " : ""}${escapeXML(card.id)}</span>` +
+            `<div xmlns="http://www.w3.org/1999/xhtml" class="card"><div class="cbody"><span class="cid">${groupLabel(card) === card.id ? "♛ " : ""}≡ ${escapeXML(card.id)}</span>` +
             `${board.cyclic.has(card.id) ? "⟲ " : ""}${escapeXML(card.title.replace(/\t/g, " ").replace(/\p{Cc}/gu, ""))
                 .replace(/`([^`]+)`/g, "<code>$1</code>")}</div></div></foreignObject></g>`)
     }

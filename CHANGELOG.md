@@ -5,6 +5,13 @@ ChangeLog
 1.1.0 (2026-10-XX)
 ------------------
 
+-   FEATURE [tool]: Assignee Badges on Task Board Cards
+    The cards of the lanes and graph views of the TUI and WUI task boards now carry, besides the
+    ` ⚉ <agent> ` badges of the agents busy with a task, the badge of an assigned task on their
+    top border: ` ⚉ <name> ` for a known agent, else ` ☺ <name> ` for a person. The badges
+    are now also shown in the graph views and use the normal color, the accent color for active
+    tasks, and the signal color for the selected task.
+
 -   FEATURE [tool,plugin]: Usage Accounting for Task Assignments
     The new `ase-task-assign` skill (and `ase task assign` command) assigns a task. Assigning it
     to oneself opens a usage window, which accounts the AI time, tokens, and costs reported via

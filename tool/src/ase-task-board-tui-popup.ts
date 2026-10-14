@@ -94,11 +94,14 @@ export type PlanParts  = { keys: Map<string, string>, body: string, atts: Attach
 /*  a line of the read dialog  */
 type DialogLine = { text: string, color?: string, bold?: boolean, mask?: number[] }
 
-/*  the key/value header lines of the read dialog, separated from the
-    content by a line, so that the content starts directly after it,
-    resp. (for Markdown content) after a blank line  */
+/*  the key/value header lines of the read dialog (each cut to the width with
+    an ellipsis), separated from the content by a line, so that the content
+    starts directly after it, resp. (for Markdown content) after a blank line  */
 const headerLines = (keys: [ string, string ][], width: number, blank: boolean): DialogLine[] => {
-    const out = keys.map(([ key, val ]): DialogLine => ({ text: `${(key + ":").padEnd(11)}${sanitize(val)}`, color: palette.dim }))
+    const out = keys.map(([ key, val ]): DialogLine => {
+        const text = `${(key + ":").padEnd(11)}${sanitize(val)}`
+        return { text: text.length > width ? text.slice(0, Math.max(0, width - 1)) + "…" : text, color: palette.dim }
+    })
     if (out.length > 0) {
         out.push({ text: "─".repeat(width), color: palette.dim })
         if (blank)
@@ -219,7 +222,7 @@ export const agentLogLines = (agent: AgentPresence, width: number): LogLine[] =>
         const level  = `[${line.level.toUpperCase()}]: `
         const tone   = line.level !== "info" ? "signal" : "accent"
         const task   = sanitize(line.task)
-        const hold   = "\uE000".repeat((task !== "" ? task.length + 3 : 0) + level.length - 1)
+        const hold   = "\uE000".repeat((task !== "" ? task.length + 5 : 0) + level.length - 1)
         const textW  = Math.max(10, width - prefix.length)
         const msg    = sanitize(line.msg)
         const rows   = hold.length < textW ? clampLines(hold + " " + msg, textW, Infinity) :
@@ -300,14 +303,14 @@ type DialogArgs = {
 /*  the segments of the dependencies row of the read dialog within its inner width:
     predecessors on the left, successors on the right (padded in between to the
     full width, or cut at the end if too long), with each id rendered inverse
-    with one extra space on each side and carrying the referenced task id  */
+    behind "≡", with one extra space on each side, and carrying the referenced task id  */
 export const refSegs = (pred: string[], succ: string[], tint: (id: string) => string | undefined, innerW: number) => {
     type Seg = { text: string, color: string | undefined, inverse: boolean, ref?: string }
     const refs = (ids: string[]): Seg[] => ids.length === 0 ?
         [ { text: "—", color: palette.dim, inverse: false } ] :
         ids.flatMap((ref, i) => [
             ...(i > 0 ? [ { text: " ", color: palette.dim, inverse: false } ] : []),
-            { text: ` ${ref} `, color: tint(ref), inverse: true, ref }
+            { text: ` ≡ ${ref} `, color: tint(ref), inverse: true, ref }
         ])
     const fill: Seg = { text: "", color: palette.dim, inverse: false }
     const segs: Seg[] = [
@@ -578,14 +581,14 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
     /*  the header width, without its outer spaces and the " X " close button  */
     const titleW = Math.max(0, innerW - 2 - 4)
 
-    /*  the header: task group (if any, and not for an epic), task id (of an epic
-        behind "♛"), and title on the left (with the title cut as needed), lane
+    /*  the header: task group (if any, and not for an epic), task id (behind "≡",
+        and of an epic also behind "♛"), and title on the left (with the title cut as needed), lane
         group and status on the right (dropped if even the task group and id would not fit otherwise)  */
     const title  = card !== undefined ? cardLabel(card).replace(/^(\S+) ▶ /, "$1 ") : id
     const tgroup = card !== undefined ? groupLabel(card) : ""
     const epic   = tgroup !== "" && tgroup === id
     const prefix = tgroup !== "" && !epic ? `♛ ${tgroup} ▶ ` : ""
-    const groupW = prefix.length + (epic ? 2 : 0)
+    const groupW = prefix.length + (epic ? 4 : 2)
     let   right  = card !== undefined ? `${group !== undefined ? `${group} ▷ ` : ""}${card.status}` : ""
     if (id.length + 3 + groupW + right.length > titleW)
         right = ""
@@ -626,7 +629,7 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
         h(Text, {},
             " ",
             ...(prefix !== "" ? [ h(Text, { ...cx("bold"), color: tint(id) }, prefix) ] : []),
-            h(Text, { ...cx("badge"), color: tint(id) }, ` ${epic ? "♛ " : ""}${head.slice(0, id.length)} `),
+            h(Text, { ...cx("badge"), color: tint(id) }, ` ${epic ? "♛ " : ""}≡ ${head.slice(0, id.length)} `),
             h(Text, { color: tint(id) }, head.slice(id.length)),
             h(Text, cx("dim"), right.slice(0, right.length - lane.length)),
             h(Text, cx("dim", "bold"), lane),
@@ -643,8 +646,9 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
             const line = lines[s + i]
             const bar  = lines.length <= viewH ? " " : (i >= thumbY && i < thumbY + thumbH ? "█" : "░")
 
-            /*  split the padded line into runs of equal inline style  */
-            const text = " " + (line?.text ?? "").padEnd(bodyW)
+            /*  split the padded line into runs of equal inline style (cut to the body width,
+                as a wider line would wrap and push the rows of the dialog out of place)  */
+            const text = " " + (line?.text ?? "").slice(0, bodyW).padEnd(bodyW)
             const mask = [ 0, ...(line?.mask ?? []) ]
             const runs = [] as { text: string, style: number }[]
             for (let k = 0; k < text.length; k++) {

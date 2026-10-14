@@ -8,8 +8,8 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import { splitHeight, toneOf, cardLabel, groupLabel, editMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration } from "./ase-task-board-core.js"
-import type { Board, Card, GroupSpec, LaneSpec, Surface } from "./ase-task-board-core.js"
+import { splitHeight, toneOf, cardLabel, groupLabel, editMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf } from "./ase-task-board-core.js"
+import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
@@ -60,10 +60,11 @@ export const fitGroups = (groups: GroupSpec[], collapsed: string[], first: numbe
     task (if any) and the lane states it can be moved to, the groups
     whose lanes show a scroll arrow on their left or right border (or -1),
     the current pulse frame of the tasks of active lanes (or -1),
-    the agents busy with each task,
+    the known agents and the agents busy with each task,
     and the registration of the rendered card, lane, and group boxes for the mouse hit-testing  */
 type ViewCtx = {
     board: Board, surface: Surface, sel: Sel, dim: boolean, carry: Carry | null, titles: boolean, scroll: Scroll, pulse: number,
+    agents:   AgentsState | null
     working:  Map<string, AgentPresence[]>
     cardRef:  (id: string) => (el: DOMElement | null) => void
     laneRef:  (g: number, l: number) => (el: DOMElement | null) => void
@@ -87,13 +88,13 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
 }
 
 /*  the label lines of a card of a width: its group (if any, and not for an epic,
-    between "♛" and "▶"), the task id (of an epic behind "♛"), its markers, and title,
+    between "♛" and "▶"), the task id (behind "≡", and of an epic also behind "♛"), its markers, and title,
     cut onto a single line, or if titles are shown, wrapped onto at most three lines
     (with an ellipsis if cut), padded by one column on each side, with the group
     glued to the task id by five placeholder columns (the "♛", the "▶", their
     spacing, and the gap), a placeholder column glued
     in front of the task id to reserve the extra column of its inverse
-    rendering (plus two for the "♛" of an epic), the arrow in front of the
+    rendering (plus two for the "≡", and two more for the "♛" of an epic), the arrow in front of the
     title dropped, and a placeholder column glued in front of the first marker
     (resp. the title) for its spacing to the inverse task id  */
 const cardLines = ({ board, titles }: ViewCtx, c: Card, width: number): string[] => {
@@ -103,7 +104,7 @@ const cardLines = ({ board, titles }: ViewCtx, c: Card, width: number): string[]
     const group = groupLabel(c)
     const epic  = group === c.id
     const glued = group !== "" && !epic ? glueGroup.repeat(3) + group.replace(/ /g, glueGroup) + glueGroup.repeat(2) : ""
-    const text  = glued + glueId + (epic ? glueGroup.repeat(2) : "") + c.id +
+    const text  = glued + glueId + glueGroup.repeat(epic ? 4 : 2) + c.id +
         (marks + cardLabel(c).slice(c.id.length).replace(/^ ▶ /, " ")).replace(/^ /, ` ${glueTitle}`)
     return clampLines(text, textW - 2, titles ? 3 : 1).map((line) => ` ${line}`)
 }
@@ -122,12 +123,12 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
     /*  the group (if any, and not for an epic) at the start of the first line
         (behind the margin) between "♛" and "▶" in bold box color, followed by the task id
         (behind the placeholder), which is always bold and inverse, with one column
-        of spacing on each side (and for an epic behind "♛"), and then the
+        of spacing on each side (behind "≡", and for an epic also behind "♛"), and then the
         rest of the label, where a partially visible card loses its cut border and text lines  */
     const group   = groupLabel(c)
     const epic    = group === c.id
     const lead    = group !== "" && !epic ? group.length + 5 : 0
-    const from    = lead + (epic ? 4 : 2)
+    const from    = lead + (epic ? 6 : 4)
     const to      = from + c.id.length
     const badge   = lead > 0 ? [ h(Text, { key: "group", ...cx("bold") },
         `♛ ${lines[0].slice(4, lead - 1).replace(new RegExp(glueGroup, "g"), " ")} ▶`), " " ] : []
@@ -151,21 +152,23 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
         return [ text.slice(0, at), h(Text, { key: "edit", bold: true, ...(color !== undefined ? { color } : {}) }, edit), text.slice(at + edit.length) ]
     }
     const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
-        ...(k === 0 ? [ line.slice(0, 1), ...badge, h(Text, { key: "id", ...cx("badge") }, ` ${epic ? "♛ " : ""}${line.slice(from, to)} `),
+        ...(k === 0 ? [ line.slice(0, 1), ...badge, h(Text, { key: "id", ...cx("badge") }, ` ${epic ? "♛ " : ""}≡ ${line.slice(from, to)} `),
             ...marker(line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "")) ] : marker(line.replace(glueTitle, "")))))
         .slice(cut === "top" ? lines.length + 1 - rows : 0, cut === "bottom" ? rows - 1 : lines.length)
 
-    /*  the agents busy with the task, each as an inverse " ⚉ <name> " box in accent color (like on
-        the agent cards, separated by a border character) on the left part of its top border (placed
+    /*  the badges of the task (the agents busy with it, else its assignee), each as an inverse
+        " <icon> <name> " box (separated by a border character) in signal color when selected,
+        in accent color when active, and else in normal color, on the left part of its top border (placed
         on the border row, i.e. above the content of a bordered box, and behind one border character)  */
-    const workers = !moving && !phantom && cut !== "top" ? ctx.working.get(c.id) : undefined
-    const agents  = (top: number) => workers !== undefined && width > 10 ? [
-        h(Box, { key: "agents", position: "absolute", top, left: top < 0 ? 1 : 2, width: width - 7 },
+    const badges  = !moving && !phantom && cut !== "top" ? badgesOf(c, ctx.agents, ctx.working.get(c.id)) : []
+    const shade   = on ? palette.signal : tone === "active" ? palette.accent : palette.normal
+    const labels  = (top: number) => badges.length > 0 && width > 10 ? [
+        h(Box, { key: "badges", position: "absolute", top, left: top < 0 ? 1 : 2, width: width - 7 },
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" },
-                ...workers.flatMap((agent, k) => [ k > 0 ? (held ? "═" : "─") : "",
-                    h(Text, { key: agent.id, ...cx("badge"), color: palette.accent, dimColor: dim }, ` ⚉ ${clean(agent.name)} `) ]))) ] : []
+                ...badges.flatMap((badge, k) => [ k > 0 ? (held ? "═" : "─") : "",
+                    h(Text, { key: k, ...cx("badge"), color: shade, dimColor: dim }, ` ${badge.icon} ${badge.name} `) ]))) ] : []
     if (!lane.active || ctx.pulse < 0 || moving || phantom || cut === "top")
-        return h(Box, box, ...text, ...agents(-1))
+        return h(Box, box, ...text, ...labels(-1))
 
     /*  the tasks of active lanes pulse in their top border, which hence
         is drawn on its own above the box without its regular top border  */
@@ -174,7 +177,7 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
     return h(Box, { key: box.key, ref: ctx.cardRef(c.id), width, height: rows, flexDirection: "column" },
         h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, top),
         ...(rows > 1 ? [ h(Box, { ...box, key: "box", ref: undefined, borderTop: false, height: rows - 1 }, ...text) ] : []),
-        ...agents(0))
+        ...labels(0))
 }
 
 /*  render one lane of the lane view  */
@@ -382,14 +385,14 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
 
 /*  render the lane view  */
 export const renderLanes = (ctx: BoardCtx) => {
-    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, pulse, grown, cardRef, laneRef, groupRef, working } = ctx
+    const { board, surface, sel, dim, carry, fit, columns, boardH, mouse, pulse, grown, cardRef, laneRef, groupRef, agents, working } = ctx
     const total  = board.groups.length
     const shown  = fit.last - fit.first + 1
     const arrows = shown < total && !grown
     const group  = board.groups[sel.g]
     const info   = grown ? `lane ${group.lanes[sel.l].status} of group ${group.title} grown · g shrinks` :
         `groups ${fit.first + 1}–${fit.last + 1} of ${total} · ${arrows ? "←/→ scrolls" : "all visible"}`
-    const view   = { board, surface, sel, dim, carry, titles: surface.titles, scroll: { left: -1, right: -1 }, pulse, cardRef, laneRef, groupRef, working }
+    const view   = { board, surface, sel, dim, carry, titles: surface.titles, scroll: { left: -1, right: -1 }, pulse, cardRef, laneRef, groupRef, agents, working }
 
     /*  the scroll bar consumes the entire width remaining besides the info  */
     const track  = Math.max(1, columns - 2 - info.length - 3)
@@ -426,15 +429,18 @@ export const renderLanes = (ctx: BoardCtx) => {
 
 /*  render the graph view  */
 export const renderGraph = (ctx: BoardCtx) => {
-    const { board, sel, dim, layout, boardH, x, y, viewH, viewW, graphView, graphTitles, surface, mouse, pulse, agents } = ctx
+    const { board, sel, dim, layout, boardH, x, y, viewH, viewW, graphView, graphTitles, surface, mouse, pulse, agents, working } = ctx
     const card = sel.id !== "" ? board.cards.get(sel.id) : undefined
     if (layout === null)
         return [ h(Box, { key: "graph", height: boardH, marginX: 1, paddingX: 1, ...cx("frame", "border-dim") },
             h(Text, cx("dim"), board.cards.size === 0 ? "(no tasks)" : "laying out …")),
         h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " "), h(Text, { key: "keys3" }, " ") ]
 
-    /*  draw the ELK layout, with the active nodes pulsing  */
-    const { lines, tones } = drawGraphText(layout.board, layout.graph, sel.id, layout.titles, pulse >= 0 ? pulseFrames[pulse] : "")
+    /*  draw the ELK layout, with the active nodes pulsing and the badges of the
+        nodes (by their current cards, as the layout might lag behind the board)  */
+    const badges = new Map([ ...layout.board.cards.values() ].map((c) =>
+        [ c.id, badgesOf(board.cards.get(c.id) ?? c, agents, working.get(c.id)) ]))
+    const { lines, tones } = drawGraphText(layout.board, layout.graph, sel.id, layout.titles, pulse >= 0 ? pulseFrames[pulse] : "", badges)
     const visible = lines.slice(y, y + viewH).map((l, i) => {
         const segs = [] as { text: string, tone: string }[]
         for (let k = x; k < Math.min(l.length, x + viewW); k++) {
@@ -554,7 +560,7 @@ export const renderAgents = (ctx: BoardCtx) => {
                         h(Box, { flexGrow: 1, flexShrink: 1 },
                             h(Text, cx("truncate", dim && "dimmed"),
                                 h(Text, cx("normal", dim && "dimmed"), line.prefix),
-                                ...(line.task !== "" ? [ h(Text, cx(line.tone, "badge", dim && "dimmed"), ` ${line.task} `), " " ] : []),
+                                ...(line.task !== "" ? [ h(Text, cx(line.tone, "badge", dim && "dimmed"), ` ≡ ${line.task} `), " " ] : []),
                                 h(Text, cx(line.tone, dim && "dimmed"), line.level),
                                 h(Text, cx(line.tone, dim && "dimmed"), line.text))),
                         h(Text, cx("signal", dim && "dimmed"),

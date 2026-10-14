@@ -52,14 +52,14 @@
                         <div v-if="!surface.minimized.includes(l.status)" class="cards" tabindex="-1">
                             <!--  the task carried by the keyboard, shown on top of the selected target lane  -->
                             <div v-if="carried !== null && drag?.over === l.status" class="card held sel carried" :class="`tone-${carried.tone}`">
-                                <div class="cbody"><span v-if="carried.group !== '' && carried.group !== carried.id" class="cepic">♛ {{ carried.group }} ▶</span><span class="cid">{{ carried.group === carried.id ? "♛ " : "" }}{{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}<span v-if="carried.edit !== ''" class="cedit" :class="carried.edit" :title="editTitles[carried.edit]">{{ editMarkers[carried.edit] }}</span><template v-for="(s, si) in titleSegments(carried.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></div>
+                                <div class="cbody"><span v-if="carried.group !== '' && carried.group !== carried.id" class="cepic">♛ {{ carried.group }} ▶</span><span class="cid">{{ carried.group === carried.id ? "♛ " : "" }}≡ {{ carried.id }}</span>{{ carried.cyclic ? "⟲ " : "" }}<span v-if="carried.edit !== ''" class="cedit" :class="carried.edit" :title="editTitles[carried.edit]">{{ editMarkers[carried.edit] }}</span><template v-for="(s, si) in titleSegments(carried.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></div>
                             </div>
                             <div v-for="c in l.cards" :key="c.id" class="card" draggable="true"
-                                :class="[ `tone-${c.tone}`, { sel: sel.id === c.id, working: working.has(c.id) }, carryClass(c.id) ]"
+                                :class="[ `tone-${c.tone}`, { sel: sel.id === c.id, badged: badges.has(c.id) }, carryClass(c.id) ]"
                                 @click="sel = { g: gi, l: li, id: c.id }; openTask(c.id)"
                                 @dragstart="dragStart($event, c.id, l.status, c.moves)" @dragend="dragEnd">
-                                <div v-if="working.has(c.id)" class="cagents"><span v-for="name in working.get(c.id)!" :key="name" class="cagent"><span class="aicon">⚉</span> {{ name }}</span></div>
-                                <div class="cbody"><span v-if="c.group !== '' && c.group !== c.id" class="cepic">♛ {{ c.group }} ▶</span><span class="cid">{{ c.group === c.id ? "♛ " : "" }}{{ c.id }}</span>{{ c.cyclic ? "⟲ " : "" }}<span v-if="c.edit !== ''" class="cedit" :class="c.edit" :title="editTitles[c.edit]">{{ editMarkers[c.edit] }}</span><template v-for="(s, si) in titleSegments(c.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></div>
+                                <div v-if="badges.has(c.id)" class="cagents"><span v-for="(b, bi) in badges.get(c.id)!" :key="bi" class="cagent"><span class="aicon">{{ b.icon }}</span> {{ b.name }}</span></div>
+                                <div class="cbody"><span v-if="c.group !== '' && c.group !== c.id" class="cepic">♛ {{ c.group }} ▶</span><span class="cid">{{ c.group === c.id ? "♛ " : "" }}≡ {{ c.id }}</span>{{ c.cyclic ? "⟲ " : "" }}<span v-if="c.edit !== ''" class="cedit" :class="c.edit" :title="editTitles[c.edit]">{{ editMarkers[c.edit] }}</span><template v-for="(s, si) in titleSegments(c.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></div>
                             </div>
                         </div>
                     </div>
@@ -131,10 +131,10 @@
     </footer>
     <div v-show="task !== null" id="scrim" @click.self="leaveEdit(true)">
         <div v-if="task !== null" id="dlg">
-            <!--  the header: task group (if any, and not for an epic), task id (of an epic behind "♛"),
+            <!--  the header: task group (if any, and not for an epic), task id (behind "≡", and of an epic also behind "♛"),
                   and title on the left, lane group and lane on the right  -->
             <div class="dhd">
-                <h1 :class="`tone-${task.tone}`"><span v-if="task.epic !== '' && task.epic !== task.id" class="cepic">♛ {{ task.epic }} ▶</span><span class="cid">{{ task.epic === task.id ? "♛ " : "" }}{{ task.id }}</span><template v-for="(s, si) in titleSegments(task.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></h1>
+                <h1 :class="`tone-${task.tone}`"><span v-if="task.epic !== '' && task.epic !== task.id" class="cepic">♛ {{ task.epic }} ▶</span><span class="cid">{{ task.epic === task.id ? "♛ " : "" }}≡ {{ task.id }}</span><template v-for="(s, si) in titleSegments(task.title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template></h1>
                 <span v-if="editing?.id !== ''" class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
                 <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit(false)">✎</button>
                 <button class="close" title="close (ESC)" @click="leaveEdit(true)">✕</button>
@@ -145,12 +145,12 @@
                 <span>
                     <span class="mute">predecessors:</span>
                     <span v-if="task.pred.length === 0" class="mute">—</span>
-                    <span v-for="r in task.pred" :key="r.id" class="ref" :class="`tone-${r.tone}`" @click="openTask(r.id)">{{ r.id }}</span>
+                    <span v-for="r in task.pred" :key="r.id" class="ref" :class="`tone-${r.tone}`" @click="openTask(r.id)">≡ {{ r.id }}</span>
                 </span>
                 <span>
                     <span class="mute">successors:</span>
                     <span v-if="task.succ.length === 0" class="mute">—</span>
-                    <span v-for="r in task.succ" :key="r.id" class="ref" :class="`tone-${r.tone}`" @click="openTask(r.id)">{{ r.id }}</span>
+                    <span v-for="r in task.succ" :key="r.id" class="ref" :class="`tone-${r.tone}`" @click="openTask(r.id)">≡ {{ r.id }}</span>
                 </span>
             </div>
 
@@ -268,7 +268,7 @@ import { emacs, EmacsHandler }                                                  
 type EditState = "pending" | "active" | "failed"
 
 /*  the board model and task details, as delivered by the service  */
-type Card    = { id: string, title: string, group: string, cyclic: boolean, tone: string, moves?: string[], edit: EditState | "", finished: boolean }
+type Card    = { id: string, title: string, group: string, cyclic: boolean, tone: string, moves?: string[], edit: EditState | "", finished: boolean, assignee: string }
 type Lane    = { status: string, active: boolean, weight: number, dashed: boolean, kind: "initial" | "regular" | "terminal", cards: Card[] }
 type Group   = { title: string, lanes: Lane[] }
 type Surface = { view: View, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }
@@ -499,6 +499,63 @@ const working   = computed<Map<string, string[]>>((previous) => {
     return previous !== undefined && JSON.stringify([ ...previous ]) === JSON.stringify([ ...map ]) ? previous : map
 })
 
+/*  the names of the known agents (kept as the previous value while unchanged, like above)  */
+const agentNames = computed<Set<string>>((previous) => {
+    const set = new Set((agents.value?.agents ?? []).map((agent) => agent.name))
+    return previous !== undefined && JSON.stringify([ ...previous ]) === JSON.stringify([ ...set ]) ? previous : set
+})
+
+/*  the badges of a task, shown on the left part of its top border (like in the TUI): the agents
+    busy with it (marked "⚉"), else its assignee (if any), marked "⚉" if it is the name of a known
+    agent and else "☺" (as a person), and the badges of all tasks of the lanes  */
+type Badge = { icon: string, name: string }
+const badgesOf = (id: string, assignee: string): Badge[] => {
+    const busy = working.value.get(id)
+    if (busy !== undefined)
+        return busy.map((name) => ({ icon: "⚉", name }))
+    if (assignee === "")
+        return []
+    return [ { icon: agentNames.value.has(assignee) ? "⚉" : "☺", name: assignee } ]
+}
+const badges = computed(() => {
+    const map = new Map<string, Badge[]>()
+    for (const g of board.value?.groups ?? [])
+        for (const l of g.lanes)
+            for (const c of l.cards) {
+                const list = badgesOf(c.id, c.assignee)
+                if (list.length > 0)
+                    map.set(c.id, list)
+            }
+    return map
+})
+
+/*  place the badges onto the top borders of the graph nodes (like in the lanes)  */
+const showBadges = () => {
+    graphEl.value?.querySelectorAll<SVGGElement>("g.node[data-id]").forEach((n) => {
+        const card = n.querySelector<HTMLElement>(".card")
+        if (card === null)
+            return
+        card.querySelector(".cagents")?.remove()
+        const list = badgesOf(n.dataset.id ?? "", n.dataset.assignee ?? "")
+        card.classList.toggle("badged", list.length > 0)
+        if (list.length === 0)
+            return
+        const box = document.createElement("div")
+        box.className = "cagents"
+        for (const badge of list) {
+            const icon = document.createElement("span")
+            icon.className   = "aicon"
+            icon.textContent = badge.icon
+            const span = document.createElement("span")
+            span.className = "cagent"
+            span.append(icon, ` ${badge.name}`)
+            box.append(span)
+        }
+        card.prepend(box)
+    })
+}
+watch([ working, agentNames ], () => nextTick(showBadges))
+
 /*  a duration (in ms) in its coarsest unit, the label of an agent (its name, with its
     differing kind), and its uptime (the duration since its start, measured up to its latest
     heartbeat)  */
@@ -601,7 +658,7 @@ const AgentLog = defineComponent({
                 seen.set(l.time, n + 1)
                 return h("div", { key: `${l.time}:${n}`, class: [ "aline", l.level ] }, [
                     h("span", { class: "atime" }, `${logTime(l.time)}:`), " ",
-                    ...(l.task !== "" ? [ h("span", { class: "atask" }, l.task), " " ] : []),
+                    ...(l.task !== "" ? [ h("span", { class: "atask" }, `≡ ${l.task}`), " " ] : []),
                     `${logLevel(l.level)}${l.msg}`
                 ])
             })
@@ -1269,7 +1326,7 @@ const openPrompt = async (id: string) => {
 
 /*  the names of the requests processed by the agents announced to the agent relay (for their
     suggestion on requesting a task by prompt): "edit" of the editor agent, and the request
-    names of the request agents of "ase agent custom"  */
+    names of the request agents of the definitions (e.g. of "ase agent adhoc")  */
 const requestNames = computed(() =>
     [ ...new Set(agentList.value.map((a) => a.kind === "editor" ? "edit" : a.request ?? "").filter((n) => n !== "")) ].sort())
 
@@ -1300,7 +1357,7 @@ const cancelPrompt = () => {
 }
 
 /*  request a task by the prompt of its popup under its request name (processed by a request
-    agent of "ase agent custom", resp. by "ase agent editor" for "edit"), dropping the draft of
+    agent of a definition, resp. by "ase agent editor" for "edit"), dropping the draft of
     the task once sent, resp. keeping the request as its draft on failure  */
 const submitRequest = async (p: { id: string, text: string, name: string }) => {
     if (p.name.trim() === "" || p.text.trim() === "") {
@@ -1595,6 +1652,7 @@ watch([ sel, graph, view, task, grown ], () => {
     nextTick(() => {
         applyZoom()
         showSel()
+        showBadges()
     })
 })
 

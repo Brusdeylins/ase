@@ -298,9 +298,12 @@ header
         color: var(--c-line)
 .lane, .cards
     outline: none
+/*  the cards of a lane, keeping their padding also when scrolling
+    the selected task box into view (e.g. via the cursor keys)  */
 .cards
     overflow-y: auto
     padding: 8px 10px
+    scroll-padding-block: 8px
     display: flex
     flex-direction: column
     gap: 8px
@@ -373,22 +376,33 @@ header
     &.failed
         color: var(--c-signal)
 
-/*  the task box with agents busy with it: room above it and on its top for
-    the agents placed onto the left part of its top border (like in the TUI)  */
-.card.working
+/*  the task box with badges: room above it and on its top for the badges placed
+    onto the left part of its top border (like in the TUI), also when scrolling it
+    into view, where the fixed-size graph nodes keep their room and get smaller badges instead  */
+.card.badged
     position: relative
     overflow: visible
     margin-top: 6px
     padding-top: 16px
-#board .card.held.working
+    scroll-margin-top: 12px
+#board .card.held.badged
     padding-top: 14px
+    .cagents
+        left: 8px
+#graph .card.badged
+    margin-top: 0
+    padding-top: 8px
+    .cagents
+        font-size: 0.75em
+        line-height: 14px
 
-/*  the agents busy with the task, onto the left part of the top border of its box
-    (leaving room on the right part for the pulse of the box)  */
+/*  the badges of the task (the agents busy with it, else its assignee), onto the left
+    part of the top border of its box (leaving room on the right part for the pulse of the box),
+    aligned with the left column of the task id (i.e., the left padding of the box)  */
 .cagents
     position: absolute
     top: 0
-    left: 8px
+    left: 10px
     transform: translateY(-50%)
     max-width: calc(100% - 40px)
     font-weight: bold
@@ -396,13 +410,13 @@ header
     overflow: hidden
     text-overflow: ellipsis
 
-/*  an agent busy with the task: its icon and name in an inverse
-    box with rounded corners in accent color  */
+/*  a badge of the task: its icon and name in an inverse box with rounded corners,
+    in signal color when selected, in accent color when active, and else in normal color  */
 .cagent
     display: inline-block
-    background: var(--c-accent)
+    background: var(--c-text)
     color: var(--c-paper)
-    border-radius: 5px
+    border-radius: 3px
     padding: 0 8px
     margin-right: 4px
     &:last-child
@@ -420,7 +434,7 @@ header
     color: var(--c-accent-strong)
 .tone-active.card:hover, .tone-active:hover .card
     border-color: var(--c-accent)
-.tone-active .cid
+.tone-active .cid, .tone-active .cagent
     background: var(--c-accent)
 
 /*  the pulse of the task boxes of active lanes, of the active graph nodes, and of the agent cards
@@ -500,7 +514,7 @@ header
     border-color: var(--c-signal)
     box-shadow: 0 0 0 1px var(--c-signal)
     color: var(--c-signal)
-#board .card.sel .cid, #graph .node.sel .cid
+#board .card.sel .cid, #graph .node.sel .cid, #board .card.sel .cagent, #graph .node.sel .cagent
     background: var(--c-signal)
 
 /*  the task carried by the keyboard (like in the TUI): held with a double border,
