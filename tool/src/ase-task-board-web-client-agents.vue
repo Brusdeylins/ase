@@ -1,0 +1,197 @@
+<!--
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+-->
+
+<!--  the agents view: the master list "agents" of the agents as cards (name and state, kind and
+      mode of operation, uptime, the ids of the tasks it is busy with, else "none (waiting)", and its
+      total and last usage of the agent tool), and the
+      detail view "agent log" with the recent processing log of the selected agent (with the task ids
+      inverse), with its lines broken and following its bottom unless scrolled up  -->
+<template>
+    <div v-show="view === 'agents'" id="agents">
+        <section class="amaster">
+            <div class="atitle">Agents</div>
+            <div class="alist">
+                <div v-if="agentList.length === 0" class="aempty" :class="{ off: agents !== null && !agents.connected }">{{ agentsEmpty }}</div>
+                <div v-for="a in agentList" :key="a.id" class="acard" :class="{ sel: a.id === agentSel?.id, busy: a.state === 'busy' }"
+                    @click="selectAgent(a.id)">
+                    <div class="aname"><span class="abadge"><span class="aicon">⚉</span> {{ a.name }}</span></div>
+                    <span class="abeat">{{ beatOf(a.id) ? "♥" : "♡" }}</span>
+                    <div class="afields">
+                        <span>kind:</span><b class="aval">{{ a.kind }}</b>
+                        <span>mode:</span><b class="aval">{{ typeof a.mode === "string" && a.mode !== "" ? a.mode : "none" }}</b>
+                        <span>uptime:</span><b class="aval">{{ agentUptime(a) }}</b>
+                        <span>task:</span><span class="aval atasks"><b v-if="a.tasks.length === 0">none (waiting)</b><span v-for="id in a.tasks" :key="id" class="atask">{{ id }}</span></span>
+                        <span>usage:</span><b class="aval">{{ agentUsage(a.usage?.total) }}</b>
+                        <span>last:</span><b class="aval">{{ agentUsage(a.usage?.last) }}</b>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="adetail">
+            <div class="atitle">Agent: Recent Log Entries</div>
+            <div ref="logEl" class="alog" @scroll="onLogScroll">
+                <AgentLog />
+            </div>
+            <div v-if="logPos !== ''" class="apos">{{ logPos }}</div>
+        </section>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { ref, shallowRef, computed, nextTick, watch, onMounted, onBeforeUnmount, defineComponent, h } from "vue"
+import {
+    type Agent, type AgentLine, type AgentUsage,
+    view, agents, agentLogs, agentList, agentSel, logEl, logStick, agentNow,
+    agentDuration, selectAgent
+} from "./ase-task-board-web-client-model"
+
+/*  the text shown without any agents  */
+const agentsEmpty = computed(() => agents.value === null || !agents.value.connected ?
+    "agent relay unreachable — reconnecting …" : "no agents running")
+
+/*  the uptime of an agent (the duration since its start, measured up to its latest heartbeat)  */
+const agentUptime = (agent: Agent) =>
+    agentDuration(agent.beat - (agent.started ?? agent.since))
+
+/*  a compact usage of the agent tool: its wall time, its output tokens (with
+    a metric suffix), and its costs (in USD), where an unavailable field is "n/a"
+    and no usage at all (before the first finished job) is "none"  */
+const agentUsage = (usage: AgentUsage | undefined) => {
+    if (usage === undefined)
+        return "none"
+    const tok = usage.costToken
+    const tokens = tok === null ? "n/a" :
+        tok < 1000 ? `${tok}` : tok < 1000 * 1000 ? `${(tok / 1000).toFixed(1)}k` : `${(tok / (1000 * 1000)).toFixed(1)}M`
+    const cost = usage.costUSD === null ? "$n/a" : `$${usage.costUSD.toFixed(2)}`
+    return `${agentDuration(usage.walltimeSec * 1000)}, ${tokens} tok, ${cost}`
+}
+
+/*  the local time at which the latest heartbeat of each agent was received (measured locally,
+    as the clock of the agent relay may be skewed), for the heart of its card (filled for
+    BEAT_SHOWN_MS after a heartbeat, else empty), where the heartbeats are recognized by their
+    changed time stamps and a filled heart is re-rendered once it is due to be emptied (as the
+    wall-clock tick alone would empty it too early or too late)  */
+const BEAT_SHOWN_MS = 1000
+const agentBeats = shallowRef(new Map<string, { beat: number, seen: number }>())
+let   beatTimer  = null as ReturnType<typeof setTimeout> | null
+watch(agents, (next) => {
+    const at    = Date.now()
+    const beats = new Map<string, { beat: number, seen: number }>()
+    let   fresh = false
+    for (const a of next?.agents ?? []) {
+        const prev = agentBeats.value.get(a.id)
+        if (prev !== undefined && prev.beat === a.beat)
+            beats.set(a.id, prev)
+        else {
+            beats.set(a.id, { beat: a.beat, seen: at })
+            fresh = true
+        }
+    }
+    agentBeats.value = beats
+    if (fresh) {
+        agentNow.value = at
+        if (beatTimer !== null)
+            clearTimeout(beatTimer)
+        beatTimer = setTimeout(() => { beatTimer = null; agentNow.value = Date.now() }, BEAT_SHOWN_MS)
+    }
+})
+const beatOf = (id: string) =>
+    agentNow.value - (agentBeats.value.get(id)?.seen ?? 0) < BEAT_SHOWN_MS
+const pad         = (n: number, k = 2) => String(n).padStart(k, "0")
+const logTime     = (time: number) => {
+    const d = new Date(time)
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+        `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
+}
+
+/*  the level of an agent log line as a "[...]: " prefix  */
+const logLevel    = (level: AgentLine["level"]) =>
+    `[${level.toUpperCase()}]: `
+
+/*  the agent log of the detail view: the recent processing log lines of the selected agent
+    (with the task ids inverse), as a component of its own, so that only it re-renders on the
+    frequent changes of these lines, keyed by their time and their position among the lines of
+    the same time (so the lines stay keyed alike when the oldest lines are dropped)  */
+const AgentLog = defineComponent({
+    name: "AgentLog",
+    setup () {
+        return () => {
+            const agent = agentSel.value
+            if (agent === null)
+                return h("div", { class: [ "aempty", { off: agents.value !== null && !agents.value.connected } ] }, agentsEmpty.value)
+            const lines = agentLogs.value.get(agent.id) ?? []
+            if (lines.length === 0)
+                return h("div", { class: "aempty" }, "(no processing log lines yet)")
+            const seen = new Map<number, number>()
+            return lines.map((l) => {
+                const n = seen.get(l.time) ?? 0
+                seen.set(l.time, n + 1)
+                return h("div", { key: `${l.time}:${n}`, class: [ "aline", l.level ] }, [
+                    h("span", { class: "atime" }, `${logTime(l.time)}:`), " ",
+                    ...(l.task !== "" ? [ h("span", { class: "atask" }, `≡ ${l.task}`), " " ] : []),
+                    `${logLevel(l.level)}${l.msg}`
+                ])
+            })
+        }
+    }
+})
+
+/*  the position within the agent log, shown on the bottom border of its detail view (like
+    in the terminal board): the number of lines if all fit, else the range of the (at least
+    partially) visible lines, and whether the log is followed or scrolled  */
+const logPos = ref("")
+const updateLogPos = () => {
+    const el    = logEl.value
+    const lines = el !== null ? Array.from(el.querySelectorAll<HTMLElement>(".aline")) : []
+    if (el === null || lines.length === 0)
+        logPos.value = ""
+    else if (el.scrollHeight <= el.clientHeight + 1)
+        logPos.value = `${lines.length} lines`
+    else {
+        const { top, bottom } = el.getBoundingClientRect()
+        let first = -1
+        let last  = -1
+        lines.forEach((line, i) => {
+            const r = line.getBoundingClientRect()
+            if (r.bottom > top + 1 && r.top < bottom - 1) {
+                if (first < 0)
+                    first = i
+                last = i
+            }
+        })
+        logPos.value = first < 0 ? `${lines.length} lines` :
+            `lines ${first + 1}–${last + 1} of ${lines.length} · ${logStick.value ? "following" : "scrolled"}`
+    }
+}
+
+/*  follow the bottom of the agent log only while it is scrolled to the bottom  */
+const onLogScroll = () => {
+    const el = logEl.value
+    if (el !== null)
+        logStick.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 4
+    updateLogPos()
+}
+
+/*  keep the agent log scrolled to its bottom on every change while following it  */
+watch(() => [ agentSel.value?.id, agentLogs.value.get(agentSel.value?.id ?? ""), view.value ], async () => {
+    await nextTick()
+    const el = logEl.value
+    if (el !== null && logStick.value)
+        el.scrollTop = el.scrollHeight
+    updateLogPos()
+})
+
+/*  keep the position within the agent log on resizing  */
+onMounted(() => {
+    window.addEventListener("resize", updateLogPos)
+})
+onBeforeUnmount(() => {
+    window.removeEventListener("resize", updateLogPos)
+    if (beatTimer !== null)
+        clearTimeout(beatTimer)
+})
+</script>
+

@@ -15,7 +15,9 @@
     },
     "include": [
         "../src/ase-task-board-web-client.ts",
-        "../src/ase-task-board-web-client.vue"
+        "../src/ase-task-board-web-client.vue",
+        "../src/ase-task-board-web-client-*.ts",
+        "../src/ase-task-board-web-client-*.vue"
     ]
 }
 

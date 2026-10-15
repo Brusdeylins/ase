@@ -22,7 +22,8 @@
         "../package.json"
     ],
     "exclude": [
-        "../src/ase-task-board-web-client.ts"
+        "../src/ase-task-board-web-client.ts",
+        "../src/ase-task-board-web-client-*.ts"
     ]
 }
 
