@@ -248,6 +248,12 @@ AI usage accounting (see `ase-task-assign`(1) and
   Whether the AI usage accounting is enabled as a whole (default:
   `false`).
 
+- `telemetry.implicit` (`true` or `false`, `user` and `project` scopes
+  only):
+  Whether the usage of an interactive session is also accounted onto
+  its active task while the task is *unassigned*, i.e., without
+  assigning it to oneself (default: `true`, never for task `default`).
+
 - `telemetry.service.port` (*port* `1024`..`65535`, `user` scope only):
   The port of the per-user OTLP ingress on `127.0.0.1` (default:
   `44318`).

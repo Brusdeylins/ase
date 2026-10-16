@@ -44,7 +44,14 @@ changing the `Assignee:` of a task to oneself *elsewhere* (e.g. on the
 task board) opens its usage window, too, and attaches every session of
 the project whose current task it is (also a session switching to it,
 or starting with it, later on), with the window starting *paused*, i.e.,
-accounting from the next AI request of its sessions on. Long windows
+accounting from the next AI request of its sessions on. An *unassigned*
+task is even accounted *implicitly*, without any assignment: while it is
+the current task of a session, the session is attached to its usage
+window in the same way, until the session switches to another task, the
+task gets assigned to anybody else, or the session ends (configurable via
+`telemetry.implicit`, default: `true`, never for task `default`), so
+explicitly assigning a task to oneself is needed only for claiming it,
+e.g. against the agents of `ase agent`. Long windows
 additionally book every `telemetry.service.interval` minutes (default: 10).
 Without any AI request for `telemetry.service.idle` minutes (default: 30),
 a usage window *pauses*, and the next AI request (of any kind, not just

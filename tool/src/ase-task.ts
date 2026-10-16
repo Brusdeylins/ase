@@ -1725,6 +1725,7 @@ export class TaskMCP {
             try {
                 if (args.id !== undefined) {
                     const warning = await Task.setId(this.log, args.session, args.id)
+                    this.usage?.activate(args.session)
                     const msg = `OK: set active task id to "${args.id}" ` +
                         `for session "${args.session}"` + notice(warning)
                     return mcpText(msg)

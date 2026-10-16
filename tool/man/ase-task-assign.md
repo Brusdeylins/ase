@@ -50,6 +50,15 @@ a task is changed to oneself elsewhere (e.g., on the task board), the
 service opens its window (starting *paused*) and attaches every session
 of the project whose active task it is.
 
+Unless disabled via `telemetry.implicit`, the service also accounts an
+*unassigned* task *implicitly*: it opens its window (starting
+*paused*) and attaches every interactive session of the project whose
+active task it is, without setting the `Assignee`, but only as long as
+the task stays the active task of the session and unassigned (task
+`default` excluded). Assigning such a task to oneself turns the
+implicit attachment into a regular one, and unassigning a task
+assigned to oneself elsewhere turns its attachments into implicit ones.
+
 Open windows additionally book every `telemetry.service.interval`
 minutes, pause after `telemetry.service.idle` minutes without any AI
 request of an attached session (resumed silently by the next one,

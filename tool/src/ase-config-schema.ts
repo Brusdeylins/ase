@@ -81,6 +81,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "board.web.color.signal":        webColorDefaults.signal,
         "board.web.editor.keymap":       "default",
         "telemetry.enabled":             "false",
+        "telemetry.implicit":            "true",
         "telemetry.prices.ai":           "*=4.00/20.00/0.20/5.00",
         "telemetry.prices.hr":           "*=110"
     },
@@ -127,6 +128,7 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "board.web.color.signal":        [ "user", "project" ],
     "board.web.editor.keymap":       [ "user", "project" ],
     "telemetry.enabled":             [ "user", "project" ],
+    "telemetry.implicit":            [ "user", "project" ],
     "telemetry.service.port":        [ "user" ],
     "telemetry.service.token":       [ "user" ],
     "telemetry.service.interval":    [ "user", "project" ],
@@ -323,8 +325,9 @@ export const configSchema = v.nullish(v.strictObject({
         guidance: v.optional(v.picklist(agentClassification.guidance))
     })),
     telemetry: v.optional(v.strictObject({
-        enabled: v.optional(v.union([ v.boolean(), v.picklist([ "true", "false" ]) ])),
-        service: v.optional(v.strictObject({
+        enabled:  v.optional(v.union([ v.boolean(), v.picklist([ "true", "false" ]) ])),
+        implicit: v.optional(v.union([ v.boolean(), v.picklist([ "true", "false" ]) ])),
+        service:  v.optional(v.strictObject({
             port:     v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
                 /^\d+$/.test(String(s)) && Number(s) >= 1024 && Number(s) <= 65535, "expected a port number (1024-65535)"))),
             token:    v.optional(v.pipe(v.string(), v.minLength(1))),
@@ -367,9 +370,11 @@ export const configSchema = v.nullish(v.strictObject({
     runtime state shared between the hooks, the MCP server, and the skills, which is
     intentionally not part of the user-facing configuration: "basedir" is the project
     directory, "task" is the id of the active
-    task, and "skill" is the id of the active edit-capable skill  */
+    task, "skill" is the id of the active edit-capable skill, and "headless"
+    whether the session is a headless one of an agent  */
 export const sessionStateSchema = v.nullish(v.strictObject({
-    basedir: v.optional(v.pipe(v.string(), v.minLength(1))),
-    task:    v.optional(v.pipe(v.string(), v.minLength(1))),
-    skill:   v.optional(v.pipe(v.string(), v.minLength(1)))
+    basedir:  v.optional(v.pipe(v.string(), v.minLength(1))),
+    task:     v.optional(v.pipe(v.string(), v.minLength(1))),
+    skill:    v.optional(v.pipe(v.string(), v.minLength(1))),
+    headless: v.optional(v.picklist([ "true", "false" ]))
 }))

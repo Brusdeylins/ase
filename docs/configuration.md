@@ -294,6 +294,18 @@ activate`):
     Writable on the `user` and `project` scopes, so a single project can
     opt in (or out).
 
+-   **telemetry.implicit**: whether the usage of an interactive session
+    is also accounted *implicitly* onto its active task while the task is
+    *unassigned*, i.e., without assigning it to oneself first (`true` or
+    `false`, default: `true`, i.e., opt-out). The session is attached to
+    the usage window of the task as soon as it switches to (or starts
+    with) the task, and detached again once it switches to another task,
+    the task gets assigned to anybody else, or the session ends. The task
+    `default`, the tasks assigned to anybody else, and the headless
+    sessions of the `ase agent` jobs (which book their usage themselves)
+    are never accounted implicitly. Writable on the `user` and `project`
+    scopes.
+
 -   **telemetry.service.port**: the port of the per-user OTLP ingress on
     `127.0.0.1` (default: `44318`). Writable on the `user` scope only.
 

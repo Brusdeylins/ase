@@ -67,6 +67,15 @@ export const telemetryEnabled = (log: Log): boolean => {
     return String(cfg.get("telemetry.enabled") ?? "false") === "true"
 }
 
+/*  whether the AI usage accounting implicitly accounts the active task of a session while
+    the task is unassigned ("telemetry.implicit", opt-out), i.e., without the session
+    explicitly assigning it to oneself  */
+export const telemetryImplicit = (log: Log): boolean => {
+    const cfg = new Config("config", configSchema, log)
+    cfg.read()
+    return String(cfg.get("telemetry.implicit") ?? "true") === "true"
+}
+
 /*  the OTLP ingress of the user: its base URL and its bearer token, where with <create>
     a missing token is generated and persisted on the user configuration scope
     (and without <create> a missing token is reported as empty)  */
@@ -347,12 +356,13 @@ const usageZero = (): Usage =>
     closing time (null while open), the time up to which its real time is accounted, the
     time of its last activity (its opening, a session attaching, or a usage record), its
     attached sessions (each with its attachment interval, "until" being null while
-    attached), its not yet booked usage, its time of the last booking, the number of
-    records it received, and the time its task was first found vanished on a booking
-    (if not found since then)  */
+    attached, and whether it is attached only implicitly, i.e., just as long as the
+    unassigned task stays the active task of the session), its not yet booked usage, its
+    time of the last booking, the number of records it received, and the time its task
+    was first found vanished on a booking (if not found since then)  */
 type UsageWindow = {
     task: string, self: string, opened: number, closed: number | null, realFrom: number, active: number,
-    attach: { session: string, from: number, until: number | null }[],
+    attach: { session: string, from: number, until: number | null, implicit?: boolean }[],
     unbooked: Usage, booked: number, records: number, missing?: number
 }
 
@@ -724,6 +734,12 @@ export class UsageTracker {
                 w.attach.push({ session, from: now, until: null })
                 this.register(session)
             }
+            else {
+                /*  (an implicit attachment becomes an explicit one)  */
+                for (const a of w.attach)
+                    if (a.session === session && a.until === null)
+                        delete a.implicit
+            }
             if (w !== undefined)
                 this.touch(w, now, now, this.idleMs())
             if (telemetryEndpoint(this.log, false).token === "")
@@ -751,6 +767,15 @@ export class UsageTracker {
         this.detachAt(session, Date.now())
         this.persist()
         this.watch()
+    }
+
+    /*  note the switch of a session to another active task, so its adoption
+        happens right away instead of on the next periodic check only, as
+        otherwise the usage records of its very first AI requests on this task
+        would be dropped  */
+    activate (session: string): void {
+        Task.validateSession(session)
+        this.adoptSoon()
     }
 
     /*  follow the rename of a task with its usage windows, so their usage is
@@ -893,10 +918,19 @@ export class UsageTracker {
             if (Object.values(delta).some((amount) => amount > 0)) {
                 try {
                     if (!await Task.addUsage(this.log, w.task, delta)) {
+                        /*  the task of an open window may still be created (as a session can
+                            switch to a new task before its first save), so an interim booking
+                            just keeps its usage until the next interval  */
+                        const now = Date.now()
+                        if (!final) {
+                            w.booked = now
+                            await this.persist()
+                            return null
+                        }
+
                         /*  a vanished task may just have been renamed, with the rename being
                             reported a moment later (see "rename"), so the window keeps its
                             usage and is retried for a while, before it is dropped  */
-                        const now = Date.now()
                         if (w.missing === undefined || now - w.missing < RENAME_MS) {
                             if (w.missing === undefined)
                                 this.log.write("warning", `usage: task "${w.task}" not found -- keeping its usage window (retrying later)`)
@@ -1053,7 +1087,22 @@ export class UsageTracker {
             if (parts === null)
                 continue
             const assignee = (parts.keys.get("Assignee") ?? "").trim()
-            if (assignee !== w.self && w.closed === null) {
+            if (assignee === w.self || w.closed !== null)
+                continue
+            if (assignee === "" && this.implicit(task)) {
+                /*  an unassigned task stays accounted implicitly, i.e., its attached sessions
+                    stay attached only as long as it remains their active task (see "adopt")  */
+                const explicit = w.attach.filter((a) => a.until === null && a.implicit !== true)
+                if (explicit.length === 0)
+                    continue
+                this.log.write("info", `usage: task "${task}" unassigned elsewhere -- ` +
+                    "accounting its usage window implicitly from now on")
+                for (const a of explicit)
+                    a.implicit = true
+                await this.persist()
+                this.adoptSoon()
+            }
+            else {
                 this.log.write("info", `usage: task "${task}" re-assigned to "${assignee}" elsewhere -- closing its usage window`)
                 this.close(w, Date.now())
                 await this.persist()
@@ -1062,33 +1111,44 @@ export class UsageTracker {
         this.watch()
     }
 
-    /*  ---- self-assignments elsewhere ----  */
+    /*  ---- self-assignments elsewhere and unassigned active tasks ----  */
 
-    /*  adopt the sessions of the self-assigned tasks in the background (coalescing the
-        bursts of task store changes into at most one pending adoption), logging any failure  */
+    /*  whether a task is accounted implicitly while it is unassigned, i.e., unless disabled
+        ("telemetry.implicit") or the task is the "default" one (the placeholder task of
+        every session without an explicitly chosen task)  */
+    private implicit (task: string): boolean {
+        return task !== "default" && telemetryImplicit(this.log)
+    }
+
+    /*  adopt the sessions of the self-assigned or unassigned active tasks in the background
+        (coalescing the bursts of task store changes and task switches into at most one
+        pending adoption), logging any failure  */
     private adoptSoon (): void {
         if (this.adopting.size > 0)
             return
         this.adopting.add(() => this.adopt()).catch((err: unknown) => {
-            this.log.write("warning", "usage: failed to adopt the sessions of the self-assigned tasks: " +
+            this.log.write("warning", "usage: failed to adopt the sessions of the active tasks: " +
                 `${err instanceof Error ? err.message : String(err)}`)
         })
     }
 
-    /*  attach every session of this project whose active task is assigned to oneself
-        elsewhere (e.g. through a task board, an editor, or Git, i.e., outside of any session)
-        to the usage window of that task, opening it if necessary: a session is adopted only
-        once per self-assignment of its active task (so it is not taken away again from a
-        window it got explicitly assigned to afterwards, and a window closed for inactivity is
-        not re-opened), and a window opened this way starts paused, i.e., accounts its real
-        time only from the first AI request of its sessions on (as a session directory might
-        just be left behind by a crashed agent tool)  */
+    /*  attach every interactive session of this project whose active task is either assigned
+        to oneself elsewhere (e.g. through a task board, an editor, or Git, i.e., outside of any
+        session) or unassigned (implicitly, see "implicit") to the usage window of that task,
+        opening it if necessary: a session is adopted only once per self-assignment resp.
+        activation of its active task (so it is not taken away again from a window it got
+        explicitly assigned to afterwards, and a window closed for inactivity is not re-opened),
+        a window opened this way starts paused, i.e., accounts its real time only from the
+        first AI request of its sessions on (as a session directory might just be left behind
+        by a crashed agent tool), and an implicit attachment ends as soon as its task is no
+        longer the active task of its session or no longer accounted implicitly; the headless
+        sessions of the agents are never adopted, as the agents book their usage themselves  */
     private async adopt (): Promise<void> {
         if (!telemetryEnabled(this.log))
             return
 
-        /*  determine the sessions of this project (as recorded by the session start hook)
-            and their active tasks, reading their state without locking (see "ase mcp")  */
+        /*  determine the interactive sessions of this project (as recorded by the session start
+            hook) and their active tasks, reading their state without locking (see "ase mcp")  */
         let names: string[] = []
         try {
             names = fs.readdirSync(path.join(userStateDir(), "session"))
@@ -1102,9 +1162,10 @@ export class UsageTracker {
                 Task.validateSession(session)
                 const state = sessionState(this.log, session)
                 state.read()
-                const basedir = state.getExplicit("basedir")
-                const task    = state.getExplicit("task")
-                if (typeof basedir === "string" && typeof task === "string"
+                const basedir  = state.getExplicit("basedir")
+                const task     = state.getExplicit("task")
+                const headless = state.getExplicit("headless")
+                if (typeof basedir === "string" && typeof task === "string" && headless !== "true"
                     && path.resolve(basedir) === path.resolve(this.root))
                     active.set(session, task)
             }
@@ -1116,7 +1177,9 @@ export class UsageTracker {
             if (!active.has(session))
                 this.adopted.delete(session)
 
-        /*  determine the assignees of their active tasks (cached until the next task store change)  */
+        /*  determine the assignees of their active tasks (cached until the next task store
+            change), where a not (yet) existing task is taken as unassigned, as a session
+            usually switches to a new task before its first save  */
         for (const task of new Set(active.values())) {
             if (this.owners.has(task))
                 continue
@@ -1124,14 +1187,47 @@ export class UsageTracker {
             this.owners.set(task, (parts?.keys.get("Assignee") ?? "").trim())
         }
 
-        /*  attach the sessions of the self-assigned active tasks, where on the first adoption
-            (after the start of the service) the sessions already attached to any window are
-            taken as adopted, as their adoption state did not survive the restart  */
+        /*  determine how the active task of a session is accounted: explicitly as
+            assigned to oneself, implicitly as unassigned, or not at all  */
         const self = userId()
-        const now  = Date.now()
+        const mode = (task: string): "explicit" | "implicit" | "none" => {
+            const owner = this.owners.get(task) ?? ""
+            return owner === self ? "explicit" : owner === "" && this.implicit(task) ? "implicit" : "none"
+        }
+
+        /*  end the implicit attachments whose task is no longer the active task of their
+            session or no longer accounted implicitly, resp. turn them into explicit ones once
+            their task got assigned to oneself elsewhere  */
+        const now = Date.now()
         let changed = false
+        for (const w of this.journal.windows) {
+            if (w.closed !== null)
+                continue
+            for (const a of w.attach) {
+                if (a.until !== null || a.implicit !== true || this.explicit.has(a.session))
+                    continue
+                const task = active.get(a.session)
+                if (task === undefined)
+                    continue
+                if (task === w.task && mode(task) === "explicit")
+                    delete a.implicit
+                else if (task !== w.task || mode(task) !== "implicit") {
+                    this.log.write("info", `usage: task "${w.task}" no longer implicitly accounted for its session ` +
+                        `"${a.session}" -- detaching the session from its usage window`)
+                    this.detachAt(a.session, now)
+                }
+                else
+                    continue
+                changed = true
+            }
+        }
+
+        /*  attach the sessions of the self-assigned or unassigned active tasks, where on the
+            first adoption (after the start of the service) the sessions already attached to any
+            window are taken as adopted, as their adoption state did not survive the restart  */
         for (const [ session, task ] of active) {
-            if (this.owners.get(task) !== self) {
+            const how = mode(task)
+            if (how === "none") {
                 this.adopted.delete(session)
                 continue
             }
@@ -1151,10 +1247,14 @@ export class UsageTracker {
                 }
                 this.journal.windows.push(w)
             }
-            w.attach.push({ session, from: now, until: null })
+            w.attach.push({ session, from: now, until: null, ...(how === "implicit" ? { implicit: true } : {}) })
             this.register(session)
-            this.log.write("info", `usage: task "${task}" assigned to "${self}" elsewhere -- ` +
-                `attaching its active session "${session}" to its usage window`)
+            if (how === "implicit")
+                this.log.write("info", `usage: task "${task}" unassigned -- implicitly ` +
+                    `attaching its active session "${session}" to its usage window`)
+            else
+                this.log.write("info", `usage: task "${task}" assigned to "${self}" elsewhere -- ` +
+                    `attaching its active session "${session}" to its usage window`)
             changed = true
         }
         this.primed = true

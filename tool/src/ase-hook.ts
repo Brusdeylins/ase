@@ -386,8 +386,13 @@ export default class HookCommand {
 
         cfg.read()
 
+        /*  determine headless mode  */
+        const headless = process.env.ASE_HEADLESS === "true" ? "true" : "false"
+
         /*  determine task id and persist it, together with the project directory
-            (see above), into the internal session state (only when scoped to a real
+            (see above) and the headless mode (as the project service never attaches
+            the headless sessions of the agents, which book their usage themselves, to
+            usage windows), into the internal session state (only when scoped to a real
             session), normalizing the path separators of the project directory, as Git
             reports the top-level directory with forward slashes even on Windows  */
         const taskId = process.env.ASE_TASK_ID ?? "default"
@@ -397,6 +402,7 @@ export default class HookCommand {
                 state.read()
                 state.set("task", taskId)
                 state.set("basedir", path.resolve(projectDir))
+                state.set("headless", headless)
                 state.write()
             })
         }
@@ -435,9 +441,6 @@ export default class HookCommand {
             list of SpecBook schema configurations (empty: the bundled standard schema)  */
         const specBasedir = String(cfg.get("project.artifact.spec.basedir") ?? "")
         const specSchema  = String(cfg.get("project.artifact.spec.schema")  ?? "")
-
-        /*  determine headless mode  */
-        const headless = process.env.ASE_HEADLESS === "true" ? "true" : "false"
 
         /*  publish the ASE session information and emit it as the hook output payload  */
         const payload = this.publishSessionInfo(tool, {
