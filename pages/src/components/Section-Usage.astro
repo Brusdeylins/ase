@@ -7,14 +7,16 @@
 
 /*  "Usage" section: a text/terminal pair laid out as a two-column row,
     mirroring the highlights rows, followed by the full skill catalog panel
-    whose skill names open the shared man-page modal on click.  */
+    and the top-level CLI commands, whose names open the shared man-page
+    modal on click.  */
 
 import GlowSide        from "./Widget-Glow-Side.astro"
 import Terminal        from "./Widget-Terminal.astro"
 import Diagram         from "./Widget-Diagram.astro"
 import Annotation      from "./Widget-Annotation.astro"
 import { skillGroups } from "../data/skills.ts"
-import Compass         from "@lucide/astro/icons/compass"
+import { manPages }    from "../data/manpages.ts"
+import Compass        from "@lucide/astro/icons/compass"
 import Footprints      from "@lucide/astro/icons/footprints"
 import Search          from "@lucide/astro/icons/search"
 import BookOpenText    from "@lucide/astro/icons/book-open-text"
@@ -29,6 +31,10 @@ const columns = [
     [ "Funnel Mode" ],
     [ "Task Mode" ]
 ].map((labels) => labels.map((label) => skillGroups.find((group) => group.label === label)!))
+
+/*  the CLI commands shown below the catalog: "ase" itself and its
+    top-level commands only, as the deeper ones are reachable from there  */
+const commands = manPages.filter((page) => page.depth <= 1)
 ---
 <section id="usage" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header id="getstarted" class="ase-section-head" data-reveal>
@@ -156,7 +162,8 @@ const columns = [
         <p class="ase-lead ase-justify">
             <b>ASE</b> provides many individual skills and each one accepts options and arguments.
             Fortunately, they are all documented in individual Unix-style manpages you can browse
-            and search.
+            and search &mdash; together with the manpages of all commands of the
+            <b><code>ase</code></b> command-line interface (CLI).
         </p>
     </header>
 
@@ -221,6 +228,21 @@ const columns = [
                         })}
                     </div>
                 ))}
+            </div>
+
+            {/*  the top-level CLI commands, spanning the full panel width  */}
+            <div class="mt-8">
+                <p class="text-sm font-bold uppercase tracking-wider text-accent">CLI Commands</p>
+                <ul class="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-[0.90625rem] leading-none text-foreground-secondary">
+                    {commands.map((page) => {
+                        const idx    = page.label.lastIndexOf(" ")
+                        const prefix = page.label.slice(0, idx + 1)
+                        const name   = page.label.slice(idx + 1)
+                        return (
+                            <li>{prefix}<button type="button" class="cursor-grab text-accent transition-colors hover:text-white" data-help-id={page.id}><b>{name}</b></button></li>
+                        )
+                    })}
+                </ul>
             </div>
         </div>
     </div>

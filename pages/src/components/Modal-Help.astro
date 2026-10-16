@@ -6,14 +6,18 @@
 */
 
 /*  full-viewport help modal: a build-time-assembled, scrollable man-page
-    browser for all ASE skills. The reusable Modal shell wraps a two-pane
-    layout — a sticky, grouped skill-index sidebar plus a scrollable rendered
-    pane. At build time we read every `plugin/skills/<skill>/help.md`, render
-    it to HTML via `marked`, and inline the result. Any element on the page
-    carrying `data-help-id` opens the modal and jumps to the matching skill;
-    the Modal shell handles the close button and Escape.
+    browser for all ASE skills and all `ase` CLI commands. The reusable Modal
+    shell wraps a two-pane layout — a sticky, grouped index sidebar plus a
+    scrollable rendered pane. At build time we read every
+    `plugin/skills/<skill>/help.md` and every `tool/man/<command>.md`, render
+    them to HTML via `marked`, and inline the result. Any element on the page
+    carrying `data-help-id` opens the modal and jumps to the matching page;
+    the Modal shell handles the close button and Escape. Skills are addressed
+    by their skill id (e.g. "ase-task-list"), CLI commands by their manual
+    page name plus section (e.g. "ase-task-list.1"), as both name spaces
+    partially overlap.
 
-    The shown man page is deep-linkable: the URL fragment "#help/<skill-id>"
+    The shown man page is deep-linkable: the URL fragment "#help/<page-id>"
     is the single source of truth, every man-page hop pushes a History API
     entry, and the copy-link button hands out the current deep link.  */
 
@@ -22,6 +26,7 @@ import path            from "node:path"
 import { marked }      from "marked"
 import Modal           from "./Modal-Shell.astro"
 import { skillGroups } from "../data/skills.ts"
+import { manPages }    from "../data/manpages.ts"
 
 /*  locate the in-repo skills directory relative to the `pages/` project root
     (`pages/etc/astro.config.mjs` runs from there), mirroring the `node:fs` +
@@ -33,6 +38,7 @@ const skillsDir = path.resolve(process.cwd(), "..", "plugin", "skills")
     material, so it is rendered without an HTML sanitizer.  */
 interface HelpDoc {
     id:    string
+    name:  string
     title: string
     html:  string
 }
@@ -63,17 +69,43 @@ for (const id of fs.readdirSync(skillsDir)) {
         search mode, where it separates the stacked result documents.  */
     const html = `<p class="help-doc-head">${id} - ${title}</p>` + body
 
-    helpDocs[id] = { id, title, html }
+    helpDocs[id] = { id, name: id, title, html }
 }
 
-/*  flatten the shared catalog into the rendered-pane order (groups, then the
-    skills within each group), skipping any id without a readable help.md.  */
+/*  render the CLI manual pages the same way. The leading remark-man line
+    "# <name>(1) -- <Title>" is turned into the "NAME" section the skill
+    pages carry, so both kinds of pages read alike, and every "`<name>`(1)"
+    reference to another CLI manual page is turned into an in-modal
+    `data-help-id` trigger, like the `SEE ALSO` cross-links of the skills.
+    The section number of every "`<name>`(<section>)" reference is moved
+    into the code span, so it directly follows the name instead of being
+    pushed away by the padding of the code span.  */
+const manNames = new Set(manPages.map((page) => page.name))
+const cliDocs: HelpDoc[] = manPages.map((page) => {
+    const md = page.md.replace(/^#\s+(\S+)\(1\)\s+--\s+(.+)$/m, "## NAME\n\n`$1`(1) - $2")
+    const body = (marked.parse(md) as string).replace(
+        /<code>([a-z0-9_.-]+)<\/code>\(([0-9])\)/g,
+        (_m, ref, section) => {
+            const code = `<code>${ref}(${section})</code>`
+            return section === "1" && manNames.has(ref) && ref !== page.name ?
+                `<a data-help-id="${ref}.1">${code}</a>` : code
+        }
+    )
+    const name = `${page.name}(1)`
+    const html = `<p class="help-doc-head">${name} - ${page.title}</p>` + body
+    return { id: page.id, name, title: page.title, html }
+})
+
+/*  flatten the shared catalogs into the rendered-pane order (skill groups,
+    then the skills within each group, then the CLI commands), skipping any
+    skill id without a readable help.md.  */
 const orderedDocs: HelpDoc[] = []
 for (const group of skillGroups)
     for (const id of group.skills)
         if (helpDocs[id]) orderedDocs.push(helpDocs[id])
+orderedDocs.push(...cliDocs)
 ---
-<Modal id="help-modal" label="Skill help">
+<Modal id="help-modal" label="Manual pages">
     {/* copy-link button: hands out the deep link of the currently shown
         man-page. It sits next to the shell's close button and reuses the
         page-global `Clipboard-Copy` handler, which reads `data-copy` at click
@@ -87,10 +119,10 @@ for (const group of skillGroups)
     >Copy link</button>
 
     <div class="grid h-[85vh] w-[94vw] max-w-6xl grid-cols-1 overflow-hidden rounded-lg border border-border-strong bg-background shadow-2xl sm:grid-cols-[16rem_1fr]">
-        {/* sticky grouped skill-index sidebar, headed by the full-text search
-            box. As the whole sidebar is desktop-only ("hidden sm:block"), so is
-            the search box it carries. */}
-        <nav class="hidden overflow-y-auto border-r border-border-strong bg-background-secondary p-4 sm:block sm:max-h-[85vh]" aria-label="Skill index">
+        {/* sticky grouped index sidebar, headed by the full-text search box.
+            As the whole sidebar is desktop-only ("hidden sm:block"), so is the
+            search box it carries. */}
+        <nav class="hidden overflow-y-auto border-r border-border-strong bg-background-secondary p-4 sm:block sm:max-h-[85vh]" aria-label="Manual page index">
             <div class="mb-4">
                 <input
                     type="search"
@@ -118,6 +150,22 @@ for (const group of skillGroups)
                     </ul>
                 </div>
             ))}
+            {/* the CLI command tree, shown in its command form and indented
+                below the top-level commands to reflect the nesting */}
+            <div class="mb-4" data-help-group>
+                <p class="text-xs font-bold uppercase tracking-wider text-accent">CLI Commands</p>
+                <ul class="mt-2 space-y-0.5 text-sm leading-tight text-foreground-secondary">
+                    {manPages.map((page) => (
+                        <li style={`padding-left: ${Math.max(0, page.depth - 1) * 0.75}rem`}>
+                            <button
+                                type="button"
+                                data-help-id={page.id}
+                                class="block w-full cursor-grab text-left text-foreground-secondary transition-colors hover:text-white"
+                            >{page.label}</button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
         </nav>
 
         {/* scrollable man-page pane: every doc is assembled at build time but
@@ -125,7 +173,7 @@ for (const group of skillGroups)
             the open/click script toggles which `#help-<id>` article is visible. */}
         <div id="help-modal-pane" class="max-h-[85vh] overflow-y-auto p-6 sm:p-8">
             {orderedDocs.map((doc) => (
-                <article id={`help-${doc.id}`} class="help-md hidden" data-help-title={doc.title} set:html={doc.html} />
+                <article id={`help-${doc.id}`} class="help-md hidden" data-help-name={doc.name} data-help-title={doc.title} set:html={doc.html} />
             ))}
             <p id="help-search-none" class="hidden text-center text-foreground-muted"></p>
         </div>
@@ -257,7 +305,7 @@ for (const group of skillGroups)
             copy-link button, so a bookmark gets a meaningful default name and
             the deep link can be handed out with a single click.  */
         const reflect = (id: string, article: HTMLElement) => {
-            document.title = id + " - " + (article.getAttribute("data-help-title") ?? "")
+            document.title = (article.getAttribute("data-help-name") ?? id) + " - " + (article.getAttribute("data-help-title") ?? "")
             helpCopy.setAttribute("data-copy", location.origin + location.pathname + "#help/" + id)
         }
 
@@ -288,12 +336,12 @@ for (const group of skillGroups)
             helpPane.scrollTop = 0
         }
 
-        /*  the URL fragment "#help/<skill-id>" is the single source of truth
+        /*  the URL fragment "#help/<page-id>" is the single source of truth
             for the shown man-page, which makes it shareable, bookmarkable, and
             leavable via the browser's back button. Its "/" separator keeps such
             a route distinct from the plain section ids ("#usage", "#setup",
             ...), so it never scroll-jumps the page behind the modal.  */
-        const ROUTE = /^#help\/([a-z0-9_-]+)$/
+        const ROUTE = /^#help\/([a-z0-9_.-]+)$/
 
         const routeOf = (hash: string): string => {
             const m = hash.match(ROUTE)
@@ -563,6 +611,9 @@ for (const group of skillGroups)
         padding: 0;
         background: transparent;
     }
+    /*  code spans inside hyperlinks (like the cross-links of the
+        `SEE ALSO` sections) take over the accent color of the link  */
+    .help-md a code { color: inherit; }
     /*  the per-document separator heading, prepended at build time: invisible
         in the regular one-doc-at-a-time mode and only surfacing in search mode,
         where the pane stacks all matching man-pages.  */
