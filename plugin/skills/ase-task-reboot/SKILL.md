@@ -147,6 +147,10 @@ Procedure
             where present, except that all `grilled:` tags
             are *dropped* from `Tags:` (the whole key is dropped if no
             other tag remains), as the grilled plan content is gone,
+        -   the `Kind:` frontmatter key, if *absent* in the previous plan,
+            is *created* by *inferring* the kind of change from the
+            *re-created* plan content according to the plan <format/>
+            (defaulting to `CRAFTING`),
         -   the frontmatter keys `Source:`, `Changeset:`, and `Target:`
             are *dropped*, so they are *reset* to their configured
             defaults according to the plan <format/>, as the rebooted
