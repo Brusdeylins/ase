@@ -804,10 +804,14 @@ header
         &.off
             color: var(--c-signal)
 
-    /*  the column chart, where each column leaves room for its number on top of it  */
-    .schart
+    /*  the row of the column charts, taking the remaining height  */
+    .scharts
         flex: 1
         min-height: 200px
+
+    /*  the column chart, where each column leaves room for its number on top of it  */
+    .schart
+        min-height: 0
         display: flex
         flex-direction: column
     .sgrid
@@ -828,8 +832,7 @@ header
             font-weight: bold
             color: var(--c-text-soft)
         .sbar
-            width: 70%
-            max-width: 96px
+            width: 100%
             border: 1px solid var(--c-text)
             border-bottom: 0
             border-radius: 3px 3px 0 0
@@ -846,13 +849,15 @@ header
             .sbar
                 border-color: var(--c-mute)
                 background: var(--c-mute)
+    /*  the labels of the columns, cut to their first seven characters (by the
+        component), and without an ellipsis if still too long, for readability  */
     .sstate
         padding-top: 4px
         border-top: 1px solid var(--c-border)
         text-align: center
         white-space: nowrap
         overflow: hidden
-        text-overflow: ellipsis
+        text-overflow: clip
         font-size: 0.75rem
         font-weight: bold
         color: var(--c-text-soft)

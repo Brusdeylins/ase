@@ -4,35 +4,49 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 -->
 
-<!--  the statistics view (like in the TUI): the buttons of the time ranges, the framed column chart "Tasks per State" of the numbers
-      of tasks per lifecycle state (labeled by state and phase, in the colors of their lanes), the
+<!--  the statistics view (like in the TUI): the buttons of the time ranges (the one of "total" with its number of days), the framed
+      column chart "Tasks per State" of the numbers of tasks per lifecycle state (labeled by state and phase, in the colors of their
+      lanes, with the framed column chart "Throughput" of the finished tasks of the last weeks besides it), the
       framed stacked bar "Task Progress" of the cancelled, finished, work-in-progress, and open tasks
       (with the framed stacked bar "Open Tasks" of the ready and blocked open tasks besides it), the
       framed bars "Usage" of the total times, tokens, and costs of the tasks, with the bars of a
       column scaled to the maximum of the column, and the framed table "Top-5 Tasks" of the
-      tasks of the highest usage (with the framed "Finish Averages" of the usage per finished
+      tasks of the highest usage (with the framed "Finished Tasks" of the average usage per finished
       task and the framed "Efficiency" of the AI usage besides it)  -->
 <template>
     <div v-show="view === 'stats'" id="stats">
         <div class="sranges">
             <template v-for="(r, i) in statsRanges" :key="r.range">
                 <span v-if="i > 0" class="ssep">·</span>
-                <button :class="{ on: r.range === statsRange }" @click="selectStatsRange(r.range)">{{ r.label }}</button>
+                <button :class="{ on: r.range === statsRange }" @click="selectStatsRange(r.range)">{{ rangeLabel(r.range, r.label) }}</button>
             </template>
         </div>
         <div v-if="stats === null" class="sempty" :class="{ off: statsError !== null }">{{ statsError ?? "loading …" }}</div>
         <template v-else>
-            <section class="schart">
-                <div class="stitle">Tasks per State</div>
-                <div class="sgrid" :style="{ gridTemplateColumns: `repeat(${stats.states.length}, minmax(0, 1fr))` }">
-                    <div v-for="s in stats.states" :key="s.status" class="scol" :class="s.tone">
-                        <span class="scount">{{ s.count }}</span>
-                        <div class="sbar" :style="{ height: `calc((100% - 1.5em) * ${s.count / maxCount})` }"></div>
+            <div class="spair scharts">
+                <section class="schart">
+                    <div class="stitle">Tasks per State</div>
+                    <div class="sgrid" :style="{ gridTemplateColumns: `repeat(${stats.states.length}, minmax(0, 1fr))` }">
+                        <div v-for="s in stats.states" :key="s.status" class="scol" :class="s.tone">
+                            <span class="scount">{{ s.count }}</span>
+                            <div class="sbar" :style="{ height: `calc((100% - 1.5em) * ${s.count / maxCount})` }"></div>
+                        </div>
+                        <div v-for="s in stats.states" :key="`l-${s.status}`" class="sstate" :class="s.tone" :title="s.status">{{ s.status.slice(0, 7) }}</div>
+                        <div v-for="p in phases" :key="p.phase" class="sphase" :style="{ gridColumn: `span ${p.n}` }" :title="p.phase"><span>{{ p.phase }}</span></div>
                     </div>
-                    <div v-for="s in stats.states" :key="`l-${s.status}`" class="sstate" :class="s.tone" :title="s.status">{{ s.status }}</div>
-                    <div v-for="p in phases" :key="p.phase" class="sphase" :style="{ gridColumn: `span ${p.n}` }" :title="p.phase"><span>{{ p.phase }}</span></div>
-                </div>
-            </section>
+                </section>
+                <section class="schart">
+                    <div class="stitle">Throughput</div>
+                    <div class="sgrid" :style="{ gridTemplateColumns: `repeat(${stats.throughput.length}, minmax(0, 1fr))` }">
+                        <div v-for="w in stats.throughput" :key="w.start" class="scol" :title="`week ${w.week} (from ${w.start}): ${w.count} finished`">
+                            <span class="scount">{{ w.count }}</span>
+                            <div class="sbar" :style="{ height: `calc((100% - 1.5em) * ${w.count / maxWeek})` }"></div>
+                        </div>
+                        <div v-for="w in stats.throughput" :key="`l-${w.start}`" class="sstate" :title="`week ${w.week} (from ${w.start})`">W{{ w.week }}</div>
+                        <div class="sphase" :style="{ gridColumn: `span ${stats.throughput.length}` }" :title="weekSummary"><span>{{ weekSummary }}</span></div>
+                    </div>
+                </section>
+            </div>
             <div class="spair">
                 <section v-for="b in stacks" :key="b.key" class="sprogress">
                     <div class="stitle">{{ b.title }}</div>
@@ -115,15 +129,16 @@
                 </section>
                 <div class="ssplit">
                     <section class="seffect">
-                        <div class="stitle">Finish Averages</div>
-                        <div class="sline"><span>AI cost</span><b>{{ cost(stats.efficiency.costAI) }}</b></div>
-                        <div class="sline"><span>HR cost</span><b>{{ cost(stats.efficiency.costHR) }}</b></div>
-                        <div class="sline"><span>AI Token</span><b title="input ▷ output tokens">{{ tokens(stats.efficiency.input) }}<span class="sflow">▷</span>{{ tokens(stats.efficiency.output) }}</b></div>
+                        <div class="stitle">Finished Tasks</div>
+                        <div class="sline"><span>⌀ AI cost</span><b>{{ cost(stats.efficiency.costAI) }}</b></div>
+                        <div class="sline"><span>⌀ HR cost</span><b>{{ cost(stats.efficiency.costHR) }}</b></div>
+                        <div class="sline"><span>⌀ AI token</span><b title="input ▷ output tokens">{{ tokens(stats.efficiency.input) }}<span class="sflow">▷</span>{{ tokens(stats.efficiency.output) }}</b></div>
                     </section>
                     <section class="seffect">
                         <div class="stitle">Efficiency</div>
                         <div class="sline"><span>AI/HR time ratio</span><b>{{ ratio(stats.efficiency.timeRatio) }}</b></div>
                         <div class="sline"><span>AI/HR cost ratio</span><b>{{ ratio(stats.efficiency.costRatio) }}</b></div>
+                        <div class="sline"><span>cache hit ratio</span><b>{{ percent(stats.efficiency.cacheRatio) }}</b></div>
                     </section>
                 </div>
             </div>
@@ -156,12 +171,20 @@ const tokenPct   = (n: number) => `${tokenSum.value > 0 ? Math.round(n / tokenSu
 
 /*  the compact amounts: a time (in minutes) in minutes below one hour, else in hours, a number
     of tokens with a metric suffix, and costs in USD, and the share of a value of a maximum  */
-const hours  = (minutes: number) => minutes < 60 ? `${Math.round(minutes)}m` : `${(minutes / 60).toFixed(1)}h`
-const tokens = (n: number) =>
+const hours   = (minutes: number) => minutes < 60 ? `${Math.round(minutes)}m` : `${(minutes / 60).toFixed(1)}h`
+const tokens  = (n: number) =>
     n < 1000 ? String(n) : n < 1000 * 1000 ? `${(n / 1000).toFixed(1)}k` :
         n < 1000 * 1000 * 1000 ? `${(n / (1000 * 1000)).toFixed(1)}M` : `${(n / (1000 * 1000 * 1000)).toFixed(1)}G`
-const cost   = (usd: number) => `$${usd.toFixed(2)}`
-const ratio  = (r: number | null) => r !== null ? `${r.toFixed(1)}×` : "n/a"
+const cost    = (usd: number) => `$${usd.toFixed(2)}`
+const ratio   = (r: number | null) => r !== null ? `${r.toFixed(1)}×` : "n/a"
+const percent = (r: number | null) => r !== null ? `${Math.round(r * 100)}%` : "n/a"
+
+/*  the label of a time range button, where the time range "total" is suffixed
+    with its number of days (once known, like in the TUI)  */
+const rangeLabel = (range: string, label: string) => {
+    const days = stats.value?.days
+    return range === "total" && days !== undefined ? `${label} (${days} day${days === 1 ? "" : "s"})` : label
+}
 
 /*  the (maximum) number of tasks of the highest usage, always shown as rows (with blank
     rows for the missing tasks), to keep the height of their table (like in the TUI)  */
@@ -183,6 +206,15 @@ const phases   = computed(() => (stats.value?.states ?? []).reduce((list, s) => 
         list.push({ phase: s.phase, n: 1 })
     return list
 }, [] as { phase: string, n: number }[]))
+
+/*  the highest number of finished tasks of a week, and the total and average
+    number of finished tasks of all weeks (like in the TUI)  */
+const maxWeek     = computed(() => Math.max(1, ...(stats.value?.throughput ?? []).map((w) => w.count)))
+const weekSummary = computed(() => {
+    const weeks = stats.value?.throughput ?? []
+    const sum   = weeks.reduce((n, w) => n + w.count, 0)
+    return `${sum} finished · ⌀ ${(weeks.length > 0 ? sum / weeks.length : 0).toFixed(1)}/week`
+})
 
 /*  the stacked bars of the progress of the tasks and of the readiness of the open
     tasks with their parts, and the share of a number of tasks of the parts  */

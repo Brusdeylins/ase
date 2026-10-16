@@ -178,12 +178,21 @@ cycles).
 The third view `stats` shows the statistics of the tasks matching the
 `filter:` field (all tasks if empty), refreshed on every change of the
 tasks, within the time range selected by the buttons `total` (all
-tasks), `within last 30 days`, and `within last 7 days` on its top
+tasks, with the number of days since the creation of the oldest
+task), `within last 30 days`, and `within last 7 days` on its top
 (selected via `←`/`→` or a click, initially `total`):
 
 - `Tasks per State`: a column chart with the number of tasks of each
   state of the task lifecycle model, labeled by the state and, below,
   by its phase (the group of its lane), in the colors of the lanes.
+- `Throughput` (besides `Tasks per State`): a column chart with the
+  number of tasks finished (in a terminal state other than `CANCELLED`)
+  in each of the last 12 weeks (a quarter, ending with the current
+  week), labeled by the ISO week number and, below, by the total and
+  average number of finished tasks per week. As the time of the
+  completion of a task is not tracked, its `Modified:` frontmatter key
+  is taken instead, so the throughput is just an approximation. It
+  always covers the last 12 weeks, independent of the time range.
 - `Task Progress`: one stacked bar of the *cancelled* tasks, the
   *finished* tasks (in a terminal state other than `CANCELLED`), the
   tasks *work-in-progress* (`wip`, in an active state, like `PLANNING` or
@@ -208,15 +217,18 @@ tasks), `within last 30 days`, and `within last 7 days` on its top
   resp. of their input and output tokens without any costs), `Cost`,
   and `Token` (as *input* `▷` *output*, with the uncached input tokens,
   i.e., without the cache read and write tokens).
-- `Finish Averages` (besides `Top-5 Tasks`): the average AI costs,
+- `Finished Tasks` (besides `Top-5 Tasks`): the average (`⌀`) AI costs,
   human costs, and AI tokens (as *input* `▷` *output*, like in `Top-5
   Tasks`) per finished task (the usage of the finished tasks divided
   by their number, including the finished tasks without any usage).
-- `Efficiency` (besides `Finish Averages`): the *AI/HR time ratio* (the
+- `Efficiency` (besides `Finished Tasks`): the *AI/HR time ratio* (the
   AI request time per human time, i.e., the higher, the more AI work
   per attended human minute) and the *AI/HR cost ratio* (the AI costs
   per human costs), each `n/a` without any human time resp. costs (as
-  booked by the agents, see `ase-agent`(1)).
+  booked by the agents, see `ase-agent`(1)), and the *cache hit ratio*
+  (the share of the cache read tokens of all input tokens, i.e., of the
+  cache read, cache write, and uncached input tokens, the main lever on
+  the AI costs), `n/a` without any input tokens.
 
 Within the last 30 or 7 days, a task counts only if the period from
 its `Created:` to its `Modified:` frontmatter key overlaps with the
