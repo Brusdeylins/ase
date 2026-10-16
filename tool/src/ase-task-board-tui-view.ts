@@ -867,9 +867,9 @@ export const renderStats = (ctx: BoardCtx) => {
             fit(label, Math.max(0, width - 4 - value.length)), h(Text, { key: "v", ...cx("bold") }, value))
     const loading = [ h(Text, { key: "loading", ...cx("dim", dim && "dimmed") }, "loading …") ]
     const avgList = usage === null ? loading : [
-        valLine("cost-ai", avgW, "⌀ AI cost",  statsCost(eff.costAI)),
-        valLine("cost-hr", avgW, "⌀ HR cost",  statsCost(eff.costHR)),
-        valLine("tokens",  avgW, "⌀ AI token", `${statsTokens(eff.input)} ▷ ${statsTokens(eff.output)}`),
+        valLine("cost-ai", avgW, "AI cost (⌀)",  statsCost(eff.costAI)),
+        valLine("cost-hr", avgW, "HR cost (⌀)",  statsCost(eff.costHR)),
+        valLine("tokens",  avgW, "AI token (⌀)", `${statsTokens(eff.input)} ▷ ${statsTokens(eff.output)}`),
         valLine("lead-median", avgW, "lead (median)", statsDuration(eff.leadMedian)),
         valLine("lead-p85",    avgW, "lead (p85)",    statsDuration(eff.leadP85))
     ]

@@ -132,9 +132,9 @@
                 <div class="ssplit">
                     <section class="seffect">
                         <div class="stitle">Finished Tasks</div>
-                        <div class="sline"><span>⌀ AI cost</span><b>{{ cost(stats.efficiency.costAI) }}</b></div>
-                        <div class="sline"><span>⌀ HR cost</span><b>{{ cost(stats.efficiency.costHR) }}</b></div>
-                        <div class="sline"><span>⌀ AI token</span><b title="input ▷ output tokens">{{ tokens(stats.efficiency.input) }}<span class="sflow">▷</span>{{ tokens(stats.efficiency.output) }}</b></div>
+                        <div class="sline"><span>AI cost (⌀)</span><b>{{ cost(stats.efficiency.costAI) }}</b></div>
+                        <div class="sline"><span>HR cost (⌀)</span><b>{{ cost(stats.efficiency.costHR) }}</b></div>
+                        <div class="sline"><span>AI token (⌀)</span><b title="input ▷ output tokens">{{ tokens(stats.efficiency.input) }}<span class="sflow">▷</span>{{ tokens(stats.efficiency.output) }}</b></div>
                         <div class="sline"><span>lead (median)</span><b>{{ duration(stats.efficiency.leadMedian) }}</b></div>
                         <div class="sline"><span>lead (p85)</span><b>{{ duration(stats.efficiency.leadP85) }}</b></div>
                     </section>
