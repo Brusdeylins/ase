@@ -4,6 +4,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
+import YAML          from "yaml"
+
 import type * as API from "./ase-task-store-plugin-api.js"
 
 /*  a task lifecycle model: the lifecycle states a task plan can be in
@@ -733,6 +735,50 @@ export const keepUsage = (plan: API.TaskPlan, stored: API.TaskPlan): API.TaskPla
             attachment.push(kept.shift()!)
     }
     return { ...plan, attachment: [ ...attachment, ...kept ] }
+}
+
+/*  the amounts of the AI usage accounting of a task, as "<group>.<field>" of the YAML data of
+    its usage attachment: the AI request time, the human time, and the real (wall-clock) time
+    (in minutes), the cache read, cache write, (uncached) input, and output tokens, and the AI
+    and human costs (in USD)  */
+export const usageKeys = [
+    "time.ai", "time.hr", "time.real",
+    "token.cread", "token.cwrite", "token.input", "token.output",
+    "cost.ai", "cost.hr"
+] as const
+
+/*  an amount of AI usage  */
+export type TaskUsage = Partial<Record<(typeof usageKeys)[number], number>>
+
+/*  parse the YAML data of a usage attachment into its amounts (leniently,
+    i.e., with unparsable data and non-numeric amounts taken as absent)  */
+export const usageOf = (data: string): TaskUsage => {
+    let doc: unknown
+    try {
+        doc = YAML.parse(data)
+    }
+    catch {
+        doc = null
+    }
+    const groups = (typeof doc === "object" && doc !== null ? doc : {}) as Record<string, Record<string, unknown> | undefined>
+    const usage: TaskUsage = {}
+    for (const key of usageKeys) {
+        const [ group, field ] = key.split(".")
+        const amount = Number(groups[group]?.[field])
+        if (Number.isFinite(amount))
+            usage[key] = amount
+    }
+    return usage
+}
+
+/*  render the amounts of a usage attachment as its YAML data: one flow mapping per group  */
+export const usageData = (usage: TaskUsage): string => {
+    const groups = new Map<string, string[]>()
+    for (const key of usageKeys) {
+        const [ group, field ] = key.split(".")
+        groups.set(group, [ ...(groups.get(group) ?? []), `${field}: ${String(usage[key] ?? 0)}` ])
+    }
+    return Array.from(groups, ([ group, fields ]) => `${(group + ":").padEnd(7)} { ${fields.join(", ")} }\n`).join("")
 }
 
 /*  derive the title of a task plan from its body as defined by the

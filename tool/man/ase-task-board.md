@@ -47,9 +47,10 @@ are:
 
 Besides the *lanes* view, the boards show the *graph* view, the
 dependency graph of the tasks derived from their `After:` keys (where
-an epic implicitly comes after all other tasks of its group), and,
-with an agent relay, the *agents* view. All views are cycled via `v`
-(or a click onto the `view:` value of the header). The last shown
+an epic implicitly comes after all other tasks of its group), the
+*stats* view with the statistics of the tasks, and with an agent relay
+the *agents* view. All views are cycled via `v` (or a click onto
+the `view:` value of the header). The last shown
 view, the minimized lanes, the collapsed groups, and the shown flags
 are persisted in `.ase/board.yaml` (separately for the terminal and
 the web board).
@@ -172,10 +173,31 @@ waiting) with their status and their last processing log line, and
 finally all warnings of the board (behind `⚠`, e.g. on dependency
 cycles).
 
+### Stats View
+
+The third view `stats` shows the statistics of the tasks matching the
+`filter:` field (all tasks if empty), refreshed on every change of the
+tasks:
+
+- `Tasks per State`: a column chart with the number of tasks of each
+  state of the task lifecycle model, labeled by the state and, below,
+  by its phase (the group of its lane), in the colors of the lanes.
+- `Task Progress`: one stacked bar of the *cancelled* tasks, the
+  *finished* tasks (in a terminal state other than `CANCELLED`), the
+  tasks *work-in-progress* (in an active state, like `PLANNING` or
+  `IMPLEMENTING`), and the *open* tasks (in any other state, like
+  `DRAFTED`, `PLANNED`, or `STALLED`), each with its number and share.
+- `Usage`: bars of the total accumulated usage of the tasks (see
+  `ase-task-assign`(1) and `ase-agent`(1)) by its `time` (AI request,
+  human, and real time, in minutes below one hour, else in hours), its
+  `token` (all tokens, stacked by the cache read, cache write, input,
+  and output tokens), and its `cost` (AI and human costs, in USD), with
+  the bars of a column scaled to the maximum of the column.
+
 ### Agents View
 
 With an agent relay (see `--agent-relay`), the boards additionally
-follow the running agents (see `ase-agent`(1)) live in the third view
+follow the running agents (see `ase-agent`(1)) live in the last view
 `agents`: a master/detail view, with the framed master list `Agents` on
 the left, showing each agent as a card with its name (inverse, behind
 a `⚉`), a pulse on its top border while busy (resp. a circle while
@@ -239,17 +261,18 @@ under the kitty keyboard protocol.
 
 ### Every View
 
-- `v`: Cycle the view: lanes, graph, and (with an agent relay) agents.
+- `v`: Cycle the view: lanes, graph, stats, and (with an agent relay)
+  agents.
 - `/`: Focus the `filter:` field (not in the agents view).
 - `?`: Hide or show the key hint lines (persisted).
 - `D`: Delete the selected task, after a confirmation (not in the
-  agents view).
+  agents and stats views).
 - `T`: Transfer the selected task to another state via the transfer
-  popup (not in the agents view).
+  popup (not in the agents and stats views).
 - `E`: Request the edit of the selected task by a prompt (not in the
-  agents view).
+  agents and stats views).
 - `R`: Request the selected task by a prompt under a request name (not
-  in the agents view).
+  in the agents and stats views).
 - `M`: Disable or enable the mouse support (terminal board only).
 - `q`, `Ctrl`+`C`: Quit (terminal board only).
 
@@ -390,7 +413,7 @@ The following configuration keys (on scope `user` or `project`, see
 - `.ase/board.yaml`:
   The display state of the boards in the project root: separately for
   the terminal board (`tui`) and the web board (`web`), the shown
-  `view` (`lanes`, `graph`, or `agents`), the `minimized` lanes, the
+  `view` (`lanes`, `graph`, `stats`, or `agents`), the `minimized` lanes, the
   `collapsed` groups, and whether the task `titles` are wrapped onto
   multiple lines, the key hint lines are shown (`keys`), and the graph
   shows the `standalone` tasks. The web state is shared by all

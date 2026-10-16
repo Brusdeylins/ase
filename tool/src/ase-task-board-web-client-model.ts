@@ -20,10 +20,19 @@ export type Board   = { mode: string, project: string, version: string, warnings
 export type Tone    = "active" | "done" | "idle"
 export type Ref     = { id: string, tone: Tone }
 export type Task    = { id: string, title: string, tone: Tone, status: string, group: string, epic: string, doc: string, tabs: string[], pred: Ref[], succ: Ref[] }
-export type View    = "lanes" | "graph" | "agents"
+export type View    = "lanes" | "graph" | "stats" | "agents"
 
 /*  the statistics of the dependency graph: its numbers of tasks and dependencies  */
 export type GraphStats = { tasks: number, dependencies: number }
+
+/*  the statistics of the tasks (see the statistics view): the tasks per lifecycle state (with its
+    phase and tone), their progress, and their total AI usage (times in minutes, costs in USD)  */
+export type StatsUsage  = { timeAI: number, timeHR: number, timeReal: number, cread: number, cwrite: number, input: number, output: number, costAI: number, costHR: number }
+export type BoardStats  = {
+    states:   { phase: string, status: string, count: number, tone: Tone }[]
+    progress: { finished: number, cancelled: number, wip: number, open: number }
+    usage:    StatsUsage
+}
 
 /*  the agents passed by the agent relay: whether the agent relay is connected, and the
     running agents (with their usage of the agent tool, but without their processing log lines), and, separately, the processing
@@ -107,6 +116,7 @@ const busyLabel = (url: string, opts?: RequestInit): BusyLabel => {
     const fixed: Record<string, string> = {
         board:  "loading tasks",
         graph:  "loading graph",
+        stats:  "loading statistics",
         new:    "preparing new task",
         toggle: "saving board state"
     }
@@ -160,6 +170,8 @@ export const actionNote  = ref<string | null>(null)
 export const view        = ref<View>("lanes")
 export const graph       = ref("")
 export const graphStats  = ref<GraphStats | null>(null)
+export const stats       = ref<BoardStats | null>(null)
+export const statsError  = ref<string | null>(null)
 export const task        = ref<Task | null>(null)
 export const sel         = ref<Sel>({ g: 0, l: 0, id: "" })
 export const grow        = ref(false)
@@ -179,6 +191,7 @@ let   openId      = null as string | null
 let   openSeq     = 0
 let   reloadSeq   = 0
 let   graphSeq    = 0
+let   statsSeq    = 0
 
 /*  the elements of the page used by more than the component rendering them  */
 export const boardEl     = ref<HTMLElement | null>(null)
@@ -342,6 +355,17 @@ export const renderGraph = async (background = false) => {
     graphStats.value = res.error !== undefined ? null : res.stats
 }
 
+/*  load the statistics of the tasks (computed by the service)  */
+export const loadStats = async (background = false) => {
+    const seq = ++statsSeq
+    const res = await api<BoardStats>(`/task-board/api/stats?filter=${encodeURIComponent(query)}`, undefined, background)
+    if (seq !== statsSeq)
+        return
+    statsError.value = res.error !== undefined ? res.error : null
+    if (res.error === undefined)
+        stats.value = res
+}
+
 /*  remember the scroll position of the document of the selected tab  */
 const keepTabScroll = () => {
     const win = planEl.value?.contentWindow ?? null
@@ -456,6 +480,8 @@ export const reload = async (background = false) => {
     board.value = data
     if (view.value === "graph")
         await renderGraph(background)
+    else if (view.value === "stats")
+        await loadStats(background || stats.value !== null)
     if (openId !== null)
         await openTask(openId, background)
 }
@@ -500,19 +526,21 @@ export const toggle = async (list: "minimized" | "collapsed" | "titles" | "keys"
     applySurface(s)
 }
 
-/*  cycle through the views: lanes, graph, and (with an agent relay) agents  */
+/*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents  */
 export const cycleView = () => {
-    const views: View[] = agents.value !== null ? [ "lanes", "graph", "agents" ] : [ "lanes", "graph" ]
+    const views: View[] = agents.value !== null ? [ "lanes", "graph", "stats", "agents" ] : [ "lanes", "graph", "stats" ]
     setView(views[(views.indexOf(view.value) + 1) % views.length])
 }
 
-/*  switch between the lanes, the graph, and the agents view, persisting it for newly opened web boards  */
+/*  switch between the lanes, the graph, the stats, and the agents view, persisting it for newly opened web boards  */
 export const setView = (v: View) => {
     view.value = v
     if (v !== "lanes")
         drag.value = null
     if (v === "graph")
         renderGraph()
+    else if (v === "stats")
+        loadStats(stats.value !== null)
     api<Surface>("/task-board/api/view", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ view: v })
     }).then((s) => {

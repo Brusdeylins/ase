@@ -15,7 +15,7 @@ import pkg                                    from "../package.json" with { type
 import { useBoardState, mouseReporting }      from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
 import { handleMouse, handleKey }             from "./ase-task-board-tui-control.js"
-import { h, renderLanes, renderGraph, renderAgents } from "./ase-task-board-tui-view.js"
+import { h, renderLanes, renderGraph, renderAgents, renderStats } from "./ase-task-board-tui-view.js"
 import { palette, loadPalette, cx }           from "./ase-task-board-tui-style.js"
 import { sanitize, renderDialog, renderConfirm, renderTransfer, renderPrompt, renderBusy } from "./ase-task-board-tui-popup.js"
 
@@ -98,7 +98,7 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         h(Box, { paddingX: 1 },
             h(Text, cx("signal", "truncate", dim && "dimmed"),
                 board.warnings.length > 0 ? `⚠ ${board.warnings.map(sanitize).join(" · ")}` : " ")),
-        ...(view === "lanes" ? renderLanes(ctx) : view === "graph" ? renderGraph(ctx) : renderAgents(ctx))
+        ...(view === "lanes" ? renderLanes(ctx) : view === "graph" ? renderGraph(ctx) : view === "stats" ? renderStats(ctx) : renderAgents(ctx))
             .filter((el) => surface.keys || !String(el.key).startsWith("keys")),
 
         /*  the horizontal rule between the key hints and the status line, turning downward with rounded corners at both ends  */

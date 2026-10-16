@@ -601,7 +601,9 @@ Query parameters:
 - `fields` (optional): `header` to additionally include the entire
   header of each plan (so a client can group or filter by `Group`,
   `Phase`, `Assignee`, `Kind`, or `Tags` without loading the plans),
-  or `none` (default) for the minimal entries.
+  `usage` to additionally include the AI usage accounting of each plan
+  (which loads all plans, e.g. for usage statistics), or `none`
+  (default) for the minimal entries.
 
 A state which is not a state of the model is rejected with `422`, as is
 an `include`/`exclude` combination cancelling out to an empty state set
@@ -626,6 +628,11 @@ Response `200`:
   `YYYY-MM-DD HH:MM`.
 - `header`: the entire header of the plan (present only with
   `fields=header`), as in the task plan structure.
+- `usage`: the parsed amounts of the usage attachment of the plan
+  (present only with `fields=usage`, and only for a plan with a usage
+  attachment), keyed by `time.ai`, `time.hr`, `time.real`,
+  `token.cread`, `token.cwrite`, `token.input`, `token.output`,
+  `cost.ai`, and `cost.hr`.
 
 An empty `tasks` array is returned if no task plans exist.
 

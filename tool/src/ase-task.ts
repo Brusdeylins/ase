@@ -11,7 +11,7 @@ import readline                                           from "node:readline/pr
 
 import { Command }                                        from "commander"
 import { execaSync }                                      from "execa"
-import YAML, { isScalar }                                 from "yaml"
+import { isScalar }                                       from "yaml"
 import { DateTime }                                       from "luxon"
 import { z }                                              from "zod"
 import { LRUCache }                                       from "lru-cache"
@@ -43,54 +43,13 @@ type TaskStoreSpec = {
     lifecycle: TaskFormat.TaskLifecycle, idscheme: string
 }
 
-/*  the amounts of the AI usage accounting of a task, as "<group>.<field>" of the YAML data of
-    its usage attachment: the AI request time, the human time, and the real (wall-clock) time
-    (in minutes), the cache read, cache write, (uncached) input, and output tokens, and the AI
-    and human costs (in USD)  */
-export const usageKeys = [
-    "time.ai", "time.hr", "time.real",
-    "token.cread", "token.cwrite", "token.input", "token.output",
-    "cost.ai", "cost.hr"
-] as const
-
-/*  an amount of AI usage, to be added to the usage attachment of a task  */
-export type TaskUsage = Partial<Record<(typeof usageKeys)[number], number>>
+/*  an amount of AI usage, to be added to the usage attachment of a task (see "TaskFormat.usageKeys")  */
+export type TaskUsage = TaskFormat.TaskUsage
 
 /*  the failure of a booking whose save might have been done nevertheless (e.g. on a lost
     response, a timeout, or a partially done save of an issue tracker), so the booking must
     not be retried, as it would then be booked twice  */
 export class UsageUncertain extends Error {}
-
-/*  parse the YAML data of a usage attachment into its amounts (leniently,
-    i.e., with unparsable data and non-numeric amounts taken as absent)  */
-const usageOf = (data: string): TaskUsage => {
-    let doc: unknown
-    try {
-        doc = YAML.parse(data)
-    }
-    catch {
-        doc = null
-    }
-    const groups = (typeof doc === "object" && doc !== null ? doc : {}) as Record<string, Record<string, unknown> | undefined>
-    const usage: TaskUsage = {}
-    for (const key of usageKeys) {
-        const [ group, field ] = key.split(".")
-        const amount = Number(groups[group]?.[field])
-        if (Number.isFinite(amount))
-            usage[key] = amount
-    }
-    return usage
-}
-
-/*  render the amounts of a usage attachment as its YAML data: one flow mapping per group  */
-const usageData = (usage: TaskUsage): string => {
-    const groups = new Map<string, string[]>()
-    for (const key of usageKeys) {
-        const [ group, field ] = key.split(".")
-        groups.set(group, [ ...(groups.get(group) ?? []), `${field}: ${String(usage[key] ?? 0)}` ])
-    }
-    return Array.from(groups, ([ group, fields ]) => `${(group + ":").padEnd(7)} { ${fields.join(", ")} }\n`).join("")
-}
 
 /*  reusable functionality: the task plans of the current project,
     forwarded to the task store selected by the "project.task.store.url"
@@ -685,6 +644,13 @@ export class Task {
         })
     }
 
+    /*  list the AI usage accounting (the amounts of the usage attachment)
+        of all persisted tasks having one, keyed by task id  */
+    static async listUsage (log: Log): Promise<Map<string, TaskUsage>> {
+        return Task.with(log, async (client) =>
+            new Map((await client.list("usage")).flatMap((item) => item.usage !== undefined ? [ [ item.id, item.usage ] ] : [])))
+    }
+
     /*  get the lifecycle status of a task plan: the "Status:" frontmatter
         key of the plan, falling back to the initial state of the task
         lifecycle model; throws if no task exists  */
@@ -822,16 +788,16 @@ export class Task {
         but might have been done nevertheless, so it must not be retried  */
     static async addUsage (log: Log, id: string, delta: TaskUsage): Promise<boolean> {
         return Task.updateRetry(log, id, (plan) => {
-            if (!usageKeys.some((key) => (delta[key] ?? 0) > 0))
+            if (!TaskFormat.usageKeys.some((key) => (delta[key] ?? 0) > 0))
                 return false
             const at    = plan.attachment.findIndex((att) => TaskFormat.isUsage(att) && att.Data !== undefined)
-            const usage = at >= 0 ? usageOf(plan.attachment[at].Data) : {}
-            for (const key of usageKeys) {
+            const usage = at >= 0 ? TaskFormat.usageOf(plan.attachment[at].Data) : {}
+            for (const key of TaskFormat.usageKeys) {
                 const sum = (usage[key] ?? 0) + Math.max(0, delta[key] ?? 0)
                 usage[key] = Number(sum.toFixed(key.startsWith("cost.") ? 4 : 0))
             }
             const now  = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
-            const data = usageData(usage)
+            const data = TaskFormat.usageData(usage)
             if (at >= 0)
                 plan.attachment[at] = { ...plan.attachment[at], Modified: now, Data: data }
             else

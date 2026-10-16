@@ -74,11 +74,11 @@ export type Board = {
     warnings: string[]
 }
 
-/*  the per-surface view state: the shown view (the lanes, the dependency graph, or the agents),
+/*  the per-surface view state: the shown view (the lanes, the dependency graph, the agents, or the statistics),
     minimized lanes, collapsed groups, and whether the task titles, the key hints, and the
     standalone tasks of the graph are shown  */
 export type Surface     = { view: SurfaceView, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }
-export type SurfaceView = "lanes" | "graph" | "agents"
+export type SurfaceView = "lanes" | "graph" | "stats" | "agents"
 export type SurfaceList = "minimized" | "collapsed"
 export type SurfaceFlag = "titles" | "keys" | "standalone"
 
@@ -153,7 +153,7 @@ export const splitHeight = (total: number, weights: number[], min = 0): number[]
 
 /*  the valibot schema of the persisted board state  */
 const surfaceSchema = v.object({
-    view:       v.optional(v.picklist([ "lanes", "graph", "agents" ]), "lanes"),
+    view:       v.optional(v.picklist([ "lanes", "graph", "stats", "agents" ]), "lanes"),
     minimized:  v.optional(v.array(v.string()), []),
     collapsed:  v.optional(v.array(v.string()), []),
 
@@ -240,7 +240,7 @@ export class BoardState {
         })
     }
 
-    /*  set the shown view (lanes, graph, or agents)  */
+    /*  set the shown view (lanes, graph, stats, or agents)  */
     static setView (surface: "tui" | "web", view: SurfaceView): Promise<State> {
         return BoardState.update((state) => {
             state[surface].view = view

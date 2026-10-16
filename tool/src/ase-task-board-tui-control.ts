@@ -144,6 +144,8 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
             setTyping(true)
         return
     }
+    if (view === "stats")
+        return
     if ((btn === 64 || btn === 65) && view === "lanes") {
         /*  the wheel over a lane scrolls it, by stepping the selection
             through its cards (entering the lane at its first card)  */
@@ -541,7 +543,7 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
 
     /*  request the deletion of a task in every view (under the kitty keyboard
         protocol, Shift+d arrives as "d" with the shift modifier)  */
-    const target = dialog !== null ? dialog.id : view === "agents" ? "" : sel.id
+    const target = dialog !== null ? dialog.id : view === "agents" || view === "stats" ? "" : sel.id
     if ((input === "D" || (input === "d" && key.shift)) && target !== "" && carry === null) {
         setConfirm({ id: target, yes: false })
         return
@@ -602,6 +604,11 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         else if (key.home || key.end)
             scrollLog(key.home ? "top" : "bottom")
         else if (input === "?")
+            toggleFlag("keys")
+        return
+    }
+    if (view === "stats") {
+        if (input === "?")
             toggleFlag("keys")
         return
     }

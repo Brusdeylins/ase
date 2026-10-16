@@ -13,7 +13,7 @@ import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./a
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
-import { palette, dashed, dashedBold, cx, isClass, pulseFrames } from "./ase-task-board-tui-style.js"
+import { palette, dashed, dashedBold, cx, isClass, pulseFrames, lowerEighths } from "./ase-task-board-tui-style.js"
 
 /*  shorthand for creating React elements without JSX  */
 export const h = React.createElement
@@ -478,7 +478,7 @@ export const renderGraph = (ctx: BoardCtx) => {
             h(Text, cx("hint", dim && "dimmed"),
                 `D: delete task · E: edit by prompt · R: request by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
                 `s: ${surface.standalone ? "hide" : "show"} standalone tasks · ` +
-                `/: filter tasks · v: view ${agents !== null ? "agents" : "lanes"}`)),
+                "/: filter tasks · v: view stats")),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
@@ -584,6 +584,175 @@ export const renderAgents = (ctx: BoardCtx) => {
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `v: view lanes · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+    ]
+}
+
+/*  the heights of the frames "Task Progress" and "Usage" of the statistics view
+    (each with an inner blank line at its top and bottom)  */
+const PROGRESS_H = 6
+const USAGE_H    = 8
+
+/*  the compact amounts of the statistics view: a time (in minutes) in minutes below one
+    hour, else in hours, a number of tokens with a metric suffix, and costs in USD  */
+const statsHours  = (minutes: number) => minutes < 60 ? `${Math.round(minutes)}m` : `${(minutes / 60).toFixed(1)}h`
+const statsTokens = (n: number) =>
+    n < 1000 ? String(n) : n < 1000 * 1000 ? `${(n / 1000).toFixed(1)}k` :
+        n < 1000 * 1000 * 1000 ? `${(n / (1000 * 1000)).toFixed(1)}M` : `${(n / (1000 * 1000 * 1000)).toFixed(1)}G`
+const statsCost   = (usd: number) => `$${usd.toFixed(2)}`
+
+/*  center a text within a width (cut with an ellipsis if too long), padded by a fill character  */
+const center = (text: string, width: number, fill = " "): string => {
+    const cut  = text.length <= width ? text : width > 1 ? text.slice(0, width - 1) + "…" : text.slice(0, width)
+    const left = Math.floor((width - cut.length) / 2)
+    return fill.repeat(left) + cut + fill.repeat(width - cut.length - left)
+}
+
+/*  split a number of cells onto parts by their amounts (by the largest remainder method)  */
+const splitCells = (cells: number, amounts: number[]): number[] => {
+    const sum = amounts.reduce((n, a) => n + a, 0)
+    if (sum <= 0)
+        return amounts.map(() => 0)
+    const exact = amounts.map((a) => cells * a / sum)
+    const parts = exact.map((e) => Math.floor(e))
+    const order = exact.map((_e, i) => i).sort((a, b) => (exact[b] - parts[b]) - (exact[a] - parts[a]))
+    const rest  = cells - parts.reduce((n, p) => n + p, 0)
+    for (let k = 0; k < rest; k++)
+        parts[order[k]]++
+    return parts
+}
+
+/*  a horizontal bar of a width for a value of a maximum, in whole cells (as a partially filled
+    cell would leave a gap before the track), on a light shaded track (in the color of the bar)  */
+const statsBar = (value: number, max: number, width: number): string => {
+    const n = max > 0 ? Math.round(value / max * width) : 0
+    return "█".repeat(n).padEnd(width, "░")
+}
+
+/*  render the statistics view: the framed column chart "Tasks per State" of the numbers of tasks per
+    lifecycle state (labeled by state and phase, in the colors of their lanes), the framed stacked bar
+    "Task Progress" of the cancelled, finished, work-in-progress, and open tasks, and the framed bars
+    "Usage" of the total times, tokens, and costs of the tasks  */
+export const renderStats = (ctx: BoardCtx) => {
+    const { stats, usage, columns, boardH, dim, mouse, filter, agents } = ctx
+    const innerW = Math.max(20, columns - 6)
+    const tint   = (tone: string) => tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
+    const frame  = (key: string, height: number, title: string, padY: number, ...content: React.ReactNode[]) =>
+        h(Box, { key, height, flexShrink: 0 },
+            h(Box, { paddingX: 1, paddingY: padY, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") }, ...content),
+            h(Box, { position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
+                h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), title), " ]")))
+    if (stats === null)
+        return [ h(Box, { key: "stats", height: boardH }), h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " ") ]
+
+    /*  the column chart, where the highest column leaves the top row for its number, each
+        number sits on top of its column (being at least a thin line, even without any tasks,
+        like in the web board), the columns stand on a base line above their states (drawn with
+        the upper eighth block, so it directly touches the columns above it), and each phase is
+        labeled below its line spanning its states (like in the web board)  */
+    const chartH = Math.max(7, boardH - PROGRESS_H - USAGE_H)
+    const areaH  = chartH - 6
+    const colW   = Math.max(2, Math.floor(innerW / stats.states.length))
+    const lineW  = colW - 1
+    const fitW   = Math.max(1, Math.min(12, lineW - 2))
+    const barW   = fitW > 1 && (lineW - fitW) % 2 !== 0 ? fitW - 1 : fitW
+    const barL   = 1 + Math.floor((lineW - barW) / 2)
+    const max    = Math.max(1, ...stats.states.map((s) => s.count))
+    const column = (key: string | number, tone: string, text: string) =>
+        h(Text, { key, color: tint(tone), dimColor: dim }, " ".repeat(barL) + text + " ".repeat(Math.max(0, colW - barW - barL)))
+    const rows   = Array.from({ length: areaH }, (_x, r) => {
+        const level = areaH - 1 - r
+        return h(Box, { key: `row${r}` }, h(Text, { wrap: "truncate" }, ...stats.states.map((s, i) => {
+            const fill = Math.max(1, Math.round(s.count / max * (areaH - 1) * 8))
+            const cell = Math.max(0, Math.min(8, fill - level * 8))
+            return column(i, s.tone, cell > 0 ? lowerEighths[cell].repeat(barW) :
+                level === Math.ceil(fill / 8) ? center(String(s.count), barW) : " ".repeat(barW))
+        })))
+    })
+    const phases = stats.states.reduce((list, s) => {
+        const last = list.at(-1)
+        if (last !== undefined && last.phase === s.phase)
+            last.n++
+        else
+            list.push({ phase: s.phase, n: 1 })
+        return list
+    }, [] as { phase: string, n: number }[])
+    const chart  = frame("chart", chartH, "Tasks per State", 0, ...rows,
+        h(Box, { key: "base" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
+            stats.states.map(() => " " + "▔".repeat(colW - 1)).join(""))),
+        h(Box, { key: "states" }, h(Text, { wrap: "truncate" }, ...stats.states.map((s, i) =>
+            h(Text, { key: i, color: tint(s.tone), dimColor: dim, bold: true }, " " + center(s.status, colW - 1))))),
+        h(Box, { key: "phases" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, phases.map((p) =>
+            " " + "─".repeat(Math.max(0, p.n * colW - 1))).join(""))),
+        h(Box, { key: "phase-labels" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, phases.map((p) =>
+            " " + center(p.phase, p.n * colW - 1)).join(""))))
+
+    /*  the stacked bar of the progress of the tasks, with its legend  */
+    const { finished, cancelled, wip, open } = stats.progress
+    const total  = finished + cancelled + wip + open
+    const parts  = [
+        { label: "cancelled",        count: cancelled, glyph: "▒", color: palette.dim },
+        { label: "finished",         count: finished,  glyph: "█", color: palette.normal },
+        { label: "work-in-progress", count: wip,       glyph: "█", color: palette.accent },
+        { label: "open",             count: open,      glyph: "░", color: palette.normal }
+    ]
+    const cells  = splitCells(innerW, parts.map((p) => p.count))
+    const pct    = (count: number) => `${total > 0 ? Math.round(count / total * 100) : 0}%`
+    const progress = frame("progress", PROGRESS_H, "Task Progress", 1,
+        h(Text, { key: "bar", wrap: "truncate" }, ...(total === 0 ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, "░".repeat(innerW)) ] :
+            parts.map((p, i) => h(Text, { key: i, color: p.color, dimColor: dim }, p.glyph.repeat(cells[i]))))),
+        h(Box, { key: "legend", justifyContent: "center" },
+            h(Text, cx("normal", "truncate", dim && "dimmed"), ...parts.flatMap((p, i) => [
+                i > 0 ? " · " : "", h(Text, { key: `g${i}`, color: p.color, dimColor: dim }, p.glyph), ` ${p.label}: `,
+                h(Text, { key: `n${i}`, ...cx("bold") }, String(p.count)), ` (${pct(p.count)})` ]))))
+
+    /*  the bars of the total usage by times, tokens (stacked by their kinds),
+        and costs (columns), with the bars of a column scaled to its maximum, where each
+        column ends with a gap (which the last column lets run out at the frame)  */
+    const u       = stats.usage
+    const nameW   = 5
+    const valW    = 7
+    const gapW    = 3
+    const cellW   = Math.max(18, Math.floor((innerW + gapW) / 3))
+    const meterW  = cellW - nameW - 1 - valW - gapW
+    const tokens  = u.cread + u.cwrite + u.input + u.output
+    const maxTime = Math.max(u.timeAI, u.timeHR, u.timeReal)
+    const maxCost = Math.max(u.costAI, u.costHR)
+    const cell    = (key: string, name: string, color: string | undefined, meter: string, value: string, last = false) => [
+        name.padEnd(nameW), h(Text, { key, color, dimColor: dim }, meter), " ", last ? value : value.padEnd(valW + gapW) ]
+    const split   = splitCells(tokens > 0 ? meterW : 0, [ u.cread, u.cwrite, u.input, u.output ])
+    const stack   = [ "░", "▒", "▓", "█" ].map((glyph, i) => glyph.repeat(split[i])).join("")
+    const time    = (name: string, color: string | undefined, minutes: number) =>
+        cell(`time-${name}`, name, color, statsBar(minutes, maxTime, meterW), statsHours(minutes))
+    const cost    = (name: string, color: string | undefined, usd: number) =>
+        cell(`cost-${name}`, name, color, statsBar(usd, maxCost, meterW), statsCost(usd), true)
+    const share   = (n: number) => `${tokens > 0 ? Math.round(n / tokens * 100) : 0}%`
+    const legend  = (key: string, left: [ string, string, number ], right: [ string, string, number ]) => [
+        " ".repeat(nameW), h(Text, { key: `${key}-l`, color: palette.accent, dimColor: dim }, left[0]),
+        ` ${left[1]} (${share(left[2])})`.padEnd(14),
+        h(Text, { key: `${key}-r`, color: palette.accent, dimColor: dim }, right[0]),
+        ` ${right[1]} (${share(right[2])})`.padEnd(Math.max(0, cellW - nameW - 1 - 14 - 1)) ]
+    const lines   = [
+        [ ...time("AI", palette.accent, u.timeAI), ...cell("token", "AI", palette.accent, stack.padEnd(meterW), statsTokens(tokens)),
+            ...cost("AI", palette.accent, u.costAI) ],
+        [ ...time("HR", palette.accent, u.timeHR), ...legend("legend1", [ "░", "cread", u.cread ], [ "▓", "input", u.input ]),
+            ...cost("HR", palette.accent, u.costHR) ],
+        [ ...time("real", palette.dim, u.timeReal), ...legend("legend2", [ "▒", "cwrite", u.cwrite ], [ "█", "output", u.output ]) ]
+    ].map((segs, i) => h(Text, { key: `line${i}`, ...cx("normal", "truncate", dim && "dimmed") }, ...segs))
+    const head    = h(Text, { key: "head", ...cx("normal", "bold", "truncate", dim && "dimmed") },
+        "Time:".padEnd(cellW) + "Token:".padEnd(cellW) + "Cost:")
+    const matrix  = frame("usage", USAGE_H, "Usage", 1, ...(usage === null ?
+        [ h(Text, { key: "loading", ...cx("dim", dim && "dimmed") }, "loading …") ] : [ head, ...lines ]))
+    const shown   = [ ...ctx.board.cards.keys() ].filter((id) => !ctx.board.context.has(id)).length
+    return [
+        h(Box, { key: "stats", height: boardH, paddingX: 1, flexDirection: "column", overflow: "hidden" }, chart, progress, matrix),
+        h(Box, { key: "info", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"), [ "statistics of ", h(Text, { key: "n", ...cx("bold") }, String(shown)),
+                ` ${filter !== "" ? "filtered " : ""}tasks` ])),
+        h(Box, { key: "keys1", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"), `/: filter tasks · v: view ${agents !== null ? "agents" : "lanes"}`)),
+        h(Box, { key: "keys2", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
+                `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 

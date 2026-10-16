@@ -20,6 +20,7 @@ import { configSchema, webColorDefaults, webColorNames } from "./ase-config-sche
 import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, dataLang, dataLoad, dataSpans, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
+import { statsOf }               from "./ase-task-board-stats.js"
 import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine } from "./ase-agent-relay-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
@@ -32,7 +33,7 @@ import pkg                       from "../package.json" with { type: "json" }
 export const BOARD_BUILD = (() => {
     const dir  = path.dirname(fileURLToPath(import.meta.url))
     const hash = crypto.createHash("sha1")
-    for (const f of [ "core.js", "filter.js", "graph.js", "web-server.js", "web-client.html", "web-client.css", "web-client.js" ])
+    for (const f of [ "core.js", "filter.js", "graph.js", "stats.js", "web-server.js", "web-client.html", "web-client.css", "web-client.js" ])
         hash.update(fs.readFileSync(path.join(dir, `ase-task-board-${f}`)))
     return `${pkg.version}:${hash.digest("hex")}`
 })()
@@ -429,7 +430,7 @@ const registerPageRoutes = (server: Hapi.Server, log: Log): void => {
 const filterQuery = (request: Hapi.Request): string =>
     typeof request.query.filter === "string" ? request.query.filter : ""
 
-/*  register the view routes of the web board: the board, the graph, and the tasks with their attachments  */
+/*  register the view routes of the web board: the board, the graph, the statistics, and the tasks with their attachments  */
 const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
     /*  the board model, reduced onto the tasks matching the filter query  */
     server.route({
@@ -456,6 +457,15 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
             }
             return h.response({ svg, stats })
         })
+    })
+
+    /*  the statistics of the tasks matching the filter query: the tasks per lifecycle
+        state, their progress, and their total AI usage (loading all plans)  */
+    server.route({
+        method:  "GET",
+        path:    "/task-board/api/stats",
+        handler: guarded(async (request, h) =>
+            h.response(statsOf(filterBoard(await currentBoard(log), filterQuery(request)), await Task.listUsage(log))))
     })
 
     /*  one task plan, rendered in the appearance of SpecBook  */
@@ -730,14 +740,14 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
 
 /*  register the surface routes of the web board: view changes, surface toggles, keep-alive, and change events  */
 const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
-    /*  set the shown view (lanes, graph, or agents) of the web surface, as the view of newly opened web boards  */
+    /*  set the shown view (lanes, graph, stats, or agents) of the web surface, as the view of newly opened web boards  */
     server.route({
         method:  "POST",
         path:    "/task-board/api/view",
         options: { payload: { parse: true, allow: "application/json" } },
         handler: guarded(async (request, h) => {
             const p = request.payload as { view?: unknown } | null
-            if (p === null || (p.view !== "lanes" && p.view !== "graph" && p.view !== "agents"))
+            if (p === null || (p.view !== "lanes" && p.view !== "graph" && p.view !== "stats" && p.view !== "agents"))
                 return h.response({ error: "invalid view request" }).code(400)
             return h.response((await BoardState.setView("web", p.view)).web)
         })

@@ -25,14 +25,17 @@
         <BoardLanes />
         <BoardGraph />
         <BoardAgents />
+        <BoardStats />
     </div>
     <!--  the horizontal scroll bar of the lanes view, resp. the info line
-          of the graph view with the selected task and its status  -->
+          of the graph view with the selected task and its status, of the agents
+          view with the selected agent, and of the stats view with its number of tasks  -->
     <div id="hscroll">
         <button :style="{ visibility: view === 'lanes' && !scroll.all && !grown ? 'visible' : 'hidden' }" @click="scrollBy(-240)">◀</button>
         <span v-if="grown">lane <b>{{ board?.groups[sel.g]?.lanes[sel.l]?.status }}</b> of group <b>{{ board?.groups[sel.g]?.title }}</b> grown<span class="sep">·</span>g shrinks</span>
         <span v-else-if="view === 'lanes' && scroll.info !== ''">{{ scroll.info }}<span class="sep">·</span>{{ scroll.all ? "all visible" : "scroll or ◀/▶" }}</span>
         <span v-else-if="view === 'graph' && selStatus !== null">task: <b>{{ sel.id }}</b><span class="sep">·</span>status: <b>{{ selStatus }}</b></span>
+        <span v-else-if="view === 'stats' && stats !== null">statistics of <b>{{ statsCount }}</b> {{ filter !== "" ? "filtered " : "" }}tasks</span>
         <span v-else-if="view === 'agents' && agentSel !== null">agent: <b>{{ agentLabel(agentSel) }}</b><span class="sep">·</span>host: <b>{{ agentSel.host }}</b><span class="sep">·</span>pid: <b>{{ agentSel.pid }}</b><span class="sep">·</span>{{ agentSel.state }}: <b>{{ agentDuration(agentNow - agentSel.since) }}</b><span class="sep">·</span>heartbeat: <b>{{ agentDuration(agentNow - agentSel.beat) }} ago</b></span>
         <button :style="{ visibility: view === 'lanes' && !scroll.all && !grown ? 'visible' : 'hidden' }" @click="scrollBy(240)">▶</button>
     </div>
@@ -54,10 +57,11 @@ import { computed, onMounted, onBeforeUnmount } from "vue"
 import BoardLanes                               from "./ase-task-board-web-client-lanes.vue"
 import BoardGraph                               from "./ase-task-board-web-client-graph.vue"
 import BoardAgents                              from "./ase-task-board-web-client-agents.vue"
+import BoardStats                               from "./ase-task-board-web-client-stats.vue"
 import TaskDialog                               from "./ase-task-board-web-client-dialog.vue"
 import BoardPopup                               from "./ase-task-board-web-client-popup.vue"
 import {
-    board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, agentNow, online, store,
+    board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, agentNow, online, store, stats,
     surface, titles, grown, agentDuration, agentLabel, cycleView, clearFilter, scrollBy, updateScroll, updateTabScroll,
     reload, startService, stopService
 } from "./ase-task-board-web-client-model"
@@ -69,6 +73,9 @@ const taskCount = computed(() => {
     const cards = board.value?.groups.flatMap((g) => g.lanes).flatMap((l) => l.cards)
     return cards === undefined ? "" : `${cards.filter((c) => c.tone !== "done").length}/${cards.length}`
 })
+
+/*  the number of tasks of the statistics, for the info line of the stats view  */
+const statsCount = computed(() => stats.value?.states.reduce((n, s) => n + s.count, 0) ?? 0)
 
 /*  the status of the selected task, for the info line of the graph view  */
 const selStatus = computed(() => {
@@ -138,6 +145,11 @@ const hints     = computed(() => {
     ], [
         { key: "v",             action: "view lanes" },
         { key: "?",             action: "hide key hints" }
+    ] ] : view.value === "stats" ? [ [
+        { key: "/",             action: "filter tasks" },
+        { key: "v",             action: `view ${agents.value !== null ? "agents" : "lanes"}` }
+    ], [
+        { key: "?",             action: "hide key hints" }
     ] ] : [ [
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⏎/Left-Click",  action: "view task" },
@@ -151,7 +163,7 @@ const hints     = computed(() => {
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "s",             action: `${surface.value.standalone ? "hide" : "show"} standalone tasks` },
         { key: "/",             action: "filter tasks" },
-        { key: "v",             action: `view ${agents.value !== null ? "agents" : "lanes"}` },
+        { key: "v",             action: "view stats" },
         { key: "+/-/0",         action: "zoom in/out/reset" }
     ], [
         { key: "?",             action: "hide key hints" }

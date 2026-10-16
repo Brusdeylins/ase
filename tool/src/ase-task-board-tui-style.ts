@@ -92,9 +92,11 @@ let classes = sheet(palette)
 export const pulseFrames = [ "●", "●", "●", "●", "●", "◉", "⦿", "○", "⦿", "◉" ]
 
 /*  the frames of the spinner of the busy popup, and the left eighth blocks
-    (by number of filled eighths) of its progress bar  */
+    (by number of filled eighths) of its progress bar,
+    and the lower eighth blocks of the columns of the statistics view  */
 export const spinnerFrames = [ "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" ]
 export const eighths       = [ " ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█" ]
+export const lowerEighths  = [ " ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█" ]
 
 /*  load the palette from the configuration and derive the style sheet from it  */
 export const loadPalette = (log: Log): void => {

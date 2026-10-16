@@ -24,6 +24,7 @@ import * as TaskFormat                        from "./ase-task-format.js"
 import { editRefused, editPrompt, requestEdit, requestsOf } from "./ase-task-request.js"
 import type { TaskRequests }                  from "./ase-task-request.js"
 import { filterBoard, dropStandalone }        from "./ase-task-board-filter.js"
+import { statsOf }                            from "./ase-task-board-stats.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
 import { fitGroups, agentLogWidth }           from "./ase-task-board-tui-view.js"
@@ -260,6 +261,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const [ prompt,  setPrompt  ] = React.useState<PromptState | null>(null)
     const [ store,   setStore   ] = React.useState<StoreState | null>(null)
     const [ relayed, setRelayed ] = React.useState<AgentsState | null | undefined>(undefined)
+    const [ usage,   setUsage   ] = React.useState<Map<string, TaskFormat.TaskUsage> | null>(null)
     const [ grow,    setGrow    ] = React.useState(false)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
@@ -401,11 +403,35 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             setView("lanes")
     }, [ view, relayed ])
 
-    /*  cycle through the views: lanes, graph, and (with an agent relay) agents  */
+    /*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents  */
     const cycleView = (): void => {
-        const views: SurfaceView[] = agents !== null ? [ "lanes", "graph", "agents" ] : [ "lanes", "graph" ]
+        const views: SurfaceView[] = agents !== null ? [ "lanes", "graph", "stats", "agents" ] : [ "lanes", "graph", "stats" ]
         setView(views[(views.indexOf(view) + 1) % views.length])
     }
+
+    /*  fetch the AI usage of all tasks whenever the statistics view is shown or the board
+        changes, but only while the statistics view is shown (as each fetching loads all
+        plans), and once known in the background, i.e. without the busy popup  */
+    React.useEffect(() => {
+        if (view !== "stats")
+            return
+        let live = true
+        const load = Task.listUsage(log)
+        const run  = usage === null ? track({ text: "loading usage of tasks" }, load) : load
+        run.then((next) => {
+            if (live)
+                setUsage(next)
+        }).catch((err: unknown) => {
+            log.write("warning", `board: loading usage failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+        return () => {
+            live = false
+        }
+    }, [ log, all, view ])
+
+    /*  the statistics of the shown tasks (while the statistics view is shown)  */
+    const stats = React.useMemo(() =>
+        view === "stats" ? statsOf(board, usage ?? new Map()) : null, [ board, usage, view ])
 
     /*  fetch the plan (with its attachments) of the read dialog whenever it is opened or the board changes
         (the latter in the background, i.e. without the busy popup), together with loading the
@@ -787,7 +813,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }, [ grow, growable ])
 
     const headH  = 3
-    const footH  = surface.keys ? (view === "agents" ? 5 : 6) : 3
+    const footH  = surface.keys ? (view === "agents" || view === "stats" ? 5 : 6) : 3
     const boardH = rows - headH - footH
     const innerW = columns - 2
 
@@ -933,7 +959,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, cardRef, laneRef, groupRef, headRef, agentRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,
-        agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog,
+        agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, stats, usage,
         toggle, toggleFlag, startEdit, startPrompt, startRequest, cancelPrompt, submitPrompt, remove, transferTo, drop
     }
 }

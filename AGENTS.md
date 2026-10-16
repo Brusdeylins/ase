@@ -91,7 +91,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             resp. GitHub, GitLab, and Gitea Issues), and `task-store-issues`
             for the common parts of all issue tracker storage plugins
         -   the task board: `task-board` for the `ase task board` CLI
-            command, `task-board-{core,graph,filter}` for its model,
+            command, `task-board-{core,graph,filter,stats}` for its model,
             `task-board-tui` (split into `task-board-tui-{model,control,view,popup,style}`)
             for the terminal UI, and `task-board-web-server` for the browser
             UI, served by the service, with its client in
@@ -100,7 +100,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             into the modules `task-board-web-client-{model,editor,control}`
             (shared state and service access, task plan editor, and
             actions and key dispatching) and the components
-            `task-board-web-client-{lanes,graph,agents,dialog,popup,title}`
+            `task-board-web-client-{lanes,graph,agents,stats,dialog,popup,title}`
     -   `tool/src/ase-agent-*.ts`: the parts of `ase agent`:
         -   `agent-runtime` for the runtime base of all agents,
             `agent-runtime-tool` for the headless agent tool invocation

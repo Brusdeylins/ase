@@ -70,7 +70,7 @@ export type EventListener = (prjId: string, frame: EventFrame) => void
 
 /*  the results of the core operations  */
 export type ProjectView     = { id: string, lifecycle: TaskFormat.TaskLifecycle, idscheme: string, seqmark: number }
-export type TaskListEntry   = { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader }
+export type TaskListEntry   = { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader, usage?: TaskFormat.TaskUsage }
 export type TaskSaveResult  = { created: boolean, id: string, status: string, tag?: string }
 export type TaskPatchResult = { id: string, status: string, from?: string, references?: number }
 export type KeySetResult    = { created: boolean, key: string, value: API.TaskHeaderValue }
@@ -406,25 +406,33 @@ export class TaskStoreCore {
     /*  ==== task plan operations ====  */
 
     /*  list the task plans passing the "include"/"exclude" state filter,
-        optionally with their entire header  */
+        optionally with their entire header, resp. with the AI usage accounting
+        of their usage attachment (loading each plan)  */
     async taskList (prjId: string, include = "none", exclude = "none", fields = "none"): Promise<TaskListEntry[]> {
         return this.serialize(prjId, async () => {
             const { lifecycle } = await this.project(prjId)
             const states = this.states(lifecycle, include, exclude)
-            if (fields !== "none" && fields !== "header")
-                throw problem(422, `invalid "fields" value "${fields}" (expected: "header" or "none")`)
+            if (fields !== "none" && fields !== "header" && fields !== "usage")
+                throw problem(422, `invalid "fields" value "${fields}" (expected: "header", "usage", or "none")`)
             const entries = await this.store.taskList(prjId)
             entries.sort((a, b) => TaskFormat.compareIds(a.id, b.id))
-            return entries
-                .map((entry) => ({ entry, status: TaskFormat.taskStatus(entry.header, lifecycle) }))
-                .filter(({ status }) => !lifecycle.states.includes(status) || states.includes(status))
-                .map(({ entry, status }) => ({
+            const result = [] as TaskListEntry[]
+            for (const entry of entries) {
+                const status = TaskFormat.taskStatus(entry.header, lifecycle)
+                if (lifecycle.states.includes(status) && !states.includes(status))
+                    continue
+                const att = fields === "usage" ? (await this.store.taskLoad(prjId, entry.id))?.attachment
+                    .find((att) => TaskFormat.isUsage(att) && att.Data !== undefined) : undefined
+                result.push({
                     id:     entry.id,
                     status,
                     title:  entry.title,
                     mtime:  DateTime.fromJSDate(entry.mtime).toFormat("yyyy-LL-dd HH:mm"),
-                    ...(fields === "header" ? { header: entry.header } : {})
-                }))
+                    ...(fields === "header" ? { header: entry.header } : {}),
+                    ...(att?.Data !== undefined ? { usage: TaskFormat.usageOf(att.Data) } : {})
+                })
+            }
+            return result
         })
     }
 

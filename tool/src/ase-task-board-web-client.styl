@@ -736,6 +736,223 @@ header
             color: var(--c-text)
         &.warning, &.error
             color: var(--c-signal)
+
+/*  the statistics view (like the agents view, with framed sections): the column chart of the
+    tasks per state (in the dark colors of their lanes, like in the TUI, with the phases below
+    the states), the stacked bar of the progress of the tasks (the cancelled tasks
+    dim and hatched, the finished ones dark, the work-in-progress ones in accent color, and the
+    open ones light), and the bars of the total usage (the AI and human amounts in accent color,
+    the real times dim, and the stacked token counts in the shades of the accent color)  */
+#stats
+    flex: 1
+    min-height: 0
+    display: flex
+    flex-direction: column
+    gap: 16px
+    padding-top: 8px
+    overflow-y: auto
+    section
+        position: relative
+        border: 1px solid var(--c-border)
+        border-radius: 8px
+        background: var(--c-ground-light)
+        padding: 16px 12px 10px
+    .stitle
+        position: absolute
+        top: 0
+        left: 50%
+        transform: translate(-50%, -50%)
+        max-width: calc(100% - 24px)
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        padding: 0 6px
+        border: 1px solid var(--c-border)
+        border-radius: 5px
+        background: var(--c-paper)
+        color: var(--c-mute)
+        font-size: 0.8125rem
+        font-weight: bold
+    .sempty
+        color: var(--c-mute)
+        font-size: 0.8125rem
+        &.off
+            color: var(--c-signal)
+
+    /*  the column chart, where each column leaves room for its number on top of it  */
+    .schart
+        flex: 1
+        min-height: 200px
+        display: flex
+        flex-direction: column
+    .sgrid
+        flex: 1
+        min-height: 0
+        display: grid
+        grid-template-rows: minmax(0, 1fr) auto auto
+        column-gap: 6px
+    .scol
+        display: flex
+        flex-direction: column
+        justify-content: flex-end
+        align-items: center
+        min-height: 0
+        .scount
+            font-size: 0.8125rem
+            line-height: 1.5
+            font-weight: bold
+            color: var(--c-text-soft)
+        .sbar
+            width: 70%
+            max-width: 96px
+            border: 1px solid var(--c-text)
+            border-bottom: 0
+            border-radius: 3px 3px 0 0
+            background: var(--c-text)
+        &.active
+            .scount
+                color: var(--c-accent-strong)
+            .sbar
+                border-color: var(--c-accent)
+                background: var(--c-accent)
+        &.done
+            .scount
+                color: var(--c-line)
+            .sbar
+                border-color: var(--c-mute)
+                background: var(--c-mute)
+    .sstate
+        padding-top: 4px
+        border-top: 1px solid var(--c-border)
+        text-align: center
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        font-size: 0.75rem
+        font-weight: bold
+        color: var(--c-text-soft)
+        &.active
+            color: var(--c-accent-strong)
+        &.done
+            color: var(--c-line)
+    .sphase
+        margin-top: 4px
+        padding-top: 2px
+        border-top: 1px solid var(--c-border-soft)
+        text-align: center
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        font-size: 0.75rem
+        color: var(--c-mute)
+
+    /*  the stacked bar of the progress, with its legend  */
+    .sstack
+        display: flex
+        height: 22px
+        border: 1px solid var(--c-border)
+        border-radius: 5px
+        overflow: hidden
+        background: var(--c-paper)
+    .spart
+        flex-basis: 0
+        min-width: 2px
+    .slegend
+        display: flex
+        flex-wrap: wrap
+        gap: 4px 16px
+        margin-top: 6px
+        font-size: 0.8125rem
+        color: var(--c-text-soft)
+    .sprogress .slegend
+        justify-content: center
+        column-gap: 0.6rem
+
+    /*  the separators between the entries of the progress legend (like in the TUI)  */
+    .ssep
+        color: var(--c-mute)
+    .sswatch
+        display: inline-block
+        width: 10px
+        height: 10px
+        margin-right: 5px
+        border-radius: 2px
+    .spart, .sswatch
+        &.finished
+            background: var(--c-text)
+        &.cancelled
+            background: repeating-linear-gradient(45deg, var(--c-border-strong) 0 3px, var(--c-ground) 3px 6px)
+        &.wip
+            background: var(--c-accent)
+        &.open
+            background: var(--c-fill)
+
+    /*  the bars of the total AI usage by the times, tokens, and costs (columns)  */
+    .smatrix
+        display: grid
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+        gap: 8px 28px
+        align-items: start
+        font-size: 0.8125rem
+    .shead
+        font-weight: bold
+        color: var(--c-text)
+
+    /*  the legend of the token bar below it, in two columns (cache read and
+        write on the left, input and output on the right), aligned with the bar  */
+    .stokens
+        display: grid
+        grid-template-rows: auto auto
+        grid-auto-flow: column
+        justify-content: start
+        gap: 3px 24px
+        margin: 2px 0 0 calc(2.5em + 6px)
+        color: var(--c-mute)
+    .scell
+        display: flex
+        flex-direction: column
+        gap: 3px
+        min-width: 0
+    .srow
+        display: flex
+        align-items: center
+        gap: 6px
+    .sname
+        flex: 0 0 2.5em
+        color: var(--c-mute)
+    .strack
+        flex: 1
+        min-width: 0
+        height: 16px
+        display: flex
+        border: 1px solid var(--c-border-soft)
+        border-radius: 3px
+        overflow: hidden
+        background: var(--c-paper)
+    .sfill
+        flex: none
+        height: 100%
+    .sval
+        flex: 0 0 3.8em
+        text-align: left
+        font-variant-numeric: tabular-nums
+        font-weight: bold
+        color: var(--c-text)
+    .sfill, .sswatch
+        &.ai
+            background: var(--c-accent)
+        &.hr
+            background: var(--c-accent)
+        &.real
+            background: var(--c-mute)
+        &.cread
+            background: var(--c-accent-line)
+        &.cwrite
+            background: var(--c-accent-light)
+        &.input
+            background: var(--c-accent)
+        &.output
+            background: var(--c-accent-strong)
 footer
     padding: 4px 16px 6px
     text-align: center

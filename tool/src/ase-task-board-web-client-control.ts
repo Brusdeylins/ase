@@ -440,12 +440,15 @@ const onCarryKey = (s: Sel, group: Group, carry: NonNullable<typeof drag.value> 
     }
 }
 
-/*  on the board, navigate the selection like in the TUI (but not while typing the filter)  */
+/*  on the board, navigate the selection like in the TUI (but not while typing the filter),
+    where the statistics view has no selection at all  */
 const onBoardKey = (ev: KeyboardEvent) => {
     if (view.value === "agents") {
         onAgentsKey(ev)
         return
     }
+    if (view.value === "stats")
+        return
     const b = board.value
     if (b === null || b.groups.length === 0 || ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
         return
@@ -611,7 +614,7 @@ const onBusyKey = (ev: KeyboardEvent) => {
 /*  start the key handling: the single-key bindings (the graph view binds its zoom keys
     itself), the dispatching of all other keys, and the swallowing of keys while busy  */
 export const controlStart = () => {
-    Mousetrap.bind("t", () => { if (board.value !== null && view.value !== "agents") toggle("titles", "") })
+    Mousetrap.bind("t", () => { if (board.value !== null && (view.value === "lanes" || view.value === "graph")) toggle("titles", "") })
     Mousetrap.bind("s", () => { if (board.value !== null && view.value === "graph" && task.value === null) toggle("standalone", "") })
     Mousetrap.bind("v", () => { if (task.value === null) cycleView() })
     Mousetrap.bind("?", () => { if (board.value !== null) toggle("keys", "") })

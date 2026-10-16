@@ -35,7 +35,7 @@ export interface TaskStoreClient {
     open   (): Promise<void>
     close  (): Promise<void>
     newId  (title: string, proposal: string, taken: string[]): Promise<{ scheme: string, id: string }>
-    list   (fields?: "header"): Promise<Core.TaskListEntry[]>
+    list   (fields?: "header" | "usage"): Promise<Core.TaskListEntry[]>
     load   (id: string): Promise<API.TaskPlan | null>
     save   (id: string, plan: API.TaskPlan, tag?: string, create?: boolean): Promise<string | undefined>
     patch  (id: string, change: { status?: string, id?: string }): Promise<Core.TaskPatchResult | null>
@@ -143,7 +143,7 @@ export class LocalTaskStoreClient implements TaskStoreClient {
             await entry.opened.then((opened) => opened.store.close(), () => {})
         }
     }
-    list (fields?: "header"): Promise<Core.TaskListEntry[]> {
+    list (fields?: "header" | "usage"): Promise<Core.TaskListEntry[]> {
         return this.core.taskList(this.prjId, "none", "none", fields ?? "none")
     }
     load (id: string): Promise<API.TaskPlan | null> {
@@ -383,7 +383,7 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
     async close (): Promise<void> {
         await this.dispatcher?.close()
     }
-    async list (fields?: "header"): Promise<Core.TaskListEntry[]> {
+    async list (fields?: "header" | "usage"): Promise<Core.TaskListEntry[]> {
         const url = this.tasks + (fields !== undefined ? `?fields=${fields}` : "")
         return (await this.request<{ tasks: Core.TaskListEntry[] }>("GET", url) ?? this.unregistered()).tasks
     }
