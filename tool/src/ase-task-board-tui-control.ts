@@ -11,6 +11,7 @@ import { reachableStates }                    from "./ase-task-board-core.js"
 import { nearestPlace }                       from "./ase-task-board-graph.js"
 import { groupItems, relocate }               from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
+import type { StatsRange }                    from "./ase-task-board-stats.js"
 import { gridColumns }                        from "./ase-task-board-tui-view.js"
 import {
     refSegs, tabFirst, tabLayout, confirmBox, transferBox, CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE
@@ -104,7 +105,7 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     const {
         board, surface, view, setFilter, typing, setTyping, sel, setSel, setDialog, scroll, layout,
         carry, setCarry, opening, cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, boxAt, graphView, toggle, grown, setGrow,
-        cycleView, agentList, agentIdx, selectAgent, scrollLog
+        cycleView, agentList, agentIdx, selectAgent, scrollLog, rangeBoxes, setRange
     } = ctx
     if (handlePopupMouse(ctx, btn, mx, my))
         return
@@ -144,8 +145,13 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
             setTyping(true)
         return
     }
-    if (view === "stats")
+    if (view === "stats") {
+        /*  a click onto a time range button of the statistics view selects the time range  */
+        const range = btn === 0 ? boxAt(rangeBoxes.current, mx, my) : undefined
+        if (range !== undefined)
+            setRange(range as StatsRange)
         return
+    }
     if ((btn === 64 || btn === 65) && view === "lanes") {
         /*  the wheel over a lane scrolls it, by stepping the selection
             through its cards (entering the lane at its first card)  */
@@ -522,7 +528,7 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
         exit, all, board, surface, view, setView, typing, setTyping, sel, setSel, dialog, setDialog,
         notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
-        prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, startRequest, cycleView, selectAgent, scrollLog, logH
+        prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, startRequest, cycleView, selectAgent, scrollLog, logH, stepRange
     } = ctx
     if (notice !== null)
         setNotice(null)
@@ -608,7 +614,10 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         return
     }
     if (view === "stats") {
-        if (input === "?")
+        /*  the left/right arrows step through the time ranges of the statistics  */
+        if (key.leftArrow || key.rightArrow)
+            stepRange(key.leftArrow ? -1 : 1)
+        else if (input === "?")
             toggleFlag("keys")
         return
     }

@@ -750,6 +750,11 @@ export const usageKeys = [
 /*  an amount of AI usage  */
 export type TaskUsage = Partial<Record<(typeof usageKeys)[number], number>>
 
+/*  the period of the AI usage accounting of a task: the "Created" and "Modified"
+    times of its usage attachment (empty if absent), i.e., the times of its first and
+    last booking, between which the accounted usage accrued  */
+export type TaskUsagePeriod = { created: string, modified: string }
+
 /*  parse the YAML data of a usage attachment into its amounts (leniently,
     i.e., with unparsable data and non-numeric amounts taken as absent)  */
 export const usageOf = (data: string): TaskUsage => {

@@ -4,13 +4,19 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 -->
 
-<!--  the statistics view (like in the TUI): the framed column chart "Tasks per State" of the numbers
+<!--  the statistics view (like in the TUI): the buttons of the time ranges, the framed column chart "Tasks per State" of the numbers
       of tasks per lifecycle state (labeled by state and phase, in the colors of their lanes), the
       framed stacked bar "Task Progress" of the cancelled, finished, work-in-progress, and open tasks,
       and the framed bars "Usage" of the total times, tokens, and costs of the tasks, with the
       bars of a column scaled to the maximum of the column  -->
 <template>
     <div v-show="view === 'stats'" id="stats">
+        <div class="sranges">
+            <template v-for="(r, i) in statsRanges" :key="r.range">
+                <span v-if="i > 0" class="ssep">·</span>
+                <button :class="{ on: r.range === statsRange }" @click="selectStatsRange(r.range)">{{ r.label }}</button>
+            </template>
+        </div>
         <div v-if="stats === null" class="sempty" :class="{ off: statsError !== null }">{{ statsError ?? "loading …" }}</div>
         <template v-else>
             <section class="schart">
@@ -78,7 +84,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import {
-    view, stats, statsError
+    view, stats, statsError, statsRange, statsRanges, selectStatsRange
 } from "./ase-task-board-web-client-model"
 
 /*  the token counts of the stacked token bar, the total usage

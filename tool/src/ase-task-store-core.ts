@@ -70,7 +70,7 @@ export type EventListener = (prjId: string, frame: EventFrame) => void
 
 /*  the results of the core operations  */
 export type ProjectView     = { id: string, lifecycle: TaskFormat.TaskLifecycle, idscheme: string, seqmark: number }
-export type TaskListEntry   = { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader, usage?: TaskFormat.TaskUsage }
+export type TaskListEntry   = { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader, usage?: TaskFormat.TaskUsage, usagePeriod?: TaskFormat.TaskUsagePeriod }
 export type TaskSaveResult  = { created: boolean, id: string, status: string, tag?: string }
 export type TaskPatchResult = { id: string, status: string, from?: string, references?: number }
 export type KeySetResult    = { created: boolean, key: string, value: API.TaskHeaderValue }
@@ -407,7 +407,7 @@ export class TaskStoreCore {
 
     /*  list the task plans passing the "include"/"exclude" state filter,
         optionally with their entire header, resp. with the AI usage accounting
-        of their usage attachment (loading each plan)  */
+        of their usage attachment and its period (loading each plan)  */
     async taskList (prjId: string, include = "none", exclude = "none", fields = "none"): Promise<TaskListEntry[]> {
         return this.serialize(prjId, async () => {
             const { lifecycle } = await this.project(prjId)
@@ -429,7 +429,10 @@ export class TaskStoreCore {
                     title:  entry.title,
                     mtime:  DateTime.fromJSDate(entry.mtime).toFormat("yyyy-LL-dd HH:mm"),
                     ...(fields === "header" ? { header: entry.header } : {}),
-                    ...(att?.Data !== undefined ? { usage: TaskFormat.usageOf(att.Data) } : {})
+                    ...(att?.Data !== undefined ? {
+                        usage:       TaskFormat.usageOf(att.Data),
+                        usagePeriod: { created: att.Created ?? "", modified: att.Modified ?? "" }
+                    } : {})
                 })
             }
             return result

@@ -13,7 +13,7 @@ import {
     api, groupItems, relocate,
     board, actionError, actionNote, view, graph, task, sel, grow, editing, confirmDel, transfer, prompt,
     tab, drag, busy, boardEl, graphEl, planEl, filterEl, agentList, agentSel, logEl,
-    surface, growable, grown, openTask, closeTask, selectTab, selectAgent, toggle, cycleView
+    surface, growable, grown, openTask, closeTask, selectTab, selectAgent, toggle, cycleView, stepStatsRange
 } from "./ase-task-board-web-client-model"
 import { startEdit, startNew, onEditorKey } from "./ase-task-board-web-client-editor"
 
@@ -441,14 +441,22 @@ const onCarryKey = (s: Sel, group: Group, carry: NonNullable<typeof drag.value> 
 }
 
 /*  on the board, navigate the selection like in the TUI (but not while typing the filter),
-    where the statistics view has no selection at all  */
+    where the statistics view has no selection at all, but steps through its time ranges  */
 const onBoardKey = (ev: KeyboardEvent) => {
     if (view.value === "agents") {
         onAgentsKey(ev)
         return
     }
-    if (view.value === "stats")
+    if (view.value === "stats") {
+        /*  the left/right arrows step through the time ranges of the statistics  */
+        if (ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
+            return
+        if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+            stepStatsRange(ev.key === "ArrowLeft" ? -1 : 1)
+            ev.preventDefault()
+        }
         return
+    }
     const b = board.value
     if (b === null || b.groups.length === 0 || ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
         return

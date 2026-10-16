@@ -20,7 +20,8 @@ import { configSchema, webColorDefaults, webColorNames } from "./ase-config-sche
 import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, dataLang, dataLoad, dataSpans, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
-import { statsOf }               from "./ase-task-board-stats.js"
+import { statsOf, statsRanges }  from "./ase-task-board-stats.js"
+import type { StatsRange }       from "./ase-task-board-stats.js"
 import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine } from "./ase-agent-relay-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
@@ -459,13 +460,18 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         })
     })
 
-    /*  the statistics of the tasks matching the filter query: the tasks per lifecycle
-        state, their progress, and their total AI usage (loading all plans)  */
+    /*  the statistics of the tasks matching the filter query within the time range: the tasks
+        per lifecycle state, their progress, and their total AI usage (loading all plans)  */
     server.route({
         method:  "GET",
         path:    "/task-board/api/stats",
-        handler: guarded(async (request, h) =>
-            h.response(statsOf(filterBoard(await currentBoard(log), filterQuery(request)), await Task.listUsage(log))))
+        handler: guarded(async (request, h) => {
+            const range = typeof request.query.range === "string" ? request.query.range : "total"
+            if (!statsRanges.includes(range as StatsRange))
+                return h.response({ error: "invalid statistics range" }).code(400)
+            return h.response(statsOf(filterBoard(await currentBoard(log), filterQuery(request)),
+                await Task.listUsage(log), range as StatsRange))
+        })
     })
 
     /*  one task plan, rendered in the appearance of SpecBook  */

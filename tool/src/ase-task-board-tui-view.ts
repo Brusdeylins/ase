@@ -12,6 +12,7 @@ import { splitHeight, toneOf, cardLabel, groupLabel, editMarker, clampLines, glu
 import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
+import { statsRanges, statsRangeLabels }      from "./ase-task-board-stats.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
 import { palette, dashed, dashedBold, cx, isClass, pulseFrames, lowerEighths } from "./ase-task-board-tui-style.js"
 
@@ -587,8 +588,10 @@ export const renderAgents = (ctx: BoardCtx) => {
     ]
 }
 
-/*  the heights of the frames "Task Progress" and "Usage" of the statistics view
-    (each with an inner blank line at its top and bottom)  */
+/*  the heights of the buttons of the time ranges (with a blank line below them), and of the
+    frames "Task Progress" and "Usage" (each with an inner blank line at its top and bottom)
+    of the statistics view  */
+const RANGES_H   = 2
 const PROGRESS_H = 6
 const USAGE_H    = 8
 
@@ -631,9 +634,9 @@ const statsBar = (value: number, max: number, width: number): string => {
 /*  render the statistics view: the framed column chart "Tasks per State" of the numbers of tasks per
     lifecycle state (labeled by state and phase, in the colors of their lanes), the framed stacked bar
     "Task Progress" of the cancelled, finished, work-in-progress, and open tasks, and the framed bars
-    "Usage" of the total times, tokens, and costs of the tasks  */
+    "Usage" of the total times, tokens, and costs of the tasks, below the buttons of the time ranges  */
 export const renderStats = (ctx: BoardCtx) => {
-    const { stats, usage, columns, boardH, dim, mouse, filter, agents } = ctx
+    const { stats, usage, range, rangeRef, columns, boardH, dim, mouse, filter, agents } = ctx
     const innerW = Math.max(20, columns - 6)
     const tint   = (tone: string) => tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
     const frame  = (key: string, height: number, title: string, padY: number, ...content: React.ReactNode[]) =>
@@ -649,7 +652,7 @@ export const renderStats = (ctx: BoardCtx) => {
         like in the web board), the columns stand on a base line above their states (drawn with
         the upper eighth block, so it directly touches the columns above it), and each phase is
         labeled below its line spanning its states (like in the web board)  */
-    const chartH = Math.max(7, boardH - PROGRESS_H - USAGE_H)
+    const chartH = Math.max(7, boardH - RANGES_H - PROGRESS_H - USAGE_H)
     const areaH  = chartH - 6
     const colW   = Math.max(2, Math.floor(innerW / stats.states.length))
     const lineW  = colW - 1
@@ -742,14 +745,21 @@ export const renderStats = (ctx: BoardCtx) => {
         "Time:".padEnd(cellW) + "Token:".padEnd(cellW) + "Cost:")
     const matrix  = frame("usage", USAGE_H, "Usage", 1, ...(usage === null ?
         [ h(Text, { key: "loading", ...cx("dim", dim && "dimmed") }, "loading …") ] : [ head, ...lines ]))
-    const shown   = [ ...ctx.board.cards.keys() ].filter((id) => !ctx.board.context.has(id)).length
+
+    /*  the buttons of the time ranges, separated by dots, with the one of the shown time range highlighted  */
+    const ranges  = h(Box, { key: "ranges", height: RANGES_H, flexShrink: 0, justifyContent: "center" },
+        ...statsRanges.flatMap((r, i) => [
+            ...(i > 0 ? [ h(Text, { key: `sep${i}`, ...cx("dim", dim && "dimmed") }, " · ") ] : []),
+            h(Box, { key: r, ref: rangeRef(r) },
+                h(Text, cx("button", r === range && "button-active", dim && "dimmed"), ` ${statsRangeLabels[r]} `)) ]))
+    const shown   = stats.states.reduce((n, s) => n + s.count, 0)
     return [
-        h(Box, { key: "stats", height: boardH, paddingX: 1, flexDirection: "column", overflow: "hidden" }, chart, progress, matrix),
+        h(Box, { key: "stats", height: boardH, paddingX: 1, flexDirection: "column", overflow: "hidden" }, ranges, chart, progress, matrix),
         h(Box, { key: "info", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"), [ "statistics of ", h(Text, { key: "n", ...cx("bold") }, String(shown)),
-                ` ${filter !== "" ? "filtered " : ""}tasks` ])),
+                ` ${filter !== "" ? "filtered " : ""}tasks`, ...(range !== "total" ? [ " ", h(Text, { key: "r", ...cx("bold") }, statsRangeLabels[range]) ] : []) ])),
         h(Box, { key: "keys1", ...cx("bar") },
-            h(Text, cx("hint", dim && "dimmed"), `/: filter tasks · v: view ${agents !== null ? "agents" : "lanes"}`)),
+            h(Text, cx("hint", dim && "dimmed"), `←/→: select time range · /: filter tasks · v: view ${agents !== null ? "agents" : "lanes"}`)),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))

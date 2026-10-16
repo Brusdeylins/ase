@@ -633,6 +633,11 @@ Response `200`:
   attachment), keyed by `time.ai`, `time.hr`, `time.real`,
   `token.cread`, `token.cwrite`, `token.input`, `token.output`,
   `cost.ai`, and `cost.hr`.
+- `usagePeriod`: the period of the usage attachment of the plan
+  (present together with `usage`), as an object with its `created` and
+  `modified` times (the `Created` and `Modified` keys of the
+  attachment, i.e., the times of its first and last booking, empty if
+  absent).
 
 An empty `tasks` array is returned if no task plans exist.
 

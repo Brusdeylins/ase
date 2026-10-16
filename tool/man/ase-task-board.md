@@ -177,7 +177,9 @@ cycles).
 
 The third view `stats` shows the statistics of the tasks matching the
 `filter:` field (all tasks if empty), refreshed on every change of the
-tasks:
+tasks, within the time range selected by the buttons `total` (all
+tasks), `within last 30 days`, and `within last 7 days` on its top
+(selected via `←`/`→` or a click, initially `total`):
 
 - `Tasks per State`: a column chart with the number of tasks of each
   state of the task lifecycle model, labeled by the state and, below,
@@ -193,6 +195,15 @@ tasks:
   `token` (all tokens, stacked by the cache read, cache write, input,
   and output tokens), and its `cost` (AI and human costs, in USD), with
   the bars of a column scaled to the maximum of the column.
+
+Within the last 30 or 7 days, a task counts only if the period from
+its `Created:` to its `Modified:` frontmatter key overlaps with the
+time range, and the usage of a task counts only with the overlapping
+part of the period from the `Created:` to the `Modified:` key of its
+usage attachment (i.e., the times of its first and last booking). As
+the usage attachment does not track when the usage accrued, the usage
+is taken as being evenly spread over this period, so the usage within
+these time ranges is just an approximation.
 
 ### Agents View
 
@@ -315,6 +326,11 @@ under the kitty keyboard protocol.
 - `s`: Hide or show the standalone tasks, i.e., the tasks without any
   predecessors and successors (persisted).
 - `+`/`-`/`0`: Zoom in, out, resp. reset the zoom (web board only).
+
+### Stats View
+
+- `←`/`→`: Select the previous/next time range (`total`, `within last
+  30 days`, or `within last 7 days`).
 
 ### Agents View
 

@@ -49,9 +49,9 @@ type GroupLayout = { title: string, lanes: LaneLayout[] }
 /*  a card of the board: the task id, its title, its group (epic, else empty),
     its lifecycle state (its lane), its actual status (differing from its lifecycle
     state if foreign to the lifecycle model), the state of its edit requests
-    (see "ase agent editor", else empty), its assignee (else empty), and the data
-    needed for ordering and the graph  */
-export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", assignee: string, after: string[], created: string }
+    (see "ase agent editor", else empty), its assignee (else empty), the data
+    needed for ordering and the graph, and the time of its last modification  */
+export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", assignee: string, after: string[], created: string, modified: string }
 
 /*  the marker of the state of the edit requests of a card (else empty):
     requested, being processed, or failed  */
@@ -490,7 +490,9 @@ export const buildBoard = async (log: Log): Promise<Board> => {
                 `"${lifecycle.name}" (shown as "${status}")`)
         const group  = (keys.get("Group") ?? "").trim()
         const assignee = (keys.get("Assignee") ?? "").trim()
-        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), assignee, after, created: keys.get("Created") ?? "" })
+        const created  = keys.get("Created")  ?? ""
+        const modified = keys.get("Modified") ?? ""
+        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), assignee, after, created, modified })
     }
 
     /*  derive predecessors (known ones only) and successors  */

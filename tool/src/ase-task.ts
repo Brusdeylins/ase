@@ -644,11 +644,12 @@ export class Task {
         })
     }
 
-    /*  list the AI usage accounting (the amounts of the usage attachment)
+    /*  list the AI usage accounting (the amounts of the usage attachment and its period)
         of all persisted tasks having one, keyed by task id  */
-    static async listUsage (log: Log): Promise<Map<string, TaskUsage>> {
+    static async listUsage (log: Log): Promise<Map<string, { usage: TaskUsage, period: TaskFormat.TaskUsagePeriod }>> {
         return Task.with(log, async (client) =>
-            new Map((await client.list("usage")).flatMap((item) => item.usage !== undefined ? [ [ item.id, item.usage ] ] : [])))
+            new Map((await client.list("usage")).flatMap((item) => item.usage !== undefined ?
+                [ [ item.id, { usage: item.usage, period: item.usagePeriod ?? { created: "", modified: "" } } ] ] : [])))
     }
 
     /*  get the lifecycle status of a task plan: the "Status:" frontmatter

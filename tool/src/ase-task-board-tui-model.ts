@@ -24,7 +24,8 @@ import * as TaskFormat                        from "./ase-task-format.js"
 import { editRefused, editPrompt, requestEdit, requestsOf } from "./ase-task-request.js"
 import type { TaskRequests }                  from "./ase-task-request.js"
 import { filterBoard, dropStandalone }        from "./ase-task-board-filter.js"
-import { statsOf }                            from "./ase-task-board-stats.js"
+import { statsOf, statsRanges }               from "./ase-task-board-stats.js"
+import type { StatsRange }                    from "./ase-task-board-stats.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
 import { fitGroups, agentLogWidth }           from "./ase-task-board-tui-view.js"
@@ -137,14 +138,15 @@ const useBusy = () => {
 }
 
 /*  the rendered boxes for the mouse hit-testing: the card, lane, and group boxes of the
-    lane view, the agent cards of the agents view, the view value, filter field, and clear
-    button of the header, and the graph viewport content  */
+    lane view, the agent cards of the agents view, the time range buttons of the statistics
+    view, the view value, filter field, and clear button of the header, and the graph viewport content  */
 const useHitBoxes = () => {
     const cardBoxes  = React.useRef(new Map<string, DOMElement>())
     const laneBoxes  = React.useRef(new Map<string, DOMElement>())
     const groupBoxes = React.useRef(new Map<string, DOMElement>())
     const headBoxes  = React.useRef(new Map<string, DOMElement>())
     const agentBoxes = React.useRef(new Map<string, DOMElement>())
+    const rangeBoxes = React.useRef(new Map<string, DOMElement>())
     const graphView  = React.useRef<DOMElement | null>(null)
     const register   = (map: Map<string, DOMElement>, key: string) => (el: DOMElement | null) => {
         if (el !== null)
@@ -157,7 +159,8 @@ const useHitBoxes = () => {
     const groupRef   = (g: number) => register(groupBoxes.current, String(g))
     const headRef    = (key: "view" | "filter" | "clear") => register(headBoxes.current, key)
     const agentRef   = (id: string) => register(agentBoxes.current, id)
-    return { cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, graphView, cardRef, laneRef, groupRef, headRef, agentRef }
+    const rangeRef   = (range: StatsRange) => register(rangeBoxes.current, range)
+    return { cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, rangeBoxes, graphView, cardRef, laneRef, groupRef, headRef, agentRef, rangeRef }
 }
 
 /*  find the registered box under a (0-based) mouse position  */
@@ -261,7 +264,8 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const [ prompt,  setPrompt  ] = React.useState<PromptState | null>(null)
     const [ store,   setStore   ] = React.useState<StoreState | null>(null)
     const [ relayed, setRelayed ] = React.useState<AgentsState | null | undefined>(undefined)
-    const [ usage,   setUsage   ] = React.useState<Map<string, TaskFormat.TaskUsage> | null>(null)
+    const [ usage,   setUsage   ] = React.useState<Awaited<ReturnType<typeof Task.listUsage>> | null>(null)
+    const [ range,   setRange   ] = React.useState<StatsRange>("total")
     const [ grow,    setGrow    ] = React.useState(false)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
@@ -276,7 +280,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const { busy, busyTick, track } = useBusy()
 
     /*  the rendered boxes for the mouse hit-testing  */
-    const { cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, graphView, cardRef, laneRef, groupRef, headRef, agentRef } = useHitBoxes()
+    const { cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, rangeBoxes, graphView, cardRef, laneRef, groupRef, headRef, agentRef, rangeRef } = useHitBoxes()
 
     /*  report mouse clicks while the board runs and mouse support is enabled
         (disabling it gives the regular text selection of the terminal back)  */
@@ -429,9 +433,16 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         }
     }, [ log, all, view ])
 
-    /*  the statistics of the shown tasks (while the statistics view is shown)  */
+    /*  the statistics of the shown tasks within the time range (while the statistics view is shown)  */
     const stats = React.useMemo(() =>
-        view === "stats" ? statsOf(board, usage ?? new Map()) : null, [ board, usage, view ])
+        view === "stats" ? statsOf(board, usage ?? new Map(), range) : null, [ board, usage, view, range ])
+
+    /*  step the time range of the statistics to the previous or next one (without wrapping around)  */
+    const stepRange = (delta: number): void => {
+        const k = statsRanges.indexOf(range) + delta
+        if (k >= 0 && k < statsRanges.length)
+            setRange(statsRanges[k])
+    }
 
     /*  fetch the plan (with its attachments) of the read dialog whenever it is opened or the board changes
         (the latter in the background, i.e. without the busy popup), together with loading the
@@ -956,10 +967,10 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         log, exit, columns, rows, all, board, surface, view, setView, filter, setFilter, typing, setTyping,
         sel, setSel, dialog, setDialog, scroll, layout, notice, setNotice, carry, setCarry, cycle,
         confirm, setConfirm, transfer, setTransfer, prompt, setPrompt, mouse, setMouse, opening, grown, setGrow,
-        cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, cardRef, laneRef, groupRef, headRef, agentRef, boxAt, graphView,
+        cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, rangeBoxes, cardRef, laneRef, groupRef, headRef, agentRef, rangeRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,
-        agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, stats, usage,
+        agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, stats, usage, range, setRange, stepRange,
         toggle, toggleFlag, startEdit, startPrompt, startRequest, cancelPrompt, submitPrompt, remove, transferTo, drop
     }
 }

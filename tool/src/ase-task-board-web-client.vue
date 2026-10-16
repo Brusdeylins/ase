@@ -35,7 +35,7 @@
         <span v-if="grown">lane <b>{{ board?.groups[sel.g]?.lanes[sel.l]?.status }}</b> of group <b>{{ board?.groups[sel.g]?.title }}</b> grown<span class="sep">·</span>g shrinks</span>
         <span v-else-if="view === 'lanes' && scroll.info !== ''">{{ scroll.info }}<span class="sep">·</span>{{ scroll.all ? "all visible" : "scroll or ◀/▶" }}</span>
         <span v-else-if="view === 'graph' && selStatus !== null">task: <b>{{ sel.id }}</b><span class="sep">·</span>status: <b>{{ selStatus }}</b></span>
-        <span v-else-if="view === 'stats' && stats !== null">statistics of <b>{{ statsCount }}</b> {{ filter !== "" ? "filtered " : "" }}tasks</span>
+        <span v-else-if="view === 'stats' && stats !== null">statistics of <b>{{ statsCount }}</b> {{ filter !== "" ? "filtered " : "" }}tasks<template v-if="stats.range !== 'total'">{{ " " }}<b>{{ statsRanges.find((r) => r.range === stats?.range)?.label }}</b></template></span>
         <span v-else-if="view === 'agents' && agentSel !== null">agent: <b>{{ agentLabel(agentSel) }}</b><span class="sep">·</span>host: <b>{{ agentSel.host }}</b><span class="sep">·</span>pid: <b>{{ agentSel.pid }}</b><span class="sep">·</span>{{ agentSel.state }}: <b>{{ agentDuration(agentNow - agentSel.since) }}</b><span class="sep">·</span>heartbeat: <b>{{ agentDuration(agentNow - agentSel.beat) }} ago</b></span>
         <button :style="{ visibility: view === 'lanes' && !scroll.all && !grown ? 'visible' : 'hidden' }" @click="scrollBy(240)">▶</button>
     </div>
@@ -61,7 +61,7 @@ import BoardStats                               from "./ase-task-board-web-clien
 import TaskDialog                               from "./ase-task-board-web-client-dialog.vue"
 import BoardPopup                               from "./ase-task-board-web-client-popup.vue"
 import {
-    board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, agentNow, online, store, stats,
+    board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, agentNow, online, store, stats, statsRanges,
     surface, titles, grown, agentDuration, agentLabel, cycleView, clearFilter, scrollBy, updateScroll, updateTabScroll,
     reload, startService, stopService
 } from "./ase-task-board-web-client-model"
@@ -146,6 +146,7 @@ const hints     = computed(() => {
         { key: "v",             action: "view lanes" },
         { key: "?",             action: "hide key hints" }
     ] ] : view.value === "stats" ? [ [
+        { key: "←/→",           action: "select time range" },
         { key: "/",             action: "filter tasks" },
         { key: "v",             action: `view ${agents.value !== null ? "agents" : "lanes"}` }
     ], [
