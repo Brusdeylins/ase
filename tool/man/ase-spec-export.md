@@ -49,12 +49,14 @@ The MCP tool `ase_specbook_export` provides the same to the skills.
   the filename extension (`json`, `json5`, `yaml` or `yml`, `toon`,
   `html` or `htm`, `pdf`, and `md` or `markdown`, case-insensitive)
   unless explicitly given as a prefix of at least two characters (out
-  of the same names), where a plain `-` defaults to `json`. The log
-  is written to standard error (see `ase`(1)), so it never mixes into
-  the export on standard output. An unknown format prefix and a not inferable format are errors. A relative
-  *file* is relative to the current working directory. Default: the
-  HTML rendering into `index.html` inside the specification base
-  directory (e.g., `docs/specbook/index.html`).
+  of the same names), where a plain `-` defaults to `json`.
+
+  The log is written to standard error (see `ase`(1)), so it never
+  mixes into the export on standard output. An unknown format prefix and
+  a not inferable format are errors. A relative *file* is relative to the
+  current working directory. Default: the HTML rendering into
+  `index.html` inside the specification base directory (e.g.,
+  `docs/specbook/index.html`).
 
 - \[`-w`|`--watch`\]:
   Do not terminate after the initial export, but keep the outputs in

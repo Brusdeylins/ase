@@ -29,26 +29,29 @@
 
 **ase agent editor** processes the edit requests of tasks. Unlike the
 phase agents, it is bound to no phase and supports all task lifecycle
-models (`solo`, `team`, and `enterprise`). An edit request is added by
-key `E` of the task board (see `ase-task-board`(1)) or by `ase task
-request` *id* `edit` *prompt* (see `ase-task-request`(1)) as an
-attachment of type `text/plain; charset=utf-8; kind="edit"` with the
-prompt as its data, mirrored in the tag `ase-agent-editor:pending` of
-the task (aggregated as `:active` while one is processed and as
-`:failed` once one failed).
+models (`solo`, `team`, and `enterprise`).
+
+An edit request is added by key `E` of the task board (see
+`ase-task-board`(1)) or by `ase task request` *id* `edit` *prompt* (see
+`ase-task-request`(1)) as an attachment of type
+`text/plain; charset=utf-8; kind="edit"` with the prompt as its data,
+mirrored in the tag `ase-agent-editor:pending` of the task (aggregated
+as `:active` while one is processed and as `:failed` once one failed).
 
 The editor observes the tasks with this tag, except those in an activity
 status of the task lifecycle model, where the task is actively worked on
 (`team`: `IMPLEMENTING`; `enterprise`: `PLANNING`, `IMPLEMENTING`,
 `APPROVING`, and `INTEGRATING`), and those still held by a phase agent
 (tagged `ase-agent-`*kind*`:active`), which wait until their status
-changes resp. their tag is released. It claims the oldest request of
-such a task in a single conditional save by turning it into
-`kind="edit-running"` and setting the `Assignee:` of the task to its
-agent name (remembering the previous assignee in the request), which
-keeps all other agents off the task during the edit without touching its
-status. The request of a finished task, resp. a request with an empty
-prompt, is turned into `kind="edit-failed"` instead.
+changes resp. their tag is released.
+
+It claims the oldest request of such a task in a single conditional
+save by turning it into `kind="edit-running"` and setting the
+`Assignee:` of the task to its agent name (remembering the previous
+assignee in the request), which keeps all other agents off the task
+during the edit without touching its status. The request of a finished
+task, resp. a request with an empty prompt, is turned into
+`kind="edit-failed"` instead.
 
 It then edits the plan via the skill invocation `ase-task-edit --plan
 REFINE --next DONE` *id*`:` *prompt* (with the whitespace of the prompt
@@ -66,8 +69,10 @@ plan content actually changed (its frontmatter, except `Status:`,
 the skill reported no error, or else turns it back into `kind="edit"` on
 an interrupt, resp. into `kind="edit-failed"` (with the reason, e.g.,
 `skill reported an error`, `agent tool failed`, or `plan not changed`)
-otherwise. A finalization failing even after its retries is retried on
-every further dispatching.
+otherwise.
+
+A finalization failing even after its retries is retried on every
+further dispatching.
 
 On its start, the editor marks the requests left in
 `kind="edit-running"` by any terminated editor process of the same user
@@ -96,11 +101,12 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`-n`|`--name` *name*\]: The name of the agent (default:
       `editor`): up to 64 letters, digits, underscores, and dashes,
       starting with a letter or digit, other than the name of another
-      agent kind, `relay`, or `fleet`. It names the agent in its log
-      lines, its processing log attachment `agent:`*name*, the
-      `Assignee:` of the tasks it processes, its temporary directory,
-      and its process files `.ase/agent/`*name*`.yaml` and
-      `.ase/agent/`*name*`.log`. Agents of the kind `editor` under
+      agent kind, `relay`, or `fleet`.
+
+      It names the agent in its log lines, its processing log attachment
+      `agent:`*name*, the `Assignee:` of the tasks it processes, its
+      temporary directory, and its process files `.ase/agent/`*name*`.yaml`
+      and `.ase/agent/`*name*`.log`. Agents of the kind `editor` under
       different names form a pool, competing for the same tasks and
       processing them in parallel to each other.
 
@@ -139,10 +145,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
       `worktree` value is processed in its own temporary Git worktree of
       this clone, and changed branches are pushed back to its origin
       (default: none, i.e., all tasks are processed in the Git working
-      copy the agent is started in, which is hence mandatory). Requires
-      a task store not located in the working copy (i.e., not a local
-      `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES** in
-      `ase-agent`(1).
+      copy the agent is started in, which is hence mandatory).
+
+      Requires a task store not located in the working copy (i.e., not a
+      local `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES**
+      in `ase-agent`(1).
 
     - \[`-d`|`--tempdir` *dir*\]: Create the temporary directory of the
       agent as the sub-directory *name* of *dir*, where `%p` is expanded

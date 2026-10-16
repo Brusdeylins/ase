@@ -23,14 +23,15 @@ via `--taken`, plus the reserved id `default`:
   lower-cased, and joined with `-`).
 
 - `seq`\[`:`*template*\]:
-  The highest sequence number of all ids matching *template* plus
-  one, but at least the high-water mark of all ids ever removed
-  (deleted, purged, or renamed) or allocated plus one, so the number
-  of such a task is never reused. Ids not matching the current
-  *template* (e.g., after a template change) are ignored. The
-  allocated number is *reserved* by raising the high-water mark
-  atomically, so a concurrent allocation never yields the same id.
-  The *title* is not used.
+  The highest sequence number of all ids matching *template* plus one,
+  but at least the high-water mark of all ids ever removed (deleted,
+  purged, or renamed) or allocated plus one, so the number of such a
+  task is never reused. Ids not matching the current *template* (e.g.,
+  after a template change) are ignored.
+
+  The allocated number is *reserved* by raising the high-water mark
+  atomically, so a concurrent allocation never yields the same id. The
+  *title* is not used.
 
 - `any`:
   The proposed id of `--proposal`, sanitized (whitespace runs replaced

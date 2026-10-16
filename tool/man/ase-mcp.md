@@ -11,11 +11,12 @@
 stdio transport: it accepts MCP messages on standard input, forwards
 them to the per-project background service of `ase-service`(1) via the
 Streamable HTTP transport (`http://127.0.0.1:`*port*`/mcp`), and writes
-the responses to standard output. It is configured as the stdio MCP
-server `ase` of the *ASE* plugin in the agent tool and is not intended
-to be invoked directly by end users. All log messages go to standard
-error (or to the file of the global `--log-file` option), as standard
-output carries the MCP protocol.
+the responses to standard output.
+
+It is configured as the stdio MCP server `ase` of the *ASE* plugin in
+the agent tool and is not intended to be invoked directly by end users.
+All log messages go to standard error (or to the file of the global
+`--log-file` option), as standard output carries the MCP protocol.
 
 On start, the service of the project is probed and auto-started (via
 `ase service start`) if it is not running yet. The bridge then lives as
@@ -40,10 +41,12 @@ answers all MCP messages in-process through the same set of MCP tools
 the service provides (covering the MCP handshake and the tool listing),
 holds back all tool calls, and waits until the `SessionStart` hook (see
 `ase-hook`(1)) recorded the project directory of the session (with id
-`COPILOT_AGENT_SESSION_ID`). It then switches into this directory,
-starts or connects the service of the project there, and forwards the
-held tool calls. If no project directory is recorded within 30 seconds
-of the first held tool call, it falls back to the current directory.
+`COPILOT_AGENT_SESSION_ID`).
+
+It then switches into this directory, starts or connects the service
+of the project there, and forwards the held tool calls. If no project
+directory is recorded within 30 seconds of the first held tool call, it
+falls back to the current directory.
 
 The service provides the `ase_*` MCP tools of the skills, e.g.,
 `ase_ping`, `ase_config_get`, `ase_config_set`, `ase_config_delete`,

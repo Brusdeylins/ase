@@ -29,12 +29,13 @@ statusline, i.e., the `ase statusline` renderer (see
 settings file of the agent tool. Without a sub-command, the usage
 information is shown and the command exits with status `1`.
 
-The statusline is supported for *Anthropic Claude Code CLI*
-(`claude`) and *GitHub Copilot CLI* (`copilot`) only, while *OpenAI
-Codex CLI* (`codex`) has no scriptable statusline mechanism, so
-`--tool codex` fails with an error. The settings file is, for
-`claude`, `~/.claude/settings.json` (scope `user`),
-`.claude/settings.json` (scope `project`), resp.
+The statusline is supported for *Anthropic Claude Code CLI* (`claude`)
+and *GitHub Copilot CLI* (`copilot`) only, while *OpenAI Codex CLI*
+(`codex`) has no scriptable statusline mechanism, so `--tool codex`
+fails with an error.
+
+The settings file is, for `claude`, `~/.claude/settings.json` (scope
+`user`), `.claude/settings.json` (scope `project`), resp.
 `.claude/settings.local.json` (scope `local`) relative to the current
 working directory, and, for `copilot`, the single per-user
 `$COPILOT_HOME/settings.json` (default: `~/.copilot/settings.json`).
@@ -51,8 +52,10 @@ and the command still exits with status `0`.
 
 - `ase setup statusline activate` \[*options*\] \[*format* \[...\]\]:
   Add the `statusLine` entry of *ASE* to the settings file, or update
-  an existing one of *ASE* in place. The entry is the object `{
-  "type": "command", "command": "ase statusline ...", "padding": 0 }`,
+  an existing one of *ASE* in place.
+
+  The entry is the object
+  `{ "type": "command", "command": "ase statusline ...", "padding": 0 }`,
   whose command is `ase statusline --tool` *tool* `-w` *width* `-m`
   *margin* `-p` *padding*, followed by `--no-icons` and `--no-labels`
   if given, and the *format* lines, each one single-quoted for the

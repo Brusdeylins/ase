@@ -28,12 +28,13 @@ state last. The cards of the *active* lanes (the states a task is
 actively worked on) are shown in the accent color (default: blue), the
 cards of the *parking* lanes in the normal color, and the cards of the
 finished lanes in the dim color (default: grey), while the selected
-card is shown in the signal color (default: red). A card shows the
-task id (inverse, behind a `≡`, and of an epic, i.e., a task being its
-own group, additionally behind a `♛`), its group (if any, between `♛`
-and `▶`), its markers, and its title, the latter cut onto a single line
-or, toggled with `t`, wrapped onto at most three lines. The markers
-are:
+card is shown in the signal color (default: red).
+
+A card shows the task id (inverse, behind a `≡`, and of an epic, i.e.,
+a task being its own group, additionally behind a `♛`), its group (if
+any, between `♛` and `▶`), its markers, and its title, the latter cut
+onto a single line or, toggled with `t`, wrapped onto at most three
+lines. The markers are:
 
 - `⟲`: the task is part of a dependency cycle of its `After:` keys.
 - `✎`: an edit request of the task is pending (see `ase-agent-editor`(1)).
@@ -49,38 +50,39 @@ Besides the *lanes* view, the boards show the *graph* view, the
 dependency graph of the tasks derived from their `After:` keys (where
 an epic implicitly comes after all other tasks of its group), the
 *stats* view with the statistics of the tasks, and with an agent relay
-the *agents* view. All views are cycled via `v` (or a click onto
-the `view:` value of the header). The last shown
-view, the minimized lanes, the collapsed groups, and the shown flags
-are persisted in `.ase/board.yaml` (separately for the terminal and
-the web board).
+the *agents* view. All views are cycled via `v` (or a click onto the
+`view:` value of the header).
+
+The last shown view, the minimized lanes, the collapsed groups, and the
+shown flags are persisted in `.ase/board.yaml` (separately for the
+terminal and the web board).
 
 ### Terminal Board
 
 The terminal board runs in the alternate screen of the terminal and
-requires a window of at least 40 columns and 16 rows. Its header
-shows the project, the task lifecycle model, the number of unfinished
-and of all tasks, the current view, and the `filter:` field (with its
-`✕` clear button), below it the warnings of the board (e.g. on
-dependency cycles), and its footer shows the
-information line, up to three key hint lines (hidden and shown via
-`?`), and the status line with the kind and connection state of the
-task store (`●` connected, `○` disconnected), the number of agents and
-the connection state of the agent relay (if any), and the *ASE*
-version, or a notice instead.
+requires a window of at least 40 columns and 16 rows.
+
+Its header shows the project, the task lifecycle model, the number of
+unfinished and of all tasks, the current view, and the `filter:` field
+(with its `✕` clear button), below it the warnings of the board (e.g. on
+dependency cycles), and its footer shows the information line, up to
+three key hint lines (hidden and shown via `?`), and the status line
+with the kind and connection state of the task store (`●` connected,
+`○` disconnected), the number of agents and the connection state of
+the agent relay (if any), and the *ASE* version, or a notice instead.
 
 In the lanes view, lanes can be minimized (`m`) and groups collapsed
 (`c`), and the selected lane can be *grown* via `g` to the full board,
-showing all its cards in a grid of at least four columns. A card opens
-its plan in a full-height *task dialog* (`⏎` or a mouse click), which
-shows the frontmatter keys, the predecessors and successors of the
-task (a click onto one opens its task dialog), and the plan body,
+showing all its cards in a grid of at least four columns.
+
+A card opens its plan in a full-height *task dialog* (`⏎` or a mouse
+click), which shows the frontmatter keys, the predecessors and successors
+of the task (a click onto one opens its task dialog), and the plan body,
 followed by the attachments of the plan as further tabs, where a diff
-attachment (type `text/x-diff`, like the implementation draft or the
-change set snapshot `kind="changeset"` of the `implementer` and
-`integrator` agents) is colored per line, YAML and JSON data are
-syntax-highlighted, and a change set snapshot older than the plan is
-marked `(stale)`.
+attachment (type `text/x-diff`, like the implementation draft or the change
+set snapshot `kind="changeset"` of the `implementer` and `integrator`
+agents) is colored per line, YAML and JSON data are syntax-highlighted,
+and a change set snapshot older than the plan is marked `(stale)`.
 
 A task is moved into another state (changing its `Status:`) either by
 picking it up with `SPACE` and dropping it with a second `SPACE` onto
@@ -104,11 +106,13 @@ finished task and while an edit of it is in progress), which
 `ase-agent-editor`(1) then processes via the `ase-task-edit` skill. The
 prompt popup is prefilled with the prompt of a cancelled request resp.
 of the most recent failed request (for a retry), and an empty prompt
-is refused. `R` requests the selected task by a prompt under a
-*request name* (see `ase task request`), suggested from the request
-agents announced to the agent relay (`edit` for `ase agent editor`,
-else the request name of any other request agent), which the request
-agent of the name then processes.
+is refused.
+
+`R` requests the selected task by a prompt under a *request name*
+(see `ase task request`), suggested from the request agents announced
+to the agent relay (`edit` for `ase agent editor`, else the request
+name of any other request agent), which the request agent of the name
+then processes.
 
 `/` focuses the `filter:` field of the header: its keywords are
 matched case-insensitively against the task id and title, AND-combined
@@ -125,11 +129,12 @@ header cycles the view, a click onto the `filter:` field focuses it, a
 click onto its `✕` clears it, a click onto the title of a lane minimizes
 or maximizes it (resp. shrinks a grown lane), a click onto the title of
 a group collapses or expands it, a click onto a lane selects it, and
-the mouse wheel over a lane scrolls it. `M` disables the mouse support
-to regain the regular text selection of the terminal (and enables it
-again). The terminal board enables the *kitty keyboard protocol* if
-the terminal supports it, as only then `Shift`+`⏎` is distinguishable
-from `⏎`.
+the mouse wheel over a lane scrolls it.
+
+`M` disables the mouse support to regain the regular text selection of
+the terminal (and enables it again). The terminal board enables the
+*kitty keyboard protocol* if the terminal supports it, as only then
+`Shift`+`⏎` is distinguishable from `⏎`.
 
 ### Web Board
 
@@ -137,13 +142,15 @@ With `--web`, the web board is served through the *ASE* service of the
 project (see `ase-service`(1), started if not yet running) under
 `http://127.0.0.1:`*port*`/task-board`, which is printed on standard
 output and opened in the default browser (via `open`, `xdg-open`, resp.
-`start`). It offers the same views and keys as the terminal board,
-where a task is additionally moved by dragging its card onto a
-reachable lane, the graph is zoomed by the mouse wheel (and `+`, `-`,
-and `0`) and panned by dragging it, and an image attachment is zoomed
-by the mouse wheel. Its minimized lanes and collapsed groups are
-stored once per project, not per browser, so all open web boards share
-them and pick up a change immediately.
+`start`).
+
+It offers the same views and keys as the terminal board, where a task
+is additionally moved by dragging its card onto a reachable lane, the
+graph is zoomed by the mouse wheel (and `+`, `-`, and `0`) and panned
+by dragging it, and an image attachment is zoomed by the mouse wheel.
+Its minimized lanes and collapsed groups are stored once per project,
+not per browser, so all open web boards share them and pick up a change
+immediately.
 
 In the task dialog of the web board, `e` (or `✎`) edits the task plan
 in a Markdown editor (in the lanes and graph views, `e` opens the
@@ -194,6 +201,7 @@ task), `within last 30 days`, and `within last 7 days` on its top
   completion of a task is not tracked, its `Modified:` frontmatter key
   is taken instead, so the throughput is just an approximation. It
   always covers the last 12 weeks, independent of the time range.
+
   Below it, the `forecast:` line shows the number of all unfinished
   tasks (*work-in-progress* and *open*, independent of the time range)
   and the number of weeks to finish them at the average throughput of
@@ -223,16 +231,17 @@ task), `within last 30 days`, and `within last 7 days` on its top
   and `Token` (as *input* `▷` *output*, with the uncached input tokens,
   i.e., without the cache read and write tokens).
 - `Finished Tasks` (besides `Top-5 Tasks`): the average (`⌀`) AI costs,
-  human costs, and AI tokens (as *input* `▷` *output*, like in `Top-5
-  Tasks`) per finished task (the usage of the finished tasks divided
-  by their number, including the finished tasks without any usage),
-  and the *lead time* (the time from the `Created:` to the `Modified:`
-  frontmatter key) of the finished tasks as its median (`lead (median)`)
-  and its 85th percentile (`lead (p85)`), in minutes below one hour, in
-  hours below two days, else in days, each `n/a` without any finished
-  task. Like the throughput,
-  the lead time is just an approximation, and median and percentile are
-  robust against single outlier tasks.
+  human costs, and AI tokens (as *input* `▷` *output*, like in
+  `Top-5 Tasks`) per finished task (the usage of the finished tasks
+  divided by their number, including the finished tasks without any
+  usage), and the *lead time* (the time from the `Created:` to the
+  `Modified:` frontmatter key) of the finished tasks as its median
+  (`lead (median)`) and its 85th percentile (`lead (p85)`), in minutes
+  below one hour, in hours below two days, else in days, each `n/a`
+  without any finished task.
+
+  Like the throughput, the lead time is just an approximation, and
+  median and percentile are robust against single outlier tasks.
 - `Efficiency` (besides `Finished Tasks`): the *AI/HR time ratio* (the
   AI request time per human time, i.e., the higher, the more AI work
   per attended human minute) and the *AI/HR cost ratio* (the AI costs
@@ -265,14 +274,17 @@ waiting), and the fields `kind:` and `mode:` of its operation (or
 in total since its start resp. by its last finished job, each as wall
 time, output tokens, and costs in USD (e.g. `12m, 9.2k tok, $3.41`,
 with `n/a` for what the agent tool does not report, and `none` before
-the first finished job). The framed detail view `Agent: Recent Log
-Entries` on the right shows the recent processing log lines of the
-selected agent, each with its full timestamp, the id of its task (if
-any), and its level and content (warnings and errors in the signal
-color), broken onto multiple rows instead of being cut. The detail
-view follows the bottom of the log while not scrolled up. When the
-selected agent vanishes, its neighbor is selected instead. The
-information line shows the selected agent with its host and process
+the first finished job).
+
+The framed detail view `Agent: Recent Log Entries` on the right shows
+the recent processing log lines of the selected agent, each with its
+full timestamp, the id of its task (if any), and its level and content
+(warnings and errors in the signal color), broken onto multiple rows
+instead of being cut. The detail view follows the bottom of the log
+while not scrolled up. When the selected agent vanishes, its neighbor
+is selected instead.
+
+The information line shows the selected agent with its host and process
 id, its state with the duration for which it has been in it, and the
 age of its latest heartbeat. Without an agent relay, the agents view
 is skipped.
@@ -305,9 +317,11 @@ shown agents), and re-established.
   embedded, else from `$ASE_AGENT_RELAY_TOKEN`, else from
   `project.relay.token`, else of the locally started agent relay
   (default: the configured `project.relay.url`, else none, i.e.,
-  without agents view). Honored by the terminal board and the text
-  overview only, as the web board always follows the configured
-  `project.relay.url` (and hence warns about the option).
+  without agents view).
+
+  Honored by the terminal board and the text overview only, as the web
+  board always follows the configured `project.relay.url` (and hence
+  warns about the option).
 
 ## KEYS
 
@@ -474,13 +488,15 @@ The following configuration keys (on scope `user` or `project`, see
 
 - `.ase/board.yaml`:
   The display state of the boards in the project root: separately for
-  the terminal board (`tui`) and the web board (`web`), the shown
-  `view` (`lanes`, `graph`, `stats`, or `agents`), the `minimized` lanes, the
+  the terminal board (`tui`) and the web board (`web`), the shown `view`
+  (`lanes`, `graph`, `stats`, or `agents`), the `minimized` lanes, the
   `collapsed` groups, and whether the task `titles` are wrapped onto
   multiple lines, the key hint lines are shown (`keys`), and the graph
-  shows the `standalone` tasks. The web state is shared by all
-  browsers and tabs showing the web board. It never holds task
-  content, and is covered by the self-ignoring `.ase/.gitignore`.
+  shows the `standalone` tasks.
+
+  The web state is shared by all browsers and tabs showing the web board.
+  It never holds task content, and is covered by the self-ignoring
+  `.ase/.gitignore`.
 
 ## EXIT STATUS
 

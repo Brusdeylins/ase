@@ -20,9 +20,10 @@ registered from a local directory (`<cli> plugin marketplace add`
 *dir*), and then the plugin `ase@ase` is installed from it (`<cli>
 plugin install ase@ase`, resp. `codex plugin add ase@ase` for *OpenAI
 Codex CLI*), retried up to three times with a delay of one second.
-The marketplace directory is the installed `@rse/ase` package itself,
-which bundles the plugin, or, with `--dev`, the local *ASE* working
-copy.
+
+The marketplace directory is the installed `@rse/ase` package
+itself, which bundles the plugin, or, with `--dev`, the local *ASE*
+working copy.
 
 For `--tool claude`, the plugin-shipped output style `ase:ase-terse`
 is additionally selected by writing `"outputStyle": "ase:ase-terse"`
@@ -52,10 +53,11 @@ already installed when running it (e.g., via `npm install -g
   `project` (registered in `.claude/settings.json` of the current
   project, meant to be shared via version control), or `local`
   (registered in `.claude/settings.local.json` of the current
-  project, kept out of version control). A non-`user` scope is passed
-  as `--scope` *scope* to the agent tool CLI. Only supported for
-  `--tool claude`; a non-`user` scope for `copilot` or `codex` fails
-  with an error.
+  project, kept out of version control).
+
+  A non-`user` scope is passed as `--scope` *scope* to the agent tool
+  CLI. Only supported for `--tool claude`; a non-`user` scope for
+  `copilot` or `codex` fails with an error.
 
 - \[`-d`|`--dev`\]:
   Development mode: register the plugin marketplace from the local

@@ -29,14 +29,16 @@
 ## DESCRIPTION
 
 **ase agent approver** drives the `Approval` phase of the `enterprise`
-task lifecycle model (refused for any other model). It claims every task
-in the state `IMPLEMENTED` which is unassigned or assigned to the agent,
-which does not carry any tag `ase-agent-approver` yet (i.e., without its
-verdict yet, so a task already carrying a verdict of the approver is
-never picked up again), and whose `After:` predecessors (and, for an
-explicit epic, its group members) are `APPROVED` or later, moves it into
-`APPROVING`, and reviews its `Changeset:` (or the configured
-`project.task.default.changeset`) via the skill `ase-repo-review`:
+task lifecycle model (refused for any other model).
+
+It claims every task in the state `IMPLEMENTED` which is unassigned or
+assigned to the agent, which does not carry any tag `ase-agent-approver`
+yet (i.e., without its verdict yet, so a task already carrying a
+verdict of the approver is never picked up again), and whose `After:`
+predecessors (and, for an explicit epic, its group members) are
+`APPROVED` or later, moves it into `APPROVING`, and reviews its
+`Changeset:` (or the configured `project.task.default.changeset`) via
+the skill `ase-repo-review`:
 
 - `worktree`: The change set staged in its working copy, i.e., the Git
   worktree `.ase/worktree/`*id* of a parallel implementer if existing,
@@ -53,11 +55,12 @@ The verdict `APPROVE` resp. `REJECT` of the review (the last upper-case
 word after the label `REVIEW VERDICT` in the output of the successfully
 exited agent tool) is added as the tag `ase-agent-approver:approve`
 resp. `ase-agent-approver:reject`, while a failed or skipped review,
-which yields no verdict, adds the plain tag `ase-agent-approver`. In the
-default mode `judge`, the task is then put back into `IMPLEMENTED` for a
-human decision, while in mode `approve`, it is put into `APPROVED` on
-the verdict `APPROVE`, into `DECLINED` on the verdict `REJECT`, and back
-into `IMPLEMENTED` without a verdict. In both modes, the task is
+which yields no verdict, adds the plain tag `ase-agent-approver`.
+
+In the default mode `judge`, the task is then put back into `IMPLEMENTED`
+for a human decision, while in mode `approve`, it is put into `APPROVED`
+on the verdict `APPROVE`, into `DECLINED` on the verdict `REJECT`, and
+back into `IMPLEMENTED` without a verdict. In both modes, the task is
 unassigned afterwards.
 
 On an interrupt, a task being processed is put back, untagged and with
@@ -88,9 +91,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
       lines, its processing log attachment `agent:`*name*, the
       `Assignee:` of the tasks it processes, its temporary directory,
       and its process files `.ase/agent/`*name*`.yaml` and
-      `.ase/agent/`*name*`.log`. Agents of the kind `approver` under
-      different names form a pool, competing for the same tasks and
-      processing them in parallel to each other.
+      `.ase/agent/`*name*`.log`.
+
+      Agents of the kind `approver` under different names form a pool,
+      competing for the same tasks and processing them in parallel to
+      each other.
 
     - \[`-t`|`--tool` *tool*\]: The headless agent tool processing the
       tasks: `claude` (*Anthropic Claude Code CLI*), `copilot` (*GitHub
@@ -127,10 +132,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
       `worktree` value is processed in its own temporary Git worktree of
       this clone, and changed branches are pushed back to its origin
       (default: none, i.e., all tasks are processed in the Git working
-      copy the agent is started in, which is hence mandatory). Requires
-      a task store not located in the working copy (i.e., not a local
-      `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES** in
-      `ase-agent`(1).
+      copy the agent is started in, which is hence mandatory).
+
+      Requires a task store not located in the working copy (i.e., not a
+      local `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES**
+      in `ase-agent`(1).
 
     - \[`-d`|`--tempdir` *dir*\]: Create the temporary directory of the
       agent as the sub-directory *name* of *dir*, where `%p` is expanded

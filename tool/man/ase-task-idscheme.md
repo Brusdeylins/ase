@@ -19,8 +19,9 @@ always follows the configuration, the `project.task.idscheme`
 configuration (default: `slug`); for a remote task store (`ase://` or
 `ases://`), the scheme the project is registered under in the task
 store, which is shared by all clients of the project and hence
-registered under `project.task.idscheme` on first use only. A
-configured `project.task.idscheme` deviating from the scheme of a
+registered under `project.task.idscheme` on first use only.
+
+A configured `project.task.idscheme` deviating from the scheme of a
 remote task store is warned about once per deviation only (tracked in
 the *per-user state directory* as `task-lifecycle.json`).
 

@@ -86,10 +86,11 @@ exits with status `1`.
   appended to. As the service inherits the file descriptor for its
   entire lifetime, the file cannot be rotated while the service runs,
   and instead is trimmed down to its last 2000 lines whenever a
-  service is started on a file larger than 1 MB. Routine MCP traffic
-  (session handshakes, notifications, and stream opens) is logged at
-  level `debug` only, and the arguments of the logged MCP tool calls
-  are cut at 200 characters.
+  service is started on a file larger than 1 MB.
+
+  Routine MCP traffic (session handshakes, notifications, and stream
+  opens) is logged at level `debug` only, and the arguments of the
+  logged MCP tool calls are cut at 200 characters.
 
 - `.ase/.gitignore`:
   The self-ignoring Git ignore file covering the machine-local runtime

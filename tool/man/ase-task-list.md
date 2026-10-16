@@ -40,13 +40,15 @@ listed, but warned about.
   of the project (given case-insensitively), where the term `finished`
   expands to the finished states of the model and the term `none` (as
   well as an empty term) is ignored. An empty list (default: `none`)
-  means all states. The states of the models are `OPEN`, `SHELVED`,
-  `CLOSED`, and `CANCELLED` (`solo`), `PLANNING`, `SHELVED`,
-  `IMPLEMENTING`, `STALLED`, `IMPLEMENTED`, and `CANCELLED` (`team`),
-  and `DRAFTED`, `SHELVED`, `PLANNING`, `PLANNED`, `STALLED`,
-  `IMPLEMENTING`, `IMPLEMENTED`, `DECLINED`, `APPROVING`, `APPROVED`,
-  `DEFERRED`, `INTEGRATING`, `INTEGRATED`, and `CANCELLED`
-  (`enterprise`). A state which is not one of the model is an error.
+  means all states.
+
+  The states of the models are `OPEN`, `SHELVED`, `CLOSED`, and
+  `CANCELLED` (`solo`), `PLANNING`, `SHELVED`, `IMPLEMENTING`,
+  `STALLED`, `IMPLEMENTED`, and `CANCELLED` (`team`), and `DRAFTED`,
+  `SHELVED`, `PLANNING`, `PLANNED`, `STALLED`, `IMPLEMENTING`,
+  `IMPLEMENTED`, `DECLINED`, `APPROVING`, `APPROVED`, `DEFERRED`,
+  `INTEGRATING`, `INTEGRATED`, and `CANCELLED` (`enterprise`). A state
+  which is not one of the model is an error.
 
 - \[`-e`|`--exclude` *states*\]:
   Exclude the tasks in one of the *states* from the listing, a

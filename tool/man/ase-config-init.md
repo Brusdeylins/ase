@@ -15,12 +15,13 @@ scope (the strongest scope of the scope chain, by default `project`
 inside a project, else `user`) with the preset values of *type*. The
 file (and its parent directories) are created if missing. Already
 existing keys of the file which the preset does not cover are kept,
-while those covered by the preset are overwritten. Keys of the preset
-which are not writable on the target scope (e.g., all
-`project.task.*`, `project.artifact.*`, and `board.*` keys on a `task`
-or `session` scope, or `telemetry.prices.ai` on the `project` scope)
-are silently skipped. The file is written under an advisory file lock
-and atomically.
+while those covered by the preset are overwritten.
+
+Keys of the preset which are not writable on the target scope (e.g.,
+all `project.task.*`, `project.artifact.*`, and `board.*` keys on a
+`task` or `session` scope, or `telemetry.prices.ai` on the `project`
+scope) are silently skipped. The file is written under an advisory
+file lock and atomically.
 
 ## OPTIONS
 
@@ -30,16 +31,18 @@ and atomically.
 - \[`--scope` *scope*\]:
   Select the scope chain, whose strongest scope is the target scope
   written by this command. As an option of `ase config`, it has to be
-  given *before* `init`. The *scope* value is a comma-separated list of
-  the terms `user`, `project`, `task:`*id*, and `session:`*id* (with
-  *id* matching `[A-Za-z0-9._-]+`), at most one per kind and in any
-  order, canonicalized into the order `user` < `project` < `task` <
-  `session`. `user` is always added implicitly, and `project` is added
-  implicitly whenever a project context (a Git working tree or a `.ase`
-  directory at or above the current directory) exists, but never
-  above the strongest explicitly requested term. An explicit `project`
-  without a project context is an error. Default: `project` inside a
-  project context, else `user`. See `ase-config`(1) for details.
+  given *before* `init`. The *scope* value is a comma-separated list
+  of the terms `user`, `project`, `task:`*id*, and `session:`*id*
+  (with *id* matching `[A-Za-z0-9._-]+`), at most one per kind and in
+  any order, canonicalized into the order `user` < `project` < `task`
+  < `session`.
+
+  `user` is always added implicitly, and `project` is added implicitly
+  whenever a project context (a Git working tree or a `.ase` directory
+  at or above the current directory) exists, but never above the
+  strongest explicitly requested term. An explicit `project` without a
+  project context is an error. Default: `project` inside a project
+  context, else `user`. See `ase-config`(1) for details.
 
 ## ARGUMENTS
 

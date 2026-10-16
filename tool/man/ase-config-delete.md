@@ -15,10 +15,12 @@ configuration file of the target scope (the strongest scope of the
 scope chain, by default `project` inside a project, else `user`) and
 writes the file back. Weaker scopes are never modified, so a value of
 the same key on a weaker scope (or the built-in default) becomes
-effective again. Deleting a key which is not set on the target scope
-is no error. As for `ase config set`, a key which is not writable on
-the target scope cannot be deleted there either, and a target file
-which carries invalid content is not overwritten.
+effective again.
+
+Deleting a key which is not set on the target scope is no error. As
+for `ase config set`, a key which is not writable on the target scope
+cannot be deleted there either, and a target file which carries invalid
+content is not overwritten.
 
 ## OPTIONS
 
@@ -32,12 +34,14 @@ which carries invalid content is not overwritten.
   of the terms `user`, `project`, `task:`*id*, and `session:`*id* (with
   *id* matching `[A-Za-z0-9._-]+`), at most one per kind and in any
   order, canonicalized into the order `user` < `project` < `task` <
-  `session`. `user` is always added implicitly, and `project` is added
-  implicitly whenever a project context (a Git working tree or a `.ase`
-  directory at or above the current directory) exists, but never
-  above the strongest explicitly requested term. An explicit `project`
-  without a project context is an error. Default: `project` inside a
-  project context, else `user`. See `ase-config`(1) for details.
+  `session`.
+
+  `user` is always added implicitly, and `project` is added implicitly
+  whenever a project context (a Git working tree or a `.ase` directory
+  at or above the current directory) exists, but never above the
+  strongest explicitly requested term. An explicit `project` without a
+  project context is an error. Default: `project` inside a project
+  context, else `user`. See `ase-config`(1) for details.
 
 ## ARGUMENTS
 

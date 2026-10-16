@@ -17,15 +17,16 @@ Without *status*, the current status is printed to standard output,
 where a plan without a `Status` key reads as the initial state of the
 task lifecycle model of the project.
 
-With *status*, the status is set and the change is logged as `task:
-set status of "`*id*`" from "`*from*`" to "`*to*`"`. The *status* is
-given case-insensitively and has to be a state of the task lifecycle
-model of the project, which is reachable from the current status via
-one or more transitions of the model (see **TASK LIFECYCLE MODELS** in
-`ase-task`(1)); a current status foreign to the model can be changed
-to any state, to allow its correction. Only the frontmatter is
-changed: the `Modified` key is left alone, as it tracks the changes of
-the plan body only.
+With *status*, the status is set and the change is logged as
+`task: set status of "`*id*`" from "`*from*`" to "`*to*`"`. The
+*status* is given case-insensitively and has to be a state of the task
+lifecycle model of the project, which is reachable from the current
+status via one or more transitions of the model (see
+**TASK LIFECYCLE MODELS** in `ase-task`(1)); a current status foreign
+to the model can be changed to any state, to allow its correction.
+
+Only the frontmatter is changed: the `Modified` key is left alone, as
+it tracks the changes of the plan body only.
 
 ## OPTIONS
 

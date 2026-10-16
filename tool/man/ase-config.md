@@ -35,11 +35,12 @@ unknown or invalid entries are warned about and dropped from the
 in-memory view, while on set, delete, and write they lead to a fatal
 error. A target file still carrying invalid content is never
 overwritten, as the skipped content would otherwise be lost: repair
-it first (e.g. via `ase config edit`). Obsolete (pre-1.1.0) entries
-`project.artifact.task.{basedir,files}` and `agent.{task,skill}` are
-migrated in place on reading: a `basedir` becomes
-`project.task.store.url` (as `ase:`*basedir*) unless the latter is
-already set, and the other entries are dropped.
+it first (e.g. via `ase config edit`).
+
+Obsolete (pre-1.1.0) entries `project.artifact.task.{basedir,files}`
+and `agent.{task,skill}` are migrated in place on reading: a `basedir`
+becomes `project.task.store.url` (as `ase:`*basedir*) unless the
+latter is already set, and the other entries are dropped.
 
 A *key* is a dotted path like `agent.persona`. Any unambiguous
 trailing part of a known key is accepted, too, e.g., `persona` for
@@ -56,14 +57,15 @@ exits with status `1`.
 
 - \[`--scope` *scope*\]:
   Select the scope chain. This option belongs to `ase config` itself
-  and hence has to be given *before* the *command*, e.g., `ase config
-  --scope user set agent.persona writer`. The *scope* value is a
-  comma-separated list of scope terms, in any order, where each term
-  is one of `user`, `project`, `task:`*id*, or `session:`*id* (with
-  *id* matching `[A-Za-z0-9._-]+`, but neither `.` nor `..`). At most
-  one term per kind is allowed. The chain is canonicalized into the
-  fixed inheritance order `default` < `user` < `project` < `task` <
-  `session`:
+  and hence has to be given *before* the *command*, e.g.,
+  `ase config --scope user set agent.persona writer`.
+
+  The *scope* value is a comma-separated list of scope terms, in any
+  order, where each term is one of `user`, `project`, `task:`*id*, or
+  `session:`*id* (with *id* matching `[A-Za-z0-9._-]+`, but neither `.`
+  nor `..`). At most one term per kind is allowed. The chain is
+  canonicalized into the fixed inheritance order `default` < `user` <
+  `project` < `task` < `session`:
 
     - `user` is always implicitly added at the bottom of the chain.
     - `project` is implicitly added only when a *project context*

@@ -23,13 +23,15 @@ the latest version of `@rse/ase` known from the NPM registry (as
 determined by a cached background check, refreshed at most once per
 hour). If both are equal, the command reports that *ASE* is already at
 the latest version and exits without any further action (unless
-`--force` is given). Otherwise, the tool is updated via `npm update -g
-@rse/ase` (prefixed with `sudo`(8) if the global `npm` installation
-root is not writable by the current user and `sudo` is available), the
-plugin marketplace snapshot is refreshed (`<cli> plugin marketplace
-update ase`, resp. `codex plugin marketplace upgrade ase`), and the
-plugin is updated (`<cli> plugin update ase@ase`, resp. removed and
-re-added for *OpenAI Codex CLI*, which has no plugin update command).
+`--force` is given).
+
+Otherwise, the tool is updated via `npm update -g @rse/ase` (prefixed
+with `sudo`(8) if the global `npm` installation root is not writable by
+the current user and `sudo` is available), the plugin marketplace
+snapshot is refreshed (`<cli> plugin marketplace update ase`, resp.
+`codex plugin marketplace upgrade ase`), and the plugin is updated
+(`<cli> plugin update ase@ase`, resp. removed and re-added for *OpenAI
+Codex CLI*, which has no plugin update command).
 
 In the development mode (`--dev`), the local *ASE* working copy is
 re-built instead (`npm install` and `npm start build` in its `tool/`
@@ -58,8 +60,10 @@ there, which is preserved with a warning.
   in this order (strongest first), and the first one whose settings
   file registers the plugin `ase@ase` under `enabledPlugins` (enabled
   or disabled) is taken, falling back to `user` when no installation
-  is found. For tools other than `claude`, the scope is always `user`,
-  and an explicitly given non-`user` scope fails with an error.
+  is found.
+
+  For tools other than `claude`, the scope is always `user`, and an
+  explicitly given non-`user` scope fails with an error.
 
 - \[`-f`|`--force`\]:
   Always perform the update, even if the tool is already at the

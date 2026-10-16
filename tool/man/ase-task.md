@@ -22,9 +22,11 @@ All commands are forwarded to the *task store* selected by the
 project is identified in the task store by `project.id` (default: the
 sanitized basename of the project root, i.e., the Git top-level
 directory, or the current working directory outside a Git working
-tree). The `Status` of the task plans follows the *task lifecycle
-model* of the project (see **TASK LIFECYCLE MODELS** below), and new
-task ids are generated after the *task id scheme* of the project (see
+tree).
+
+The `Status` of the task plans follows the *task lifecycle model* of
+the project (see **TASK LIFECYCLE MODELS** below), and new task ids
+are generated after the *task id scheme* of the project (see
 **TASK ID SCHEMES** below).
 
 Without a *command*, the usage information is shown and the command
@@ -108,32 +110,36 @@ configuration URL (see `ase-config`(1)):
 
 - `ase:`*path*:
   The built-in file-based storage plugin, running in-process, storing
-  each plan as a file `TASK-`*id*`.md` directly in the directory *path*,
-  which is resolved relative to the project root (default:
-  `ase:./.ase/task`). On the `project` and `task:`*id* scopes, *path*
-  must not escape the project root (also not through symbolic links),
-  as a cloned repository could otherwise direct task writes anywhere; a
-  directory outside of it is accepted on the `user` or `session` scope
-  only. The lifecycle model and task id scheme of a local task store
-  always follow `project.task.lifecycle` and `project.task.idscheme`.
+  each plan as a file `TASK-`*id*`.md` directly in the directory
+  *path*, which is resolved relative to the project root (default:
+  `ase:./.ase/task`).
+
+  On the `project` and `task:`*id* scopes, *path* must not escape the
+  project root (also not through symbolic links), as a cloned
+  repository could otherwise direct task writes anywhere; a directory
+  outside of it is accepted on the `user` or `session` scope only. The
+  lifecycle model and task id scheme of a local task store always
+  follow `project.task.lifecycle` and `project.task.idscheme`.
 
 - `ase://`*addr*`:`*port*\[`/`*token*\]:
   A remote task store server (see `ase-task-store`(1)), connected via
   HTTP. It requires an explicitly configured `project.id`, as a
-  basename-derived one likely collides on a shared server. On first
-  use, the project is registered in the task store under the
+  basename-derived one likely collides on a shared server.
+
+  On first use, the project is registered in the task store under the
   configured `project.task.lifecycle` and `project.task.idscheme`;
   afterwards the registered model and scheme apply to all clients of
   the project, and a deviating configuration is warned about once per
-  deviation only (see `ase-task-lifecycle`(1)). The bearer token is the
-  embedded *token* (warned about if the URL is configured on the
-  `project` or a `task:`*id* scope, as it might be committed), else
-  `$ASE_TASK_STORE_TOKEN`, else `project.task.store.token` (warned
-  about if not configured on the `user` scope), else the `token` of
-  the per-user `store.yaml` of a locally started task store server
-  (only if the URL addresses exactly this server). Sending a token to a
-  non-loopback host selected on the `project` or a `task:`*id* scope is
-  warned about.
+  deviation only (see `ase-task-lifecycle`(1)).
+
+  The bearer token is the embedded *token* (warned about if the URL is
+  configured on the `project` or a `task:`*id* scope, as it might be
+  committed), else `$ASE_TASK_STORE_TOKEN`, else
+  `project.task.store.token` (warned about if not configured on the
+  `user` scope), else the `token` of the per-user `store.yaml` of a
+  locally started task store server (only if the URL addresses exactly
+  this server). Sending a token to a non-loopback host selected on the
+  `project` or a `task:`*id* scope is warned about.
 
 - `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\]:
   The same as `ase://`, but connecting via HTTPS. With the suffix
@@ -174,12 +180,14 @@ The `Status` frontmatter key of a task plan holds a state of the task
 lifecycle model of the project, selected by `project.task.lifecycle`
 for a local task store resp. registered in a remote task store (see
 `ase-task-lifecycle`(1)). A plan without a `Status` key reads as the
-*initial* state of the model. A status change has to be reachable from
-the current state via one or more transitions of the model (a status
-foreign to the model can be changed to any state, to allow its
-correction). The *finished* states end the lifecycle, and in the
-*activity* states a task is actively worked on (by a human or an
-agent), so its plan must not be changed concurrently.
+*initial* state of the model.
+
+A status change has to be reachable from the current state via one or
+more transitions of the model (a status foreign to the model can be
+changed to any state, to allow its correction). The *finished* states
+end the lifecycle, and in the *activity* states a task is actively
+worked on (by a human or an agent), so its plan must not be changed
+concurrently.
 
 - `solo`:
   The single-phase lifecycle for a local solo developer (default).
@@ -199,21 +207,22 @@ agent), so its plan must not be changed concurrently.
 
 - `enterprise`:
   The four-phase lifecycle (planning, implementation, approval, and
-  integration) for a gated enterprise pipeline, driven headless by
-  the agents of `ase-agent`(1). States: `DRAFTED` (initial),
-  `SHELVED`, `PLANNING` (activity), `PLANNED`, `STALLED`,
-  `IMPLEMENTING` (activity), `IMPLEMENTED`, `DECLINED`, `APPROVING`
-  (activity), `APPROVED`, `DEFERRED`, `INTEGRATING` (activity),
-  `INTEGRATED` (finished), and `CANCELLED` (finished). Transitions:
-  `DRAFTED` to `SHELVED`, `PLANNING`, or `CANCELLED`; `SHELVED` to
-  `DRAFTED` or `CANCELLED`; `PLANNING` to `DRAFTED`, `SHELVED`,
-  `PLANNED`, or `CANCELLED`; `PLANNED` to `STALLED`, `IMPLEMENTING`,
-  or `CANCELLED`; `STALLED` to `PLANNED` or `CANCELLED`;
-  `IMPLEMENTING` to `DRAFTED`, `PLANNED`, `STALLED`, `IMPLEMENTED`, or
-  `CANCELLED`; `IMPLEMENTED` to `DECLINED`, `APPROVING`, or
-  `CANCELLED`; `DECLINED` to `IMPLEMENTED` or `CANCELLED`;
-  `APPROVING` to `DRAFTED`, `PLANNED`, `IMPLEMENTED`, `DECLINED`,
-  `APPROVED`, or `CANCELLED`; `APPROVED` to `DEFERRED`,
+  integration) for a gated enterprise pipeline, driven headless by the
+  agents of `ase-agent`(1). States: `DRAFTED` (initial), `SHELVED`,
+  `PLANNING` (activity), `PLANNED`, `STALLED`, `IMPLEMENTING`
+  (activity), `IMPLEMENTED`, `DECLINED`, `APPROVING` (activity),
+  `APPROVED`, `DEFERRED`, `INTEGRATING` (activity), `INTEGRATED`
+  (finished), and `CANCELLED` (finished).
+
+  Transitions: `DRAFTED` to `SHELVED`, `PLANNING`, or `CANCELLED`;
+  `SHELVED` to `DRAFTED` or `CANCELLED`; `PLANNING` to `DRAFTED`,
+  `SHELVED`, `PLANNED`, or `CANCELLED`; `PLANNED` to `STALLED`,
+  `IMPLEMENTING`, or `CANCELLED`; `STALLED` to `PLANNED` or
+  `CANCELLED`; `IMPLEMENTING` to `DRAFTED`, `PLANNED`, `STALLED`,
+  `IMPLEMENTED`, or `CANCELLED`; `IMPLEMENTED` to `DECLINED`,
+  `APPROVING`, or `CANCELLED`; `DECLINED` to `IMPLEMENTED` or
+  `CANCELLED`; `APPROVING` to `DRAFTED`, `PLANNED`, `IMPLEMENTED`,
+  `DECLINED`, `APPROVED`, or `CANCELLED`; `APPROVED` to `DEFERRED`,
   `INTEGRATING`, or `CANCELLED`; `DEFERRED` to `APPROVED` or
   `CANCELLED`; `INTEGRATING` to `DRAFTED`, `PLANNED`, `APPROVED`,
   `DEFERRED`, `INTEGRATED`, or `CANCELLED`.

@@ -22,10 +22,12 @@ changed text is saved like by `ase-task-save`(1), i.e., checked
 against the task lifecycle model, where the save is *conditional* on
 the plan as loaded (resp. create-only for a not yet existing plan), so
 a change of the task in the meantime (e.g., by an agent) is never
-overwritten. A changed `Id` frontmatter key renames the task after
-the save, like `ase-task-rename`(1), where an already existing target
-id is refused before anything is saved. An id not conforming to the
-task id scheme of the project is warned about.
+overwritten.
+
+A changed `Id` frontmatter key renames the task after the save, like
+`ase-task-rename`(1), where an already existing target id is refused
+before anything is saved. An id not conforming to the task id scheme
+of the project is warned about.
 
 If the save fails because the task was changed in the meantime, the
 edits are not saved, but kept in the temporary file, whose path is

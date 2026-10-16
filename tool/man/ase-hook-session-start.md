@@ -60,10 +60,12 @@ following steps:
    `project.task.default.source`, `project.task.default.changeset`, and
    `project.task.default.target`, the specification base directory
    `project.artifact.spec.basedir`, and the schema configuration
-   `project.artifact.spec.schema`. A setting not explicitly configured
-   in any scope falls back to the environment variables
-   `ASE_PERSONA_STYLE`, `ASE_GUIDANCE_LEVEL`, `ASE_PROJECT_BOXING`,
-   `ASE_PROJECT_TASK_LIFECYCLE`, `ASE_PROJECT_TASK_DEFAULT_SOURCE`,
+   `project.artifact.spec.schema`.
+
+   A setting not explicitly configured in any scope falls back to the
+   environment variables `ASE_PERSONA_STYLE`, `ASE_GUIDANCE_LEVEL`,
+   `ASE_PROJECT_BOXING`, `ASE_PROJECT_TASK_LIFECYCLE`,
+   `ASE_PROJECT_TASK_DEFAULT_SOURCE`,
    `ASE_PROJECT_TASK_DEFAULT_CHANGESET`, and
    `ASE_PROJECT_TASK_DEFAULT_TARGET`, and finally to the defaults
    `engineer`, `normal`, `white`, `solo`, `worktree`, `worktree`, and
@@ -92,13 +94,16 @@ following steps:
    `<ase-headless>`, and `<ase-agent-tool>`), followed by the
    constitution, with all `@`*file* references expanded recursively
    (relative to the referencing file, `~/` denoting the home
-   directory). For `--tool copilot` and `--tool codex` only, the
-   instructions of the output style `ase-terse` (with its YAML
-   frontmatter stripped) are appended, as these agent tools have no
-   output style concept, whereas *Anthropic Claude Code CLI* applies the
-   plugin output style natively. The context is emitted as
-   `hookSpecificOutput.additionalContext` (`claude` and `codex`), resp.
-   as the top-level field `additionalContext` (`copilot`).
+   directory).
+
+   For `--tool copilot` and `--tool codex` only, the instructions of the
+   output style `ase-terse` (with its YAML frontmatter stripped) are
+   appended, as these agent tools have no output style concept, whereas
+   *Anthropic Claude Code CLI* applies the plugin output style natively.
+   The context is emitted as `hookSpecificOutput.additionalContext`
+   (`claude` and `codex`), resp. as the top-level field
+   `additionalContext` (`copilot`).
+
    Additionally, for `claude` and `codex`, unless running headless
    (`ASE_HEADLESS` is `true`) or with guidance level `none`, a
    deterministic *ASE* banner (version, user, project, task, session,

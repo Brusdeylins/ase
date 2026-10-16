@@ -31,11 +31,13 @@ For the `ascii` format, the rendering is optionally clipped to the
 terminal dimensions (reduced by the extra clipping amounts): lines
 wider than the width budget are truncated (preserving and properly
 terminating any ANSI color sequences), and lines beyond the height
-budget are dropped. A clipped rendering is followed by a warning
-paragraph which states the overflow and advises how to regenerate the
-diagram source to fit (e.g., by preferring a portrait orientation,
-reducing siblings per row, abbreviating node labels, or nesting). The
-output always ends with a newline.
+budget are dropped.
+
+A clipped rendering is followed by a warning paragraph which states
+the overflow and advises how to regenerate the diagram source to fit
+(e.g., by preferring a portrait orientation, reducing siblings per
+row, abbreviating node labels, or nesting). The output always ends
+with a newline.
 
 The MCP tool `ase_diagram` provides the same to the skills.
 

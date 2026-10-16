@@ -64,28 +64,32 @@ agent engine:
   `builtin:implementer-draft`, `builtin:approver-judge`,
   `builtin:approver-approve`, `builtin:integrator-merge`,
   `builtin:integrator-rebase`, `builtin:integrator-squash`, and
-  `builtin:editor-edit`. All options `--`*group*`-`*item* below are
-  also accepted by the built-in agents, where they override the
-  built-in definition (see `ase-agent-planner`(1) etc.).
+  `builtin:editor-edit`.
+
+  All options `--`*group*`-`*item* below are also accepted by the
+  built-in agents, where they override the built-in definition (see
+  `ase-agent-planner`(1) etc.).
 
 - *definition kinds* (`ase agent` *kind*): an agent kind of its own,
   discovered from the definition file *kind*`.`*ext* of the project
   (`.ase/agents/`, intended to be versioned) or of the user (*per-user
   configuration directory*`/agents/`). A definition kind of the project
   shadows one of the user, and both shadow a built-in agent kind of the
-  same name (whose `--mode` then no longer exists). For example,
-  `.ase/agents/reviewer.mts` yields the commands `ase agent reviewer
-  start|status|log|stop`, which take exactly the same options as `ase
-  agent adhoc` described here, except `--definition` (as the
-  definition file of the kind takes its place), and where the given
-  options override the definition file. The definition files are
-  discovered only on the commands `ase agent` ..., where a file of an
-  invalid kind name (other than up to 64 letters, digits, underscores,
-  and dashes, starting with a letter or digit), of the reserved kind
-  names `adhoc`, `relay`, or `fleet`, or of an already discovered kind
-  name in the same directory (by the precedence of the extensions
-  `.yaml`, `.yml`, `.ts`, `.mts`, `.js`, `.mjs`, and `.cjs`, in this
-  order) is skipped with a warning.
+  same name (whose `--mode` then no longer exists).
+
+  For example, `.ase/agents/reviewer.mts` yields the commands
+  `ase agent reviewer start|status|log|stop`, which take exactly the same
+  options as `ase agent adhoc` described here, except `--definition` (as
+  the definition file of the kind takes its place), and where the given
+  options override the definition file.
+
+  The definition files are discovered only on the commands `ase agent`
+  ..., where a file of an invalid kind name (other than up to 64 letters,
+  digits, underscores, and dashes, starting with a letter or digit), of
+  the reserved kind names `adhoc`, `relay`, or `fleet`, or of an already
+  discovered kind name in the same directory (by the precedence of the
+  extensions `.yaml`, `.yml`, `.ts`, `.mts`, `.js`, `.mjs`, and `.cjs`,
+  in this order) is skipped with a warning.
 
 - *ad-hoc agents* (`ase agent adhoc`): an agent without a definition
   file of its own, e.g., for a one-off agent, or for an agent defined
@@ -103,19 +107,23 @@ not carry its tag (see `--tag-name`), whose `Assignee:` is empty or
 its own assignee name (see `--assign-name`), and whose predecessors
 (the tasks of the `After:` key, and, for an explicit epic, the other
 tasks of its `Group:`) all passed its phase (see `--state-passed` and
-the hook `passes`). It claims each such task (in natural task id order,
-or in the order of the hook `order`) in a single conditional save,
-which moves it into the state of `--state-activity`, tags it with the
-tag value `active` (as `<tag-name>:active`), and assigns it to the
-agent. It then processes the task through the headless agent tool of
-`--tool` with the prompt of `--prompt-skill`, `--prompt-text`, or
-`--prompt-file`, checks the success criteria, and finally, again in a
-single conditional save, settles the task: it tags it according to
-`--tag-success` resp. `--tag-failure` (or with the found verdict as
-the tag value), hands it over to the assignee of `--assign-success`
-resp. `--assign-failure`, and moves it into the state of
-`--state-success` resp. `--state-failure` (or of `--state-verdict`). A
-task whose status the skill itself moved elsewhere is tagged, too, and
+the hook `passes`).
+
+It claims each such task (in natural task id order, or in the order of
+the hook `order`) in a single conditional save, which moves it into the
+state of `--state-activity`, tags it with the tag value `active` (as
+`<tag-name>:active`), and assigns it to the agent.
+
+It then processes the task through the headless agent tool of `--tool`
+with the prompt of `--prompt-skill`, `--prompt-text`, or `--prompt-file`,
+checks the success criteria, and finally, again in a single conditional
+save, settles the task: it tags it according to `--tag-success` resp.
+`--tag-failure` (or with the found verdict as the tag value), hands it
+over to the assignee of `--assign-success` resp. `--assign-failure`, and
+moves it into the state of `--state-success` resp. `--state-failure` (or
+of `--state-verdict`).
+
+A task whose status the skill itself moved elsewhere is tagged, too, and
 left in that state. An interrupted processing puts the task back,
 untagged and with its previous assignee, into its incoming state.
 
@@ -152,9 +160,10 @@ where an error names the offending option.
   initialized (e.g., its agent tool is looked up and the task lifecycle
   model is checked against `--lifecycle`) before the command returns,
   so a failing agent is reported together with the tail of its log
-  (waiting up to 30 seconds for its startup). An agent of the same
-  name already running is left alone (and is an error with
-  `--foreground`). All options are described under **OPTIONS** below.
+  (waiting up to 30 seconds for its startup).
+
+  An agent of the same name already running is left alone (and is an error
+  with `--foreground`). All options are described under **OPTIONS** below.
 
 - `ase agent adhoc status` \[`-n`|`--name` *name*\]:
   Report whether the agent named *name* (default: `adhoc`) is running,
@@ -165,13 +174,14 @@ where an error names the offending option.
   Show the log `.ase/agent/`*name*`.log` of the agent named *name*
   (default: `adhoc`) run in the background (where an agent run in the
   foreground logs to the terminal, and an agent of a fleet into the log
-  of the fleet instead, see `ase-agent-fleet`(1)). With `-n`|`--lines`
-  *n*, only the last *n* lines are shown (default: all). With
-  `-f`|`--follow`, the last *n* lines (default: 10) are shown and then,
-  in the style of `tail -f`, all newly appended lines are followed until
-  interrupted. As `-n` is the number of lines, the name is given via
-  the long option `--name` only. If no log file exists, this is just
-  reported (at log level `info`).
+  of the fleet instead, see `ase-agent-fleet`(1)).
+
+  With `-n`|`--lines` *n*, only the last *n* lines are shown (default:
+  all). With `-f`|`--follow`, the last *n* lines (default: 10) are shown
+  and then, in the style of `tail -f`, all newly appended lines are
+  followed until interrupted. As `-n` is the number of lines, the name is
+  given via the long option `--name` only. If no log file exists, this is
+  just reported (at log level `info`).
 
 - `ase agent adhoc stop` \[`-n`|`--name` *name*\]:
   Stop the agent named *name* (default: `adhoc`) by sending it
@@ -195,12 +205,13 @@ The following options are shared by all agents (see also
   The name of the agent (default: its kind, i.e., `adhoc`, resp. the
   definition kind *kind*), at most 64 letters, digits, underscores, and
   dashes, starting with a letter or digit, and neither the name of
-  another agent kind, nor `relay` or `fleet`. It names the agent in its
-  log lines, its processing log attachment `agent:`*name* (see
-  `--attach-log`), the `Assignee:` of the tasks it processes (see
-  `--assign-name`), its default tag `ase-agent-`*name* (lower-cased,
-  see `--tag-name`), its default request name (see `--request-name`),
-  its temporary directory, and its process files
+  another agent kind, nor `relay` or `fleet`.
+
+  It names the agent in its log lines, its processing log attachment
+  `agent:`*name* (see `--attach-log`), the `Assignee:` of the tasks it
+  processes (see `--assign-name`), its default tag `ase-agent-`*name*
+  (lower-cased, see `--tag-name`), its default request name (see
+  `--request-name`), its temporary directory, and its process files
   `.ase/agent/`*name*`.yaml` and `.ase/agent/`*name*`.log`. Hence,
   multiple ad-hoc agents are started under different names.
 
@@ -248,10 +259,11 @@ The following options are shared by all agents (see also
   of the agent, like the clone of `--repo`, where `%p` in *dir* is
   expanded to the process id of the agent, `%h` to a hash value unique
   to the process, and `%%` to `%` (default: a fresh, private directory
-  below the system temporary directory). A missing *dir* is created
-  private to the current user, while an existing *dir* has to be a
-  directory (no symbolic link) owned by the current user. Silently
-  ignored with `--workdir project`.
+  below the system temporary directory).
+
+  A missing *dir* is created private to the current user, while an
+  existing *dir* has to be a directory (no symbolic link) owned by the
+  current user. Silently ignored with `--workdir project`.
 
 - \[`-f`|`--foreground`\]:
   Run the agent in the current process, logging to the terminal, until
@@ -267,12 +279,13 @@ a flat long option `--`*group*`-`*item* (except the ungrouped ones),
 accepted by all agents (including the built-in ones), where the given
 options override the definition of the agent (see `--definition` and
 **DEFINITION FILES**). A *repeatable* option can be given multiple
-times, each time adding a value. A given option also replaces its
-mutually exclusive alternatives of the definition: `--prompt-skill`
-replaces `--prompt-text` and `--prompt-file`, `--prompt-text` and
-`--prompt-file` replace each other and `--prompt-skill` with
-`--prompt-args`, and `--tag-retry` and `--tag-failure` replace each
-other.
+times, each time adding a value.
+
+A given option also replaces its mutually exclusive alternatives of the
+definition: `--prompt-skill` replaces `--prompt-text` and
+`--prompt-file`, `--prompt-text` and `--prompt-file` replace each other
+and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
+`--tag-failure` replace each other.
 
 #### Ungrouped
 
@@ -298,11 +311,12 @@ other.
   determines the working directory of the agent tool, the directories
   granted to it (via `--add-dir`), the holds and deferrals of the
   tasks, and the values of the placeholders `{workdir}`, `{source-dir}`,
-  and `{changeset-worktree}`. The worktrees the agent creates itself
-  are named *id*`-`*assign-name* resp.
-  *id*`-`*changeset-name*`-`*assign-name* (with every `#` of the task
-  id replaced by `_`), so they equal those of the built-in agents if
-  `--assign-name` is set to the built-in kind:
+  and `{changeset-worktree}`.
+
+  The worktrees the agent creates itself are named *id*`-`*assign-name*
+  resp. *id*`-`*changeset-name*`-`*assign-name* (with every `#` of the
+  task id replaced by `_`), so they equal those of the built-in agents
+  if `--assign-name` is set to the built-in kind:
     - `project`: the project root. `--repo` and `--tempdir` are
       silently ignored.
     - `source`: the working copy holding the `Source:` (the project
@@ -485,13 +499,15 @@ implicitly, but always have to be given explicitly.
 
 - \[`--prompt-skill` *name*\]:
   The skill to invoke, as *skill* or *plugin*`:`*skill* (letters,
-  digits, `_`, `.`, and `-`). It is invoked like the built-in agents
-  do, i.e., as `/`*skill* (`claude` and `copilot`) resp. `$`*skill*
-  (`codex`), followed by a single space and the rendered arguments of
-  `--prompt-args` only if these are non-empty, where an un-namespaced
-  ASE skill (`ase-*`) gets the plugin namespace `ase:` for `claude`
-  only, a *plugin*`:`*skill* stays verbatim, and any other name (e.g., a
-  project skill generated by `ase-meta-workflow`) stays un-namespaced.
+  digits, `_`, `.`, and `-`).
+
+  It is invoked like the built-in agents do, i.e., as `/`*skill*
+  (`claude` and `copilot`) resp. `$`*skill* (`codex`), followed by a
+  single space and the rendered arguments of `--prompt-args` only if
+  these are non-empty, where an un-namespaced ASE skill (`ase-*`) gets
+  the plugin namespace `ase:` for `claude` only, a *plugin*`:`*skill*
+  stays verbatim, and any other name (e.g., a project skill generated by
+  `ase-meta-workflow`) stays un-namespaced.
 
 - \[`--prompt-args` *template*\]:
   The arguments of the skill, as a template (see **TEMPLATES**)
@@ -513,12 +529,13 @@ implicitly, but always have to be given explicitly.
 - \[`--prepare-run` *cmd*\]:
   (repeatable) A shell command run in the working directory before the
   prompt (e.g., `npm ci`), where a failing command fails the processing
-  without running the prompt. It gets the environment variables
-  `ASE_TASK_ID`, `ASE_TASK_TITLE`, `ASE_TASK_SOURCE`,
-  `ASE_TASK_CHANGESET`, `ASE_TASK_TARGET` (the raw flow values or their
-  configured defaults), `ASE_AGENT_NAME`, `ASE_AGENT_WORKDIR`, and
-  `ASE_AGENT_PARAM_`*NAME* per parameter (see **PARAMETERS**).
-  Empty commands are refused.
+  without running the prompt.
+
+  It gets the environment variables `ASE_TASK_ID`, `ASE_TASK_TITLE`,
+  `ASE_TASK_SOURCE`, `ASE_TASK_CHANGESET`, `ASE_TASK_TARGET` (the raw
+  flow values or their configured defaults), `ASE_AGENT_NAME`,
+  `ASE_AGENT_WORKDIR`, and `ASE_AGENT_PARAM_`*NAME* per parameter (see
+  **PARAMETERS**). Empty commands are refused.
 
 #### Success
 
@@ -558,13 +575,15 @@ changed`, `no verdict`, `no new or changed attachment "<spec>"`, or
   The label after which the verdict is given in the output of a
   successfully exited agent tool: the verdict is the upper-case word
   following the label (after any non-word characters) on the last
-  output line carrying it, e.g., `APPROVE` for the label `REVIEW
-  VERDICT` and the line `**REVIEW VERDICT**: **APPROVE**`. The hook
-  `verdict` can determine it instead. A verdict is stored lower-cased
-  as the tag value (e.g., `ase-agent-approver:approve`, instead of
-  `--tag-success`) and mapped to a target state via `--state-verdict`.
-  It is honored on success only: on a failed processing, the task is
-  settled by `--tag-failure` and `--state-failure` instead.
+  output line carrying it, e.g., `APPROVE` for the label `REVIEW VERDICT`
+  and the line `**REVIEW VERDICT**: **APPROVE**`. The hook `verdict` can
+  determine it instead.
+
+  A verdict is stored lower-cased as the tag value (e.g.,
+  `ase-agent-approver:approve`, instead of `--tag-success`) and mapped to
+  a target state via `--state-verdict`. It is honored on success only: on
+  a failed processing, the task is settled by `--tag-failure` and
+  `--state-failure` instead.
 
 - \[`--verdict-allow` *VERDICT*\]:
   (repeatable) An accepted verdict, an upper-case word (default: the
@@ -604,13 +623,15 @@ type exactly and, if given, its MIME type.
   itself after the processing (before `--finish-commit`) and replacing
   the one of an earlier processing in place (keeping its `Created:`
   key), like `implementer` and `integrator` with the kind `changeset`.
+
   With `--workdir changeset`, it covers the change set of a `worktree`
   or `branch:` changeset from its fork point from the `Source:` on, with
   `base` *commit* (plus `, partial` unless the task reached
   `--state-phase`) in its `Desc:` key, while an `attachment:` changeset
-  other than `attachment:`*kind* removes it as obsolete. With
-  `--workdir target`, it covers the change of the target branch by the
-  integration of a `worktree` or `branch:` changeset, with `base`
+  other than `attachment:`*kind* removes it as obsolete.
+
+  With `--workdir target`, it covers the change of the target branch by
+  the integration of a `worktree` or `branch:` changeset, with `base`
   *commit*`, merged` *commit* in its `Desc:` key, unless the task did
   not reach `--state-phase` or the content of the target did not change.
   Without a change set, the task stays untouched.
@@ -703,11 +724,12 @@ either:
   Node.js) or a JavaScript file (`.js`, `.mjs`, or `.cjs`), whose
   default export is the definition object or a (possibly asynchronous)
   function returning it, where `.mts` resp. `.mjs` avoid the reparsing
-  warning of Node.js outside of a package of `"type": "module"`. It is
-  typed via the type `AgentDefinition` of the package `@rse/ase`
-  (`import type { AgentDefinition } from "@rse/ase"` and `export
-  default { ... } satisfies AgentDefinition`, with `@rse/ase` as a
-  development dependency for the editor only, as the type import is
+  warning of Node.js outside of a package of `"type": "module"`.
+
+  It is typed via the type `AgentDefinition` of the package `@rse/ase`
+  (`import type { AgentDefinition } from "@rse/ase"` and
+  `export default { ... } satisfies AgentDefinition`, with `@rse/ase`
+  as a development dependency for the editor only, as the type import is
   erased). Only such a file can additionally carry *hooks* (its key
   `hooks`, see **HOOKS**).
 
@@ -717,20 +739,23 @@ Every definition file can additionally declare *parameters* (its key
 A definition file can extend a *base definition* via its key
 `definition`: a further definition file (relative to the definition
 file) or, as `builtin:`*kind*`-`*mode* (resp. `builtin:`*kind*), the
-definition of a built-in agent. Its options override those of the base
-definition (also replacing their mutually exclusive alternatives, and
-with a false flag unsetting the flag of the base definition), its
-parameter declarations extend those of the same name of the base
-definition field-wise (e.g., `params: { severity: LOW }` changes just
-the default value), and its hooks replace those of the same name of
-the base definition. Base
-definitions can be chained arbitrarily deep, but never cyclic. For
-example, a `.ase/agents/implementer.mts` of `definition:
-"builtin:implementer-implement"` plus a `ready` hook shadows the
-built-in `implementer` while keeping its definition and its `passes`
-hook, and a `.ase/agents/reviewer.yaml` of `definition:
-builtin:approver-judge` plus its own `tag: { name: ase-agent-reviewer
-}` runs a further judging agent of its own tag.
+definition of a built-in agent.
+
+Its options override those of the base definition (also replacing their
+mutually exclusive alternatives, and with a false flag unsetting the
+flag of the base definition), its parameter declarations extend those
+of the same name of the base definition field-wise (e.g.,
+`params: { severity: LOW }` changes just the default value), and its
+hooks replace those of the same name of the base definition. Base
+definitions can be chained arbitrarily deep, but never cyclic.
+
+For example, a `.ase/agents/implementer.mts` of
+`definition: "builtin:implementer-implement"` plus a `ready` hook shadows
+the built-in `implementer` while keeping its definition and its `passes`
+hook, and a `.ase/agents/reviewer.yaml` of
+`definition: builtin:approver-judge` plus its own
+`tag: { name: ase-agent-reviewer }` runs a further judging agent of its
+own tag.
 
 ## PARAMETERS
 
@@ -776,13 +801,13 @@ parameter provides its value (empty if neither given nor defaulted) as:
 
 The *hooks* of a TypeScript or JavaScript definition file (its key
 `hooks`, typed via `AgentHooks` of the package `@rse/ase`) are the
-code-based extensions beyond the declarative options, which not only
-gate, but also shape the processing. A thrown error never terminates a
-running agent, but counts like a negative result with the error as its
-reason. The hooks receive the *task* (its `id`, `title`, `status`
-adapted to the task lifecycle model of the project, its flattened
-frontmatter `keys`, and its `tags`) and a context *ctx*, which
-provides:
+code-based extensions beyond the declarative options, which not only gate,
+but also shape the processing. A thrown error never terminates a running
+agent, but counts like a negative result with the error as its reason.
+
+The hooks receive the *task* (its `id`, `title`, `status` adapted to the
+task lifecycle model of the project, its flattened frontmatter `keys`,
+and its `tags`) and a context *ctx*, which provides:
 
 - `agent` and `lifecycle`:
   The agent (its `name`, `kind`, `mode`, and `tag`) and the task

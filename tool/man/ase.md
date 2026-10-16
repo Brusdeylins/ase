@@ -14,18 +14,20 @@
 ## DESCRIPTION
 
 **ase**, *Agentic Software Engineering (ASE)*, is the command-line
-companion tool of the *ASE* agent tool plugin for *Anthropic Claude
-Code CLI* (primary target), *GitHub Copilot CLI*, and *OpenAI Codex
-CLI* (secondary targets). It provides the plugin and tool setup, the
-layered configuration management, a per-project background HTTP
-service (bridged into the agent tool as a Model-Context-Protocol (MCP)
-server), the agent tool hook handlers, the statusline rendering, the
-persisted task plan management (including a task store server and an
-interactive task board), the autonomous task lifecycle agents (plus
-their agent relay and fleet supervisor), the project artifact
-resolution, the *SpecBook*-based specification linting, exporting and
-previewing, and miscellaneous utilities like diagram rendering,
-identifier minting, and text measuring.
+companion tool of the *ASE* agent tool plugin for
+*Anthropic Claude Code CLI* (primary target), *GitHub Copilot CLI*,
+and *OpenAI Codex CLI* (secondary targets).
+
+It provides the plugin and tool setup, the layered configuration
+management, a per-project background HTTP service (bridged into the
+agent tool as a Model-Context-Protocol (MCP) server), the agent tool
+hook handlers, the statusline rendering, the persisted task plan
+management (including a task store server and an interactive task
+board), the autonomous task lifecycle agents (plus their agent relay
+and fleet supervisor), the project artifact resolution, the
+*SpecBook*-based specification linting, exporting and previewing, and
+miscellaneous utilities like diagram rendering, identifier minting,
+and text measuring.
 
 Most commands are sub-command groups. Each group and each command has
 its own manual page, named after the command path with dashes, e.g.,

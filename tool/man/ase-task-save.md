@@ -19,11 +19,12 @@ attachment blocks, where a plan in a legacy format is normalized into
 the current frontmatter shape first. The `Id` frontmatter key is
 always taken from the *id* argument, and a missing `Type` key is set
 to `text/vnd.ase.task`. A text without a closed frontmatter block is
-taken as the plan body. Attachment data given as the elision marker
-`[elided: `*N*` lines]` is restored from the stored plan. The usage
-attachment (`kind="usage"`) can be changed by a booking only: an
-overwrite keeps the stored usage attachment, while a create drops any
-given one.
+taken as the plan body.
+
+Attachment data given as the elision marker `[elided: `*N*` lines]` is
+restored from the stored plan. The usage attachment (`kind="usage"`)
+can be changed by a booking only: an overwrite keeps the stored usage
+attachment, while a create drops any given one.
 
 The `Status` frontmatter key is checked against the task lifecycle
 model of the project: a changed status which is not a state of the

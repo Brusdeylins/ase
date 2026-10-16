@@ -272,6 +272,7 @@ Copilot CLI*), `session_id`, `version`, `model.display_name`,
 `rate_limits.seven_day` (each with `used_percentage` and `resets_at`),
 and `cost.total_cost_usd`, `cost.total_duration_ms`,
 `cost.total_lines_added`, and `cost.total_lines_removed` are used.
+
 Invalid JSON is an error.
 
 ## ENVIRONMENT

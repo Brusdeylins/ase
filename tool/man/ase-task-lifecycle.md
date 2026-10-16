@@ -19,26 +19,29 @@ follows the configuration, the `project.task.lifecycle` configuration
 (default: `solo`); for a remote task store (`ase://` or `ases://`),
 the model the project is registered under in the task store, which is
 shared by all clients of the project and hence registered under
-`project.task.lifecycle` on first use only. A configured
-`project.task.lifecycle` deviating from the model of a remote task
-store is warned about once per deviation only (tracked in the
-*per-user state directory* as `task-lifecycle.json`).
+`project.task.lifecycle` on first use only.
+
+A configured `project.task.lifecycle` deviating from the model of a
+remote task store is warned about once per deviation only (tracked in
+the *per-user state directory* as `task-lifecycle.json`).
 
 With *name*, the project in the task store is explicitly switched to
 this model: for a local task store by setting `project.task.lifecycle`
-on the `project` scope (see `ase-config`(1)), for a remote task store
-by re-registering the project there. On every switch of the model, the
-`Status` of the existing task plans is mapped onto the new model: a
-state also existing in the new model is kept, else the first
-candidate state existing in the new model wins (for a finished state
-only a finished one), else the initial state (resp. the first finished
-state) of the new model is used. For instance, from `solo` to `team`,
-`OPEN` becomes `PLANNING` and `CLOSED` becomes `IMPLEMENTED`, and from
-`enterprise` to `solo`, `PLANNED` and `IMPLEMENTING` become `OPEN` and
-`INTEGRATED` becomes `CLOSED`. Plans without a `Status` key are left
-alone, as they read as the initial state of any model. The switch is
-logged as `task: set lifecycle model of project from "`*from*`" to
-"`*name*`"`.
+on the `project` scope (see `ase-config`(1)), for a remote task store by
+re-registering the project there.
+
+On every switch of the model, the `Status` of the existing task plans is
+mapped onto the new model: a state also existing in the new model is
+kept, else the first candidate state existing in the new model wins (for
+a finished state only a finished one), else the initial state (resp. the
+first finished state) of the new model is used. For instance, from
+`solo` to `team`, `OPEN` becomes `PLANNING` and `CLOSED` becomes
+`IMPLEMENTED`, and from `enterprise` to `solo`, `PLANNED` and
+`IMPLEMENTING` become `OPEN` and `INTEGRATED` becomes `CLOSED`.
+
+Plans without a `Status` key are left alone, as they read as the initial
+state of any model. The switch is logged as
+`task: set lifecycle model of project from "`*from*`" to "`*name*`"`.
 
 ## OPTIONS
 

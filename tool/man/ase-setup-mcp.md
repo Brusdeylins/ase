@@ -79,14 +79,18 @@ The API-based *chat* servers are registered as stdio servers running
 `npx -y mcp-to-openai`, which bridges to the OpenAI-compatible API of
 the LLM vendor, or, with the key `ASE_MCP_KEY_OPENROUTER` of an
 *OpenRouter* account as a common alternative, to the *OpenRouter*
-proxy API. The harness-based *chat* servers (`anthropic-claude`,
-`openai-codex`, and `github-copilot`) are registered as stdio servers
-running `npx -y mcp-to-harness`, which bridges to the locally
-installed agent tool CLI, authenticating via its own configured
-credentials: their variable carries no API key at all, but the model
-identifier of the harness, with the special value `default` selecting
-the default model of the harness. The *search* servers are registered
-as stdio servers running `npx -y @brave/brave-search-mcp-server` resp.
+proxy API.
+
+The harness-based *chat* servers (`anthropic-claude`, `openai-codex`,
+and `github-copilot`) are registered as stdio servers running
+`npx -y mcp-to-harness`, which bridges to the locally installed agent
+tool CLI, authenticating via its own configured credentials: their
+variable carries no API key at all, but the model identifier of the
+harness, with the special value `default` selecting the default model
+of the harness.
+
+The *search* servers are registered as stdio servers running
+`npx -y @brave/brave-search-mcp-server` resp.
 `npx -y @perplexity-ai/mcp-server`, resp. as an HTTP server on
 `https://mcp.exa.ai/mcp` for `exa`.
 
@@ -99,20 +103,22 @@ as stdio servers running `npx -y @brave/brave-search-mcp-server` resp.
   registered MCP server name), `KEY` (the accepted suffixes *KEY* of
   the environment variables `ASE_MCP_KEY_`*KEY*, in order of
   preference), and `SKILLS` (the *ASE* skills leveraging the server).
+
   It accepts no options besides `-h`|`--help` and does not require any
   agent tool.
 
 - `ase setup mcp activate` \[`-t`|`--tool` *tool*\] \[`-s`|`--scope` *scope*\] \[*servers*\]:
   Register one or more pre-defined MCP servers with the agent tool
-  (via `<cli> mcp add`). The environment variables
-  `ASE_MCP_KEY_`*KEY* are first additionally sourced from a `.env`
-  file in the current directory (if existing). Each selected server
-  takes its key from the first of its variables (see `KEY` of `ase
-  setup mcp list`) which is set and non-empty. A server none of whose
-  variables is set is silently skipped when it was selected
-  implicitly (via an empty *servers* or `all`), but causes a hard
-  error when it was given explicitly. A prior registration of the
-  same server is removed first, so it is re-created cleanly.
+  (via `<cli> mcp add`). The environment variables `ASE_MCP_KEY_`*KEY*
+  are first additionally sourced from a `.env` file in the current
+  directory (if existing). Each selected server takes its key from the
+  first of its variables (see `KEY` of `ase setup mcp list`) which is
+  set and non-empty.
+
+  A server none of whose variables is set is silently skipped when it
+  was selected implicitly (via an empty *servers* or `all`), but causes
+  a hard error when it was given explicitly. A prior registration of
+  the same server is removed first, so it is re-created cleanly.
 
 - `ase setup mcp deactivate` \[`-t`|`--tool` *tool*\] \[`-s`|`--scope` *scope*\] \[*servers*\]:
   Unregister one or more pre-defined MCP servers from the agent tool
@@ -133,11 +139,12 @@ as stdio servers running `npx -y @brave/brave-search-mcp-server` resp.
   Select the MCP server registration scope: `user` (default;
   registered globally for the current user), `project` (registered in
   the project and meant to be shared via version control), or `local`
-  (registered in the project, but kept out of version control). The
-  scope is always passed explicitly to *Anthropic Claude Code CLI*, as
-  it would otherwise default to `local`. Only supported for `--tool
-  claude`; a non-`user` scope for `copilot` or `codex` fails with an
-  error.
+  (registered in the project, but kept out of version control).
+
+  The scope is always passed explicitly to *Anthropic Claude Code CLI*,
+  as it would otherwise default to `local`. Only supported for
+  `--tool claude`; a non-`user` scope for `copilot` or `codex` fails
+  with an error.
 
 ## ARGUMENTS
 

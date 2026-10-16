@@ -17,13 +17,14 @@ All references to *old-id* in the `After` frontmatter keys of all
 other task plans of the project are rewritten to *new-id* (in the
 frontmatter only, so their `Modified` key stays untouched), and the
 number of updated plans is reported. For an *explicit epic*, i.e., a
-task whose `Group` key equals its old (or already its new) id, its
-own `Group` key and those of all its member task plans are rewritten,
-too, while otherwise the group names are left untouched, as they form
-a namespace of their own. The task itself is renamed first, so an
-interruption never leaves both ids behind; a failure to update the
-references afterwards is reported together with the plans left
-behind.
+task whose `Group` key equals its old (or already its new) id, its own
+`Group` key and those of all its member task plans are rewritten, too,
+while otherwise the group names are left untouched, as they form a
+namespace of their own.
+
+The task itself is renamed first, so an interruption never leaves both
+ids behind; a failure to update the references afterwards is reported
+together with the plans left behind.
 
 For a `seq` task id scheme, the sequence number of *old-id* is never
 reused by `ase-task-newid`(1). A *new-id* not conforming to the task

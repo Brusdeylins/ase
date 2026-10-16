@@ -48,12 +48,13 @@ individual manual pages for the exact applicability):
   statusline registration: `user` (registered globally for the
   current user), `project` (registered in the project and meant to be
   shared via version control), or `local` (registered in the project,
-  but kept out of version control). Only supported for `--tool
-  claude` (and, for the statusline, a `user` scope for `--tool
-  copilot`); a non-`user` scope for any other tool fails with an
-  error, as those agent tools have no scope concept. Not accepted by
-  `ase setup status` (which reports all scopes at once) and `ase
-  setup telemetry` (which is always user-level).
+  but kept out of version control).
+
+  Only supported for `--tool claude` (and, for the statusline, a `user`
+  scope for `--tool copilot`); a non-`user` scope for any other tool
+  fails with an error, as those agent tools have no scope concept. Not
+  accepted by `ase setup status` (which reports all scopes at once) and
+  `ase setup telemetry` (which is always user-level).
 
 ## COMMANDS
 

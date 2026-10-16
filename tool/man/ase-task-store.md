@@ -29,15 +29,18 @@
 
 ## DESCRIPTION
 
-**ase task store** manages the *task store server*: a per-user
-(not per-project), bearer token authenticated REST API server, which
+**ase task store** manages the *task store server*: a per-user (not
+per-project), bearer token authenticated REST API server, which
 persists the task plans of *all* projects registered with it and which
 the `ase task` commands of a project use through a remote
-`project.task.store.url` of the form `ase://`*addr*`:`*port*\[`/`*token*\]
-resp. `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\] (see
-`ase-task`(1)). It can run locally or on a central host, as long as all
-clients reach it. The REST API itself, its task plan model, and its
-event notifications are described in `docs/task-api.md` of the *ASE*
+`project.task.store.url` of the form
+`ase://`*addr*`:`*port*\[`/`*token*\] resp.
+`ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\] (see
+`ase-task`(1)).
+
+It can run locally or on a central host, as long as all clients reach
+it. The REST API itself, its task plan model, and its event
+notifications are described in `docs/task-api.md` of the *ASE*
 distribution.
 
 The server is *storage agnostic*: it implements the authentication,
@@ -80,18 +83,18 @@ resolved (where both or none have to be given) and checked for
 readability, so invalid options never leave no server running.
 
 The start is *idempotent*: a server already running on the configured
-address and port (as identified by probing its `/projects` endpoint)
-is left alone and reported as `task store: already running on`
-*url*. If an explicitly given option *deviates* from the
-configuration of the running server (`--address`, `--port`,
-`--token`, `--cors`, `--tls-cert`, `--tls-key`, `--module`,
-`--basedir`, `--solo`/`--no-solo`, `--with-agent-relay`, or
-`--without-agent-relay`), the running server is instead stopped and
-restarted with the new configuration. A running server rejecting the
-configured token is an error. A configured port held by a foreign
-service is re-allocated (with a warning). Binding to a non-loopback
-*host* without TLS is warned about, as the bearer token would then
-travel unencrypted over the network.
+address and port (as identified by probing its `/projects` endpoint) is
+left alone and reported as `task store: already running on` *url*. If an
+explicitly given option *deviates* from the configuration of the running
+server (`--address`, `--port`, `--token`, `--cors`, `--tls-cert`,
+`--tls-key`, `--module`, `--basedir`, `--solo`/`--no-solo`,
+`--with-agent-relay`, or `--without-agent-relay`), the running server is
+instead stopped and restarted with the new configuration.
+
+A running server rejecting the configured token is an error. A
+configured port held by a foreign service is re-allocated (with a
+warning). Binding to a non-loopback *host* without TLS is warned about,
+as the bearer token would then travel unencrypted over the network.
 
 A detached server is awaited (for up to 10 seconds) until it responds
 to the probe with the expected token, and is reported as `task store:
@@ -124,14 +127,15 @@ removing its `pid` from `store.yaml`. The options are:
   (default: the configured `cors` list, else none, i.e., no CORS
   headers are emitted and cross-origin browser requests fail).
 - \[`-m`|`--module` *name*\]:
-  The storage plugin to load: `ase` for the built-in file-based
-  one, `github`, `gitlab`, resp. `gitea` for the built-in GitHub,
-  GitLab, resp. Gitea Issues one, any other plain *name* (matching
+  The storage plugin to load: `ase` for the built-in file-based one,
+  `github`, `gitlab`, resp. `gitea` for the built-in GitHub, GitLab,
+  resp. Gitea Issues one, any other plain *name* (matching
   `[A-Za-z0-9_-]+`) for the NPM package `ase-task-store-`*name*
-  (resolvable from the *ASE* installation), and a relative or
-  absolute path for a local module (default: the configured
-  `storage.plugin`, else `ase`). The given plugin is persisted as
-  `storage.plugin`.
+  (resolvable from the *ASE* installation), and a relative or absolute
+  path for a local module (default: the configured `storage.plugin`,
+  else `ase`).
+
+  The given plugin is persisted as `storage.plugin`.
 - \[`-d`|`--basedir` *dir*\]:
   The base directory of the built-in `ase` storage plugin (default:
   the configured `storage.options.basedir`, resolved relative to
@@ -234,24 +238,27 @@ built-in storage plugins exist:
   textual task format as `TASK-`*id*`.md` files. Its options are
   `basedir` (the base directory, see `--basedir`), `solo` (see
   `--solo`), and `lifecycle` (the task lifecycle model of newly
-  registered projects, default: `solo`). Without `solo`, every project
-  is stored below *basedir*`/`*project-id*`/`, with its `PROJECT.yaml`
-  as the project registry entry (carrying the task lifecycle model,
-  the task id scheme, and the sequence number high-water mark). With
-  `solo`, a single project is stored flat in *basedir* itself, with a
-  single `PROJECT.yaml` there, and any project id is accepted -- which
-  is exactly what the local `ase:`*path* form of
-  `project.task.store.url` uses in-process, without any server.
+  registered projects, default: `solo`).
+
+  Without `solo`, every project is stored below
+  *basedir*`/`*project-id*`/`, with its `PROJECT.yaml` as the project
+  registry entry (carrying the task lifecycle model, the task id
+  scheme, and the sequence number high-water mark). With `solo`, a
+  single project is stored flat in *basedir* itself, with a single
+  `PROJECT.yaml` there, and any project id is accepted -- which is
+  exactly what the local `ase:`*path* form of `project.task.store.url`
+  uses in-process, without any server.
 
 - `github`:
   Persists the task plans as the *issues* of GitHub repositories,
-  through the GitHub REST API. Its options are `url` (the web URL of
-  the GitHub instance, default: `https://github.com`, else e.g. the one
-  of a GitHub Enterprise Server or Cloud), `token` (default:
-  `$GITHUB_TOKEN`, else `$GH_TOKEN`; required), `repos` (required, a
-  mapping of each project id onto its *owner*`/`*repo*), and `poll`
-  (the polling interval of the change detection in seconds, default:
-  `60`, `0` disables it).
+  through the GitHub REST API.
+
+  Its options are `url` (the web URL of the GitHub instance, default:
+  `https://github.com`, else e.g. the one of a GitHub Enterprise
+  Server or Cloud), `token` (default: `$GITHUB_TOKEN`, else
+  `$GH_TOKEN`; required), `repos` (required, a mapping of each project
+  id onto its *owner*`/`*repo*), and `poll` (the polling interval of
+  the change detection in seconds, default: `60`, `0` disables it).
 
 - `gitlab`:
   Persists the task plans as the *issues* of GitLab projects, through
@@ -298,14 +305,16 @@ server) for the `github:`, `gitlab:`, and `gitea+http[s]:` forms of
 - *per-user configuration directory*`/store.yaml`:
   The configuration and runtime state of the task store server (see
   `ase`(1) for the location of the per-user configuration directory),
-  written with mode `0600`, as it carries the token. Its keys are
-  `address` (the bound address), `port` (the bound port), `token` (the
-  expected bearer token), `pid` (the process id of the running server),
-  `cors` (the list of allowed CORS origins), `tls.cert` and `tls.key`
-  (the paths of the PEM certificate and key, resolved relative to the
-  file), `relay` (`true` to co-host the agent relay), `storage.plugin`
-  (the storage plugin), and `storage.options` (the options of the
-  storage plugin, see **STORAGE PLUGINS**), as in the example below.
+  written with mode `0600`, as it carries the token.
+
+  Its keys are `address` (the bound address), `port` (the bound port),
+  `token` (the expected bearer token), `pid` (the process id of the
+  running server), `cors` (the list of allowed CORS origins),
+  `tls.cert` and `tls.key` (the paths of the PEM certificate and key,
+  resolved relative to the file), `relay` (`true` to co-host the agent
+  relay), `storage.plugin` (the storage plugin), and `storage.options`
+  (the options of the storage plugin, see **STORAGE PLUGINS**), as in
+  the example below.
 
 - *per-user configuration directory*`/store.log`:
   The log of the task store server run in the background.

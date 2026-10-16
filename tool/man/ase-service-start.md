@@ -19,13 +19,15 @@ fresh random free port out of the range `42000`..`44000` (trying up to
 20 candidates), spawns the service as a detached background process
 (with its standard output and standard error appended to
 `.ase/service.log`, trimmed to its last 2000 lines beforehand if larger
-than 1 MB), and probes its readiness for up to 5 seconds. Once ready,
-the service persists its port into `.ase/service.yaml`, and the command
-reports `service: started on port` *port*. If the spawned service exits
-during its startup, does not become ready in time, or loses its port to
-a foreign listener, the attempt is aborted (killing the process) and
-retried with a new port, up to three attempts in total, after which the
-command fails with the reason and the last 20 lines of the log.
+than 1 MB), and probes its readiness for up to 5 seconds.
+
+Once ready, the service persists its port into `.ase/service.yaml`,
+and the command reports `service: started on port` *port*. If the
+spawned service exits during its startup, does not become ready in
+time, or loses its port to a foreign listener, the attempt is aborted
+(killing the process) and retried with a new port, up to three attempts
+in total, after which the command fails with the reason and the last
+20 lines of the log.
 
 The detached service adopts the log level of the global `--log-level`
 option of this command, e.g., `ase --log-level debug service start`

@@ -25,10 +25,11 @@ and its creation and modification timestamps. The aggregated state of
 the requests of the name is mirrored in the `Tags` frontmatter key of
 the task as the tag `ase-agent-`*name*`:pending` (resp.
 `ase-agent-editor:pending` for `edit`), as the agents and the task
-boards see the task headers only. While being processed, the request
-turns into `kind="`*name*`-running"` (tag value `active`), and on a
-failure into `kind="`*name*`-failed"` (tag value `failed`). A new
-request replaces all failed requests of the name.
+boards see the task headers only.
+
+While being processed, the request turns into `kind="`*name*`-running"`
+(tag value `active`), and on a failure into `kind="`*name*`-failed"` (tag
+value `failed`). A new request replaces all failed requests of the name.
 
 The request is refused for a missing task, for a task in a finished
 state of the task lifecycle model, for an empty prompt, and while a

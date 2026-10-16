@@ -30,16 +30,18 @@ invalid file as is).
 - \[`--scope` *scope*\]:
   Select the scope chain, whose strongest scope is the target scope
   whose file is edited. As an option of `ase config`, it has to be
-  given *before* `edit`. The *scope* value is a comma-separated list of
-  the terms `user`, `project`, `task:`*id*, and `session:`*id* (with
-  *id* matching `[A-Za-z0-9._-]+`), at most one per kind and in any
-  order, canonicalized into the order `user` < `project` < `task` <
-  `session`. `user` is always added implicitly, and `project` is added
-  implicitly whenever a project context (a Git working tree or a `.ase`
-  directory at or above the current directory) exists, but never
-  above the strongest explicitly requested term. An explicit `project`
-  without a project context is an error. Default: `project` inside a
-  project context, else `user`. See `ase-config`(1) for details.
+  given *before* `edit`. The *scope* value is a comma-separated list
+  of the terms `user`, `project`, `task:`*id*, and `session:`*id*
+  (with *id* matching `[A-Za-z0-9._-]+`), at most one per kind and in
+  any order, canonicalized into the order `user` < `project` < `task`
+  < `session`.
+
+  `user` is always added implicitly, and `project` is added implicitly
+  whenever a project context (a Git working tree or a `.ase` directory
+  at or above the current directory) exists, but never above the
+  strongest explicitly requested term. An explicit `project` without a
+  project context is an error. Default: `project` inside a project
+  context, else `user`. See `ase-config`(1) for details.
 
 ## ENVIRONMENT
 

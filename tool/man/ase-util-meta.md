@@ -10,13 +10,15 @@
 
 **ase util meta** writes the contents of one or more *meta files* of
 the *ASE* plugin to standard output, concatenated in the given order
-and without any separator. The meta files are the shared instructions
-and format conventions of the *ASE* skills, e.g., the constitution
-(`ase-constitution.md`), the tenets (`ase-tenets.md`), the persona
-(`ase-persona.md`), the dialog conventions (`ase-dialog.md`), the
-option parsing conventions (`ase-getopt.md`), and the artifact format
-conventions (`ase-format-*.md`, plus the standard *SpecBook* schema
-configuration `ase-format-specbook.yaml`).
+and without any separator.
+
+The meta files are the shared instructions and format conventions of
+the *ASE* skills, e.g., the constitution (`ase-constitution.md`), the
+tenets (`ase-tenets.md`), the persona (`ase-persona.md`), the dialog
+conventions (`ase-dialog.md`), the option parsing conventions
+(`ase-getopt.md`), and the artifact format conventions
+(`ase-format-*.md`, plus the standard *SpecBook* schema configuration
+`ase-format-specbook.yaml`).
 
 The meta files are read from the `plugin/meta/` directory bundled with
 the tool package itself, independent of any environment variables. All

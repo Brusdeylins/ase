@@ -29,19 +29,19 @@
 ## DESCRIPTION
 
 **ase agent implementer** drives the `Implementation` phase of the
-`enterprise` task lifecycle model (refused for any other model). It
-claims every task in the state `PLANNED` which is unassigned or assigned
-to the agent, which does not carry the tag `ase-agent-implementer` yet,
-and whose `After:` predecessors (and, for an explicit epic, its group
-members) are *integrated*, i.e., `INTEGRATED` and not still tagged by
-the integrator with the value `active` or `failed`, as the task is
-implemented from its `Source:`, which contains the change set of a
-predecessor only then. For a task *stacked* onto a predecessor (i.e.,
-with the `branch:` changeset of the predecessor as its `Source:`), the
-predecessor passes already once `IMPLEMENTED` or later (and not still
-tagged by the implementer with the value `active` or `failed` while
-`IMPLEMENTED`). This predecessor rule is the hook `passes` of the
-built-in definition.
+`enterprise` task lifecycle model (refused for any other model). It claims
+every task in the state `PLANNED` which is unassigned or assigned to the
+agent, which does not carry the tag `ase-agent-implementer` yet, and whose
+`After:` predecessors (and, for an explicit epic, its group members) are
+*integrated*, i.e., `INTEGRATED` and not still tagged by the integrator
+with the value `active` or `failed`, as the task is implemented from its
+`Source:`, which contains the change set of a predecessor only then.
+
+For a task *stacked* onto a predecessor (i.e., with the `branch:`
+changeset of the predecessor as its `Source:`), the predecessor passes
+already once `IMPLEMENTED` or later (and not still tagged by the
+implementer with the value `active` or `failed` while `IMPLEMENTED`).
+This predecessor rule is the hook `passes` of the built-in definition.
 
 In its default mode `implement`, the implementer moves each claimed task
 into `IMPLEMENTING`, tags it with `ase-agent-implementer:active`, and
@@ -50,9 +50,11 @@ skill invocation `ase-task-implement --next DONE` *id* (see
 **CHANGESETS**). The skill itself puts a successfully implemented task
 into `IMPLEMENTED`, while a task left in `IMPLEMENTING` is put into
 `STALLED`. Afterwards, the task is unassigned and tagged with
-`ase-agent-implementer`. A task already `IMPLEMENTED`, but whose
-changeset branch could not be committed or pushed, is instead tagged
-`ase-agent-implementer:failed` and left for a manual intervention.
+`ase-agent-implementer`.
+
+A task already `IMPLEMENTED`, but whose changeset branch could not be
+committed or pushed, is instead tagged `ase-agent-implementer:failed`
+and left for a manual intervention.
 
 In mode `draft`, the implementer instead claims only the `PLANNED` tasks
 without an implementation draft attachment (type `text/x-diff;
@@ -96,11 +98,13 @@ In mode `implement`, the `Changeset:` of the task (or the configured
   with the message *Kind*`:` *title* `(`*id*`)` (where *Kind* is the
   `Kind:` frontmatter key of the task, default `CRAFTING`) -- also a
   partial result of a failed processing, as the plan tracks it --, where
-  the `.ase` directory is never committed. The worktree of the agent is
-  removed again only if clean. Under `--repo`, the branch is pushed to
-  the origin of the clone and, if the push is rejected, kept as the
-  branch `ase-agent-rescue/`*id* in the preserved clone, also for a
-  partial change set of a task put into `STALLED`.
+  the `.ase` directory is never committed.
+
+  The worktree of the agent is removed again only if clean. Under
+  `--repo`, the branch is pushed to the origin of the clone and, if
+  the push is rejected, kept as the branch `ase-agent-rescue/`*id* in
+  the preserved clone, also for a partial change set of a task put
+  into `STALLED`.
 
 - `attachment:`*name*: The change set is entirely handled by the skill.
 
@@ -113,8 +117,10 @@ of type `text/x-diff; charset=utf-8; kind="changeset"` (see
 `base` *commit* (plus `, partial` for a task not put into
 `IMPLEMENTED`) in its `Desc:` key, so the change set can be viewed
 wherever the task is visible, e.g., on the task boards during its
-approval. For an `attachment:` changeset other than
-`attachment:changeset`, an existing snapshot is removed as obsolete.
+approval.
+
+For an `attachment:` changeset other than `attachment:changeset`, an
+existing snapshot is removed as obsolete.
 
 ## OPTIONS
 
@@ -140,9 +146,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
       lines, its processing log attachment `agent:`*name*, the
       `Assignee:` of the tasks it processes, its temporary directory,
       and its process files `.ase/agent/`*name*`.yaml` and
-      `.ase/agent/`*name*`.log`. Agents of the kind `implementer` under
-      different names form a pool, competing for the same tasks and
-      processing them in parallel to each other.
+      `.ase/agent/`*name*`.log`.
+
+      Agents of the kind `implementer` under different names form a
+      pool, competing for the same tasks and processing them in parallel
+      to each other.
 
     - \[`-t`|`--tool` *tool*\]: The headless agent tool processing the
       tasks: `claude` (*Anthropic Claude Code CLI*), `copilot` (*GitHub
@@ -183,10 +191,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
       `worktree` value is processed in its own temporary Git worktree of
       this clone, and changed branches are pushed back to its origin
       (default: none, i.e., all tasks are processed in the Git working
-      copy the agent is started in, which is hence mandatory). Requires
-      a task store not located in the working copy (i.e., not a local
-      `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES** in
-      `ase-agent`(1).
+      copy the agent is started in, which is hence mandatory).
+
+      Requires a task store not located in the working copy (i.e., not a
+      local `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES**
+      in `ase-agent`(1).
 
     - \[`-d`|`--tempdir` *dir*\]: Create the temporary directory of the
       agent as the sub-directory *name* of *dir*, where `%p` is expanded

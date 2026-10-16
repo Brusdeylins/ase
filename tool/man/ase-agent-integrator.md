@@ -57,11 +57,12 @@ successfully and its output carries the status line of the skill
 matching `status:\W*plan integrated\b`, while a task left in
 `INTEGRATING` is put into `DEFERRED`, especially on unresolvable merge
 conflicts. Afterwards, the task is unassigned and tagged with
-`ase-agent-integrator`. A task already `INTEGRATED`, but whose target
-branch could not be pushed, is instead tagged
-`ase-agent-integrator:failed` and left for a manual intervention, with
-the merge kept as the branch `ase-agent-rescue/`*id* in the preserved
-clone.
+`ase-agent-integrator`.
+
+A task already `INTEGRATED`, but whose target branch could not be pushed,
+is instead tagged `ase-agent-integrator:failed` and left for a manual
+intervention, with the merge kept as the branch `ase-agent-rescue/`*id*
+in the preserved clone.
 
 For a `worktree` or `branch:` changeset of an `INTEGRATED` task whose
 integration changed the content of the target branch, the agent itself
@@ -106,10 +107,12 @@ All other options belong to the sub-commands (see **COMMANDS**).
       lines, its processing log attachment `agent:`*name*, the
       `Assignee:` of the tasks it processes, its temporary directory,
       and its process files `.ase/agent/`*name*`.yaml` and
-      `.ase/agent/`*name*`.log`. Agents of the kind `integrator` under
-      different names form a pool, competing for the same tasks, but
-      processing the tasks serially only, so a single integrator
-      suffices (and a fleet refuses more than one).
+      `.ase/agent/`*name*`.log`.
+
+      Agents of the kind `integrator` under different names form a
+      pool, competing for the same tasks, but processing the tasks
+      serially only, so a single integrator suffices (and a fleet
+      refuses more than one).
 
     - \[`-t`|`--tool` *tool*\]: The headless agent tool processing the
       tasks: `claude` (*Anthropic Claude Code CLI*), `copilot` (*GitHub
@@ -148,10 +151,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
       `worktree` value is processed in its own temporary Git worktree of
       this clone, and changed branches are pushed back to its origin
       (default: none, i.e., all tasks are processed in the Git working
-      copy the agent is started in, which is hence mandatory). Requires
-      a task store not located in the working copy (i.e., not a local
-      `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES** in
-      `ase-agent`(1).
+      copy the agent is started in, which is hence mandatory).
+
+      Requires a task store not located in the working copy (i.e., not a
+      local `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES**
+      in `ase-agent`(1).
 
     - \[`-d`|`--tempdir` *dir*\]: Create the temporary directory of the
       agent as the sub-directory *name* of *dir*, where `%p` is expanded

@@ -50,12 +50,13 @@ the agent tool to be found in `$PATH`. The rows are:
 Files below the home directory are shown abbreviated with `~`, and an
 unparsable settings file is silently skipped. The command is purely
 read-only and always exits with status `0`, so a missing registration
-is reported rather than signalled through the exit code. It takes no
-`--scope`, since it deliberately reports *all* scopes at once -- that
-is exactly what makes an unintentionally leaked registration visible.
-Scope information is only available for `--tool claude` (and, for MCP
-servers, `--tool copilot`); everywhere else the scope is reported as
-`(n/a)`.
+is reported rather than signalled through the exit code.
+
+It takes no `--scope`, since it deliberately reports *all* scopes at
+once -- that is exactly what makes an unintentionally leaked
+registration visible. Scope information is only available for
+`--tool claude` (and, for MCP servers, `--tool copilot`); everywhere
+else the scope is reported as `(n/a)`.
 
 ## OPTIONS
 

@@ -46,12 +46,13 @@ formats and pages it as usual (honoring `MANPAGER`, `PAGER`, and
   The manual page to show (default: `ase`). It is given either by its
   name (e.g. `ase-agent-fleet`) or by the words of the command path
   (e.g. `agent fleet`), which are joined with dashes, where the leading
-  `ase` is optional and the name is case-insensitive. A command path
-  deeper than the shipped manual pages (e.g. `task store start`) falls
-  back to the manual page of its nearest parent group (e.g.
-  `ase-task-store`), but never to the top-level page `ase`(1). A *page*
-  consisting of anything other than letters, digits, and dashes is
-  refused.
+  `ase` is optional and the name is case-insensitive.
+
+  A command path deeper than the shipped manual pages (e.g.
+  `task store start`) falls back to the manual page of its nearest
+  parent group (e.g. `ase-task-store`), but never to the top-level
+  page `ase`(1). A *page* consisting of anything other than letters,
+  digits, and dashes is refused.
 
 ## ENVIRONMENT
 

@@ -53,10 +53,12 @@ the global excludes file (`core.excludesFile`, else
 `$XDG_CONFIG_HOME/git/ignore`, falling back to
 `~/.config/git/ignore`), the repository-local `info/exclude`, and the
 `.gitignore` files from the project root downwards, with the last
-matching rule winning. The universe is partitioned among the kinds by
-descending precedence `spec`, `code`, `docs`, and `infr`: a file
-matched by multiple kinds belongs to the first one only, and every
-file matched by none of them belongs to `othr`.
+matching rule winning.
+
+The universe is partitioned among the kinds by descending precedence
+`spec`, `code`, `docs`, and `infr`: a file matched by multiple kinds
+belongs to the first one only, and every file matched by none of them
+belongs to `othr`.
 
 Without a sub-command, the usage information is shown and the command
 exits with status `1`.

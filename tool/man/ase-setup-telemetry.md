@@ -51,10 +51,12 @@ status `0`), and reported as `foreign` by `ase setup status`.
       `OTEL_EXPORTER_OTLP_ENDPOINT=`*url*,
       `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer `*token*, and
       `OTEL_LOGS_EXPORT_INTERVAL=5000` are added to (resp. updated in)
-      the `env` object of `~/.claude/settings.json`. If any of these
-      variables is already set there, but points neither to the URL
-      nor carries the token of the *ASE* ingress, the configuration
-      is foreign and preserved; a non-object `env` is preserved, too.
+      the `env` object of `~/.claude/settings.json`.
+
+      If any of these variables is already set there, but points
+      neither to the URL nor carries the token of the *ASE* ingress, the
+      configuration is foreign and preserved; a non-object `env` is
+      preserved, too.
     - `codex`:
       A marked block (between the lines `# BEGIN ASE telemetry
       (generated)` and `# END ASE telemetry (generated)`) with an
@@ -76,19 +78,20 @@ status `0`), and reported as `foreign` by `ase setup status`.
       `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer `*token* to the
       `copilot` command only, instead of exporting them to every other
       program. A new shell session is required for it to take effect.
+
       For any other shell, the command fails with an error showing the
-      shell function to define manually. An
-      `$OTEL_EXPORTER_OTLP_ENDPOINT` of the environment other than the
-      *ASE* ingress URL, and an assignment of `COPILOT_OTEL_ENABLED` or
-      `OTEL_EXPORTER_OTLP_ENDPOINT` in the profile outside of the
-      block, are foreign and preserved.
+      shell function to define manually. An `$OTEL_EXPORTER_OTLP_ENDPOINT`
+      of the environment other than the *ASE* ingress URL, and an
+      assignment of `COPILOT_OTEL_ENABLED` or `OTEL_EXPORTER_OTLP_ENDPOINT`
+      in the profile outside of the block, are foreign and preserved.
 
 - `ase setup telemetry deactivate` \[`-t`|`--tool` *tool*\]:
   Remove the telemetry export configured by `ase setup telemetry
   activate` again, preserving any foreign telemetry configuration. It
-  does not require `telemetry.enabled`. Per agent tool: for `claude`,
-  the above variables are removed from the `env` of
-  `~/.claude/settings.json` (and the `env` itself, if it became
+  does not require `telemetry.enabled`.
+
+  Per agent tool: for `claude`, the above variables are removed from the
+  `env` of `~/.claude/settings.json` (and the `env` itself, if it became
   empty); for `codex`, the marked block is removed from
   `$CODEX_HOME/config.toml`; and for `copilot`, the marked block is
   removed from all candidate shell profiles (`~/.zshrc`, `~/.bashrc`,

@@ -33,9 +33,10 @@ time, state (`waiting` or `busy`), the ids of the tasks it is busy
 with, its usage of the agent tool (in total and by its last job), the
 time since which it is in its state, the time of its latest
 announcement (its heartbeat), and its most recent 100 processing log
-lines (each message truncated to 500 characters). An agent without
-heartbeat for 30 seconds is removed (checked every 5 seconds), and a
-project exists only while it has agents.
+lines (each message truncated to 500 characters).
+
+An agent without heartbeat for 30 seconds is removed (checked every 5
+seconds), and a project exists only while it has agents.
 
 The agents announce their presence (see `--agent-relay` of
 `ase-agent`(1)) on every change of their state, after each finished
@@ -54,15 +55,16 @@ configuration `project.relay.url` (or their option `--agent-relay`),
 as `ase://`*addr*`:`*port*\[`/`*token*\] for HTTP, resp.
 `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\] for HTTPS
 (optionally without certificate verification). The relay requires an
-explicit `project.id`. The bearer token of a client is the one
-embedded in the URL (warned about if configured on the `project` or a
-`task` scope, as it might be committed), else `$ASE_AGENT_RELAY_TOKEN`,
-else `project.relay.token` (intended for the `user` scope, and warned
-about on any other scope), else the token of the locally started agent
-relay (resp. of the locally started task store co-hosting it), but only
-if the URL addresses exactly this server. Sending a token to a
-non-loopback host selected by a repository-supplied scope is warned
-about.
+explicit `project.id`.
+
+The bearer token of a client is the one embedded in the URL (warned about
+if configured on the `project` or a `task` scope, as it might be
+committed), else `$ASE_AGENT_RELAY_TOKEN`, else `project.relay.token`
+(intended for the `user` scope, and warned about on any other scope),
+else the token of the locally started agent relay (resp. of the locally
+started task store co-hosting it), but only if the URL addresses exactly
+this server. Sending a token to a non-loopback host selected by a
+repository-supplied scope is warned about.
 
 ## COMMANDS
 
@@ -70,18 +72,20 @@ about.
   Start the agent relay server in the background (spawning a detached
   process logging into `relay.log`) and wait until it responds (up to
   10 seconds), or with `--foreground` run it in the current process.
+
   The configuration of the server is resolved from the options, the
   environment, and the per-user `relay.yaml`, and its effective values
   (address, port, token, CORS origins, TLS certificate and key, and
   process id) are persisted in `relay.yaml` (readable by the current
-  user only). The start is idempotent: an already running server is
-  left alone, unless an explicitly given option (`--address`, `--port`,
+  user only). The start is idempotent: an already running server is left
+  alone, unless an explicitly given option (`--address`, `--port`,
   `--token`, `--cors`, `--tls-cert`, or `--tls-key`) deviates from its
   configuration, in which case the server is restarted to apply it.
+
   With `--foreground`, an already running server with an unchanged
-  configuration is an error. A configured port held by a foreign
-  service is re-allocated (with a warning). Binding to a non-loopback
-  address without TLS is warned about, as the bearer token then travels
+  configuration is an error. A configured port held by a foreign service
+  is re-allocated (with a warning). Binding to a non-loopback address
+  without TLS is warned about, as the bearer token then travels
   unencrypted. All options are described under **OPTIONS** below.
 
 - `ase agent relay status`:
@@ -180,11 +184,12 @@ The WebSocket event endpoint `/projects/`*id*`/agents/events` first
 sends a snapshot frame of all agents of the project (with `reset:
 true`) and then a frame on each change (the added or updated agents,
 and the removed ones), where the processing log lines of an agent are
-always to be appended to the already received ones. Subscribers are
-pinged every 15 seconds and terminated if they did not answer the
-previous ping, resp. if they cannot keep up (more than 1 MB of not yet
-transmitted data). A plain HTTP request onto the event endpoint is
-answered with status 426.
+always to be appended to the already received ones.
+
+Subscribers are pinged every 15 seconds and terminated if they did not
+answer the previous ping, resp. if they cannot keep up (more than 1 MB
+of not yet transmitted data). A plain HTTP request onto the event
+endpoint is answered with status 426.
 
 The project ids have to match `[A-Za-z0-9_-]+` and the agent ids
 `[A-Za-z0-9][A-Za-z0-9_.-]*` (at most 128 characters), else the request

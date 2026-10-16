@@ -49,8 +49,9 @@ fleet is ready.
 Afterwards, the fleet restarts every member whenever it exits (e.g.,
 crashed, or stopped individually via `ase agent` *agent* `stop`) after
 a delay starting at 1 second and doubled on each restart in a row up
-to 5 minutes, which is reset once the member ran for 10 minutes. On
-termination (`SIGTERM`, `SIGINT`, `SIGHUP`, or `SIGQUIT`), the fleet
+to 5 minutes, which is reset once the member ran for 10 minutes.
+
+On termination (`SIGTERM`, `SIGINT`, `SIGHUP`, or `SIGQUIT`), the fleet
 first stops all agents (each of which aborts its running processings
 and puts their tasks back) and then the agent relay (as the agents
 remove their presence from it), where a repeated signal is forwarded
@@ -82,10 +83,11 @@ members) or `ase agent fleet stop`.
   `implement`, 2 tasks in parallel), `approver` (mode `judge`, 2 tasks
   in parallel, so a human still decides on the approval), and
   `integrator` (mode `squash`), plus a commented-out example of an
-  ad-hoc request agent `lint` (see `ase-agent-adhoc`(1)). The
-  configuration is checked like on `ase agent fleet start` before it is
-  written, and an already existing *file* is overwritten only with
-  `--force`. Options:
+  ad-hoc request agent `lint` (see `ase-agent-adhoc`(1)).
+
+  The configuration is checked like on `ase agent fleet start` before
+  it is written, and an already existing *file* is overwritten only
+  with `--force`. Options:
     - \[`-c`|`--config` *file*\]: the YAML configuration file to create
       (default: `.ase/fleet.yaml` of the project).
     - \[`-t`|`--tool` *tool*\]: the agent tool of all agents, `claude`,
@@ -98,12 +100,13 @@ members) or `ase agent fleet stop`.
   **CONFIGURATION**) in the background (spawning a detached supervising
   process logging into `.ase/agent/fleet.log`), and return once all
   members started successfully, or with `--foreground` run the fleet in
-  the current process. The configuration is validated before the fleet
-  starts. An already running fleet is left alone (and is an error with
-  `--foreground`). With the section `relay`, the fleet owns the
-  per-user agent relay, which hence must not run already (stop it
-  first via `ase agent relay stop`, or remove the section `relay`).
-  Options:
+  the current process.
+
+  The configuration is validated before the fleet starts. An already
+  running fleet is left alone (and is an error with `--foreground`).
+  With the section `relay`, the fleet owns the per-user agent
+  relay, which hence must not run already (stop it first via
+  `ase agent relay stop`, or remove the section `relay`). Options:
     - \[`-c`|`--config` *file*\]: the YAML configuration file (default:
       `.ase/fleet.yaml` of the project).
     - \[`-f`|`--foreground`\]: run the fleet in the current process,
@@ -123,10 +126,11 @@ members) or `ase agent fleet stop`.
   Show the log `.ase/agent/fleet.log` of the fleet run in the
   background, aggregating the lines of the fleet itself and of all its
   members, each one prefixed with its name, where the name and the log
-  level tag are colored if the output is a terminal. With
-  `-n`|`--lines` *n*, only the last *n* lines are shown (default: all).
-  With `-f`|`--follow`, the last *n* lines (default: 10) are shown and
-  then, in the style of `tail -f`, all newly appended lines are
+  level tag are colored if the output is a terminal.
+
+  With `-n`|`--lines` *n*, only the last *n* lines are shown (default:
+  all). With `-f`|`--follow`, the last *n* lines (default: 10) are shown
+  and then, in the style of `tail -f`, all newly appended lines are
   followed until interrupted. If no log file exists, this is just
   reported (at log level `info`).
 
@@ -154,19 +158,19 @@ value omits an option, and a list repeats an option:
   (optional) The options `address`, `port`, `token`, `cors`,
   `tls-cert`, and `tls-key` of `ase agent relay start` (see
   `ase-agent-relay`(1)). The presence of this section (even if empty)
-  lets the fleet run and own the per-user agent relay. Its options not
-  given fall back as follows: `address`, `port`, and `token` to those of
-  the configured `project.relay.url` (its embedded token, else
-  `$ASE_AGENT_RELAY_TOKEN`, else `project.relay.token`), if it
-  addresses a local address of this host (else this is warned about and
-  `project.relay.url` is not adopted), where a deviating `address` or
-  `port` (resp. a `tls-cert` with an adopted `project.relay.url`
+  lets the fleet run and own the per-user agent relay.
+
+  Its options not given fall back as follows: `address`, `port`, and
+  `token` to those of the configured `project.relay.url` (its embedded
+  token, else `$ASE_AGENT_RELAY_TOKEN`, else `project.relay.token`), if
+  it addresses a local address of this host (else this is warned about
+  and `project.relay.url` is not adopted), where a deviating `address`
+  or `port` (resp. a `tls-cert` with an adopted `project.relay.url`
   selecting HTTP) is warned about, as the task boards following
   `project.relay.url` then do not see the agents of the fleet; and
-  `tls-cert` and `tls-key` to `project.relay.crt` and
-  `project.relay.key` (unless an adopted `project.relay.url` selects
-  HTTP), where an adopted `project.relay.url` selecting HTTPS requires
-  both.
+  `tls-cert` and `tls-key` to `project.relay.crt` and `project.relay.key`
+  (unless an adopted `project.relay.url` selects HTTP), where an adopted
+  `project.relay.url` selecting HTTPS requires both.
 
 - `default`:
   (optional) The default options of all agents: `tool`, `parallel`,
@@ -185,17 +189,20 @@ value omits an option, and a list repeats an option:
   definition kind of the project or the user, or `adhoc` (see
   `ase-agent-adhoc`(1)). Hence, an agent of a definition kind is given
   by a section of its kind (or with `kind:` *kind*), and an agent
-  defined inline by a section with `kind: adhoc`. The options of the
-  definitions can also be nested by group, like in a definition file
-  (e.g., `prompt: { text: ... }`), where a key must not be given both
-  flat and nested. The values of the parameters declared by the
-  definition are given by the map `params` (e.g., `params: { severity:
-  high }`), which repeats the option `--params` *name*`=`*value* per
-  parameter. The `definition` of `kind: adhoc` (unless a
-  `builtin:` one) is relative to the configuration file, where hooks
-  can be given only through a TypeScript or JavaScript definition
-  file. A section without any options (an empty value) runs the agent
-  of the kind of its name with its defaults.
+  defined inline by a section with `kind: adhoc`.
+
+  The options of the definitions can also be nested by group, like in a
+  definition file (e.g., `prompt: { text: ... }`), where a key must not
+  be given both flat and nested. The values of the parameters
+  declared by the definition are given by the map `params` (e.g.,
+  `params: { severity: high }`), which repeats the option `--params`
+  *name*`=`*value* per parameter.
+
+  The `definition` of `kind: adhoc` (unless a `builtin:` one) is
+  relative to the configuration file, where hooks can be given only
+  through a TypeScript or JavaScript definition file. A section without
+  any options (an empty value) runs the agent of the kind of its name
+  with its defaults.
 
 The following is refused, as the definitions of all agents are already
 resolved and validated on the start of the fleet:

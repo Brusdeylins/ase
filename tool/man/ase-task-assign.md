@@ -48,14 +48,16 @@ A usage window also closes when its last session ends, and when the
 active task of an attached session. Conversely, once the `Assignee` of
 a task is changed to oneself elsewhere (e.g., on the task board), the
 service opens its window (starting *paused*) and attaches every session
-of the project whose active task it is. Open windows additionally book
-every `telemetry.service.interval` minutes, pause after
-`telemetry.service.idle` minutes without any AI request of an attached
-session (resumed silently by the next one, without accounting the
-paused gap), and are closed and booked after 7 days without any
-activity. The result is logged together with the action on the usage
-window and the booked usage. This is what the `ase_task_assign` MCP
-tool of the `ase-task-assign` skill does for the current session.
+of the project whose active task it is.
+
+Open windows additionally book every `telemetry.service.interval`
+minutes, pause after `telemetry.service.idle` minutes without any AI
+request of an attached session (resumed silently by the next one,
+without accounting the paused gap), and are closed and booked after 7
+days without any activity. The result is logged together with the
+action on the usage window and the booked usage. This is what the
+`ase_task_assign` MCP tool of the `ase-task-assign` skill does for the
+current session.
 
 ## OPTIONS
 

@@ -27,18 +27,20 @@
 ## DESCRIPTION
 
 **ase agent planner** drives the `Planning` phase of the `enterprise`
-task lifecycle model (refused for any other model). As a plan is
-re-created only on the explicit request of a human, the planner claims
-only the tasks in the state `DRAFTED` whose `Assignee:` frontmatter key
-already is its agent name (default: `planner`), i.e., which a human
-assigned to the planner, and which do not carry the tag of its mode yet
-and whose `After:` predecessors (and, for an explicit epic, its group
-members) are `PLANNED` or later, or still `DRAFTED` and tagged by the
-planner of the same mode.
+task lifecycle model (refused for any other model).
+
+As a plan is re-created only on the explicit request of a human, the
+planner claims only the tasks in the state `DRAFTED` whose `Assignee:`
+frontmatter key already is its agent name (default: `planner`), i.e.,
+which a human assigned to the planner, and which do not carry the tag
+of its mode yet and whose `After:` predecessors (and, for an explicit
+epic, its group members) are `PLANNED` or later, or still `DRAFTED`
+and tagged by the planner of the same mode.
 
 In its default mode `reboot`, the planner moves each claimed task into
 `PLANNING`, tags it with `ase-agent-planner-reboot:active`, and reboots
 its plan via the skill invocation `ase-task-reboot --next DONE` *id*.
+
 The skill itself resets a successfully rebooted plan into `DRAFTED`,
 where it waits, tagged with `ase-agent-planner-reboot` and unassigned,
 for its final review and its promotion into `PLANNED` by a human (so
@@ -79,13 +81,14 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`-n`|`--name` *name*\]: The name of the agent (default:
       `planner`): up to 64 letters, digits, underscores, and dashes,
       starting with a letter or digit, other than the name of another
-      agent kind, `relay`, or `fleet`. It names the agent in its log
-      lines, its processing log attachment `agent:`*name*, the
-      `Assignee:` of the tasks it processes, and its process files
-      `.ase/agent/`*name*`.yaml` and `.ase/agent/`*name*`.log`. Agents
-      of the kind `planner` under different names form a pool, competing
-      for the same tasks, but each claims only the tasks explicitly
-      assigned to its own name.
+      agent kind, `relay`, or `fleet`.
+
+      It names the agent in its log lines, its processing log
+      attachment `agent:`*name*, the `Assignee:` of the tasks it
+      processes, and its process files `.ase/agent/`*name*`.yaml` and
+      `.ase/agent/`*name*`.log`. Agents of the kind `planner` under
+      different names form a pool, competing for the same tasks, but each
+      claims only the tasks explicitly assigned to its own name.
 
     - \[`-t`|`--tool` *tool*\]: The headless agent tool processing the
       tasks: `claude` (*Anthropic Claude Code CLI*), `copilot` (*GitHub
