@@ -7,7 +7,7 @@
 
 `ase-meta-mint`
     [`--help`|`-h`]
-    [`--type`|`-t` `uuid`|`sha1`|`const`|`var`|`class`|`func`|`path`|`name`]
+    [`--type`|`-t` `uuid`|`sha1`|`nanoid`|`const`|`var`|`class`|`func`|`path`|`name`]
     [`--count`|`-c` *count*]
     [*hint*]
 
@@ -17,7 +17,7 @@ The `ase-meta-mint` skill *mints* an identifier or a name of a requested
 type out of the free-text *hint* formed by the positional arguments. It
 dispatches on `--type` and emits the generated strings as its result.
 
-The two *hash-derived* types are delegated to the `ase_mint` tool of the
+The three *hash-derived* types are delegated to the `ase_mint` tool of the
 `ase` MCP server, which derives them reproducibly instead of guessing
 them:
 
@@ -29,6 +29,11 @@ them:
 
 -   `sha1`:
     the 40-character hexadecimal *SHA-1* digest of the *hint*.
+
+-   `nanoid`:
+    the 10-character, *NanoId*-style *base62* hash of the *hint* (its
+    *SHA-1* digest, *base62*-encoded and truncated), a short but still
+    reproducible identifier.
 
 The six *linguistic* types are derived by the skill itself: the *hint*
 is distilled into its essential words, which are then assembled
@@ -63,7 +68,7 @@ a random *UUID V4* without one.
 
 ##  OPTIONS
 
-`--type`|`-t` `uuid`|`sha1`|`const`|`var`|`class`|`func`|`path`|`name`:
+`--type`|`-t` `uuid`|`sha1`|`nanoid`|`const`|`var`|`class`|`func`|`path`|`name`:
     Select the type of the minted identifier or name (default: `uuid`).
 
 `--count`|`-c` *count*:
@@ -84,7 +89,7 @@ a random *UUID V4* without one.
 
 ##  SCENARIOS
 
--   You need a stable, reproducible UUID or SHA-1 digest for a concept
+-   You need a stable, reproducible UUID, SHA-1 digest, or short hash for a concept
 -   You need a well-formed constant, variable, function, or class identifier
 -   You need a path component or slug derived from a description
 -   You need a catchy product name for a new component or tool

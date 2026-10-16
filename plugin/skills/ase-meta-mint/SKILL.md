@@ -1,9 +1,9 @@
 ---
 name: ase-meta-mint
-argument-hint: "[--help|-h] [--type|-t uuid|sha1|const|var|class|func|path|name] [--count|-c <count>] [<hint>]"
+argument-hint: "[--help|-h] [--type|-t uuid|sha1|nanoid|const|var|class|func|path|name] [--count|-c <count>] [<hint>]"
 description: >
     Mint an identifier or a name of a requested type out of a free-text
-    hint: a UUID, a SHA-1 digest, a constant, variable, function, or
+    hint: a UUID, a SHA-1 digest, a NanoId-style hash, a constant, variable, function, or
     class identifier, a path component, or a product-like name. Use when
     the user wants an identifier, id, symbol, slug, or name "minted",
     "coined", "derived", or "generated" from a description.
@@ -22,7 +22,7 @@ Mint an Identifier or Name
 
 <expand name="getopt"
     arg1="ase-meta-mint"
-    arg2="--type|-t=(uuid|sha1|const|var|class|func|path|name) --count|-c=1">
+    arg2="--type|-t=(uuid|sha1|nanoid|const|var|class|func|path|name) --count|-c=1">
     $ARGUMENTS
 </expand>
 
@@ -59,12 +59,12 @@ following hint:
 
     </step>
 
-2.  <step id="STEP 2: Mint Hash-Derived Identifiers" condition="<type/> is `uuid` or `sha1`">
+2.  <step id="STEP 2: Mint Hash-Derived Identifiers" condition="<type/> is `uuid`, `sha1`, or `nanoid`">
 
     1.  Call the `ase_mint(type: "<type/>", hint: "<hint/>", count:
         <count/>)` tool of the `ase` MCP server and set <results/> to
         the returned lines of its `text` output, one identifier per
-        line. You *MUST* *NOT* derive a UUID or a SHA-1 digest yourself
+        line. You *MUST* *NOT* derive a UUID, a SHA-1 digest, or a NanoId-style hash yourself
         -- only the tool hashes correctly and reproducibly.
 
     2.  <if condition="a line of the `text` output starts with `WARNING:`">

@@ -4,7 +4,7 @@
 
 `ase util mint`
 \[`-h`|`--help`\]
-\[`-t`|`--type` `uuid`|`sha1`\]
+\[`-t`|`--type` `uuid`|`sha1`|`nanoid`\]
 \[`-c`|`--count` *count*\]
 \[*hint* \[...\]\]
 
@@ -24,7 +24,13 @@ prints them to standard output, one identifier per line:
 - With type `sha1`, the *hint* yields its 40-character hexadecimal
   *SHA-1* digest. This requires a non-empty *hint*.
 
-This backs the `uuid` and `sha1` types of the `ase-meta-mint` skill
+- With type `nanoid`, the *hint* yields its 10-character, *NanoId*-style
+  *base62* hash (its *SHA-1* digest, *base62*-encoded and truncated),
+  a short but still reproducible identifier, as used for the content
+  binding of the `Effort` key of the task plans. This requires a
+  non-empty *hint*, too.
+
+This backs the `uuid`, `sha1`, and `nanoid` types of the `ase-meta-mint` skill
 (and the MCP tool `ase_mint`), while the language-level identifier
 types of that skill require the AI and hence exist in the skill only.
 
@@ -33,7 +39,7 @@ types of that skill require the AI and hence exist in the skill only.
 - \[`-h`|`--help`\]:
   Show usage information and exit.
 
-- \[`-t`|`--type` `uuid`|`sha1`\]:
+- \[`-t`|`--type` `uuid`|`sha1`|`nanoid`\]:
   The identifier type (default: `uuid`).
 
 - \[`-c`|`--count` *count*\]:
@@ -52,7 +58,7 @@ types of that skill require the AI and hence exist in the skill only.
 ## EXIT STATUS
 
 Exits with status `0` on success, and with status `1` on an invalid
-*count* or type `sha1` with an empty *hint*.
+*count* or type `sha1` or `nanoid` with an empty *hint*.
 
 ## EXAMPLES
 
@@ -65,6 +71,9 @@ $ ase util mint -c 3
 
 # mint the SHA-1 digest of a hint
 $ ase util mint -t sha1 the user account entity
+
+# mint the short NanoId-style hash of a hint
+$ ase util mint -t nanoid the user account entity
 ```
 
 ## SEE ALSO
