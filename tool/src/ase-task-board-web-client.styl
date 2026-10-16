@@ -818,7 +818,7 @@ header
         flex: 1
         min-height: 0
         display: grid
-        grid-template-rows: minmax(0, 1fr) auto auto
+        grid-template-rows: minmax(0, 1fr) auto auto auto
         column-gap: 6px
     .scol
         display: flex
@@ -869,6 +869,16 @@ header
         margin-top: 4px
         padding-top: 2px
         border-top: 1px solid var(--c-border-soft)
+        text-align: center
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        font-size: 0.75rem
+        color: var(--c-mute)
+    /*  the footer of the column chart (blank if empty, to keep the
+        columns of all charts aligned), like the forecast of the backlog  */
+    .sfoot
+        padding-top: 2px
         text-align: center
         white-space: nowrap
         overflow: hidden

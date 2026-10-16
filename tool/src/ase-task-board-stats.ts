@@ -57,22 +57,31 @@ export type StatsTop = { id: string, title: string, tone: Tone, cost: number, in
     time) and the AI/HR cost ratio (the AI costs per human costs), each null without any
     human time resp. costs, the cache hit ratio (0-1, the cache read tokens per all input
     tokens, i.e., the cache read, cache write, and uncached input tokens), null without any
-    input tokens, and the average AI costs, human costs (in USD), and (uncached) input and
-    output tokens per finished task (all zero without any finished task)  */
+    input tokens, the average AI costs, human costs (in USD), and (uncached) input and
+    output tokens per finished task (all zero without any finished task), and the median
+    and 85th percentile of the lead times of the finished tasks (in minutes, from their
+    creation to their last modification), each null without any finished task  */
 export type StatsEfficiency = {
     timeRatio: number | null, costRatio: number | null, cacheRatio: number | null,
-    costAI: number, costHR: number, input: number, output: number
+    costAI: number, costHR: number, input: number, output: number,
+    leadMedian: number | null, leadP85: number | null
 }
 
 /*  the throughput of a week: its ISO week number, its start day (its Monday, as "YYYY-MM-DD"),
     and the number of tasks finished within it (in a terminal state except "CANCELLED")  */
 export type StatsWeek = { week: number, start: string, count: number }
 
+/*  the forecast of the backlog: the number of unfinished tasks (work-in-progress and open),
+    and the number of weeks to finish them at the average throughput of the last weeks
+    (zero without any unfinished task, null without any throughput)  */
+export type StatsForecast = { backlog: number, weeks: number | null }
+
 /*  the statistics of the board: its time range, the tasks per lifecycle state, the progress
     of the tasks, the readiness of the open tasks, the total AI usage of the tasks, the (up to
     five) tasks of the highest usage, the efficiency of the AI usage, the throughput of
-    the last weeks (oldest first, ending with the current week), and the number of days of
-    the time range "total" (from the creation of the oldest task until now)  */
+    the last weeks (oldest first, ending with the current week), the forecast of the backlog,
+    and the number of days of the time range "total" (from the creation of the oldest task
+    until now)  */
 export type Stats = {
     range:      StatsRange
     days:       number
@@ -83,6 +92,7 @@ export type Stats = {
     top:        StatsTop[]
     efficiency: StatsEfficiency
     throughput: StatsWeek[]
+    forecast:   StatsForecast
 }
 
 /*  the number of tasks of the highest usage  */
@@ -203,6 +213,29 @@ export const statsOf = (board: Board, usage: Map<string, { usage: TaskFormat.Tas
     for (const t of top)
         t.share = costs > 0 ? t.cost / costs : tokens > 0 ? (t.input + t.output) / tokens : 0
 
+    /*  the lead times of the finished tasks (in minutes, sorted ascending), by their last
+        modification as the (approximated) time of their completion (like the throughput),
+        and a percentile (0-1) of them (linearly interpolated between their closest ranks)  */
+    const leads = [] as number[]
+    for (const id of within) {
+        const card = board.cards.get(id)!
+        if (kindOf.get(card.status) !== "finished")
+            continue
+        const created  = timeOf(card.created)
+        const modified = timeOf(card.modified)
+        if (!Number.isNaN(created) && !Number.isNaN(modified) && modified >= created)
+            leads.push((modified - created) / (60 * 1000))
+    }
+    leads.sort((a, b) => a - b)
+    const percentile = (p: number) => {
+        if (leads.length === 0)
+            return null
+        const pos  = (leads.length - 1) * p
+        const low  = Math.floor(pos)
+        const high = Math.ceil(pos)
+        return Math.round(leads[low] + (leads[high] - leads[low]) * (pos - low))
+    }
+
     /*  the efficiency of the AI usage  */
     const n      = progress.finished
     const inputs = total.cread + total.cwrite + total.input
@@ -213,7 +246,9 @@ export const statsOf = (board: Board, usage: Map<string, { usage: TaskFormat.Tas
         costAI:     n > 0 ? Number((finished.costAI / n).toFixed(4)) : 0,
         costHR:     n > 0 ? Number((finished.costHR / n).toFixed(4)) : 0,
         input:      n > 0 ? Math.round(finished.input  / n) : 0,
-        output:     n > 0 ? Math.round(finished.output / n) : 0
+        output:     n > 0 ? Math.round(finished.output / n) : 0,
+        leadMedian: percentile(0.50),
+        leadP85:    percentile(0.85)
     }
 
     /*  the throughput of the last weeks: the finished tasks per (ISO) week, by their last
@@ -235,6 +270,21 @@ export const statsOf = (board: Board, usage: Map<string, { usage: TaskFormat.Tas
             throughput[WEEKS_N - 1 - ago].count++
     }
 
+    /*  the forecast of the backlog: all unfinished tasks, divided by the average throughput
+        of the last weeks (independent of the time range, like the throughput, as all
+        unfinished tasks have to be finished nevertheless)  */
+    let backlog = 0
+    for (const card of board.cards.values()) {
+        const kind = kindOf.get(card.status)
+        if (!board.context.has(card.id) && (kind === "wip" || kind === "open"))
+            backlog++
+    }
+    const perWeek  = throughput.reduce((sum, w) => sum + w.count, 0) / WEEKS_N
+    const forecast = {
+        backlog,
+        weeks: backlog === 0 ? 0 : perWeek > 0 ? Number((backlog / perWeek).toFixed(1)) : null
+    }
+
     /*  the number of days of the time range "total": from the creation (resp. the last
         modification without any creation) of the oldest task until now (zero without any task)  */
     let oldest = now
@@ -248,6 +298,6 @@ export const statsOf = (board: Board, usage: Map<string, { usage: TaskFormat.Tas
             oldest = Math.min(oldest, time)
     }
     const days = Math.ceil((now - oldest) / (24 * 60 * 60 * 1000))
-    return { range, days, states, progress, readiness, usage: total, top, efficiency, throughput }
+    return { range, days, states, progress, readiness, usage: total, top, efficiency, throughput, forecast }
 }
 

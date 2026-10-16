@@ -184,7 +184,8 @@ task), `within last 30 days`, and `within last 7 days` on its top
 
 - `Tasks per State`: a column chart with the number of tasks of each
   state of the task lifecycle model, labeled by the state and, below,
-  by its phase (the group of its lane), in the colors of the lanes.
+  by its phase (the group of its lane), in the colors of the lanes,
+  and with the `total tasks:` line below it.
 - `Throughput` (besides `Tasks per State`): a column chart with the
   number of tasks finished (in a terminal state other than `CANCELLED`)
   in each of the last 12 weeks (a quarter, ending with the current
@@ -193,6 +194,10 @@ task), `within last 30 days`, and `within last 7 days` on its top
   completion of a task is not tracked, its `Modified:` frontmatter key
   is taken instead, so the throughput is just an approximation. It
   always covers the last 12 weeks, independent of the time range.
+  Below it, the `forecast:` line shows the number of all unfinished
+  tasks (*work-in-progress* and *open*, independent of the time range)
+  and the number of weeks to finish them at the average throughput of
+  the last 12 weeks, `n/a` without any finished task within them.
 - `Task Progress`: one stacked bar of the *cancelled* tasks, the
   *finished* tasks (in a terminal state other than `CANCELLED`), the
   tasks *work-in-progress* (`wip`, in an active state, like `PLANNING` or
@@ -220,7 +225,14 @@ task), `within last 30 days`, and `within last 7 days` on its top
 - `Finished Tasks` (besides `Top-5 Tasks`): the average (`⌀`) AI costs,
   human costs, and AI tokens (as *input* `▷` *output*, like in `Top-5
   Tasks`) per finished task (the usage of the finished tasks divided
-  by their number, including the finished tasks without any usage).
+  by their number, including the finished tasks without any usage),
+  and the *lead time* (the time from the `Created:` to the `Modified:`
+  frontmatter key) of the finished tasks as its median (`lead (median)`)
+  and its 85th percentile (`lead (p85)`), in minutes below one hour, in
+  hours below two days, else in days, each `n/a` without any finished
+  task. Like the throughput,
+  the lead time is just an approximation, and median and percentile are
+  robust against single outlier tasks.
 - `Efficiency` (besides `Finished Tasks`): the *AI/HR time ratio* (the
   AI request time per human time, i.e., the higher, the more AI work
   per attended human minute) and the *AI/HR cost ratio* (the AI costs

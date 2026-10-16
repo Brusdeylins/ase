@@ -605,6 +605,18 @@ const statsTokens = (n: number) =>
         n < 1000 * 1000 * 1000 ? `${(n / (1000 * 1000)).toFixed(1)}M` : `${(n / (1000 * 1000 * 1000)).toFixed(1)}G`
 const statsCost   = (usd: number) => `$${usd.toFixed(2)}`
 
+/*  the compact duration (in minutes) of the statistics view: in minutes below one hour,
+    in hours below two days, else in days, resp. "n/a" if unknown  */
+const statsDuration = (minutes: number | null) =>
+    minutes === null ? "n/a" : minutes < 60 ? `${Math.round(minutes)}m` :
+        minutes < 48 * 60 ? `${(minutes / 60).toFixed(1)}h` : `${(minutes / (24 * 60)).toFixed(1)}d`
+
+/*  the forecast of the backlog of the statistics view: the number of unfinished tasks
+    and the number of weeks to finish them (resp. "n/a" without any throughput)  */
+const statsForecast = (backlog: number, weeks: number | null) =>
+    backlog === 0 ? "forecast: no unfinished tasks" :
+        `forecast: ${backlog} unfinished ≈ ${weeks !== null ? `${weeks.toFixed(1)} week${weeks === 1 ? "" : "s"}` : "n/a"}`
+
 /*  center a text within a width (cut with an ellipsis if too long), padded by a fill character  */
 const center = (text: string, width: number, fill = " "): string => {
     const cut  = text.length <= width ? text : width > 1 ? text.slice(0, width - 1) + "…" : text.slice(0, width)
@@ -675,12 +687,13 @@ export const renderStats = (ctx: BoardCtx) => {
         even without any number, like in the web board), the columns stand on a blank line above
         their labels (each cut to its first five characters, without an ellipsis, for
         readability), and each group of columns is labeled below its line spanning its columns
-        (like in the web board), where the columns start directly at the left padding of the
+        (like in the web board), followed by a footer line (blank if empty, to keep the columns
+        of all charts aligned), where the columns start directly at the left padding of the
         frame, are separated by a gap of one column, and leave the remaining width on the right  */
-    const chartH   = Math.max(7, boardH - RANGES_H - PROGRESS_H - USAGE_H - TOP_H)
-    const areaH    = chartH - 6
+    const chartH   = Math.max(8, boardH - RANGES_H - PROGRESS_H - USAGE_H - TOP_H)
+    const areaH    = chartH - 7
     const colChart = (key: string, title: string, width: number,
-        cols: { label: string, count: number, tone: string }[], groups: { label: string, n: number }[]) => {
+        cols: { label: string, count: number, tone: string }[], groups: { label: string, n: number }[], footer = "") => {
         const colW   = Math.max(2, Math.floor((width + 1) / cols.length))
         const lineW  = colW - 1
         const fitW   = Math.max(1, Math.min(14, lineW))
@@ -711,14 +724,16 @@ export const renderStats = (ctx: BoardCtx) => {
             h(Box, { key: "groups" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
                 "─".repeat(Math.max(0, g.n * colW - 1)) + gapOf(i, groups.length)).join(""))),
             h(Box, { key: "group-labels" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
-                center(g.label, g.n * colW - 1) + gapOf(i, groups.length)).join(""))))
+                center(g.label, g.n * colW - 1) + gapOf(i, groups.length)).join(""))),
+            h(Box, { key: "footer" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
+                center(footer, Math.max(0, cols.length * colW - 1)))))
     }
 
     /*  the column chart of the number of tasks per state (labeled by the states, grouped by their
-        phases), with the column chart of the throughput of the last weeks besides it (labeled by
+        phases, and with the total number of tasks as its footer), with the column chart of the throughput of the last weeks besides it (labeled by
         their week numbers, prefixed with "W" if fitting, and grouped by all weeks with the total
-        and average number of finished tasks), grown like the frames "Finished Tasks" and
-        "Efficiency" together, to align with them  */
+        and average number of finished tasks, and with the forecast of the backlog as its footer),
+        grown like the frames "Finished Tasks" and "Efficiency" together, to align with them  */
     const phases  = stats.states.reduce((list, s) => {
         const last = list.at(-1)
         if (last !== undefined && last.label === s.phase)
@@ -733,10 +748,12 @@ export const renderStats = (ctx: BoardCtx) => {
     const weekAvg = stats.throughput.length > 0 ? weekSum / stats.throughput.length : 0
     const chart   = pair("charts", chartH,
         colChart("chart", "Tasks per State", leftW - 2 * avgGrow - 4,
-            stats.states.map((s) => ({ label: s.status, count: s.count, tone: s.tone })), phases),
+            stats.states.map((s) => ({ label: s.status, count: s.count, tone: s.tone })), phases,
+            `total tasks: ${stats.states.reduce((n, s) => n + s.count, 0)}`),
         colChart("throughput", "Throughput", weeksW,
             stats.throughput.map((w) => ({ label: weekW >= 3 ? `W${w.week}` : String(w.week), count: w.count, tone: "idle" })),
-            [ { label: `${weekSum} finished · ⌀ ${weekAvg.toFixed(1)}/week`, n: stats.throughput.length } ]),
+            [ { label: `${weekSum} finished · ⌀ ${weekAvg.toFixed(1)}/week`, n: stats.throughput.length } ],
+            statsForecast(stats.forecast.backlog, stats.forecast.weeks)),
         2 * avgGrow)
 
     /*  a framed stacked bar of the numbers of tasks of parts, with its legend  */
@@ -836,10 +853,10 @@ export const renderStats = (ctx: BoardCtx) => {
                     `${statsTokens(t.input).padStart(inW)} ▷ ${statsTokens(t.output).padStart(outW)}`.padStart(tokW))
             }) ]
 
-    /*  the averages per finished task and the efficiency of the AI usage (the AI/HR time and
-        cost ratios and the cache hit ratio), side by side, in accent color (like the active lanes),
-        each as lines of labels with their values right-aligned (where a too long label is cut with
-        an ellipsis)  */
+    /*  the averages and lead times of the finished tasks and the efficiency of the AI usage (the
+        AI/HR time and cost ratios and the cache hit ratio), side by side, in accent color (like the
+        active lanes), each as lines of labels with their values right-aligned (where a too long
+        label is cut with an ellipsis)  */
     const avgW    = Math.floor((rightW - 1) / 2) + avgGrow
     const effW    = rightW + 2 * avgGrow - 1 - avgW
     const eff     = stats.efficiency
@@ -852,7 +869,9 @@ export const renderStats = (ctx: BoardCtx) => {
     const avgList = usage === null ? loading : [
         valLine("cost-ai", avgW, "⌀ AI cost",  statsCost(eff.costAI)),
         valLine("cost-hr", avgW, "⌀ HR cost",  statsCost(eff.costHR)),
-        valLine("tokens",  avgW, "⌀ AI token", `${statsTokens(eff.input)} ▷ ${statsTokens(eff.output)}`)
+        valLine("tokens",  avgW, "⌀ AI token", `${statsTokens(eff.input)} ▷ ${statsTokens(eff.output)}`),
+        valLine("lead-median", avgW, "lead (median)", statsDuration(eff.leadMedian)),
+        valLine("lead-p85",    avgW, "lead (p85)",    statsDuration(eff.leadP85))
     ]
     const effList = usage === null ? loading : [
         valLine("time-ratio", effW, "AI/HR time ratio", ratio(eff.timeRatio)),

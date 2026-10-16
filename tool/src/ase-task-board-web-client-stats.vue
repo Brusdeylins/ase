@@ -33,6 +33,7 @@
                         </div>
                         <div v-for="s in stats.states" :key="`l-${s.status}`" class="sstate" :class="s.tone" :title="s.status">{{ s.status.slice(0, 7) }}</div>
                         <div v-for="p in phases" :key="p.phase" class="sphase" :style="{ gridColumn: `span ${p.n}` }" :title="p.phase"><span>{{ p.phase }}</span></div>
+                        <div class="sfoot" :style="{ gridColumn: `span ${stats.states.length}` }">total tasks: {{ totalTasks }}</div>
                     </div>
                 </section>
                 <section class="schart">
@@ -44,6 +45,7 @@
                         </div>
                         <div v-for="w in stats.throughput" :key="`l-${w.start}`" class="sstate" :title="`week ${w.week} (from ${w.start})`">W{{ w.week }}</div>
                         <div class="sphase" :style="{ gridColumn: `span ${stats.throughput.length}` }" :title="weekSummary"><span>{{ weekSummary }}</span></div>
+                        <div class="sfoot" :style="{ gridColumn: `span ${stats.throughput.length}` }" :title="forecast">{{ forecast }}</div>
                     </div>
                 </section>
             </div>
@@ -133,6 +135,8 @@
                         <div class="sline"><span>⌀ AI cost</span><b>{{ cost(stats.efficiency.costAI) }}</b></div>
                         <div class="sline"><span>⌀ HR cost</span><b>{{ cost(stats.efficiency.costHR) }}</b></div>
                         <div class="sline"><span>⌀ AI token</span><b title="input ▷ output tokens">{{ tokens(stats.efficiency.input) }}<span class="sflow">▷</span>{{ tokens(stats.efficiency.output) }}</b></div>
+                        <div class="sline"><span>lead (median)</span><b>{{ duration(stats.efficiency.leadMedian) }}</b></div>
+                        <div class="sline"><span>lead (p85)</span><b>{{ duration(stats.efficiency.leadP85) }}</b></div>
                     </section>
                     <section class="seffect">
                         <div class="stitle">Efficiency</div>
@@ -169,15 +173,19 @@ const costBars   = computed(() => [
 const tokenSum   = computed(() => usage.value.cread + usage.value.cwrite + usage.value.input + usage.value.output)
 const tokenPct   = (n: number) => `${tokenSum.value > 0 ? Math.round(n / tokenSum.value * 100) : 0}%`
 
-/*  the compact amounts: a time (in minutes) in minutes below one hour, else in hours, a number
-    of tokens with a metric suffix, and costs in USD, and the share of a value of a maximum  */
-const hours   = (minutes: number) => minutes < 60 ? `${Math.round(minutes)}m` : `${(minutes / 60).toFixed(1)}h`
-const tokens  = (n: number) =>
+/*  the compact amounts: a time (in minutes) in minutes below one hour, else in hours, a duration
+    (in minutes) in minutes below one hour, in hours below two days, else in days (like in the TUI),
+    a number of tokens with a metric suffix, and costs in USD, and the share of a value of a maximum  */
+const hours    = (minutes: number) => minutes < 60 ? `${Math.round(minutes)}m` : `${(minutes / 60).toFixed(1)}h`
+const duration = (minutes: number | null) =>
+    minutes === null ? "n/a" : minutes < 60 ? `${Math.round(minutes)}m` :
+        minutes < 48 * 60 ? `${(minutes / 60).toFixed(1)}h` : `${(minutes / (24 * 60)).toFixed(1)}d`
+const tokens   = (n: number) =>
     n < 1000 ? String(n) : n < 1000 * 1000 ? `${(n / 1000).toFixed(1)}k` :
         n < 1000 * 1000 * 1000 ? `${(n / (1000 * 1000)).toFixed(1)}M` : `${(n / (1000 * 1000 * 1000)).toFixed(1)}G`
-const cost    = (usd: number) => `$${usd.toFixed(2)}`
-const ratio   = (r: number | null) => r !== null ? `${r.toFixed(1)}×` : "n/a"
-const percent = (r: number | null) => r !== null ? `${Math.round(r * 100)}%` : "n/a"
+const cost     = (usd: number) => `$${usd.toFixed(2)}`
+const ratio    = (r: number | null) => r !== null ? `${r.toFixed(1)}×` : "n/a"
+const percent  = (r: number | null) => r !== null ? `${Math.round(r * 100)}%` : "n/a"
 
 /*  the label of a time range button, where the time range "total" is suffixed
     with its number of days (once known, like in the TUI)  */
@@ -196,9 +204,10 @@ const tokInW  = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) =
 const tokOutW = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) => tokens(t.output).length)))
 const share  = (value: number, max: number) => `${max > 0 ? value / max * 100 : 0}%`
 
-/*  the highest number of tasks of a state, and the phases with their numbers of states  */
-const maxCount = computed(() => Math.max(1, ...(stats.value?.states ?? []).map((s) => s.count)))
-const phases   = computed(() => (stats.value?.states ?? []).reduce((list, s) => {
+/*  the highest and the total number of tasks of the states, and the phases with their numbers of states  */
+const maxCount   = computed(() => Math.max(1, ...(stats.value?.states ?? []).map((s) => s.count)))
+const totalTasks = computed(() => (stats.value?.states ?? []).reduce((n, s) => n + s.count, 0))
+const phases     = computed(() => (stats.value?.states ?? []).reduce((list, s) => {
     const last = list.at(-1)
     if (last !== undefined && last.phase === s.phase)
         last.n++
@@ -214,6 +223,14 @@ const weekSummary = computed(() => {
     const weeks = stats.value?.throughput ?? []
     const sum   = weeks.reduce((n, w) => n + w.count, 0)
     return `${sum} finished · ⌀ ${(weeks.length > 0 ? sum / weeks.length : 0).toFixed(1)}/week`
+})
+
+/*  the forecast of the backlog: the number of unfinished tasks and the number
+    of weeks to finish them, resp. "n/a" without any throughput (like in the TUI)  */
+const forecast = computed(() => {
+    const { backlog, weeks } = stats.value?.forecast ?? { backlog: 0, weeks: 0 }
+    return backlog === 0 ? "forecast: no unfinished tasks" :
+        `forecast: ${backlog} unfinished ≈ ${weeks !== null ? `${weeks.toFixed(1)} week${weeks === 1 ? "" : "s"}` : "n/a"}`
 })
 
 /*  the stacked bars of the progress of the tasks and of the readiness of the open
