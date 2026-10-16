@@ -1,6 +1,6 @@
 ---
 name: ase-task-grill
-argument-hint: "[--help|-h] [--rounds|-r <n>] [--until|-u MUST|SHOULD|MAY] [--perspective|-p <perspective>] [--ground|-G] [--focus|-f <section>[,...]] [--next|-n <option>[,...]] [<id>]"
+argument-hint: "[--help|-h] [--rounds|-r <n>] [--until|-u MUST|SHOULD|MAY] [--perspective|-p <perspective>] [--ground|-G] [--focus|-f <section>[,...]] [--force|-F] [--next|-n <option>[,...]] [<id>]"
 description: >
     Interview the user relentlessly about the task plan until reaching a
     shared understanding, resolving each branch of the question decision
@@ -22,7 +22,7 @@ Iteratively Grill a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-grill"
-    arg2="--rounds|-r=1 --until|-u=(MUST|SHOULD|MAY) --perspective|-p= --ground|-G --focus|-f=(all|SPECIFICATION|SPEC|DESIGN|DES|VERIFICATION|VER)... --next|-n=(none|DONE|EDIT|IMPLEMENT|DRAFT)... --int-reuse-task">
+    arg2="--rounds|-r=1 --until|-u=(MUST|SHOULD|MAY) --perspective|-p= --ground|-G --focus|-f=(all|SPECIFICATION|SPEC|DESIGN|DES|VERIFICATION|VER)... --force|-F --next|-n=(none|DONE|GRILL|EDIT|IMPLEMENT|DRAFT)... --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -106,6 +106,11 @@ Set <args>--int-reuse-task</args>.
         in order to grill an *already grilled* section again *only* where
         questions are still *open*:
 
+        -   If <getopt-option-force/> is `true`, *ignore* any
+            `grilled:<section/>` tag: the scope of *every* section is the
+            *entire* section, so already grilled sections are *re-grilled*
+            completely. Skip the following two cases.
+
         -   If the `Tags:` frontmatter key of <task-content/> carries
             the tag `grilled:<section/>` (with <section/> being the
             *lower-case* name of the section) and the section contains
@@ -114,7 +119,7 @@ Set <args>--int-reuse-task</args>.
             <sections/> and only output the following <template/>:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **section <section/> already grilled -- skipped**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **section <section/> already grilled -- skipped (use `--force` to re-grill)**
             </template>
 
         -   If the `Tags:` frontmatter key carries the tag
@@ -319,9 +324,10 @@ Set <args>--int-reuse-task</args>.
 
         <expand name="task-next-select"
             arg1="ase-task-grill"
-            arg2="DONE|EDIT|IMPLEMENT|DRAFT">
+            arg2="DONE|GRILL|EDIT|IMPLEMENT|DRAFT">
             Next Step: How would you like to proceed with the plan?
             DONE: Stop processing.
+            GRILL: Re-grill the entire plan again.
             EDIT: Hand off plan to editing.
             DRAFT: Hand off plan to implementation drafting.
             IMPLEMENT: Hand off plan to implementation.
@@ -335,6 +341,27 @@ Set <args>--int-reuse-task</args>.
 
             <template>
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated -- done**
+            </template>
+
+        -   If <result/> is `GRILL`:
+            <expand name="handoff-args"/>
+            Set <args><args/> --force --rounds <getopt-option-rounds/> --until <getopt-option-until/> --focus <getopt-option-focus/></args>.
+            <if condition="<getopt-option-perspective/> is not empty">
+                Set <args><args/> --perspective <getopt-option-perspective/></args>,
+                with the value shell-quoted if it contains spaces or special characters.
+            </if>
+            <if condition="<getopt-option-ground/> is `true`">
+                Set <args><args/> --ground</args>.
+            </if>
+            Only output the following <template/> and then call the
+            tool `Skill(skill: "ase:ase-task-grill", args: "<args/>")`
+            to invoke the `ase:ase-task-grill` skill again in order to
+            *re-grill* the updated plan with the same grilling options.
+            Immediately stop processing the current skill once the
+            `Skill` tool was used.
+
+            <template>
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan updated -- hand-off to re-grilling**
             </template>
 
         -   If <result/> is `EDIT`:

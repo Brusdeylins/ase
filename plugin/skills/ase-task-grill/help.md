@@ -12,6 +12,7 @@
     [`--perspective`|`-p` *perspective*]
     [`--ground`|`-G`]
     [`--focus`|`-f` *section*[,...]]
+    [`--force`|`-F`]
     [`--next`|`-n` *option*[,...]]
     [*id*]
 
@@ -60,8 +61,9 @@ persisted, its `Tags:` frontmatter key records each grilled section as
 its own tag `grilled:`*section* (lower-case, kept alongside the tags of
 previously grilled sections, e.g. `grilled:specification,
 grilled:design`), and a `PLAN CHANGES` box shows the bullet-points
-changed by the round. Finally, the user is offered a hand-off to
-editing, implementation, or draft.
+changed by the round. Finally, the user is offered a complete
+re-grilling (with the same grilling options), or a hand-off to editing,
+implementation, or draft.
 
 The *open* questions are recorded in the checkboxes of the plan's
 bullet-points: a bullet-point whose question stayed *unanswered*
@@ -71,7 +73,8 @@ question the plan does not cover yet is added as a new `[?]`
 bullet-point, and an *answered* question resets its bullet-points to
 `[ ]`. When a section is grilled *again* (its `grilled:`*section* tag
 is already present), only its `[?]` bullet-points are re-asked, and a
-section without any `[?]` bullet-point is skipped entirely. Bullet-points
+section without any `[?]` bullet-point is skipped entirely, unless
+`--force` is given. Bullet-points
 in state `[-]` (cancelled) or `[>]` (deferred) are never questioned.
 
 ##  OPTIONS
@@ -128,6 +131,11 @@ in state `[-]` (cancelled) or `[>]` (deferred) are never questioned.
     stays the context, and the answers may still update any section.
     An unknown, empty, or duplicate *section* token aborts the skill.
 
+-   `--force`|`-F`:
+    Re-grill already grilled sections completely, i.e., ignore their
+    `grilled:`*section* tags instead of skipping them resp. re-asking
+    only their `[?]` bullet-points.
+
 -   `--next`|`-n` *option*[,...]:
     Automatically answer the user dialog for the next step (at the end
     of this skill). *option* is a single token or a *comma-separated
@@ -136,9 +144,10 @@ in state `[-]` (cancelled) or `[>]` (deferred) are never questioned.
     to the downstream skill on hand-off so an entire pipeline can be
     pre-scripted in one shot. Recognized tokens at this skill: `none`
     (default, interactive answer required), `DONE` (no next step),
-    `EDIT` (hand-over to `ase-task-edit`), `IMPLEMENT` (hand-over to
-    `ase-task-implement`), or `DRAFT` (hand-over to
-    `ase-task-implement --draft`).
+    `GRILL` (re-grilling via `ase-task-grill --force` with the same
+    grilling options), `EDIT` (hand-over to `ase-task-edit`),
+    `IMPLEMENT` (hand-over to `ase-task-implement`), or `DRAFT`
+    (hand-over to `ase-task-implement --draft`).
 
 ##  ARGUMENTS
 
@@ -186,6 +195,12 @@ current task plan:
 
 ```text
 ❯ /ase-task-grill --focus DES,SPEC
+```
+
+Re-grill the already grilled current task plan completely:
+
+```text
+❯ /ase-task-grill --force
 ```
 
 Grill the current task plan and then hand off to editing:

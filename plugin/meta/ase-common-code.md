@@ -170,9 +170,9 @@ Set <args>--int-reuse-task</args>.
 4.  <elseif condition="<head/> is equal `GRILL`">
     Consume the head: set <getopt-option-next/> to the remaining
     tokens (joined back with `,`, or `none` if empty). `GRILL`
-    is this skill's own dispatch token, *not* part of
-    `ase-task-grill`'s `--next` vocabulary, so it must be
-    stripped here rather than forwarded. All remaining tokens are
+    is this skill's own dispatch token, so it must be stripped
+    here rather than forwarded (where `ase-task-grill` would
+    interpret it as a request for re-grilling). All remaining tokens are
     `ase-task-grill`'s own vocabulary and are forwarded verbatim.
     <if condition="<getopt-option-next/> is not equal `none`">
         Set <args><args/> --next <getopt-option-next/></args>
