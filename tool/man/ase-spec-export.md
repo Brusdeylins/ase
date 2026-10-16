@@ -25,8 +25,8 @@ or more output files. The supported formats are:
 The specification is parsed once, and each distinct format is exported
 once, even if requested for multiple outputs. Each written file is
 logged at the `info` level. The export fails on any lint diagnostic
-(see `ase-spec-lint`(1)), so a partial or invalid specification is
-never emitted.
+of `error` severity (see `ase-spec-lint`(1)), while warnings are only
+logged, so a partial or invalid specification is never emitted.
 
 The `pdf` format additionally requires a Chromium-class browser, which
 neither `npm install -g @rse/ase` nor `ase setup install` provides:
@@ -68,8 +68,9 @@ The MCP tool `ase_specbook_export` provides the same to the skills.
 ## EXIT STATUS
 
 Exits with status `0` on success, and with status `1` on any lint
-diagnostic, an invalid output specification, a missing browser for
-`pdf`, an unwritable output file, or `--watch` combined with `-`.
+diagnostic of `error` severity, an invalid output specification, a
+missing browser for `pdf`, an unwritable output file, or `--watch`
+combined with `-`.
 
 ## EXAMPLES
 

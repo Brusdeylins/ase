@@ -73,9 +73,8 @@ members) or `ase agent fleet stop`.
 
 - `ase agent fleet init` \[`-c`|`--config` *file*\] \[`-t`|`--tool` *tool*\] \[`--force`\]:
   Create the initial YAML configuration *file* of a fleet for the
-  `enterprise` task lifecycle model: with the section `fleet` (option
-  `foreground: false`), the section `relay` (with all its options
-  commented out, so they fall back to `project.relay.url`,
+  `enterprise` task lifecycle model: with the section `relay` (with all
+  its options commented out, so they fall back to `project.relay.url`,
   `project.relay.crt`, and `project.relay.key`), the section `default`
   (with `tool`, `parallel: 1`, and `timeout: 60m`, plus `repo` and
   `tempdir` commented out), the edit request agent `editor`, the four

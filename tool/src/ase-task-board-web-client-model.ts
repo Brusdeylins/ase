@@ -27,14 +27,18 @@ export type GraphStats = { tasks: number, dependencies: number }
 
 /*  the statistics of the tasks (see the statistics view): its time range (all tasks, resp. the
     tasks of the last 30 or 7 days), the tasks per lifecycle state (with its phase and tone),
-    their progress, and their total AI usage (times in minutes, costs in USD)  */
+    their progress, the readiness of the open tasks, their total AI usage (times in minutes,
+    costs in USD), the tasks of the highest usage, and the efficiency of the AI usage  */
 export type StatsRange  = "total" | "30d" | "7d"
 export type StatsUsage  = { timeAI: number, timeHR: number, timeReal: number, cread: number, cwrite: number, input: number, output: number, costAI: number, costHR: number }
 export type BoardStats  = {
-    range:    StatsRange
-    states:   { phase: string, status: string, count: number, tone: Tone }[]
-    progress: { finished: number, cancelled: number, wip: number, open: number }
-    usage:    StatsUsage
+    range:      StatsRange
+    states:     { phase: string, status: string, count: number, tone: Tone }[]
+    progress:   { finished: number, cancelled: number, wip: number, open: number }
+    readiness:  { ready: number, blocked: number }
+    usage:      StatsUsage
+    top:        { id: string, title: string, tone: Tone, cost: number, input: number, output: number, share: number }[]
+    efficiency: { timeRatio: number | null, costRatio: number | null, costAI: number, costHR: number, input: number, output: number }
 }
 
 /*  the agents passed by the agent relay: whether the agent relay is connected, and the

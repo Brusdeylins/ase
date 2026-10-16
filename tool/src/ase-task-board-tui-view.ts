@@ -589,11 +589,13 @@ export const renderAgents = (ctx: BoardCtx) => {
 }
 
 /*  the heights of the buttons of the time ranges (with a blank line below them), and of the
-    frames "Task Progress" and "Usage" (each with an inner blank line at its top and bottom)
-    of the statistics view  */
+    frames "Task Progress" (and "Open Tasks" besides it), "Usage", and "Top-5 Tasks" (and
+    "Finish Averages" and "Efficiency" besides it), each with an inner blank line at its top
+    and bottom, of the statistics view  */
 const RANGES_H   = 2
 const PROGRESS_H = 6
 const USAGE_H    = 8
+const TOP_H      = 10
 
 /*  the compact amounts of the statistics view: a time (in minutes) in minutes below one
     hour, else in hours, a number of tokens with a metric suffix, and costs in USD  */
@@ -633,17 +635,37 @@ const statsBar = (value: number, max: number, width: number): string => {
 
 /*  render the statistics view: the framed column chart "Tasks per State" of the numbers of tasks per
     lifecycle state (labeled by state and phase, in the colors of their lanes), the framed stacked bar
-    "Task Progress" of the cancelled, finished, work-in-progress, and open tasks, and the framed bars
-    "Usage" of the total times, tokens, and costs of the tasks, below the buttons of the time ranges  */
+    "Task Progress" of the cancelled, finished, work-in-progress, and open tasks (with the framed
+    stacked bar "Open Tasks" of the ready and blocked open tasks besides it), the framed bars "Usage"
+    of the total times, tokens, and costs of the tasks, and the framed table "Top-5 Tasks" of the
+    tasks of the highest usage (with the framed "Finish Averages" of the usage per finished task and
+    the framed "Efficiency" of the AI usage besides it), below the buttons of the time ranges  */
 export const renderStats = (ctx: BoardCtx) => {
     const { stats, usage, range, rangeRef, columns, boardH, dim, mouse, filter, agents } = ctx
     const innerW = Math.max(20, columns - 6)
-    const tint   = (tone: string) => tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
-    const frame  = (key: string, height: number, title: string, padY: number, ...content: React.ReactNode[]) =>
+
+    /*  the widths of the frames of the rows with two frames (the left one taking two thirds,
+        less the columns the right one is grown by), and the inner widths of these frames
+        (without their borders and paddings)  */
+    const rightW = Math.max(16, Math.floor((innerW + 4) / 3))
+    const leftW  = Math.max(16, innerW + 4 - rightW - 1)
+    const pair   = (key: string, height: number, left: React.ReactNode, right: React.ReactNode, grow = 0) =>
         h(Box, { key, height, flexShrink: 0 },
-            h(Box, { paddingX: 1, paddingY: padY, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") }, ...content),
+            h(Box, { width: leftW - grow, flexShrink: 0, flexDirection: "column" }, left),
+            h(Box, { width: 1, flexShrink: 0 }),
+            h(Box, { width: rightW + grow, flexShrink: 0, flexDirection: "column" }, right))
+
+    /*  the number of columns the frames "Finish Averages" and "Efficiency" are each grown by
+        (at the expense of the frame "Top-5 Tasks")  */
+    const avgGrow = 4
+    const tint   = (tone: string) => tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
+    const frameOf = (accent: boolean) => (key: string, height: number, title: string, padY: number, ...content: React.ReactNode[]) =>
+        h(Box, { key, height, flexShrink: 0 },
+            h(Box, { paddingX: 1, paddingY: padY, ...cx("grow", "column", "frame", accent ? "border-accent" : "border-dim", dim && "border-dimmed") }, ...content),
             h(Box, { position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
-                h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), title), " ]")))
+                h(Text, { ...cx(accent ? "accent" : "dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), title), " ]")))
+    const frame       = frameOf(false)
+    const accentFrame = frameOf(true)
     if (stats === null)
         return [ h(Box, { key: "stats", height: boardH }), h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " ") ]
 
@@ -652,7 +674,7 @@ export const renderStats = (ctx: BoardCtx) => {
         like in the web board), the columns stand on a base line above their states (drawn with
         the upper eighth block, so it directly touches the columns above it), and each phase is
         labeled below its line spanning its states (like in the web board)  */
-    const chartH = Math.max(7, boardH - RANGES_H - PROGRESS_H - USAGE_H)
+    const chartH = Math.max(7, boardH - RANGES_H - PROGRESS_H - USAGE_H - TOP_H)
     const areaH  = chartH - 6
     const colW   = Math.max(2, Math.floor(innerW / stats.states.length))
     const lineW  = colW - 1
@@ -689,24 +711,35 @@ export const renderStats = (ctx: BoardCtx) => {
         h(Box, { key: "phase-labels" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, phases.map((p) =>
             " " + center(p.phase, p.n * colW - 1)).join(""))))
 
-    /*  the stacked bar of the progress of the tasks, with its legend  */
+    /*  a framed stacked bar of the numbers of tasks of parts, with its legend  */
+    const stacked = (key: string, title: string, width: number,
+        parts: { label: string, count: number, glyph: string, color: string | undefined }[]) => {
+        const total = parts.reduce((n, p) => n + p.count, 0)
+        const cells = splitCells(width, parts.map((p) => p.count))
+        const pct   = (count: number) => `${total > 0 ? Math.round(count / total * 100) : 0}%`
+        return frame(key, PROGRESS_H, title, 1,
+            h(Text, { key: "bar", wrap: "truncate" }, ...(total === 0 ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, "░".repeat(width)) ] :
+                parts.map((p, i) => h(Text, { key: i, color: p.color, dimColor: dim }, p.glyph.repeat(cells[i]))))),
+            h(Box, { key: "legend", justifyContent: "center" },
+                h(Text, cx("normal", "truncate", dim && "dimmed"), ...parts.flatMap((p, i) => [
+                    i > 0 ? " · " : "", h(Text, { key: `g${i}`, color: p.color, dimColor: dim }, p.glyph), ` ${p.label}: `,
+                    h(Text, { key: `n${i}`, ...cx("bold") }, String(p.count)), ` (${pct(p.count)})` ]))))
+    }
+
+    /*  the stacked bars of the progress of the tasks and of the readiness of the open tasks
+        (grown like the frames "Finish Averages" and "Efficiency" together, to align with them)  */
     const { finished, cancelled, wip, open } = stats.progress
-    const total  = finished + cancelled + wip + open
-    const parts  = [
-        { label: "cancelled",        count: cancelled, glyph: "▒", color: palette.dim },
-        { label: "finished",         count: finished,  glyph: "█", color: palette.normal },
-        { label: "work-in-progress", count: wip,       glyph: "█", color: palette.accent },
-        { label: "open",             count: open,      glyph: "░", color: palette.normal }
-    ]
-    const cells  = splitCells(innerW, parts.map((p) => p.count))
-    const pct    = (count: number) => `${total > 0 ? Math.round(count / total * 100) : 0}%`
-    const progress = frame("progress", PROGRESS_H, "Task Progress", 1,
-        h(Text, { key: "bar", wrap: "truncate" }, ...(total === 0 ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, "░".repeat(innerW)) ] :
-            parts.map((p, i) => h(Text, { key: i, color: p.color, dimColor: dim }, p.glyph.repeat(cells[i]))))),
-        h(Box, { key: "legend", justifyContent: "center" },
-            h(Text, cx("normal", "truncate", dim && "dimmed"), ...parts.flatMap((p, i) => [
-                i > 0 ? " · " : "", h(Text, { key: `g${i}`, color: p.color, dimColor: dim }, p.glyph), ` ${p.label}: `,
-                h(Text, { key: `n${i}`, ...cx("bold") }, String(p.count)), ` (${pct(p.count)})` ]))))
+    const progress = pair("progress", PROGRESS_H,
+        stacked("progress", "Task Progress", leftW - 2 * avgGrow - 4, [
+            { label: "cancelled",        count: cancelled, glyph: "▒", color: palette.dim },
+            { label: "finished",         count: finished,  glyph: "█", color: palette.normal },
+            { label: "wip",              count: wip,       glyph: "█", color: palette.accent },
+            { label: "open",             count: open,      glyph: "░", color: palette.normal }
+        ]),
+        stacked("readiness", "Open Tasks", rightW + 2 * avgGrow - 4, [
+            { label: "ready",            count: stats.readiness.ready,   glyph: "░", color: palette.normal },
+            { label: "blocked",          count: stats.readiness.blocked, glyph: "▒", color: palette.signal }
+        ]), 2 * avgGrow)
 
     /*  the bars of the total usage by times, tokens (stacked by their kinds),
         and costs (columns), with the bars of a column scaled to its maximum, where each
@@ -746,6 +779,62 @@ export const renderStats = (ctx: BoardCtx) => {
     const matrix  = frame("usage", USAGE_H, "Usage", 1, ...(usage === null ?
         [ h(Text, { key: "loading", ...cx("dim", dim && "dimmed") }, "loading …") ] : [ head, ...lines ]))
 
+    /*  the table of the tasks of the highest usage: the id (inverse behind "≡", in the color of
+        its lane), the title (cut with an ellipsis), a bar of its share of the total costs (resp.
+        tokens), the costs, and the input and output tokens (as "<input> ▷ <output>", with
+        the "▷" vertically aligned), with two columns of spacing between the columns  */
+    const topW    = leftW - 2 * avgGrow - 4
+    const fit     = (text: string, width: number) => text.length <= width ? text.padEnd(width) : text.slice(0, Math.max(0, width - 1)) + "…"
+    const idW     = Math.min(28, Math.max(7, ...stats.top.map((t) => t.id.length + 4)))
+    const pctW    = Math.max(11, Math.min(16, Math.floor(topW / 8)))
+    const costW   = 7
+    const inW     = Math.max(0, ...stats.top.map((t) => statsTokens(t.input).length))
+    const outW    = Math.max(0, ...stats.top.map((t) => statsTokens(t.output).length))
+    const tokW    = Math.max(5, inW + 3 + outW)
+    const gap     = "  "
+    const titleW  = Math.max(0, topW - idW - pctW - costW - tokW - 4 * gap.length)
+    const topHead = h(Text, { key: "head", ...cx("normal", "bold", "truncate", dim && "dimmed") },
+        [ "Task Id".padEnd(idW), "Task Title".padEnd(titleW), "Total Share".padEnd(pctW),
+            "Cost".padStart(costW), "Token".padEnd(tokW) ].join(gap))
+    const topList = usage === null ? [ h(Text, { key: "loading", ...cx("dim", dim && "dimmed") }, "loading …") ] :
+        stats.top.length === 0 ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, "no usage") ] :
+            [ topHead, ...stats.top.map((t, i) => {
+                const id = fit(t.id, idW - 4).trimEnd()
+                return h(Text, { key: `top${i}`, ...cx("normal", "truncate", dim && "dimmed") },
+                    h(Text, { key: "id", color: tint(t.tone), dimColor: dim, ...cx("badge") }, ` ≡ ${id} `),
+                    " ".repeat(idW - id.length - 4) + gap + fit(t.title, titleW) + gap,
+                    h(Text, { key: "bar", color: palette.accent, dimColor: dim }, statsBar(t.share, 1, pctW)),
+                    gap + statsCost(t.cost).padStart(costW) + gap +
+                    `${statsTokens(t.input).padStart(inW)} ▷ ${statsTokens(t.output).padStart(outW)}`.padStart(tokW))
+            }) ]
+
+    /*  the averages per finished task and the efficiency of the AI usage (the AI/HR time and
+        cost ratios), side by side, in accent color (like the active lanes), each as lines of
+        labels with their values right-aligned (where a too long label is cut with an ellipsis)  */
+    const avgW    = Math.floor((rightW - 1) / 2) + avgGrow
+    const effW    = rightW + 2 * avgGrow - 1 - avgW
+    const eff     = stats.efficiency
+    const ratio   = (r: number | null) => r !== null ? `${r.toFixed(1)}×` : "n/a"
+    const valLine = (key: string, width: number, label: string, value: string) =>
+        h(Text, { key, ...cx("accent", "truncate", dim && "dimmed") },
+            fit(label, Math.max(0, width - 4 - value.length)), h(Text, { key: "v", ...cx("bold") }, value))
+    const loading = [ h(Text, { key: "loading", ...cx("dim", dim && "dimmed") }, "loading …") ]
+    const avgList = usage === null ? loading : [
+        valLine("cost-ai", avgW, "AI cost", statsCost(eff.costAI)),
+        valLine("cost-hr", avgW, "HR cost", statsCost(eff.costHR)),
+        valLine("tokens",  avgW, "AI Token", `${statsTokens(eff.input)} ▷ ${statsTokens(eff.output)}`)
+    ]
+    const effList = usage === null ? loading : [
+        valLine("time-ratio", effW, "AI/HR time ratio", ratio(eff.timeRatio)),
+        valLine("cost-ratio", effW, "AI/HR cost ratio", ratio(eff.costRatio))
+    ]
+    const tops    = pair("top", TOP_H, frame("top", TOP_H, "Top-5 Tasks", 1, ...topList),
+        h(Box, { height: TOP_H },
+            h(Box, { width: avgW, flexShrink: 0, flexDirection: "column" }, accentFrame("averages", TOP_H, "Finish Averages", 1, ...avgList)),
+            h(Box, { width: 1, flexShrink: 0 }),
+            h(Box, { width: effW, flexShrink: 0, flexDirection: "column" }, accentFrame("efficiency", TOP_H, "Efficiency", 1, ...effList))),
+        2 * avgGrow)
+
     /*  the buttons of the time ranges, separated by dots, with the one of the shown time range highlighted  */
     const ranges  = h(Box, { key: "ranges", height: RANGES_H, flexShrink: 0, justifyContent: "center" },
         ...statsRanges.flatMap((r, i) => [
@@ -754,7 +843,7 @@ export const renderStats = (ctx: BoardCtx) => {
                 h(Text, cx("button", r === range && "button-active", dim && "dimmed"), ` ${statsRangeLabels[r]} `)) ]))
     const shown   = stats.states.reduce((n, s) => n + s.count, 0)
     return [
-        h(Box, { key: "stats", height: boardH, paddingX: 1, flexDirection: "column", overflow: "hidden" }, ranges, chart, progress, matrix),
+        h(Box, { key: "stats", height: boardH, paddingX: 1, flexDirection: "column", overflow: "hidden" }, ranges, chart, progress, matrix, tops),
         h(Box, { key: "info", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"), [ "statistics of ", h(Text, { key: "n", ...cx("bold") }, String(shown)),
                 ` ${filter !== "" ? "filtered " : ""}tasks`, ...(range !== "total" ? [ " ", h(Text, { key: "r", ...cx("bold") }, statsRangeLabels[range]) ] : []) ])),

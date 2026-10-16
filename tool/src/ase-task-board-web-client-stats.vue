@@ -6,9 +6,12 @@
 
 <!--  the statistics view (like in the TUI): the buttons of the time ranges, the framed column chart "Tasks per State" of the numbers
       of tasks per lifecycle state (labeled by state and phase, in the colors of their lanes), the
-      framed stacked bar "Task Progress" of the cancelled, finished, work-in-progress, and open tasks,
-      and the framed bars "Usage" of the total times, tokens, and costs of the tasks, with the
-      bars of a column scaled to the maximum of the column  -->
+      framed stacked bar "Task Progress" of the cancelled, finished, work-in-progress, and open tasks
+      (with the framed stacked bar "Open Tasks" of the ready and blocked open tasks besides it), the
+      framed bars "Usage" of the total times, tokens, and costs of the tasks, with the bars of a
+      column scaled to the maximum of the column, and the framed table "Top-5 Tasks" of the
+      tasks of the highest usage (with the framed "Finish Averages" of the usage per finished
+      task and the framed "Efficiency" of the AI usage besides it)  -->
 <template>
     <div v-show="view === 'stats'" id="stats">
         <div class="sranges">
@@ -30,19 +33,21 @@
                     <div v-for="p in phases" :key="p.phase" class="sphase" :style="{ gridColumn: `span ${p.n}` }" :title="p.phase"><span>{{ p.phase }}</span></div>
                 </div>
             </section>
-            <section class="sprogress">
-                <div class="stitle">Task Progress</div>
-                <div class="sstack">
-                    <div v-for="p in parts" v-show="p.count > 0" :key="p.key" class="spart" :class="p.key" :style="{ flexGrow: p.count }"
-                        :title="`${p.label}: ${p.count} (${pct(p.count)})`"></div>
-                </div>
-                <div class="slegend">
-                    <template v-for="(p, i) in parts" :key="p.key">
-                        <span v-if="i > 0" class="ssep">·</span>
-                        <span><span class="sswatch" :class="p.key"></span>{{ p.label }}: <b>{{ p.count }}</b> ({{ pct(p.count) }})</span>
-                    </template>
-                </div>
-            </section>
+            <div class="spair">
+                <section v-for="b in stacks" :key="b.key" class="sprogress">
+                    <div class="stitle">{{ b.title }}</div>
+                    <div class="sstack">
+                        <div v-for="p in b.parts" v-show="p.count > 0" :key="p.key" class="spart" :class="p.key" :style="{ flexGrow: p.count }"
+                            :title="`${p.label}: ${p.count} (${pct(p.count, b.parts)})`"></div>
+                    </div>
+                    <div class="slegend">
+                        <template v-for="(p, i) in b.parts" :key="p.key">
+                            <span v-if="i > 0" class="ssep">·</span>
+                            <span><span class="sswatch" :class="p.key"></span>{{ p.label }}: <b>{{ p.count }}</b> ({{ pct(p.count, b.parts) }})</span>
+                        </template>
+                    </div>
+                </section>
+            </div>
             <section class="susage">
                 <div class="stitle">Usage</div>
                 <div class="smatrix">
@@ -77,6 +82,51 @@
                     </div>
                 </div>
             </section>
+            <div class="spair">
+                <section class="stop">
+                    <div class="stitle">Top-5 Tasks</div>
+                    <table class="stoplist">
+                        <thead>
+                            <tr>
+                                <th>Task Id</th>
+                                <th class="stask">Task Title</th>
+                                <th>Total Share</th>
+                                <th class="snum">Cost</th>
+                                <th>Token</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="t in stats.top" :key="t.id">
+                                <td><span class="cid" :class="t.tone">≡ {{ t.id }}</span></td>
+                                <td class="stask" :title="t.title"><span>{{ t.title }}</span></td>
+                                <td class="sbarcell" :title="`${Math.round(t.share * 100)}%`"><div class="strack"><div class="sfill ai" :style="{ width: share(t.share, 1) }"></div></div></td>
+                                <td class="snum">{{ cost(t.cost) }}</td>
+                                <td class="snum" title="input ▷ output tokens">
+                                    <span class="stok" :style="{ minWidth: `${tokInW}ch` }">{{ tokens(t.input) }}</span>
+                                    <span class="sflow">▷</span>
+                                    <span class="stok" :style="{ minWidth: `${tokOutW}ch` }">{{ tokens(t.output) }}</span>
+                                </td>
+                            </tr>
+                            <tr v-for="k in TOP_N - stats.top.length" :key="`empty-${k}`" class="sblank">
+                                <td colspan="5">{{ k === 1 && stats.top.length === 0 ? "no usage" : "" }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </section>
+                <div class="ssplit">
+                    <section class="seffect">
+                        <div class="stitle">Finish Averages</div>
+                        <div class="sline"><span>AI cost</span><b>{{ cost(stats.efficiency.costAI) }}</b></div>
+                        <div class="sline"><span>HR cost</span><b>{{ cost(stats.efficiency.costHR) }}</b></div>
+                        <div class="sline"><span>AI Token</span><b title="input ▷ output tokens">{{ tokens(stats.efficiency.input) }}<span class="sflow">▷</span>{{ tokens(stats.efficiency.output) }}</b></div>
+                    </section>
+                    <section class="seffect">
+                        <div class="stitle">Efficiency</div>
+                        <div class="sline"><span>AI/HR time ratio</span><b>{{ ratio(stats.efficiency.timeRatio) }}</b></div>
+                        <div class="sline"><span>AI/HR cost ratio</span><b>{{ ratio(stats.efficiency.costRatio) }}</b></div>
+                    </section>
+                </div>
+            </div>
         </template>
     </div>
 </template>
@@ -111,6 +161,16 @@ const tokens = (n: number) =>
     n < 1000 ? String(n) : n < 1000 * 1000 ? `${(n / 1000).toFixed(1)}k` :
         n < 1000 * 1000 * 1000 ? `${(n / (1000 * 1000)).toFixed(1)}M` : `${(n / (1000 * 1000 * 1000)).toFixed(1)}G`
 const cost   = (usd: number) => `$${usd.toFixed(2)}`
+const ratio  = (r: number | null) => r !== null ? `${r.toFixed(1)}×` : "n/a"
+
+/*  the (maximum) number of tasks of the highest usage, always shown as rows (with blank
+    rows for the missing tasks), to keep the height of their table (like in the TUI)  */
+const TOP_N = 5
+
+/*  the widths (in characters) of the input and output tokens of the tasks of the
+    highest usage, to vertically align the "▷" between them (like in the TUI)  */
+const tokInW  = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) => tokens(t.input).length)))
+const tokOutW = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) => tokens(t.output).length)))
 const share  = (value: number, max: number) => `${max > 0 ? value / max * 100 : 0}%`
 
 /*  the highest number of tasks of a state, and the phases with their numbers of states  */
@@ -124,21 +184,30 @@ const phases   = computed(() => (stats.value?.states ?? []).reduce((list, s) => 
     return list
 }, [] as { phase: string, n: number }[]))
 
-/*  the parts of the progress of the tasks, and the share of a number of tasks  */
-const parts = computed(() => {
-    const p = stats.value?.progress ?? { finished: 0, cancelled: 0, wip: 0, open: 0 }
-    return [
+/*  the stacked bars of the progress of the tasks and of the readiness of the open
+    tasks with their parts, and the share of a number of tasks of the parts  */
+const stacks = computed(() => {
+    const p = stats.value?.progress  ?? { finished: 0, cancelled: 0, wip: 0, open: 0 }
+    const r = stats.value?.readiness ?? { ready: 0, blocked: 0 }
+    const progress = [
         { key: "cancelled", label: "cancelled",        count: p.cancelled },
         { key: "finished",  label: "finished",         count: p.finished },
-        { key: "wip",       label: "work-in-progress", count: p.wip },
+        { key: "wip",       label: "wip",              count: p.wip },
         { key: "open",      label: "open",             count: p.open }
     ]
+    const readiness = [
+        { key: "ready",     label: "ready",            count: r.ready },
+        { key: "blocked",   label: "blocked",          count: r.blocked }
+    ]
+    return [
+        { key: "progress",  title: "Task Progress", parts: progress },
+        { key: "readiness", title: "Open Tasks",    parts: readiness }
+    ]
 })
-const pct = (count: number) => {
-    const total = parts.value.reduce((n, p) => n + p.count, 0)
+const pct = (count: number, parts: { count: number }[]) => {
+    const total = parts.reduce((n, p) => n + p.count, 0)
     return `${total > 0 ? Math.round(count / total * 100) : 0}%`
 }
-
 /*  the maxima of the time and cost columns  */
 const maxTime = computed(() => Math.max(usage.value.timeAI, usage.value.timeHR, usage.value.timeReal))
 const maxCost = computed(() => Math.max(usage.value.costAI, usage.value.costHR))

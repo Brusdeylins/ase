@@ -909,8 +909,114 @@ header
             background: repeating-linear-gradient(45deg, var(--c-border-strong) 0 3px, var(--c-ground) 3px 6px)
         &.wip
             background: var(--c-accent)
-        &.open
+        &.open, &.ready
             background: var(--c-fill)
+        &.blocked
+            background: repeating-linear-gradient(45deg, var(--c-signal) 0 3px, var(--c-signal-ground) 3px 6px)
+
+    /*  the rows with two framed sections, the left one taking two thirds (like in the TUI)  */
+    .spair
+        display: grid
+        grid-template-columns: minmax(0, 2fr) minmax(0, 1fr)
+        gap: 16px
+
+    /*  the right third of a row split into two framed sections side by side  */
+    .ssplit
+        display: grid
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)
+        gap: 16px
+
+    /*  the table of the tasks of the highest usage: the id (inverse behind "≡", in the color
+        of its lane), the title (taking the remaining width, cut with an ellipsis), the bar
+        of the total share, the costs, and the input and output tokens (with the "▷" between
+        them vertically aligned)  */
+    .stoplist
+        width: 100%
+        border-collapse: collapse
+        font-size: 0.8125rem
+        th
+            padding: 0 16px 4px 0
+            text-align: left
+            white-space: nowrap
+            font-weight: bold
+            color: var(--c-text)
+        td
+            padding: 2px 16px 2px 0
+            white-space: nowrap
+            color: var(--c-text-soft)
+
+        /*  the rows of a fixed height, so the blank rows for the missing tasks
+            keep the height of the table (like in the TUI)  */
+        tbody tr
+            height: 22px
+        .sblank td
+            color: var(--c-mute)
+        th:last-child, td:last-child
+            padding-right: 0
+        .cid
+            margin-right: 0
+            &.active
+                background: var(--c-accent)
+            &.done
+                background: var(--c-line)
+        .stask
+            width: 100%
+            max-width: 0
+            overflow: hidden
+            text-overflow: ellipsis
+        .sbarcell
+            width: 16%
+            min-width: 60px
+        .snum
+            text-align: right
+            font-variant-numeric: tabular-nums
+        td.snum
+            font-weight: bold
+            color: var(--c-text)
+        .stok
+            display: inline-block
+            text-align: right
+        .sflow
+            margin: 0 0.4em
+            font-weight: normal
+            color: var(--c-mute)
+
+    /*  the averages per finished task and the efficiency of the AI usage, colored like the
+        active lanes (with the title like their lane header): labels with their values
+        right-aligned, where a too long label is cut with an ellipsis  */
+    section.seffect
+        display: flex
+        flex-direction: column
+        gap: 2px
+        line-height: 1.15
+        border-color: var(--c-accent-line)
+        background: var(--c-accent-ground)
+        color: var(--c-accent-strong)
+        .stitle
+            border-color: var(--c-accent-line)
+            background: var(--c-accent-fill)
+            color: var(--c-accent-strong)
+        .sline b
+            color: var(--c-accent-strong)
+        .sline .sflow
+            color: var(--c-accent-light)
+    .sline
+        display: flex
+        justify-content: space-between
+        gap: 8px
+        span:first-child
+            min-width: 0
+            white-space: nowrap
+            overflow: hidden
+            text-overflow: ellipsis
+        b
+            white-space: nowrap
+            font-variant-numeric: tabular-nums
+            color: var(--c-text)
+        .sflow
+            margin: 0 0.4em
+            font-weight: normal
+            color: var(--c-mute)
 
     /*  the bars of the total AI usage by the times, tokens, and costs (columns)  */
     .smatrix

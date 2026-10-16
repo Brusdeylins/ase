@@ -324,7 +324,7 @@ cors:
 storage:
     plugin: ase
     options:
-        basedir: /Users/rse/.ase/tasks
+        basedir: /Users/rse/Library/Application Support/ase/tasks
 ```
 
 ## EXIT STATUS

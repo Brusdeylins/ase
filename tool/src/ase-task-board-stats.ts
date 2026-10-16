@@ -38,9 +38,40 @@ export type StatsUsage = {
     costAI: number, costHR: number
 }
 
-/*  the statistics of the board: its time range, the tasks per lifecycle state,
-    the progress of the tasks, and the total AI usage of the tasks  */
-export type Stats = { range: StatsRange, states: StatsState[], progress: StatsProgress, usage: StatsUsage }
+/*  the readiness of the open tasks: the numbers of the ready tasks (all predecessors
+    in a terminal state) and of the blocked tasks (any predecessor in another state)  */
+export type StatsReadiness = { ready: number, blocked: number }
+
+/*  a task of the highest usage: its id, its title, its tone (like the tasks of its lane),
+    its total (AI and human) costs (in USD), its (uncached) input and output tokens, and its
+    share (0-1) of the total costs of all tasks (resp. of their input and output tokens
+    without any costs)  */
+export type StatsTop = { id: string, title: string, tone: Tone, cost: number, input: number, output: number, share: number }
+
+/*  the efficiency of the AI usage: the AI/HR time ratio (the AI request time per human
+    time) and the AI/HR cost ratio (the AI costs per human costs), each null without any
+    human time resp. costs, and the average AI costs, human costs (in USD), and (uncached)
+    input and output tokens per finished task (all zero without any finished task)  */
+export type StatsEfficiency = {
+    timeRatio: number | null, costRatio: number | null,
+    costAI: number, costHR: number, input: number, output: number
+}
+
+/*  the statistics of the board: its time range, the tasks per lifecycle state, the progress
+    of the tasks, the readiness of the open tasks, the total AI usage of the tasks, the (up to
+    five) tasks of the highest usage, and the efficiency of the AI usage  */
+export type Stats = {
+    range:      StatsRange
+    states:     StatsState[]
+    progress:   StatsProgress
+    readiness:  StatsReadiness
+    usage:      StatsUsage
+    top:        StatsTop[]
+    efficiency: StatsEfficiency
+}
+
+/*  the number of tasks of the highest usage  */
+const TOP_N = 5
 
 /*  the fields of the AI usage, by the amounts of the usage attachment  */
 const usageFields: [ keyof StatsUsage, (typeof TaskFormat.usageKeys)[number] ][] = [
@@ -89,33 +120,81 @@ export const statsOf = (board: Board, usage: Map<string, { usage: TaskFormat.Tas
         if (!board.context.has(card.id) && shareOf(card.created, card.modified, range, now) !== null)
             within.add(card.id)
 
-    /*  the tasks per state and their progress  */
+    /*  the tasks per state and their progress, and the tones and categories of the lanes  */
     const states   = [] as StatsState[]
     const progress = { finished: 0, cancelled: 0, wip: 0, open: 0 }
+    const toneOf   = new Map<string, Tone>()
+    const kindOf   = new Map<string, keyof StatsProgress>()
     for (const g of board.groups)
         for (const l of g.lanes) {
+            const tone: Tone = l.kind === "terminal" ? "done" : l.active ? "active" : "idle"
+            const kind = l.kind === "terminal" ? (l.status === "CANCELLED" ? "cancelled" : "finished") : l.active ? "wip" : "open"
             const count = (board.lanes.get(l.status) ?? []).filter((c) => within.has(c.id)).length
-            states.push({ phase: g.title, status: l.status, count, tone: l.kind === "terminal" ? "done" : l.active ? "active" : "idle" })
-            if (l.kind === "terminal")
-                progress[l.status === "CANCELLED" ? "cancelled" : "finished"] += count
-            else
-                progress[l.active ? "wip" : "open"] += count
+            states.push({ phase: g.title, status: l.status, count, tone })
+            progress[kind] += count
+            toneOf.set(l.status, tone)
+            kindOf.set(l.status, kind)
         }
 
-    /*  the total AI usage of the tasks (proportionally to the overlapping parts of their usage periods)  */
-    const total = { timeAI: 0, timeHR: 0, timeReal: 0, cread: 0, cwrite: 0, input: 0, output: 0, costAI: 0, costHR: 0 }
-    for (const id of board.cards.keys()) {
-        const u = usage.get(id)
-        if (u === undefined || board.context.has(id))
+    /*  the readiness of the open tasks, by the states of their (known) predecessors
+        (independent of the time range and the filter, as they block the tasks nevertheless)  */
+    const done      = (id: string) => {
+        const card = board.cards.get(id)
+        return card === undefined || toneOf.get(card.status) === "done"
+    }
+    const readiness = { ready: 0, blocked: 0 }
+    for (const id of within)
+        if (kindOf.get(board.cards.get(id)!.status) === "open")
+            readiness[(board.pred.get(id) ?? []).every(done) ? "ready" : "blocked"]++
+
+    /*  the total AI usage of the tasks (proportionally to the overlapping parts of their usage
+        periods), the usage of each task, and the total usage of the finished tasks  */
+    const zero     = () => ({ timeAI: 0, timeHR: 0, timeReal: 0, cread: 0, cwrite: 0, input: 0, output: 0, costAI: 0, costHR: 0 })
+    const total    = zero()
+    const finished = zero()
+    const tops     = [] as StatsTop[]
+    for (const card of board.cards.values()) {
+        const u = usage.get(card.id)
+        if (u === undefined || board.context.has(card.id))
             continue
         const share = shareOf(u.period.created, u.period.modified, range, now)
         if (share === null)
             continue
+        const task = zero()
         for (const [ field, key ] of usageFields)
-            total[field] += (u.usage[key] ?? 0) * share
+            task[field] = (u.usage[key] ?? 0) * share
+        for (const [ field ] of usageFields) {
+            total[field] += task[field]
+            if (within.has(card.id) && kindOf.get(card.status) === "finished")
+                finished[field] += task[field]
+        }
+        const input  = Math.round(task.input)
+        const output = Math.round(task.output)
+        const cost   = Number((task.costAI + task.costHR).toFixed(4))
+        if (input + output > 0 || cost > 0)
+            tops.push({ id: card.id, title: card.title, tone: toneOf.get(card.status) ?? "idle", cost, input, output, share: 0 })
     }
     for (const [ field, key ] of usageFields)
         total[field] = Number(total[field].toFixed(key.startsWith("cost.") ? 4 : 0))
-    return { range, states, progress, usage: total }
+
+    /*  the tasks of the highest usage: by their costs, then by their input and output
+        tokens, with their shares of the total costs (resp. input and output tokens)  */
+    const top    = tops.sort((a, b) => b.cost - a.cost || (b.input + b.output) - (a.input + a.output)).slice(0, TOP_N)
+    const costs  = total.costAI + total.costHR
+    const tokens = total.input + total.output
+    for (const t of top)
+        t.share = costs > 0 ? t.cost / costs : tokens > 0 ? (t.input + t.output) / tokens : 0
+
+    /*  the efficiency of the AI usage  */
+    const n = progress.finished
+    const efficiency = {
+        timeRatio: total.timeHR > 0 ? Number((total.timeAI / total.timeHR).toFixed(2)) : null,
+        costRatio: total.costHR > 0 ? Number((total.costAI / total.costHR).toFixed(2)) : null,
+        costAI:    n > 0 ? Number((finished.costAI / n).toFixed(4)) : 0,
+        costHR:    n > 0 ? Number((finished.costHR / n).toFixed(4)) : 0,
+        input:     n > 0 ? Math.round(finished.input  / n) : 0,
+        output:    n > 0 ? Math.round(finished.output / n) : 0
+    }
+    return { range, states, progress, readiness, usage: total, top, efficiency }
 }
 

@@ -174,10 +174,11 @@ The command-specific ones are described in their own manual pages.
 - `.ase/`:
   The per-project *ASE* directory in the project root, holding the
   `project` scope configuration `config.yaml`, the agent definitions
-  `agents/`, the fleet configuration `fleet.yaml`, and the
-  machine-local runtime files (`service.yaml`, `service.log`,
-  `board.yaml`, `agent/`, `task/`, and `worktree/`), the latter covered
-  by the self-ignoring `.ase/.gitignore`.
+  `agents/`, the fleet configuration `fleet.yaml`, the task plans
+  `task/` of the default local task store, and the machine-local
+  runtime files (`service.yaml`, `service.log`, `board.yaml`, `agent/`,
+  and `worktree/`), the latter covered by the self-ignoring
+  `.ase/.gitignore`.
 
 ## EXIT STATUS
 

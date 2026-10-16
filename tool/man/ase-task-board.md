@@ -186,15 +186,37 @@ tasks), `within last 30 days`, and `within last 7 days` on its top
   by its phase (the group of its lane), in the colors of the lanes.
 - `Task Progress`: one stacked bar of the *cancelled* tasks, the
   *finished* tasks (in a terminal state other than `CANCELLED`), the
-  tasks *work-in-progress* (in an active state, like `PLANNING` or
+  tasks *work-in-progress* (`wip`, in an active state, like `PLANNING` or
   `IMPLEMENTING`), and the *open* tasks (in any other state, like
   `DRAFTED`, `PLANNED`, or `STALLED`), each with its number and share.
+- `Open Tasks` (besides `Task Progress`): one stacked bar of the open
+  tasks, split into the *ready* tasks (all predecessors in a terminal
+  state, or none at all) and the *blocked* tasks (any predecessor in
+  another state, including the implicit predecessors of an epic),
+  each with its number and share.
 - `Usage`: bars of the total accumulated usage of the tasks (see
   `ase-task-assign`(1) and `ase-agent`(1)) by its `time` (AI request,
   human, and real time, in minutes below one hour, else in hours), its
   `token` (all tokens, stacked by the cache read, cache write, input,
   and output tokens), and its `cost` (AI and human costs, in USD), with
   the bars of a column scaled to the maximum of the column.
+- `Top-5 Tasks`: a table of the (up to) five tasks of the highest usage, ranked
+  by their total (AI and human) costs and then by their input and
+  output tokens, with the columns `Task Id` (inverse behind `≡`, in the
+  color of its lane), `Task Title` (cut with an ellipsis if too long),
+  `Total Share` (a bar of its share of the total costs of all tasks,
+  resp. of their input and output tokens without any costs), `Cost`,
+  and `Token` (as *input* `▷` *output*, with the uncached input tokens,
+  i.e., without the cache read and write tokens).
+- `Finish Averages` (besides `Top-5 Tasks`): the average AI costs,
+  human costs, and AI tokens (as *input* `▷` *output*, like in `Top-5
+  Tasks`) per finished task (the usage of the finished tasks divided
+  by their number, including the finished tasks without any usage).
+- `Efficiency` (besides `Finish Averages`): the *AI/HR time ratio* (the
+  AI request time per human time, i.e., the higher, the more AI work
+  per attended human minute) and the *AI/HR cost ratio* (the AI costs
+  per human costs), each `n/a` without any human time resp. costs (as
+  booked by the agents, see `ase-agent`(1)).
 
 Within the last 30 or 7 days, a task counts only if the period from
 its `Created:` to its `Modified:` frontmatter key overlaps with the
@@ -266,9 +288,9 @@ shown agents), and re-established.
 ## KEYS
 
 The following keys are supported by the terminal board (and, unless
-noted otherwise, equally by the web board). The keys `D`, `E`, `R`,
-`T`, and `M` are also accepted as `Shift` with the lower-case letter
-under the kitty keyboard protocol.
+noted otherwise, equally by the web board). The keys `D`, `E`, `N`,
+`R`, `T`, and `M` are also accepted as `Shift` with the lower-case
+letter under the kitty keyboard protocol.
 
 ### Every View
 
