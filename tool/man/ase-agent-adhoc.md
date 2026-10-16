@@ -596,6 +596,25 @@ type exactly and, if given, its MIME type.
   (`phase` only) Leave every task already carrying such an attachment
   unclaimed (e.g., a task already carrying a draft).
 
+- \[`--attach-changeset` *kind*\]:
+  (with `--workdir changeset` or `target` only) Store the *change set
+  snapshot* -- the view-only, text-only unified diff of the change set
+  (without the `.ase` directory) -- as the task attachment of type
+  `text/x-diff; charset=utf-8; kind="<kind>"`, captured by the agent
+  itself after the processing (before `--finish-commit`) and replacing
+  the one of an earlier processing in place (keeping its `Created:`
+  key), like `implementer` and `integrator` with the kind `changeset`.
+  With `--workdir changeset`, it covers the change set of a `worktree`
+  or `branch:` changeset from its fork point from the `Source:` on, with
+  `base` *commit* (plus `, partial` unless the task reached
+  `--state-phase`) in its `Desc:` key, while an `attachment:` changeset
+  other than `attachment:`*kind* removes it as obsolete. With
+  `--workdir target`, it covers the change of the target branch by the
+  integration of a `worktree` or `branch:` changeset, with `base`
+  *commit*`, merged` *commit* in its `Desc:` key, unless the task did
+  not reach `--state-phase` or the content of the target did not change.
+  Without a change set, the task stays untouched.
+
 #### Finish
 
 - \[`--finish-commit`\]:

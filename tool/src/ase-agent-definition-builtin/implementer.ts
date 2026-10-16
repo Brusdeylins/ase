@@ -54,9 +54,10 @@ export default {
         /*  implement the task from its source into its changeset, which the skill itself puts
             into "IMPLEMENTED" on success (else it is stalled), where a "branch:" changeset is
             implemented in place in the worktree carrying its branch, while the "Source:" of the
-            plan stays in effect, so the skill bases the change set snapshot on the fork point of
-            the branch from its source (and hence shows the entire branch, also on a re-run of a
-            declined task), and the work on it is afterwards committed onto it and published  */
+            plan stays in effect, the change set snapshot is attached by the agent itself, based
+            on the fork point of the branch from its source (and hence shows the entire branch,
+            also on a re-run of a declined task), and the work on it is afterwards committed onto
+            it and published  */
         implement: {
             type:      "phase",
             lifecycle: "enterprise",
@@ -69,6 +70,7 @@ export default {
                     "{?changeset-worktree: --worktree {changeset-worktree}} {id}"
             },
             success:   { criterion: [ "status" ] },
+            attach:    { changeset: "changeset" },
             finish:    { commit: true },
             hooks:     { passes: passes() }
         },

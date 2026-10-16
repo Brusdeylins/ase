@@ -366,21 +366,6 @@ Procedure
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ ERROR: temporary worktree for attachment **<changeset-name/>** cannot be prepared
             </template>
 
-    6.  <if condition="<changeset-type/> is `worktree` and <work-dir/> is equal to <origin-dir/>">
-        The change set stays uncommitted in the *origin working copy*,
-        which may already carry *foreign* uncommitted changes (e.g.
-        other work in progress), which do not belong to the change set
-        and hence *MUST* *NOT* show up in its snapshot. So, capture the
-        baseline of the working tree before the implementation:
-
-        <expand name="changeset-baseline" arg1="<work-dir/>"></expand>
-        </if>
-        <else>
-        A context worktree, a branch, or a temporary worktree carries
-        nothing but the change set (of this and earlier runs), so set
-        <changeset-baseline></changeset-baseline> (empty).
-        </else>
-
 4.  **Create Implementation:**
 
     1.  <if condition="<getopt-option-stateless/> is not equal `true` and <ase-project-task-lifecycle/> is `team` or `enterprise`">
@@ -554,45 +539,11 @@ Procedure
             </template>
             </if>
 
-        -   <if condition="<changeset-type/> is `worktree` or `branch`">
-            Attach the *change set snapshot*, which makes the change set
-            viewable wherever the task is visible (e.g. on the task boards
-            during its approval). Set <snapshot-suffix/> to `, partial` if
-            the change set was *not* applied completely and successfully
-            (the same criterion as for the `STALLED` state above), or to
-            empty otherwise. For <changeset-type/> `worktree`, expand the
-            following:
-
-            <expand name="changeset-snapshot"
-                arg1="<work-dir/>"
-                arg2="<source-commit/>"
-                arg3=""
-                arg4="<snapshot-suffix/>"
-                arg5="<timestamp-modified/>"
-                arg6="<changeset-baseline/>"></expand>
-
-            For <changeset-type/> `branch`, expand the following instead:
-
-            <expand name="changeset-snapshot"
-                arg1="<work-dir/>"
-                arg2="<source-commit/>"
-                arg3="<changeset-name/>"
-                arg4="<snapshot-suffix/>"
-                arg5="<timestamp-modified/>"
-                arg6=""></expand>
-            </if>
-            <elseif condition="<changeset-name/> is not `changeset`">
-            The change set is an attachment itself, so it needs no
-            snapshot, and a snapshot of an earlier run would show an
-            *outdated* change set: *remove* an attachment block with the
-            `Type` key value `text/x-diff; charset=utf-8; kind="changeset"`
-            from the "backmatter" of <task-content/>, if existing.
-            </elseif>
-
-        Apart from the checkboxes, the frontmatter keys, the change set
-        attachment, and the change set snapshot above, the plan *MUST*
-        stay *exactly* as loaded -- in particular, the "backmatter" with
-        its other attachment blocks is passed through *verbatim*.
+        Apart from the checkboxes, the frontmatter keys, and the change
+        set attachment above, the plan *MUST* stay *exactly* as loaded --
+        in particular, the "backmatter" with its other attachment blocks
+        (including a *change set snapshot*, which is maintained by the
+        `ase agent` agents only) is passed through *verbatim*.
 
         Finally call the `ase_task_save(id: "<ase-task-id/>", text:
         "<task-content/>")` tool of the `ase` MCP server to persist the

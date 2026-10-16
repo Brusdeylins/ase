@@ -267,23 +267,21 @@ You *MUST* honor the following hints on this *task* format:
     branch after the integration, and the attachment is *delivered*: it is then neither delivered
     again by `ase-task-integrate` nor re-applied by `ase-task-implement`.
 
-    For a `Changeset` of `worktree` or `branch:<name/>`, the skills
-    `ase-task-implement` and `ase-task-integrate` additionally maintain the
-    *change set snapshot*: a *view-only*, text-only unified diff of the change
-    set, which makes it viewable wherever the task is visible (e.g. on the task
-    boards during its approval). It carries the `Type` key value
-    `text/x-diff; charset=utf-8; kind="changeset"`, is *replaced* in place on
-    every run (keeping its `Created` key), and its `Desc` key carries
-    `base <commit/>` (plus `, partial` for an incomplete change set) after an
-    implementation, resp. `base <commit/>, merged <commit/>` after an
-    integration. If the change set was made in a working copy which already
-    carried *foreign* uncommitted changes, the diff starts at the *baseline*
-    tree of the working copy, captured right before the implementation, instead
-    of at the base commit, so it excludes these foreign changes, and its `Desc`
-    key additionally carries `, baseline <tree/>`, the full Git tree id of this
-    baseline. It is *never* delivered by `ase-task-integrate`, unless the
-    `Changeset` is `attachment:changeset`, in which case this attachment *is*
-    the change set itself. A stale snapshot just shows an outdated change set.
+    For a `Changeset` of `worktree` or `branch:<name/>`, the `ase agent`
+    agents `implementer` and `integrator` (and every agent configured with
+    `--attach-changeset`) additionally maintain the *change set snapshot*: a
+    *view-only*, text-only unified diff of the change set, which makes it
+    viewable wherever the task is visible (e.g. on the task boards during its
+    approval). The skills never create or change it, but pass it through
+    *verbatim*. It carries the `Type` key value
+    `text/x-diff; charset=utf-8; kind="<kind/>"` (with <kind/> being
+    `changeset` for the built-in agents), is *replaced* in place on every run
+    (keeping its `Created` key), and its `Desc` key carries `base <commit/>`
+    (plus `, partial` for an incomplete change set) after an implementation,
+    resp. `base <commit/>, merged <commit/>` after an integration. It is
+    *never* delivered by `ase-task-integrate`, unless the `Changeset` is
+    `attachment:<kind/>`, in which case this attachment *is* the change set
+    itself. A stale snapshot just shows an outdated change set.
 
     The *usage attachment* carries the *accumulated AI and human usage* of the
     task, as booked by `ase-task-assign` and the `ase agent` jobs. It carries the

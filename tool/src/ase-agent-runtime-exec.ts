@@ -122,7 +122,7 @@ export const jobScope = new AsyncLocalStorage<AbortSignal>()
     where Git never prompts for credentials (as nobody could answer them anyway), as its
     standard input is ignored (unless fed with <input>), and where the command is killed
     once the operation of the job it runs within timed out  */
-type JobOptions = { cwd?: string, reject?: boolean, input?: string }
+type JobOptions = { cwd?: string, reject?: boolean, input?: string, env?: Record<string, string> }
 const execaJobBase = execa({ timeout: jobTimeout, env: { GIT_TERMINAL_PROMPT: "0" } })
 export const execaJob = (file: string, args: readonly string[], options: JobOptions = {}) => {
     const { input, ...rest } = options
@@ -288,5 +288,37 @@ export const worktreeName = (root: string, dir: string): string => {
 export const gitClean = async (dir: string): Promise<boolean> => {
     const { stdout } = await execaJob("git", [ "status", "--porcelain", "--", ".", ":(exclude).ase" ], { cwd: dir })
     return stdout.trim() === ""
+}
+
+/*  the text-only unified diff of a change set in the Git working copy <dir> (always without
+    the ASE state), from the fork point of its head from the commit <base> on, where the head
+    is the commit <head>, or, if empty, the working tree of <dir>, including its untracked
+    files, which are captured through a temporary index, so the index of <dir> stays untouched,
+    resolving to the fork point and the diff (empty if there is no change set)  */
+export const gitChangesetDiff = async (dir: string, base: string, head = ""): Promise<{ base: string, diff: string }> => {
+    const { stdout: fork } = await execaJob("git", [ "merge-base", base, head !== "" ? head : "HEAD" ], { cwd: dir })
+    const from  = fork.trim()
+    const args  = [ "--no-color", "--no-ext-diff" ]
+    const paths = [ "--", ".", ":(exclude).ase" ]
+    let diff: string
+    if (head !== "")
+        diff = (await execaJob("git", [ "diff", ...args, from, head, ...paths ], { cwd: dir })).stdout
+    else {
+        const { stdout: index } = await execaJob("git", [ "rev-parse", "--path-format=absolute", "--git-path", "index" ], { cwd: dir })
+        const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "ase-agent-index-"))
+        try {
+            const env = { GIT_INDEX_FILE: path.join(temp, "index") }
+            await fs.promises.copyFile(index.trim(), env.GIT_INDEX_FILE).catch((err: unknown) => {
+                if ((err as NodeJS.ErrnoException).code !== "ENOENT")
+                    throw err
+            })
+            await execaJob("git", [ "add", "--all", ...paths ], { cwd: dir, env })
+            diff = (await execaJob("git", [ "diff", "--cached", ...args, from, ...paths ], { cwd: dir, env })).stdout
+        }
+        finally {
+            await fs.promises.rm(temp, { recursive: true, force: true })
+        }
+    }
+    return { base: from, diff: diff !== "" && !diff.endsWith("\n") ? `${diff}\n` : diff }
 }
 

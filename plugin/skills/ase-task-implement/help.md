@@ -76,16 +76,11 @@ For derived changesets (`branch:` and `attachment:`), *uncommitted*
 changes of a `worktree` source are *not* carried over, as they start
 at its `HEAD`.
 
-For a `worktree` or `branch:` changeset, the skill additionally
-attaches the *change set snapshot* to the plan: the view-only,
-text-only unified diff of the change set against its base commit, in
-the attachment block of type `text/x-diff; charset=utf-8;
-kind="changeset"` (created, or replaced in place, with `base <commit>`
--- plus `, partial` for an incomplete change set -- in its `Desc:`
-key), so the change set can be viewed wherever the task is visible,
-e.g. on the task boards during its approval. An `attachment:`
-changeset needs no snapshot, so an existing one is removed (except
-for `attachment:changeset`, whose attachment *is* the change set).
+The skill does *not* maintain the *change set snapshot* of the plan
+(the attachment block of type `text/x-diff; charset=utf-8;
+kind="changeset"`), which only the `implementer` agent of `ase agent`
+attaches after its implementation, but passes an existing one through
+unchanged.
 
 Unless `--stateless` is given, the plan's `Status:` key follows the
 task lifecycle model: for `solo` it stays untouched (as the task is

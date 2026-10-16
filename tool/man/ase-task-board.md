@@ -77,8 +77,8 @@ shows the frontmatter keys, the predecessors and successors of the
 task (a click onto one opens its task dialog), and the plan body,
 followed by the attachments of the plan as further tabs, where a diff
 attachment (type `text/x-diff`, like the implementation draft or the
-change set snapshot `kind="changeset"` of `ase-task-implement` and
-`ase-task-integrate`) is colored per line, YAML and JSON data are
+change set snapshot `kind="changeset"` of the `implementer` and
+`integrator` agents) is colored per line, YAML and JSON data are
 syntax-highlighted, and a change set snapshot older than the plan is
 marked `(stale)`.
 

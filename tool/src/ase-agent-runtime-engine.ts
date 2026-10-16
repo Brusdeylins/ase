@@ -12,7 +12,7 @@ import * as TaskFormat              from "./ase-task-format.js"
 import { TaskRequests, attachmentTime } from "./ase-task-request.js"
 import type {
     AgentOpts, AgentTask, AgentItem, AgentJob,
-    AgentLog, AgentResult, AgentWork, AgentSelection, LineLevel
+    AgentLog, AgentResult, AgentWork, AgentSelection, AgentSnapshot, LineLevel
 }                                   from "./ase-agent-runtime.js"
 import { Agent, taskFlow, taskFlowRaw, tagsOf, setPlanTag, updateTask } from "./ase-agent-runtime.js"
 import { skillErrored, verdictOf }  from "./ase-agent-runtime-tool.js"
@@ -506,7 +506,8 @@ class DefinedCore {
         }
     }
 
-    /*  finish the job of a task: store its output lines (see "--attach-output"), finish its
+    /*  finish the job of a task: store its output lines (see "--attach-output") and its
+        change set snapshot (see "--attach-changeset"), finish its
         work (e.g. commit and publish it), evaluate its success criteria (recorded for the
         settling, but never thrown), decide its settling by the hook "settle", and run the
         hook "finish" and the finishing command of its success (whose failures fail the
@@ -522,6 +523,9 @@ class DefinedCore {
         if (def.attach.output !== "")
             await this.attachOutput(task, result.output).catch((err: unknown) =>
                 log("warning", `output not attached to task: ${reason(err)}`))
+        if (work.snapshot !== undefined)
+            await this.attachSnapshot(task, work.snapshot, !result.ok || await this.status(task) !== def.state.phase, log)
+                .catch((err: unknown) => log("warning", `change set snapshot not attached to task: ${reason(err)}`))
         try {
             await work.finish?.(log, result)
         }
@@ -734,6 +738,42 @@ class DefinedCore {
             return true
         })
     }
+
+    /*  store the change set snapshot captured by <capture> (see "--attach-changeset", and
+        marked as partial by <partial>) as the task attachment of type "text/x-diff;
+        kind="<kind>"" (of "--attach-changeset"), replacing the one of an earlier processing in
+        place (keeping its creation time), or remove an obsolete one, where the task stays
+        untouched without a change set, so the unified diff is passed verbatim, instead of
+        through the agent tool  */
+    private async attachSnapshot (task: AgentTask, capture: (partial: boolean) => Promise<AgentSnapshot>,
+        partial: boolean, log: AgentLog): Promise<void> {
+        const snapshot = await capture(partial)
+        if (snapshot === null)
+            return
+        const kind = this.def.attach.changeset
+        const spec = { mime: "text/x-diff", kind }
+        const time = attachmentTime()
+        await updateTask(this.log, task.id, (plan) => {
+            const at = plan.attachment.findIndex((att) => attachMatches(spec, att.Type ?? ""))
+            if (snapshot === "obsolete") {
+                if (at < 0)
+                    return false
+                plan.attachment = plan.attachment.filter((att) => !attachMatches(spec, att.Type ?? ""))
+                return true
+            }
+            const entry = {
+                Type: `text/x-diff; charset=utf-8; kind="${kind}"`, Desc: snapshot.desc,
+                Created: at >= 0 ? plan.attachment[at].Created ?? time : time, Modified: time, Data: snapshot.diff
+            }
+            plan.attachment = plan.attachment.flatMap((att, i) =>
+                i === at ? [ entry ] : attachMatches(spec, att.Type ?? "") ? [] : [ att ])
+            if (at < 0)
+                plan.attachment.push(entry)
+            return true
+        })
+        await log("info", snapshot === "obsolete" ? `obsolete change set snapshot "${kind}" removed from task` :
+            `change set snapshot "${kind}" attached to task (${snapshot.desc})`)
+    }
 }
 
 /*  the phase agent of a definition (see "--type phase")  */
@@ -843,8 +883,11 @@ class DefinedPhaseAgent extends PhaseAgent {
     /*  prepare the job of a task in its working directory  */
     protected async prepare (task: AgentTask, parallel: boolean, log: AgentLog): Promise<AgentJob> {
         this.core.records.delete(task.id)
-        const work = await this.workdirJob(task, this.def.workdir, this.identity.suffix, parallel,
-            { checkout: this.def.prompt.template.names.has("source-dir"), commit: this.def.finish.commit })
+        const work = await this.workdirJob(task, this.def.workdir, this.identity.suffix, parallel, {
+            checkout: this.def.prompt.template.names.has("source-dir"),
+            commit:   this.def.finish.commit,
+            snapshot: this.def.attach.changeset
+        })
         return this.core.prepare(task, log, work, "")
     }
 
@@ -964,8 +1007,11 @@ class DefinedRequestAgent extends RequestAgent {
     protected async prepare (task: AgentTask, parallel: boolean, log: AgentLog): Promise<AgentJob> {
         this.core.records.delete(task.id)
         const claim = this.claims.get(task.id)!
-        const work  = await this.workdirJob(task, this.def.workdir, this.identity.suffix, parallel,
-            { checkout: this.def.prompt.template.names.has("source-dir"), commit: this.def.finish.commit })
+        const work  = await this.workdirJob(task, this.def.workdir, this.identity.suffix, parallel, {
+            checkout: this.def.prompt.template.names.has("source-dir"),
+            commit:   this.def.finish.commit,
+            snapshot: this.def.attach.changeset
+        })
         return this.core.prepare(task, log, work, claim.prompt, async () =>
             (await Task.inspect(this.log, task.id, (plan) => this.digest(plan) !== claim.digest)) ?? false)
     }

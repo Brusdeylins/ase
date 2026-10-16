@@ -9,9 +9,10 @@ import type { AgentKind }       from "../ase-agent-definition-core.js"
 
 /*  integrate the changeset of the task into its target by the Git operation <mode>, where
     the skill itself puts the task into "INTEGRATED" on success, so the task counts as
-    integrated on the "plan integrated" status of the skill only (else it is deferred), and
-    where the tasks are processed serially only, as merges into the same target branch
-    cannot run concurrently  */
+    integrated on the "plan integrated" status of the skill only (else it is deferred), where
+    the agent itself attaches the change set snapshot of the change set which finally landed
+    on the target, and where the tasks are processed serially only, as merges into the same
+    target branch cannot run concurrently  */
 const integrate = (mode: string): AgentDefinition => ({
     type:      "phase",
     lifecycle: "enterprise",
@@ -23,7 +24,8 @@ const integrate = (mode: string): AgentDefinition => ({
         skill: "ase-task-integrate",
         args:  `--next DONE --mode ${mode}{?changeset-worktree: --worktree {changeset-worktree}} {id}`
     },
-    success:   { criterion: [ "exit" ], match: [ "status:\\W*plan integrated\\b" ] }
+    success:   { criterion: [ "exit" ], match: [ "status:\\W*plan integrated\\b" ] },
+    attach:    { changeset: "changeset" }
 })
 
 /*  agent "ase agent integrator"  */

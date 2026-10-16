@@ -63,6 +63,14 @@ branch could not be pushed, is instead tagged
 the merge kept as the branch `ase-agent-rescue/`*id* in the preserved
 clone.
 
+For a `worktree` or `branch:` changeset of an `INTEGRATED` task whose
+integration changed the content of the target branch, the agent itself
+(and not the skill) afterwards replaces the *change set snapshot* of the
+task -- the attachment of type `text/x-diff; charset=utf-8;
+kind="changeset"` (see `--attach-changeset`) -- in place by the
+view-only, text-only unified diff which finally landed on the target,
+with `base` *commit*`, merged` *commit* in its `Desc:` key.
+
 Any uncommitted change in the worktree of the target branch lets the
 merge of every task with a `branch:` changeset fail, and is committed
 together with the change set of a task with a `worktree` changeset, so
@@ -306,6 +314,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--attach-skip` *spec*\]: The attachment
       \[*mime-type*`;`\]*kind* leaving a task unclaimed (`phase` only).
       Built-in: not set.
+
+    - \[`--attach-changeset` *kind*\]: The kind of the attachment
+      `text/x-diff;`*kind* storing the change set snapshot of the task
+      (with `--workdir changeset` or `target` only). Built-in:
+      `changeset`.
 
     - \[`--finish-commit`\]: Commit the work onto a `branch:` changeset
       and publish it (with `--workdir changeset` only). Built-in: not

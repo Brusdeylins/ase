@@ -306,6 +306,10 @@ All other options belong to the sub-commands (see **COMMANDS**).
       Built-in: not set. Not allowed, as the editor is of type
       `request`.
 
+    - \[`--attach-changeset` *kind*\]: The kind of the attachment
+      `text/x-diff;`*kind* storing the change set snapshot of the task
+      (with `--workdir changeset` or `target` only). Built-in: not set.
+
     - \[`--finish-commit`\]: Commit the work onto a `branch:` changeset
       and publish it (with `--workdir changeset` only). Built-in: not
       set. Not allowed, as the editor works with `--workdir source`.

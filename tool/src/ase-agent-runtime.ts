@@ -34,7 +34,7 @@ import type { ToolCosts }           from "./ase-agent-runtime-tool.js"
 import {
     tempPreserved, tempDir, exclusive, execaJob, jobScope, withinJobTimeout,
     gitInside, gitLocked, gitWorktree, worktreeRemove, gitWorktreeRemove, gitWorktreeAdd,
-    gitWorktreeDetached, worktreeId, contextDir, worktreeName, gitClean
+    gitWorktreeDetached, worktreeId, contextDir, worktreeName, gitClean, gitChangesetDiff
 }                                   from "./ase-agent-runtime-exec.js"
 import type { TempDir }             from "./ase-agent-runtime-exec.js"
 import { AgentRun }                 from "./ase-agent-runtime-claim.js"
@@ -88,11 +88,21 @@ export type AgentJob = {
     cleanup?: (log: AgentLog) => Promise<void>
 }
 
+/*  the change set snapshot of a job (see "AgentWork"): the "Desc" key and the unified diff of
+    the attachment block to attach, "obsolete" to remove an existing one (as the change set
+    is an attachment itself), or null to leave the task untouched (e.g. without a change set)  */
+export type AgentSnapshot = { desc: string, diff: string } | "obsolete" | null
+
 /*  the work of a job in its working directory (see "Agent.sourceJob", "Agent.changesetJob",
     "Agent.changesetReadJob", and "Agent.targetJob"): the job without its prompt, plus the
-    temporary worktree of a "branch:" source (else empty) and the ASE worktree id under
-    which the skill finds the changeset (else empty)  */
-export type AgentWork = Omit<AgentJob, "cmd" | "prompt"> & { dirs: string[], sourceDir: string, changesetWorktree: string }
+    temporary worktree of a "branch:" source (else empty), the ASE worktree id under
+    which the skill finds the changeset (else empty), and optionally the capturing of the
+    change set snapshot after the invocation, before its finishing (where <partial> tells
+    whether the skill did not reach its phase success state)  */
+export type AgentWork = Omit<AgentJob, "cmd" | "prompt"> & {
+    dirs: string[], sourceDir: string, changesetWorktree: string,
+    snapshot?: (partial: boolean) => Promise<AgentSnapshot>
+}
 
 /*  the type ("worktree", "branch", "attachment", or "source") and the name
     (of "branch:<name>" and "attachment:<name>") of a change set flow value  */
@@ -602,18 +612,27 @@ export abstract class Agent {
     /*  the work of a job in the working directory kind <workdir>: the project root
         ("project"), or the working copy of "sourceJob" (with the "branch:" source checked out
         on request), "changesetJob" (with the work committed on request), "changesetReadJob",
-        or "targetJob", where the agent-owned worktrees are named with the suffix <suffix>  */
+        or "targetJob" (the latter two with the change set snapshot captured on request, for
+        its attachment of the kind <snapshot>, else empty), where the agent-owned worktrees
+        are named with the suffix <suffix>  */
     protected async workdirJob (task: AgentTask, workdir: string, suffix: string, parallel: boolean,
-        options: { checkout: boolean, commit: boolean }): Promise<AgentWork> {
+        options: { checkout: boolean, commit: boolean, snapshot: string }): Promise<AgentWork> {
         if (workdir === "source")
             return this.sourceJob(task, suffix, options.checkout)
         else if (workdir === "changeset")
-            return this.changesetJob(task, suffix, parallel, options.commit)
+            return this.changesetJob(task, suffix, parallel, options.commit, options.snapshot)
         else if (workdir === "changeset-read")
             return this.changesetReadJob(task, suffix)
         else if (workdir === "target")
-            return this.targetJob(task, suffix)
+            return this.targetJob(task, suffix, options.snapshot)
         return { cwd: Task.projectRoot(), dirs: [], sourceDir: "", changesetWorktree: "" }
+    }
+
+    /*  the change set snapshot of the working tree of the Git working copy <dir>, from the
+        fork point of its "HEAD" from the source commit <base> on, marked as partial on request  */
+    private async worktreeSnapshot (dir: string, base: string, partial: boolean): Promise<AgentSnapshot> {
+        const { base: fork, diff } = await gitChangesetDiff(dir, base)
+        return diff !== "" ? { desc: `base ${fork}${partial ? ", partial" : ""}`, diff } : null
     }
 
     /*  the work of a job in the working copy holding the "Source:" of a task (see "workdir"),
@@ -686,11 +705,20 @@ export abstract class Agent {
         task, created by the skill itself), a "branch:" changeset in the worktree in which it is
         checked out, else in an agent worktree "<id>-<suffix>" (with the branch created from the
         source if missing), and an "attachment:" changeset left to the skill, where the work on a
-        "branch:" changeset is committed onto it on request (<commit>) and published  */
-    private async changesetJob (task: AgentTask, suffix: string, parallel: boolean, commit: boolean): Promise<AgentWork> {
+        "branch:" changeset is committed onto it on request (<commit>) and published, and where
+        the change set snapshot is captured on request (for its attachment of the kind
+        <snapshot>, else empty) from the working tree carrying the change set (also for a
+        "branch:" changeset, before its commit), based on the source commit (so it shows the
+        entire change set, also of an earlier processing), while a snapshot is obsolete for an
+        "attachment:" changeset (except for the attachment of its own kind, which is the
+        change set itself)  */
+    private async changesetJob (task: AgentTask, suffix: string, parallel: boolean, commit: boolean,
+        snapshot: string): Promise<AgentWork> {
         const source    = taskFlow(this.log, task, "Source")
         const changeset = taskFlow(this.log, task, "Changeset")
         const cwd       = await this.workdir(task, [ source, changeset ])
+        const base      = snapshot !== "" && changeset.type !== "attachment" ? (await execaJob("git",
+            [ "rev-parse", "--verify", `${source.type === "branch" ? source.name : "HEAD"}^{commit}` ], { cwd })).stdout.trim() : ""
         if (changeset.type === "branch") {
             /*  check out the changeset branch (created from the source if missing) in a
                 worktree of the agent, unless it is already checked out in the working copy
@@ -715,6 +743,9 @@ export abstract class Agent {
                 dirs: [],
                 sourceDir: "",
                 changesetWorktree: worktreeName(cwd, dir),
+                ...(snapshot !== "" ? {
+                    snapshot: async (partial: boolean) => this.worktreeSnapshot(dir, base, partial)
+                } : {}),
                 ...(commit ? {
                     finish: async (log: AgentLog) => {
                         /*  the ASE state (e.g. the local task store) is never committed  */
@@ -757,7 +788,21 @@ export abstract class Agent {
                     await execaJob("git", [ "switch", "--quiet", source.name ], { cwd })
             }
         }
-        return { cwd, dirs: [], sourceDir: "", changesetWorktree: changeset.type === "worktree" && parallel ? worktreeId(task.id) : "" }
+
+        /*  the snapshot of a "worktree" changeset is captured from the working copy itself (as
+            it was clean before, it carries the change set only), resp. from the ASE worktree of
+            the task (created by the skill, so there is no change set if it is missing)  */
+        const capture = async (partial: boolean): Promise<AgentSnapshot> => {
+            if (changeset.type === "attachment")
+                return changeset.name !== snapshot ? "obsolete" : null
+            const dir = parallel ? await contextDir(cwd, task) : cwd
+            return parallel && dir === cwd ? null : this.worktreeSnapshot(dir, base, partial)
+        }
+        return {
+            cwd, dirs: [], sourceDir: "",
+            changesetWorktree: changeset.type === "worktree" && parallel ? worktreeId(task.id) : "",
+            ...(snapshot !== "" ? { snapshot: capture } : {})
+        }
     }
 
     /*  whether a task is ready for the review access to its "Changeset:" (see
@@ -860,8 +905,10 @@ export abstract class Agent {
         (see "targetReady"), in the working copy itself, granting access to the context worktree
         of a "worktree" changeset (whose ASE worktree id the skill selects) and to the worktrees in
         which the changeset and target branches are checked out, where a target branch not checked
-        out anywhere yet is checked out in a temporary worktree "<id>-<suffix>"  */
-    private async targetJob (task: AgentTask, suffix: string): Promise<AgentWork> {
+        out anywhere yet is checked out in a temporary worktree "<id>-<suffix>", and where the
+        change set snapshot of the change set which finally landed on the target branch is
+        captured on request (for its attachment of the kind <snapshot>, else empty)  */
+    private async targetJob (task: AgentTask, suffix: string, snapshot: string): Promise<AgentWork> {
         const changeset = taskFlow(this.log, task, "Changeset")
         const target    = taskFlow(this.log, task, "Target")
         const root      = await this.workdir(task, [ changeset, target ])
@@ -902,11 +949,31 @@ export abstract class Agent {
             dirs.push(dir)
             base = await tip(target.name)
         }
+
+        /*  the snapshot of a "worktree" or "branch:" changeset is the change of the target
+            branch (a "worktree" target being the branch checked out in the working copy) by
+            its integration, unless the task was not integrated or its content did not change
+            (as the change set already landed earlier)  */
+        const branch = snapshot === "" || changeset.type === "attachment" ? "" : target.type === "branch" ? target.name :
+            (await execaJob("git", [ "branch", "--show-current" ], { cwd: root })).stdout.trim()
+        const before = branch !== "" ? await tip(branch) : ""
+        const capture = async (partial: boolean): Promise<AgentSnapshot> => {
+            const after = await tip(branch)
+            if (partial || after === "" || after === before)
+                return null
+            const tree = async (commit: string) =>
+                (await execaJob("git", [ "rev-parse", `${commit}^{tree}` ], { cwd: root })).stdout.trim()
+            if (await tree(after) === await tree(before))
+                return null
+            const { base: fork, diff } = await gitChangesetDiff(root, before, after)
+            return diff !== "" ? { desc: `base ${fork}, merged ${after}`, diff } : null
+        }
         return {
             cwd:  root,
             dirs: dirs.filter((dir) => dir !== ""),
             sourceDir: "",
             changesetWorktree: context,
+            ...(before !== "" ? { snapshot: capture } : {}),
             finish: async (log: AgentLog) => {
                 const reason = (err: unknown) => err instanceof Error ? err.message : String(err)
                 if (target.type === "branch" && await tip(target.name) === base)

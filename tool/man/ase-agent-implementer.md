@@ -91,7 +91,7 @@ In mode `implement`, the `Changeset:` of the task (or the configured
   worktree, which then has to be without uncommitted changes, as they
   would be committed, too), implemented there in place (via the skill
   options `--changeset worktree --worktree` *id*`-implementer`, keeping
-  the `Source:` of the plan, so the change set snapshot of the skill
+  the `Source:` of the plan, so the change set snapshot of the agent
   shows the entire branch), and afterwards *committed* onto the branch
   with the message *Kind*`:` *title* `(`*id*`)` (where *Kind* is the
   `Kind:` frontmatter key of the task, default `CRAFTING`) -- also a
@@ -103,6 +103,18 @@ In mode `implement`, the `Changeset:` of the task (or the configured
   partial change set of a task put into `STALLED`.
 
 - `attachment:`*name*: The change set is entirely handled by the skill.
+
+For a `worktree` or `branch:` changeset, the agent itself (and not the
+skill) afterwards attaches the *change set snapshot* to the task: the
+view-only, text-only unified diff of the change set from its fork point
+from the `Source:` on (without the `.ase` directory), in the attachment
+of type `text/x-diff; charset=utf-8; kind="changeset"` (see
+`--attach-changeset`), replaced in place on every processing, with
+`base` *commit* (plus `, partial` for a task not put into
+`IMPLEMENTED`) in its `Desc:` key, so the change set can be viewed
+wherever the task is visible, e.g., on the task boards during its
+approval. For an `attachment:` changeset other than
+`attachment:changeset`, an existing snapshot is removed as obsolete.
 
 ## OPTIONS
 
@@ -344,6 +356,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
       \[*mime-type*`;`\]*kind* leaving a task unclaimed (`phase` only).
       Built-in: not set (mode `implement`), `text/x-diff;draft` (mode
       `draft`).
+
+    - \[`--attach-changeset` *kind*\]: The kind of the attachment
+      `text/x-diff;`*kind* storing the change set snapshot of the task
+      (with `--workdir changeset` or `target` only). Built-in:
+      `changeset` (mode `implement`), not set (mode `draft`).
 
     - \[`--finish-commit`\]: Commit the work onto a `branch:` changeset
       and publish it (with `--workdir changeset` only). Built-in:

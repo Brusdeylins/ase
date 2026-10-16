@@ -95,6 +95,7 @@ export interface AgentDefinition {
         output?:   string
         expect?:   string
         skip?:     string
+        changeset?: string
     }
     finish?: {
         commit?:   boolean

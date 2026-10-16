@@ -467,27 +467,11 @@ Procedure
             *untouched*, as its `Data` payload is not changed.
             </if>
 
-        -   <if condition="<changeset-type/> is `worktree` or `branch` and <merge-verdict/> is `MERGED`">
-            Attach the *change set snapshot* of the change set which
-            *finally landed* on the target, which makes it viewable
-            wherever the task is visible. Capture the output of the
-            command `git rev-parse "refs/heads/<target-branch/>"` into
-            <target-after/>, and determine <timestamp-snapshot/> by
-            calling the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool
-            of the `ase` MCP server. Then expand the following:
-
-            <expand name="changeset-snapshot"
-                arg1="<origin-dir/>"
-                arg2="<target-before/>"
-                arg3="<target-after/>"
-                arg4=", merged <target-after/>"
-                arg5="<timestamp-snapshot/>"
-                arg6=""></expand>
-            </if>
-
         The `Modified:` key stays *untouched*, as the "body" is not
         changed. Apart from the above, the plan *MUST* stay *exactly* as
-        loaded. To persist the plan, call the `ase_task_save(id:
+        loaded -- in particular, a *change set snapshot*, which is
+        maintained by the `ase agent` agents only, is passed through
+        *verbatim*. To persist the plan, call the `ase_task_save(id:
         "<ase-task-id/>", text: "<task-content/>")` tool of the `ase`
         MCP server. This `ase_task_save` MCP tool call is the *only*
         permitted way to persist the plan -- *NEVER* write the plan file

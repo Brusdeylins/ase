@@ -161,6 +161,8 @@ export const definitionOptions: DefinitionOption[] = [
     opt("attach-expect",     "value", "spec",          "attachment \"[<mime-type>;]<kind>\" to be created or changed " +
         "by the processing for the \"attachment\" success criterion"),
     opt("attach-skip",       "value", "spec",          "attachment \"[<mime-type>;]<kind>\" leaving a task unclaimed"),
+    opt("attach-changeset",  "value", "kind",          "kind of the attachment \"text/x-diff;<kind>\" storing the change set " +
+        "snapshot of the task (with \"--workdir changeset\" or \"target\" only)"),
     opt("finish-commit",     "flag",  "",              "commit the work onto a \"branch:\" changeset and publish it " +
         "(with \"--workdir changeset\" only)"),
     opt("finish-success",    "value", "cmd",           "shell command to run after a successful processing"),
@@ -305,7 +307,7 @@ export type ResolvedDefinition = {
     prepare: string[]
     success: { criteria: DefinitionCriterion[], match: RegExp[] }
     verdict: { label: string, allow: string[] }
-    attach:  { log: string, output: string, expect: AttachSpec | null, skip: AttachSpec | null }
+    attach:  { log: string, output: string, expect: AttachSpec | null, skip: AttachSpec | null, changeset: string }
     finish:  { commit: boolean, success: string, failure: string }
     params:  Record<string, string>
     hooks:   AgentHooks
@@ -581,6 +583,8 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
             fail(key, `not allowed with "--type ${type}" (for "--type ${type === "request" ? "phase" : "request"}" only)`)
     if (has("finish-commit") && workdir !== "changeset")
         fail("finish-commit", `not allowed with "--workdir ${workdir}" (for "--workdir changeset" only)`)
+    if (has("attach-changeset") && workdir !== "changeset" && workdir !== "target")
+        fail("attach-changeset", `not allowed with "--workdir ${workdir}" (for "--workdir changeset" or "target" only)`)
     if (loaded.hooks.passes !== undefined && type !== "phase")
         fail("definition", "hook \"passes\" is for \"--type phase\" only")
 
@@ -802,6 +806,8 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         fail("attach-log", `invalid name "${attachLog}"`)
     if (has("attach-output") && !kindRe.test(str("attach-output")))
         fail("attach-output", `invalid kind "${str("attach-output")}"`)
+    if (has("attach-changeset") && !kindRe.test(str("attach-changeset")))
+        fail("attach-changeset", `invalid kind "${str("attach-changeset")}"`)
     const attachExpect = attachSpec("attach-expect")
     if (attachExpect !== null && has("attach-output")
         && attachMatches(attachExpect, `text/plain; kind="${str("attach-output")}"`))
@@ -824,7 +830,10 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         prepare: list("prepare-run"),
         success: { criteria: criteria as DefinitionCriterion[], match },
         verdict: { label: str("verdict-label"), allow },
-        attach:  { log: attachLog, output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip") },
+        attach:  {
+            log: attachLog, output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip"),
+            changeset: str("attach-changeset")
+        },
         finish:  { commit: flag("finish-commit"), success: str("finish-success"), failure: str("finish-failure") },
         params,
         hooks:   loaded.hooks
