@@ -78,9 +78,6 @@ ASE 1.0 to ASE 2.0
 -   **Server Operation**: `ase service`, `ase task store`, and `ase agent relay` support
     `start --foreground` and a `log [-n <lines>] [-f]` sub-command.
 
--   **Container Image**: the image `ghcr.io/rse/ase` provides Node.js, ASE, Git, Bash, and
-    Claude Code CLI with the ASE plugin pre-installed.
-
 ### INCOMPATIBILITIES
 
 -   **Node.js**: the `ase` tool now requires Node.js 22.18.0 or newer.

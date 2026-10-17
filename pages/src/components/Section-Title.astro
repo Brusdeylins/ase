@@ -14,6 +14,7 @@ import TypingDemo   from "./Widget-Typing-Demo.astro"
 import Flag         from "./Widget-Flag.astro"
 import Annotation   from "./Widget-Annotation.astro"
 import HeroVideo    from "./Widget-Title-Video.astro"
+import Splash       from "./Widget-Splash.astro"
 import ModalYouTube from "./Modal-YouTube.astro"
 import {
     Swiper,
@@ -68,8 +69,12 @@ const badges = [
 
             {/* title */}
             <h1 class="max-w-full text-4xl font-bold break-words sm:text-6xl md:text-7xl">
-                <span class="bg-gradient-to-b from-[var(--neutral-grad-from)] to-[var(--neutral-grad-to)] bg-clip-text text-transparent">
-                    Agentic
+                <span class="relative inline-block">
+                    {/* release splash icon, overlaid onto the word "Agentic", linking to the news */}
+                    <Splash href="/news/" class="absolute bottom-[55%] left-[-25%] z-20 w-22 sm:w-29 md:w-35 lg:bottom-auto lg:left-auto lg:right-[100%] lg:top-[85%] xl:right-[108%]" />
+                    <span class="bg-gradient-to-b from-[var(--neutral-grad-from)] to-[var(--neutral-grad-to)] bg-clip-text text-transparent">
+                        Agentic
+                    </span>
                 </span>{" "}
                 <span class="bg-gradient-to-b from-brand-400 to-brand-600 bg-clip-text text-transparent">
                     Software Engineering
@@ -136,7 +141,7 @@ const badges = [
                 <b>Agentic AI Coding</b> and traditional <b>Software Engineering</b>.{" "}
                 <b>ASE</b> ships as a plugin for the software development tool{" "}
                 <a href="https://claude.com/products/claude-code">Anthropic Claude Code CLI</a> &mdash;
-                and with reduced support also for the alternative
+                and with reduced functionality and support also for the alternative
                 tools <a href="https://github.com/features/copilot/cli">GitHub Copilot CLI</a> and{" "}
                 <a href="https://github.com/openai/codex">OpenAI Codex CLI</a>.{" "}
                 It comprises agent hooks, parametrizable agent <a href="/usage/#deepdive">skills</a>, an underlying

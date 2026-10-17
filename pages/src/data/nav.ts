@@ -9,8 +9,9 @@
     page route, so route path, nav label, browser title, and meta description
     are kept in a single place.  */
 
-import { site }     from "./site.ts"
-import { useCases } from "./usecases.ts"
+import { site }         from "./site.ts"
+import { useCases }     from "./usecases.ts"
+import { newsReleases } from "./news.ts"
 
 export interface NavItem {
     path:        string  /*  route path of the page (with trailing slash)  */
@@ -134,6 +135,17 @@ export const navItems: NavEntry[] = [
           { path: "/design/#methodology",  label: "Methodology"  },
           { path: "/design/#architecture", label: "Architecture" }
       ] },
+    /*  the pull-down of the news is derived from the releases of `NEWS.md`  */
+    { label:       "News",
+      page:        { path:        "/news/",
+                     label:       "News",
+                     title:       "News",
+                     description: "The notable changes between the major releases of ASE: the new features " +
+                                  "and the incompatibilities to take into account when upgrading." },
+      items: newsReleases.map((release) => ({
+          path:  `/news/#${release.id}`,
+          label: release.label
+      })) },
 ]
 
 /*  the author entry, shown separately in the right-hand header group  */
