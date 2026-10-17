@@ -469,7 +469,8 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
             const range = typeof request.query.range === "string" ? request.query.range : "total"
             if (!statsRanges.includes(range as StatsRange))
                 return h.response({ error: "invalid statistics range" }).code(400)
-            return h.response(statsOf(filterBoard(await currentBoard(log), filterQuery(request)),
+            const all   = await currentBoard(log)
+            return h.response(statsOf(filterBoard(all, filterQuery(request)), all,
                 await Task.listUsage(log), range as StatsRange))
         })
     })

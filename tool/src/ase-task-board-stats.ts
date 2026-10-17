@@ -139,8 +139,9 @@ const shareOf = (createdAt: string, modifiedAt: string, range: StatsRange, now: 
     time range, and its usage counts with the overlapping part of the period of its usage attachment
     (its "Created" and "Modified" keys) -- as the usage attachment does not track when the usage
     accrued, the usage is taken as being evenly spread over this period, i.e., the usage within a
-    time range other than "total" is just an approximation  */
-export const statsOf = (board: Board, usage: Map<string, { usage: TaskFormat.TaskUsage, period: TaskFormat.TaskUsagePeriod }>,
+    time range other than "total" is just an approximation, and where the readiness of the tasks
+    is determined on the unfiltered board "all"  */
+export const statsOf = (board: Board, all: Board, usage: Map<string, { usage: TaskFormat.TaskUsage, period: TaskFormat.TaskUsagePeriod }>,
     range: StatsRange = "total", now = Date.now()): Stats => {
     /*  the tasks within the time range  */
     const within = new Set<string>()
@@ -167,13 +168,13 @@ export const statsOf = (board: Board, usage: Map<string, { usage: TaskFormat.Tas
     /*  the readiness of the open tasks, by the states of their (known) predecessors
         (independent of the time range and the filter, as they block the tasks nevertheless)  */
     const done      = (id: string) => {
-        const card = board.cards.get(id)
+        const card = all.cards.get(id)
         return card === undefined || toneOf.get(card.status) === "done"
     }
     const readiness = { ready: 0, blocked: 0 }
     for (const id of within)
         if (kindOf.get(board.cards.get(id)!.status) === "open")
-            readiness[(board.pred.get(id) ?? []).every(done) ? "ready" : "blocked"]++
+            readiness[(all.pred.get(id) ?? []).every(done) ? "ready" : "blocked"]++
 
     /*  the total AI usage of the tasks (proportionally to the overlapping parts of their usage
         periods), the usage of each task, and the total usage of the finished tasks  */

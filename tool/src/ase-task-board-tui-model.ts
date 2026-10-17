@@ -433,9 +433,10 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         }
     }, [ log, all, view ])
 
-    /*  the statistics of the shown tasks within the time range (while the statistics view is shown)  */
+    /*  the statistics of the shown tasks within the time range (while the statistics view is shown),
+        with their readiness determined against all tasks  */
     const stats = React.useMemo(() =>
-        view === "stats" ? statsOf(board, usage ?? new Map(), range) : null, [ board, usage, view, range ])
+        view === "stats" ? statsOf(board, all, usage ?? new Map(), range) : null, [ board, all, usage, view, range ])
 
     /*  step the time range of the statistics to the previous or next one (without wrapping around)  */
     const stepRange = (delta: number): void => {
@@ -598,15 +599,18 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }
 
     /*  create a new task with $EDITOR on its pre-filled text, under the id of
-        its "Id:" key; an unchanged text creates no task, and a text which failed
-        to save is kept as a draft (under the empty id) for the next new task  */
+        its "Id:" key; an unchanged pre-filled text creates no task, and a text which
+        failed to save is kept as a draft (under the empty id) for the next new task,
+        where even an unchanged draft is created again, while an emptied text
+        discards the draft (and any new task)  */
     const create = async (): Promise<void> => {
-        const orig = drafts.current.get("") ?? await track<string>({ text: "preparing new task" },
+        const draft = drafts.current.get("")
+        const orig  = draft ?? await track<string>({ text: "preparing new task" },
             Task.lifecycle(log).then((lifecycle) => newTaskText(log, all, lifecycle)))
-        const text = await runEditor("new-task", orig)
-        if (text === orig) {
+        const text  = await runEditor("new-task", orig)
+        if ((draft === undefined && text === orig) || text.trim() === "") {
             drafts.current.delete("")
-            setNotice("new task discarded")
+            setNotice(draft !== undefined ? "new task draft discarded" : "new task discarded")
             return
         }
         const id = TaskFormat.taskTextId(text)
@@ -619,7 +623,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         catch (err: unknown) {
             drafts.current.set("", text)
             const msg = err instanceof Error ? err.message : String(err)
-            setNotice(`creating task failed: ${msg} (press "N" to re-edit)`)
+            setNotice(`creating task failed: ${msg} (press "N" to re-edit, or empty it to discard)`)
         }
     }
 

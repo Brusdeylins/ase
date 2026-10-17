@@ -99,7 +99,9 @@ creates a new task by editing a pre-filled task plan (all frontmatter
 keys, a free placeholder id, the initial state, and the section
 template of the task format), which is stored under the id of its `Id:`
 line (refused for an existing id, while an unchanged text creates no
-task at all). `D` deletes the selected task after a confirmation.
+task at all), where a text which failed to save is offered again on the
+next `N` (created again even if unchanged) until it is emptied, which
+discards it. `D` deletes the selected task after a confirmation.
 
 `E` requests the edit of the selected task by a prompt (refused for a
 finished task and while an edit of it is in progress), which
@@ -215,7 +217,9 @@ task), `within last 30 days`, and `within last 7 days` on its top
   tasks, split into the *ready* tasks (all predecessors in a terminal
   state, or none at all) and the *blocked* tasks (any predecessor in
   another state, including the implicit predecessors of an epic),
-  each with its number and share.
+  each with its number and share. The readiness is determined against
+  all tasks, independent of the `filter:` field, as a predecessor
+  hidden by the filter blocks a task nevertheless.
 - `Usage`: bars of the total accumulated usage of the tasks (see
   `ase-task-assign`(1) and `ase-agent`(1)) by its `time` (AI request,
   human, and real time, in minutes below one hour, else in hours), its

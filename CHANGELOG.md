@@ -5,6 +5,16 @@ ChangeLog
 1.1.0 (2026-10-XX)
 ------------------
 
+-   BUGFIX [tool]: Task Board Drafts, Readiness, and Tag Guarding
+    On the terminal task board, a new task draft kept after a failed save is now created again
+    even if left unchanged in `$EDITOR` (instead of being silently discarded), while an emptied
+    text discards the draft. The `Open Tasks` statistics now determine the readiness of the
+    filtered tasks against all tasks, as a predecessor hidden by the filter blocks a task
+    nevertheless. Finally, an agent definition with `tag-success: none` returning a task into its
+    incoming state is now only accepted if the hook `ready` guarding it is declared by the same
+    definition, so a definition based on e.g. `builtin:implementer` can no longer process a task
+    again and again.
+
 -   BUGFIX [tool]: Agent Process Management and Crash Recovery
     The `ase agent fleet` now stops an orphaned agent relay only if its process still has the
     recorded start time, so a relay process id reused after a crash or reboot no longer gets an
