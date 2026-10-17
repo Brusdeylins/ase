@@ -134,6 +134,70 @@ const shareOf = (createdAt: string, modifiedAt: string, range: StatsRange, now: 
     return Math.max(0, Math.min(modified, now) - Math.max(created, from)) / (modified - created)
 }
 
+/*  the throughput of the last weeks: the finished tasks per (ISO) week, by their last
+    modification as the (approximated) time of their completion  */
+const throughputOf = (board: Board, kindOf: Map<string, keyof StatsProgress>, now: number): StatsWeek[] => {
+    const thisWeek   = DateTime.fromMillis(now).startOf("week")
+    const throughput = Array.from({ length: WEEKS_N }, (_x, i) => {
+        const start = thisWeek.minus({ weeks: WEEKS_N - 1 - i })
+        return { week: start.weekNumber, start: start.toFormat("yyyy-LL-dd"), count: 0 }
+    })
+    for (const card of board.cards.values()) {
+        if (board.context.has(card.id) || kindOf.get(card.status) !== "finished")
+            continue
+        const time = timeOf(card.modified)
+        if (Number.isNaN(time) || time > now)
+            continue
+        const ago = Math.round(thisWeek.diff(DateTime.fromMillis(time).startOf("week"), "weeks").weeks)
+        if (ago >= 0 && ago < WEEKS_N)
+            throughput[WEEKS_N - 1 - ago].count++
+    }
+    return throughput
+}
+
+/*  the number of days from the creation (resp. the last modification without any creation)
+    of the oldest task until now (zero without any task)  */
+const daysOf = (board: Board, now: number): number => {
+    let oldest = now
+    for (const card of board.cards.values()) {
+        if (board.context.has(card.id))
+            continue
+        let time = timeOf(card.created)
+        if (Number.isNaN(time))
+            time = timeOf(card.modified)
+        if (!Number.isNaN(time))
+            oldest = Math.min(oldest, time)
+    }
+    return Math.ceil((now - oldest) / (24 * 60 * 60 * 1000))
+}
+
+/*  the lead times of the finished tasks <within> the time range (in minutes, sorted ascending),
+    by their last modification as the (approximated) time of their completion (like the throughput)  */
+const leadsOf = (board: Board, within: Set<string>, kindOf: Map<string, keyof StatsProgress>): number[] => {
+    const leads = [] as number[]
+    for (const id of within) {
+        const card = board.cards.get(id)!
+        if (kindOf.get(card.status) !== "finished")
+            continue
+        const created  = timeOf(card.created)
+        const modified = timeOf(card.modified)
+        if (!Number.isNaN(created) && !Number.isNaN(modified) && modified >= created)
+            leads.push((modified - created) / (60 * 1000))
+    }
+    return leads.sort((a, b) => a - b)
+}
+
+/*  a percentile <p> (0-1) of the ascending <values> (linearly interpolated
+    between their closest ranks), or null without any values  */
+const percentileOf = (values: number[], p: number): number | null => {
+    if (values.length === 0)
+        return null
+    const pos  = (values.length - 1) * p
+    const low  = Math.floor(pos)
+    const high = Math.ceil(pos)
+    return Math.round(values[low] + (values[high] - values[low]) * (pos - low))
+}
+
 /*  compute the statistics of the (possibly filtered) tasks of a board within a time range, where
     a task counts if the period of its plan (its "Created" and "Modified" keys) overlaps with the
     time range, and its usage counts with the overlapping part of the period of its usage attachment
@@ -214,28 +278,8 @@ export const statsOf = (board: Board, all: Board, usage: Map<string, { usage: Ta
     for (const t of top)
         t.share = costs > 0 ? t.cost / costs : tokens > 0 ? (t.input + t.output) / tokens : 0
 
-    /*  the lead times of the finished tasks (in minutes, sorted ascending), by their last
-        modification as the (approximated) time of their completion (like the throughput),
-        and a percentile (0-1) of them (linearly interpolated between their closest ranks)  */
-    const leads = [] as number[]
-    for (const id of within) {
-        const card = board.cards.get(id)!
-        if (kindOf.get(card.status) !== "finished")
-            continue
-        const created  = timeOf(card.created)
-        const modified = timeOf(card.modified)
-        if (!Number.isNaN(created) && !Number.isNaN(modified) && modified >= created)
-            leads.push((modified - created) / (60 * 1000))
-    }
-    leads.sort((a, b) => a - b)
-    const percentile = (p: number) => {
-        if (leads.length === 0)
-            return null
-        const pos  = (leads.length - 1) * p
-        const low  = Math.floor(pos)
-        const high = Math.ceil(pos)
-        return Math.round(leads[low] + (leads[high] - leads[low]) * (pos - low))
-    }
+    /*  the lead times of the finished tasks (see "leadsOf")  */
+    const leads = leadsOf(board, within, kindOf)
 
     /*  the efficiency of the AI usage  */
     const n      = progress.finished
@@ -248,28 +292,13 @@ export const statsOf = (board: Board, all: Board, usage: Map<string, { usage: Ta
         costHR:     n > 0 ? Number((finished.costHR / n).toFixed(4)) : 0,
         input:      n > 0 ? Math.round(finished.input  / n) : 0,
         output:     n > 0 ? Math.round(finished.output / n) : 0,
-        leadMedian: percentile(0.50),
-        leadP85:    percentile(0.85)
+        leadMedian: percentileOf(leads, 0.50),
+        leadP85:    percentileOf(leads, 0.85)
     }
 
-    /*  the throughput of the last weeks: the finished tasks per (ISO) week, by their last
-        modification as the (approximated) time of their completion (independent of the time
-        range, as the weeks are a time range on their own)  */
-    const thisWeek   = DateTime.fromMillis(now).startOf("week")
-    const throughput = Array.from({ length: WEEKS_N }, (_x, i) => {
-        const start = thisWeek.minus({ weeks: WEEKS_N - 1 - i })
-        return { week: start.weekNumber, start: start.toFormat("yyyy-LL-dd"), count: 0 }
-    })
-    for (const card of board.cards.values()) {
-        if (board.context.has(card.id) || kindOf.get(card.status) !== "finished")
-            continue
-        const time = timeOf(card.modified)
-        if (Number.isNaN(time) || time > now)
-            continue
-        const ago = Math.round(thisWeek.diff(DateTime.fromMillis(time).startOf("week"), "weeks").weeks)
-        if (ago >= 0 && ago < WEEKS_N)
-            throughput[WEEKS_N - 1 - ago].count++
-    }
+    /*  the throughput of the last weeks (independent of the time range,
+        as the weeks are a time range on their own)  */
+    const throughput = throughputOf(board, kindOf, now)
 
     /*  the forecast of the backlog: all unfinished tasks, divided by the average throughput
         of the last weeks (independent of the time range, like the throughput, as all
@@ -286,19 +315,8 @@ export const statsOf = (board: Board, all: Board, usage: Map<string, { usage: Ta
         weeks: backlog === 0 ? 0 : perWeek > 0 ? Number((backlog / perWeek).toFixed(1)) : null
     }
 
-    /*  the number of days of the time range "total": from the creation (resp. the last
-        modification without any creation) of the oldest task until now (zero without any task)  */
-    let oldest = now
-    for (const card of board.cards.values()) {
-        if (board.context.has(card.id))
-            continue
-        let time = timeOf(card.created)
-        if (Number.isNaN(time))
-            time = timeOf(card.modified)
-        if (!Number.isNaN(time))
-            oldest = Math.min(oldest, time)
-    }
-    const days = Math.ceil((now - oldest) / (24 * 60 * 60 * 1000))
+    /*  the number of days of the time range "total"  */
+    const days = daysOf(board, now)
     return { range, days, states, progress, readiness, usage: total, top, efficiency, throughput, forecast }
 }
 

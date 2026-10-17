@@ -228,6 +228,72 @@ export default class AgentFleetCommand extends DaemonCommand {
         super(log)
     }
 
+    /*  the agent relay of a fleet by the options <values> of its section "relay"
+        (completed in place by the configured agent relay)  */
+    private relayPlan (values: Section): FleetRelay {
+        /*  read the configured agent relay URL and token  */
+        const cfg = new Config("config", configSchema, this.log)
+        cfg.read()
+        const scoped = (key: string): string | null => {
+            const entry = cfg.getScoped(key)
+            return entry !== undefined ? String(isScalar(entry.value) ? entry.value.value : entry.value) : null
+        }
+
+        /*  let the options "address", "port", and "token" not given fall back to those of
+            the configured "project.relay.url" (if it addresses this host), so the agent
+            relay serves exactly the URL the task boards follow (where a deviating option
+            is warned about), and let it decide on HTTP or HTTPS  */
+        let token: string | null = null
+        let insecure = false
+        let secure: boolean | null = null
+        const configured = scoped("project.relay.url")
+        if (configured !== null) {
+            const label = redactURL(configured)
+            const spec  = parseRelayURL(configured)
+            const host  = spec.url.hostname.replace(/^\[|\]$/g, "")
+            if (!isLocal(host))
+                this.log.write("warning", `fleet: configured "project.relay.url" "${label}" ` +
+                    "addresses no local address -- not adopted by the agent relay of the fleet " +
+                    "(the task boards following it will not see the agents of the fleet)")
+            else {
+                const deviates = (key: string) =>
+                    this.log.write("warning", `fleet: section "relay": option "${key}" deviates ` +
+                        `from the configured "project.relay.url" "${label}" ` +
+                        "(the task boards following it will not see the agents of the fleet)")
+                if (!given(values, "address"))
+                    values.address = host
+                else if (![ host, "0.0.0.0", "::" ].includes(String(values.address)))
+                    deviates("address")
+                if (!given(values, "port"))
+                    values.port = spec.url.port
+                else if (String(values.port) !== spec.url.port)
+                    deviates("port")
+                if (!given(values, "token")) {
+                    const env = process.env.ASE_AGENT_RELAY_TOKEN
+                    token = spec.embedded ?? (env !== undefined && env !== "" ? env : scoped("project.relay.token"))
+                }
+                if (!spec.secure && given(values, "tls-cert"))
+                    deviates("tls-cert")
+                insecure = spec.insecure
+                secure   = spec.secure
+            }
+        }
+
+        /*  let the options "tls-cert" and "tls-key" not given fall back to the configured
+            "project.relay.crt" and "project.relay.key" (as the agent relay itself would),
+            where an adopted "project.relay.url" selecting HTTPS requires both  */
+        const tls = relayTls(cfg)
+        if (!given(values, "tls-cert") && tls.cert !== null)
+            values["tls-cert"] = tls.cert
+        if (!given(values, "tls-key") && tls.key !== null)
+            values["tls-key"] = tls.key
+        if (secure === true && (!given(values, "tls-cert") || !given(values, "tls-key")))
+            throw new Error("fleet: configured \"project.relay.url\" selects HTTPS, but no TLS certificate and key " +
+                "(set the options \"tls-cert\" and \"tls-key\" of the section \"relay\", " +
+                "or \"project.relay.crt\" and \"project.relay.key\")")
+        return { args: sectionArgs("relay", values), token, insecure }
+    }
+
     /*  load and validate the configuration file (or the configuration <text> of it), where the
         options of each agent are validated by parsing them with the "start" command of a fresh agent  */
     private async load (file: string, text?: string): Promise<FleetPlan> {
@@ -241,104 +307,36 @@ export default class AgentFleetCommand extends DaemonCommand {
         }
         if (!isSection(data))
             throw new Error(`fleet: configuration "${file}" carries no sections`)
-        const section = (name: string): Section => {
+        const section = (name: string, keys?: string[]): Section => {
             const value = data[name]
             if (value === null || value === undefined)
                 return {}
             if (!isSection(value))
                 throw new Error(`fleet: section "${name}" carries no options`)
+            for (const key of Object.keys(value))
+                if (keys !== undefined && !keys.includes(key))
+                    throw new Error(`fleet: section "${name}": unsupported option "${key}" ` +
+                        `(expected ${keys.map((k) => `"${k}"`).join(", ")})`)
             return value
         }
 
         /*  the options of the fleet itself  */
-        const fleet = section("fleet")
-        for (const key of Object.keys(fleet))
-            if (!fleetKeys.includes(key))
-                throw new Error(`fleet: section "fleet": unsupported option "${key}" ` +
-                    `(expected ${fleetKeys.map((name) => `"${name}"`).join(", ")})`)
+        const fleet = section("fleet", fleetKeys)
         const foreground = fleet.foreground ?? false
         if (typeof foreground !== "boolean")
             throw new Error("fleet: section \"fleet\": invalid value of option \"foreground\" (expected a boolean)")
 
         /*  the default options of the agents  */
-        const defaults = section("default")
-        for (const key of Object.keys(defaults))
-            if (!defaultKeys.includes(key))
-                throw new Error(`fleet: section "default": unsupported option "${key}" ` +
-                    `(expected ${defaultKeys.map((name) => `"${name}"`).join(", ")})`)
+        const defaults = section("default", defaultKeys)
 
         /*  the options of the agent relay  */
         let relay: FleetRelay | null = null
         if (Object.hasOwn(data, "relay")) {
-            const values = { ...section("relay") }
-            for (const key of Object.keys(values))
-                if (!relayKeys.includes(key))
-                    throw new Error(`fleet: section "relay": unsupported option "${key}" ` +
-                        `(expected ${relayKeys.map((name) => `"${name}"`).join(", ")})`)
+            const values = { ...section("relay", relayKeys) }
             if (given(defaults, "agent-relay"))
                 throw new Error("fleet: section \"default\": option \"agent-relay\" not allowed with the section \"relay\"")
 
-            /*  read the configured agent relay URL and token  */
-            const cfg = new Config("config", configSchema, this.log)
-            cfg.read()
-            const scoped = (key: string): string | null => {
-                const entry = cfg.getScoped(key)
-                return entry !== undefined ? String(isScalar(entry.value) ? entry.value.value : entry.value) : null
-            }
-
-            /*  let the options "address", "port", and "token" not given fall back to those of
-                the configured "project.relay.url" (if it addresses this host), so the agent
-                relay serves exactly the URL the task boards follow (where a deviating option
-                is warned about), and let it decide on HTTP or HTTPS  */
-            let token: string | null = null
-            let insecure = false
-            let secure: boolean | null = null
-            const configured = scoped("project.relay.url")
-            if (configured !== null) {
-                const label = redactURL(configured)
-                const spec  = parseRelayURL(configured)
-                const host  = spec.url.hostname.replace(/^\[|\]$/g, "")
-                if (!isLocal(host))
-                    this.log.write("warning", `fleet: configured "project.relay.url" "${label}" ` +
-                        "addresses no local address -- not adopted by the agent relay of the fleet " +
-                        "(the task boards following it will not see the agents of the fleet)")
-                else {
-                    const deviates = (key: string) =>
-                        this.log.write("warning", `fleet: section "relay": option "${key}" deviates ` +
-                            `from the configured "project.relay.url" "${label}" ` +
-                            "(the task boards following it will not see the agents of the fleet)")
-                    if (!given(values, "address"))
-                        values.address = host
-                    else if (![ host, "0.0.0.0", "::" ].includes(String(values.address)))
-                        deviates("address")
-                    if (!given(values, "port"))
-                        values.port = spec.url.port
-                    else if (String(values.port) !== spec.url.port)
-                        deviates("port")
-                    if (!given(values, "token")) {
-                        const env = process.env.ASE_AGENT_RELAY_TOKEN
-                        token = spec.embedded ?? (env !== undefined && env !== "" ? env : scoped("project.relay.token"))
-                    }
-                    if (!spec.secure && given(values, "tls-cert"))
-                        deviates("tls-cert")
-                    insecure = spec.insecure
-                    secure   = spec.secure
-                }
-            }
-
-            /*  let the options "tls-cert" and "tls-key" not given fall back to the configured
-                "project.relay.crt" and "project.relay.key" (as the agent relay itself would),
-                where an adopted "project.relay.url" selecting HTTPS requires both  */
-            const tls = relayTls(cfg)
-            if (!given(values, "tls-cert") && tls.cert !== null)
-                values["tls-cert"] = tls.cert
-            if (!given(values, "tls-key") && tls.key !== null)
-                values["tls-key"] = tls.key
-            if (secure === true && (!given(values, "tls-cert") || !given(values, "tls-key")))
-                throw new Error("fleet: configured \"project.relay.url\" selects HTTPS, but no TLS certificate and key " +
-                    "(set the options \"tls-cert\" and \"tls-key\" of the section \"relay\", " +
-                    "or \"project.relay.crt\" and \"project.relay.key\")")
-            relay = { args: sectionArgs("relay", values), token, insecure }
+            relay = this.relayPlan(values)
         }
 
         /*  the agents, named by their sections  */

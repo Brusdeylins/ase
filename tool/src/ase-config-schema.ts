@@ -179,14 +179,14 @@ export const tokenCost = (price: TokenPrice | undefined, tokens: TokenCounts): n
     price === undefined ? 0 : (tokens.cread * price.cread + tokens.cwrite * price.cwrite +
         tokens.input * price.input + tokens.output * price.output) / 1e6
 
-/*  check a price table, returning an error message or empty string  */
-const checkPrices = (spec: string): string => {
+/*  check whether a specification is accepted by its parser  */
+const parsable = (parse: (spec: string) => unknown, spec: string): boolean => {
     try {
-        parsePrices(spec)
-        return ""
+        parse(spec)
+        return true
     }
-    catch (err: unknown) {
-        return err instanceof Error ? err.message : String(err)
+    catch {
+        return false
     }
 }
 
@@ -206,17 +206,6 @@ export const parseRates = (spec: string): Map<string, number> => {
 /*  the hourly rate (in USD) of a user: its own one, else the one of "*", else zero  */
 export const userRate = (rates: Map<string, number>, user: string): number =>
     rates.get(user) ?? rates.get("*") ?? 0
-
-/*  check an hourly rate table, returning an error message or empty string  */
-const checkRates = (spec: string): string => {
-    try {
-        parseRates(spec)
-        return ""
-    }
-    catch (err: unknown) {
-        return err instanceof Error ? err.message : String(err)
-    }
-}
 
 /*  schema for a single artifact kind's "basedir"/"files" specification  */
 const artifactSchema = v.optional(v.strictObject({
@@ -337,9 +326,9 @@ export const configSchema = v.nullish(v.strictObject({
                 /^\d+$/.test(String(s)), "expected a number of minutes (0 disables)")))
         })),
         prices: v.optional(v.strictObject({
-            ai: v.optional(v.pipe(v.string(), v.check((s) => checkPrices(s) === "",
+            ai: v.optional(v.pipe(v.string(), v.check((s) => parsable(parsePrices, s),
                 "expected \"<model>=<input>/<output>[/<cread>/<cwrite>][ ...]\" (USD per million tokens, with \"*\" as the model of all others)"))),
-            hr: v.optional(v.pipe(v.string(), v.check((s) => checkRates(s) === "",
+            hr: v.optional(v.pipe(v.string(), v.check((s) => parsable(parseRates, s),
                 "expected \"<user-id>=<usd-per-hour>[,...]\" (with \"*\" as the user id of all others)")))
         }))
     })),

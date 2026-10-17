@@ -544,6 +544,45 @@ const loadDefinitionFile = async (file: string): Promise<LoadedDefinition> => {
     return definitionValues(data, `agent: option "--definition": definition "${file}"`, path.dirname(file))
 }
 
+/*  fail on the option "--<key>" with the message <msg>  */
+const failOption = (key: string, msg: string): never => {
+    throw new Error(`agent: option "--${key}": ${msg}`)
+}
+
+/*  resolve the values of the declared parameters <decls>: their given values <specs>
+    ("<name>=<value>", where a later value of the same name wins), else their default
+    values, else empty, validated against their declarations  */
+const resolveParams = (decls: Record<string, ParamDecl>, specs: string[]): Record<string, string> => {
+    const params: Record<string, string> = {}
+    const envs   = new Map<string, string>()
+    for (const [ name, decl ] of Object.entries(decls)) {
+        const other = envs.get(paramEnv(name))
+        if (other !== undefined)
+            failOption("definition", `parameters "${other}" and "${name}" clash in their environment variable "${paramEnv(name)}"`)
+        envs.set(paramEnv(name), name)
+        params[name] = decl.default ?? ""
+    }
+    const declared = Object.keys(decls).map((name) => `"${name}"`).join(", ")
+    for (const spec of specs) {
+        const m = /^([^=]+)=(.*)$/s.exec(spec)
+        if (m === null)
+            failOption("params", `invalid value "${spec}" (expected "<name>=<value>")`)
+        else if (!Object.hasOwn(decls, m[1]))
+            failOption("params", `unknown parameter "${m[1]}" ` +
+                (declared !== "" ? `(expected ${declared})` : "(the definition declares no parameters)"))
+        params[m![1]] = m![2]
+    }
+    for (const [ name, decl ] of Object.entries(decls)) {
+        const value = params[name]
+        if (decl.required === true && value === "")
+            failOption("params", `parameter "${name}" is required` + (decl.desc !== undefined ? ` (${decl.desc})` : ""))
+        else if (decl.allow !== undefined && value !== "" && !decl.allow.includes(value))
+            failOption("params", `invalid value "${value}" of parameter "${name}" ` +
+                `(expected ${decl.allow.map((val) => `"${val}"`).join(", ")})`)
+    }
+    return params
+}
+
 /*  resolve the definition of the agent named <name> from its (camel-cased) command-line
     options <opts>: the defaults, overridden by the definition of "--definition" (if any),
     overridden by the given options, validated against the task lifecycle models  */
@@ -562,9 +601,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     const list   = (key: string): string[] => Array.isArray(values[key]) ? values[key] as string[] : []
     const flag   = (key: string): boolean => values[key] === true
     const has    = (key: string): boolean => values[key] !== undefined
-    const fail   = (key: string, msg: string): never => {
-        throw new Error(`agent: option "--${key}": ${msg}`)
-    }
+    const fail   = failOption
     const choice = <T extends string> (key: string, choices: readonly T[], def: T): T => {
         const value = str(key, def)
         if (!choices.includes(value as T))
@@ -698,36 +735,9 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     }
     const handover = type === "phase" ? "none" : "previous"
 
-    /*  the parameters: their given values (where a later value of the same name wins), else
-        their default values, else empty, validated against their declarations  */
+    /*  the parameters (see "resolveParams")  */
     const decls  = loaded.params
-    const params: Record<string, string> = {}
-    const envs   = new Map<string, string>()
-    for (const [ name, decl ] of Object.entries(decls)) {
-        const other = envs.get(paramEnv(name))
-        if (other !== undefined)
-            fail("definition", `parameters "${other}" and "${name}" clash in their environment variable "${paramEnv(name)}"`)
-        envs.set(paramEnv(name), name)
-        params[name] = decl.default ?? ""
-    }
-    const declared = Object.keys(decls).map((name) => `"${name}"`).join(", ")
-    for (const spec of list("params")) {
-        const m = /^([^=]+)=(.*)$/s.exec(spec)
-        if (m === null)
-            fail("params", `invalid value "${spec}" (expected "<name>=<value>")`)
-        else if (!Object.hasOwn(decls, m[1]))
-            fail("params", `unknown parameter "${m[1]}" ` +
-                (declared !== "" ? `(expected ${declared})` : "(the definition declares no parameters)"))
-        params[m![1]] = m![2]
-    }
-    for (const [ name, decl ] of Object.entries(decls)) {
-        const value = params[name]
-        if (decl.required === true && value === "")
-            fail("params", `parameter "${name}" is required` + (decl.desc !== undefined ? ` (${decl.desc})` : ""))
-        else if (decl.allow !== undefined && value !== "" && !decl.allow.includes(value))
-            fail("params", `invalid value "${value}" of parameter "${name}" ` +
-                `(expected ${decl.allow.map((val) => `"${val}"`).join(", ")})`)
-    }
+    const params = resolveParams(decls, list("params"))
 
     /*  the prompt  */
     const prompts = [ "prompt-skill", "prompt-text", "prompt-file" ].filter((key) => has(key))

@@ -760,21 +760,7 @@ header
         background: var(--c-ground-light)
         padding: 16px 12px 10px
     .stitle
-        position: absolute
-        top: 0
-        left: 50%
-        transform: translate(-50%, -50%)
-        max-width: calc(100% - 24px)
-        white-space: nowrap
-        overflow: hidden
-        text-overflow: ellipsis
-        padding: 0 6px
-        border: 1px solid var(--c-border)
-        border-radius: 5px
-        background: var(--c-paper)
-        color: var(--c-mute)
-        font-size: 0.8125rem
-        font-weight: bold
+        @extend #agents .atitle
     .sranges
         display: flex
         justify-content: center

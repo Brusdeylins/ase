@@ -53,7 +53,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `statusline`, `task`, `task-board`, `agent`, `artifact`, `spec`,
         `man`, `util`, and `util-{meta,diagram,worktree,mint,metric,compat}`
     -   `tool/src/ase-lib-*.ts`: the generic library modules (`lib-log`,
-        `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`,
+        `lib-stdio`, `lib-table`, `lib-ignore`, `lib-version`, `lib-hash`,
         `lib-daemon-cli` for the start/status/log/stop CLI commands of all
         background processes (servers, agents, and the agent fleet), and
         `lib-server-cli` and `lib-server-bind` for the CLI commands and the

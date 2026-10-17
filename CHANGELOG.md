@@ -15,6 +15,13 @@ ChangeLog
     definition, so a definition based on e.g. `builtin:implementer` can no longer process a task
     again and again.
 
+-   CLEANUP [tool]: Internal Refactorings
+    Factored out the agent relay planning and the per-section option validation of
+    `ase agent fleet`, the parameter resolution of the agent definitions, the throughput and
+    day-span computation of the task board statistics, the parse checks of the configuration
+    schema, and the NanoId-style hashing (into `ase-lib-hash`), and let the frame titles of
+    the statistics view of the web task board share the style of those of its agents view.
+
 -   BUGFIX [tool]: Agent Process Management and Crash Recovery
     The `ase agent fleet` now stops an orphaned agent relay only if its process still has the
     recorded start time, so a relay process id reused after a crash or reboot no longer gets an

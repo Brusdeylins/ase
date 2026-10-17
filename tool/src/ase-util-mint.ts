@@ -13,6 +13,7 @@ import UUID                  from "pure-uuid"
 import type { McpServer }    from "@modelcontextprotocol/sdk/server/mcp.js"
 
 import { writeStdout }       from "./ase-lib-stdio.js"
+import { nanoid }            from "./ase-lib-hash.js"
 
 /*  the fixed ASE namespace UUID, itself a UUID V5 over the ASE home URL
     within the standard URL namespace, so that all hint-derived UUIDs
@@ -21,22 +22,6 @@ const NAMESPACE = new UUID(5, "ns:URL", "https://ase.tools").format("std")
 
 /*  the identifier types which are derivable without any AI reasoning  */
 export type MintType = "uuid" | "sha1" | "nanoid"
-
-/*  the alphabet and length of the NanoId-style hashes  */
-const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-const NANOID = 10
-
-/*  derive the short NanoId-style hash of a hint: the SHA-1 digest of
-    the hint, base62-encoded and truncated to its lowest digits  */
-const nanoid = (hint: string): string => {
-    let n  = BigInt(`0x${createHash("sha1").update(hint).digest("hex")}`)
-    let id = ""
-    for (let i = 0; i < NANOID; i++) {
-        id += BASE62[Number(n % 62n)]
-        n  /= 62n
-    }
-    return id
-}
 
 /*  the outcome of a minting request: the identifiers themselves, plus
     an optional warning about a request which could not be honored
