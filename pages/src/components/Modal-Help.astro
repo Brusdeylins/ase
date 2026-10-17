@@ -138,7 +138,7 @@ orderedDocs.push(...cliDocs)
                 itself a "data-help-group", so the search also hides a
                 section whose groups all ran empty */}
             <div class="mb-6" data-help-group>
-                <p class="mb-3 text-sm font-bold uppercase tracking-wider text-white">Skills</p>
+                <p class="mb-3 text-sm font-bold uppercase tracking-wider text-white">AI Skills</p>
                 {skillPrefixGroups.map((group) => (
                     <div class="mb-4" data-help-group>
                         <p class="text-xs font-bold uppercase tracking-wider text-accent">{group.label}</p>
@@ -159,7 +159,7 @@ orderedDocs.push(...cliDocs)
             {/* the CLI commands, shown in their command form and grouped by
                 their top-level command */}
             <div class="mb-4" data-help-group>
-                <p class="mb-3 text-sm font-bold uppercase tracking-wider text-white">Commands</p>
+                <p class="mb-3 text-sm font-bold uppercase tracking-wider text-white">CLI Commands</p>
                 {manGroups.map((group) => (
                     <div class="mb-4" data-help-group>
                         <p class="text-xs font-bold uppercase tracking-wider text-accent">{group.label}</p>

@@ -97,7 +97,6 @@ export const navItems: NavEntry[] = [
                                   "full skill catalog with its online manual pages." },
       items: [
           { path: "/usage/#getstarted", label: "Get Started"    },
-          { path: "/usage/#overview",   label: "Skill Overview" },
           { path: "/usage/#deepdive",   label: "Skill Deep-Dive" }
       ] },
     { label:       "Workflows",
