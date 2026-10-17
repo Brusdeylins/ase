@@ -295,19 +295,26 @@ export const drawGraphText = (board: Board, layout: GraphLayout, selected: strin
 
         /*  the label lines, with the task id at the start of the first line
             (behind the placeholder and "≡" and, for an epic, also behind "♛",
-            and with one column of spacing on each side of it)  */
-        const pre = groupLabel(board.cards.get(n.id)!) === n.id ? 4 : 2
-        nodeLines(board, n.id, titles, n.w).forEach((line, k) => {
+            and with one column of spacing on each side of it), where the part of a task id
+            too long for the first line is hard-wrapped onto the following lines  */
+        const pre   = groupLabel(board.cards.get(n.id)!) === n.id ? 4 : 2
+        const lines = nodeLines(board, n.id, titles, n.w)
+        let   spill = Math.max(0, pre + 1 + n.id.length - (lines[0]?.length ?? 0))
+        lines.forEach((line, k) => {
             const row = n.y + 1 + k
             if (row >= n.y + n.h - 1 || row >= H)
                 return
+            const cont = k === 0 ? 0 : Math.min(spill, line.length)
+            spill -= cont
             for (let i = 0; i < line.length && n.x + 2 + i < W; i++) {
                 chars[row][n.x + 2 + i] = k === 0 && pre > 2 && i === 1 ? "♛" : k === 0 && i === pre - 1 ? "≡" :
                     (k === 0 && i <= pre) || line[i] === glueTitle ? " " : line[i]
-                tones[row][n.x + 2 + i] = k === 0 && i <= pre + n.id.length + 1 ? `${tone}-id` : `${tone}-title`
+                tones[row][n.x + 2 + i] = (k === 0 && i <= pre + n.id.length + 1) || (cont > 0 && i <= cont) ? `${tone}-id` : `${tone}-title`
             }
             if (k === 0 && n.x + 3 + pre + n.id.length < Math.min(W, n.x + n.w - 1))
                 tones[row][n.x + 3 + pre + n.id.length] = `${tone}-id`
+            else if (cont > 0 && spill === 0 && n.x + 2 + cont < Math.min(W, n.x + n.w - 1))
+                tones[row][n.x + 2 + cont] = `${tone}-id`
         })
     }
     return { lines: chars.map((r) => r.join("")), tones }

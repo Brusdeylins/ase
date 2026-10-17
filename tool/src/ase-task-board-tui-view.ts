@@ -98,7 +98,9 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
     in front of the task id to reserve the extra column of its inverse
     rendering (plus two for the "≡", and two more for the "♛" of an epic), the arrow in front of the
     title dropped, and a placeholder column glued in front of the first marker
-    (resp. the title) for its spacing to the inverse task id  */
+    (resp. the title) for its spacing to the inverse task id, where, if titles are
+    shown and the group and the task id together do not fit onto the first line,
+    the task id starts on the second line  */
 const cardLines = ({ titles }: ViewCtx, c: Card, width: number): string[] => {
     const textW = Math.max(3, width - 2)
     const edit  = editMarker(c)
@@ -107,7 +109,8 @@ const cardLines = ({ titles }: ViewCtx, c: Card, width: number): string[] => {
     const group = groupLabel(c)
     const epic  = group === c.id
     const glued = group !== "" && !epic ? glueGroup.repeat(3) + group.replace(/ /g, glueGroup) + glueGroup.repeat(2) : ""
-    const text  = glued + glueId + glueGroup.repeat(epic ? 4 : 2) + c.id +
+    const head  = glueId + glueGroup.repeat(epic ? 4 : 2) + c.id
+    const text  = glued + (titles && glued !== "" && glued.length + head.length > textW - 2 ? " " : "") + head +
         (marks + cardLabel(c).slice(c.id.length).replace(/^ ▶ /, " ")).replace(/^ /, ` ${glueTitle}`)
     return clampLines(text, textW - 2, titles ? 3 : 1).map((line) => ` ${line}`)
 }
@@ -127,11 +130,13 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
         (behind the margin) between "♛" and "▶" in bold box color, followed by the task id
         (behind the placeholder), which is always bold and inverse, with one column
         of spacing on each side (behind "≡", and for an epic also behind "♛"), and then the
-        rest of the label, where a partially visible card loses its cut border and text lines  */
+        rest of the label, where a partially visible card loses its cut border and text lines,
+        and where the task id is either on the first line behind the group or on the second line  */
     const group   = groupLabel(c)
     const epic    = group === c.id
     const lead    = group !== "" && !epic ? group.length + 5 : 0
-    const from    = lead + (epic ? 6 : 4)
+    const at      = Math.max(0, lines.findIndex((line) => line.includes(glueId)))
+    const from    = (at > 0 ? lines[at].indexOf(glueId) : lead + 1) + (epic ? 5 : 3)
     const to      = from + c.id.length
     const badge   = lead > 0 ? [ h(Text, { key: "group", ...cx("bold") },
         `♛ ${lines[0].slice(4, lead - 1).replace(new RegExp(glueGroup, "g"), " ")} ▶`), " " ] : []
@@ -164,9 +169,22 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
         }
         return [ ...out, rest ]
     }
+    /*  the part of a task id too long for its line, which is hard-wrapped onto the
+        following lines (behind the margin), is also rendered inverse, with the trailing
+        column of spacing behind its last part  */
+    let   spill   = Math.max(0, to - lines[at].length)
+    const spills  = lines.map((line, k) => {
+        const n = k <= at ? 0 : Math.min(spill, line.length - 1)
+        spill -= n
+        return { n, end: n > 0 && spill === 0 }
+    })
     const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
-        ...(k === 0 ? [ line.slice(0, 1), ...badge, h(Text, { key: "id", ...cx("badge") }, ` ${epic ? "♛ " : ""}≡ ${line.slice(from, to)} `),
-            ...marker(line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "")) ] : marker(line.replace(glueTitle, "")))))
+        ...(k < at ? [ line.slice(0, 1), ...badge ] :
+            k === at ? [ line.slice(0, 1), ...(k === 0 ? badge : []), h(Text, { key: "id", ...cx("badge") }, ` ${epic ? "♛ " : ""}≡ ${line.slice(from, to)} `),
+                ...marker(line.slice(to + 1).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "")) ] :
+                spills[k].n > 0 ? [ line.slice(0, 1), h(Text, { key: "id", ...cx("badge") }, line.slice(1, 1 + spills[k].n) + (spills[k].end ? " " : "")),
+                    ...marker(line.slice(2 + spills[k].n).replace(new RegExp(`^${glueTitle}`), " ").replace(glueTitle, "")) ] :
+                    marker(line.replace(glueTitle, "")))))
         .slice(cut === "top" ? lines.length + 1 - rows : 0, cut === "bottom" ? rows - 1 : lines.length)
 
     /*  the badges of the task (the agents busy with it, else its assignee), each as an inverse
