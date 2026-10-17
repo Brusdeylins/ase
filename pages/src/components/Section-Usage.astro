@@ -31,8 +31,8 @@ const columns = [
     [ "HELP", "META: CONFIG", "META: EXPLAIN", "META: JUDGE" ],
     [ "META: RESEARCH", "META: GENERATE", "ARCH" ],
     [ "DOCS", "SPEC", "CODE" ],
-    [ "REPO", "SYNC" ],
-    [ "TASK" ]
+    [ "REPO", "SYNC", "TASK: MANAGE" ],
+    [ "TASK: HANDLE", "TASK: EDIT", "TASK: EXECUTE" ]
 ].map((labels) => labels.map((label) => skillPrefixGroups.find((group) => group.label === label)!))
 const placed = new Set(columns.flat())
 columns[columns.length - 1].push(...skillPrefixGroups.filter((group) => !placed.has(group)))
@@ -215,7 +215,7 @@ const commandColumns = manColumns
                         {column.map((group) => (
                             <div>
                                 <p class="text-sm font-bold uppercase tracking-wider text-accent">{group.label}</p>
-                                <ul class="mt-1 space-y-1 text-[0.90625rem] leading-none text-foreground-secondary">
+                                <ul class="mt-1 space-y-0.5 text-[0.90625rem] leading-none text-foreground-secondary">
                                     {group.skills.map((id) => {
                                         const idx    = id.lastIndexOf("-")
                                         const prefix = id.slice(0, idx + 1)
@@ -244,7 +244,7 @@ const commandColumns = manColumns
                             {column.map((group) => (
                                 <div>
                                     <p class="text-sm font-bold uppercase tracking-wider text-accent">{group.label}</p>
-                                    <ul class="mt-1 text-[0.90625rem] leading-tight text-foreground-secondary">
+                                    <ul class="mt-1 text-[0.90625rem] leading-[1.15] text-foreground-secondary">
                                         {/*  never line-wrap a long command, but cut it
                                              off with an ellipsis (even in the middle of
                                              a word) and show it in full on hover

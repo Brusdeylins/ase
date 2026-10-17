@@ -110,9 +110,9 @@ export const skillGroups: SkillGroup[] = [
     keeping the skill order of the mode groups within
     each prefix group, where any skill of a prefix not explicitly listed
     here forms an own group at the end, so it never silently drops out of
-    the manual page browser. The large "meta" prefix group is further split
-    into explicitly listed sub-groups, where any "meta" skill not listed in
-    them is caught by a trailing plain "META" group. The leading skills
+    the manual page browser. The large "meta" and "task" prefix groups are
+    further split into explicitly listed sub-groups, where any skill not
+    listed in them is caught by a trailing plain "META" resp. "TASK" group. The leading skills
     are moved to the top of their prefix group.  */
 const prefixOf  = (id: string): string => id.split("-")[1] ?? ""
 const prefixes  = [ "help", "meta", "arch", "docs", "spec", "code", "repo", "sync", "task" ]
@@ -130,6 +130,13 @@ const subGroups: Record<string, SkillGroup[]> = {
         { label: "META: RESEARCH", skills: [ "ase-meta-brainstorm", "ase-meta-search", "ase-meta-quorum",
             "ase-meta-proximity", "ase-meta-chat", "ase-meta-quotes" ] },
         { label: "META: GENERATE", skills: [ "ase-meta-mint", "ase-meta-workflow" ] }
+    ],
+    task: [
+        { label: "TASK: MANAGE",   skills: [ "ase-task-list", "ase-task-rename", "ase-task-delete" ] },
+        { label: "TASK: HANDLE",   skills: [ "ase-task-id", "ase-task-status", "ase-task-assign" ] },
+        { label: "TASK: EDIT",     skills: [ "ase-task-edit", "ase-task-view", "ase-task-grill", "ase-task-research",
+            "ase-task-estimate", "ase-task-reboot", "ase-task-condense", "ase-task-dissect" ] },
+        { label: "TASK: EXECUTE",  skills: [ "ase-task-implement", "ase-task-integrate" ] }
     ]
 }
 export const skillPrefixGroups: SkillGroup[] = prefixes.flatMap((prefix) => {
