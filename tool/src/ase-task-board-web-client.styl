@@ -366,20 +366,10 @@ header
     margin-right: 6px
     font-weight: bold
 
-/*  the marker of the state of the edit requests of the task: bold, in accent color while
-    being processed, and in signal color when failed, spaced apart from the title  */
-.cedit
-    font-weight: bold
-    margin-right: 6px
-    &.active
-        color: var(--c-accent)
-    &.failed
-        color: var(--c-signal)
-
-/*  the marker of the effort size of the task: bold, framed by a thin border
-    (like the brackets of the TUI) drawn as an inset shadow, so that it takes no
+/*  the markers of the edit requests and the effort size of the task: bold, in the regular
+    text color, framed by a thin border (like the brackets of the TUI) drawn as an inset shadow, so that it takes no
     extra height and keeps the same box height as the task id, spaced apart from the title  */
-.ceffort
+.cedit, .ceffort
     display: inline-block
     font-weight: bold
     box-shadow: inset 0 0 0 1px currentColor

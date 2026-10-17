@@ -90,7 +90,7 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
 
 /*  the label lines of a card of a width: its group (if any, and not for an epic,
     between "♛" and "▶"), the task id (behind "≡", and of an epic also behind "♛"), its markers
-    (of a dependency cycle, of the edit requests, and of the effort size), and title,
+    (of the edit requests and of the effort size), and title,
     cut onto a single line, or if titles are shown, wrapped onto at most three lines
     (with an ellipsis if cut), padded by one column on each side, with the group
     glued to the task id by five placeholder columns (the "♛", the "▶", their
@@ -99,11 +99,11 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
     rendering (plus two for the "≡", and two more for the "♛" of an epic), the arrow in front of the
     title dropped, and a placeholder column glued in front of the first marker
     (resp. the title) for its spacing to the inverse task id  */
-const cardLines = ({ board, titles }: ViewCtx, c: Card, width: number): string[] => {
+const cardLines = ({ titles }: ViewCtx, c: Card, width: number): string[] => {
     const textW = Math.max(3, width - 2)
     const edit  = editMarker(c)
     const size  = effortMarker(c)
-    const marks = (board.cyclic.has(c.id) ? " ⟲" : "") + (edit !== "" ? ` ${edit}` : "") + (size !== "" ? ` ${size}` : "")
+    const marks = (edit !== "" ? ` ${edit}` : "") + (size !== "" ? ` ${size}` : "")
     const group = groupLabel(c)
     const epic  = group === c.id
     const glued = group !== "" && !epic ? glueGroup.repeat(3) + group.replace(/ /g, glueGroup) + glueGroup.repeat(2) : ""
@@ -142,12 +142,9 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
     } as const
 
     /*  the markers of the edit requests and of the effort size (in this order, each on
-        whatever line it was wrapped onto) in bold (except for the enclosing brackets of the
-        one of the effort size), where the one of the edit requests is like
-        in the web board in accent color while being processed and in signal color when
-        failed (except for the ghost of the carried task)  */
-    const color   = phantom ? undefined : c.edit === "active" ? palette.accent : c.edit === "failed" ? palette.signal : undefined
-    const marks   = [ { key: "edit", text: editMarker(c), color }, { key: "effort", text: effortMarker(c), color: undefined } ]
+        whatever line it was wrapped onto) in bold (except for their enclosing brackets),
+        and in the regular color of the card text  */
+    const marks   = [ { key: "edit", text: editMarker(c) }, { key: "effort", text: effortMarker(c) } ]
         .filter((mark) => mark.text !== "")
     let   marked  = 0
     const marker  = (text: string): React.ReactNode[] => {
@@ -162,7 +159,7 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
             const inner = mark.text.replace(/^\[(.*)\]$/, "$1")
             const frame = inner !== mark.text
             out.push(rest.slice(0, at), h(Text, { key: mark.key }, frame ? "[" : "",
-                h(Text, { bold: true, ...(mark.color !== undefined ? { color: mark.color } : {}) }, inner), frame ? "]" : ""))
+                h(Text, { bold: true }, inner), frame ? "]" : ""))
             rest = rest.slice(at + mark.text.length)
         }
         return [ ...out, rest ]

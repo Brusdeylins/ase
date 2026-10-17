@@ -361,7 +361,7 @@ export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
             `data-assignee="${escapeXML(card.assignee.replace(/\p{Cc}/gu, ""))}">` +
             `<foreignObject x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}">` +
             `<div xmlns="http://www.w3.org/1999/xhtml" class="card"><div class="cbody"><span class="cid">${groupLabel(card) === card.id ? "♛ " : ""}≡ ${escapeXML(card.id)}</span>` +
-            `${board.cyclic.has(card.id) ? "⟲ " : ""}${escapeXML(card.title.replace(/\t/g, " ").replace(/\p{Cc}/gu, ""))
+            `${escapeXML(card.title.replace(/\t/g, " ").replace(/\p{Cc}/gu, ""))
                 .replace(/`([^`]+)`/g, "<code>$1</code>")}</div></div></foreignObject></g>`)
     }
     out.push("</svg>")

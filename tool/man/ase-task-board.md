@@ -36,10 +36,9 @@ any, between `♛` and `▶`), its markers, and its title, the latter cut
 onto a single line or, toggled with `t`, wrapped onto at most three
 lines. The markers are:
 
-- `⟲`: the task is part of a dependency cycle of its `After:` keys.
-- `✎`: an edit request of the task is pending (see `ase-agent-editor`(1)).
-- `✎…`: an edit request of the task is being processed.
-- `✎✗`: an edit request of the task failed.
+- `[✎]`: an edit request of the task is pending (see `ase-agent-editor`(1)).
+- `[✎…]`: an edit request of the task is being processed.
+- `[✎✗]`: an edit request of the task failed.
 - `[⚖`*size*`]`: the effort of the task, i.e., the T-shirt size
   (`XS`, `S`, `M`, `L`, or `XL`) of its valid `Effort:` key (see
   `ase-agent-estimator`(1)), absent for an unestimated task.
@@ -186,7 +185,7 @@ overview is printed as plain text and the command exits: a header line
 with the project, the lifecycle model, and the number of tasks, then
 per group (`━` *group*) and lane (*state*, marked `(active)` for an
 active lane, and its number of cards) the cards with their id (plus
-the `⟲` and `✎` markers), title, and the agents busy with them (behind
+the `✎` and `⚖` markers), title, and the agents busy with them (behind
 `⚙`), followed, with an agent relay, by the agents (`●` busy, `○`
 waiting) with their status and their last processing log line, and
 finally all warnings of the board (behind `⚠`, e.g. on dependency

@@ -12,7 +12,7 @@ import { ref, shallowRef, reactive, computed, nextTick, watch } from "vue"
 export type EditState = "pending" | "active" | "failed"
 
 /*  the board model and task details, as delivered by the service  */
-export type Card    = { id: string, title: string, group: string, cyclic: boolean, tone: string, moves?: string[], edit: EditState | "", finished: boolean, assignee: string, effort: string }
+export type Card    = { id: string, title: string, group: string, tone: string, moves?: string[], edit: EditState | "", finished: boolean, assignee: string, effort: string }
 export type Lane    = { status: string, active: boolean, weight: number, dashed: boolean, kind: "initial" | "regular" | "terminal", cards: Card[] }
 export type Group   = { title: string, lanes: Lane[] }
 export type Surface = { view: View, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }

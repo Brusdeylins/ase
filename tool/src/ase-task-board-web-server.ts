@@ -263,7 +263,7 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
         lanes: g.lanes.map((l) => ({
             status: l.status, active: l.active, weight: l.weight, dashed: l.dashed, kind: l.kind,
             cards:  (board.lanes.get(l.status) ?? []).map((c) => ({
-                id: c.id, title: c.title, group: c.group, cyclic: board.cyclic.has(c.id), tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c),
+                id: c.id, title: c.title, group: c.group, tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c),
                 edit: c.edit, finished: editRefused(lifecycle, c.actual), assignee: c.assignee, effort: c.effort
             }))
         }))

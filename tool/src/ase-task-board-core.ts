@@ -54,10 +54,10 @@ type GroupLayout = { title: string, lanes: LaneLayout[] }
     needed for ordering and the graph, and the time of its last modification  */
 export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", assignee: string, effort: TaskFormat.EffortSize | "", after: string[], created: string, modified: string }
 
-/*  the marker of the state of the edit requests of a card (else empty):
-    requested, being processed, or failed  */
+/*  the marker of the state of the edit requests of a card, enclosed in brackets
+    (else empty): requested, being processed, or failed  */
 export const editMarker = (card: Card): string =>
-    card.edit === "pending" ? "✎" : card.edit === "active" ? "✎…" : card.edit === "failed" ? "✎✗" : ""
+    card.edit === "pending" ? "[✎]" : card.edit === "active" ? "[✎…]" : card.edit === "failed" ? "[✎✗]" : ""
 
 /*  the marker of the effort size of a card: the size behind "⚖",
     enclosed in brackets (else empty if not estimated)  */

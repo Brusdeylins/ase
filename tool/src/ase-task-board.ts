@@ -38,11 +38,11 @@ const textOverview = async (log: Log, relay?: string): Promise<string> => {
             const cards = board.lanes.get(lane.status) ?? []
             out.push(`  ${lane.status}${lane.active ? " (active)" : ""} · ${cards.length}`)
             for (const c of cards) {
-                /*  mark the task (like the terminal board) as cyclic, with the state of its edit requests,
+                /*  mark the task (like the terminal board) with the state of its edit requests,
                     and with its effort size  */
                 const edit  = editMarker(c)
                 const size  = effortMarker(c)
-                const marks = (board.cyclic.has(c.id) ? " ⟲" : "") + (edit !== "" ? ` ${edit}` : "") + (size !== "" ? ` ${size}` : "")
+                const marks = (edit !== "" ? ` ${edit}` : "") + (size !== "" ? ` ${size}` : "")
                 out.push(`    ${cardLabel(c).replace(c.id, c.id + marks)}` +
                     (busy.has(c.id) ? ` ⚙ ${busy.get(c.id)!.map((agent) => agent.name).join(", ")}` : ""))
             }
