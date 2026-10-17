@@ -67,12 +67,19 @@ const defaultKeys = [ "tool", "parallel", "timeout", "repo", "tempdir", "agent-r
 /*  the options not allowed in the section of an agent, as the fleet decides on them  */
 const deniedKeys = [ "name", "one-shot", "foreground", "help" ]
 
-/*  the initial configuration of a fleet (see "ase agent fleet init") for the "enterprise"
-    task lifecycle model: the agent relay, the four phase agents, the edit request agent,
-    and the effort estimation agent  */
-const initConfig = (tool: string): string => textframe`
+/*  the state of the planned tasks per task lifecycle model, as estimated by the estimator  */
+const initPlanned: Record<string, string> = { solo: "OPEN", team: "PLANNING", enterprise: "PLANNED" }
+
+/*  the initial configuration of a fleet (see "ase agent fleet init") for a task lifecycle
+    model: the agent relay, the edit request agent, and the effort estimation agent for all
+    models, plus the four phase agents for "enterprise" resp. an ad-hoc implementation agent
+    for "team" (as the built-in phase agents support "enterprise" only), while "solo" has no
+    activity states and hence no phase agents at all  */
+const initConfig = (tool: string, lifecycle: string): string => [
+    textframe`
     ##
     ##  ASE Agent Fleet Configuration
+    ##  (for the "${lifecycle}" task lifecycle model)
     ##
 
     #   the agent relay, passing the live presence of the agents to the task boards
@@ -98,7 +105,7 @@ const initConfig = (tool: string): string => textframe`
     editor:
         parallel:       1               # maximum number of tasks processed in parallel
 
-    #   the effort estimation agent: estimating the effort of the unestimated tasks (PLANNED, unclaimed)
+    #   the effort estimation agent: estimating the effort of the unestimated tasks (${initPlanned[lifecycle]}, unclaimed)
     estimator:
         mode:           phase           # "phase" (unestimated planned tasks) or "request" (on request)
         parallel:       1               # maximum number of tasks processed in parallel
@@ -114,7 +121,40 @@ const initConfig = (tool: string): string => textframe`
     #   in any unfinished status on request (attached via "ase task request <id> research [<topic>]")
     #researcher:
     #    parallel:       1               # maximum number of tasks processed in parallel
-
+    `,
+    lifecycle === "solo" ? textframe`
+    #   no phase agents, as the "solo" task lifecycle model has no activity states: its tasks
+    #   (OPEN > CLOSED) are driven interactively, while the agents above only assist on them
+    ` : "",
+    lifecycle === "team" ? textframe`
+    #   the implementation phase agent (PLANNING > IMPLEMENTING > IMPLEMENTED), as an ad-hoc agent
+    #   (as the built-in "implementer" supports the "enterprise" task lifecycle model only),
+    #   claiming only the tasks explicitly assigned to "developer" (as the other ones in
+    #   PLANNING are still planned), and stalling a task on failure (STALLED)
+    developer:
+        kind:           adhoc           # agent kind
+        type:           phase           # processing type ("phase" or "request")
+        lifecycle:      team            # supported task lifecycle model
+        workdir:        changeset       # implement in the changeset of the task
+        parallel:       1               # maximum number of tasks processed in parallel
+        state:
+            incoming:   PLANNING        # state of the tasks to claim
+            activity:   IMPLEMENTING    # state during the processing
+            success:    IMPLEMENTED     # state on success
+            failure:    STALLED         # state on failure
+        assign:
+            required:   true            # claim only the tasks assigned to "developer"
+        prompt:
+            skill:      ase-task-implement
+            args:       "--next DONE{?changeset-type=branch: --changeset worktree}{?changeset-worktree: --worktree {changeset-worktree}} {id}"
+        success:
+            criterion:  [ status ]      # success only on the move into IMPLEMENTED by the skill
+        attach:
+            changeset:  changeset       # kind of the attachment storing the change set snapshot
+        finish:
+            commit:     true            # commit and publish the work on a "branch:" changeset
+    ` : "",
+    lifecycle === "enterprise" ? textframe`
     #   the planning phase agent (DRAFTED > PLANNING > DRAFTED)
     planner:
         mode:           reboot          # "reboot" (re-create plan) or "condense" (compress plan)
@@ -134,7 +174,8 @@ const initConfig = (tool: string): string => textframe`
     #   the integration phase agent (APPROVED > INTEGRATING > INTEGRATED)
     integrator:
         mode:           squash          # Git integration operation ("merge", "rebase", or "squash")
-
+    ` : "",
+    textframe`
     #   an agent of a definition file ".ase/agents/<kind>.{yaml,ts,js}" of the project (or of
     #   the user) is configured by a section named after its kind (or with "kind: <kind>"),
     #   while an ad-hoc agent is entirely configured by its section (see "ase agent adhoc start"),
@@ -151,6 +192,7 @@ const initConfig = (tool: string): string => textframe`
     #    attach:
     #        output:     lint-report     # kind of the attachment storing the output
     `
+].filter((block) => block !== "").join("\n")
 
 /*  the agent relay of a fleet: its "ase agent relay start" options, the token to pass to
     it through the environment (or null to leave its resolution to the agent relay), and
@@ -661,20 +703,31 @@ export default class AgentFleetCommand extends DaemonCommand {
         return stopped
     }
 
-    /*  init flow: create the initial configuration file (validated like on start),
-        where an already existing configuration file is overwritten only on request  */
-    private async doInit (opts: { config?: string, tool?: string, force?: boolean }): Promise<number> {
+    /*  init flow: create the initial configuration file for a task lifecycle model (default:
+        the configured one), validated like on start, where an already existing configuration
+        file is overwritten only on request  */
+    private async doInit (opts: { config?: string, tool?: string, lifecycle?: string, force?: boolean }): Promise<number> {
         const file = path.resolve(opts.config ?? path.join(path.dirname(processDir()), "fleet.yaml"))
         const tool = opts.tool ?? agentDefaults().tool
         if (![ "claude", "copilot", "codex" ].includes(tool))
             throw new Error(`${this.label}: invalid agent tool "${tool}" (expected "claude", "copilot", or "codex")`)
+        let lifecycle = opts.lifecycle
+        if (lifecycle === undefined) {
+            const cfg = new Config("config", configSchema, this.log)
+            cfg.read()
+            const value = cfg.get("project.task.lifecycle")
+            lifecycle = String((isScalar(value) ? value.value : value) ?? "") || "solo"
+        }
+        if (!Object.hasOwn(initPlanned, lifecycle))
+            throw new Error(`${this.label}: invalid task lifecycle model "${lifecycle}" ` +
+                "(expected \"solo\", \"team\", or \"enterprise\")")
         if (fs.existsSync(file) && !opts.force)
             throw new Error(`${this.label}: configuration "${file}" already exists (overwrite it with "--force")`)
-        const text = initConfig(tool)
+        const text = initConfig(tool, lifecycle)
         await this.load(file, text)
         fs.mkdirSync(path.dirname(file), { recursive: true })
         fs.writeFileSync(file, text, "utf8")
-        this.log.write("info", `${this.label}: created configuration "${file}" ` +
+        this.log.write("info", `${this.label}: created configuration "${file}" for task lifecycle model "${lifecycle}" ` +
             `(start the fleet with "ase agent fleet start${opts.config !== undefined ? ` -c ${opts.config}` : ""}")`)
         return 0
     }
@@ -777,13 +830,16 @@ export default class AgentFleetCommand extends DaemonCommand {
         /*  register CLI sub-command "init"  */
         group
             .command("init")
-            .description("Create the initial configuration file for the \"enterprise\" task lifecycle model, " +
-                "with the agent relay, the four phase agents, the edit request agent, and the effort estimation agent")
+            .description("Create the initial configuration file for a task lifecycle model, " +
+                "with the agent relay, the edit request agent, and the effort estimation agent, " +
+                "plus the four phase agents for \"enterprise\" resp. an ad-hoc implementation agent for \"team\"")
             .option("-c, --config <file>", "YAML configuration file to create (default: \".ase/fleet.yaml\")")
             .option("-t, --tool <tool>", "agent tool of all agents (\"claude\", \"copilot\", or \"codex\"; " +
                 "default: $ASE_TOOL, else \"claude\")")
+            .option("--lifecycle <model>", "task lifecycle model (\"solo\", \"team\", or \"enterprise\"; " +
+                "default: configured \"project.task.lifecycle\")")
             .option("--force", "overwrite an already existing configuration file")
-            .action(async (opts: { config?: string, tool?: string, force?: boolean }) => {
+            .action(async (opts: { config?: string, tool?: string, lifecycle?: string, force?: boolean }) => {
                 process.exitCode = await this.doInit(opts)
             })
 

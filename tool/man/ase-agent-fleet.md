@@ -5,6 +5,7 @@
 `ase agent fleet init`
 \[`-c`|`--config` *file*\]
 \[`-t`|`--tool` *tool*\]
+\[`--lifecycle` *model*\]
 \[`--force`\]
 
 `ase agent fleet start`
@@ -72,26 +73,38 @@ members) or `ase agent fleet stop`.
 
 ## COMMANDS
 
-- `ase agent fleet init` \[`-c`|`--config` *file*\] \[`-t`|`--tool` *tool*\] \[`--force`\]:
-  Create the initial YAML configuration *file* of a fleet for the
-  `enterprise` task lifecycle model: with the section `relay` (with all
-  its options commented out, so they fall back to `project.relay.url`,
-  `project.relay.crt`, and `project.relay.key`), the section `default`
-  (with `tool`, `parallel: 1`, and `timeout: 60m`, plus `repo` and
-  `tempdir` commented out), the edit request agent `editor`, the effort
-  estimation agent `estimator` (mode `phase`, estimating the `PLANNED`
-  tasks before their implementation), a commented-out effort
-  estimation request agent `estimator-request` (mode `request`,
-  (re-)estimating the tasks in any unfinished status on request), a
-  commented-out research request agent `researcher`, the
-  four phase agents `planner` (mode
-  `reboot`), `implementer` (mode `implement`, 2 tasks in parallel,
-  waiting for the effort estimation, with its parameter `effort-wait`
-  commented out, to be set to `false` if the `estimator` is removed),
-  `approver` (mode `judge`, 2 tasks in parallel, so a human still
-  decides on the approval), and `integrator` (mode `squash`), plus a
+- `ase agent fleet init` \[`-c`|`--config` *file*\] \[`-t`|`--tool` *tool*\] \[`--lifecycle` *model*\] \[`--force`\]:
+  Create the initial YAML configuration *file* of a fleet for a task
+  lifecycle model. For all models, it contains the section `relay`
+  (with all its options commented out, so they fall back to
+  `project.relay.url`, `project.relay.crt`, and `project.relay.key`),
+  the section `default` (with `tool`, `parallel: 1`, and `timeout: 60m`,
+  plus `repo` and `tempdir` commented out), the edit request agent
+  `editor`, the effort estimation agent `estimator` (mode `phase`,
+  estimating the planned tasks, i.e., the `OPEN` tasks for `solo`, the
+  `PLANNING` tasks for `team`, and the `PLANNED` tasks for `enterprise`),
+  a commented-out effort estimation request agent `estimator-request`
+  (mode `request`, (re-)estimating the tasks in any unfinished status on
+  request), a commented-out research request agent `researcher`, and a
   commented-out example of an ad-hoc request agent `lint` (see
   `ase-agent-adhoc`(1)).
+
+  Additionally, it contains per task lifecycle model:
+    - `solo`: no phase agents, as the model has no activity states, so
+      its tasks are driven interactively, while the agents only assist.
+    - `team`: the ad-hoc implementation phase agent `developer` (as the
+      built-in phase agents support the `enterprise` model only), which
+      claims only the `PLANNING` tasks explicitly assigned to
+      `developer` (as the other ones are still planned) into
+      `IMPLEMENTING`, implements them from their `Source:` into their
+      `Changeset:` via the `ase-task-implement` skill, and puts them
+      into `STALLED` unless they became `IMPLEMENTED`.
+    - `enterprise`: the four phase agents `planner` (mode `reboot`),
+      `implementer` (mode `implement`, 2 tasks in parallel, waiting for
+      the effort estimation, with its parameter `effort-wait` commented
+      out, to be set to `false` if the `estimator` is removed),
+      `approver` (mode `judge`, 2 tasks in parallel, so a human still
+      decides on the approval), and `integrator` (mode `squash`).
 
   The configuration is checked like on `ase agent fleet start` before
   it is written, and an already existing *file* is overwritten only
@@ -100,6 +113,9 @@ members) or `ase agent fleet stop`.
       (default: `.ase/fleet.yaml` of the project).
     - \[`-t`|`--tool` *tool*\]: the agent tool of all agents, `claude`,
       `copilot`, or `codex` (default: `$ASE_TOOL`, else `claude`).
+    - \[`--lifecycle` *model*\]: the task lifecycle model, `solo`, `team`,
+      or `enterprise` (default: the configured `project.task.lifecycle`,
+      else `solo`).
     - \[`--force`\]: overwrite an already existing configuration file.
     - \[`-h`|`--help`\]: show the usage information and exit.
 
@@ -285,7 +301,7 @@ status 0.
 
 ```sh
 # create the initial configuration of a fleet, and start and follow it
-$ ase agent fleet init -t claude
+$ ase agent fleet init -t claude --lifecycle enterprise
 $ ase agent fleet start
 $ ase agent fleet status
 $ ase agent fleet log -f
