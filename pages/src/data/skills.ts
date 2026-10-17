@@ -7,7 +7,8 @@
 /*  shared skill catalog: the single source of truth for the grouping and
     ordering of all ASE skills. Both the catalog grid in `Section-Usage.astro`
     (which arranges the groups into its own column layout) and the sidebar in
-    `Modal-Help.astro` are driven by this list, so the two stay in sync (DRY).  */
+    `Modal-Help.astro` are driven by the prefix groups derived from this
+    list, so the two stay in sync (DRY).  */
 
 export interface SkillGroup {
     label:  string
@@ -71,6 +72,7 @@ export const skillGroups: SkillGroup[] = [
             "ase-task-edit",
             "ase-task-grill",
             "ase-task-research",
+            "ase-task-estimate",
             "ase-task-reboot",
             "ase-task-implement",
             "ase-task-integrate",
@@ -81,7 +83,6 @@ export const skillGroups: SkillGroup[] = [
             "ase-task-rename",
             "ase-task-condense",
             "ase-task-dissect",
-            "ase-task-estimate",
             "ase-task-delete"
         ]
     },
@@ -102,3 +103,42 @@ export const skillGroups: SkillGroup[] = [
         ]
     }
 ]
+
+/*  the alternative grouping of the same skills by their "ase-<group>-xxx"
+    name prefix (ignoring the modes above) for the catalog grid of
+    `Section-Usage.astro` and the sidebar and pane of `Modal-Help.astro`,
+    keeping the skill order of the mode groups within
+    each prefix group, where any skill of a prefix not explicitly listed
+    here forms an own group at the end, so it never silently drops out of
+    the manual page browser. The large "meta" prefix group is further split
+    into explicitly listed sub-groups, where any "meta" skill not listed in
+    them is caught by a trailing plain "META" group. The leading skills
+    are moved to the top of their prefix group.  */
+const prefixOf  = (id: string): string => id.split("-")[1] ?? ""
+const prefixes  = [ "help", "meta", "arch", "docs", "spec", "code", "repo", "sync", "task" ]
+const leading   = [ "ase-code-edit" ]
+const allSkills = skillGroups.flatMap((group) => group.skills)
+    .sort((a, b) => Number(leading.includes(b)) - Number(leading.includes(a)))
+for (const id of allSkills)
+    if (!prefixes.includes(prefixOf(id)))
+        prefixes.push(prefixOf(id))
+const subGroups: Record<string, SkillGroup[]> = {
+    meta: [
+        { label: "META: CONFIG",   skills: [ "ase-meta-config", "ase-meta-compat" ] },
+        { label: "META: EXPLAIN",  skills: [ "ase-meta-why", "ase-meta-eli5" ] },
+        { label: "META: JUDGE",    skills: [ "ase-meta-evaluate", "ase-meta-diaboli", "ase-meta-steelman" ] },
+        { label: "META: RESEARCH", skills: [ "ase-meta-brainstorm", "ase-meta-search", "ase-meta-quorum",
+            "ase-meta-proximity", "ase-meta-chat", "ase-meta-quotes" ] },
+        { label: "META: GENERATE", skills: [ "ase-meta-mint", "ase-meta-workflow" ] }
+    ]
+}
+export const skillPrefixGroups: SkillGroup[] = prefixes.flatMap((prefix) => {
+    const skills = allSkills.filter((id) => prefixOf(id) === prefix)
+    const subs   = (subGroups[prefix] ?? []).map((group) => ({
+        label:  group.label,
+        skills: group.skills.filter((id) => skills.includes(id))
+    }))
+    const listed = new Set(subs.flatMap((group) => group.skills))
+    return subs.concat([ { label: prefix.toUpperCase(), skills: skills.filter((id) => !listed.has(id)) } ])
+        .filter((group) => group.skills.length > 0)
+})

@@ -25,7 +25,7 @@ import fs              from "node:fs"
 import path            from "node:path"
 import { marked }      from "marked"
 import Modal           from "./Modal-Shell.astro"
-import { skillGroups } from "../data/skills.ts"
+import { skillPrefixGroups } from "../data/skills.ts"
 import { manPages, manGroups } from "../data/manpages.ts"
 
 /*  locate the in-repo skills directory relative to the `pages/` project root
@@ -96,11 +96,11 @@ const cliDocs: HelpDoc[] = manPages.map((page) => {
     return { id: page.id, name, title: page.title, html }
 })
 
-/*  flatten the shared catalogs into the rendered-pane order (skill groups,
-    then the skills within each group, then the CLI commands), skipping any
+/*  flatten the shared catalogs into the rendered-pane order (skill prefix
+    groups, then the skills within each group, then the CLI commands), skipping any
     skill id without a readable help.md.  */
 const orderedDocs: HelpDoc[] = []
-for (const group of skillGroups)
+for (const group of skillPrefixGroups)
     for (const id of group.skills)
         if (helpDocs[id]) orderedDocs.push(helpDocs[id])
 orderedDocs.push(...cliDocs)
@@ -139,7 +139,7 @@ orderedDocs.push(...cliDocs)
                 section whose groups all ran empty */}
             <div class="mb-6" data-help-group>
                 <p class="mb-3 text-sm font-bold uppercase tracking-wider text-white">Skills</p>
-                {skillGroups.map((group) => (
+                {skillPrefixGroups.map((group) => (
                     <div class="mb-4" data-help-group>
                         <p class="text-xs font-bold uppercase tracking-wider text-accent">{group.label}</p>
                         <ul class="mt-2 space-y-0.5 text-sm leading-none text-foreground-secondary">
