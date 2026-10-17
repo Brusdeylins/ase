@@ -328,7 +328,9 @@ Task board (all writable on the `user` and `project` scopes only, see
   `grey`, `black`, `blue`, and `orange`), each either `default`, a
   color name (`black`, `grey`, `gray`, `brown`, `red`, `orange`,
   `yellow`, `green`, `teal`, `cyan`, `blue`, `purple`, or `magenta`),
-  `#rgb`, or `#rrggbb`.
+  `#rgb`, or `#rrggbb`. Each base color is expanded into a spread of 64
+  colors over the entire lightness range, out of which the web board
+  takes all its colors.
 
 - `board.web.editor.keymap` (`default`, `vim`, or `emacs`):
   The key bindings of the task plan editor of the web board (default:

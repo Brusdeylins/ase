@@ -518,7 +518,7 @@ Response `200`:
 - `lifecycle.finished`: the states the `finished` sentinel expands to.
 - `lifecycle.transitions`: the allowed successor states per state.
 - `idscheme`: the task id scheme, `slug[:<words>]`, `seq[:<template>]`,
-  or `any` (see `project.task.idscheme` in `configuration.md`).
+  or `any` (see `project.task.idscheme` in `ase-config`(1)).
 - `seqmark`: the sequence number high-water mark: the highest sequence
   number of all task ids conforming to a `seq` scheme which were ever
   removed by `DELETE`, purge, or `PATCH` rename, or allocated by

@@ -262,12 +262,16 @@ code {
 /*  give inline code a subtle rounded chip frame. Uses :where() (zero
     specificity) so any element that supplies its own framing via utility
     classes (the Terminal command rows, the skill chip) overrides it cleanly,
-    and `.code-plain` opts out entirely.  */
+    and `.code-plain` opts out entirely. The cloned box decoration gives
+    every line fragment of a wrapped chip its own padding and border, so
+    the continuation lines align with the first one.  */
 :where(code:not(.code-plain)) {
     border: 1px solid var(--border);
     border-radius: 0.3rem;
     color: var(--foreground);
     background: var(--background-elevated);
     padding: 0.05em 0.35em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
 }
 

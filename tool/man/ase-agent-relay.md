@@ -54,7 +54,9 @@ The agent relay is selected by the agents and task boards via the
 configuration `project.relay.url` (or their option `--agent-relay`),
 as `ase://`*addr*`:`*port*\[`/`*token*\] for HTTP, resp.
 `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\] for HTTPS
-(optionally without certificate verification). The relay requires an
+(verifying the server certificate against the Node.js CA store,
+extendable via `$NODE_EXTRA_CA_CERTS`, or, with `?insecure`, without
+certificate verification). The relay requires an
 explicit `project.id`.
 
 The bearer token of a client is the one embedded in the URL (warned about

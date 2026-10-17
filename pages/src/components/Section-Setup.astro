@@ -14,7 +14,7 @@ import Terminal   from "./Widget-Terminal.astro"
 import Annotation from "./Widget-Annotation.astro"
 
 /*  the ASE configuration parameters, mirroring the schema, the "default"
-    preset, and the writable-scope map of "tool/src/ase-config.ts"  */
+    preset, and the writable-scope map of "tool/src/ase-config-schema.ts"  */
 const configParams: Array<{ name: string, value: string, scopes: string, desc: string }> = [
     { name: "agent.persona",
       value: "engineer",
@@ -27,7 +27,9 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
     { name: "project.id",
       value: "",
       scopes: "user, project, task, session",
-      desc: "Unique short id of the project (default: project root basename; required for a remote task store)." },
+      desc: "Unique short id of the project (default: the sanitized project root basename, " +
+            "or <basedir>-<worktree> for a worktree next to an \"active\" symlink; " +
+            "required for a remote task store and for the agent relay)." },
     { name: "project.name",
       value: "Example Project",
       scopes: "user, project, task, session",
@@ -40,19 +42,82 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
             "both the work depth of the skills and the visibility of their output." },
     { name: "project.task.lifecycle",
       value: "solo",
-      scopes: "user, project, task, session",
-      desc: "Lifecycle of the project task plans: solo, team, or enterprise." },
-    { name: "project.task.store",
+      scopes: "user, project",
+      desc: "Lifecycle model of the project task plans: solo (single-phase, local solo developer), " +
+            "team (two-phase, distributed small team), or enterprise (four-phase, gated enterprise " +
+            "pipeline). It also fixes the lane layout of the task boards." },
+    { name: "project.task.idscheme",
+      value: "slug",
+      scopes: "user, project",
+      desc: "Scheme of new task ids: slug[:<words>] (slug of the first title words, like json-export), " +
+            "seq[:<template>] (increasing sequence number through a template like FOO-%03d or #%d, " +
+            "never reusing a number), or any (arbitrary unique id proposed by the agent)." },
+    { name: "project.task.store.url",
       value: "ase:./.ase/task",
       scopes: "user, project",
-      desc: "URL of the task store keeping the project task plans: ase:<path> runs the built-in " +
-            "storage plugin in-process on <path> (relative to the project root), " +
-            "ase://<addr>:<port> or ase://<addr>:<port>/<token> forwards to a remote task store server." },
-    { name: "project.task.token",
+      desc: "URL of the task store keeping the project task plans: ase:<path> (built-in file-based " +
+            "storage, relative to the project root), ase://<addr>:<port>[/<token>] resp. " +
+            "ases://<addr>:<port>[/<token>][?insecure] (remote task store server via HTTP resp. HTTPS), " +
+            "or github:<owner>/<repo>, gitlab:<namespace>/<project>, and gitea+https://<host>/<owner>/<repo> " +
+            "(issue trackers, requiring a seq task id scheme)." },
+    { name: "project.task.store.token",
       value: "",
       scopes: "user",
-      desc: "Bearer token of a remote task store server, used if the task store URL embeds no token " +
-            "and $ASE_TASK_STORE_TOKEN is not set." },
+      desc: "Bearer token of a remote task store server (used if the URL embeds no token and " +
+            "$ASE_TASK_STORE_TOKEN is not set), resp. the token of a GitHub, GitLab, or Gitea task store." },
+    { name: "project.task.store.{crt,key}",
+      value: "",
+      scopes: "user, project",
+      desc: "PEM certificate (chain) and private key files of the task store server, " +
+            "relative to the directory of the configuration file defining them." },
+    { name: "project.task.default.source",
+      value: "worktree",
+      scopes: "user, project",
+      desc: "Default of the Source: key of the task plans: worktree or branch:<name>." },
+    { name: "project.task.default.changeset",
+      value: "worktree",
+      scopes: "user, project",
+      desc: "Default of the Changeset: key of the task plans: worktree, branch:<name>, or attachment:<name>." },
+    { name: "project.task.default.target",
+      value: "source",
+      scopes: "user, project",
+      desc: "Default of the Target: key of the task plans: worktree, branch:<name>, or source." },
+    { name: "project.task.effort.scale",
+      value: "15,60,240,960",
+      scopes: "user, project",
+      desc: "Upper bounds of the effort sizes XS, S, M, and L of the Effort: key of the task plans, " +
+            "in strictly ascending human minutes (XL is open-ended)." },
+    { name: "project.task.effort.factor",
+      value: "1",
+      scopes: "user, project",
+      desc: "Human minutes per point of the attention score of the effort estimation " +
+            "(fitted by /ase-task-estimate --calibrate --save)." },
+    { name: "project.task.effort.{file,line}",
+      value: "1, 0.025",
+      scopes: "user, project",
+      desc: "Additional human minutes per touched file resp. per predicted changed line of the " +
+            "volume score of the effort estimation (fitted by /ase-task-estimate --calibrate --save)." },
+    { name: "project.task.effort.iteration",
+      value: "2.5",
+      scopes: "user, project",
+      desc: "Multiplier of the estimated minutes of a task whose main deliverable is an interactive " +
+            "or visual user interface, covering its rounds of post-adjustment (at least 1)." },
+    { name: "project.relay.url",
+      value: "",
+      scopes: "user, project",
+      desc: "URL of the agent relay passing the live presence of the agents to the task boards: " +
+            "ase://<addr>:<port>[/<token>] or ases://<addr>:<port>[/<token>][?insecure]. " +
+            "If unset, no presence is passed at all." },
+    { name: "project.relay.token",
+      value: "",
+      scopes: "user",
+      desc: "Bearer token of the agent relay, used if the URL embeds no token " +
+            "and $ASE_AGENT_RELAY_TOKEN is not set." },
+    { name: "project.relay.{crt,key}",
+      value: "",
+      scopes: "user, project",
+      desc: "PEM certificate (chain) and private key files of the agent relay server, " +
+            "relative to the directory of the configuration file defining them." },
     { name: "project.artifact.spec.basedir",
       value: "docs/specbook",
       scopes: "user, project",
@@ -91,7 +156,57 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
     { name: "project.artifact.infr.files",
       value: "**/{.github,.claude*,etc}/** **/{AGENTS.md,{package,tsconfig*}.json,.{git,npm}ignore}",
       scopes: "user, project",
-      desc: "Glob spec matching the infrastructure files, relative to the anchor directory." }
+      desc: "Glob spec matching the infrastructure files, relative to the anchor directory." },
+    { name: "telemetry.enabled",
+      value: "false",
+      scopes: "user, project",
+      desc: "Whether the AI usage accounting (time, tokens, and costs) of the task assignments " +
+            "is enabled at all (opt-in)." },
+    { name: "telemetry.implicit",
+      value: "true",
+      scopes: "user, project",
+      desc: "Whether the usage of an interactive session is also accounted onto its active task " +
+            "while the task is unassigned (never for the task default)." },
+    { name: "telemetry.service.port",
+      value: "44318",
+      scopes: "user",
+      desc: "Port of the per-user OTLP ingress on 127.0.0.1." },
+    { name: "telemetry.service.token",
+      value: "",
+      scopes: "user",
+      desc: "Bearer token of the OTLP ingress, generated by ase setup telemetry activate." },
+    { name: "telemetry.service.interval",
+      value: "10",
+      scopes: "user, project",
+      desc: "Interval in minutes of the interim bookings of the open usage windows (0 disables)." },
+    { name: "telemetry.service.idle",
+      value: "30",
+      scopes: "user, project",
+      desc: "Idle time in minutes after which a usage window pauses accounting (0 disables)." },
+    { name: "telemetry.prices.ai",
+      value: "*=4.00/20.00/0.20/5.00",
+      scopes: "user",
+      desc: "Price table <model>=<input>/<output>[/<cread>/<cwrite>] [...] in USD per million " +
+            "tokens, for the agent tools reporting no costs themselves (Codex and Copilot)." },
+    { name: "telemetry.prices.hr",
+      value: "*=110",
+      scopes: "user, project",
+      desc: "Hourly rate table <user-id>=<usd-per-hour>[,...] of the human time, keyed by the assignee of the task." },
+    { name: "board.tui.color.{dim,normal,accent,signal}",
+      value: "grey, default, blue, red",
+      scopes: "user, project",
+      desc: "Colors of the four color roles of the terminal task board: default (terminal foreground), " +
+            "a color name (like blue or blueBright), #rgb, #rrggbb, ansi256(<n>), or rgb(<r>,<g>,<b>)." },
+    { name: "board.web.color.{dim,normal,accent,signal}",
+      value: "grey, black, blue, orange",
+      scopes: "user, project",
+      desc: "Base colors of the four color roles of the web task board: default, a color name " +
+            "(black, grey, brown, red, orange, yellow, green, teal, cyan, blue, purple, or magenta), " +
+            "#rgb, or #rrggbb, each expanded into a spread of 64 colors." },
+    { name: "board.web.editor.keymap",
+      value: "default",
+      scopes: "user, project",
+      desc: "Key bindings of the task plan editor of the web task board: default, vim, or emacs." }
 ]
 ---
 <section id="setup" class="relative isolate mx-auto max-w-4xl px-6 py-8">
@@ -480,7 +595,7 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                 Fine-Tune with <span class="text-accent">Configuration</span>
             </h2>
             <p class="text-foreground-secondary ase-justify">
-                <b>ASE</b> is driven by a small set of configuration parameters,
+                <b>ASE</b> is driven by a set of configuration parameters,
                 managed with the <code>ase config</code> command and stored as YAML.
                 They are resolved along the layered scope chain{" "}
                 <code>default</code> &larr; <code>user</code> &larr; <code>project</code> &larr;{" "}
@@ -488,7 +603,8 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                 overrides the weaker ones. Reads always cascade through the entire
                 chain, while writes are confined to the strongest scope selected
                 via <code>--scope</code>. The <b>Scopes</b> column below lists the
-                scopes a parameter may be <i>written</i> on.
+                scopes a parameter may be <i>written</i> on. Run <code>ase man config</code> for
+                the full details of all parameters.
             </p>
         </header>
 
@@ -512,7 +628,9 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                     {configParams.map((param, i) => (
                         <tr class={`border-b border-border/40 last:border-0${i % 2 === 0 ? " bg-background-elevated" : ""}`}>
                             <td class="py-1 px-2 align-top">
-                                <code class="break-all text-accent!">{param.name}</code>
+                                <code class="wrap-anywhere text-accent!">{param.name.split(/(?<=[.,])/).map((part, j) => (
+                                    <Fragment>{j > 0 && <wbr />}{part}</Fragment>
+                                ))}</code>
                             </td>
                             <td class="py-1 px-2 align-top text-foreground-secondary">
                                 {param.value === "" ?

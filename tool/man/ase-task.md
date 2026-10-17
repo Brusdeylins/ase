@@ -151,8 +151,10 @@ configuration URL (see `ase-config`(1)):
   `project` or a `task:`*id* scope is warned about.
 
 - `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\]:
-  The same as `ase://`, but connecting via HTTPS. With the suffix
-  `?insecure`, the verification of the server certificate is skipped.
+  The same as `ase://`, but connecting via HTTPS, verifying the server
+  certificate against the Node.js CA store (extendable via
+  `$NODE_EXTRA_CA_CERTS`). With the suffix `?insecure`, the
+  verification of the server certificate is skipped.
 
 - `github:`*owner*`/`*repo*, `github+https://`*host*`/`*owner*`/`*repo*, or `github+http://`*host*`/`*owner*`/`*repo*:
   The built-in GitHub storage plugin, running in-process, storing the
