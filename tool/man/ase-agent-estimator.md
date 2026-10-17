@@ -75,9 +75,9 @@ is estimated again. A task not estimated is tagged with
 In the mode `request`, the estimator instead processes the `estimate`
 requests attached to tasks in any lifecycle status except a finished
 one (e.g., `DRAFTED`, which the mode `phase` never picks up), as
-requested via `ase task request` *id* `estimate` *prompt* (see
-`ase-task-request`(1)) resp. key `R` of the task boards, where the
-*prompt* is ignored (but required to be non-empty). Like the request
+requested via `ase task request` *id* `estimate` (see
+`ase-task-request`(1)) resp. key `R` of the task boards, where a
+prompt is ignored and hence may be empty. Like the request
 agent `editor` (see `ase-agent-editor`(1)), it claims such a task by
 tagging it with `ase-agent-estimate:active` and assigning it to itself
 (deferring a task in an activity status until it changes), estimates

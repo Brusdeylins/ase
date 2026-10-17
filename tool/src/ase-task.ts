@@ -1059,10 +1059,12 @@ export default class TaskCommand {
             .description("Request the processing of a task by a prompt, attached as a request of a name " +
                 "(\"edit\" for the edit requests of \"ase agent editor\", any other name for the requests " +
                 "of a request agent of a definition), replacing its failed requests of the name " +
-                "(refused for a finished task, and while a request of the name is being processed)")
+                "(refused for a finished task, and while a request of the name is being processed), " +
+                "where the prompt may be omitted for any other name than \"edit\" (for the request " +
+                "agents ignoring the prompts of their requests, like the estimator agent)")
             .argument("<id>", "Task identifier")
             .argument("<name>", "Request name")
-            .argument("<prompt...>", "Prompt of the request")
+            .argument("[<prompt...>]", "Prompt of the request")
             .action(async (id: string, name: string, prompt: string[]) => {
                 await requestsOf(name).request(this.log, id, prompt.join(" "))
                 this.log.write("info", `task: requested "${name}" of "${id}"`)
@@ -1611,18 +1613,19 @@ export class TaskMCP {
                 "`name` (`edit` for the edit requests of the `ase agent editor`, any other name for the requests " +
                 "of a request agent of a definition), replacing its failed requests of the name. " +
                 "Returns a status `text`. Fails with an error if the task does not exist or is finished, " +
-                "or while a request of the name is being processed.",
+                "while a request of the name is being processed, or if the `prompt` of an `edit` request is empty.",
             inputSchema: {
                 id: z.string()
                     .describe("task identifier (allowed characters: A-Z, a-z, 0-9, '#', '_', '-')"),
                 name: z.string()
                     .describe("request name (a lower-case word of letters, digits, and dashes)"),
-                prompt: z.string()
-                    .describe("prompt of the request")
+                prompt: z.string().optional()
+                    .describe("prompt of the request (may be empty for any other name than `edit`, " +
+                        "for the request agents ignoring the prompts of their requests)")
             }
         }, async (args) => {
             try {
-                await requestsOf(args.name).request(this.log, args.id, args.prompt)
+                await requestsOf(args.name).request(this.log, args.id, args.prompt ?? "")
                 return mcpText(`OK: requested "${args.name}" of task "${args.id}"`)
             }
             catch (err: unknown) {

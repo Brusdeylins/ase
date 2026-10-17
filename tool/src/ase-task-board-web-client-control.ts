@@ -110,6 +110,14 @@ const openPrompt = async (id: string) => {
 export const requestNames = computed(() =>
     [ ...new Set(agentList.value.map((a) => a.kind === "editor" ? "edit" : a.request ?? "").filter((n) => n !== "")) ].sort())
 
+/*  whether a request of a name may have an empty prompt: only if it is processed solely by
+    agents announced to the agent relay which ignore the prompts of their requests (e.g. the
+    "estimate" requests of "ase agent estimator")  */
+const requestPromptless = (name: string) => {
+    const agents = agentList.value.filter((a) => (a.kind === "editor" ? "edit" : a.request ?? "") === name)
+    return agents.length > 0 && agents.every((a) => a.promptless === true)
+}
+
 /*  open the prompt popup of a request by prompt of any name of a task (see "ase task request",
     refused for a finished task), with the request name suggested from the request agents
     announced to the agent relay, prefilled with its draft of a cancelled (or failed to be
@@ -138,9 +146,10 @@ export const cancelPrompt = () => {
 
 /*  request a task by the prompt of its popup under its request name (processed by a request
     agent of a definition, resp. by "ase agent editor" for "edit"), dropping the draft of
-    the task once sent, resp. keeping the request as its draft on failure  */
+    the task once sent, resp. keeping the request as its draft on failure, where the prompt
+    may be empty only for the requests of agents ignoring their prompts  */
 const submitRequest = async (p: { id: string, text: string, name: string }) => {
-    if (p.name.trim() === "" || p.text.trim() === "") {
+    if (p.name.trim() === "" || (p.text.trim() === "" && !requestPromptless(p.name.trim()))) {
         actionError.value = `requesting task "${p.id}" by prompt failed: empty ${p.name.trim() === "" ? "request name" : "prompt"}`
         return
     }

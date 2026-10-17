@@ -12,6 +12,8 @@ ChangeLog
     estimates it (and with `--calibrate` checks it against finished tasks), the new agent
     `ase agent estimator` estimates the planned tasks in the background or any task on request
     (`--mode request`), and `ase agent implementer` by default waits for the estimation.
+    Requests to request agents ignoring their prompts, like the `estimate` requests of the
+    estimator, may now be sent with an empty prompt via `ase task request` and both task boards.
     Task list, task view, and both task boards show the effort, filter by it, and chart its
     distribution. Finally, `ase util mint` and `ase-meta-mint` support the new type `nanoid`.
 

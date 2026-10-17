@@ -17,7 +17,7 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf,
-    watchAgents, busyAgents, agentsDigest, requestNames, dataLoad
+    watchAgents, busyAgents, agentsDigest, requestNames, requestPromptless, dataLoad
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState, AgentsState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -752,7 +752,8 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
 
     /*  request a task by the prompt of its popup under its request name (processed by a
         request agent of a definition, resp. by "ase agent editor" for "edit"), dropping
-        the draft of the task once sent, resp. keeping the request as its draft on failure  */
+        the draft of the task once sent, resp. keeping the request as its draft on failure,
+        where the prompt may be empty only for the requests of agents ignoring their prompts  */
     const submitRequest = (id: string, text: string, pos: number, name: string): void => {
         let requests: TaskRequests
         try {
@@ -762,7 +763,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             setNotice(`requesting task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
             return
         }
-        if (text.trim() === "") {
+        if (text.trim() === "" && !requestPromptless(agents, name)) {
             setNotice(`requesting "${name}" of task "${id}" failed: empty prompt`)
             return
         }

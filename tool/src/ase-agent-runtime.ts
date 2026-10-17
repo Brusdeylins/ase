@@ -260,6 +260,10 @@ export abstract class Agent {
     /*  the name of the requests processed by the agent, as announced in its presence (default: none)  */
     protected presenceRequest = ""
 
+    /*  whether the prompts of the requests processed by the agent are ignored (so they may be
+        requested with an empty prompt), as announced in its presence (default: consumed)  */
+    protected promptless = false
+
     /*  whether tasks are processed serially only (clamping "--parallel" to 1, and
         refusing multiple agents of the kind in a fleet, see "ase agent fleet")  */
     protected readonly serial: boolean = false
@@ -1436,7 +1440,8 @@ export abstract class Agent {
 
         /*  announce the presence of the agent to the agent relay (if any) while it runs  */
         if (this.relay !== null) {
-            this.presence = new AgentPresenceReporter(this.log, this.relay, this.kind, this.name, this.mode, this.presenceRequest)
+            this.presence = new AgentPresenceReporter(this.log, this.relay, this.kind, this.name, this.mode, this.presenceRequest,
+                this.promptless)
             this.presence.start()
         }
 

@@ -117,7 +117,10 @@ is refused.
 (see `ase task request`), suggested from the request agents announced
 to the agent relay (`edit` for `ase agent editor`, else the request
 name of any other request agent), which the request agent of the name
-then processes.
+then processes. An empty prompt is refused, unless all request agents
+of the name announced to the agent relay ignore the prompts of their
+requests (e.g., the `estimate` requests of `ase agent estimator --mode
+request`, see `ase-agent-estimator`(1)).
 
 `/` focuses the `filter:` field of the header: its keywords are
 matched case-insensitively against the task id and title, AND-combined

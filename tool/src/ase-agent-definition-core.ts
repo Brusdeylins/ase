@@ -309,7 +309,7 @@ export type ResolvedDefinition = {
         require: string[], exclude: string[], guarded: boolean
     }
     assign:  { name: string, required: boolean, success: string, failure: string }
-    request: { name: string, done: string }
+    request: { name: string, done: string, prompt: boolean }
     prompt:  { skill: string, template: Template }
     prepare: string[]
     success: { criteria: DefinitionCriterion[], match: RegExp[] }
@@ -885,6 +885,12 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         if ((has(key) && str(key, "-") === "") || list(key).some((cmd) => cmd.trim() === ""))
             fail(key, "empty shell command")
 
+    /*  whether a request agent consumes the prompts of its requests: by the placeholder
+        "{prompt}" of its prompt template, or potentially by a hook receiving the job (and
+        hence the prompt of the request), else the requests may have an empty prompt  */
+    const consumes = type === "request" && (template.names.has("prompt")
+        || ([ "prepare", "prompt", "finish" ] as const).some((hook) => loaded.hooks[hook] !== undefined))
+
     return {
         name, type, workdir, lifecycles, unclaimed,
         serial:  flag("serial"),
@@ -897,7 +903,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
             name: assignName, required: flag("assign-required"),
             success: assignee("assign-success", handover), failure: assignee("assign-failure", handover)
         },
-        request: { name: requestName, done: str("request-done", "processed") },
+        request: { name: requestName, done: str("request-done", "processed"), prompt: consumes },
         prompt:  { skill, template },
         prepare: list("prepare-run"),
         success: { criteria: criteria as DefinitionCriterion[], match },

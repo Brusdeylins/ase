@@ -59,11 +59,14 @@ export class RequestError extends Error {
     and whose aggregated state is mirrored as a tag in the task header (e.g.
     "ase-agent-editor:pending"), as the dispatching of the agent and the task boards both see
     the task headers only, where <name> names the requests (e.g. "edit"), <tag> is the
-    tag (e.g. "ase-agent-editor"), and <done> describes a processed task (e.g. "edited")  */
+    tag (e.g. "ase-agent-editor"), <done> describes a processed task (e.g. "edited"), and
+    <prompted> tells whether a request requires a prompt (else it may have an empty one,
+    as some request agents ignore the prompts, and the request agents consuming them refuse
+    an empty one themselves on processing the request)  */
 export class TaskRequests {
     private readonly kinds: Record<RequestState, string>
 
-    constructor (readonly name: string, readonly tag: string, readonly done: string) {
+    constructor (readonly name: string, readonly tag: string, readonly done: string, readonly prompted = false) {
         this.kinds = { pending: name, active: `${name}-running`, failed: `${name}-failed` }
     }
 
@@ -161,13 +164,13 @@ export class TaskRequests {
         return plan.attachment.some((att) => this.state(att.Type ?? "") === "active")
     }
 
-    /*  request the processing of a task by a prompt, replacing all its failed requests
-        (refused for a finished task, and while a request is being processed, as adding
-        a request changes the task plan under the agent processing the running one,
-        whose conditional save of the task plan would then fail)  */
+    /*  request the processing of a task by a prompt (which may be empty, unless the requests
+        require a prompt), replacing all its failed requests (refused for a finished task, and
+        while a request is being processed, as adding a request changes the task plan under the
+        agent processing the running one, whose conditional save of the task plan would then fail)  */
     async request (log: Log, id: string, prompt: string): Promise<void> {
         const text = prompt.trim()
-        if (text === "")
+        if (text === "" && this.prompted)
             throw new RequestError("empty", `empty ${this.name} prompt`)
         let refused = ""
         let running = false
@@ -181,12 +184,12 @@ export class TaskRequests {
                 running = true
                 return false
             }
-            const line = text.replace(/\s+/g, " ")
+            const line = text !== "" ? text.replace(/\s+/g, " ") : `${this.name} request without prompt`
             const time = attachmentTime()
             plan.attachment = plan.attachment.filter((att) => this.state(att.Type ?? "") !== "failed")
             plan.attachment.push({
                 Type: this.type("pending"), Desc: line.length > 60 ? `${line.slice(0, 59)}…` : line,
-                Created: time, Modified: time, Data: `${text}\n`
+                Created: time, Modified: time, Data: text !== "" ? `${text}\n` : ""
             })
             this.retag(plan)
             return true
@@ -202,8 +205,8 @@ export class TaskRequests {
 
 /*  the edit requests: requested ("edit"), being processed by an editor agent
     ("edit-running"), and failed ("edit-failed", to be re-requested), mirrored
-    in the task header as tag "ase-agent-editor:<state>"  */
-export const edits = new TaskRequests("edit", "ase-agent-editor", "edited")
+    in the task header as tag "ase-agent-editor:<state>", always requiring a prompt  */
+export const edits = new TaskRequests("edit", "ase-agent-editor", "edited", true)
 
 /*  the valid names of requests: lower-case words, not ending in a state suffix of a request kind  */
 export const REQUEST_NAME_RE = /^(?!.*-(?:running|failed)$)[a-z][a-z0-9-]*$/

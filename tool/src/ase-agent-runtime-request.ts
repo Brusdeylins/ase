@@ -163,7 +163,7 @@ export abstract class RequestAgent extends Agent {
         assignee), which keeps all other agents off the task during its processing, where the
         request of a finished task is marked as failed instead, and a task meanwhile in an
         activity status or meanwhile held by a phase agent is skipped, and a request without
-        a prompt is marked as failed  */
+        a prompt is marked as failed (unless the agent ignores the prompts of its requests)  */
     protected async claim (task: AgentTask): Promise<string | null> {
         const lifecycle = this.lifecycle!
         let status   = ""
@@ -171,10 +171,12 @@ export abstract class RequestAgent extends Agent {
         let assignee = ""
         let sum      = ""
         let refused  = ""
+        let claimed  = false
         await updateTask(this.log, task.id, (plan) => {
             status  = TaskFormat.taskStatus(plan.header, lifecycle)
             prompt  = ""
             refused = ""
+            claimed = false
 
             /*  adopt a request already claimed by this run, as found by an update
                 retried after a saved claim whose response was lost  */
@@ -183,6 +185,7 @@ export abstract class RequestAgent extends Agent {
                 prompt   = (own.Data ?? "").trim()
                 assignee = typeParam(own.Type ?? "", "assignee")
                 sum      = this.digest(plan)
+                claimed  = true
                 return false
             }
             const i = plan.attachment.findIndex((att) => this.requests.state(att.Type ?? "") === "pending")
@@ -192,13 +195,14 @@ export abstract class RequestAgent extends Agent {
             const att = plan.attachment[i]
             if (requestRefused(lifecycle, status))
                 refused = `task is finished, status "${status}"`
-            else if ((att.Data ?? "").trim() === "")
+            else if ((att.Data ?? "").trim() === "" && !this.promptless)
                 refused = "empty prompt"
             if (refused !== "")
                 plan.attachment[i] = { ...att, Type: this.requests.type("failed"), Desc: `failed (${refused})`, Modified: attachmentTime() }
             else {
                 prompt   = (att.Data ?? "").trim()
                 assignee = String(plan.header.Assignee ?? "")
+                claimed  = true
                 const params = {
                     agent: this.assignee, assignee, host: os.hostname(), owner: runOwner,
                     pid: String(process.pid), run: this.runLock.id
@@ -214,7 +218,7 @@ export abstract class RequestAgent extends Agent {
             await this.write("warning", this.name, `task "${task.id}": ${this.requests.name} request refused (${refused})`)
             return null
         }
-        else if (prompt === "")
+        else if (!claimed)
             return null
         this.claims.set(task.id, { prompt, assignee, digest: sum })
         return `claimed ${this.requests.name} request (status "${status}", assigned to "${this.assignee}"` +

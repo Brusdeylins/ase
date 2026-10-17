@@ -6,7 +6,7 @@
 \[`-h`|`--help`\]
 *id*
 *name*
-*prompt* \[...\]
+\[*prompt* ...\]
 
 ## DESCRIPTION
 
@@ -22,8 +22,9 @@ request agent of a definition kind or of `ase agent adhoc` (with
 
 The request is attached to the task plan as an attachment of the type
 `text/plain; charset=utf-8; kind="`*name*`"`, with the prompt as its
-data, its whitespace-collapsed first 60 characters as its description,
-and its creation and modification timestamps. The aggregated state of
+data, its whitespace-collapsed first 60 characters as its description
+(resp. *name*` request without prompt` for an empty prompt), and its
+creation and modification timestamps. The aggregated state of
 the requests of the name is mirrored in the `Tags` frontmatter key of
 the task as the tag `ase-agent-`*name*`:pending` (resp.
 `ase-agent-editor:pending` for `edit`), as the agents and the task
@@ -34,9 +35,15 @@ While being processed, the request turns into `kind="`*name*`-running"`
 value `failed`). A new request replaces all failed requests of the name.
 
 The request is refused for a missing task, for a task in a finished
-state of the task lifecycle model, for an empty prompt, and while a
-request of the name is being processed, as adding a request would
-change the task plan under the agent processing the running one.
+state of the task lifecycle model, for an empty prompt of an `edit`
+request, and while a request of the name is being processed, as adding
+a request would change the task plan under the agent processing the
+running one. The prompt of any other request may be empty, for the
+request agents ignoring the prompts of their requests (like `ase agent
+estimator --mode request`), while a request agent consuming the
+prompts (by the placeholder `{prompt}` of its prompt template, or by
+its hooks `prepare`, `prompt`, or `finish`, see `ase-agent-adhoc`(1))
+turns a request with an empty prompt into a failed one.
 
 The MCP tool `ase_task_request` provides the same functionality.
 
@@ -60,9 +67,10 @@ The MCP tool `ase_task_request` provides the same functionality.
   `estimate` the estimation requests of `ase agent estimator --mode
   request`.
 
-- *prompt* \[...\]:
+- \[*prompt* ...\]:
   The prompt of the request, with all its words joined by single
-  spaces (and leading and trailing whitespace removed).
+  spaces (and leading and trailing whitespace removed), where an
+  omitted prompt is an empty one (refused for `edit`).
 
 ## EXIT STATUS
 
@@ -77,6 +85,9 @@ $ ase task request json-export edit "Also support JSON5 output"
 
 # request a lint report from a request agent of name "lint"
 $ ase task request json-export lint focus on error handling
+
+# request a re-estimation of the effort (without a prompt)
+$ ase task request json-export estimate
 ```
 
 ## SEE ALSO

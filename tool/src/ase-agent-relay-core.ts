@@ -28,12 +28,13 @@ export type AgentUsages = { total: AgentUsage, last: AgentUsage } | null
 
 /*  the presence of an agent as announced by itself: its kind, name, and mode of
     operation (e.g. "draft", or empty), the name of the requests it processes (of a
-    request agent of a definition, else absent), its host and process id, its start
-    time (in ms since the epoch, by the clock of the agent), its state, the ids of the tasks
-    it is busy with, its usage of the agent tool, and its processing log lines added since
-    its previous announcement (a delta only)  */
+    request agent of a definition, else absent), whether it ignores the prompts of these
+    requests (so they may be requested with an empty prompt, else absent), its host and
+    process id, its start time (in ms since the epoch, by the clock of the agent), its state,
+    the ids of the tasks it is busy with, its usage of the agent tool, and its processing log
+    lines added since its previous announcement (a delta only)  */
 export type AgentAnnounce = {
-    kind: string, name: string, mode: string, request?: string, host: string, pid: number, started: number,
+    kind: string, name: string, mode: string, request?: string, promptless?: boolean, host: string, pid: number, started: number,
     state: AgentState, tasks: string[], usage: AgentUsages, lines: AgentLine[]
 }
 
@@ -102,14 +103,15 @@ const usageEntries = {
     costUSD:     v.nullable(amount)
 }
 const announceEntries = {
-    kind:    v.pipe(text(64), v.minLength(1)),
-    name:    v.pipe(text(64), v.minLength(1)),
-    mode:    v.optional(text(64), ""),
-    request: v.optional(text(64)),
-    host:    text(255),
-    pid:     v.pipe(v.number(), v.integer(), v.minValue(0)),
-    state:   v.picklist([ "waiting", "busy" ]),
-    tasks:   v.pipe(v.array(v.pipe(text(255), v.regex(TaskFormat.TASK_ID_RE))), v.maxLength(64))
+    kind:       v.pipe(text(64), v.minLength(1)),
+    name:       v.pipe(text(64), v.minLength(1)),
+    mode:       v.optional(text(64), ""),
+    request:    v.optional(text(64)),
+    promptless: v.optional(v.boolean()),
+    host:       text(255),
+    pid:        v.pipe(v.number(), v.integer(), v.minValue(0)),
+    state:      v.picklist([ "waiting", "busy" ]),
+    tasks:      v.pipe(v.array(v.pipe(text(255), v.regex(TaskFormat.TASK_ID_RE))), v.maxLength(64))
 }
 
 /*  the valibot schema of an announcement (strict, as received by the relay)  */

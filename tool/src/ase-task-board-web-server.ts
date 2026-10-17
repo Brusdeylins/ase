@@ -721,7 +721,8 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
 
     /*  request a task by a prompt under a request name (processed by a request agent of
         a definition, resp. by "ase agent editor" for "edit"), answering 400 if the
-        request name is invalid or the prompt is empty, 404 if the task is missing, and 409
+        request name is invalid or the prompt of an "edit" request is empty (as the prompts
+        of all other requests may be empty), 404 if the task is missing, and 409
         if it is finished or a request of the name is in progress (as checked atomically
         with the request)  */
     server.route({

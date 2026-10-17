@@ -158,7 +158,13 @@ request on success, or turns it into `kind="<name>-failed"` (with the
 reason of the failure as its description) on failure, resp. back into
 `kind="<name>"` on interrupt, where the task keeps its status and its
 tags (except the request state tag) and, by default, gets its previous
-assignee back.
+assignee back. An agent consumes the request prompts if its prompt
+template references `{prompt}` or it has a hook `prepare`, `prompt`,
+or `finish` (which receive the request prompt in their *job*), where
+it then refuses a request with an empty prompt as failed, else it
+ignores the request prompts, accepts requests with an empty prompt,
+and announces this to the agent relay, so the task boards accept
+an empty prompt for its requests, too.
 
 Only the prompt (and `--state-incoming` for `--type phase`) is
 mandatory, while all other options default to the safe *annotate*

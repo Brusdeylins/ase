@@ -55,7 +55,7 @@ exits with status `1`.
 - `ase task status` \[*id*\[`:`\]\] \[*status*\]:
   Get or set the lifecycle status of a task. See `ase-task-status`(1).
 
-- `ase task request` *id* *name* *prompt* \[...\]:
+- `ase task request` *id* *name* \[*prompt* ...\]:
   Request the processing of a task by a prompt. See
   `ase-task-request`(1).
 

@@ -767,6 +767,14 @@ export const requestNames = (state: AgentsState | null): string[] =>
     [ ...new Set((state?.agents ?? []).map((agent) => agent.kind === "editor" ? "edit" : agent.request ?? "")
         .filter((name) => name !== "")) ].sort()
 
+/*  whether a request of a name may have an empty prompt: only if it is processed solely by
+    agents announced to the agent relay which ignore the prompts of their requests (e.g. the
+    "estimate" requests of "ase agent estimator")  */
+export const requestPromptless = (state: AgentsState | null, name: string): boolean => {
+    const agents = (state?.agents ?? []).filter((agent) => (agent.kind === "editor" ? "edit" : agent.request ?? "") === name)
+    return agents.length > 0 && agents.every((agent) => agent.promptless === true)
+}
+
 /*  order the agents by name (and id, for equally named agents on different hosts)  */
 const byName = (a: AgentPresence, b: AgentPresence): number =>
     a.name.localeCompare(b.name) || a.id.localeCompare(b.id)
