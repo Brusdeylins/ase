@@ -96,8 +96,8 @@ export const navItems: NavEntry[] = [
                      description: "How to get started with ASE: the intent-driven way into the skills, plus the " +
                                   "full skill catalog with its online manual pages." },
       items: [
-          { path: "/usage/#getstarted", label: "Get Started"    },
-          { path: "/usage/#deepdive",   label: "Skill Deep-Dive" }
+          { path: "/usage/#getstarted", label: "Get Started"       },
+          { path: "/usage/#deepdive",   label: "Skills & Commands" }
       ] },
     { label:       "Workflows",
       page:        { path:        "/workflows/",
