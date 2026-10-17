@@ -28,7 +28,7 @@ import ShieldCheck             from "@lucide/astro/icons/shield-check"
 import SquareTerminal          from "@lucide/astro/icons/square-terminal"
 import Cpu                     from "@lucide/astro/icons/cpu"
 import WandSparkles            from "@lucide/astro/icons/wand-sparkles"
-import Bot                     from "@lucide/astro/icons/bot"
+import Sprout                  from "@lucide/astro/icons/sprout"
 import Briefcase               from "@lucide/astro/icons/briefcase"
 import PiggyBank               from "@lucide/astro/icons/piggy-bank"
 import SlidersHorizontal       from "@lucide/astro/icons/sliders-horizontal"
@@ -55,7 +55,7 @@ export const fitFor: Fit[] = [
     },
     {
         icon:  Brain,
-        title: "You prefer thinking before acting",
+        title: "You prefer more thinking before acting",
         body:  "You accept an approach funnel and a written plan before the first line changes, " +
                "because post-hoc repair of a wrong change set costs more than the detour."
     },
@@ -88,10 +88,10 @@ export const fitAgainst: Fit[] = [
                "ceremony you will route around anyway."
     },
     {
-        icon:  Bot,
-        title: "You want a fully autonomous agent fleet",
-        body:  "<b>ASE</b> deliberately keeps a human in the loop at every decision point. " +
-               "It, by default, is not an unattended, self-dispatching swarm, even if it can be forced into it to some extent."
+        icon:  Sprout,
+        title: "You are new to software development",
+        body:  "<b>ASE</b> assumes you can spot a plausible but wrong result and reject it. " +
+               "It amplifies existing expertise, but it neither teaches the craft nor replaces it."
     },
     {
         icon:  Briefcase,
