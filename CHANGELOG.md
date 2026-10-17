@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-1.1.0 (2026-10-XX)
+2.0.0 (2026-10-XX)
 ------------------
 
 -   CHANGE [plugin,pages]: Fold `ase-code-{craft,refactor,resolve}` into the Edit Skills
@@ -124,9 +124,10 @@ ChangeLog
     key. This makes the change set viewable wherever the task is visible, especially during its
     approval. If the origin working copy already carries foreign uncommitted changes (e.g. other
     work in progress), the snapshot starts at a baseline tree of the working copy, captured right
-    before the implementation, and hence excludes these changes (marked by `, baseline <tree>`). The task boards now color every diff attachment per line and mark an outdated
-    snapshot tab with `(stale)`, and `ase agent implementer` keeps the `Source:` of the plan for a
-    `branch:` changeset, so its snapshot covers the entire branch.
+    before the implementation, and hence excludes these changes (marked by `, baseline <tree>`).
+    The task boards now color every diff attachment per line and mark an outdated snapshot tab
+    with `(stale)`, and `ase agent implementer` keeps the `Source:` of the plan for a `branch:`
+    changeset, so its snapshot covers the entire branch.
 
 -   FEATURE [tool]: Container Image
     The new `build-container` build target uses `docker buildx` and `etc/ase.dockerfile` to build
@@ -141,30 +142,29 @@ ChangeLog
     `.ase/agents/<kind>.{yaml,ts,js}` of the project (or `agents/` in the per-user configuration
     directory) yields an agent kind of its own (`ase agent <kind> start`), shadowing a built-in
     one of the same kind, while the new `ase agent adhoc` runs an agent given entirely by flat
-    `--<group>-<item>` options, optionally based on a definition (`--definition`): either
-    claiming tasks by their lifecycle status (`--type phase`) or processing attached prompt requests
-    (`--type request`), with configurable states, tags, assignees, skill or text prompts with
-    placeholder templates, working directories, preparing and finishing commands, success criteria
-    (like an expected attachment created or changed by the processing, where a leftover of an
-    earlier processing does not count), verdicts, and attachments. A definition is a YAML file, or a TypeScript or JavaScript file
-    (typed via `AgentDefinition` of the `@rse/ase` package) which additionally carries hooks along
-    the entire processing: `start` and `stop` (agent setup and teardown), `order` (prioritization),
-    `passes` and `ready` (claiming), `prepare` and `prompt` (code-based preparing and computed
-    prompts), `verdict` and `success` (evaluation), `settle` (per-task target state, tag, and
-    assignee), and `finish` (code-based finishing), with a context reading the plans and all
-    tasks, changing tasks (frontmatter keys, tags, and attachments), running commands, and
-    honoring a cancellation signal. The five built-in agents are no
-    longer hard-coded, but declarative definitions run by the same engine, reusable via
-    `--definition builtin:<kind>-<mode>`. A definition file can extend a base definition (another
-    definition file or a built-in one) via its key `definition`, overriding its options and
-    replacing its hooks of the same name. All agents accept the `--<group>-<item>` options,
-    which win over their definition, where a given
-    prompt source (`--prompt-skill`, `--prompt-text`, or `--prompt-file`) resp. `--tag-retry` or
-    `--tag-failure` also replaces its mutually exclusive alternative of the definition. A verdict
-    decides the tag and target state of a successfully processed task only, so a failed one (an
-    unmet success criterion or a failed finishing command) is consistently settled as a failure.
-    Requests of any name are attached via the new `ase task request` command, the new
-    `ase_task_request` MCP tool, or key `R` of the task boards. The tool now requires Node.js
+    `--<group>-<item>` options, optionally based on a definition (`--definition`): either claiming
+    tasks by their lifecycle status (`--type phase`) or processing attached prompt requests (`--type
+    request`), with configurable states, tags, assignees, skill or text prompts with placeholder
+    templates, working directories, preparing and finishing commands, success criteria (like an
+    expected attachment created or changed by the processing, where a leftover of an earlier
+    processing does not count), verdicts, and attachments. A definition is a YAML file, or a
+    TypeScript or JavaScript file (typed via `AgentDefinition` of the `@rse/ase` package) which
+    additionally carries hooks along the entire processing: `start` and `stop` (agent setup and
+    teardown), `order` (prioritization), `passes` and `ready` (claiming), `prepare` and `prompt`
+    (code-based preparing and computed prompts), `verdict` and `success` (evaluation), `settle`
+    (per-task target state, tag, and assignee), and `finish` (code-based finishing), with a context
+    reading the plans and all tasks, changing tasks (frontmatter keys, tags, and attachments),
+    running commands, and honoring a cancellation signal. The five built-in agents are no longer
+    hard-coded, but declarative definitions run by the same engine, reusable via `--definition
+    builtin:<kind>-<mode>`. A definition file can extend a base definition (another definition
+    file or a built-in one) via its key `definition`, overriding its options and replacing its
+    hooks of the same name. All agents accept the `--<group>-<item>` options, which win over their
+    definition, where a given prompt source (`--prompt-skill`, `--prompt-text`, or `--prompt-file`)
+    resp. `--tag-retry` or `--tag-failure` also replaces its mutually exclusive alternative of the
+    definition. A verdict decides the tag and target state of a successfully processed task only, so
+    a failed one (an unmet success criterion or a failed finishing command) is consistently settled
+    as a failure. Requests of any name are attached via the new `ase task request` command, the
+    new `ase_task_request` MCP tool, or key `R` of the task boards. The tool now requires Node.js
     22.18.0 or newer.
 
 -   FEATURE [tool]: Individually Managed Agents and Supervised Agent Fleets
@@ -410,13 +410,13 @@ ChangeLog
 -   FEATURE [tool]: Configurable task store
     The new `project.task.store.url` URL selects the task plan location: `ase:<path>` (default
     `ase:./.ase/task`, confined to the project root on `project`/`task` scope) runs the built-in
-    plugin in-process, `ase[s]://<addr>:<port>[/<token>][?insecure]` forwards to a remote server via
-    HTTP(S). The token alternatively comes from `$ASE_TASK_STORE_TOKEN`, the new user-scoped
+    plugin in-process, `ase[s]://<addr>:<port>[/<token>][?insecure]` forwards to a remote server
+    via HTTP(S). The token alternatively comes from `$ASE_TASK_STORE_TOKEN`, the new user-scoped
     `project.task.store.token`, or `store.yaml`, and the new `project.task.store.{crt,key}` supply
-    the TLS certificate and key of `ase task store start`. A remote store requires an explicit `project.id` and keeps
-    its registered lifecycle model, changed only via the new `ase task lifecycle [<name>]` (mapping
-    existing `Status` values). `project.artifact.task.{basedir,files}` were removed and are migrated
-    in place, and the legacy pre-1.0 task file migration was dropped.
+    the TLS certificate and key of `ase task store start`. A remote store requires an explicit
+    `project.id` and keeps its registered lifecycle model, changed only via the new `ase task
+    lifecycle [<name>]` (mapping existing `Status` values). `project.artifact.task.{basedir,files}`
+    were removed and are migrated in place, and the legacy pre-1.0 task file migration was dropped.
 
 -   FEATURE [tool]: Task view command and task listing titles
     The new `ase task view <id>` shows a task plan in `$PAGER` (default `more`) when on a terminal,

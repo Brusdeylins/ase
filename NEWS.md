@@ -2,7 +2,7 @@
 NEWS
 ====
 
-ASE 1.0 to ASE 1.1
+ASE 1.0 to ASE 2.0
 ------------------
 
 ### FEATURES
