@@ -86,7 +86,7 @@ export const skillGroups: SkillGroup[] = [
         ]
     },
     {
-        label: "Quick Mode",
+        label: "Direct Mode",
         skills: [
             "ase-code-edit",
             "ase-spec-edit",

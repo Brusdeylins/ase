@@ -20,8 +20,8 @@ import Annotation from "./Widget-Annotation.astro"
     from its neighbours: a bare chat bubble for the plain prompt, a bolt for
     speed, a double check for the added grilling and verification, a clipboard
     for the single ad-hoc plan, stacked layers for the co-existing task plans,
-    a take-off for the professional planning, a funnel for the Funnel Mode, and
-    a refresh cycle for the round-trip reconciliation, a sticky note for the
+    a take-off for the professional planning, a refresh cycle for the
+    round-trip reconciliation, a sticky note for the
     free-form user-story card, and a checked book for the SpecBook specification model  */
 
 import Workflow      from "@lucide/astro/icons/workflow"
@@ -31,7 +31,6 @@ import CheckCheck    from "@lucide/astro/icons/check-check"
 import ClipboardList from "@lucide/astro/icons/clipboard-list"
 import Layers        from "@lucide/astro/icons/layers"
 import PlaneTakeoff  from "@lucide/astro/icons/plane-takeoff"
-import Funnel        from "@lucide/astro/icons/funnel"
 import RefreshCw     from "@lucide/astro/icons/refresh-cw"
 import StickyNote    from "@lucide/astro/icons/sticky-note"
 import BookCheck     from "@lucide/astro/icons/book-check"
@@ -49,7 +48,7 @@ import BookCheck     from "@lucide/astro/icons/book-check"
         <p class="ase-lead ase-justify">
             On top of the standard Agentic AI Coding tool modes{" "}
             <i>Ad-Hoc Mode</i> and <i>Plan Mode</i>,{" "}
-            <b>ASE</b> adds four distinct operation modes
+            <b>ASE</b> adds three distinct operation modes
             to provide even more flexibility and power.
         </p>
     </header>
@@ -64,13 +63,14 @@ import BookCheck     from "@lucide/astro/icons/book-check"
                 </h3>
                 <div class="mt-4 text-foreground-secondary">
                     <p class="ase-justify">
-                    <b class="text-accent">Quick Mode</b>: The more advanced variant of the{" "}
+                    <b class="text-accent">Direct Mode</b>: The more advanced variant of the{" "}
                     <i>Ad-Hoc Mode</i>, where the
                     agent directly modifies artifacts, but where
                     the underlying <b>ASE</b> tenets are still applied
                     and honored and optionally the prompt and its intent
                     can be relentlessly "grilled" as in <b>Task Mode</b>.
-                    Additionally, the result can be optionally verified,
+                    Additionally, the right approach can optionally be also selected explicitly,
+                    the results can be optionally verified,
                     the operation can be looped until it converges, and
                     the changes can be isolated in a Git worktree.
                     </p>
@@ -87,19 +87,6 @@ import BookCheck     from "@lucide/astro/icons/book-check"
                     of the user. Afterwards, the task plan can be drafted,
                     implemented, and finally integrated, either step by step
                     interactively or even fully autonomously.
-                    </p>
-
-                    <p class="text-foreground-secondary ase-indent-p ase-justify">
-                    <b class="text-accent">Funnel Mode</b>: The even more advanced mode
-                    where the user first sketches the plan, then the
-                    agent figures out possible approaches, then the user
-                    selects one approach, then a task plan is created
-                    for this approach, and then finally this switches
-                    over to the regular <b>Task Mode</b>. The task plan
-                    has a fixed format and is persisted and hence is
-                    available across agent sessions. This mode is especially
-                    useful when the solution approach is not obvious and
-                    multiple alternatives have to be evaluated first.
                     </p>
 
                     <p class="text-foreground-secondary ase-indent-p ase-justify">
@@ -259,15 +246,15 @@ import BookCheck     from "@lucide/astro/icons/book-check"
 
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
-                <p class="ase-eyebrow">Quick Mode</p>
+                <p class="ase-eyebrow">Direct Mode #1</p>
                 <h3 class="ase-h3 flex items-center gap-2">
                     <Zap class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
                     Quick &amp; Dirty I
                 </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The simple quick &amp; dirty approach in <b>ASE</b>{" "}
-                    is the Quick Mode, which borrows underlying instructions
-                    from the <b>ASE</b> Task Mode and Funnel Mode, but works without
+                    is the Direct Mode, which borrows underlying instructions
+                    from the <b>ASE</b> Task Mode, but works without
                     the ceremony of the <b>ASE</b> Task Mode. The pro
                     is its speed, the con is that it might require
                     subsequent ad-hoc adjustment promptings, as the
@@ -291,14 +278,15 @@ import BookCheck     from "@lucide/astro/icons/book-check"
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
                 <GlowSide variant="text" side="left"/>
-                <p class="ase-eyebrow">Quick Mode</p>
+                <p class="ase-eyebrow">Direct Mode #2</p>
                 <h3 class="ase-h3 flex items-center gap-2">
                     <CheckCheck class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
                     Quick &amp; Dirty II
                 </h3>
                 <p class="mt-4 text-foreground-secondary ase-justify">
                     The advanced quick &amp; dirty approach in <b>ASE</b>{" "}
-                    is the Quick Mode where the
+                    is the Direct Mode where the right approach
+                    is selected and the
                     expressed intent is "grilled" and the results are
                     verified. The pro is its decent balance between
                     higher speed and good result quality, the con is
@@ -311,7 +299,7 @@ import BookCheck     from "@lucide/astro/icons/book-check"
                     prefix="Claude Code"
                     helpPage={Astro.url.pathname}
                     commands={[
-                        "**/ase-code-edit** **--grill** **--verify** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
+                        "**/ase-code-edit** **--approach** **--grill** **--verify** Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal"
                     ]}
                 />
             </div>
@@ -421,43 +409,7 @@ import BookCheck     from "@lucide/astro/icons/book-check"
 
         <div class="ase-grid-split">
             <div class="lg:order-1 relative isolate" data-reveal="right">
-                <GlowSide variant="text" side="left"/>
-                <p class="ase-eyebrow">Funnel Mode</p>
-                <h3 class="ase-h3 flex items-center gap-2">
-                    <Funnel class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
-                    Expert Planning
-                </h3>
-                <p class="mt-4 text-foreground-secondary ase-justify">
-                    The expert approach is the <b>ASE</b> Funnel Mode,
-                    followed by the <b>ASE</b> Task Mode. The pro
-                    is that crafting / resolution / refactoring tenets
-                    are internalized by the LLM and multiple solution
-                    approaches are evaluated, the con is its necessary
-                    extra steps. Use for complex tasks under explicit
-                    planning where the solution approach is not obvious.
-                </p>
-            </div>
-            <div class="lg:order-2 relative isolate" data-reveal="left">
-                <Terminal
-                    prefix="Claude Code"
-                    helpPage={Astro.url.pathname}
-                    commands={[
-                        "**/ase-task-edit** --approach Create \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
-                        "**A1 (dialog selection)**",
-                        "Change output color to blue",
-                        "Use NPM package \"chalk\" for coloring",
-                        "**GRILL (dialog selection)**",
-                        "**DRAFT (dialog selection)**",
-                        "**IMPLEMENT (dialog selection)**",
-                        "**DELETE (dialog selection)**"
-                    ]}
-                />
-            </div>
-        </div>
-
-        <div class="ase-grid-split">
-            <div class="lg:order-1 relative isolate" data-reveal="right">
-                <p class="ase-eyebrow">Reconciliation Mode</p>
+                <p class="ase-eyebrow">Sync Mode</p>
                 <h3 class="ase-h3 flex items-center gap-2">
                     <RefreshCw class="h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
                     Artifact Reconciliation

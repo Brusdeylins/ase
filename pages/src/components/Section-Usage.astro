@@ -22,13 +22,13 @@ import Search          from "@lucide/astro/icons/search"
 import BookOpenText    from "@lucide/astro/icons/book-open-text"
 
 /*  arrange the skill groups into the five catalog columns, where the
-    fourth column stacks "Quick Mode" and "Sync Mode" vertically instead
+    fourth column stacks "Direct Mode" and "Sync Mode" vertically instead
     of letting the sixth group wrap into an own grid row  */
 const columns = [
     [ "Standalone Mode 1/3" ],
     [ "Standalone Mode 2/3" ],
     [ "Standalone Mode 3/3" ],
-    [ "Quick Mode", "Sync Mode" ],
+    [ "Direct Mode", "Sync Mode" ],
     [ "Task Mode" ]
 ].map((labels) => labels.map((label) => skillGroups.find((group) => group.label === label)!))
 

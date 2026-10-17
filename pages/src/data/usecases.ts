@@ -602,7 +602,7 @@ export const useCases: UseCase[] = [
                      "draft its implementation, and implement it in an isolated Git worktree.",
         abstract:    "Feature work is where the operation modes pay off. The running example here is " +
                      "*a `--json` output mode for `ase task list`* — walked through the full Task Mode, " +
-                     "with the one-shot Quick Mode shown as its alternative.",
+                     "with the one-shot Direct Mode shown as its alternative.",
         steps: [
             {
                 icon:     Tag,
@@ -668,7 +668,7 @@ export const useCases: UseCase[] = [
             },
             {
                 icon:     Sparkles,
-                eyebrow:  "Quick Mode",
+                eyebrow:  "Direct Mode",
                 title:    "Or Do It In One Shot",
                 body:     "For a change this size, the fused one-shot variant does the very same work " +
                           "with grilling and verification, but without a persisted plan.",
@@ -682,7 +682,7 @@ export const useCases: UseCase[] = [
         id:          "bugfixing",
         label:       "Bugfixing",
         title:       "Use Case: Bugfixing",
-        description: "How to fix a defect with ASE: find the root cause, resolve it in quick mode or " +
+        description: "How to fix a defect with ASE: find the root cause, resolve it in direct mode or " +
                      "as a planned change, and verify the fix before it leaves the working copy.",
         abstract:    "A defect that jumps the queue still deserves a cause, not a patch. The running " +
                      "example here is *the statusline showing a stale task id after `ase task rename`* — " +
@@ -700,11 +700,11 @@ export const useCases: UseCase[] = [
             },
             {
                 icon:     Wrench,
-                eyebrow:  "Quick Mode",
+                eyebrow:  "Direct Mode",
                 title:    "Resolve It Immediately",
                 body:     "Bug-fixing follows its own tenets — no drive-by cleanups, minimum new flags, " +
-                          "handling close to the origin — and in quick mode the whole funnel collapses " +
-                          "into a single grounded pass, implemented right away and revertable wholesale.",
+                          "handling close to the origin — and in direct mode the fix is applied in a " +
+                          "single grounded pass, implemented right away and revertable wholesale.",
                 commands: [
                     "**/ase-code-edit** --mode resolve the statusline keeps the old task id after `ase task rename`"
                 ]
@@ -789,7 +789,7 @@ export const useCases: UseCase[] = [
             },
             {
                 icon:     Sparkles,
-                eyebrow:  "Quick Mode",
+                eyebrow:  "Direct Mode",
                 title:    "Or Refactor In One Shot",
                 body:     "For a rename-sized refactoring, the plan ceremony is skipped and the change " +
                           "applied in place; for anything in between, the fused editor refactors, " +
