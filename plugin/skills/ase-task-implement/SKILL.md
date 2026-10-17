@@ -32,6 +32,7 @@ Implement a Task Plan
 </objective>
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-format-spec.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-code.md
@@ -73,8 +74,7 @@ Procedure
         <expand name="task-load-content"></expand>
 
     2.  If the <task-content/> is still empty, complain and tell the user to
-        use the `ase-code-resolve`, `ase-code-refactor`, `ase-code-craft`,
-        or `ase-task-edit` skills first to create a task plan. Then
+        use the `ase-task-edit` skill first to create a task plan. Then
         immediately stop processing this skill.
 
     3.  Internalize the tenets stated by the plan:
@@ -389,6 +389,24 @@ Procedure
         <task-content/>:
 
         <expand name="changeset-land" arg1="<work-dir/>"></expand>
+
+        <if condition="<task-kind/> is `SPECIFYING`, or the task plan otherwise creates, revises, or removes statements of `SPEC` artifacts">
+        The `SPEC` artifacts are in scope, so you *MUST* internalize and
+        honor the `SPEC` format, i.e. the SpecBook models and formats plus
+        the SpecBook schema configuration of the project
+        (`ase-format-spec.md`), and keep every changed `SPEC` artifact
+        conformant to it (structure, object kinds, properties, ids,
+        `[[xxx]]` references, and the `Modified:` timestamp rule). Read the
+        **SpecBook SCHEMA Model** of the project (resolved as described in
+        `ase-format-spec.md`) to learn the allowed object kinds,
+        properties, nestings, and value constraints, and resolve the
+        `SPEC` artifacts by running the command
+        `ase artifact list --kind spec` *once* with <work-dir/> as its
+        working directory and parsing its `- <file/>` output lines into
+        the file list -- the `ase_artifact_list` tool always resolves
+        against the *project* working copy and hence *MUST* *NOT* be used
+        here. Do not output anything.
+        </if>
 
         You *MUST* *skip* every bullet-point of <task-content/> in
         checkbox state `[-]` (cancelled) or `[>]` (deferred): neither
