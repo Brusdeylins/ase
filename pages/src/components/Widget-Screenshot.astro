@@ -1,0 +1,44 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  a captioned, click-to-zoom screenshot: the image is shown through the
+    Diagram widget (opening the shared image modal), with its label as the
+    caption below. A screenshot whose file is not (yet) present below
+    `public/` is rendered as a framed placeholder naming the expected file
+    instead, so a section can be laid out before all of its screenshots are
+    taken. The check runs at build time from the `pages/` project root
+    (`pages/etc/astro.config.mjs` runs from there).  */
+
+import fs       from "node:fs"
+import path     from "node:path"
+import Diagram  from "./Widget-Diagram.astro"
+import ImageOff from "@lucide/astro/icons/image-off"
+
+interface Props {
+    src:    string
+    label:  string
+    class?: string
+}
+
+const { src, label, class: className = "" } = Astro.props
+const present = fs.existsSync(path.join(process.cwd(), "public", src))
+---
+<figure class={className}>
+    {present ? (
+        <Diagram src={src} label={label} compact/>
+    ) : (
+        <div class="grid aspect-video w-full place-items-center rounded-xl border border-dashed border-border-strong bg-background-elevated/40 p-4 text-center shadow-xl">
+            <div class="flex flex-col items-center gap-2 text-foreground-muted">
+                <ImageOff class="h-8 w-8" stroke-width={0.75}/>
+                <span class="text-sm">Screenshot pending</span>
+                <code class="text-xs break-all">public{src}</code>
+            </div>
+        </div>
+    )}
+    <figcaption class="mt-1 text-center text-xs text-foreground-muted">{label}</figcaption>
+</figure>
+

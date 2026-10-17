@@ -72,6 +72,7 @@ export const navItems: NavEntry[] = [
                      description: "The highlights of ASE, each shown in a short screencast, boosting the " +
                                   "recurring work-steps of industrial Software Engineering." },
       items: [
+          { path: "/highlights/#usp",          label: "Unique Selling Points"   },
           { path: "/highlights/#productivity", label: "Productivity Difference" },
           { path: "/highlights/#previews",     label: "Skill Sneak Previews"    }
       ] },

@@ -8,20 +8,23 @@
 /*  a click-to-zoom diagram: the SVG shown inline as a framed, hover-lifting
     button that opens the shared image modal (wired in BaseLayout via the
     `data-image-*` attributes). `class` is forwarded to the wrapping <div> so
-    the caller can set the two-column order (e.g. "lg:order-2").  */
+    the caller can set the two-column order (e.g. "lg:order-2"). `compact`
+    reduces the padding around the image to about a third (e.g. for screenshot grids).  */
 
 interface Props {
-    src:    string
-    label:  string
-    class?: string
+    src:      string
+    label:    string
+    class?:   string
+    compact?: boolean
 }
 
-const { src, label, class: className = "" } = Astro.props
+const { src, label, class: className = "", compact = false } = Astro.props
 ---
 <div class={className}>
     <button
         type="button"
-        class="group relative block w-full cursor-zoom-in overflow-hidden rounded-xl border border-border-strong p-4 shadow-xl transition-transform hover:-translate-y-0.5 sm:p-6"
+        class:list={[ "group relative block w-full cursor-zoom-in overflow-hidden rounded-xl border border-border-strong shadow-xl transition-transform hover:-translate-y-0.5",
+            compact ? "p-[0.35rem] sm:p-[0.525rem]" : "p-4 sm:p-6" ]}
         data-image-src={src}
         data-image-label={label}
         aria-label={`Enlarge ${label}`}
