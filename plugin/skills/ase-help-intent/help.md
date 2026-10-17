@@ -65,4 +65,4 @@ Route a planning intent to the matching commands:
 ##  SEE ALSO
 
 [`ase-help-skill`](../ase-help-skill/help.md), [`ase-meta-proximity`](../ase-meta-proximity/help.md), [`ase-meta-search`](../ase-meta-search/help.md),
-[`ase-code-craft`](../ase-code-craft/help.md).
+[`ase-task-edit`](../ase-task-edit/help.md).

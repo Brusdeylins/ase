@@ -547,7 +547,7 @@ related to a set of code quality aspects.
 
         <if condition="at least one problem in <problems/> was left uncorrected">
         <ase-tpl-hint level="normal">
-        For problems whose correction demands more than a local edit, use `/ase-code-resolve` to derive and apply a full solution approach.
+        For problems whose correction demands more than a local edit, use `/ase-task-edit` to derive a full solution approach and plan, or `/ase-code-edit -a` to derive and apply it directly.
         </ase-tpl-hint>
         </if>
 

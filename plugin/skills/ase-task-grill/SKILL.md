@@ -96,8 +96,7 @@ Set <args>--int-reuse-task</args>.
         <expand name="task-load-content"></expand>
 
     2.  <if condition="<task-content/> is empty">
-        Complain and tell the user to use the `ase-code-resolve`,
-        `ase-code-refactor`, `ase-code-craft`, or `ase-task-edit` skills
+        Complain and tell the user to use the `ase-task-edit` skill
         first to create a task plan. Then immediately stop processing
         this skill.
         </if>

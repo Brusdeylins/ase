@@ -29,9 +29,6 @@
 ○   `ase-code-lint`:       Lint Source Code
 ○   `ase-code-explain`:    Explain Source Code
 ○   `ase-code-insight`:    Project Insight
-○   `ase-code-craft`:      Craft Source Code
-○   `ase-code-refactor`:   Refactor Artifacts
-○   `ase-code-resolve`:    Resolve Problem
 ○   `ase-code-edit`:       Edit Source Code
 ○   `ase-sync-import`:     Import Foreign Sources into Artifact Set
 ○   `ase-sync-reconcile`:  Reconcile Artifact Set to Artifact Set

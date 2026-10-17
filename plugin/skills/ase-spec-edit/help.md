@@ -7,6 +7,7 @@
 
 `ase-spec-edit`
     [`--help`|`-h`]
+    [`--approach`|`-a`]
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
     [`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`]
@@ -34,11 +35,12 @@ WHAT and its implementation-detail HOW parts), *discovering* (resolve
 the `SPEC` artifacts, read the *SpecBook* schema configuration of the
 project, and read the specification artifacts related to the query),
 *grilling* (optionally stress-test the query with rounds of questions),
-*implementing* (apply the change set in place, honoring the GENERIC and
-SPECIFYING tenets and the `SPEC` format contract), and *verifying*
-(optionally validate the specification until it passes). The *querying*
-state and every *grilling* round close with an `EDIT TODO` box showing
-the established `WHAT` and `HOW` information.
+*implementing* (optionally select an approach, then apply the change set
+in place, honoring the GENERIC and SPECIFYING tenets and the `SPEC`
+format contract), and *verifying* (optionally validate the specification
+until it passes). The *querying* state, every *grilling* round, and the
+approach selection close with an `EDIT TODO` box showing the established
+`WHAT` and `HOW` information.
 
 The change set stays strictly restricted to the `SPEC` artifacts -- the
 artifact kinds `CODE`, `DOCS`, `TASK`, `INFR`, and `OTHR` are never
@@ -47,6 +49,15 @@ touched. Every generated artifact carries the current `Created:` and
 timestamp refreshed.
 
 ##  OPTIONS
+
+-   `--approach`|`-a`:
+    Before applying the change set, propose one or more specification
+    approaches with pros and cons, recommend one of them, and let the
+    user pick the preferred one via an interactive dialog (or, under the
+    `black` project boxing or in headless mode, automatically pick the
+    recommended one). The chosen approach is merged into the HOW part of
+    the query. Without `--approach`, no approaches are determined at
+    all.
 
 -   `--grill`|`-g`:
     Grill the query before implementing, similar to `ase-task-grill`:
@@ -179,6 +190,13 @@ Grill the query with two rounds first, then edit and validate:
 
 ```text
 ❯ /ase-spec-edit -g -r 2 -v split the Event entity into Event and EventSeries
+```
+
+Let the user pick one of several specification approaches first, then
+edit:
+
+```text
+❯ /ase-spec-edit -a model the access permissions of the personas
 ```
 
 Grill the query exclusively from the domain perspective, grounded in

@@ -8,6 +8,7 @@
 `ase-code-edit`
     [`--help`|`-h`]
     [`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`]
+    [`--approach`|`-a`]
     [`--grill`|`-g`]
     [`--grill-rounds`|`-r` *n*]
     [`--grill-until`|`-u` `MUST`|`SHOULD`|`MAY`]
@@ -21,9 +22,9 @@
 ##  DESCRIPTION
 
 The `ase-code-edit` skill edits the code base *directly* from a *query*,
-in one shot and without any task plan ceremony. It is a *plan-less*
-fusion of `ase-code-craft`, `ase-code-refactor`, `ase-code-resolve`,
-`ase-task-grill`, and `ase-task-implement`.
+in one shot and without any task plan ceremony. It is the *plan-less*
+counterpart of `ase-task-edit`, `ase-task-grill`, and
+`ase-task-implement`, covering crafting, refactoring, and resolving.
 
 Each single-shot run (or each `--loop` iteration) walks through five
 states: *querying* (take the *query* argument or ask for a query via an
@@ -31,11 +32,12 @@ interactive `Edit Query` dialog, and
 split it into its domain-specific WHAT and its implementation-detail HOW
 parts), *discovering* (read the source artifacts related to the query),
 *grilling* (optionally stress-test the query with rounds of questions),
-*implementing* (apply the change set in place, honoring the tenet set
-selected via `--mode`), and *verifying* (optionally verify the
-implementation until it passes). The *querying* state and every
-*grilling* round close with an `EDIT TODO` box showing the established
-`WHAT` and `HOW` information.
+*implementing* (optionally select an approach, then apply the change
+set in place, honoring the tenet set selected via `--mode`), and
+*verifying* (optionally verify the implementation until it passes). The
+*querying* state, every *grilling* round, and the approach selection
+close with an `EDIT TODO` box showing the established `WHAT` and `HOW`
+information.
 
 ##  OPTIONS
 
@@ -43,6 +45,15 @@ implementation until it passes). The *querying* state and every
     Select the tenet set internalized for the implementation: `craft`
     (CRAFTING), `refactor` (REFACTORING), or `resolve` (RESOLVING).
     The default `auto` infers the tenet set from the query itself.
+
+-   `--approach`|`-a`:
+    Before applying the change set, propose one or more crafting,
+    refactoring, or resolution approaches with pros and cons, recommend
+    one of them, and let the user pick the preferred one via an
+    interactive dialog (or, under the `black` project boxing or in
+    headless mode, automatically pick the recommended one). The chosen
+    approach is merged into the HOW part of the query. Without
+    `--approach`, no approaches are determined at all.
 
 -   `--grill`|`-g`:
     Grill the query before implementing, similar to `ase-task-grill`:
@@ -177,6 +188,13 @@ Grill the query with two rounds first, then implement and verify:
 ❯ /ase-code-edit -g -r 2 -v refactor the config loading into layers
 ```
 
+Let the user pick one of several resolution approaches first, then
+implement:
+
+```text
+❯ /ase-code-edit -a fix race condition in cache invalidation
+```
+
 Grill the query exclusively from the security perspective, grounded in
 the project artifacts and the Internet/Web, then implement:
 
@@ -199,5 +217,5 @@ branch `feature-verbose`:
 
 ##  SEE ALSO
 
-[`ase-code-craft`](../ase-code-craft/help.md), [`ase-code-refactor`](../ase-code-refactor/help.md), [`ase-code-resolve`](../ase-code-resolve/help.md),
+[`ase-task-edit`](../ase-task-edit/help.md), [`ase-spec-edit`](../ase-spec-edit/help.md),
 [`ase-task-grill`](../ase-task-grill/help.md), [`ase-task-implement`](../ase-task-implement/help.md).

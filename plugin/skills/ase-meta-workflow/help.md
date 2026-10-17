@@ -121,4 +121,4 @@ Generate a user-wide skill and overwrite a previous generation:
 ##  SEE ALSO
 
 [`ase-help-intent`](../ase-help-intent/help.md), [`ase-help-skill`](../ase-help-skill/help.md),
-[`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-code-resolve`](../ase-code-resolve/help.md), [`ase-task-implement`](../ase-task-implement/help.md).
+[`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-task-edit`](../ase-task-edit/help.md), [`ase-task-implement`](../ase-task-implement/help.md).

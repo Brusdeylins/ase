@@ -32,7 +32,6 @@ Implement a Task Plan
 </objective>
 
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
-@${CLAUDE_SKILL_DIR}/../../meta/ase-format-spec.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-code.md
@@ -391,12 +390,11 @@ Procedure
         <expand name="changeset-land" arg1="<work-dir/>"></expand>
 
         <if condition="<task-kind/> is `SPECIFYING`, or the task plan otherwise creates, revises, or removes statements of `SPEC` artifacts">
-        The `SPEC` artifacts are in scope, so you *MUST* internalize and
-        honor the `SPEC` format, i.e. the SpecBook models and formats plus
-        the SpecBook schema configuration of the project
-        (`ase-format-spec.md`), and keep every changed `SPEC` artifact
-        conformant to it (structure, object kinds, properties, ids,
-        `[[xxx]]` references, and the `Modified:` timestamp rule). Read the
+        <expand name="task-spec-format"/>
+
+        Keep every changed `SPEC` artifact conformant to the `SPEC`
+        format (structure, object kinds, properties, ids, `[[xxx]]`
+        references, and the `Modified:` timestamp rule). Read the
         **SpecBook SCHEMA Model** of the project (resolved as described in
         `ase-format-spec.md`) to learn the allowed object kinds,
         properties, nestings, and value constraints, and resolve the

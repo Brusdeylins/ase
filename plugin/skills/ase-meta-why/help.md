@@ -86,4 +86,4 @@ committing early to the wrong root cause:
 
 ##  SEE ALSO
 
-[`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-code-resolve`](../ase-code-resolve/help.md), [`ase-arch-analyze`](../ase-arch-analyze/help.md).
+[`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-task-edit`](../ase-task-edit/help.md), [`ase-arch-analyze`](../ase-arch-analyze/help.md).

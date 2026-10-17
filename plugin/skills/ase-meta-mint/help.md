@@ -116,4 +116,4 @@ Mint three product name candidates:
 
 ##  SEE ALSO
 
-[`ase-task-id`](../ase-task-id/help.md), [`ase-meta-brainstorm`](../ase-meta-brainstorm/help.md), [`ase-code-craft`](../ase-code-craft/help.md), [`ase-arch-discover`](../ase-arch-discover/help.md).
+[`ase-task-id`](../ase-task-id/help.md), [`ase-meta-brainstorm`](../ase-meta-brainstorm/help.md), [`ase-task-edit`](../ase-task-edit/help.md), [`ase-arch-discover`](../ase-arch-discover/help.md).

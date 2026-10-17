@@ -1,6 +1,6 @@
 ---
 name: ase-code-edit
-argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--grill-perspective|-p <perspective>] [--grill-ground|-G] [--verify|-v] [--worktree|-w <name>[:<branch>]] [--loop|-l] [<query>|<issue-id>]"
+argument-hint: "[--help|-h] [--mode|-m auto|craft|refactor|resolve] [--approach|-a] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--grill-perspective|-p <perspective>] [--grill-ground|-G] [--verify|-v] [--worktree|-w <name>[:<branch>]] [--loop|-l] [<query>|<issue-id>]"
 description: >
     Edit Source Code: Use when the user wants to "edit" the code base in
     one shot from a query or a bare analyzer issue id like "P1", fusing
@@ -22,7 +22,7 @@ Edit Source Code
 
 <expand name="getopt"
     arg1="ase-code-edit"
-    arg2="--mode|-m=(auto|craft|refactor|resolve) --grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --grill-perspective|-p= --grill-ground|-G --verify|-v --worktree|-w= --loop|-l">
+    arg2="--mode|-m=(auto|craft|refactor|resolve) --approach|-a --grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --grill-perspective|-p= --grill-ground|-G --verify|-v --worktree|-w= --loop|-l">
     $ARGUMENTS
 </expand>
 
@@ -35,6 +35,7 @@ resolving in one shot -- through the states *querying*, *discovering*,
 @${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-grill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-changeset.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-common-approach.md
 
 Procedure
 ---------
@@ -329,7 +330,34 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         in the following creation and updating of code. Do not output
         anything.
 
-    2.  Apply the edit by modifying the affected *artifacts* with a
+    2.  <if condition="<getopt-option-approach/> is equal `true`">
+
+        Set <approach-kind/> to `crafting`, `refactoring`, or
+        `resolution` for the <task-kind/> `CRAFTING`, `REFACTORING`, or
+        `RESOLVING` correspondingly, and determine the overall approach
+        of the edit, based on <todo-what/> and <todo-how/> plus the
+        information gathered in the *discovering* state:
+
+        <expand name="approach-select"
+            arg1="<approach-kind/>"
+            arg2="✪ skill: **ase-code-edit**"></expand>
+
+        If <chosen-approach/> is empty, only output the following <template/>
+        and then immediately *STOP* processing the entire current skill:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ status: **editing stopped**
+        </template>
+
+        Otherwise, merge <chosen-approach/> *exclusively* into <todo-how/>,
+        where the chosen approach overrides any conflicting
+        implementation detail, and expand the following:
+
+        <expand name="todo-box" arg1="current state (after approaching)"></expand>
+
+        </if>
+
+    3.  Apply the edit by modifying the affected *artifacts* with a
         corresponding, complete *change set*, honoring *only*
         <todo-what/> and <todo-how/> plus the information gathered in
         the *discovering* state. Also, if a `CHANGELOG.md` file exists,
@@ -339,7 +367,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         <expand name="changeset-land" arg1="<worktree-dir/>"></expand>
         </if>
 
-    3.  <if condition="<issue-id/> is not empty">
+    4.  <if condition="<issue-id/> is not empty">
         Call the `ase_kv_delete(key: "ase-issue-<issue-id/>")` tool of
         the `ase` MCP server to remove the now-resolved analyzer result
         from the key/value store, then set <issue-id></issue-id> (empty),
@@ -347,7 +375,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         Do not output anything.
         </if>
 
-    4.  Output only the following <template/>. You *MUST* *NOT* output a
+    5.  Output only the following <template/>. You *MUST* *NOT* output a
         change summary, a list of modified artifacts, a rationale, or a
         unified diff of the changes -- *independent* of
         <ase-project-boxing/>, whose exposure rules are explicitly

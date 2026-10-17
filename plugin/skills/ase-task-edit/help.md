@@ -8,22 +8,41 @@
 `ase-task-edit`
     [`--help`|`-h`]
     [`--plan`|`-p` *option*]
-    [`--dry`|`-d`]
+    [`--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`|`specify`]
+    [`--approach`|`-a`]
+    [`--unverified`|`-u`]
     [`--next`|`-n` *option*[,...]]
-    [*id* | *id*: *instruction* | *instruction*]
+    [*id* | *id*: *instruction* | *instruction* | *issue-id*]
 
 ##  DESCRIPTION
 
 The `ase-task-edit` skill establishes and refines a *task plan* purely
 through a *chat-driven loop*. The user steers each round via an
 interactive dialog that offers continued refinement, finalization, or
-hand-off to implementation or draft.
+hand-off to implementation or draft. It covers the planning of all
+kinds of change: crafting a new feature, refactoring the code base,
+resolving a problem, and specifying.
 
 A newly generated plan is grounded in the relevant specification
 (`SPEC`), source code (`CODE`), and infrastructure (`INFR`) files of the
 project: it names the actual files and symbols to change, the actual
 build, lint, and test procedures, and a `CHANGELOG.md` entry if such a
 file exists.
+
+Before a new plan is generated, the skill determines its *kind of
+change* (stored in the `Kind:` key of the plan) and internalizes the
+corresponding tenets (for example KISS, YAGNI, and DRY for crafting,
+or Surgical Changes and Origin Proximity for resolving). For a
+resolution, it first reports the `PROBLEM CONTEXT` and `PROBLEM
+DETAILS`. Under `--approach`, it then proposes one or more *approaches*
+with pros and cons, recommends one of them, and lets the user pick the
+preferred one via an interactive dialog, and the new plan is then
+composed along the chosen approach.
+
+If the current task is `default` and a new plan is generated from an
+*instruction*, a new task id is allocated from the instruction
+according to the task id scheme of the project, so the plan does not
+end up under `default`.
 
 Attachments in the plan's backmatter are never removed by a refinement.
 A refinement which changes an attachment refreshes the attachment's
@@ -49,7 +68,26 @@ stale draft.
     *instruction*), or `PRESERVE` (preserve the existing plan by
     ignoring *instruction* and stopping skill processing).
 
--   `--dry`|`-d`:
+-   `--mode`|`-m` `auto`|`craft`|`refactor`|`resolve`|`specify`:
+    Select the kind of change of the plan: `craft` (`CRAFTING`),
+    `refactor` (`REFACTORING`), `resolve` (`RESOLVING`), or `specify`
+    (`SPECIFYING`). It selects the tenets internalized when the plan is
+    generated or refined and sets the `Kind:` key of the plan, also on
+    a refinement. The default `auto` infers the kind of a new plan from
+    the *instruction*, uses `RESOLVING` for an *issue-id* (also on a
+    refinement), and otherwise leaves the `Kind:` key of an existing
+    plan as it is and honors its tenets.
+
+-   `--approach`|`-a`:
+    Before a new plan is composed, propose one or more crafting,
+    refactoring, resolution, or specification approaches with pros and
+    cons, recommend one of them, and let the user pick the preferred one
+    via an interactive dialog (or, under the `black` project boxing or
+    in headless mode, automatically pick the recommended one). The new
+    plan is then composed along the chosen approach. Without
+    `--approach`, no approaches are determined at all.
+
+-   `--unverified`|`-u`:
     Generate any *new* plan *without* the `##  VERIFICATION (WHEN)` section.
     Applies only to freshly generated plans, not to existing plans
     loaded from disk. When `ase-task-implement` later applies such
@@ -73,16 +111,24 @@ stale draft.
 
 ##  ARGUMENTS
 
--   *id* | *id*: *instruction* | *instruction*:
-    Edit the task with the unique identifier *id* (default: `default`).
-    Optionally, *instruction* either gives instructions for creating a
-    new task or gives instructions for refining an existing task.
+-   *id* | *id*: *instruction* | *instruction* | *issue-id*:
+    Edit the task with the unique identifier *id* (default: the current
+    task). Optionally, *instruction* either gives instructions for
+    creating a new task or gives instructions for refining an existing
+    task. Instead, a bare *issue-id* (like `P1`, `T1`, or
+    `<prefix>-P1`), previously reported by `ase-code-analyze` or
+    `ase-arch-analyze`, uses the description of this issue as the
+    *instruction* (also as *id*: *issue-id*), and the issue is removed
+    once the plan is saved. If no such issue exists, *issue-id* is
+    treated as a task *id* resp. as an *instruction*.
 
 ##  SCENARIOS
 
 -   You want a task planned through chat-driven refinement
 -   You want a plan created or refined round by round
--   You want a plan iterated on before implementing it
+-   You want approaches with pros and cons before a plan is composed
+-   You want a plan to craft a feature, refactor code, or resolve a problem
+-   You want an analyzer issue like `P1` turned into a plan
 -   You want plan refinement with hand-off to draft or implementation
 
 ##  EXAMPLES
@@ -107,7 +153,21 @@ Further refine the task under id `hello`:
 ❯ /ase-task-edit hello: change the color to red.
 ```
 
+Plan the resolution of the analyzer issue `P1` along an interactively
+chosen approach, and directly hand off to implementation:
+
+```text
+❯ /ase-task-edit --approach --next IMPLEMENT P1
+```
+
+Plan a refactoring under the id `cleanup`:
+
+```text
+❯ /ase-task-edit -m refactor cleanup: extract HTTP client into its own class
+```
+
 ##  SEE ALSO
 
+[`ase-code-edit`](../ase-code-edit/help.md), [`ase-spec-edit`](../ase-spec-edit/help.md), [`ase-task-grill`](../ase-task-grill/help.md),
 [`ase-task-reboot`](../ase-task-reboot/help.md), [`ase-task-implement`](../ase-task-implement/help.md),
 [`ase-task-view`](../ase-task-view/help.md), [`ase-task-list`](../ase-task-list/help.md), [`ase-task-rename`](../ase-task-rename/help.md), [`ase-task-delete`](../ase-task-delete/help.md).

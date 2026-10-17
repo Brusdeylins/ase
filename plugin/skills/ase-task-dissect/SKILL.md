@@ -106,8 +106,7 @@ Procedure
         <expand name="task-load-content"></expand>
 
     2.  If the <task-content/> is still empty, complain and tell
-        the user to use the `ase-code-resolve`, `ase-code-refactor`,
-        `ase-code-craft`, or `ase-task-edit` skills first to create a
+        the user to use the `ase-task-edit` skill first to create a
         task plan. Then immediately stop processing this skill.
 
 3.  **Dissect Task Plan:**

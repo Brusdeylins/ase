@@ -1,12 +1,16 @@
 ---
 name: ase-task-edit
-argument-hint: "[--help|-h] [--plan|-p <option>] [--dry|-d] [--next|-n <option>[,...]] [<id> | <id>: <instruction> | <instruction>]"
+argument-hint: "[--help|-h] [--plan|-p <option>] [--mode|-m auto|craft|refactor|resolve|specify] [--approach|-a] [--unverified|-u] [--next|-n <option>[,...]] [<id> | <id>: <instruction> | <instruction> | <issue-id>]"
 description: >
     Iteratively edit and refine a named plan for a task through a
-    conversational loop. Each round, the current plan is shown and the
-    user is asked whether to keep refining, mark the plan as done, or
-    proceed to the implementation or draft. Use when the user wants
-    to plan a task purely through chat-driven refinement.
+    conversational loop. A new plan is optionally composed along the
+    chosen one of several proposed crafting, refactoring, resolution, or
+    specification approaches. Each round, the current plan is shown and the user is
+    asked whether to keep refining, mark the plan as done, or proceed to
+    the implementation or draft. Use when the user wants to plan a task
+    purely through chat-driven refinement, or wants a plan to "craft" a
+    new feature, "refactor" the code base, or "resolve" a problem (also
+    from a bare analyzer issue id like "P1").
 user-invocable: true
 disable-model-invocation: false
 effort: high
@@ -23,7 +27,7 @@ Iteratively Edit a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-edit"
-    arg2="--plan|-p=(none|OVERWRITE|REFINE|PRESERVE) --dry|-d --next|-n=(none|DONE|GRILL|DRAFT|IMPLEMENT)... --int-reuse-task --int-source-dir=">
+    arg2="--plan|-p=(none|OVERWRITE|REFINE|PRESERVE) --mode|-m=(auto|craft|refactor|resolve|specify) --approach|-a --unverified|-u --next|-n=(none|DONE|GRILL|DRAFT|IMPLEMENT)... --int-reuse-task --int-source-dir=">
     $ARGUMENTS
 </expand>
 
@@ -37,11 +41,38 @@ draft.
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-task.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-format-meta.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-task.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-common-approach.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
 
 Procedure
 ---------
 
 <define name="apply-refinement">
+Determine the *kind of change* of the refined plan:
+
+-   If <getopt-option-mode/> is `craft`, `refactor`, `resolve`, or
+    `specify`: Set <task-kind/> to `CRAFTING`, `REFACTORING`,
+    `RESOLVING`, or `SPECIFYING` correspondingly, and set
+    <task-kind-changed>true</task-kind-changed>.
+
+-   Else if <issue-id/> is not empty (`auto` with a retrieved analyzer
+    issue): Set <task-kind/> to `RESOLVING`, as the refinement fixes a
+    reported problem, and set <task-kind-changed>true</task-kind-changed>.
+
+-   Else (`auto`): Set <task-kind/> to the value of the `Kind:`
+    frontmatter key of <task-content/> (or, if it is absent or invalid,
+    *infer* it from the plan content, defaulting to `CRAFTING`), and set
+    <task-kind-changed>false</task-kind-changed>.
+
+You *MUST* then first forget all previous internalized tenets and then
+freshly internalize and strictly honor the **GENERIC TENETS** and the
+**<task-kind/> TENETS** of the **ASE Tenets** in the following
+refinement of the plan. Do not output anything.
+
+<if condition="<task-kind/> is equal `SPECIFYING`">
+<expand name="task-spec-format"/>
+</if>
+
 Treat the <instruction/> as a *refinement instruction* for
 the plan, and update <task-content/> in-place by *applying* the
 requested <instruction/> to the *plan*.
@@ -75,19 +106,129 @@ kind="draft"`, from `ase-task-implement --draft`) hence
 turns *stale* through a "body" change by its `Modified` key falling
 behind the frontmatter, which step 3.3 reports.
 
+<if condition="<task-kind-changed/> is equal `true`">
+Set the `Kind:` frontmatter key of <task-content/> to <task-kind/> --
+*creating* the key at its position in the key order of the plan
+<format/> if it is absent.
+</if>
+
 Set <task-content-dirty>true</task-content-dirty>.
 </define>
 
 <define name="generate-plan">
 <expand name="task-ground-plan" arg1="<getopt-option-int-source-dir/>"/>
 
+Determine the *kind of change* of the new plan:
+
+-   If <getopt-option-mode/> is `craft`, `refactor`, `resolve`, or
+    `specify`: Set <task-kind/> to `CRAFTING`, `REFACTORING`,
+    `RESOLVING`, or `SPECIFYING` correspondingly.
+
+-   Else if <issue-id/> is not empty (`auto` with a retrieved analyzer
+    issue): Set <task-kind/> to `RESOLVING`, as the plan fixes a
+    reported problem.
+
+-   Else (`auto`): *Infer* the <task-kind/> from the <instruction/>:
+    set to `SPECIFYING` if the plan predominantly creates or revises the
+    statements of the `SPEC` artifacts, set to `RESOLVING` if it
+    predominantly fixes a defect, set to `REFACTORING` if it
+    predominantly re-structures existing artifacts without changing
+    their observable behavior, and set to `CRAFTING` otherwise (also
+    the default if the inference stays inconclusive).
+
+Set <approach-kind/> to `specification`, `resolution`, `refactoring`,
+or `crafting` for the <task-kind/> `SPECIFYING`, `RESOLVING`,
+`REFACTORING`, or `CRAFTING` correspondingly. You *MUST* then first
+forget all previous internalized tenets and then freshly internalize
+and strictly honor the **GENERIC TENETS** and the **<task-kind/>
+TENETS** of the **ASE Tenets** in the following composition of the
+plan. Do not output anything.
+
+<if condition="<task-kind/> is equal `SPECIFYING`">
+<expand name="task-spec-format"/>
+</if>
+
+<if condition="
+    <task-kind/> is equal `RESOLVING` and
+    <ase-project-boxing/> is not equal `black` and
+    <ase-headless/> is not equal `true`
+">
+Investigate and *figure out details* related to the problem of the
+<instruction/> and report them with the following <template/>:
+
+<template>
+<ase-tpl-bullet-signal/> **PROBLEM CONTEXT**: *<context/>*
+<affected-code-excerpt/>
+<optional-diagram/>
+
+<ase-tpl-bullet-signal/> **PROBLEM DETAILS**: *<summary/>*
+● [...]
+● [...]
+● [...]
+</template>
+
+Hints:
+
+- Give a short one-sentence <context/> of the problem plus a short
+  excerpt of the affected code <affected-code-excerpt/>.
+
+- Give a short one-sentence <summary/> of the problem plus *precise*
+  but *brief* code processing information to understand the problem.
+  Try to keep the number of bullet points (●) in the range of 1-4.
+
+- In case of a *complex context situation* with complex *structure*
+  (layout, components, dependencies, etc.), complex *control flow*
+  (branching, concurrency, etc.), complex *state machine* (states,
+  transitions, etc.), complex *data flow* (actors, messages, etc.), or
+  complex *data structure* (classes, entities, relationships, etc.),
+  visualize it with an optional diagram <optional-diagram/> by
+  building a Mermaid specification <mermaid-spec/> (e.g. `flowchart
+  TB`, `stateDiagram-v2`, `sequenceDiagram`, `classDiagram`, or
+  `erDiagram`, depending on intent) and dispatching the rendering
+  to the `ase-meta-diagram` sub-agent by calling the tool
+  `Agent(description: "Diagram Rendering", subagent_type:
+  "ase:ase-meta-diagram", prompt: <mermaid-spec/>,
+  run_in_background: false)`, reproducing its
+  returned fenced code block verbatim. Omit <optional-diagram/>
+  entirely for simple or purely local situations.
+</if>
+
+<if condition="<getopt-option-approach/> is equal `true`">
+Determine the overall approach of the new plan, based on the
+<instruction/> and the grounding in the project:
+
+<expand name="approach-select"
+    arg1="<approach-kind/>"
+    arg2="◉ task: **<ase-task-id/>**"></expand>
+
+If <chosen-approach/> is empty, only output the following <template/> and
+then immediately *STOP* processing the entire current skill:
+
+<template>
+⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan generation cancelled**
+</template>
+</if>
+<else>
+Set <chosen-approach></chosen-approach> (empty). Do not output anything.
+</else>
+
 Create a new plan from scratch and store the result as
 <task-content/> by closely following the defined plan format
 <format/> and injecting into it all the information from
-the <instruction/>, all decisions you derived from the
-<instruction/>, and the grounding in the project.
+the <instruction/>, the <chosen-approach/> (if not empty), all
+decisions you derived from the <instruction/> and the <chosen-approach/>, and
+the grounding in the project. Set the `Kind:` frontmatter key to
+<task-kind/>.
 
-<if condition="<getopt-option-dry/> is equal `true`">
+<if condition="<task-kind/> is equal `RESOLVING`">
+The plan *MUST* carry code references, a precise description of the
+problem, the resolution approach, a preview of the *unified
+diff* of the necessary code changes, and -- unless
+<getopt-option-unverified/> is equal `true` -- a possible way to verify the
+success of the resolution.
+</if>
+
+<if condition="<getopt-option-unverified/> is equal `true`">
 You *MUST* completely omit the `##  VERIFICATION (WHEN)` section
 (including its heading and all of its bullet points) from
 <task-content/>.
@@ -114,13 +255,50 @@ Set <args></args> (set args to empty).
 1.  **Determine Task and Instruction:**
 
     1.  Set <instruction><getopt-arguments/></instruction> initially.
+        Set <issue-id></issue-id> (empty),
+        <task-allocated>false</task-allocated>, and
+        <task-origin>task inherited</task-origin>.
         Inherit the always existing <ase-task-id/> from the current context.
         Inherit the always existing <ase-session-id/> from the current context.
         Do not output anything.
 
-    2.  React on task and/or instruction:
+    2.  Resolve a potential analyzer issue:
+
+        <if condition="
+            <instruction/> has the format `[<id/>:] <candidate/>` where
+            the optional <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$` and
+            <candidate/> matches the regexp `^([a-zA-Z][a-zA-Z0-9_]*-)?[PT]\d+$`
+        ">
+        The <candidate/> may be a bare issue identifier (like `P1`,
+        `T1`, or `<prefix>-P1`) previously produced by
+        `ase-code-analyze` or `ase-arch-analyze`. Call the
+        `ase_kv_get(key: "ase-issue-<candidate/>")` tool of the `ase`
+        MCP server to retrieve the persisted problem description. If the
+        returned `text` is non-empty:
+
+        1.  Set <issue-id><candidate/></issue-id> and
+            <instruction><text/></instruction>.
+
+        2.  If <id/> is given, set <ase-task-id><id/></ase-task-id> and
+            <task-origin>task given</task-origin>, and call the
+            `ase_task_id(id: "<ase-task-id/>", session:
+            "<ase-session-id/>")` tool from the `ase` MCP server to
+            switch the task.
+
+        3.  Only output the following <template/>:
+
+            <template>
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ issue: **<issue-id/>**, ▶ status: **issue retrieved**
+            </template>
+
+        Otherwise, keep <instruction/> unchanged, so it is treated as a
+        task id resp. as an instruction below. Do not output anything.
+        </if>
+
+    3.  React on task and/or instruction:
 
         1.  <if condition="
+                <issue-id/> is empty and
                 <instruction/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$`
             ">
             Set <ase-task-id><instruction/></ase-task-id> (set task
@@ -136,6 +314,7 @@ Set <args></args> (set args to empty).
             </if>
 
         2.  <elseif condition="
+                <issue-id/> is empty and
                 <instruction/> has the format `<id/>: <text/>` where
                 <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$` and
                 <text/> is *empty*
@@ -153,6 +332,7 @@ Set <args></args> (set args to empty).
             </elseif>
 
         3.  <elseif condition="
+                <issue-id/> is empty and
                 <instruction/> has the format `<id/>: <text/>` where
                 <id/> matches the regexp `^[a-zA-Z0-9#][a-zA-Z0-9#_-]*$` and
                 <text/> is *not empty*
@@ -173,10 +353,11 @@ Set <args></args> (set args to empty).
         4.  <elseif condition="
                 <instruction/> is not empty
             ">
-            Only output the following <template/>:
+            Only output the following <template/>, where <task-origin/>
+            is `task given` if step 1.2 switched the task:
 
             <template>
-            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **task inherited**
+            ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **<task-origin/>**
             ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ⇌ instruction: **<instruction/>**, ▶ status: **instruction given**
             </template>
             </elseif>
@@ -269,7 +450,31 @@ Set <args></args> (set args to empty).
         </template>
         </if>
 
-    3.  <if condition="<task-content/> is not empty AND
+    3.  <if condition="
+            <ase-task-id/> is equal `default` AND
+            <task-content/> is empty AND
+            <instruction/> is not empty
+        ">
+        Call the `ase_task_newid(title: "<title/>", proposal:
+        "<proposal/>")` tool from the `ase` MCP server, where <title/> is
+        a brief title summarizing <instruction/> and <proposal/> is a
+        task id derived from <instruction/>, which consists of two
+        lower-case words concatenated with a `-` character, and set
+        <ase-task-id/> to the `id` field of its response -- the tool
+        derives the id according to the task id scheme of the project,
+        so you *MUST* *NEVER* assemble it yourself. Then call the
+        `ase_task_id(id: "<ase-task-id/>", session: "<ase-session-id/>")`
+        tool from the `ase` MCP server to switch the task, set
+        <task-tag></task-tag> (empty, as no plan exists yet under the
+        new id) and <task-allocated>true</task-allocated>, and only
+        output the following <template/>:
+
+        <template>
+        ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **task allocated**
+        </template>
+        </if>
+
+    4.  <if condition="<task-content/> is not empty AND
             <instruction/> is not empty AND
             <instruction/> is not equal <task-content/>">
         *Determine previous-plan handling*:
@@ -340,14 +545,14 @@ Set <args></args> (set args to empty).
             </template>
         </if>
 
-    4.  <if condition="no line of <task-content/> matches the case-insensitive regex `^\s*#+\s*TASK\b` AND <instruction/> is empty">
+    5.  <if condition="no line of <task-content/> matches the case-insensitive regex `^\s*#+\s*TASK\b` AND <instruction/> is empty">
         Set <instruction><task-content/></instruction> (set instruction to task content).
         Set <task-content></task-content> (set task content to empty).
         Set <task-content-dirty>true</task-content-dirty>.
         Do not output anything.
         </if>
 
-    5.  <if condition="<task-content/> is empty AND <instruction/> is not empty">
+    6.  <if condition="<task-content/> is empty AND <instruction/> is not empty">
         <expand name="generate-plan"/>
 
         Only output the following <template/> and continue processing:
@@ -397,8 +602,12 @@ Set <args></args> (set args to empty).
         persist the current plan -- <task-content/> always is the
         *authoring form* of the plan and hence is persisted *as is* --
         and then set <task-content-dirty>false</task-content-dirty>
-        again. This `ase_task_save` MCP tool call is the *only*
-        permitted way to persist the plan -- *NEVER* write the plan
+        again. If this call fails because the task already exists *and*
+        <task-allocated/> is `true` (a concurrent session took the
+        allocated id), allocate and switch to a new <ase-task-id/>
+        exactly as in step 2.3, set the `Id:` frontmatter key of
+        <task-content/> to it, and save again. This `ase_task_save` MCP
+        tool call is the *only* permitted way to persist the plan -- *NEVER* write the plan
         file via `Write`/`Edit` or by executing a shell command.
         Finally, *always* set <task-tag/> to the content enclosed in the
         `<task-plan-tag>` delimiter line of the `text` *output* field of
@@ -424,6 +633,13 @@ Set <args></args> (set args to empty).
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan saved**
         </template>
+
+        Then set <task-allocated>false</task-allocated>, as the
+        allocated id is now taken by the saved plan. If <issue-id/> is
+        not empty, call the `ase_kv_delete(key: "ase-issue-<issue-id/>")`
+        tool of the `ase` MCP server to remove the now-planned analyzer
+        result from the key/value store and set <issue-id></issue-id>
+        (empty). Do not output anything related to these steps.
         </if>
 
     3.  *Render plan*:

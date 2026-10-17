@@ -79,8 +79,7 @@ Procedure
         <expand name="task-load-content"></expand>
 
     2.  If the <task-content/> is still empty, complain and tell the user to
-        use the `ase-code-resolve`, `ase-code-refactor`, `ase-code-craft`,
-        or `ase-task-edit` skills first to create a task plan, and
+        use the `ase-task-edit` skill first to create a task plan, and
         `ase-task-implement` to create its change set. Then immediately
         stop processing this skill.
 

@@ -64,7 +64,7 @@ problem as a `PROBLEM` entry with severity (`LOW`, `MEDIUM`, `HIGH`) and
 inline file/line references (in the performance lens, each entry
 additionally carries an *evidence* and a *trade-off* line), and persists
 results in the `ase` MCP key/value store as `ase-issue-P<n>` entries so
-they can later be resolved via `ase-code-resolve P<n>` or directly
+they can later be planned via `ase-task-edit P<n>` or directly
 fixed via `ase-code-edit P<n>`.
 
 ##  ARGUMENTS
@@ -134,5 +134,5 @@ Analyze only the unstaged and untracked source files below a directory:
 
 ##  SEE ALSO
 
-[`ase-code-resolve`](../ase-code-resolve/help.md), [`ase-code-refactor`](../ase-code-refactor/help.md), [`ase-code-lint`](../ase-code-lint/help.md),
+[`ase-task-edit`](../ase-task-edit/help.md), [`ase-code-edit`](../ase-code-edit/help.md), [`ase-code-lint`](../ase-code-lint/help.md),
 [`ase-code-explain`](../ase-code-explain/help.md), [`ase-arch-analyze`](../ase-arch-analyze/help.md).

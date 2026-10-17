@@ -83,8 +83,8 @@ see whether **ASE** is right for you:
   You prefer a plan-driven approach, but the agent harness's
   Plan Mode is too unstructured and too direct because you want to
   leverage a funnel of alternative approaches first?
-  &rarr; [`/ase-code-craft`](plugin/skills/ase-code-craft/help.md)
-  `hello: "ase hello" CLI command which prints a nice "Hello World" in red`
+  &rarr; [`/ase-task-edit`](plugin/skills/ase-task-edit/help.md)
+  `-a hello: "ase hello" CLI command which prints a nice "Hello World" in red`
 
 - **Named and Persisted Plans**:
   You prefer a plan-driven approach, but the agent harness's Plan Mode is
@@ -287,15 +287,15 @@ see whether **ASE** is right for you:
   You want a problem or bug resolved through a structured, plan-driven
   funnel of candidate root causes and fix approaches instead of a direct,
   unstructured patch?
-  &rarr; [`/ase-code-resolve`](plugin/skills/ase-code-resolve/help.md)
-  `the CLI crashes on an empty config file`
+  &rarr; [`/ase-task-edit`](plugin/skills/ase-task-edit/help.md)
+  `-a -m resolve the CLI crashes on an empty config file`
 
 - **Guided Refactoring**:
   You want the code base refactored through a structured funnel of
   alternative refactoring approaches, optionally captured as a named,
   persisted task plan?
-  &rarr; [`/ase-code-refactor`](plugin/skills/ase-code-refactor/help.md)
-  `extract the config loading into a dedicated module`
+  &rarr; [`/ase-task-edit`](plugin/skills/ase-task-edit/help.md)
+  `-a -m refactor extract the config loading into a dedicated module`
 
 - **Architecture Analysis**:
   You want your software architecture reviewed for package cohesion and

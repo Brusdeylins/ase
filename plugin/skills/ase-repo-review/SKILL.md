@@ -380,7 +380,7 @@ Procedure
 
         <if condition="<verdict/> starts with `REJECT`">
         <ase-tpl-hint level="normal">
-        Use `/ase-code-resolve` to derive and apply a solution approach for the findings which demand changes.
+        Use `/ase-task-edit` to derive a solution approach and plan for the findings which demand changes.
         </ase-tpl-hint>
         </if>
 

@@ -285,7 +285,7 @@ Honor the following tenets throughout the brainstorming:
         into nothing and hence emit no output at all):
 
         <ase-tpl-hint level="normal">
-        To turn the recommended idea into a plan, use `/ase-task-edit`; to turn it directly into code, use `/ase-code-craft`.
+        To turn the recommended idea into a plan, use `/ase-task-edit`; to turn it directly into code, use `/ase-code-edit`.
         </ase-tpl-hint>
 
     </step>

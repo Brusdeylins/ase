@@ -69,5 +69,5 @@ Analyze a module under its own id namespace, yielding `core-P1`, `core-T1`, ...:
 
 ##  SEE ALSO
 
-[`ase-arch-discover`](../ase-arch-discover/help.md), [`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-code-resolve`](../ase-code-resolve/help.md),
-[`ase-code-refactor`](../ase-code-refactor/help.md), [`ase-code-insight`](../ase-code-insight/help.md).
+[`ase-arch-discover`](../ase-arch-discover/help.md), [`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-task-edit`](../ase-task-edit/help.md),
+[`ase-code-edit`](../ase-code-edit/help.md), [`ase-code-insight`](../ase-code-insight/help.md).

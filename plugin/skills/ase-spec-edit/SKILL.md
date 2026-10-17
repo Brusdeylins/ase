@@ -1,6 +1,6 @@
 ---
 name: ase-spec-edit
-argument-hint: "[--help|-h] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--grill-perspective|-p <perspective>] [--grill-ground|-G] [--verify|-v] [--worktree|-w <name>[:<branch>]] [--loop|-l] [<query>]"
+argument-hint: "[--help|-h] [--approach|-a] [--grill|-g] [--grill-rounds|-r <n>] [--grill-until|-u MUST|SHOULD|MAY] [--grill-perspective|-p <perspective>] [--grill-ground|-G] [--verify|-v] [--worktree|-w <name>[:<branch>]] [--loop|-l] [<query>]"
 description: >
     Edit Specification: Use when the user wants to "edit" the
     SpecBook-based specification (SPEC) in one shot from a query, with
@@ -22,7 +22,7 @@ Edit Specification
 
 <expand name="getopt"
     arg1="ase-spec-edit"
-    arg2="--grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --grill-perspective|-p= --grill-ground|-G --verify|-v --worktree|-w= --loop|-l">
+    arg2="--approach|-a --grill|-g --grill-rounds|-r=1 --grill-until|-u=(MUST|SHOULD|MAY) --grill-perspective|-p= --grill-ground|-G --verify|-v --worktree|-w= --loop|-l">
     $ARGUMENTS
 </expand>
 
@@ -37,6 +37,7 @@ pruning its statements in one shot -- through the states *querying*,
 @${CLAUDE_SKILL_DIR}/../../meta/ase-tenets.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-grill.md
 @${CLAUDE_SKILL_DIR}/../../meta/ase-common-changeset.md
+@${CLAUDE_SKILL_DIR}/../../meta/ase-common-approach.md
 
 Procedure
 ---------
@@ -313,11 +314,36 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         the following creation and updating of specification content. Do
         not output anything.
 
-    2.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the
+    2.  <if condition="<getopt-option-approach/> is equal `true`">
+
+        Determine the overall approach of the edit, based on
+        <todo-what/> and <todo-how/> plus the information gathered in
+        the *discovering* state:
+
+        <expand name="approach-select"
+            arg1="specification"
+            arg2="✪ skill: **ase-spec-edit**"></expand>
+
+        If <chosen-approach/> is empty, only output the following <template/>
+        and then immediately *STOP* processing the entire current skill:
+
+        <template>
+        ⧉ **ASE**: ✪ skill: **ase-spec-edit**, ▶ status: **editing stopped**
+        </template>
+
+        Otherwise, merge <chosen-approach/> *exclusively* into <todo-how/>,
+        where the chosen approach overrides any conflicting
+        implementation detail, and expand the following:
+
+        <expand name="todo-box" arg1="current state (after approaching)"></expand>
+
+        </if>
+
+    3.  Call the `ase_timestamp(format: "yyyy-LL-dd HH:mm")` tool of the
         `ase` MCP server *once* to find out the current time and store
         it in <timestamp-modified/>. Do not output anything.
 
-    3.  Apply the edit by modifying the affected `SPEC` *artifacts* with
+    4.  Apply the edit by modifying the affected `SPEC` *artifacts* with
         a corresponding, complete *change set*, honoring *only*
         <todo-what/> and <todo-how/> plus the information gathered in
         the *discovering* state.
@@ -344,7 +370,7 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         <expand name="changeset-land" arg1="<worktree-dir/>"></expand>
         </if>
 
-    4.  Output only the following <template/>. You *MUST* *NOT* output a
+    5.  Output only the following <template/>. You *MUST* *NOT* output a
         change summary, a list of modified artifacts, a rationale, or a
         unified diff of the changes -- *independent* of
         <ase-project-boxing/>, whose exposure rules are explicitly

@@ -5,6 +5,20 @@ ChangeLog
 1.1.0 (2026-10-XX)
 ------------------
 
+-   CHANGE [plugin,pages]: Fold `ase-code-{craft,refactor,resolve}` into the Edit Skills
+    The skills `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` were removed, as
+    their approach determination and selection moved into the shared `ase-common-approach.md`
+    and into the edit skills: `ase-task-edit` now determines the kind of change of a new plan
+    (or takes it from the new option `--mode`), internalizes its tenets, stores it in the `Kind:`
+    key, reports the problem context of a resolution, and, under the new option `--approach`,
+    composes the plan along the chosen one of several proposed approaches. Additionally, it
+    accepts a bare analyzer issue id like `P1` as its instruction, allocates a new task id for
+    a new plan instead of planning under the `default` task, and its option `--dry` was renamed
+    to `--unverified`. The plan-less `ase-code-edit` and `ase-spec-edit` skills support the
+    approach selection via the same new option `--approach`. Finally, `ase-task-edit` and
+    `ase-task-implement` load the `SPEC` format on demand whenever a plan specifies or
+    changes `SPEC` artifacts.
+
 -   FEATURE [plugin,tool]: Task Effort Estimation
     Task plans now carry an optional `Effort:` key, the expected human time as T-shirt size
     `XS` to `XL` on a logarithmic scale (`project.task.effort.scale`), bound to the plan content

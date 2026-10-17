@@ -57,9 +57,7 @@ given -- each part is materialized as its own *complete* sub-task plan
 
 -   `--dry`|`-d`:
     *Report only* -- print the dissection table but create *no*
-    artifacts at all, so the decision stays fully reversible. Note that
-    this meaning differs from `--dry`/`-d` in `ase-code-craft`, where it
-    instead omits the `##  VERIFICATION (WHEN)` section of the composed plan.
+    artifacts at all, so the decision stays fully reversible.
 
 -   `--force`|`-f`:
     Overwrite already existing sub-task plans. Without this option, the

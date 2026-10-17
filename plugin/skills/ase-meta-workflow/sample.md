@@ -48,7 +48,7 @@ Analyze and Resolve Source Code Problems
             isolation="worktree"
             run_in_background=true>
 
-            1.  Run <skill name="ase:ase-code-resolve" args="-a <id/>-P<n/>"/>
+            1.  Run <skill name="ase:ase-task-edit" args="--next DONE <id/>-P<n/>: <id/>-P<n/>"/>
 
             2.  Run <skill name="ase:ase-task-implement" args="<id/>-P<n/>"/>
 

@@ -159,5 +159,5 @@ Lint only the unstaged and untracked source files and apply all corrections:
 
 ##  SEE ALSO
 
-[`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-code-resolve`](../ase-code-resolve/help.md), [`ase-code-refactor`](../ase-code-refactor/help.md),
+[`ase-code-analyze`](../ase-code-analyze/help.md), [`ase-code-edit`](../ase-code-edit/help.md), [`ase-task-edit`](../ase-task-edit/help.md),
 [`ase-docs-proofread`](../ase-docs-proofread/help.md).

@@ -97,8 +97,7 @@ before any artifact is touched, in addition to the always applying
 *inferred* from the plan content, defaulting to `CRAFTING`.
 
 If the task plan deliberately *omits* the `##  VERIFICATION (WHEN)` section
-(as produced by `ase-code-craft`, `ase-code-refactor`,
-`ase-code-resolve`, or `ase-task-edit` when invoked with `--dry`),
+(as produced by `ase-task-edit` when invoked with `--unverified`),
 the entire verification phase is strictly skipped: no build, tests,
 linter, type-checker, or program execution is performed once the
 source files have been modified.
