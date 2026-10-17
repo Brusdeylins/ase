@@ -42,7 +42,7 @@ const { count = 0 } = Astro.props
     if (target) {
         const allCommands = [
             [   "Craft new feature from scratch",
-                "/ase-code-craft", "--quick hello: new \"ase hello\" CLI command which prints \"Hello World\" to the terminal" ],
+                "/ase-code-edit", "new \"ase hello\" CLI command which prints \"Hello World\" to the terminal" ],
             [   "Edit code under relentless grilling",
                 "/ase-code-edit", "--grill swap Yargs with Commander.js for option parsing" ],
             [   "Hunt logic, performance, and security flaws",
@@ -58,7 +58,7 @@ const { count = 0 } = Astro.props
             [   "Challenge thesis as devil's advocate",
                 "/ase-meta-diaboli", "--count=5 Yargs would be better than Commander.js for the ASE CLI" ],
             [   "Restructure code without changing behavior",
-                "/ase-code-refactor", "move the MCP code into its own separated class" ],
+                "/ase-task-edit", "--mode refactor move the MCP code into its own separated class" ],
             [   "Extract ranked key points",
                 "/ase-docs-distill", "--top=5 @docs/architecture.md" ],
             [   "Compare alternatives in a weighted matrix",
@@ -72,7 +72,7 @@ const { count = 0 } = Astro.props
             [   "Diverge, cluster, and shortlist ideas",
                 "/ase-meta-brainstorm", "--max-clarify=0 --min-ideas=20 clever and useful AI skills for software engineering" ],
             [   "Diagnose and resolve a problem",
-                "/ase-code-resolve", "unexpected service crash when agent tool is upgraded" ],
+                "/ase-task-edit", "--mode resolve unexpected service crash when agent tool is upgraded" ],
             [   "Explore the neighborhood of a topic",
                 "/ase-meta-proximity", "REST API" ],
             [   "Search the Web for a consolidated answer",

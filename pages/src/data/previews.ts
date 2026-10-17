@@ -31,7 +31,6 @@ import Shield                  from "@lucide/astro/icons/shield"
 import Pyramid                 from "@lucide/astro/icons/pyramid"
 import SpellCheck              from "@lucide/astro/icons/spell-check"
 import Bug                     from "@lucide/astro/icons/bug"
-import Funnel                  from "@lucide/astro/icons/funnel"
 import ClipboardCheck          from "@lucide/astro/icons/clipboard-check"
 import Tag                     from "@lucide/astro/icons/tag"
 
@@ -148,17 +147,6 @@ export const highlights: Highlight[] = [
                  "evidence-grounded, line-cited findings instead of vague hand-waving.",
         skill:   "/ase-code-analyze --severity=MEDIUM @tool/src/",
         video:   "ase-code-analyze"
-    },
-    {
-        icon:    Funnel,
-        eyebrow: "Alternative Approach Funnel",
-        title:   "Craft through a funnel of approaches",
-        body:    "Plan-driven, but not too direct and hence with enough preliminary consideration: " +
-                 "<b>ASE</b> first proposes a \"funnel\" of crafting alternative approaches, " +
-                 "lets you pick a suitable one, and only then composes a structured task plan.",
-        skill:   "/ase-code-craft --next IMPLEMENT,DELETE hello: \"ase hello\" CLI command which " +
-                 "prints a nice \"Hello World!\" in blue to the terminal",
-        video:   "ase-code-craft"
     },
     {
         icon:    ClipboardCheck,

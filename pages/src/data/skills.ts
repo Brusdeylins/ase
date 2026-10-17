@@ -16,7 +16,7 @@ export interface SkillGroup {
 
 export const skillGroups: SkillGroup[] = [
     {
-        label: "Standalone Mode 1/2",
+        label: "Standalone Mode 1/3",
         skills: [
             "ase-help-skill",
             "ase-help-intent",
@@ -35,19 +35,26 @@ export const skillGroups: SkillGroup[] = [
         ]
     },
     {
-        label: "Standalone Mode 2/2",
+        label: "Standalone Mode 2/3",
         skills: [
             "ase-meta-compat",
             "ase-meta-mint",
             "ase-meta-workflow",
+            "ase-arch-analyze",
             "ase-arch-discover",
+            "ase-code-analyze",
             "ase-code-insight",
             "ase-code-explain",
             "ase-code-lint",
             "ase-docs-shorten",
             "ase-docs-refine",
             "ase-docs-proofread",
-            "ase-docs-distill",
+            "ase-docs-distill"
+        ]
+    },
+    {
+        label: "Standalone Mode 3/3",
+        skills: [
             "ase-repo-review",
             "ase-repo-diff",
             "ase-repo-changelog",
@@ -76,16 +83,6 @@ export const skillGroups: SkillGroup[] = [
             "ase-task-dissect",
             "ase-task-estimate",
             "ase-task-delete"
-        ]
-    },
-    {
-        label: "Funnel Mode",
-        skills: [
-            "ase-arch-analyze",
-            "ase-code-analyze",
-            "ase-code-craft",
-            "ase-code-refactor",
-            "ase-code-resolve"
         ]
     },
     {

@@ -6,7 +6,7 @@
 
 /*  shared CLI manual page catalog: all `tool/man/<name>.md` pages of the
     `ase` command, read at build time and arranged into the command tree
-    (`ase` > `ase task` > `ase task list`). Both the CLI command row in
+    (`ase` > `ase task` > `ase task list`). Both the CLI command columns in
     `Section-Usage.astro` and the sidebar and pane of `Modal-Help.astro`
     are driven by this list, so the two stay in sync (DRY).  */
 
@@ -70,4 +70,43 @@ const walk = (name: string, label: string, depth: number) => {
 }
 for (const root of names.filter((name) => parentOf(name) === ""))
     walk(root, root.replace(/-/g, " "), 0)
+
+/*  group the command tree for the catalogs: "ase" itself and the top-level
+    commands without sub-commands form the "Top-Level" group, and every
+    other top-level command forms an own group with all of its deeper
+    commands, both in the depth-first order of the command tree.  */
+export interface ManGroup {
+    label: string       /*  group label, e.g. "setup"                      */
+    pages: ManPage[]    /*  pages of the group, in command tree order      */
+}
+const treeGroups: ManGroup[] = [ { label: "Top-Level", pages: [] } ]
+for (const page of manPages) {
+    if (page.depth === 0)
+        treeGroups[0].pages.push(page)
+    else if (page.depth === 1) {
+        if (manPages.some((other) => other.depth > 1 && other.label.startsWith(page.label + " ")))
+            treeGroups.push({ label: page.label.slice(page.label.lastIndexOf(" ") + 1), pages: [ page ] })
+        else
+            treeGroups[0].pages.push(page)
+    }
+    else
+        treeGroups[treeGroups.length - 1].pages.push(page)
+}
+
+/*  the arrangement of the groups into the five catalog columns of
+    `Section-Usage.astro`, which, read top to bottom and left to right,
+    also defines the order of the groups in the sidebar of
+    `Modal-Help.astro`, where any group not explicitly placed here (like
+    the one of a newly added top-level command) is appended to the last
+    column, so it never silently drops out of the catalogs.  */
+export const manColumns: ManGroup[][] = [
+    [ "Top-Level", "setup" ],
+    [ "config", "service" ],
+    [ "task" ],
+    [ "spec", "util", "artifact" ],
+    [ "agent", "hook" ]
+].map((labels) => labels.map((label) => treeGroups.find((group) => group.label === label)!))
+const placed = new Set(manColumns.flat())
+manColumns[manColumns.length - 1].push(...treeGroups.filter((group) => !placed.has(group)))
+export const manGroups: ManGroup[] = manColumns.flat()
 

@@ -26,7 +26,7 @@ import path            from "node:path"
 import { marked }      from "marked"
 import Modal           from "./Modal-Shell.astro"
 import { skillGroups } from "../data/skills.ts"
-import { manPages }    from "../data/manpages.ts"
+import { manPages, manGroups } from "../data/manpages.ts"
 
 /*  locate the in-repo skills directory relative to the `pages/` project root
     (`pages/etc/astro.config.mjs` runs from there), mirroring the `node:fs` +
@@ -134,37 +134,48 @@ orderedDocs.push(...cliDocs)
                 />
                 <p id="help-search-hint" class="mt-2 hidden text-xs italic text-foreground-muted">no matches</p>
             </div>
-            {skillGroups.map((group) => (
-                <div class="mb-4" data-help-group>
-                    <p class="text-xs font-bold uppercase tracking-wider text-accent">{group.label}</p>
-                    <ul class="mt-2 space-y-0.5 text-sm leading-tight text-foreground-secondary">
-                        {group.skills.filter((id) => helpDocs[id]).map((id) => (
-                            <li>
-                                <button
-                                    type="button"
-                                    data-help-id={id}
-                                    class="block w-full cursor-grab text-left text-foreground-secondary transition-colors hover:text-white"
-                                >{id}</button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            ))}
-            {/* the CLI command tree, shown in its command form and indented
-                below the top-level commands to reflect the nesting */}
+            {/* the two top-level sections, each headed in bold white and
+                itself a "data-help-group", so the search also hides a
+                section whose groups all ran empty */}
+            <div class="mb-6" data-help-group>
+                <p class="mb-3 text-sm font-bold uppercase tracking-wider text-white">Skills</p>
+                {skillGroups.map((group) => (
+                    <div class="mb-4" data-help-group>
+                        <p class="text-xs font-bold uppercase tracking-wider text-accent">{group.label}</p>
+                        <ul class="mt-2 space-y-0.5 text-sm leading-none text-foreground-secondary">
+                            {group.skills.filter((id) => helpDocs[id]).map((id) => (
+                                <li>
+                                    <button
+                                        type="button"
+                                        data-help-id={id}
+                                        class="block w-full cursor-grab text-left text-foreground-secondary transition-colors hover:text-white"
+                                    >{id}</button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
+            {/* the CLI commands, shown in their command form and grouped by
+                their top-level command */}
             <div class="mb-4" data-help-group>
-                <p class="text-xs font-bold uppercase tracking-wider text-accent">CLI Commands</p>
-                <ul class="mt-2 space-y-0.5 text-sm leading-tight text-foreground-secondary">
-                    {manPages.map((page) => (
-                        <li style={`padding-left: ${Math.max(0, page.depth - 1) * 0.75}rem`}>
-                            <button
-                                type="button"
-                                data-help-id={page.id}
-                                class="block w-full cursor-grab text-left text-foreground-secondary transition-colors hover:text-white"
-                            >{page.label}</button>
-                        </li>
-                    ))}
-                </ul>
+                <p class="mb-3 text-sm font-bold uppercase tracking-wider text-white">Commands</p>
+                {manGroups.map((group) => (
+                    <div class="mb-4" data-help-group>
+                        <p class="text-xs font-bold uppercase tracking-wider text-accent">{group.label}</p>
+                        <ul class="mt-2 space-y-0.5 text-sm leading-none text-foreground-secondary">
+                            {group.pages.map((page) => (
+                                <li>
+                                    <button
+                                        type="button"
+                                        data-help-id={page.id}
+                                        class="block w-full cursor-grab text-left text-foreground-secondary transition-colors hover:text-white"
+                                    >{page.label}</button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
             </div>
         </nav>
 
@@ -385,8 +396,8 @@ orderedDocs.push(...cliDocs)
 
         /*  fill the text/word caches of an article and feed the corpus
             vocabulary. Words are the same `[^a-zA-Z0-9]+`-delimited segments
-            `@rse/stx` matches its task names by, so "ase-code-craft" also
-            contributes "ase", "code", and "craft".  */
+            `@rse/stx` matches its task names by, so "ase-code-edit" also
+            contributes "ase", "code", and "edit".  */
         const index = (article: HTMLElement, id: string) => {
             if (docText.has(id)) return
             const text  = (article.textContent ?? "").toLowerCase()
@@ -557,7 +568,7 @@ orderedDocs.push(...cliDocs)
     .help-md {
         color: var(--foreground-secondary);
         font-size: 0.95rem;
-        line-height: 1.5;
+        line-height: 1.4;
     }
     .help-md h1,
     .help-md h2,

@@ -153,6 +153,21 @@ Then derive the plan from this grounding, where:
 
 </define>
 
+<define name="task-spec-format">
+
+The `SPEC` artifacts are in scope, so -- unless already done earlier in
+the current skill run -- use the `Read` tool to read the `SPEC` format
+contract, i.e., the files `meta/ase-format-specbook.md` (the SpecBook
+models and formats) and `meta/ase-format-spec.md` (the SpecBook project
+instantiation), each with its file path formed by joining
+<ase-plugin-root/> and the file name with exactly *one* `/` separator,
+as <ase-plugin-root/> may or may not carry a trailing `/`. You *MUST*
+then internalize and honor this `SPEC` format, plus the SpecBook schema
+configuration of the project, in all following work on `SPEC`
+artifacts. Do not output anything.
+
+</define>
+
 <define name="task-save-content">
 
 Update <timestamp-modified/> with the current time in ISO-style

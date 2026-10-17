@@ -63,7 +63,7 @@ export const comparison: Comparison[] = [
                   "until the bug surfaces.",
         native:   "Hand the agent your error messages and let it " +
                   "ad-hoc **hunt down and patch** the bug.",
-        ase:      "Run `/ase-code-resolve` to investigate, decide an approach, " +
+        ase:      "Run `/ase-task-edit` to investigate, decide an approach, " +
                   "plan a task, and resolve it **end-to-end**."
     },
     {
@@ -72,7 +72,7 @@ export const comparison: Comparison[] = [
                   "and **hope** it's right first time.",
         native:   "Tell the agent to \"craft this\" and get a **plausible but " +
                   "unbounded** change set to review after the fact.",
-        ase:      "Run `/ase-code-edit` for direct or `/ase-code-craft` for a **funnel- and plan-driven** crafting process, " +
+        ase:      "Run `/ase-code-edit` for direct or `/ase-task-edit` for a **funnel- and plan-driven** crafting process, " +
                   "where the agent **grills you and your intentions** to kill underspecified aspects."
     },
     {
@@ -81,7 +81,7 @@ export const comparison: Comparison[] = [
                   "and hold the whole **blast radius in your head**.",
         native:   "Tell the agent to \"refactor this\" and get a **plausible but " +
                   "unbounded** change set to review after the fact.",
-        ase:      "Run `/ase-code-refactor` for a surgical, scoped change set, " +
+        ase:      "Run `/ase-task-edit --mode refactor` for a surgical, scoped change set, " +
                   "**guided by refactoring tenets** and an optional **draft** you approve first."
     },
     {

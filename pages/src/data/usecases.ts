@@ -366,7 +366,7 @@ export const useCases: UseCase[] = [
                 body:     "The decision becomes a persisted task plan under its own task id, so the " +
                           "skeleton survives the end of the agent session.",
                 commands: [
-                    "**/ase-code-craft** skeleton: " +
+                    "**/ase-task-edit** skeleton: " +
                     "a minimal REST service exposing GET /health with the Fastify framework"
                 ]
             },
@@ -621,7 +621,7 @@ export const useCases: UseCase[] = [
                 body:     "The funnel proposes alternative approaches with explicit pros and cons, you " +
                           "pick one, and a persisted task plan under its own task id is composed for it.",
                 commands: [
-                    "**/ase-code-craft** json-output: add a --json output mode to `ase task list`"
+                    "**/ase-task-edit** --approach json-output: add a --json output mode to `ase task list`"
                 ]
             },
             {
@@ -706,7 +706,7 @@ export const useCases: UseCase[] = [
                           "handling close to the origin — and in quick mode the whole funnel collapses " +
                           "into a single grounded pass, implemented right away and revertable wholesale.",
                 commands: [
-                    "**/ase-code-resolve** --quick the statusline keeps the old task id after `ase task rename`"
+                    "**/ase-code-edit** --mode resolve the statusline keeps the old task id after `ase task rename`"
                 ]
             },
             {
@@ -723,10 +723,10 @@ export const useCases: UseCase[] = [
                 icon:     Bug,
                 eyebrow:  "Task Mode",
                 title:    "Or Plan the Whole Fix",
-                body:     "Where the defect touches more than one place, the very same call without " +
-                          "`--quick` produces a persisted plan to grill and draft first.",
+                body:     "Where the defect touches more than one place, the very same request to the " +
+                          "task editor produces a persisted plan to grill and draft first.",
                 commands: [
-                    "**/ase-code-resolve** rename-bug: the statusline keeps the old task id after `ase task rename`",
+                    "**/ase-task-edit** --mode resolve rename-bug: the statusline keeps the old task id after `ase task rename`",
                     "**/ase-task-implement** --draft rename-bug"
                 ]
             }
@@ -762,7 +762,7 @@ export const useCases: UseCase[] = [
                           "DRY, SRP — so alternative approaches with pros and cons are proposed, you " +
                           "pick one, and a persisted task plan is composed for it.",
                 commands: [
-                    "**/ase-code-refactor** getopt: consolidate the option parsing " +
+                    "**/ase-task-edit** --mode refactor --approach getopt: consolidate the option parsing " +
                     "of all CLI commands into src/ase-getopt.ts (finding cli-P1)"
                 ]
             },
@@ -795,7 +795,7 @@ export const useCases: UseCase[] = [
                           "applied in place; for anything in between, the fused editor refactors, " +
                           "grills, and verifies in a single call.",
                 commands: [
-                    "**/ase-code-refactor** --direct rename parseArgs to parseOptions in src/ase-getopt.ts",
+                    "**/ase-code-edit** --mode refactor rename parseArgs to parseOptions in src/ase-getopt.ts",
                     "**/ase-code-edit** --mode refactor --grill --verify --worktree option-table " +
                     "extract the shared option table of the CLI commands into src/ase-getopt.ts"
                 ]

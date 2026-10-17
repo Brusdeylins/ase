@@ -70,7 +70,7 @@ export const fitFor: Fit[] = [
         icon:  SquareTerminal,
         title: "You like the Unix command-line style",
         body:  "<b>ASE</b> skills are explicit commands with Unix-style options, like " +
-               "<code>/ase-code-craft --next IMPLEMENT</code> — not a chat you nudge until it complies."
+               "<code>/ase-task-edit --approach --next IMPLEMENT</code> — not a chat you nudge until it complies."
     },
     {
         icon:  Cpu,
