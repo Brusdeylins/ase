@@ -16,7 +16,8 @@ requests of this name (see `ase-agent`(1)): `edit` for the edit
 requests of `ase agent editor` (the same as key `E` of the task board,
 see `ase-task-board`(1)), `estimate` for the (re-)estimation requests
 of `ase agent estimator --mode request` (see `ase-agent-estimator`(1)),
-and any other name for the requests of a
+`research` for the research requests of `ase agent researcher` (see
+`ase-agent-researcher`(1)), and any other name for the requests of a
 request agent of a definition kind or of `ase agent adhoc` (with
 `--type request` and `--request-name` *name*).
 
@@ -40,10 +41,12 @@ request, and while a request of the name is being processed, as adding
 a request would change the task plan under the agent processing the
 running one. The prompt of any other request may be empty, for the
 request agents ignoring the prompts of their requests (like `ase agent
-estimator --mode request`), while a request agent consuming the
-prompts (by the placeholder `{prompt}` of its prompt template, or by
-its hooks `prepare`, `prompt`, or `finish`, see `ase-agent-adhoc`(1))
-turns a request with an empty prompt into a failed one.
+estimator --mode request`) or taking them as optional (like `ase agent
+researcher`, which then researches the task plan itself), while a
+request agent consuming the prompts (by the placeholder `{prompt}` of
+its prompt template, or by its hooks `prepare`, `prompt`, or `finish`,
+see `ase-agent-adhoc`(1)) turns a request with an empty prompt into a
+failed one.
 
 The MCP tool `ase_task_request` provides the same functionality.
 
@@ -61,11 +64,12 @@ The MCP tool `ase_task_request` provides the same functionality.
   The request name: a lower-case word of letters, digits, and dashes,
   starting with a letter, not ending in `-running` or `-failed`, and
   none of the built-in agent kinds `planner`, `implementer`,
-  `approver`, `integrator`, `editor`, and `estimator` (as its tag
-  `ase-agent-`*name* is the one of a built-in agent). The name `edit`
-  selects the edit requests of `ase agent editor`, and the name
+  `approver`, `integrator`, `editor`, `estimator`, and `researcher` (as
+  its tag `ase-agent-`*name* is the one of a built-in agent). The name
+  `edit` selects the edit requests of `ase agent editor`, the name
   `estimate` the estimation requests of `ase agent estimator --mode
-  request`.
+  request`, and the name `research` the research requests of `ase agent
+  researcher`.
 
 - \[*prompt* ...\]:
   The prompt of the request, with all its words joined by single
@@ -88,12 +92,15 @@ $ ase task request json-export lint focus on error handling
 
 # request a re-estimation of the effort (without a prompt)
 $ ase task request json-export estimate
+
+# request a research of a topic for the task
+$ ase task request json-export research streaming JSON serialization
 ```
 
 ## SEE ALSO
 
 `ase`(1), `ase-task`(1), `ase-task-board`(1), `ase-agent`(1),
-`ase-agent-editor`(1), `ase-agent-adhoc`(1).
+`ase-agent-editor`(1), `ase-agent-researcher`(1), `ase-agent-adhoc`(1).
 
 ## AUTHOR
 

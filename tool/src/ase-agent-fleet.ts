@@ -110,6 +110,11 @@ const initConfig = (tool: string): string => textframe`
     #    mode:           request         # "phase" (unestimated planned tasks) or "request" (on request)
     #    parallel:       1               # maximum number of tasks processed in parallel
 
+    #   the research request agent: researching a topic (or the plan itself) for the tasks
+    #   in any unfinished status on request (attached via "ase task request <id> research [<topic>]")
+    #researcher:
+    #    parallel:       1               # maximum number of tasks processed in parallel
+
     #   the planning phase agent (DRAFTED > PLANNING > DRAFTED)
     planner:
         mode:           reboot          # "reboot" (re-create plan) or "condense" (compress plan)

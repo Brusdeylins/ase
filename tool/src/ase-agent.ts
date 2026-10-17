@@ -33,6 +33,7 @@ export default class AgentCommand {
             .command("agent")
             .description("Autonomous agents driving the task lifecycle phases (planner, implementer, approver, integrator), " +
                 "processing the edit requests of tasks (editor), estimating the effort of tasks (estimator), " +
+                "researching topics for tasks (researcher), " +
                 "or of the definitions of the user or the project " +
                 "(\".ase/agents/<kind>.{yaml,ts,js}\") or given ad-hoc (adhoc), " +
                 "each running in its own process, individually or as a fleet, optionally reporting to the agent relay")

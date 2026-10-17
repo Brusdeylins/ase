@@ -110,8 +110,8 @@ The following top-level commands exist:
 
 - `ase agent` *agent* *command* \[...\]:
   Run the autonomous agents driving the task lifecycle phases,
-  processing the requests of tasks, estimating the effort of tasks, or
-  configured by definitions, individually or as a fleet, optionally
+  processing the requests of tasks, estimating the effort of tasks,
+  researching topics for tasks, or configured by definitions, individually or as a fleet, optionally
   reporting to the agent relay. See `ase-agent`(1).
 
 - `ase man` \[*page* \[...\]\]:

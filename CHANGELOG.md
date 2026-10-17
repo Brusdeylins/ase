@@ -17,6 +17,17 @@ ChangeLog
     Task list, task view, and both task boards show the effort, filter by it, and chart its
     distribution. Finally, `ase util mint` and `ase-meta-mint` support the new type `nanoid`.
 
+-   FEATURE [plugin,tool]: Grounded Task Research
+    The new skill `ase-task-research` researches a topic (or, without one, the task plan itself)
+    in depth by combining parallel Web searches of the `ase-meta-search` services with a grounding
+    in the source artifacts of the project, and appends the resulting report (findings with their
+    sources, project grounding, assessment, and recommendations) to the `research` Markdown
+    attachment of the task, with `--refine` additionally refining the plan by its recommendations.
+    The new agent `ase agent researcher` processes the `research` requests of the tasks, sent via
+    `ase task request <id> research [<topic>]` or key `R` of the task boards, this way. Agent
+    definitions can now make the request prompt optional by using `{prompt}` only within the
+    conditional `{?prompt:...}` of their prompt template.
+
 -   BUGFIX [tool]: Task Board Drafts, Readiness, and Tag Guarding
     On the terminal task board, a new task draft kept after a failed save is now created again
     even if left unchanged in `$EDITOR` (instead of being silently discarded), while an emptied

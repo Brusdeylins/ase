@@ -82,7 +82,8 @@ members) or `ase agent fleet stop`.
   estimation agent `estimator` (mode `phase`, estimating the `PLANNED`
   tasks before their implementation), a commented-out effort
   estimation request agent `estimator-request` (mode `request`,
-  (re-)estimating the tasks in any unfinished status on request), the
+  (re-)estimating the tasks in any unfinished status on request), a
+  commented-out research request agent `researcher`, the
   four phase agents `planner` (mode
   `reboot`), `implementer` (mode `implement`, 2 tasks in parallel,
   waiting for the effort estimation, with its parameter `effort-wait`
@@ -192,8 +193,8 @@ value omits an option, and a list repeats an option:
   neither the name of another agent kind, nor `relay` or `fleet`), with
   the options of `ase agent` *kind* `start` and an optional `kind`
   (default: the section name), i.e., one of the built-in kinds
-  `planner`, `implementer`, `approver`, `integrator`, `editor`, and
-  `estimator`, a definition kind of the project or the user, or `adhoc`
+  `planner`, `implementer`, `approver`, `integrator`, `editor`,
+  `estimator`, and `researcher`, a definition kind of the project or the user, or `adhoc`
   (see `ase-agent-adhoc`(1)). Hence, an agent of a definition kind is
   given by a section of its kind (or with `kind:` *kind*), and an agent
   defined inline by a section with `kind: adhoc`.

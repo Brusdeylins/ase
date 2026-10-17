@@ -1,0 +1,381 @@
+# ase-agent-researcher(1) -- Research Request Agent
+
+## SYNOPSIS
+
+`ase agent researcher start`
+\[`-n`|`--name` *name*\]
+\[`-t`|`--tool` `claude`|`copilot`|`codex`\]
+\[`-p`|`--parallel` *num*\]
+\[`-T`|`--timeout` *duration*\]
+\[`-o`|`--one-shot`\]
+\[`--agent-relay` *url*\]
+\[`-r`|`--repo` *url*\]
+\[`-d`|`--tempdir` *dir*\]
+\[`--`*group*`-`*item* *value* \[...\]\]
+\[`-f`|`--foreground`\]
+
+`ase agent researcher status`
+\[`-n`|`--name` *name*\]
+
+`ase agent researcher log`
+\[`-f`|`--follow`\]
+\[`-n`|`--lines` *n*\]
+\[`--name` *name*\]
+
+`ase agent researcher stop`
+\[`-n`|`--name` *name*\]
+
+## DESCRIPTION
+
+**ase agent researcher** processes the research requests of tasks.
+Unlike the phase agents, it is bound to no phase and supports all task
+lifecycle models (`solo`, `team`, and `enterprise`).
+
+A research request is added by key `R` of the task board (see
+`ase-task-board`(1)) or by `ase task request` *id* `research`
+\[*topic*\] (see `ase-task-request`(1)) as an attachment of type
+`text/plain; charset=utf-8; kind="research"` with the topic as its
+data, mirrored in the tag `ase-agent-research:pending` of the task
+(aggregated as `:active` while one is processed and as `:failed` once
+one failed). The topic is optional: a request without a topic
+researches the task plan itself.
+
+The researcher observes the tasks with this tag, except those in an
+activity status of the task lifecycle model, where the task is actively
+worked on (`team`: `IMPLEMENTING`; `enterprise`: `PLANNING`,
+`IMPLEMENTING`, `APPROVING`, and `INTEGRATING`), and those still held
+by a phase agent (tagged `ase-agent-`*kind*`:active`), which wait until
+their status changes resp. their tag is released.
+
+It claims the oldest request of such a task in a single conditional
+save by turning it into `kind="research-running"` and setting the
+`Assignee:` of the task to its agent name (remembering the previous
+assignee in the request), which keeps all other agents off the task
+during the research without touching its status. The request of a
+finished task is turned into `kind="research-failed"` instead.
+
+It then researches the topic via the skill invocation
+`ase-task-research --refine` *id*`:` \[*topic*\] (with the whitespace
+of the topic collapsed) in the working copy, grounded in the `Source:`
+of the task, where a `branch:`*name* source is checked out in the
+temporary, detached Git worktree `.ase/worktree/.temp/`*id*`-researcher`,
+passed to the skill via its internal option `--int-source-dir`, and
+removed afterwards. The skill combines a Web research with a grounding
+in the source artifacts of the project, appends its research report to
+the `research` attachment of the task (of type `text/markdown;
+charset=utf-8; kind="research"`), and refines the plan by the
+recommendations of the report, all in a single save, which happens
+only if the task was not changed meanwhile.
+
+Finally, in a single save, the researcher restores the previous
+assignee of the task (unless reassigned meanwhile) and removes the
+request if the `research` attachment was created or changed and the
+skill reported the attached research, or else turns it back into
+`kind="research"` on an interrupt, resp. into `kind="research-failed"`
+(with the reason, e.g., `skill reported an error`, `agent tool failed`,
+or `no new or changed attachment "text/markdown;research"`) otherwise.
+
+A finalization failing even after its retries is retried on every
+further dispatching.
+
+On its start, the researcher marks the requests left in
+`kind="research-running"` by any terminated researcher process of the
+same user on the same host (whose run lock is gone or stale and whose
+process is no longer alive) as failed (`kind="research-failed"`), and
+restores the previous assignees of their tasks. See `ase-agent`(1) for
+the common mechanics of all agents.
+
+## OPTIONS
+
+- \[`-h`|`--help`\]: Show usage information of `ase agent researcher`
+  (or of the given sub-command) only.
+
+All other options belong to the sub-commands (see **COMMANDS**).
+
+## COMMANDS
+
+- `ase agent researcher start` \[*options*\]: Start the researcher agent
+  in the background, logging into `.ase/agent/`*name*`.log`. The agent
+  is validated and initialized (e.g., its agent tool is looked up and
+  the task lifecycle model is checked) before the command returns
+  (waiting up to 30 seconds), so a failing agent is reported together
+  with the tail of its log. An agent of the same name already running is
+  left alone. The options are:
+
+    - \[`-n`|`--name` *name*\]: The name of the agent (default:
+      `researcher`): up to 64 letters, digits, underscores, and dashes,
+      starting with a letter or digit, other than the name of another
+      agent kind, `relay`, or `fleet`.
+
+      It names the agent in its log lines, its processing log attachment
+      `agent:`*name*, the `Assignee:` of the tasks it processes, its
+      temporary directory, and its process files `.ase/agent/`*name*`.yaml`
+      and `.ase/agent/`*name*`.log`. Agents of the kind `researcher`
+      under different names form a pool, competing for the same tasks and
+      processing them in parallel to each other.
+
+    - \[`-t`|`--tool` *tool*\]: The headless agent tool processing the
+      tasks: `claude` (*Anthropic Claude Code CLI*), `copilot` (*GitHub
+      Copilot CLI*), or `codex` (*OpenAI Codex CLI*) (default:
+      `$ASE_TOOL`, else `claude`). Its command has to be found in
+      `$PATH`.
+
+    - \[`-p`|`--parallel` *num*\]: The maximum number of tasks processed
+      in parallel by this agent (default: `1`), a positive integer.
+
+    - \[`-T`|`--timeout` *duration*\]: The maximum duration of
+      processing a task (the run of the agent tool), as *number* *unit*
+      (without a space) with *unit* `s` (seconds), `m` (minutes), or `h`
+      (hours) (default: `60m`). A processing exceeding it is aborted and
+      counts as failed.
+
+    - \[`-o`|`--one-shot`\]: Terminate the agent, instead of observing
+      for further tasks, once a check of the task store finds no
+      dispatchable task while the agent processes no task anymore --
+      intended for CI contexts like GitHub Actions, and not allowed in a
+      fleet. A check of the task store failing three times in a row then
+      terminates the agent with a non-zero exit status (instead of being
+      retried endlessly after a growing delay).
+
+    - \[`--agent-relay` *url*\]: The agent relay to pass the live
+      presence of the agent to, as `ase://`*addr*`:`*port*\[`/`*token*\]
+      resp. `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\] for
+      HTTPS (default: the configured `project.relay.url`, else none).
+      See **AGENT RELAY** in `ase-agent`(1). The agent is announced
+      there as processing the `research` requests, which may have an
+      empty prompt.
+
+    - \[`-r`|`--repo` *url*\]: The Git repository to clone once into the
+      temporary directory of the agent, where every task without a
+      `worktree` value is processed in its own temporary Git worktree of
+      this clone (default: none, i.e., all tasks are processed in the
+      Git working copy the agent is started in, which is hence
+      mandatory).
+
+      Requires a task store not located in the working copy (i.e., not a
+      local `ase:`*path* one). See **WORKING COPY, CLONES, AND WORKTREES**
+      in `ase-agent`(1).
+
+    - \[`-d`|`--tempdir` *dir*\]: Create the temporary directory of the
+      agent as the sub-directory *name* of *dir*, where `%p` is expanded
+      to the process id of the agent, `%h` to a hash value unique to the
+      process, and `%%` to `%` (default: a fresh, private directory
+      below the system temporary directory). A missing *dir* is created
+      private to the current user, while an existing *dir* has to be a
+      directory (no symbolic link) owned by the current user.
+
+    - \[`--type` `phase`|`request`\]: The processing type: `phase`
+      claims the tasks by their lifecycle status, `request` processes
+      the prompt requests attached to the tasks. Generic default:
+      `phase`. Built-in: `request`.
+
+    - \[`--workdir` *kind*\]: The working directory of the agent tool:
+      `project`, `source`, `changeset`, `changeset-read`, or `target`.
+      Generic default: `project`. Built-in: `source`.
+
+    - \[`--lifecycle` *model*\]: A supported task lifecycle model
+      (`solo`, `team`, or `enterprise`, repeatable). Generic default:
+      every model containing all given states, resp. all models for
+      `request` and with `--unclaimed`. Built-in: not set. Hence, all
+      task lifecycle models are supported.
+
+    - \[`--serial`\]: Process the tasks serially only, ignoring
+      `--parallel`. Built-in: not set.
+
+    - \[`--params` *name*`=`*value*\]: The value of a parameter
+      declared by the definition (repeatable). Built-in: none declared.
+
+    - \[`--tag-name` *tag*\]: The tag of the processed tasks
+      (`ase-agent-`*word*). Generic default: `ase-agent-`*name*, resp.
+      for `request` always `ase-agent-`*request-name*. Built-in:
+      `ase-agent-research` (derived from the request name `research`).
+
+    - \[`--tag-require` *tag*\]: A tag a claimable task has to carry
+      (repeatable). Built-in: not set.
+
+    - \[`--tag-exclude` *tag*\]: A tag a claimable task must not carry
+      (repeatable). Built-in: not set.
+
+    - \[`--assign-name` *who*\]: The assignee under which the tasks are
+      claimed, held, recognized, and released, and which names the
+      agent-owned worktrees. Generic default: the agent name. Built-in:
+      not set.
+
+    - \[`--assign-success` *who*\]: The assignee of a task after its
+      successful processing: a name, `none`, or `previous`. Generic
+      default: `none` for `phase`, `previous` for `request`. Built-in:
+      not set.
+
+    - \[`--assign-failure` *who*\]: The assignee of a task after its
+      failed processing: a name, `none`, or `previous`. Generic default:
+      `none` for `phase`, `previous` for `request`. Built-in: not set.
+
+    - \[`--request-name` *name*\]: The name of the processed requests
+      (`request` only). Generic default: the agent name. Built-in:
+      `research`.
+
+    - \[`--request-done` *word*\]: The word naming a processed task in
+      the log lines (`request` only). Generic default: `processed`.
+      Built-in: `researched`.
+
+    - \[`--prompt-skill` *name*\]: The skill to invoke (mutually
+      exclusive with `--prompt-text` and `--prompt-file`). Built-in:
+      `ase-task-research`.
+
+    - \[`--prompt-args` *template*\]: The argument template of the
+      skill. Generic default: `{id}` for `phase`, `{id}: {prompt}` for
+      `request`. Built-in: `--refine{?source-dir: --int-source-dir
+      "{source-dir}"} {id}:{?prompt: {prompt}}`, where the conditional
+      `{?prompt:...}` makes the prompt optional.
+
+    - \[`--prompt-text` *template*\]: The prompt text template to invoke
+      instead of a skill. Built-in: not set.
+
+    - \[`--prompt-file` *file*\]: The file with the prompt text template
+      to invoke instead of a skill. Built-in: not set.
+
+    - \[`--prepare-run` *cmd*\]: A shell command run in the working
+      directory before the prompt (repeatable). Built-in: not set.
+
+    - \[`--success-criterion` *criterion*\]: A success criterion:
+      `exit`, `clean`, `changed`, `verdict`, `attachment`, or `status`
+      (repeatable). Generic default: `exit` and `clean` for `phase`,
+      `clean` and `changed` for `request`. Built-in: `exit`, `clean`,
+      and `attachment`.
+
+    - \[`--success-match` *regex*\]: A regular expression an output line
+      has to match (repeatable). Built-in: `status:\W*research
+      attached\b`.
+
+    - \[`--verdict-label` *label*\]: The label after which the verdict
+      is given in the output. Built-in: not set.
+
+    - \[`--verdict-allow` *VERDICT*\]: An accepted verdict (repeatable).
+      Generic default: the verdicts of `--state-verdict`, else any.
+      Built-in: not set.
+
+    - \[`--attach-log` *name*\]: The name of the processing log
+      attachment `agent:`*name*. Generic default: the agent name.
+      Built-in: not set.
+
+    - \[`--attach-output` *kind*\]: The kind of the attachment storing
+      the output lines of the prompt. Built-in: not set.
+
+    - \[`--attach-expect` *spec*\]: The attachment
+      \[*mime-type*`;`\]*kind* to be created or changed by the
+      processing for the success criterion `attachment`. Built-in:
+      `text/markdown;research`.
+
+    - \[`--finish-success` *cmd*\]: A shell command run in the working
+      directory after a successful processing. Built-in: not set.
+
+    - \[`--finish-failure` *cmd*\]: A shell command run in the working
+      directory after a failed processing. Built-in: not set.
+
+    - \[`-f`|`--foreground`\]: Run the agent in the current process
+      instead, logging to the terminal, until it is interrupted (e.g.,
+      via `CTRL+C`) or stopped, where an agent of the same name already
+      running is an error.
+
+    - \[`-h`|`--help`\]: Show the usage information of the sub-command
+      only.
+
+  The options `--`*group*`-`*item* above override the built-in
+  definition of the mode of the agent (where an option also replaces its
+  mutually exclusive alternatives, e.g., `--prompt-text` replaces the
+  skill of `--prompt-skill`), while the agent keeps the identity of its
+  kind (its runs, its presence, and its agent-owned worktrees are named
+  after `researcher`). The options of the type `phase` (like
+  `--state-incoming` or `--tag-success`) are not allowed, as the
+  researcher is of type `request`. See `ase-agent-adhoc`(1) for their
+  full semantics.
+
+- `ase agent researcher status` \[`-n`|`--name` *name*\]: Report whether
+  the researcher agent of the name *name* (default: `researcher`) is
+  running, as `agent` *name*`: running (pid` *pid*`)` resp. `agent`
+  *name*`: not running` (exit status 1).
+
+- `ase agent researcher log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]
+  \[`--name` *name*\]: Show the log `.ase/agent/`*name*`.log` of the
+  researcher agent of the name *name* (default: `researcher`) run in the
+  background, where an agent of a fleet logs into the log of the fleet
+  instead (see `ase-agent-fleet`(1)). Without a log file, an
+  informational message is shown only. The options are:
+
+    - \[`-f`|`--follow`\]: Show the last *n* lines (default: 10) and
+      then follow all newly appended lines, in the style of `tail -f`,
+      until interrupted.
+
+    - \[`-n`|`--lines` *n*\]: Show the last *n* lines only (default:
+      all, or 10 with `--follow`).
+
+    - \[`--name` *name*\]: The name of the agent (default: `researcher`),
+      given in its long form only, as `-n` is the short form of
+      `--lines`.
+
+- `ase agent researcher stop` \[`-n`|`--name` *name*\]: Stop the
+  researcher agent of the name *name* (default: `researcher`) by
+  `SIGTERM`, waiting (up to 5 minutes) until it aborted its running
+  processings and put their tasks back. An agent not running is reported
+  informationally only.
+
+## ENVIRONMENT
+
+- `ASE_TOOL`: The default agent tool of `--tool` (default: `claude`).
+
+- `ASE_AGENT_RELAY_TOKEN`: The bearer token of the agent relay, if not
+  embedded in the URL of `--agent-relay` resp. `project.relay.url`.
+
+- `ASE_HEADLESS`: Set to `true` for the agent tool processes spawned by
+  the agent.
+
+## FILES
+
+- `.ase/agent/`*name*`.yaml`: The process state (kind, process id, and
+  process start time) of the agent, existing while it runs.
+
+- `.ase/agent/`*name*`.log`: The log of the agent run in the background.
+
+- `.ase/worktree/.temp/`*id*`-researcher`: The temporary, detached Git
+  worktree of a `branch:` source of a task during its research (where a
+  `#` of the task id is replaced by `_`).
+
+- *per-user state
+  directory*`/agent-researcher/`*store-hash*`/`*run-id*`.lock` and
+  `.json`: The run lock and the run record of each researcher agent
+  process, used to recover the research requests of terminated agent
+  processes (see **INTERRUPTS AND RECOVERY** in `ase-agent`(1)).
+
+## EXIT STATUS
+
+`ase agent researcher start` exits with status `0` once the agent
+started (or was already running), resp. once a foreground agent
+terminated regularly, and with status `1` on any error (e.g., an invalid
+option, or a missing agent tool). `ase agent researcher status` exits
+with status `1` if the agent is not running.
+
+## EXAMPLES
+
+```sh
+# process the research requests of the task board
+$ ase agent researcher start
+
+# request a research of a topic for a task from the command line
+$ ase task request FOO-42 research "streaming JSON serialization of large data sets"
+
+# request a research of the task plan itself (without a topic)
+$ ase task request FOO-42 research
+```
+
+## SEE ALSO
+
+`ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
+`ase-agent-implementer`(1), `ase-agent-approver`(1),
+`ase-agent-integrator`(1), `ase-agent-editor`(1),
+`ase-agent-estimator`(1), `ase-task-request`(1), `ase-agent-adhoc`(1),
+`ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),
+`ase-task-board`(1).
+
+## AUTHOR
+
+Dr. Ralf S. Engelschall <rse@engelschall.com>

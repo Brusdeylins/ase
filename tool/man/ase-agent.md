@@ -57,6 +57,9 @@ The *agent* is one of the following agent kinds:
   in any task lifecycle model, without claiming them (mode `phase`),
   resp. on request (mode `request`),
 
+- the built-in request agent `researcher`, which researches a topic (or
+  the plan itself) for tasks in any task lifecycle model on request,
+
 - an agent of a *definition kind*, whose entire behavior is configured
   by a definition file *kind*`.`*ext* of the project or of the user,
 
@@ -99,7 +102,7 @@ parallel to each other.
 
 ## TASK CLAIMING
 
-A *phase* agent (all built-in agents except `editor` and `estimator`,
+A *phase* agent (all built-in agents except `editor`, `estimator`, and `researcher`,
 and every definition of `--type phase` without `--unclaimed`) observes
 the tasks in its *incoming* state which do not yet carry its *tag*
 (plain or with any value) in their `Tags:` frontmatter key, and whose
@@ -153,10 +156,10 @@ failure is logged as an error. A final status update of a processed
 task which fails even after its retries is retried in the background
 with a growing delay.
 
-A *request* agent (`editor`, `estimator` in the mode `request`, and
-every definition of `--type request`) instead processes the prompt requests attached to tasks in
-any lifecycle status (see `ase task request` in `ase-task-request`(1)
-and `ase-agent-editor`(1)).
+A *request* agent (`editor`, `estimator` in the mode `request`,
+`researcher`, and every definition of `--type request`) instead processes the prompt requests attached to tasks in
+any lifecycle status (see `ase task request` in `ase-task-request`(1),
+`ase-agent-editor`(1), and `ase-agent-researcher`(1)).
 
 An *unclaimed* phase agent (`estimator` in the mode `phase`, and every definition of
 `--type phase` with `--unclaimed`) instead processes every task in one
@@ -438,6 +441,12 @@ The following sub-command groups exist:
   (mode `phase`), resp. of the tasks of the `estimate` requests (mode
   `request`). See `ase-agent-estimator`(1).
 
+- `ase agent researcher` `start`|`status`|`log`|`stop`:
+  The agent processing the research requests of tasks in any task
+  lifecycle model, appending a research report, grounded in the Web and
+  in the source artifacts of the project, to the `research` attachment
+  of the tasks. See `ase-agent-researcher`(1).
+
 - `ase agent` *kind* `start`|`status`|`log`|`stop`:
   The agent of the definition kind *kind* (see **DEFINITION KINDS**),
   with the same sub-commands and options as `ase agent adhoc`, except
@@ -524,8 +533,8 @@ The sub-commands of every agent kind *agent* are:
   The run lock (a directory, refreshed periodically and considered stale
   after 30 seconds without refresh) and the run record (process id, process
   start time, and claimed tasks) of each agent process of agent *kind*
-  (`planner`, `implementer`, `approver`, `integrator`, `editor`, or
-  `estimator`, resp. `tag-`*word* per tag `ase-agent-`*word* of the
+  (`planner`, `implementer`, `approver`, `integrator`, `editor`,
+  `estimator`, or `researcher`, resp. `tag-`*word* per tag `ase-agent-`*word* of the
   agents of the definition kinds and of `adhoc`), where *store-hash* is
   the first 12 hex digits of the SHA-1 digest of the identity of the
   task store.
@@ -566,8 +575,8 @@ $ ase agent implementer stop -n impl-codex
 
 `ase`(1), `ase-agent-planner`(1), `ase-agent-implementer`(1),
 `ase-agent-approver`(1), `ase-agent-integrator`(1),
-`ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
-`ase-agent-relay`(1), `ase-agent-fleet`(1), `ase-task`(1),
+`ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-researcher`(1),
+`ase-agent-adhoc`(1), `ase-agent-relay`(1), `ase-agent-fleet`(1), `ase-task`(1),
 `ase-task-board`(1), `ase-task-request`(1), `ase-config`(1).
 
 ## AUTHOR

@@ -58,7 +58,7 @@ All agents of **ase** are agents of a definition, run by the same
 agent engine:
 
 - *built-in agents* (`ase agent planner`, `implementer`, `approver`,
-  `integrator`, `editor`, and `estimator`): each mode of them is a
+  `integrator`, `editor`, `estimator`, and `researcher`): each mode of them is a
   built-in definition, which can be referenced as
   `builtin:`*kind*`-`*mode* (resp. `builtin:`*kind* for its default
   mode): `builtin:planner-reboot`, `builtin:planner-condense`,
@@ -66,7 +66,8 @@ agent engine:
   `builtin:approver-judge`, `builtin:approver-approve`,
   `builtin:integrator-merge`, `builtin:integrator-rebase`,
   `builtin:integrator-squash`, `builtin:editor-edit`,
-  `builtin:estimator-phase`, and `builtin:estimator-request`.
+  `builtin:estimator-phase`, `builtin:estimator-request`, and
+  `builtin:researcher-research`.
 
   All options `--`*group*`-`*item* below are also accepted by the
   built-in agents, where they override the built-in definition (see
@@ -159,12 +160,14 @@ reason of the failure as its description) on failure, resp. back into
 `kind="<name>"` on interrupt, where the task keeps its status and its
 tags (except the request state tag) and, by default, gets its previous
 assignee back. An agent consumes the request prompts if its prompt
-template references `{prompt}` or it has a hook `prepare`, `prompt`,
-or `finish` (which receive the request prompt in their *job*), where
-it then refuses a request with an empty prompt as failed, else it
-ignores the request prompts, accepts requests with an empty prompt,
-and announces this to the agent relay, so the task boards accept
-an empty prompt for its requests, too.
+template references `{prompt}` (except within the conditional
+`{?prompt:`*text*`}` only, which makes the prompt *optional*) or it
+has a hook `prepare`, `prompt`, or `finish` (which receive the request
+prompt in their *job*), where it then refuses a request with an empty
+prompt as failed, else it accepts requests with an empty prompt (which
+an agent with an optional prompt still passes on if non-empty), and
+announces this to the agent relay, so the task boards accept an empty
+prompt for its requests, too.
 
 Only the prompt (and `--state-incoming` for `--type phase`) is
 mandatory, while all other options default to the safe *annotate*
@@ -753,7 +756,9 @@ expand the following placeholders:
   placeholder is non-empty) or *placeholder*`=`*value* (the placeholder
   equals *value*), e.g., `{?source-dir: --int-source-dir
   "{source-dir}"}` or `{?changeset-type=branch:--branch
-  {changeset-name}}`.
+  {changeset-name}}`. A `{prompt}` used only within `{?prompt:`*text*`}`
+  makes the prompt of the requests optional, e.g., `{id}:{?prompt:
+  {prompt}}`.
 
 All other text, including whitespace, is kept verbatim, `{{` and `}}`
 yield literal braces, and an unknown placeholder (or a malformed or

@@ -58,6 +58,7 @@
 ○   `ase-task-view`:       View a Task Plan
 ○   `ase-task-edit`:       Iteratively Edit a Task Plan
 ○   `ase-task-grill`:      Iteratively Grill a Task Plan
+○   `ase-task-research`:   Research a Topic for a Task Plan
 ○   `ase-task-condense`:   Condense a Task Plan
 ○   `ase-task-dissect`:    Dissect a Task Plan
 ○   `ase-task-estimate`:   Estimate the Effort of a Task Plan

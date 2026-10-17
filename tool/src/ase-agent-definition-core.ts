@@ -21,6 +21,7 @@ import approver                     from "./ase-agent-definition-builtin/approve
 import integrator                   from "./ase-agent-definition-builtin/integrator.js"
 import editor                       from "./ase-agent-definition-builtin/editor.js"
 import estimator                    from "./ase-agent-definition-builtin/estimator.js"
+import researcher                   from "./ase-agent-definition-builtin/researcher.js"
 
 /*  a built-in agent kind ("ase agent <kind>"): its name, its CLI description, its modes
     (selected by "--mode", each with its definition, in the format of the definition files),
@@ -34,7 +35,7 @@ export type AgentKind = {
 }
 
 /*  the built-in agent kinds  */
-export const builtinKinds: AgentKind[] = [ planner, implementer, approver, integrator, editor, estimator ]
+export const builtinKinds: AgentKind[] = [ planner, implementer, approver, integrator, editor, estimator, researcher ]
 
 /*  a definition agent kind ("ase agent <kind>"): its name (the base name of its
     definition file), its definition file, and the scope of the latter  */
@@ -182,8 +183,9 @@ export const optionAttr = (key: string): string =>
     (on a non-empty placeholder, or on a placeholder equal to a value) with its body  */
 type TemplateNode = { text: string } | { name: string } | { cond: string, equals: string | null, body: TemplateNode[] }
 
-/*  a parsed template: its nodes and the names of all its placeholders  */
-export type Template = { nodes: TemplateNode[], names: Set<string> }
+/*  a parsed template: its nodes, the names of all its placeholders, and the names of its
+    placeholders used unconditionally (i.e., not only within a conditional on themselves)  */
+export type Template = { nodes: TemplateNode[], names: Set<string>, required: Set<string> }
 
 /*  the placeholders of the templates (besides "key:<Header>" and "param:<name>")  */
 const placeholders = [
@@ -206,7 +208,8 @@ export const parseTemplate = (spec: string, option: string, type: DefinitionType
     const fail = (msg: string): never => {
         throw new Error(`agent: option "--${option}": ${msg}`)
     }
-    const names = new Set<string>()
+    const names    = new Set<string>()
+    const required = new Set<string>()
     const known = (name: string): string => {
         if (name.startsWith("param:")) {
             if (!params.includes(name.slice(6)))
@@ -218,9 +221,10 @@ export const parseTemplate = (spec: string, option: string, type: DefinitionType
         return name
     }
     /*  parse the nodes of the template or, from the position <open> of its opening
-        brace on, of the body of a conditional (up to its closing brace)  */
+        brace on, of the body of a conditional on the non-empty placeholder <guard>
+        (else empty), up to its closing brace  */
     let i = 0
-    const parse = (open: number): TemplateNode[] => {
+    const parse = (open: number, guard = ""): TemplateNode[] => {
         const nodes: TemplateNode[] = []
         let text = ""
         const flush = () => {
@@ -250,7 +254,7 @@ export const parseTemplate = (spec: string, option: string, type: DefinitionType
                 const at   = i
                 i += m![0].length
                 flush()
-                nodes.push({ cond, equals: m![2] ?? null, body: parse(at) })
+                nodes.push({ cond, equals: m![2] ?? null, body: parse(at, m![2] === undefined ? cond : "") })
             }
             else if (spec[i] === "{") {
                 const m = /^\{(key:[A-Za-z][A-Za-z0-9-]*|param:[A-Za-z][A-Za-z0-9_-]*|[a-z][a-z-]*)\}/.exec(spec.slice(i))
@@ -258,6 +262,8 @@ export const parseTemplate = (spec: string, option: string, type: DefinitionType
                     fail(`invalid placeholder at position ${i + 1} (use "{{" for a literal brace)`)
                 flush()
                 nodes.push({ name: known(m![1]) })
+                if (m![1] !== guard)
+                    required.add(m![1])
                 i += m![0].length
             }
             else
@@ -268,7 +274,7 @@ export const parseTemplate = (spec: string, option: string, type: DefinitionType
         flush()
         return nodes
     }
-    return { nodes: parse(-1), names }
+    return { nodes: parse(-1), names, required }
 }
 
 /*  render a parsed template with the values of its placeholders  */
@@ -886,9 +892,10 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
             fail(key, "empty shell command")
 
     /*  whether a request agent consumes the prompts of its requests: by the placeholder
-        "{prompt}" of its prompt template, or potentially by a hook receiving the job (and
-        hence the prompt of the request), else the requests may have an empty prompt  */
-    const consumes = type === "request" && (template.names.has("prompt")
+        "{prompt}" of its prompt template (unless used only within the conditional
+        "{?prompt:...}", which makes the prompt optional), or potentially by a hook receiving
+        the job (and hence the prompt of the request), else the requests may have an empty prompt  */
+    const consumes = type === "request" && (template.required.has("prompt")
         || ([ "prepare", "prompt", "finish" ] as const).some((hook) => loaded.hooks[hook] !== undefined))
 
     return {

@@ -16,7 +16,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
 **ASE** ships three deliverables from one repository:
 
 -   `plugin/`: the agent tool plugin
-    -   `plugin/skills/ase-xxx-xxx/`: the 58 skills, each with a `SKILL.md`
+    -   `plugin/skills/ase-xxx-xxx/`: the 59 skills, each with a `SKILL.md`
         (agent instructions) and a `help.md` (Unix-style manual page), plus
         optional skill-specific files (like `ase-help-intent/data.md`, the
         concatenation of all `help.md` files, generated at build-time);
@@ -118,7 +118,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             definition model (options, YAML, TypeScript, JavaScript, and
             built-in definition loading, discovery of the definition kinds,
             hooks, validation, and templates), and
-            `agent-definition-builtin/{planner,implementer,approver,integrator,editor,estimator}`
+            `agent-definition-builtin/{planner,implementer,approver,integrator,editor,estimator,researcher}`
             for the declarative definitions of the modes of the built-in
             agents
         -   `agent-process` for the `ase agent <kind> start|status|log|stop`
@@ -272,6 +272,10 @@ Beyond `ase setup`, the CLI provides:
         key) of the tasks without a valid one in any lifecycle model
         (mode `phase`), resp. of the tasks of the `estimate` requests of
         the task boards in any unfinished status (mode `request`)
+    -   the `researcher` agent, which processes the `research` requests
+        of the task boards in any lifecycle model, appending a research
+        report (Web research plus source artifact grounding) to the
+        `research` attachment of the tasks and refining their plans
     -   the agents of the definition kinds, whose entire behavior is
         configured by a definition file `<kind>.{yaml,yml,ts,mts,js,mjs,cjs}`
         of the project (`.ase/agents/`) or of the user (`agents/` of the
