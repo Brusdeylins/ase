@@ -60,6 +60,7 @@
 ○   `ase-task-grill`:      Iteratively Grill a Task Plan
 ○   `ase-task-condense`:   Condense a Task Plan
 ○   `ase-task-dissect`:    Dissect a Task Plan
+○   `ase-task-estimate`:   Estimate the Effort of a Task Plan
 ○   `ase-task-reboot`:     Reboot a Task Plan
 ○   `ase-task-implement`:  Implement a Task Plan
 ○   `ase-task-integrate`:  Integrate a Task Change Set

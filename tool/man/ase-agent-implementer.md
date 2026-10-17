@@ -43,6 +43,16 @@ already once `IMPLEMENTED` or later (and not still tagged by the
 implementer with the value `active` or `failed` while `IMPLEMENTED`).
 This predecessor rule is the hook `passes` of the built-in definition.
 
+By default, the implementer additionally waits with a task until the
+`estimator` agent (see `ase-agent-estimator`(1)) is done with it, as the
+latter processes the `PLANNED` tasks unclaimed and would else race
+against the implementer: it claims a task only once the task carries a
+valid `Effort:` key, is an explicit epic, has an empty plan, or carries
+the tag `ase-agent-estimator` (i.e., its estimation failed). Without an
+estimator agent, disable this with `--params effort-wait=false`, as the
+unestimated tasks would else wait forever. This rule is the hook `ready`
+of the built-in definition (in both modes).
+
 In its default mode `implement`, the implementer moves each claimed task
 into `IMPLEMENTING`, tags it with `ase-agent-implementer:active`, and
 implements the plan from its `Source:` into its `Changeset:` via the
@@ -225,16 +235,26 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--lifecycle` *model*\]: A supported task lifecycle model
       (`solo`, `team`, or `enterprise`, repeatable). Generic default:
       every model containing all given states, resp. all models for
-      `request`. Built-in: `enterprise`.
+      `request` and with `--unclaimed`. Built-in: `enterprise`.
 
     - \[`--serial`\]: Process the tasks serially only, ignoring
       `--parallel`. Built-in: not set.
 
+    - \[`--unclaimed`\]: Process the tasks of the incoming states
+      without claiming them, independent of their assignee and
+      predecessors, and without ever changing their status and assignee
+      (`phase` only). Built-in: not set. Not allowed, as the implementer
+      claims the tasks into its activity state.
+
     - \[`--params` *name*`=`*value*\]: The value of a parameter
-      declared by the definition (repeatable). Built-in: none declared.
+      declared by the definition (repeatable). Built-in: `effort-wait`
+      (`true` or `false`, default: `true`), whether to wait for the
+      effort estimation of a task by the `estimator` agent (see
+      **DESCRIPTION**).
 
     - \[`--state-incoming` *state*\]: The state of the tasks to claim
-      (mandatory for `phase`). Built-in: `PLANNED`.
+      (mandatory for `phase`, repeatable with `--unclaimed` only).
+      Built-in: `PLANNED`.
 
     - \[`--state-activity` *state*\]: The state of a task during its
       processing. Generic default: the incoming state. Built-in:
@@ -480,8 +500,9 @@ $ ase agent implementer start -n drafter -m draft
 
 `ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
 `ase-agent-approver`(1), `ase-agent-integrator`(1),
-`ase-agent-editor`(1), `ase-agent-adhoc`(1), `ase-agent-fleet`(1),
-`ase-agent-relay`(1), `ase-task`(1), `ase-task-board`(1).
+`ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
+`ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),
+`ase-task-board`(1).
 
 ## AUTHOR
 

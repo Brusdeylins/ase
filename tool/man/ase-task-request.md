@@ -14,7 +14,9 @@
 *prompt* under the request name *name*, for an agent processing the
 requests of this name (see `ase-agent`(1)): `edit` for the edit
 requests of `ase agent editor` (the same as key `E` of the task board,
-see `ase-task-board`(1)), and any other name for the requests of a
+see `ase-task-board`(1)), `estimate` for the (re-)estimation requests
+of `ase agent estimator --mode request` (see `ase-agent-estimator`(1)),
+and any other name for the requests of a
 request agent of a definition kind or of `ase agent adhoc` (with
 `--type request` and `--request-name` *name*).
 
@@ -52,9 +54,11 @@ The MCP tool `ase_task_request` provides the same functionality.
   The request name: a lower-case word of letters, digits, and dashes,
   starting with a letter, not ending in `-running` or `-failed`, and
   none of the built-in agent kinds `planner`, `implementer`,
-  `approver`, `integrator`, and `editor` (as its tag `ase-agent-`*name*
-  is the one of a built-in agent). The name `edit` selects the edit
-  requests of `ase agent editor`.
+  `approver`, `integrator`, `editor`, and `estimator` (as its tag
+  `ase-agent-`*name* is the one of a built-in agent). The name `edit`
+  selects the edit requests of `ase agent editor`, and the name
+  `estimate` the estimation requests of `ase agent estimator --mode
+  request`.
 
 - *prompt* \[...\]:
   The prompt of the request, with all its words joined by single

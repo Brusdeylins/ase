@@ -39,7 +39,7 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         any), and the ASE version (dimmed) while there is nothing else to report  */
     const report = notice !== null ? sanitize(notice) :
         carry !== null ? `moving task "${carry.id}" from ${carry.from}: select a bold lane, SPACE drops, ESC cancels` :
-            typing ? "filtering tasks by fuzzy matched keywords (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : null
+            typing ? "filtering tasks by fuzzy matched keywords or effort:<size> (SPACE: and, COMMA: or): ⏎ keeps, ESC clears" : null
     const status = h(Box, { key: "status", paddingX: 1 },
         h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│")),
         h(Box, cx("grow", "bar"),

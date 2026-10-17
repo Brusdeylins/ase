@@ -14,8 +14,17 @@
 A task plan is a Markdown document in the textual *ASE* task format
 (see `ase util meta format-task`): a frontmatter block with the keys
 `Type`, `Id`, `Created`, `Modified`, `Group`, `Phase`, `After`,
-`Status`, `Assignee`, `Kind`, `Tags`, `Source`, `Changeset`, and
-`Target`, followed by the plan body and optional attachment blocks.
+`Status`, `Assignee`, `Kind`, `Effort`, `Tags`, `Source`, `Changeset`,
+and `Target`, followed by the plan body and optional attachment blocks.
+
+The optional `Effort` key carries the estimated effort of the task as
+*size* *hash*, with *size* one of the T-shirt sizes `XS`, `S`, `M`, `L`,
+or `XL` (see `project.task.effort.scale` in `ase-config`(1)) and *hash*
+the content hash of the plan body the size was given for. The task
+store drops a *stale* `Effort` (whose *hash* no longer matches the
+body, ignoring checkboxes, whitespace, and cancelled or deferred
+bullet-points) on load and save, and stamps an `Effort` given without
+*hash* with the content hash of the body on save.
 
 All commands are forwarded to the *task store* selected by the
 `project.task.store.url` configuration (see **TASK STORES** below). The
@@ -294,7 +303,7 @@ id `default` always conforms).
 ## EXAMPLES
 
 ```sh
-# list all unfinished tasks with their status, time, and title
+# list all unfinished tasks with their status, time, effort, and title
 $ ase task list -v
 
 # create a new task from a title and a plan file

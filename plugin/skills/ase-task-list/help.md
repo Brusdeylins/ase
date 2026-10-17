@@ -16,9 +16,9 @@
 The `ase-task-list` skill lists all available *task ids* in the
 current project by calling the `ase_task_list` MCP tool. In the
 default mode, only the task ids are rendered as a single-column
-Markdown table. In verbose mode, the lifecycle status and the
-last-modified timestamp of each task plan are rendered as additional
-columns.
+Markdown table. In verbose mode, the lifecycle status, the effort size
+(see `ase-task-estimate`), and the last-modified timestamp of each task
+plan are rendered as additional columns.
 
 The listing is restricted to an *effective state set*, derived from the
 `Status:` frontmatter key of each task plan (which defaults to the
@@ -60,9 +60,10 @@ DEFERRED     INTEGRATING INTEGRATED CANCELLED
 ##  OPTIONS
 
 -   `--verbose`|`-v`:
-    Render an additional `Status` column with the lifecycle state and an
-    additional `Last Modified` column with the `YYYY-MM-DD HH:MM`
-    timestamp of each task plan.
+    Render an additional `Status` column with the lifecycle state, an
+    additional `Effort` column with the T-shirt size (`-` if not
+    estimated), and an additional `Last Modified` column with the
+    `YYYY-MM-DD HH:MM` timestamp of each task plan.
 
 -   `--include`|`-i`=*state*[`,`...]:
     Restrict the listed task plans to the given comma-separated list of

@@ -12,7 +12,7 @@ import { ref, shallowRef, reactive, computed, nextTick, watch } from "vue"
 export type EditState = "pending" | "active" | "failed"
 
 /*  the board model and task details, as delivered by the service  */
-export type Card    = { id: string, title: string, group: string, cyclic: boolean, tone: string, moves?: string[], edit: EditState | "", finished: boolean, assignee: string }
+export type Card    = { id: string, title: string, group: string, cyclic: boolean, tone: string, moves?: string[], edit: EditState | "", finished: boolean, assignee: string, effort: string }
 export type Lane    = { status: string, active: boolean, weight: number, dashed: boolean, kind: "initial" | "regular" | "terminal", cards: Card[] }
 export type Group   = { title: string, lanes: Lane[] }
 export type Surface = { view: View, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }
@@ -26,19 +26,23 @@ export type View    = "lanes" | "graph" | "stats" | "agents"
 export type GraphStats = { tasks: number, dependencies: number }
 
 /*  the statistics of the tasks (see the statistics view): its time range (all tasks, resp. the
-    tasks of the last 30 or 7 days), the tasks per lifecycle state (with its phase and tone),
-    their progress, the readiness of the open tasks, their total AI usage (times in minutes,
+    tasks of the last 30 or 7 days), the tasks per lifecycle state (with its phase, tone, and
+    effort, i.e., the human minutes of the estimated tasks, and the numbers of the estimated
+    and of all tasks), their progress, the readiness of the open tasks, the distribution of
+    their effort sizes (the number of tasks per size), their total AI usage (times in minutes,
     costs in USD), the tasks of the highest usage, the efficiency of the AI usage, the
     finished tasks of the last weeks (oldest first), and the forecast of the backlog, with
     the number of days of the time range "total"  */
 export type StatsRange  = "total" | "30d" | "7d"
 export type StatsUsage  = { timeAI: number, timeHR: number, timeReal: number, cread: number, cwrite: number, input: number, output: number, costAI: number, costHR: number }
+export type StatsEffort = { minutes: number, estimated: number, tasks: number }
 export type BoardStats  = {
     range:      StatsRange
     days:       number
-    states:     { phase: string, status: string, count: number, tone: Tone }[]
+    states:     { phase: string, status: string, count: number, tone: Tone, effort: StatsEffort }[]
     progress:   { finished: number, cancelled: number, wip: number, open: number }
     readiness:  { ready: number, blocked: number }
+    sizes:      { size: string, count: number }[]
     usage:      StatsUsage
     top:        { id: string, title: string, tone: Tone, cost: number, input: number, output: number, share: number }[]
     efficiency: { timeRatio: number | null, costRatio: number | null, cacheRatio: number | null, costAI: number, costHR: number, input: number, output: number, leadMedian: number | null, leadP85: number | null }

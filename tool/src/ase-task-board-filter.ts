@@ -5,6 +5,7 @@
 */
 
 import type { Board, Card } from "./ase-task-board-core.js"
+import { effortSizes }      from "./ase-task-format.js"
 
 /*  shortest keyword still eligible for fuzzy matching: below it the
     edit distance would equate it with almost any short word  */
@@ -58,17 +59,29 @@ export const parseFilter = (query: string): string[][] =>
         .map((part) => part.split(/\s+/).filter((word) => word !== ""))
         .filter((part) => part.length > 0)
 
+/*  the effort size of a keyword "effort:<size>" (of a lower-cased query) of a known
+    size, else null, as any other keyword (also one of an unknown size) is a regular one  */
+const effortTerm = (word: string): string | null =>
+    effortSizes.find((size) => word === `effort:${size.toLowerCase()}`) ?? null
+
 /*  determine the ids of the cards matching a filter query (as SpecBook
     does): each part matches in up to two passes, the keywords as literal
     substrings of task id and title first and, only if this matches no card
     at all, as fuzzy variants of their words, as the edit-distance neighborhood
-    of a keyword would otherwise dilute a correctly spelled query  */
+    of a keyword would otherwise dilute a correctly spelled query, where a
+    keyword "effort:<size>" always exactly matches the cards of the effort size  */
 export const matchCards = (cards: Card[], query: string): Set<string> => {
     const units = cards.map((card) => {
         const text = `${card.id} ${card.title}`.toLowerCase()
-        return { id: card.id, text, words: new Set(text.split(/[^\p{L}\p{N}]+/u).filter((w) => w !== "")) }
+        return { id: card.id, text, effort: card.effort, words: new Set(text.split(/[^\p{L}\p{N}]+/u).filter((w) => w !== "")) }
     })
     const vocab = new Set(units.flatMap((unit) => [ ...unit.words ]))
+
+    /*  match a keyword literally (resp. a keyword "effort:<size>" exactly)  */
+    const literal = (unit: typeof units[number], word: string): boolean => {
+        const size = effortTerm(word)
+        return size !== null ? unit.effort === size : unit.text.includes(word)
+    }
 
     /*  the fuzzy-equivalent vocabulary words of a keyword, cached per keyword  */
     const fuzzy = new Map<string, string[]>()
@@ -84,10 +97,10 @@ export const matchCards = (cards: Card[], query: string): Set<string> => {
     }
     const kept = new Set<string>()
     for (const part of parseFilter(query)) {
-        let matched = units.filter((unit) => part.every((word) => unit.text.includes(word)))
+        let matched = units.filter((unit) => part.every((word) => literal(unit, word)))
         if (matched.length === 0)
-            matched = units.filter((unit) => part.every((word) =>
-                unit.text.includes(word) || fuzzyWords(word).some((v) => unit.words.has(v))))
+            matched = units.filter((unit) => part.every((word) => literal(unit, word)
+                || (effortTerm(word) === null && fuzzyWords(word).some((v) => unit.words.has(v)))))
         matched.forEach((unit) => kept.add(unit.id))
     }
     return kept

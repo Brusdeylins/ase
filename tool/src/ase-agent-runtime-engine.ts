@@ -33,8 +33,8 @@ import {
 }                                   from "./ase-agent-definition-core.js"
 
 /*  the identity of an agent of a definition: its kind ("ase agent <kind>"), its mode (as
-    announced in its presence), the namespace of its runs (see "AgentRun"), and its role in
-    the recovery descriptions  */
+    announced in its presence), the namespace of its runs (see "AgentRun"), its role in
+    the recovery descriptions, and the suffix of its agent-owned worktrees  */
 type Identity = { kind: string, mode: string, runKind: string, role: string, suffix: string }
 
 /*  the agent facts passed to the hooks of a definition: its name, its identity,
@@ -691,6 +691,9 @@ class DefinedCore {
             throw new Error(`unknown field "${unknown[0]}" (expected "state", "tag", or "assignee")`)
         if (this.def.type !== "phase" && (state !== undefined || tag !== undefined))
             throw new Error("the fields \"state\" and \"tag\" are for \"type: phase\" only")
+        if (this.def.unclaimed && (state !== undefined || assignee !== undefined))
+            throw new Error("the fields \"state\" and \"assignee\" are not for \"unclaimed: true\" " +
+                "(as the status and the assignee of an unclaimed task are never changed)")
         const settlement: Settlement = { tagged: tag !== undefined }
         if (state !== undefined) {
             const states = this.facts().lifecycle.states
@@ -709,10 +712,11 @@ class DefinedCore {
                 throw new Error(`invalid assignee "${String(assignee)}" (expected a name, "none", or "previous")`)
             settlement.assignee = assignee
         }
+        const to = settlement.state ?? this.target(record)
         if (settlement.tagged && settlement.tag === null && this.def.attach.skip === null
-            && (settlement.state ?? this.target(record)) === this.def.state.incoming)
+            && !this.def.tag.guarded && this.def.state.incoming.includes(to))
             throw new Error("untagging would let the agent claim the task again, " +
-                `which returns into its incoming state "${this.def.state.incoming}"`)
+                `which returns into its incoming state "${to}"`)
         return settlement
     }
 
@@ -781,6 +785,7 @@ class DefinedPhaseAgent extends PhaseAgent {
     readonly kind: string
     protected readonly description = ""
     protected readonly states:     AgentStates
+    protected readonly unclaimed:  string[] = []
     protected readonly assigned:   boolean  = false
     protected readonly finishing:  boolean  = false
     protected readonly serial:     boolean  = false
@@ -797,7 +802,8 @@ class DefinedPhaseAgent extends PhaseAgent {
         this.core       = new DefinedCore(log, def, () => ({
             name: this.name, kind: this.kind, mode: this.mode, lifecycle: this.lifecycle!, interruption: this.interruption
         }))
-        this.states     = { incoming: def.state.incoming, activity: def.state.activity, success: def.state.phase, passed: def.state.passed }
+        this.states     = { incoming: def.state.incoming[0], activity: def.state.activity, success: def.state.phase, passed: def.state.passed }
+        this.unclaimed  = def.unclaimed ? def.state.incoming : []
         this.assigned   = def.assign.required
         this.finishing  = def.finish.commit || def.finish.success !== "" || def.workdir === "target"
             || def.hooks.finish !== undefined
@@ -1212,7 +1218,8 @@ export default class AgentAdhoc extends DefinedAgent {
         "Run an ad-hoc agent, whose entire behavior is given by its options instead of a definition " +
         "file of its own: with \"--type phase\", claim every task in the \"--state-incoming\" status, " +
         "process it via the headless agent tool with a skill or a prompt text, tag it, and move it " +
-        "into the state of its success or failure, or, with \"--type request\", process the prompt " +
+        "into the state of its success or failure (or, with \"--unclaimed\", process it without " +
+        "claiming it and just tag it), or, with \"--type request\", process the prompt " +
         "requests of \"--request-name\" attached to tasks in any status (see \"ase task request\"), " +
         "logging to stdout and to the \"agent:<name>\" attachment of the task"
 

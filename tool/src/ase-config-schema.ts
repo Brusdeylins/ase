@@ -9,6 +9,8 @@ import { foregroundColorNames }  from "chalk"
 
 import type { ScopeTerm }        from "./ase-config-scope.js"
 import { checkIdScheme }         from "./ase-task-format.js"
+import { parseEffortScale }      from "./ase-task-format.js"
+import { EFFORT_SCALE }          from "./ase-task-format.js"
 
 /*  classification taxonomy  */
 export const projectClassification = {
@@ -62,6 +64,11 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "project.task.default.source":    "worktree",
         "project.task.default.changeset": "worktree",
         "project.task.default.target":    "source",
+        "project.task.effort.scale":      EFFORT_SCALE,
+        "project.task.effort.factor":     "1",
+        "project.task.effort.file":       "1",
+        "project.task.effort.line":       "0.025",
+        "project.task.effort.iteration":  "2.5",
         "project.artifact.spec.basedir":  "docs/specbook",
         "project.artifact.spec.files":    "*.{md,txt,svg,png,jpg}",
         "project.artifact.spec.schema":   "",
@@ -105,6 +112,11 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "project.task.default.source":    [ "user", "project" ],
     "project.task.default.changeset": [ "user", "project" ],
     "project.task.default.target":    [ "user", "project" ],
+    "project.task.effort.scale":      [ "user", "project" ],
+    "project.task.effort.factor":     [ "user", "project" ],
+    "project.task.effort.file":       [ "user", "project" ],
+    "project.task.effort.line":       [ "user", "project" ],
+    "project.task.effort.iteration":  [ "user", "project" ],
     "project.relay.url":              [ "user", "project" ],
     "project.relay.token":            [ "user" ],
     "project.relay.crt":              [ "user", "project" ],
@@ -274,6 +286,14 @@ const flowSchema = (forms: ReadonlyArray<string>) => v.optional(v.pipe(v.string(
         return i < 0
 }, `expected ${forms.map((form) => form === "branch" || form === "attachment" ? `"${form}:<name>"` : `"${form}"`).join(", ")}`)))
 
+/*  schema for a positive number of human minutes of the effort estimation  */
+const minutesSchema = v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
+    /^\d+(?:\.\d+)?$/.test(String(s)) && Number(s) > 0, "expected a positive number of minutes")))
+
+/*  schema for a multiplier of the effort estimation  */
+const multiplierSchema = v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
+    /^\d+(?:\.\d+)?$/.test(String(s)) && Number(s) >= 1, "expected a multiplier of at least 1")))
+
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
@@ -294,6 +314,14 @@ export const configSchema = v.nullish(v.strictObject({
                 source:    flowSchema([ "worktree", "branch" ]),
                 changeset: flowSchema([ "worktree", "branch", "attachment" ]),
                 target:    flowSchema([ "worktree", "branch", "source" ])
+            })),
+            effort:    v.optional(v.strictObject({
+                scale:     v.optional(v.pipe(v.string(), v.check((s) => parsable(parseEffortScale, s),
+                    "expected \"<xs>,<s>,<m>,<l>\" (strictly ascending upper band bounds in minutes)"))),
+                factor:    minutesSchema,
+                file:      minutesSchema,
+                line:      minutesSchema,
+                iteration: multiplierSchema
             }))
         })),
         relay: v.optional(v.strictObject({

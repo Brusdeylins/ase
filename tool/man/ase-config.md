@@ -184,6 +184,33 @@ Task plans (all writable on the `user` and `project` scopes only,
   `.lock`, and must not contain `..` or `//`. An attachment *name*
   consists of letters, digits, `_`, and `-`.
 
+- `project.task.effort.scale` (*xs*`,`*s*`,`*m*`,`*l*):
+  The upper bounds of the effort size bands `XS`, `S`, `M`, and `L` of
+  the `Effort:` key of the task plans, in strictly ascending human
+  minutes, while `XL` is open-ended (default: `15,60,240,960`). The
+  task boards sum the efforts via the band midpoints, counting `XL` as
+  twice the `L` bound.
+
+- `project.task.effort.factor` (*number*):
+  The human minutes per point of the *attention score* of the effort
+  estimation, i.e., of the weighted requirements, behaviors, and
+  changes stated by the checklist items of a plan (default: `1`).
+  Fitted and stored by `/ase-task-estimate --calibrate --save`.
+
+- `project.task.effort.file`, `project.task.effort.line` (*number*):
+  The additional human minutes per touched file resp. per predicted
+  changed line of the *volume score* of the effort estimation, where
+  the line minutes also cover the edge cases and polishing no plan
+  describes, and a newly written line weighs three times a changed
+  one (defaults: `1` resp. `0.025`). Fitted and stored by
+  `/ase-task-estimate --calibrate --save`.
+
+- `project.task.effort.iteration` (*number*):
+  The multiplier of the estimated minutes of a task whose main
+  deliverable is an interactive or visual user interface, covering
+  its many rounds of post-adjustment, at least `1` (default: `2.5`).
+  Not fitted by the calibration.
+
 Agent relay (all writable on the `user` and `project` scopes only,
 `project.relay.token` on the `user` scope only):
 

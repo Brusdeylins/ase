@@ -87,7 +87,9 @@ Procedure
     the `ase` MCP server. The result is a structured object with a
     `tasks` array where each entry has an `id` and a `status` field, and
     -- if <getopt-option-verbose/> is `true` -- additionally an `mtime`
-    field (formatted as `YYYY-MM-DD HH:MM`). *Drop* from the `tasks`
+    field (formatted as `YYYY-MM-DD HH:MM`) and an `effort` field (the
+    T-shirt size `XS`, `S`, `M`, `L`, or `XL` of the task, empty if not
+    estimated). *Drop* from the `tasks`
     array every entry whose `status` is contained in <all-states/> but
     *not* in <states/>. *Keep* every entry whose `status` is *not*
     contained in <all-states/> at all, regardless of <states/>, and
@@ -110,16 +112,17 @@ Procedure
     Else, dispatch on <getopt-option-verbose/>:
 
     -   If <getopt-option-verbose/> is `true`, output the list of tasks
-        with the following <template/>, where each <id/>, <status/>, and
-        <mtime/> correspond to an entry in the task list:
+        with the following <template/>, where each <id/>, <status/>,
+        <effort/>, and <mtime/> correspond to an entry in the task list,
+        with an empty <effort/> rendered as `-`:
 
         <template>
         ⧉ **ASE**: ◉ tasks:
 
-        | *Task Id* | *Status*    | *Last Modified*    |
-        |-----------|-------------|--------------------|
-        | **<id/>** | `<status/>` | `<mtime/>`         |
-        | [...]     | [...]       | [...]              |
+        | *Task Id* | *Status*    | *Effort*    | *Last Modified*    |
+        |-----------|-------------|-------------|--------------------|
+        | **<id/>** | `<status/>` | `<effort/>` | `<mtime/>`         |
+        | [...]     | [...]       | [...]       | [...]              |
 
         </template>
 
@@ -159,7 +162,7 @@ Procedure
 
     <if condition="<getopt-option-verbose/> is not equal `true`">
     <ase-tpl-hint level="verbose">
-    Use `/ase-task-list --verbose` to additionally show the status and the last-modified timestamp of each task plan.
+    Use `/ase-task-list --verbose` to additionally show the status, the effort size, and the last-modified timestamp of each task plan.
     </ase-tpl-hint>
     </if>
 

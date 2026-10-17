@@ -36,14 +36,14 @@
                     <div v-if="!surface.minimized.includes(l.status)" class="cards" tabindex="-1">
                         <!--  the task carried by the keyboard, shown on top of the selected target lane  -->
                         <div v-if="carried !== null && drag?.over === l.status" class="card held sel carried" :class="`tone-${carried.tone}`">
-                            <div class="cbody"><TaskTitle :id="carried.id" :epic="carried.group" :title="carried.title" :cyclic="carried.cyclic" :edit="carried.edit" /></div>
+                            <div class="cbody"><TaskTitle :id="carried.id" :epic="carried.group" :title="carried.title" :cyclic="carried.cyclic" :edit="carried.edit" :effort="carried.effort" /></div>
                         </div>
                         <div v-for="c in l.cards" :key="c.id" class="card" draggable="true"
                             :class="[ `tone-${c.tone}`, { sel: sel.id === c.id, badged: badges.has(c.id) }, carryClass(c.id) ]"
                             @click="sel = { g: gi, l: li, id: c.id }; openTask(c.id)"
                             @dragstart="dragStart($event, c.id, l.status, c.moves)" @dragend="dragEnd">
                             <div v-if="badges.has(c.id)" class="cagents"><span v-for="(b, bi) in badges.get(c.id)!" :key="bi" class="cagent"><span class="aicon">{{ b.icon }}</span> {{ b.name }}</span></div>
-                            <div class="cbody"><TaskTitle :id="c.id" :epic="c.group" :title="c.title" :cyclic="c.cyclic" :edit="c.edit" /></div>
+                            <div class="cbody"><TaskTitle :id="c.id" :epic="c.group" :title="c.title" :cyclic="c.cyclic" :edit="c.edit" :effort="c.effort" /></div>
                         </div>
                     </div>
                 </div>

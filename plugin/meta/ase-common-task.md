@@ -64,6 +64,10 @@ Task Skill Common Steps
     <getopt-option-int-reuse-task/> is equal `true`
     *and* an `ase_task_save(id: '<ase-task-id/>', ...)` tool call
     exists earlier in the current session
+    *and* the `text` *argument* of the most recent such call carries
+    no `Effort:` frontmatter key without <hash/> (a bare size like
+    `Effort: M`, which the task store stamped or dropped on that save,
+    see the plan format)
 ">
     Set <text/> to the `text` *argument* of the most recent
     `ase_task_save(id: '<ase-task-id/>', ...)` tool call -- this is

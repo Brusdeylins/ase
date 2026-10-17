@@ -53,6 +53,10 @@ The *agent* is one of the following agent kinds:
 - the built-in request agent `editor`, which processes the edit
   requests of tasks in any task lifecycle model,
 
+- the built-in agent `estimator`, which estimates the effort of tasks
+  in any task lifecycle model, without claiming them (mode `phase`),
+  resp. on request (mode `request`),
+
 - an agent of a *definition kind*, whose entire behavior is configured
   by a definition file *kind*`.`*ext* of the project or of the user,
 
@@ -65,7 +69,7 @@ agents are best run together as a *fleet* (see `ase-agent-fleet`(1)),
 and each agent can pass its live presence to the task boards through
 an *agent relay* (see `ase-agent-relay`(1)).
 
-The five built-in agents are not hard-coded, but each mode of them is a
+The six built-in agents are not hard-coded, but each mode of them is a
 declarative *definition*, run by the same agent engine as the agents of
 the definition kinds and the `adhoc` agent. Hence, every agent accepts
 all options `--`*group*`-`*item* of the definitions (see
@@ -95,14 +99,14 @@ parallel to each other.
 
 ## TASK CLAIMING
 
-A *phase* agent (all built-in agents except `editor`, and every
-definition of `--type phase`) observes the tasks in its *incoming*
-state which do not yet carry its *tag* (plain or with any value) in
-their `Tags:` frontmatter key, and whose `Assignee:` frontmatter key
-is either still empty or already the assignee name of the agent
-(default: its name), so a task can be pre-assigned to a particular
-agent of a pool, while a task assigned to anybody else (e.g., a
-human) is left alone.
+A *phase* agent (all built-in agents except `editor` and `estimator`,
+and every definition of `--type phase` without `--unclaimed`) observes
+the tasks in its *incoming* state which do not yet carry its *tag*
+(plain or with any value) in their `Tags:` frontmatter key, and whose
+`Assignee:` frontmatter key is either still empty or already the
+assignee name of the agent (default: its name), so a task can be
+pre-assigned to a particular agent of a pool, while a task assigned to
+anybody else (e.g., a human) is left alone.
 
 An agent can require a task to be already assigned to it (like
 `planner`, see `--assign-required`).
@@ -149,10 +153,21 @@ failure is logged as an error. A final status update of a processed
 task which fails even after its retries is retried in the background
 with a growing delay.
 
-A *request* agent (`editor`, and every definition of `--type
-request`) instead processes the prompt requests attached to tasks in
+A *request* agent (`editor`, `estimator` in the mode `request`, and
+every definition of `--type request`) instead processes the prompt requests attached to tasks in
 any lifecycle status (see `ase task request` in `ase-task-request`(1)
 and `ase-agent-editor`(1)).
+
+An *unclaimed* phase agent (`estimator` in the mode `phase`, and every definition of
+`--type phase` with `--unclaimed`) instead processes every task in one
+of its incoming states (each adapted onto the task lifecycle model of
+the project, e.g., `PLANNED` as `PLANNING` for `team` and as `OPEN` for
+`solo`) which does not carry its tag yet, independent of its assignee
+and its predecessors, without claiming it: it neither moves the task
+into an activity state, nor tags it as active, nor assigns it to
+itself, and it settles the task by its tag only, so it never changes
+its status and its assignee and keeps no other agent off it (see
+`ase-agent-estimator`(1)).
 
 ## PREDECESSORS
 
@@ -205,8 +220,8 @@ un-namespaced *ASE* skill (`ase-*`) gets the plugin namespace `ase:`
 for `claude` only.
 
 The agent tool and, for an agent of a working directory other than
-`project` (i.e., all built-in agents except `planner`, see `--workdir`),
-`git` have to be found in `$PATH`.
+`project` (i.e., all built-in agents except `planner` and `estimator`,
+see `--workdir`), `git` have to be found in `$PATH`.
 
 All processing information, including the output of the agent tool
 (which streams its agent messages, tool calls, failures, and final
@@ -230,8 +245,9 @@ On an interrupt (`SIGINT`, `SIGTERM`, `SIGHUP`, or `SIGQUIT`, e.g., by
 `ase agent` *agent* `stop`), and on the failure of a concurrently run
 agent, the running processings are aborted and their tasks are put
 back, untagged and with their previous assignee, into the incoming
-state, while a repeated signal terminates the process at once (leaving
-the claimed tasks to the recovery described below).
+state (while a task processed unclaimed is left untouched), while a
+repeated signal terminates the process at once (leaving the claimed
+tasks to the recovery described below).
 
 The claimed tasks of each run are recorded under a run lock in the
 *per-user state directory* (below a sub-directory per task store, as
@@ -284,9 +300,10 @@ frontmatter keys of a task (or their configured defaults
 
 Without `--repo`, all tasks are processed in the Git working copy the
 agent is started in, which is hence mandatory (except for an agent of
-the working directory `project`, like `planner`, which works in the
-project root only, where `planner` does not accept `--repo` and
-`--tempdir` at all, while any other such agent ignores them).
+the working directory `project`, like `planner` and `estimator`, which
+work in the project root only, where `planner` and `estimator` do not
+accept `--repo` and `--tempdir` at all, while any other such agent
+ignores them).
 
 With `--repo` *url*, each agent instead clones the Git repository *url* once
 into its temporary directory (removed on termination) and processes every
@@ -415,6 +432,12 @@ The following sub-command groups exist:
   The agent processing the edit requests of tasks in any task lifecycle
   model. See `ase-agent-editor`(1).
 
+- `ase agent estimator` `start`|`status`|`log`|`stop`:
+  The agent estimating the effort of the tasks without a valid
+  `Effort:` key in any task lifecycle model, without claiming them
+  (mode `phase`), resp. of the tasks of the `estimate` requests (mode
+  `request`). See `ase-agent-estimator`(1).
+
 - `ase agent` *kind* `start`|`status`|`log`|`stop`:
   The agent of the definition kind *kind* (see **DEFINITION KINDS**),
   with the same sub-commands and options as `ase agent adhoc`, except
@@ -501,10 +524,11 @@ The sub-commands of every agent kind *agent* are:
   The run lock (a directory, refreshed periodically and considered stale
   after 30 seconds without refresh) and the run record (process id, process
   start time, and claimed tasks) of each agent process of agent *kind*
-  (`planner`, `implementer`, `approver`, `integrator`, or `editor`, resp.
-  `tag-`*word* per tag `ase-agent-`*word* of the agents of the definition
-  kinds and of `adhoc`), where *store-hash* is the first 12 hex digits of
-  the SHA-1 digest of the identity of the task store.
+  (`planner`, `implementer`, `approver`, `integrator`, `editor`, or
+  `estimator`, resp. `tag-`*word* per tag `ase-agent-`*word* of the
+  agents of the definition kinds and of `adhoc`), where *store-hash* is
+  the first 12 hex digits of the SHA-1 digest of the identity of the
+  task store.
 
   On termination, the lock is removed, and so is the record, unless it
   still records claimed tasks.
@@ -542,9 +566,9 @@ $ ase agent implementer stop -n impl-codex
 
 `ase`(1), `ase-agent-planner`(1), `ase-agent-implementer`(1),
 `ase-agent-approver`(1), `ase-agent-integrator`(1),
-`ase-agent-editor`(1), `ase-agent-adhoc`(1), `ase-agent-relay`(1),
-`ase-agent-fleet`(1), `ase-task`(1), `ase-task-board`(1),
-`ase-task-request`(1), `ase-config`(1).
+`ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
+`ase-agent-relay`(1), `ase-agent-fleet`(1), `ase-task`(1),
+`ase-task-board`(1), `ase-task-request`(1), `ase-config`(1).
 
 ## AUTHOR
 

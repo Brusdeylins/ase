@@ -20,7 +20,7 @@ import { configSchema, webColorDefaults, webColorNames } from "./ase-config-sche
 import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, dataLang, dataLoad, dataSpans, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
 import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
-import { statsOf, statsRanges }  from "./ase-task-board-stats.js"
+import { statsOf, statsRanges, effortScale } from "./ase-task-board-stats.js"
 import type { StatsRange }       from "./ase-task-board-stats.js"
 import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine } from "./ase-agent-relay-core.js"
@@ -264,7 +264,7 @@ const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
             status: l.status, active: l.active, weight: l.weight, dashed: l.dashed, kind: l.kind,
             cards:  (board.lanes.get(l.status) ?? []).map((c) => ({
                 id: c.id, title: c.title, group: c.group, cyclic: board.cyclic.has(c.id), tone: toneOf(board, c), moves: cardMoves(board, lifecycle, c),
-                edit: c.edit, finished: editRefused(lifecycle, c.actual), assignee: c.assignee
+                edit: c.edit, finished: editRefused(lifecycle, c.actual), assignee: c.assignee, effort: c.effort
             }))
         }))
     }))
@@ -461,7 +461,8 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
     })
 
     /*  the statistics of the tasks matching the filter query within the time range: the tasks
-        per lifecycle state, their progress, and their total AI usage (loading all plans)  */
+        per lifecycle state, their progress, their effort (on the configured scale, on each
+        request), and their total AI usage (loading all plans)  */
     server.route({
         method:  "GET",
         path:    "/task-board/api/stats",
@@ -471,7 +472,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
                 return h.response({ error: "invalid statistics range" }).code(400)
             const all   = await currentBoard(log)
             return h.response(statsOf(filterBoard(all, filterQuery(request)), all,
-                await Task.listUsage(log), range as StatsRange))
+                await Task.listUsage(log), range as StatsRange, effortScale(log)))
         })
     })
 

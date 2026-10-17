@@ -8,7 +8,7 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import { splitHeight, toneOf, cardLabel, groupLabel, editMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf } from "./ase-task-board-core.js"
+import { splitHeight, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
@@ -89,7 +89,8 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
 }
 
 /*  the label lines of a card of a width: its group (if any, and not for an epic,
-    between "♛" and "▶"), the task id (behind "≡", and of an epic also behind "♛"), its markers, and title,
+    between "♛" and "▶"), the task id (behind "≡", and of an epic also behind "♛"), its markers
+    (of a dependency cycle, of the edit requests, and of the effort size), and title,
     cut onto a single line, or if titles are shown, wrapped onto at most three lines
     (with an ellipsis if cut), padded by one column on each side, with the group
     glued to the task id by five placeholder columns (the "♛", the "▶", their
@@ -101,7 +102,8 @@ const scrollArrows = ({ scroll, dim }: ViewCtx, g: number, height: number, wrapp
 const cardLines = ({ board, titles }: ViewCtx, c: Card, width: number): string[] => {
     const textW = Math.max(3, width - 2)
     const edit  = editMarker(c)
-    const marks = (board.cyclic.has(c.id) ? " ⟲" : "") + (edit !== "" ? ` ${edit}` : "")
+    const size  = effortMarker(c)
+    const marks = (board.cyclic.has(c.id) ? " ⟲" : "") + (edit !== "" ? ` ${edit}` : "") + (size !== "" ? ` ${size}` : "")
     const group = groupLabel(c)
     const epic  = group === c.id
     const glued = group !== "" && !epic ? glueGroup.repeat(3) + group.replace(/ /g, glueGroup) + glueGroup.repeat(2) : ""
@@ -139,18 +141,31 @@ const renderCard = (ctx: ViewCtx, lane: LaneSpec, c: Card, lines: string[], widt
         borderTop: cut !== "top", borderBottom: cut !== "bottom", width, height: rows, flexDirection: "column"
     } as const
 
-    /*  the marker of the edit requests (on whatever line it was wrapped onto) in bold,
-        and like in the web board in accent color while being processed and in signal
-        color when failed (except for the ghost of the carried task)  */
-    const edit    = editMarker(c)
+    /*  the markers of the edit requests and of the effort size (in this order, each on
+        whatever line it was wrapped onto) in bold (except for the enclosing brackets of the
+        one of the effort size), where the one of the edit requests is like
+        in the web board in accent color while being processed and in signal color when
+        failed (except for the ghost of the carried task)  */
     const color   = phantom ? undefined : c.edit === "active" ? palette.accent : c.edit === "failed" ? palette.signal : undefined
-    let   marked  = edit === ""
+    const marks   = [ { key: "edit", text: editMarker(c), color }, { key: "effort", text: effortMarker(c), color: undefined } ]
+        .filter((mark) => mark.text !== "")
+    let   marked  = 0
     const marker  = (text: string): React.ReactNode[] => {
-        const at = marked ? -1 : text.indexOf(edit)
-        if (at < 0)
-            return [ text ]
-        marked = true
-        return [ text.slice(0, at), h(Text, { key: "edit", bold: true, ...(color !== undefined ? { color } : {}) }, edit), text.slice(at + edit.length) ]
+        const out = [] as React.ReactNode[]
+        let   rest = text
+        while (marked < marks.length) {
+            const mark = marks[marked]
+            const at   = rest.indexOf(mark.text)
+            if (at < 0)
+                break
+            marked++
+            const inner = mark.text.replace(/^\[(.*)\]$/, "$1")
+            const frame = inner !== mark.text
+            out.push(rest.slice(0, at), h(Text, { key: mark.key }, frame ? "[" : "",
+                h(Text, { bold: true, ...(mark.color !== undefined ? { color: mark.color } : {}) }, inner), frame ? "]" : ""))
+            rest = rest.slice(at + mark.text.length)
+        }
+        return [ ...out, rest ]
     }
     const text    = lines.map((line, k) => h(Text, { key: k, color: tint, dimColor: dim, wrap: "truncate" },
         ...(k === 0 ? [ line.slice(0, 1), ...badge, h(Text, { key: "id", ...cx("badge") }, ` ${epic ? "♛ " : ""}≡ ${line.slice(from, to)} `),
@@ -589,17 +604,20 @@ export const renderAgents = (ctx: BoardCtx) => {
 }
 
 /*  the heights of the buttons of the time ranges (with a blank line below them), and of the
-    frames "Task Progress" (and "Open Tasks" besides it), "Usage", and "Top-5 Tasks" (and
-    "Finished Tasks" and "Efficiency" besides it), each with an inner blank line at its top
-    and bottom, of the statistics view  */
+    frames "Task Progress" (and "Open Tasks" besides it), "Usage" (and "Effort" besides
+    it), and "Top-5 Tasks" (and "Finished Tasks" and "Efficiency" besides it), each
+    with an inner blank line at its top and bottom (except for the column charts), of the
+    statistics view  */
 const RANGES_H   = 2
 const PROGRESS_H = 6
 const USAGE_H    = 8
 const TOP_H      = 10
 
 /*  the compact amounts of the statistics view: a time (in minutes) in minutes below one
-    hour, else in hours, a number of tokens with a metric suffix, and costs in USD  */
+    hour, else in hours (for the narrow columns of a column chart in whole hours from ten
+    hours on), a number of tokens with a metric suffix, and costs in USD  */
 const statsHours  = (minutes: number) => minutes < 60 ? `${Math.round(minutes)}m` : `${(minutes / 60).toFixed(1)}h`
+const statsHoursN = (minutes: number) => minutes < 10 * 60 ? statsHours(minutes) : `${Math.round(minutes / 60)}h`
 const statsTokens = (n: number) =>
     n < 1000 ? String(n) : n < 1000 * 1000 ? `${(n / 1000).toFixed(1)}k` :
         n < 1000 * 1000 * 1000 ? `${(n / (1000 * 1000)).toFixed(1)}M` : `${(n / (1000 * 1000 * 1000)).toFixed(1)}G`
@@ -646,11 +664,12 @@ const statsBar = (value: number, max: number, width: number): string => {
 }
 
 /*  render the statistics view: the framed column chart "Tasks per State" of the numbers of tasks per
-    lifecycle state (labeled by state and phase, in the colors of their lanes, with the framed column
+    lifecycle state (labeled by state, its effort, and phase, in the colors of their lanes, with the framed column
     chart "Throughput" of the finished tasks of the last weeks besides it), the framed stacked bar
     "Task Progress" of the cancelled, finished, work-in-progress, and open tasks (with the framed
     stacked bar "Open Tasks" of the ready and blocked open tasks besides it), the framed bars "Usage"
-    of the total times, tokens, and costs of the tasks, and the framed table "Top-5 Tasks" of the
+    of the total times, tokens, and costs of the tasks (with the framed column chart "Effort"
+    of the numbers of tasks per effort size besides it), and the framed table "Top-5 Tasks" of the
     tasks of the highest usage (with the framed "Finished Tasks" of the usage per finished task and
     the framed "Efficiency" of the AI usage besides it), below the buttons of the time ranges  */
 export const renderStats = (ctx: BoardCtx) => {
@@ -686,14 +705,18 @@ export const renderStats = (ctx: BoardCtx) => {
         for its number, each number sits on top of its column (being at least a thin line,
         even without any number, like in the web board), the columns stand on a blank line above
         their labels (each cut to its first five characters, without an ellipsis, for
-        readability), and each group of columns is labeled below its line spanning its columns
+        readability) and their sub-labels below them (like the effort of a state, cut with
+        an ellipsis, and blank if empty, to keep the columns of all charts aligned), and each
+        group of columns is labeled below its line spanning its columns
         (like in the web board), followed by a footer line (blank if empty, to keep the columns
         of all charts aligned), where the columns start directly at the left padding of the
-        frame, are separated by a gap of one column, and leave the remaining width on the right  */
-    const chartH   = Math.max(8, boardH - RANGES_H - PROGRESS_H - USAGE_H - TOP_H)
-    const areaH    = chartH - 7
+        frame, are separated by a gap of one column, and leave the remaining width on the right,
+        and where a compact chart of a height omits the blank line, the sub-labels, and the groups  */
+    const chartH   = Math.max(9, boardH - RANGES_H - PROGRESS_H - USAGE_H - TOP_H)
     const colChart = (key: string, title: string, width: number,
-        cols: { label: string, count: number, tone: string }[], groups: { label: string, n: number }[], footer = "") => {
+        cols: { label: string, count: number, tone: string, sub?: string }[], groups: { label: string, n: number }[], footer = "",
+        height = chartH, compact = false) => {
+        const areaH  = Math.max(1, height - (compact ? 4 : 8))
         const colW   = Math.max(2, Math.floor((width + 1) / cols.length))
         const lineW  = colW - 1
         const fitW   = Math.max(1, Math.min(14, lineW))
@@ -716,21 +739,29 @@ export const renderStats = (ctx: BoardCtx) => {
                     level === Math.ceil(fill / 8) ? center(text, barW) : " ".repeat(barW))
             })))
         })
-        return frame(key, chartH, title, 0, ...rows,
+        const labels = h(Box, { key: "labels" }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) =>
+            h(Text, { key: i, color: tint(c.tone), dimColor: dim, bold: true },
+                center(c.label.slice(0, Math.min(5, lineW)), lineW) + gapOf(i, cols.length)))))
+        const foot   = h(Box, { key: "footer" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
+            center(footer, Math.max(0, cols.length * colW - 1))))
+        if (compact)
+            return frame(key, height, title, 0, ...rows, labels, foot)
+        return frame(key, height, title, 0, ...rows,
             h(Box, { key: "base" }, h(Text, { wrap: "truncate" }, " ")),
-            h(Box, { key: "labels" }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) =>
-                h(Text, { key: i, color: tint(c.tone), dimColor: dim, bold: true },
-                    center(c.label.slice(0, Math.min(5, lineW)), lineW) + gapOf(i, cols.length))))),
+            labels,
+            h(Box, { key: "subs" }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) =>
+                h(Text, { key: i, color: tint(c.tone), dimColor: dim },
+                    center(c.sub ?? "", lineW) + gapOf(i, cols.length))))),
             h(Box, { key: "groups" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
                 "─".repeat(Math.max(0, g.n * colW - 1)) + gapOf(i, groups.length)).join(""))),
             h(Box, { key: "group-labels" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
                 center(g.label, g.n * colW - 1) + gapOf(i, groups.length)).join(""))),
-            h(Box, { key: "footer" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
-                center(footer, Math.max(0, cols.length * colW - 1)))))
+            foot)
     }
 
-    /*  the column chart of the number of tasks per state (labeled by the states, grouped by their
-        phases, and with the total number of tasks as its footer), with the column chart of the throughput of the last weeks besides it (labeled by
+    /*  the column chart of the number of tasks per state (labeled by the states and below by the
+        effort of their estimated tasks, grouped by their phases, and with the total number of tasks
+        as its footer), with the column chart of the throughput of the last weeks besides it (labeled by
         their week numbers, prefixed with "W" if fitting, and grouped by all weeks with the total
         and average number of finished tasks, and with the forecast of the backlog as its footer),
         grown like the frames "Finished Tasks" and "Efficiency" together, to align with them  */
@@ -748,7 +779,10 @@ export const renderStats = (ctx: BoardCtx) => {
     const weekAvg = stats.throughput.length > 0 ? weekSum / stats.throughput.length : 0
     const chart   = pair("charts", chartH,
         colChart("chart", "Tasks per State", leftW - 2 * avgGrow - 4,
-            stats.states.map((s) => ({ label: s.status, count: s.count, tone: s.tone })), phases,
+            stats.states.map((s) => ({
+                label: s.status, count: s.count, tone: s.tone,
+                sub:   s.effort.estimated > 0 ? statsHoursN(s.effort.minutes) : ""
+            })), phases,
             `total tasks: ${stats.states.reduce((n, s) => n + s.count, 0)}`),
         colChart("throughput", "Throughput", weeksW,
             stats.throughput.map((w) => ({ label: weekW >= 3 ? `W${w.week}` : String(w.week), count: w.count, tone: "idle" })),
@@ -788,41 +822,68 @@ export const renderStats = (ctx: BoardCtx) => {
 
     /*  the bars of the total usage by times, tokens (stacked by their kinds),
         and costs (columns), with the bars of a column scaled to its maximum, where each
-        column ends with a gap (which the last column lets run out at the frame)  */
+        column ends with a gap (which the last column lets run out at the frame), within
+        the frame on the left (grown like the frames "Finished Tasks" and "Efficiency"
+        together, to align with them), where the token column is widened (at the expense of
+        the time and cost columns) as far as needed to fit the two-column legend of the token
+        kinds below its bar, which is indented like the bar as far as the column keeps its gap,
+        and where the values of a column are as wide as its widest one, so the bars take all
+        the remaining width of the column and the columns are separated by a gap of two spaces  */
     const u       = stats.usage
     const nameW   = 5
-    const valW    = 7
-    const gapW    = 3
-    const cellW   = Math.max(18, Math.floor((innerW + gapW) / 3))
-    const meterW  = cellW - nameW - 1 - valW - gapW
+    const gapW    = 2
     const tokens  = u.cread + u.cwrite + u.input + u.output
+    const share   = (n: number) => `${tokens > 0 ? Math.round(n / tokens * 100) : 0}%`
+    const kind    = (name: string, n: number) => ` ${name} (${share(n)})`
+    const leftL   = Math.max(kind("cread", u.cread).length, kind("cwrite", u.cwrite).length) + 1
+    const rightL  = Math.max(kind("input", u.input).length, kind("output", u.output).length)
+    const timeV   = Math.max(...[ u.timeAI, u.timeHR, u.timeReal ].map((m) => statsHours(m).length))
+    const tokenV  = statsTokens(tokens).length
+    const costV   = Math.max(...[ u.costAI, u.costHR ].map((usd) => statsCost(usd).length))
+    const usageW  = leftW - 2 * avgGrow - 4 + gapW
+    const tokenW  = Math.max(Math.floor(usageW / 3), 1 + leftL + 1 + rightL + gapW, nameW + 2 + tokenV + gapW)
+    const cellW   = Math.max(nameW + 2 + Math.max(timeV, costV) + gapW, Math.floor((usageW - tokenW) / 2))
+    const timeM   = cellW - nameW - 1 - timeV - gapW
+    const costM   = cellW - nameW - 1 - costV - gapW
+    const stackW  = tokenW - nameW - 1 - tokenV - gapW
     const maxTime = Math.max(u.timeAI, u.timeHR, u.timeReal)
     const maxCost = Math.max(u.costAI, u.costHR)
-    const cell    = (key: string, name: string, color: string | undefined, meter: string, value: string, last = false) => [
+    const cell    = (key: string, name: string, color: string | undefined, meter: string, value: string, valW: number, last = false) => [
         name.padEnd(nameW), h(Text, { key, color, dimColor: dim }, meter), " ", last ? value : value.padEnd(valW + gapW) ]
-    const split   = splitCells(tokens > 0 ? meterW : 0, [ u.cread, u.cwrite, u.input, u.output ])
+    const split   = splitCells(tokens > 0 ? stackW : 0, [ u.cread, u.cwrite, u.input, u.output ])
     const stack   = [ "░", "▒", "▓", "█" ].map((glyph, i) => glyph.repeat(split[i])).join("")
     const time    = (name: string, color: string | undefined, minutes: number) =>
-        cell(`time-${name}`, name, color, statsBar(minutes, maxTime, meterW), statsHours(minutes))
+        cell(`time-${name}`, name, color, statsBar(minutes, maxTime, timeM), statsHours(minutes), timeV)
     const cost    = (name: string, color: string | undefined, usd: number) =>
-        cell(`cost-${name}`, name, color, statsBar(usd, maxCost, meterW), statsCost(usd), true)
-    const share   = (n: number) => `${tokens > 0 ? Math.round(n / tokens * 100) : 0}%`
+        cell(`cost-${name}`, name, color, statsBar(usd, maxCost, costM), statsCost(usd), costV, true)
+    const indent  = Math.max(0, Math.min(nameW, tokenW - gapW - (1 + leftL + 1 + rightL)))
     const legend  = (key: string, left: [ string, string, number ], right: [ string, string, number ]) => [
-        " ".repeat(nameW), h(Text, { key: `${key}-l`, color: palette.accent, dimColor: dim }, left[0]),
-        ` ${left[1]} (${share(left[2])})`.padEnd(14),
+        " ".repeat(indent), h(Text, { key: `${key}-l`, color: palette.accent, dimColor: dim }, left[0]),
+        kind(left[1], left[2]).padEnd(leftL),
         h(Text, { key: `${key}-r`, color: palette.accent, dimColor: dim }, right[0]),
-        ` ${right[1]} (${share(right[2])})`.padEnd(Math.max(0, cellW - nameW - 1 - 14 - 1)) ]
+        kind(right[1], right[2]).padEnd(Math.max(0, tokenW - indent - 1 - leftL - 1)) ]
     const lines   = [
-        [ ...time("AI", palette.accent, u.timeAI), ...cell("token", "AI", palette.accent, stack.padEnd(meterW), statsTokens(tokens)),
+        [ ...time("AI", palette.accent, u.timeAI), ...cell("token", "AI", palette.accent, stack.padEnd(stackW), statsTokens(tokens), tokenV),
             ...cost("AI", palette.accent, u.costAI) ],
         [ ...time("HR", palette.accent, u.timeHR), ...legend("legend1", [ "░", "cread", u.cread ], [ "▓", "input", u.input ]),
             ...cost("HR", palette.accent, u.costHR) ],
         [ ...time("real", palette.dim, u.timeReal), ...legend("legend2", [ "▒", "cwrite", u.cwrite ], [ "█", "output", u.output ]) ]
     ].map((segs, i) => h(Text, { key: `line${i}`, ...cx("normal", "truncate", dim && "dimmed") }, ...segs))
     const head    = h(Text, { key: "head", ...cx("normal", "bold", "truncate", dim && "dimmed") },
-        "Time:".padEnd(cellW) + "Token:".padEnd(cellW) + "Cost:")
+        "Time:".padEnd(cellW) + "Token:".padEnd(tokenW) + "Cost:")
     const matrix  = frame("usage", USAGE_H, "Usage", 1, ...(usage === null ?
         [ h(Text, { key: "loading", ...cx("dim", dim && "dimmed") }, "loading …") ] : [ head, ...lines ]))
+
+    /*  the compact column chart of the distribution of the effort sizes (the numbers of the
+        estimated tasks per size, from the smallest to the largest size), with the numbers of
+        the estimated and of all tasks as its footer, besides the bars of the total usage  */
+    const effort  = stats.states.reduce((sum, s) =>
+        ({ estimated: sum.estimated + s.effort.estimated, tasks: sum.tasks + s.effort.tasks }), { estimated: 0, tasks: 0 })
+    const usages  = pair("usage", USAGE_H, matrix,
+        colChart("sizes", "Effort", rightW + 2 * avgGrow - 4,
+            stats.sizes.map((s) => ({ label: s.size, count: s.count, tone: "idle" })), [],
+            `estimated: ${effort.estimated} of ${effort.tasks} tasks`, USAGE_H, true),
+        2 * avgGrow)
 
     /*  the table of the tasks of the highest usage: the id (inverse behind "≡", in the color of
         its lane), the title (cut with an ellipsis), a bar of its share of the total costs (resp.
@@ -847,7 +908,7 @@ export const renderStats = (ctx: BoardCtx) => {
                 const id = fit(t.id, idW - 4).trimEnd()
                 return h(Text, { key: `top${i}`, ...cx("normal", "truncate", dim && "dimmed") },
                     h(Text, { key: "id", color: tint(t.tone), dimColor: dim, ...cx("badge") }, ` ≡ ${id} `),
-                    " ".repeat(idW - id.length - 4) + gap + fit(t.title, titleW) + gap,
+                    " ".repeat(idW - id.length - 4) + gap + fit(clean(t.title), titleW) + gap,
                     h(Text, { key: "bar", color: palette.accent, dimColor: dim }, statsBar(t.share, 1, pctW)),
                     gap + statsCost(t.cost).padStart(costW) + gap +
                     `${statsTokens(t.input).padStart(inW)} ▷ ${statsTokens(t.output).padStart(outW)}`.padStart(tokW))
@@ -894,7 +955,7 @@ export const renderStats = (ctx: BoardCtx) => {
                 h(Text, cx("button", r === range && "button-active", dim && "dimmed"), ` ${statsRangeLabel(r, stats.days)} `)) ]))
     const shown   = stats.states.reduce((n, s) => n + s.count, 0)
     return [
-        h(Box, { key: "stats", height: boardH, paddingX: 1, flexDirection: "column", overflow: "hidden" }, ranges, chart, progress, matrix, tops),
+        h(Box, { key: "stats", height: boardH, paddingX: 1, flexDirection: "column", overflow: "hidden" }, ranges, chart, progress, usages, tops),
         h(Box, { key: "info", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"), [ "statistics of ", h(Text, { key: "n", ...cx("bold") }, String(shown)),
                 ` ${filter !== "" ? "filtered " : ""}tasks`, ...(range !== "total" ? [ " ", h(Text, { key: "r", ...cx("bold") }, statsRangeLabels[range]) ] : []) ])),

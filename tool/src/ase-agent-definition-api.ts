@@ -38,7 +38,8 @@ export interface AgentParam {
     hatches beyond the declarative options, and the base definition it extends (a definition
     file, relative to this one, or the definition "builtin:<kind>[-<mode>]" of a built-in agent),
     whose options it overrides (where a false flag unsets the flag of the base definition), whose
-    parameter declarations it extends field-wise, and whose hooks of the same name it replaces  */
+    parameter declarations it extends field-wise, and whose hooks of the same name it replaces,
+    where only an "unclaimed" phase agent can have multiple incoming states  */
 export interface AgentDefinition {
     definition?: string
     params?:     Record<string, AgentParam | string | number | boolean>
@@ -46,8 +47,9 @@ export interface AgentDefinition {
     workdir?:    AgentWorkdir
     lifecycle?:  Many<string>
     serial?:     boolean
+    unclaimed?:  boolean
     state?: {
-        incoming?: string
+        incoming?: Many<string>
         activity?: string
         success?:  string
         failure?:  string
@@ -238,11 +240,12 @@ export interface AgentHookOutcome {
 }
 
 /*  the settling of a processed task as returned by the hook "settle", overriding the
-    configured one: its target state ("type: phase" only, still required to be reachable
-    from the activity state), the value of its tag ("type: phase" only: a lower-case value,
-    or null to untag it, which is refused if the task would return into the incoming state
-    unguarded by "attach.skip"), and the assignee to hand it over to (a name, "none", or
-    "previous"), where an omitted field keeps the configured settling  */
+    configured one: its target state ("type: phase" without "unclaimed" only, still required
+    to be reachable from the activity state), the value of its tag ("type: phase" only: a
+    lower-case value, or null to untag it, which is refused if the task would return into
+    the incoming state unguarded by "attach.skip" or the hook "ready"), and the assignee to
+    hand it over to (a name, "none", or "previous", but not with "unclaimed"), where an
+    omitted field keeps the configured settling  */
 export interface AgentHookSettlement {
     readonly state?:    string
     readonly tag?:      string | null
@@ -259,12 +262,13 @@ type Async<T> = T | Promise<T>
     - "order": the prioritization of the dispatchable tasks <tasks> (in natural id order) on
       each dispatching: the tasks (or their ids) in the order to claim them, where an omitted
       task is not claimed this time (and a failed hook keeps the natural id order)
-    - "passes" (for "phase" only, synchronous): whether the predecessor <pred> of the
-      "After:" key (or of the explicit epic) of the task <succ> passed the phase of the
-      agent, or undefined for the default decision by the states "phase" and "passed"
+    - "passes" (for "phase" without "unclaimed" only, synchronous): whether the predecessor
+      <pred> of the "After:" key (or of the explicit epic) of the task <succ> passed the phase
+      of the agent, or undefined for the default decision by the states "phase" and "passed"
     - "ready": whether a dispatchable task is claimed now, checked right before its claim
-      (after "attach.skip"): true to claim it, false to silently skip it, or the reason
-      to wait for (reported once per change of it)
+      (after "attach.skip"): true to claim it, false to silently skip it (e.g. as the result
+      of its processing already guards it), or the reason to wait for (reported once per
+      change of it)
     - "prepare": the preparing of the job of a claimed task in its working directory, after
       the commands of "prepare.run", where a thrown error fails the processing
     - "prompt": the prompt of the job, given the configured one <prompt> (rendered from its

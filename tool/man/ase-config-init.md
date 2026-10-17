@@ -57,7 +57,11 @@ file lock and atomically.
       `project.task.store.url` `ase:./.ase/task`,
       `project.task.default.source` `worktree`,
       `project.task.default.changeset` `worktree`,
-      `project.task.default.target` `source`, the full set of
+      `project.task.default.target` `source`,
+      `project.task.effort.scale` `15,60,240,960`,
+      `project.task.effort.factor` `1`, `project.task.effort.file` `1`,
+      `project.task.effort.line` `0.025`,
+      `project.task.effort.iteration` `2.5`, the full set of
       `project.artifact.*` globs, the `board.tui.color.*`,
       `board.web.color.*`, and `board.web.editor.keymap` defaults, and
       `telemetry.enabled` `false`, `telemetry.prices.ai`

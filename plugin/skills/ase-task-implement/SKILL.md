@@ -377,9 +377,10 @@ Procedure
         `team` model from `PLANNING` or `STALLED`, for the `enterprise`
         model from `DRAFTED` via `PLANNING` and `PLANNED`, or from
         `PLANNED` or `STALLED`), and persist this frontmatter-only change
-        -- without refreshing the `Modified:` key -- by calling the
-        `ase_task_save(id: "<ase-task-id/>", text: "<task-content/>")`
-        tool of the `ase` MCP server. Do not output anything.
+        -- without refreshing the `Modified:` key -- by taking over the
+        stored `Effort:` key and calling the `ase_task_save` tool of the
+        `ase` MCP server *exactly* as described for the final save in
+        sub-step 5 below. Do not output anything.
         </if>
 
     2.  Perform a *final implementation* of the task plan inside
@@ -545,9 +546,25 @@ Procedure
         (including a *change set snapshot*, which is maintained by the
         `ase agent` agents only) is passed through *verbatim*.
 
+        Right before persisting, take over a concurrently stored effort
+        estimation, as the `estimator` agent and the `ase-task-estimate`
+        skill can set the `Effort:` key while the task is implemented
+        (and the checkbox changes above keep it valid): call the
+        `ase_task_load(id: "<ase-task-id/>", tag: true)` tool of the
+        `ase` MCP server, set <task-tag/> to the content of the trailing
+        `<task-plan-tag>` delimiter line of its `text` output field, and
+        set the `Effort:` frontmatter key of <task-content/> to the one
+        of the loaded plan -- *replacing* it, *creating* it at its
+        position in the key order of the plan <format/>, or *removing*
+        it if the loaded plan carries none -- changing *nothing else* of
+        <task-content/>.
+
         Finally call the `ase_task_save(id: "<ase-task-id/>", text:
-        "<task-content/>")` tool of the `ase` MCP server to persist the
-        updated task plan. This `ase_task_save` MCP tool call is the
+        "<task-content/>", base: "<task-tag/>")` tool of the `ase` MCP
+        server to persist the updated task plan. If the save is refused
+        because the plan was *changed* meanwhile, repeat the take-over
+        above and the save, at most *three* times in total, and then
+        save once more *without* the `base` argument. This `ase_task_save` MCP tool call is the
         *only* permitted way to persist the plan -- *NEVER* write the
         plan file via `Write`/`Edit` or by executing a shell command.
         Do not output anything in this sub-step.

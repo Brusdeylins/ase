@@ -376,6 +376,17 @@ header
     &.failed
         color: var(--c-signal)
 
+/*  the marker of the effort size of the task: bold, framed by a thin border
+    (like the brackets of the TUI) drawn as an inset shadow, so that it takes no
+    extra height and keeps the same box height as the task id, spaced apart from the title  */
+.ceffort
+    display: inline-block
+    font-weight: bold
+    box-shadow: inset 0 0 0 1px currentColor
+    border-radius: 3px
+    padding: 0 4px
+    margin-right: 6px
+
 /*  the task box with badges: room above it and on its top for the badges placed
     onto the left part of its top border (like in the TUI), also when scrolling it
     into view, where the fixed-size graph nodes keep their room and get smaller badges instead  */
@@ -738,11 +749,12 @@ header
             color: var(--c-signal)
 
 /*  the statistics view (like the agents view, with framed sections): the column chart of the
-    tasks per state (in the dark colors of their lanes, like in the TUI, with the phases below
+    tasks per state (in the dark colors of their lanes, like in the TUI, with the efforts and phases below
     the states), the stacked bar of the progress of the tasks (the cancelled tasks
     dim and hatched, the finished ones dark, the work-in-progress ones in accent color, and the
     open ones light), and the bars of the total usage (the AI and human amounts in accent color,
-    the real times dim, and the stacked token counts in the shades of the accent color), below
+    the real times dim, and the stacked token counts in the shades of the accent color, with the
+    compact column chart of the distribution of the effort sizes besides them), below
     the centered buttons of the time ranges, separated by dots (the one of the shown time range
     in signal color)  */
 #stats
@@ -804,8 +816,12 @@ header
         flex: 1
         min-height: 0
         display: grid
-        grid-template-rows: minmax(0, 1fr) auto auto auto
+        grid-template-rows: minmax(0, 1fr) auto auto auto auto
         column-gap: 6px
+        /*  the compact column chart (like the effort distribution), without the
+            sub-labels and the groups, filling the height of its row  */
+        &.scompact
+            grid-template-rows: minmax(0, 1fr) auto auto
     .scol
         display: flex
         flex-direction: column
@@ -846,6 +862,21 @@ header
         text-overflow: clip
         font-size: 0.75rem
         font-weight: bold
+        color: var(--c-text-soft)
+        &.active
+            color: var(--c-accent-strong)
+        &.done
+            color: var(--c-line)
+    /*  the sub-labels of the columns below their labels (like the effort of the estimated tasks
+        of a state), keeping their height also if empty, to keep the columns of all charts aligned  */
+    .seffort
+        min-height: 1.5em
+        line-height: 1.5
+        text-align: center
+        white-space: nowrap
+        overflow: hidden
+        text-overflow: ellipsis
+        font-size: 0.75rem
         color: var(--c-text-soft)
         &.active
             color: var(--c-accent-strong)
@@ -1023,7 +1054,7 @@ header
     .smatrix
         display: grid
         grid-template-columns: repeat(3, minmax(0, 1fr))
-        gap: 8px 28px
+        gap: 8px 14px
         align-items: start
         font-size: 0.8125rem
     .shead

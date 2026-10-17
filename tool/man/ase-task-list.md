@@ -30,9 +30,11 @@ listed, but warned about.
 
 - \[`-v`|`--verbose`\]:
   Annotate each task id with the lifecycle status of its plan, the
-  modification time of its plan as `(YYYY-MM-DD HH:MM)`, and its title
-  (the text after `TASK:` of the first `#   TASK:` heading of the plan
-  body, else empty), all separated by a single tab character.
+  modification time of its plan as `(YYYY-MM-DD HH:MM)`, its effort
+  size (the T-shirt size `XS`, `S`, `M`, `L`, or `XL` of the valid
+  `Effort` frontmatter key of the plan, else `-`), and its title (the
+  text after `TASK:` of the first `#   TASK:` heading of the plan body,
+  else empty), all separated by a single tab character.
 
 - \[`-i`|`--include` *states*\]:
   Restrict the listing to the tasks in one of the *states*, a

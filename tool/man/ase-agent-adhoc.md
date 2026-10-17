@@ -16,6 +16,7 @@
 \[`--workdir` *kind*\]
 \[`--lifecycle` *model*\]
 \[`--serial`\]
+\[`--unclaimed`\]
 \[`--params` *name*`=`*value*\]
 \[`--state-`*item* *state*\]
 \[`--tag-`*item* *tag*\]
@@ -57,14 +58,15 @@ All agents of **ase** are agents of a definition, run by the same
 agent engine:
 
 - *built-in agents* (`ase agent planner`, `implementer`, `approver`,
-  `integrator`, and `editor`): each mode of them is a built-in
-  definition, which can be referenced as `builtin:`*kind*`-`*mode*
-  (resp. `builtin:`*kind* for its default mode): `builtin:planner-reboot`,
-  `builtin:planner-condense`, `builtin:implementer-implement`,
-  `builtin:implementer-draft`, `builtin:approver-judge`,
-  `builtin:approver-approve`, `builtin:integrator-merge`,
-  `builtin:integrator-rebase`, `builtin:integrator-squash`, and
-  `builtin:editor-edit`.
+  `integrator`, `editor`, and `estimator`): each mode of them is a
+  built-in definition, which can be referenced as
+  `builtin:`*kind*`-`*mode* (resp. `builtin:`*kind* for its default
+  mode): `builtin:planner-reboot`, `builtin:planner-condense`,
+  `builtin:implementer-implement`, `builtin:implementer-draft`,
+  `builtin:approver-judge`, `builtin:approver-approve`,
+  `builtin:integrator-merge`, `builtin:integrator-rebase`,
+  `builtin:integrator-squash`, `builtin:editor-edit`,
+  `builtin:estimator-phase`, and `builtin:estimator-request`.
 
   All options `--`*group*`-`*item* below are also accepted by the
   built-in agents, where they override the built-in definition (see
@@ -126,6 +128,21 @@ of `--state-verdict`).
 A task whose status the skill itself moved elsewhere is tagged, too, and
 left in that state. An interrupted processing puts the task back,
 untagged and with its previous assignee, into its incoming state.
+
+With `--type phase` and `--unclaimed`, an agent instead processes the
+tasks *unclaimed*, like the built-in `estimator` agent: it observes the
+tasks in one of the states of `--state-incoming` (each adapted onto the
+task lifecycle model of the project, e.g., `PLANNED` as `PLANNING` for
+`team` and as `OPEN` for `solo`, so it supports all models) which do
+not carry its tag, independent of their `Assignee:` and their
+predecessors. It processes each such task without any change of it
+(neither moving it into an activity state, nor tagging it as active,
+nor assigning it), so it keeps no other agent off the task, and the
+skill itself has to save its result conditionally (as another agent can
+claim and change the task meanwhile). Finally, it settles the task by
+its tag only (according to `--tag-success` resp. `--tag-failure`),
+without ever changing its status or its assignee. An interrupted
+processing leaves the task untouched.
 
 With `--type request`, an agent processes the *prompt requests*
 attached to tasks in any lifecycle status (see `ase task request` in
@@ -301,7 +318,7 @@ and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
 - \[`--type` *type*\]:
   The processing type: `phase` (default) to claim tasks by their
   lifecycle status, or `request` to process the prompt requests
-  attached to tasks (see **DESCRIPTION**). The options
+  attached to tasks (see **DESCRIPTION**). The options `--unclaimed`,
   `--state-`\*, `--tag-success`, `--tag-failure`, `--tag-retry`,
   `--assign-required`, and `--attach-skip` are allowed for `phase`
   only, the options `--request-`\* for `request` only.
@@ -356,13 +373,30 @@ and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
 - \[`--lifecycle` *model*\]:
   (repeatable) A supported task lifecycle model, `solo`, `team`, or
   `enterprise` (default: every model containing all given states, resp.
-  all models for `request`). The agent refuses to start for a project
-  of any other model. All given states have to exist in all supported
-  models.
+  all models for `request` and with `--unclaimed`). The agent refuses
+  to start for a project of any other model. All given states have to
+  exist in all supported models (except with `--unclaimed`, whose
+  incoming states are adapted onto the model of the project).
 
 - \[`--serial`\]:
   Process the tasks serially only, ignoring `--parallel`. A fleet
   refuses two serially processing agents of the same tag.
+
+- \[`--unclaimed`\]:
+  (`phase` only) Process the tasks *unclaimed* (see **DESCRIPTION**):
+  every task in one of the states of `--state-incoming` (each adapted
+  onto the task lifecycle model of the project) which does not carry
+  the tag, independent of its assignee and its predecessors, without
+  claiming it, and without ever changing its status and its assignee
+  (the tag options still apply). An agent of the same kind on the same
+  host does not pick up a task already processed by another one.
+
+  Not allowed together with `--state-activity`, `--state-success`,
+  `--state-failure`, `--state-phase`, `--state-passed`,
+  `--state-verdict`, `--assign-required`, `--assign-success`,
+  `--assign-failure`, the success criterion `status`, the hook
+  `passes`, and `--workdir changeset` resp. `target` (as the task can
+  be claimed by another agent meanwhile).
 
 - \[`--params` *name*`=`*value*\]:
   (repeatable) The value of the parameter *name* declared by the
@@ -375,9 +409,15 @@ All states are case-insensitive (upper-cased), have to exist in the
 supported task lifecycle models, and the transitions from the incoming
 into the activity state, back (on interrupt), and from the activity
 state into all target states have to be reachable in these models.
+With `--unclaimed`, only `--state-incoming` is allowed instead, whose
+states have to exist in any task lifecycle model only.
 
 - \[`--state-incoming` *state*\]:
-  The state of the tasks to claim. Mandatory for `phase`.
+  The state of the tasks to claim. Mandatory for `phase`. Repeatable
+  with `--unclaimed` only, where each state is adapted onto the task
+  lifecycle model of the project (a state of the model is kept, any
+  other one is mapped onto its counterpart, e.g., `PLANNED` onto
+  `PLANNING` for `team` and onto `OPEN` for `solo`).
 
 - \[`--state-activity` *state*\]:
   The state of a task during its processing (default: the incoming
@@ -425,7 +465,12 @@ state into all target states have to be reachable in these models.
   `active`), or `none` to untag the task. A foreign tag is refused, as
   the agent would claim the task again. `none` is refused if a task
   returns into its incoming state on success (unless guarded by
-  `--attach-skip`). A found verdict is stored as the tag value instead.
+  `--attach-skip` or by the hook `ready` of a definition which itself
+  declares `tag-success: none`, like the built-in `estimator`, as a hook
+  `ready` inherited from a definition without it, like the one of the
+  built-in `implementer`, does not guard against claiming the untagged
+  task again), e.g., always with `--unclaimed`. A found verdict is
+  stored as the tag value instead.
 
 - \[`--tag-failure` *tag*\]:
   (`phase` only) The tag set on failure, like `--tag-success` (default:
@@ -875,16 +920,18 @@ invocation:
   hook keeps the natural id order and is warned about once per change).
 
 - `passes(pred, succ, ctx)`:
-  (`phase` only, synchronous) Whether the predecessor *pred* passed the
-  phase of the agent for its successor *succ*, or `undefined` for the
-  default decision by `--state-phase` and `--state-passed` (a failed
-  hook lets the successor wait and is warned about once).
+  (`phase` without `--unclaimed` only, synchronous) Whether the
+  predecessor *pred* passed the phase of the agent for its successor
+  *succ*, or `undefined` for the default decision by `--state-phase`
+  and `--state-passed` (a failed hook lets the successor wait and is
+  warned about once).
 
 - `ready(task, ctx)`:
   Whether a dispatchable task is claimed now, checked right before its
   claim (after `--attach-skip`): `true` to claim it, `false` to
-  silently skip it, or the reason to wait for (reported once per change
-  of it).
+  silently skip it (e.g., as the result of an earlier processing
+  already guards it, like the valid `Effort:` key for `estimator`), or
+  the reason to wait for (reported once per change of it).
 
 - `prepare(task, job, ctx)`:
   The preparing of the job in its working directory, after the commands
@@ -914,11 +961,13 @@ invocation:
   The settling of the processed task (where *outcome* carries its
   `success`, the `reasons` of the unmet success criteria, and the
   `result`), overriding the configured one: its target `state` (`phase`
-  only, still required to be reachable from the activity state), the
-  value of its `tag` (`phase` only, a lower-case value, or `null` to
-  untag it, refused if the task would return into its incoming state
-  unguarded by `--attach-skip`), and its `assignee` (a name, `none`, or
-  `previous`), where an omitted field (or `undefined` for all) keeps
+  without `--unclaimed` only, still required to be reachable from the
+  activity state), the value of its `tag` (`phase` only, a lower-case
+  value, or `null` to untag it, refused if the task would return into
+  its incoming state unguarded by `--attach-skip` or the hook `ready`,
+  see `--tag-success`),
+  and its `assignee` (a name, `none`, or `previous`, but not with
+  `--unclaimed`), where an omitted field (or `undefined` for all) keeps
   the configured settling, and a failed hook keeps the configured
   settling (and is warned about).
 
@@ -1064,8 +1113,9 @@ Started via `ase agent reviewer start --params severity=MEDIUM` (resp. with
 
 `ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
 `ase-agent-implementer`(1), `ase-agent-approver`(1),
-`ase-agent-integrator`(1), `ase-agent-editor`(1), `ase-agent-relay`(1),
-`ase-agent-fleet`(1), `ase-task-request`(1), `ase-task-board`(1).
+`ase-agent-integrator`(1), `ase-agent-editor`(1),
+`ase-agent-estimator`(1), `ase-agent-relay`(1), `ase-agent-fleet`(1),
+`ase-task-request`(1), `ase-task-board`(1).
 
 ## AUTHOR
 

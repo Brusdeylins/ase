@@ -68,7 +68,8 @@ const defaultKeys = [ "tool", "parallel", "timeout", "repo", "tempdir", "agent-r
 const deniedKeys = [ "name", "one-shot", "foreground", "help" ]
 
 /*  the initial configuration of a fleet (see "ase agent fleet init") for the "enterprise"
-    task lifecycle model: the agent relay, the four phase agents, and the edit request agent  */
+    task lifecycle model: the agent relay, the four phase agents, the edit request agent,
+    and the effort estimation agent  */
 const initConfig = (tool: string): string => textframe`
     ##
     ##  ASE Agent Fleet Configuration
@@ -97,6 +98,18 @@ const initConfig = (tool: string): string => textframe`
     editor:
         parallel:       1               # maximum number of tasks processed in parallel
 
+    #   the effort estimation agent: estimating the effort of the unestimated tasks (PLANNED, unclaimed)
+    estimator:
+        mode:           phase           # "phase" (unestimated planned tasks) or "request" (on request)
+        parallel:       1               # maximum number of tasks processed in parallel
+
+    #   the effort estimation request agent: (re-)estimating the effort of the tasks
+    #   in any unfinished status on request (attached via "ase task request <id> estimate <prompt>")
+    #estimator-request:
+    #    kind:           estimator       # agent kind
+    #    mode:           request         # "phase" (unestimated planned tasks) or "request" (on request)
+    #    parallel:       1               # maximum number of tasks processed in parallel
+
     #   the planning phase agent (DRAFTED > PLANNING > DRAFTED)
     planner:
         mode:           reboot          # "reboot" (re-create plan) or "condense" (compress plan)
@@ -106,6 +119,7 @@ const initConfig = (tool: string): string => textframe`
     implementer:
         mode:           implement       # "implement" (into changeset) or "draft" (into attachment)
         parallel:       2               # maximum number of tasks processed in parallel
+        #params:        { effort-wait: false }  # do not wait for the effort estimation (without "estimator")
 
     #   the approval phase agent (IMPLEMENTED > APPROVING > IMPLEMENTED)
     approver:
@@ -759,7 +773,7 @@ export default class AgentFleetCommand extends DaemonCommand {
         group
             .command("init")
             .description("Create the initial configuration file for the \"enterprise\" task lifecycle model, " +
-                "with the agent relay, the four phase agents, and the edit request agent")
+                "with the agent relay, the four phase agents, the edit request agent, and the effort estimation agent")
             .option("-c, --config <file>", "YAML configuration file to create (default: \".ase/fleet.yaml\")")
             .option("-t, --tool <tool>", "agent tool of all agents (\"claude\", \"copilot\", or \"codex\"; " +
                 "default: $ASE_TOOL, else \"claude\")")

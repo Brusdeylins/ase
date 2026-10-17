@@ -16,6 +16,7 @@ After:     <task-after/>
 Status:    <task-status/>
 Assignee:  <task-assignee/>
 Kind:      <task-kind/>
+Effort:    <task-effort/>
 Tags:      <task-tags/>
 Source:    <task-source/>
 Changeset: <task-changeset/>
@@ -95,7 +96,7 @@ You *MUST* honor the following hints on this *task* format:
     fenced code block of the *body* *MUST* be closed.
 
 -   The *frontmatter* can carry the keys `Type`, `Id`, `Created`, `Modified`,
-    `Group`, `Phase`, `After`, `Status`, `Assignee`, `Kind`, `Tags`, `Source`,
+    `Group`, `Phase`, `After`, `Status`, `Assignee`, `Kind`, `Effort`, `Tags`, `Source`,
     `Changeset`, and `Target` in exactly this order, with their values being
     *unquoted* plain scalars and vertically aligned at a *fixed* column: each
     `<key/>:` is padded with spaces to a width of 11 characters, so every value
@@ -163,6 +164,34 @@ You *MUST* honor the following hints on this *task* format:
     a skill *authoring* or *updating* a task plan *CAN* update an already
     present key or pass it through *verbatim* and *MAY* create a missing one by
     *inferring* the kind from the plan content (defaulting to `CRAFTING`).
+
+-   The `Effort` frontmatter key states the *estimated effort* of the task: the
+    expected *human time* of its *entire* lifecycle (including planning), which
+    matches the human time `time.hr` of its usage attachment. The <task-effort/>
+    value is formatted `<size/> <hash/>`, with <size/> *strictly* one of the
+    T-shirt sizes `XS`, `S`, `M`, `L`, or `XL` -- bands on a *logarithmic* scale
+    (factor 4) with the upper bounds `15`, `60`, `240`, and `960` human minutes
+    for `XS` to `L` (configuration `project.task.effort.scale`), while `XL` is
+    open-ended -- and <hash/> the short *content hash* of the "body" the size was
+    given for. The `Effort` frontmatter key is *optional*: an absent key means
+    *not estimated*, and explicit epic tasks carry none, as their effort is the
+    sum of their member tasks. It is written by `ase-task-estimate` (or by hand)
+    and *never* refreshes the `Modified` key.
+
+    The size is *bound* to the plan *content*: the content hash covers the
+    "body" with its checkboxes and whitespace left out and its bullet-points in
+    the inert states `[-]` and `[>]` left out entirely. Hence, mere checkbox state
+    changes and whitespace-only edits (like re-wrapping) keep the size valid, while
+    every other content change (including cancelling or deferring a bullet-point)
+    makes it *stale*. The task store *drops* a stale `Effort` key on load and save,
+    and *stamps* a key given without <hash/> (like `Effort: M`) with the content
+    hash of the current "body" on save. Every skill *rewriting* a plan passes the
+    key through *verbatim*, and *never* invents or changes a <hash/>. A skill
+    persisting a plan again from its *own* copy of a previous save (like the
+    `text` argument of a previous `ase_task_save`) *MUST* first take over the
+    `Effort` key *as stored* by that save (stamped, or dropped) into its copy
+    -- or else load the plan again -- as a key without <hash/> would otherwise
+    be stamped again on the next save, even against a meanwhile changed "body".
 
 -   The `Tags` frontmatter key can be used to tag a task with arbitrary key/value
     information. The <task-tags/> value has to be a comma-and-space-separated

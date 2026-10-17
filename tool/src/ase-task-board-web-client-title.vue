@@ -6,17 +6,18 @@
 
 <!--  the title line of a task: its epic (if any, and not for an epic itself), its id (behind "≡",
       and of an epic also behind "♛"), its cyclic dependency marker, its edit request marker,
-      and its title (with its Markdown inline code segments)  -->
+      its effort size marker (the size behind "⚖", framed like the bracketed one of the TUI), and its title (with its Markdown inline code segments)  -->
 <template>
-    <span v-if="epic !== '' && epic !== id" class="cepic">♛ {{ epic }} ▶</span><span class="cid">{{ epic === id ? "♛ " : "" }}≡ {{ id }}</span>{{ cyclic ? "⟲ " : "" }}<span v-if="edit !== ''" class="cedit" :class="edit" :title="editTitles[edit]">{{ editMarkers[edit] }}</span><template v-for="(s, si) in titleSegments(title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template>
+    <span v-if="epic !== '' && epic !== id" class="cepic">♛ {{ epic }} ▶</span><span class="cid">{{ epic === id ? "♛ " : "" }}≡ {{ id }}</span>{{ cyclic ? "⟲ " : "" }}<span v-if="edit !== ''" class="cedit" :class="edit" :title="editTitles[edit]">{{ editMarkers[edit] }}</span><span v-if="effort !== ''" class="ceffort" :title="`effort: ${effort}`">⚖{{ effort }}</span><template v-for="(s, si) in titleSegments(title)" :key="si"><code v-if="s.code">{{ s.text }}</code><template v-else>{{ s.text }}</template></template>
 </template>
 
 <script setup lang="ts">
 import { type EditState } from "./ase-task-board-web-client-model"
 
-withDefaults(defineProps<{ id: string, epic: string, title: string, cyclic?: boolean, edit?: EditState | "" }>(), {
+withDefaults(defineProps<{ id: string, epic: string, title: string, cyclic?: boolean, edit?: EditState | "", effort?: string }>(), {
     cyclic: false,
-    edit:   ""
+    edit:   "",
+    effort: ""
 })
 
 /*  the markers and their explanations of the states of the edit requests of a task  */

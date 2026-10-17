@@ -5,12 +5,13 @@
 -->
 
 <!--  the statistics view (like in the TUI): the buttons of the time ranges (the one of "total" with its number of days), the framed
-      column chart "Tasks per State" of the numbers of tasks per lifecycle state (labeled by state and phase, in the colors of their
+      column chart "Tasks per State" of the numbers of tasks per lifecycle state (labeled by state, its effort, and phase, in the colors of their
       lanes, with the framed column chart "Throughput" of the finished tasks of the last weeks besides it), the
       framed stacked bar "Task Progress" of the cancelled, finished, work-in-progress, and open tasks
       (with the framed stacked bar "Open Tasks" of the ready and blocked open tasks besides it), the
       framed bars "Usage" of the total times, tokens, and costs of the tasks, with the bars of a
-      column scaled to the maximum of the column, and the framed table "Top-5 Tasks" of the
+      column scaled to the maximum of the column (with the framed column chart "Effort"
+      of the numbers of tasks per effort size besides it), and the framed table "Top-5 Tasks" of the
       tasks of the highest usage (with the framed "Finished Tasks" of the average usage per finished
       task and the framed "Efficiency" of the AI usage besides it)  -->
 <template>
@@ -32,6 +33,7 @@
                             <div class="sbar" :style="{ height: `calc((100% - 1.5em) * ${s.count / maxCount})` }"></div>
                         </div>
                         <div v-for="s in stats.states" :key="`l-${s.status}`" class="sstate" :class="s.tone" :title="s.status">{{ s.status.slice(0, 7) }}</div>
+                        <div v-for="s in stats.states" :key="`e-${s.status}`" class="seffort" :class="s.tone" :title="effortTitle(s.status, s.effort)">{{ s.effort.estimated > 0 ? hours(s.effort.minutes) : "" }}</div>
                         <div v-for="p in phases" :key="p.phase" class="sphase" :style="{ gridColumn: `span ${p.n}` }" :title="p.phase"><span>{{ p.phase }}</span></div>
                         <div class="sfoot" :style="{ gridColumn: `span ${stats.states.length}` }">total tasks: {{ totalTasks }}</div>
                     </div>
@@ -44,6 +46,7 @@
                             <div class="sbar" :style="{ height: `calc((100% - 1.5em) * ${w.count / maxWeek})` }"></div>
                         </div>
                         <div v-for="w in stats.throughput" :key="`l-${w.start}`" class="sstate" :title="`week ${w.week} (from ${w.start})`">W{{ w.week }}</div>
+                        <div class="seffort" :style="{ gridColumn: `span ${stats.throughput.length}` }"></div>
                         <div class="sphase" :style="{ gridColumn: `span ${stats.throughput.length}` }" :title="weekSummary"><span>{{ weekSummary }}</span></div>
                         <div class="sfoot" :style="{ gridColumn: `span ${stats.throughput.length}` }" :title="forecast">{{ forecast }}</div>
                     </div>
@@ -64,40 +67,53 @@
                     </div>
                 </section>
             </div>
-            <section class="susage">
-                <div class="stitle">Usage</div>
-                <div class="smatrix">
-                    <span class="shead">Time:</span>
-                    <span class="shead">Token:</span>
-                    <span class="shead">Cost:</span>
-                    <div class="scell">
-                        <div v-for="b in timeBars" :key="b.name" class="srow">
-                            <span class="sname">{{ b.name }}</span>
-                            <div class="strack"><div class="sfill" :class="b.cls" :style="{ width: share(b.value, maxTime) }"></div></div>
-                            <span class="sval">{{ hours(b.value) }}</span>
-                        </div>
-                    </div>
-                    <div class="scell">
-                        <div class="srow">
-                            <span class="sname">AI</span>
-                            <div class="strack">
-                                <div v-for="t in tokenParts" :key="t" class="sfill" :class="t" :style="{ width: share(stats.usage[t], tokenSum) }"></div>
+            <div class="spair">
+                <section class="susage">
+                    <div class="stitle">Usage</div>
+                    <div class="smatrix">
+                        <span class="shead">Time:</span>
+                        <span class="shead">Token:</span>
+                        <span class="shead">Cost:</span>
+                        <div class="scell">
+                            <div v-for="b in timeBars" :key="b.name" class="srow">
+                                <span class="sname">{{ b.name }}</span>
+                                <div class="strack"><div class="sfill" :class="b.cls" :style="{ width: share(b.value, maxTime) }"></div></div>
+                                <span class="sval">{{ hours(b.value) }}</span>
                             </div>
-                            <span class="sval">{{ tokens(tokenSum) }}</span>
                         </div>
-                        <div class="slegend stokens">
-                            <span v-for="t in tokenParts" :key="t"><span class="sswatch" :class="t"></span>{{ t }} ({{ tokenPct(stats.usage[t]) }})</span>
+                        <div class="scell">
+                            <div class="srow">
+                                <span class="sname">AI</span>
+                                <div class="strack">
+                                    <div v-for="t in tokenParts" :key="t" class="sfill" :class="t" :style="{ width: share(stats.usage[t], tokenSum) }"></div>
+                                </div>
+                                <span class="sval">{{ tokens(tokenSum) }}</span>
+                            </div>
+                            <div class="slegend stokens">
+                                <span v-for="t in tokenParts" :key="t"><span class="sswatch" :class="t"></span>{{ t }} ({{ tokenPct(stats.usage[t]) }})</span>
+                            </div>
+                        </div>
+                        <div class="scell">
+                            <div v-for="b in costBars" :key="b.name" class="srow">
+                                <span class="sname">{{ b.name }}</span>
+                                <div class="strack"><div class="sfill" :class="b.cls" :style="{ width: share(b.value, maxCost) }"></div></div>
+                                <span class="sval">{{ cost(b.value) }}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="scell">
-                        <div v-for="b in costBars" :key="b.name" class="srow">
-                            <span class="sname">{{ b.name }}</span>
-                            <div class="strack"><div class="sfill" :class="b.cls" :style="{ width: share(b.value, maxCost) }"></div></div>
-                            <span class="sval">{{ cost(b.value) }}</span>
+                </section>
+                <section class="schart">
+                    <div class="stitle">Effort</div>
+                    <div class="sgrid scompact" :style="{ gridTemplateColumns: `repeat(${stats.sizes.length}, minmax(0, 1fr))` }">
+                        <div v-for="s in stats.sizes" :key="s.size" class="scol" :title="`${s.size}: ${s.count} task${s.count === 1 ? '' : 's'}`">
+                            <span class="scount">{{ s.count }}</span>
+                            <div class="sbar" :style="{ height: `calc((100% - 1.5em) * ${s.count / maxSize})` }"></div>
                         </div>
+                        <div v-for="s in stats.sizes" :key="`l-${s.size}`" class="sstate">{{ s.size }}</div>
+                        <div class="sfoot" :style="{ gridColumn: `span ${stats.sizes.length}` }">{{ estimation }}</div>
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
             <div class="spair">
                 <section class="stop">
                     <div class="stitle">Top-5 Tasks</div>
@@ -155,6 +171,7 @@ import { computed } from "vue"
 import {
     view, stats, statsError, statsRange, statsRanges, selectStatsRange
 } from "./ase-task-board-web-client-model"
+import type { StatsEffort } from "./ase-task-board-web-client-model"
 
 /*  the token counts of the stacked token bar, the total usage
     (zero while unknown), and the bars of the time and cost columns  */
@@ -204,6 +221,10 @@ const tokInW  = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) =
 const tokOutW = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) => tokens(t.output).length)))
 const share  = (value: number, max: number) => `${max > 0 ? value / max * 100 : 0}%`
 
+/*  the explanation of the effort of a state (its human minutes and its numbers of tasks)  */
+const effortTitle = (label: string, e: StatsEffort) =>
+    `${label}: ${hours(e.minutes)} effort of ${e.estimated} of ${e.tasks} task${e.tasks === 1 ? "" : "s"} estimated`
+
 /*  the highest and the total number of tasks of the states, and the phases with their numbers of states  */
 const maxCount   = computed(() => Math.max(1, ...(stats.value?.states ?? []).map((s) => s.count)))
 const totalTasks = computed(() => (stats.value?.states ?? []).reduce((n, s) => n + s.count, 0))
@@ -215,6 +236,15 @@ const phases     = computed(() => (stats.value?.states ?? []).reduce((list, s) =
         list.push({ phase: s.phase, n: 1 })
     return list
 }, [] as { phase: string, n: number }[]))
+
+/*  the highest number of tasks of an effort size, and the numbers of the estimated
+    and of all tasks (like in the TUI)  */
+const maxSize    = computed(() => Math.max(1, ...(stats.value?.sizes ?? []).map((s) => s.count)))
+const estimation = computed(() => {
+    const states = stats.value?.states ?? []
+    const sum    = (key: "estimated" | "tasks") => states.reduce((n, s) => n + s.effort[key], 0)
+    return `estimated: ${sum("estimated")} of ${sum("tasks")} tasks`
+})
 
 /*  the highest number of finished tasks of a week, and the total and average
     number of finished tasks of all weeks (like in the TUI)  */

@@ -296,6 +296,7 @@ CONVENTIONS
     | `Status`    | `string`   | lifecycle state (see *Lifecycle model* below)                |
     | `Assignee`  | `string`   | name of the assigned human or agent                          |
     | `Kind`      | `string`   | `SPECIFYING`, `CRAFTING`, `REFACTORING`, or `RESOLVING`      |
+    | `Effort`    | `string`   | effort estimation `<size> [<hash>]` (see below)              |
     | `Tags`      | `string[]` | tags, each a plain `key` marker or a `key:value` pair        |
     | `Source`    | `string`   | code basis (`worktree` or `branch:<name>`)                   |
     | `Changeset` | `string`   | change set location (`worktree`, `branch:`, `attachment:`)   |
@@ -305,6 +306,19 @@ CONVENTIONS
     reads as its default value (an empty array for the array-typed
     keys). Unknown keys are passed through as plain strings. A key
     carrying a value of the wrong type is rejected with `422`.
+
+    The `Effort` key carries the estimated human effort of the task as
+    a T-shirt *size* (`XS`, `S`, `M`, `L`, or `XL`), optionally followed
+    by the short *content hash* of the body the size was given for. A
+    value of any other format is rejected with `422`. The key is *bound*
+    to the body: the hash ignores checkbox states, whitespace, and the
+    bullet-points in the states `[-]` and `[>]`, so any other change of
+    the body makes the key *stale*. The service *drops* a stale key
+    whenever it loads, lists, or saves a plan (so a plan changed outside
+    of the service, like an issue edited in its issue tracker, never
+    reports a stale effort), and *stamps* a key given without a hash
+    with the hash of the current body on saving (like `M` becoming
+    `M 3fZq0xKb7T`).
 
   - `body`: the Markdown source of the plan body. Outside a fenced code
     block, it *MUST NOT* contain a line consisting of just `---` directly
@@ -600,8 +614,9 @@ Query parameters:
 
 - `fields` (optional): `header` to additionally include the entire
   header of each plan (so a client can group or filter by `Group`,
-  `Phase`, `Assignee`, `Kind`, or `Tags` without loading the plans),
-  `usage` to additionally include the AI usage accounting of each plan
+  `Phase`, `Assignee`, `Kind`, `Effort`, or `Tags` without loading the
+  plans, except that a plan carrying an `Effort` key is loaded once per
+  modification, to drop a stale key), `usage` to additionally include the AI usage accounting of each plan
   (which loads all plans, e.g. for usage statistics), or `none`
   (default) for the minimal entries.
 

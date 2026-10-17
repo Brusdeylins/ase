@@ -104,6 +104,7 @@ Procedure
         ⇢   **After:**     <task-after/>
         ◐   **Status:**    <task-status/>
         ☯   **Kind:**      <task-kind/>
+        ⚖   **Effort:**    <task-effort/>
         ⚑   **Tags:**      <task-tags/>
         ⇤   **Source:**    <task-source/>
         ⇢   **Changeset:** <task-changeset/>

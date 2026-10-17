@@ -7,6 +7,7 @@
 import YAML          from "yaml"
 
 import type * as API from "./ase-task-store-plugin-api.js"
+import { nanoid }    from "./ase-lib-hash.js"
 
 /*  a task lifecycle model: the lifecycle states a task plan can be in
     (the accepted values of its "Status:" frontmatter key), the initial
@@ -330,7 +331,7 @@ export const TASK_TYPE = "text/vnd.ase.task"
 /*  the frontmatter keys of the task plan format in their canonical
     order, the array-typed ones among them, and the attachment keys
     in their canonical order (see "ase-format-task.md")  */
-const frontKeys        = [ "Type", "Id", "Created", "Modified", "Group", "Phase", "After", "Status", "Assignee", "Kind", "Tags", "Source", "Changeset", "Target" ]
+const frontKeys        = [ "Type", "Id", "Created", "Modified", "Group", "Phase", "After", "Status", "Assignee", "Kind", "Effort", "Tags", "Source", "Changeset", "Target" ]
 export const arrayKeys = [ "After", "Tags" ]
 const attachKeys       = [ "Type", "Desc", "Created", "Modified", "Data", "File" ]
 
@@ -784,6 +785,76 @@ export const usageData = (usage: TaskUsage): string => {
         groups.set(group, [ ...(groups.get(group) ?? []), `${field}: ${String(usage[key] ?? 0)}` ])
     }
     return Array.from(groups, ([ group, fields ]) => `${(group + ":").padEnd(7)} { ${fields.join(", ")} }\n`).join("")
+}
+
+/*  the T-shirt sizes of the effort estimation of a task plan (its "Effort" key), in ascending order  */
+export const effortSizes = [ "XS", "S", "M", "L", "XL" ] as const
+export type EffortSize = (typeof effortSizes)[number]
+
+/*  the default upper band bounds of the sizes "XS" to "L" (in human minutes,
+    see "project.task.effort.scale"), on a logarithmic scale of factor 4  */
+export const EFFORT_SCALE = "15,60,240,960"
+
+/*  parse the upper band bounds "<xs>,<s>,<m>,<l>" of the sizes "XS" to "L"
+    (strictly ascending positive human minutes), else throw  */
+export const parseEffortScale = (spec: string): number[] => {
+    const bounds = spec.split(",").map((bound) => bound.trim())
+    if (bounds.length !== 4 || !bounds.every((bound) => /^\d+(?:\.\d+)?$/.test(bound)))
+        throw new Error(`invalid effort scale "${spec}" (expected four comma-separated numbers of minutes)`)
+    const scale = bounds.map((bound) => Number(bound))
+    if (!scale.every((bound, i) => bound > (i > 0 ? scale[i - 1] : 0)))
+        throw new Error(`invalid effort scale "${spec}" (expected strictly ascending positive bounds)`)
+    return scale
+}
+
+/*  the representative human minutes of a size, for summing up efforts: the midpoint
+    of its band, where the open-ended "XL" counts twice the upper bound of "L"  */
+export const effortMinutes = (size: EffortSize, scale: number[]): number => {
+    const i = effortSizes.indexOf(size)
+    return i < 4 ? ((i > 0 ? scale[i - 1] : 0) + scale[i]) / 2 : 2 * scale[3]
+}
+
+/*  parse the value "<size> [<hash>]" of an "Effort" key into its size and its
+    content hash (empty if not stamped yet), or null if malformed  */
+export const parseEffort = (value: string): { size: EffortSize, hash: string } | null => {
+    const m = /^(XS|S|M|L|XL)(?:[ \t]+([0-9A-Za-z]+))?$/.exec(value.trim())
+    return m === null ? null : { size: m[1] as EffortSize, hash: m[2] ?? "" }
+}
+
+/*  the content hash of a task plan body, the "Effort" key is bound to: the body with
+    its bullet-points in the inert checkbox states "[-]" and "[>]" left out entirely, the
+    checkboxes of all other bullet-points left out, and all whitespace left out, so checkbox
+    state changes and re-wrapping keep the hash, while every other content change (including
+    cancelling or deferring a bullet-point) changes it  */
+export const effortHash = (body: string): string => {
+    const content: string[] = []
+    let inert = false
+    for (const line of body.split(/\r?\n/)) {
+        const m = /^[-*+][ \t]+\[([ ?/xX>-])\]/.exec(line)
+        if (m !== null)
+            inert = m[1] === "-" || m[1] === ">"
+        else if (!/^[ \t]+\S/.test(line))
+            inert = false
+        if (!inert)
+            content.push(line.replace(/^([ \t]*[-*+][ \t]+)\[[ ?/xX>-]\]/, "$1"))
+    }
+    return nanoid(`effort:${content.join("").replace(/\s+/g, "")}`)
+}
+
+/*  bind the "Effort" key of a task plan to its body (in place): a key without
+    content hash is stamped with the content hash of the body, while a malformed
+    or stale key (whose content hash differs from the one of the body) is dropped  */
+export const bindEffort = (plan: API.TaskPlan): API.TaskPlan => {
+    const value = plan.header.Effort
+    if (value === undefined)
+        return plan
+    const effort = typeof value === "string" ? parseEffort(value) : null
+    const hash   = effortHash(plan.body)
+    if (effort !== null && effort.hash === "")
+        plan.header.Effort = `${effort.size} ${hash}`
+    else if (effort === null || effort.hash !== hash)
+        Reflect.deleteProperty(plan.header, "Effort")
+    return plan
 }
 
 /*  derive the title of a task plan from its body as defined by the

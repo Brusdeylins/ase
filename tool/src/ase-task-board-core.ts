@@ -49,14 +49,20 @@ type GroupLayout = { title: string, lanes: LaneLayout[] }
 /*  a card of the board: the task id, its title, its group (epic, else empty),
     its lifecycle state (its lane), its actual status (differing from its lifecycle
     state if foreign to the lifecycle model), the state of its edit requests
-    (see "ase agent editor", else empty), its assignee (else empty), the data
+    (see "ase agent editor", else empty), its assignee (else empty), its effort
+    size (of its valid "Effort" key, else empty if not estimated), the data
     needed for ordering and the graph, and the time of its last modification  */
-export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", assignee: string, after: string[], created: string, modified: string }
+export type Card = { id: string, title: string, group: string, status: string, actual: string, edit: EditState | "", assignee: string, effort: TaskFormat.EffortSize | "", after: string[], created: string, modified: string }
 
 /*  the marker of the state of the edit requests of a card (else empty):
     requested, being processed, or failed  */
 export const editMarker = (card: Card): string =>
     card.edit === "pending" ? "✎" : card.edit === "active" ? "✎…" : card.edit === "failed" ? "✎✗" : ""
+
+/*  the marker of the effort size of a card: the size behind "⚖",
+    enclosed in brackets (else empty if not estimated)  */
+export const effortMarker = (card: Card): string =>
+    card.effort !== "" ? `[⚖${card.effort}]` : ""
 
 /*  the board: the lane layout of the detected lifecycle model, the cards
     per lane in display order, the computed graph, the cards shown as
@@ -490,9 +496,10 @@ export const buildBoard = async (log: Log): Promise<Board> => {
                 `"${lifecycle.name}" (shown as "${status}")`)
         const group  = (keys.get("Group") ?? "").trim()
         const assignee = (keys.get("Assignee") ?? "").trim()
+        const effort   = TaskFormat.parseEffort(keys.get("Effort") ?? "")?.size ?? ""
         const created  = keys.get("Created")  ?? ""
         const modified = keys.get("Modified") ?? ""
-        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), assignee, after, created, modified })
+        cards.set(item.id, { id: item.id, title: item.title, group, status, actual: item.status, edit: editOf(keys), assignee, effort, after, created, modified })
     }
 
     /*  derive predecessors (known ones only) and successors  */
@@ -594,7 +601,7 @@ export const newTaskText = async (log: Log, board: Board, lifecycle: TaskLifecyc
     return TaskFormat.formatTaskText({
         header: {
             Type: TaskFormat.TASK_TYPE, Id: id, Created: now, Modified: now, Group: "", Phase: "",
-            After: "", Status: lifecycle.initial, Assignee: "", Kind: "", Tags: ""
+            After: "", Status: lifecycle.initial, Assignee: "", Kind: "", Effort: "", Tags: ""
         },
         body: "#   TASK: New Task\n\n" +
             "##  SPECIFICATION (WHAT)\n\n-   [ ] DOM: **[...]**: [...]\n\n-   [ ] IFC: **[...]**: [...]\n\n" +

@@ -15,7 +15,7 @@
             <span v-show="view !== 'agents'" class="sep">·</span><span v-show="view !== 'agents'" class="filter">filter:
                 <span class="field">
                     <input ref="filterEl" v-model="filter" class="val" type="text" autocomplete="off" spellcheck="false"
-                        placeholder="keywords…" title="space ANDs, comma ORs fuzzy matched keywords (/)" @keydown.esc="clearFilter" @keydown.enter="filterEl?.blur()">
+                        placeholder="keywords…" title="space ANDs, comma ORs fuzzy matched keywords or effort:<size> (/)" @keydown.esc="clearFilter" @keydown.enter="filterEl?.blur()">
                     <button v-show="filter !== ''" class="clear" title="clear filter (ESC)" @click="clearFilter">✕</button>
                 </span>
             </span>

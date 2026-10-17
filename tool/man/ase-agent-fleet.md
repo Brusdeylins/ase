@@ -78,12 +78,19 @@ members) or `ase agent fleet stop`.
   its options commented out, so they fall back to `project.relay.url`,
   `project.relay.crt`, and `project.relay.key`), the section `default`
   (with `tool`, `parallel: 1`, and `timeout: 60m`, plus `repo` and
-  `tempdir` commented out), the edit request agent `editor`, the four
-  phase agents `planner` (mode `reboot`), `implementer` (mode
-  `implement`, 2 tasks in parallel), `approver` (mode `judge`, 2 tasks
-  in parallel, so a human still decides on the approval), and
-  `integrator` (mode `squash`), plus a commented-out example of an
-  ad-hoc request agent `lint` (see `ase-agent-adhoc`(1)).
+  `tempdir` commented out), the edit request agent `editor`, the effort
+  estimation agent `estimator` (mode `phase`, estimating the `PLANNED`
+  tasks before their implementation), a commented-out effort
+  estimation request agent `estimator-request` (mode `request`,
+  (re-)estimating the tasks in any unfinished status on request), the
+  four phase agents `planner` (mode
+  `reboot`), `implementer` (mode `implement`, 2 tasks in parallel,
+  waiting for the effort estimation, with its parameter `effort-wait`
+  commented out, to be set to `false` if the `estimator` is removed),
+  `approver` (mode `judge`, 2 tasks in parallel, so a human still
+  decides on the approval), and `integrator` (mode `squash`), plus a
+  commented-out example of an ad-hoc request agent `lint` (see
+  `ase-agent-adhoc`(1)).
 
   The configuration is checked like on `ase agent fleet start` before
   it is written, and an already existing *file* is overwritten only
@@ -185,10 +192,10 @@ value omits an option, and a list repeats an option:
   neither the name of another agent kind, nor `relay` or `fleet`), with
   the options of `ase agent` *kind* `start` and an optional `kind`
   (default: the section name), i.e., one of the built-in kinds
-  `planner`, `implementer`, `approver`, `integrator`, and `editor`, a
-  definition kind of the project or the user, or `adhoc` (see
-  `ase-agent-adhoc`(1)). Hence, an agent of a definition kind is given
-  by a section of its kind (or with `kind:` *kind*), and an agent
+  `planner`, `implementer`, `approver`, `integrator`, `editor`, and
+  `estimator`, a definition kind of the project or the user, or `adhoc`
+  (see `ase-agent-adhoc`(1)). Hence, an agent of a definition kind is
+  given by a section of its kind (or with `kind:` *kind*), and an agent
   defined inline by a section with `kind: adhoc`.
 
   The options of the definitions can also be nested by group, like in a
@@ -322,7 +329,7 @@ lint:
 `ase`(1), `ase-agent`(1), `ase-agent-adhoc`(1), `ase-agent-relay`(1),
 `ase-agent-planner`(1), `ase-agent-implementer`(1),
 `ase-agent-approver`(1), `ase-agent-integrator`(1),
-`ase-agent-editor`(1), `ase-task-board`(1).
+`ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-task-board`(1).
 
 ## AUTHOR
 

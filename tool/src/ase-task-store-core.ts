@@ -89,6 +89,10 @@ const KEY_RE = /^[A-Za-z]+$/
     delegating the persistence into the storage plugin behind the
     "TaskStore"; every failure is a "Problem" carrying its HTTP status  */
 export class TaskStoreCore {
+    /*  the "Effort" keys bound by the header listings (see taskList), per task
+        plan, valid as long as the plan keeps its modification time and raw key  */
+    private efforts = new Map<string, { mtime: number, raw: string, effort: API.TaskHeaderValue | undefined }>()
+
     constructor (private store: Delegate.TaskStore, private listener: EventListener = () => {}) {
         store.watch((prjId, change) => this.external(prjId, change))
     }
@@ -147,11 +151,44 @@ export class TaskStoreCore {
             await this.store.projectMark(prjId, seqmark)
     }
 
+    /*  load a task plan through the storage plugin, with its "Effort" key bound to its
+        body (see bindEffort), so a plan changed outside of this core (like an issue edited
+        in the issue tracker) never carries a stale effort estimation  */
+    private async load (prjId: string, taskId: string): Promise<API.TaskPlan | null> {
+        const plan = await this.store.taskLoad(prjId, taskId)
+        return plan !== null ? TaskFormat.bindEffort(plan) : null
+    }
+
+    /*  the header of a listed task plan with its "Effort" key bound to its body,
+        loading the plan only if its modification time or its raw key changed
+        since the last listing, so repeated listings stay cheap for issue trackers  */
+    private async boundHeader (prjId: string, entry: API.TaskEntry): Promise<API.TaskHeader> {
+        if (entry.header.Effort === undefined)
+            return entry.header
+        const key   = `${prjId}/${entry.id}`
+        const mtime = entry.mtime.getTime()
+        const raw   = String(entry.header.Effort)
+        const memo  = this.efforts.get(key)
+        let effort: API.TaskHeaderValue | undefined
+        if (memo !== undefined && memo.mtime === mtime && memo.raw === raw)
+            effort = memo.effort
+        else {
+            effort = (await this.load(prjId, entry.id))?.header.Effort
+            this.efforts.set(key, { mtime, raw, effort })
+        }
+        const header = { ...entry.header }
+        if (effort !== undefined)
+            header.Effort = effort
+        else
+            Reflect.deleteProperty(header, "Effort")
+        return header
+    }
+
     /*  load an existing task plan of a registered project  */
     private async plan (prjId: string, taskId: string): Promise<{ lifecycle: TaskFormat.TaskLifecycle, plan: API.TaskPlan }> {
         const { lifecycle } = await this.project(prjId)
         this.validateId("task", taskId)
-        const plan = await this.store.taskLoad(prjId, taskId)
+        const plan = await this.load(prjId, taskId)
         if (plan === null)
             throw problem(404, `no task "${taskId}" in project "${prjId}"`)
         return { lifecycle, plan }
@@ -179,6 +216,9 @@ export class TaskStoreCore {
         }
         if (typeof value !== "string" || /[\r\n]/.test(value))
             throw problem(422, `header key "${key}" requires a single-line string value`)
+        if (key === "Effort" && value.trim() !== "" && TaskFormat.parseEffort(value) === null)
+            throw problem(422, "header key \"Effort\" requires a value \"<size> [<hash>]\" " +
+                `(with size one of: ${TaskFormat.effortSizes.join(", ")})`)
         return value.trim()
     }
 
@@ -315,12 +355,14 @@ export class TaskStoreCore {
         this.listener(prjId, { updated: { [taskId]: { ...this.entry(plan, lifecycle), parts } } })
     }
 
-    /*  run a read-modify-write cycle on an existing plan as a serialized operation  */
+    /*  run a read-modify-write cycle on an existing plan as a serialized operation,
+        re-binding its "Effort" key to its possibly changed body before saving  */
     private async modify<T> (prjId: string, taskId: string, part: string,
         op: (plan: API.TaskPlan, lifecycle: TaskFormat.TaskLifecycle) => T): Promise<T> {
         return this.serialize(prjId, async () => {
             const { lifecycle, plan } = await this.plan(prjId, taskId)
             const result = op(plan, lifecycle)
+            TaskFormat.bindEffort(plan)
             await this.store.taskSave(prjId, taskId, plan)
             this.emitUpdated(prjId, taskId, plan, lifecycle, [ part ])
             return result
@@ -381,7 +423,7 @@ export class TaskStoreCore {
                     const to   = TaskFormat.mapStatus(prev, lifecycle, from)
                     if (to === from)
                         continue
-                    const plan = await this.store.taskLoad(prjId, id)
+                    const plan = await this.load(prjId, id)
                     if (plan === null)
                         continue
                     plan.header.Status = to
@@ -406,7 +448,9 @@ export class TaskStoreCore {
     /*  ==== task plan operations ====  */
 
     /*  list the task plans passing the "include"/"exclude" state filter,
-        optionally with their entire header, resp. with the AI usage accounting
+        optionally with their entire header (loading each plan carrying an
+        "Effort" key changed since the last listing, to bind it to its body
+        (see boundHeader)), resp. with the AI usage accounting
         of their usage attachment and its period (loading each plan)  */
     async taskList (prjId: string, include = "none", exclude = "none", fields = "none"): Promise<TaskListEntry[]> {
         return this.serialize(prjId, async () => {
@@ -423,12 +467,13 @@ export class TaskStoreCore {
                     continue
                 const att = fields === "usage" ? (await this.store.taskLoad(prjId, entry.id))?.attachment
                     .find((att) => TaskFormat.isUsage(att) && att.Data !== undefined) : undefined
+                const header = fields === "header" ? await this.boundHeader(prjId, entry) : entry.header
                 result.push({
                     id:     entry.id,
                     status,
                     title:  entry.title,
                     mtime:  DateTime.fromJSDate(entry.mtime).toFormat("yyyy-LL-dd HH:mm"),
-                    ...(fields === "header" ? { header: entry.header } : {}),
+                    ...(fields === "header" ? { header } : {}),
                     ...(att?.Data !== undefined ? {
                         usage:       TaskFormat.usageOf(att.Data),
                         usagePeriod: { created: att.Created ?? "", modified: att.Modified ?? "" }
@@ -500,18 +545,19 @@ export class TaskStoreCore {
         and on a create-only save also rejecting an already existing plan,
         where an overwrite keeps the stored usage attachments, unless it is
         conditional on the entity tag of the complete plan (i.e., a booking),
-        and a create drops any usage attachments  */
+        and a create drops any usage attachments, and where the "Effort" key is
+        bound to the body (see bindEffort) before determining any entity tag  */
     async taskSave (prjId: string, taskId: string, raw: unknown, ifMatch?: string, createOnly = false): Promise<TaskSaveResult> {
         return this.serialize(prjId, async () => {
             const { lifecycle } = await this.project(prjId)
             this.validateId("task", taskId)
-            const prev   = await this.store.taskLoad(prjId, taskId)
+            const prev   = await this.load(prjId, taskId)
             const full   = ifMatch !== undefined && prev !== null && taskTagFull(prev) === ifMatch
             if (ifMatch !== undefined && !full && (prev === null || taskTag(prev) !== ifMatch))
                 throw problem(412, `task "${taskId}" was ${prev === null ? "deleted" : "changed"} meanwhile in project "${prjId}"`)
             if (createOnly && prev !== null)
                 throw problem(412, `task "${taskId}" already exists in project "${prjId}"`)
-            let plan     = this.validatePlan(taskId, raw)
+            let plan     = TaskFormat.bindEffort(this.validatePlan(taskId, raw))
             if (!full)
                 plan = prev !== null ? TaskFormat.keepUsage(plan, prev) : TaskFormat.withoutUsage(plan)
             const from   = prev !== null ? TaskFormat.taskStatus(prev.header, lifecycle) : lifecycle.initial
@@ -528,7 +574,7 @@ export class TaskStoreCore {
                 within the serialized operation, so it can never be the one of a subsequent
                 save of somebody else, and so any save (conditional or not) can be the
                 base of a next conditional save  */
-            const saved = this.store.verbatim ? plan : await this.store.taskLoad(prjId, taskId)
+            const saved = this.store.verbatim ? plan : await this.load(prjId, taskId)
             return { created: result === "created", id: taskId, status, ...(saved !== null ? { tag: taskTag(saved) } : {}) }
         })
     }
@@ -552,7 +598,7 @@ export class TaskStoreCore {
                 if (raw.id !== taskId)
                     newId = raw.id
             }
-            const plan = await this.store.taskLoad(prjId, taskId)
+            const plan = await this.load(prjId, taskId)
             if (plan === null)
                 throw problem(404, `no task "${taskId}" in project "${prjId}"`)
             const from = TaskFormat.taskStatus(plan.header, lifecycle)
@@ -579,7 +625,7 @@ export class TaskStoreCore {
                 for (const { id } of await this.store.taskList(prjId)) {
                     if (id === taskId)
                         continue
-                    const other = await this.store.taskLoad(prjId, id)
+                    const other = await this.load(prjId, id)
                     if (other === null)
                         continue
                     const { Group: group, After: after } = other.header

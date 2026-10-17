@@ -5,6 +5,16 @@ ChangeLog
 1.1.0 (2026-10-XX)
 ------------------
 
+-   FEATURE [plugin,tool]: Task Effort Estimation
+    Task plans now carry an optional `Effort:` key, the expected human time as T-shirt size
+    `XS` to `XL` on a logarithmic scale (`project.task.effort.scale`), bound to the plan content
+    by a hash, so it is dropped once the content changes. The new skill `ase-task-estimate`
+    estimates it (and with `--calibrate` checks it against finished tasks), the new agent
+    `ase agent estimator` estimates the planned tasks in the background or any task on request
+    (`--mode request`), and `ase agent implementer` by default waits for the estimation.
+    Task list, task view, and both task boards show the effort, filter by it, and chart its
+    distribution. Finally, `ase util mint` and `ase-meta-mint` support the new type `nanoid`.
+
 -   BUGFIX [tool]: Task Board Drafts, Readiness, and Tag Guarding
     On the terminal task board, a new task draft kept after a failed save is now created again
     even if left unchanged in `$EDITOR` (instead of being silently discarded), while an emptied

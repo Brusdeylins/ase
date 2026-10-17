@@ -202,6 +202,10 @@ Set <args></args> (set args to empty).
             *and* the `text` *output* field of the most recent such
             `ase_task_save` tool call carries a `<task-plan-tag>`
             delimiter line
+            *and* the `text` *argument* of that call carries no `Effort:`
+            frontmatter key without <hash/> (a bare size like `Effort: M`,
+            which the task store stamped or dropped on that save, see the
+            plan <format/>)
         ">
             Set <text/> to the `text` *argument* of the most recent
             `ase_task_save(id: '<ase-task-id/>', ...)` tool call -- this
@@ -406,8 +410,16 @@ Set <args></args> (set args to empty).
         of the just-persisted plan, which is for *display only* and
         *MUST NOT* be confused with the `text` *argument* passed into
         that call -- so the rendering in step 3.3 stays consistent across
-        all loop rounds. Do not output anything related to this MCP tool
-        call except the following <template/>:
+        all loop rounds. Then take over the `Effort:` key *as stored*
+        into the authoring form, as the task store stamps a key without
+        <hash/> or drops a stale one on save (see the plan <format/>):
+        set the `Effort:` frontmatter key of <task-content/> to the one
+        of the frontmatter of <task-render/> (rendered from the stored
+        plan) -- *replacing* it, *creating* it at its position in the key
+        order of the plan <format/>, or *removing* it if <task-render/>
+        carries none -- changing *nothing else* of <task-content/> and
+        leaving <task-content-dirty/> untouched. Do not output anything
+        related to this MCP tool call except the following <template/>:
 
         <template>
         ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ▶ status: **plan saved**
@@ -449,6 +461,7 @@ Set <args></args> (set args to empty).
         ⇢   **After:**     <task-after/>
         ◐   **Status:**    <task-status/>
         ☯   **Kind:**      <task-kind/>
+        ⚖   **Effort:**    <task-effort/>
         ⚑   **Tags:**      <task-tags/>
         ⇤   **Source:**    <task-source/>
         ⇢   **Changeset:** <task-changeset/>

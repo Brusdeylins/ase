@@ -20,6 +20,7 @@ import implementer                  from "./ase-agent-definition-builtin/impleme
 import approver                     from "./ase-agent-definition-builtin/approver.js"
 import integrator                   from "./ase-agent-definition-builtin/integrator.js"
 import editor                       from "./ase-agent-definition-builtin/editor.js"
+import estimator                    from "./ase-agent-definition-builtin/estimator.js"
 
 /*  a built-in agent kind ("ase agent <kind>"): its name, its CLI description, its modes
     (selected by "--mode", each with its definition, in the format of the definition files),
@@ -33,7 +34,7 @@ export type AgentKind = {
 }
 
 /*  the built-in agent kinds  */
-export const builtinKinds: AgentKind[] = [ planner, implementer, approver, integrator, editor ]
+export const builtinKinds: AgentKind[] = [ planner, implementer, approver, integrator, editor, estimator ]
 
 /*  a definition agent kind ("ase agent <kind>"): its name (the base name of its
     definition file), its definition file, and the scope of the latter  */
@@ -113,10 +114,14 @@ export const definitionOptions: DefinitionOption[] = [
     opt("workdir",           "value", "kind",          "working directory: \"project\", \"source\", \"changeset\", " +
         "\"changeset-read\", or \"target\" (default: \"project\")"),
     opt("lifecycle",         "list",  "model",         "supported task lifecycle model (repeatable) " +
-        "(default: every model containing all given states)"),
+        "(default: every model containing all given states, resp. all models with \"--unclaimed\")"),
     opt("serial",            "flag",  "",              "process the tasks serially only (ignoring \"--parallel\")"),
+    opt("unclaimed",         "flag",  "",              "process the tasks of the incoming states (each adapted onto the " +
+        "task lifecycle model) without claiming them, independent of their assignee and predecessors, " +
+        "and without ever changing their status and assignee (for \"phase\" only)"),
     opt("params",            "list",  "name=value",    "value of a parameter declared by the definition (repeatable)"),
-    opt("state-incoming",    "value", "state",         "state of the tasks to claim (mandatory for \"phase\")"),
+    opt("state-incoming",    "list",  "state",         "state of the tasks to claim (mandatory for \"phase\", " +
+        "repeatable with \"--unclaimed\" only)"),
     opt("state-activity",    "value", "state",         "state of a task during its processing (default: incoming)"),
     opt("state-success",     "value", "state",         "target state on success (default: incoming)"),
     opt("state-failure",     "value", "state",         "target state on failure (default: incoming)"),
@@ -286,20 +291,22 @@ export const attachMatches = (spec: AttachSpec, type: string): boolean =>
     typeParam(type, "kind") === spec.kind
     && (spec.mime === "" || (type.split(";")[0] ?? "").trim().toLowerCase() === spec.mime)
 
-/*  the resolved definition of an agent  */
+/*  the resolved definition of an agent (where only an unclaimed phase agent has
+    multiple incoming states, else exactly one for "phase" and none for "request")  */
 export type ResolvedDefinition = {
     name:       string
     type:       DefinitionType
     workdir:    DefinitionWorkdir
     lifecycles: string[]
     serial:     boolean
+    unclaimed:  boolean
     state: {
-        incoming: string, activity: string, success: string, failure: string,
+        incoming: string[], activity: string, success: string, failure: string,
         phase: string, passed: string, verdict: Record<string, string>
     }
     tag: {
         name: string, success: string | null | undefined, failure: string | null | undefined,
-        require: string[], exclude: string[]
+        require: string[], exclude: string[], guarded: boolean
     }
     assign:  { name: string, required: boolean, success: string, failure: string }
     request: { name: string, done: string }
@@ -346,11 +353,15 @@ type ParamDecl = { desc?: string, default?: string, required?: boolean, allow?: 
 
 /*  a loaded definition: its flattened and normalized option values (by long option name,
     where a false flag only unsets the flag of its base definition), its parameter
-    declarations, its hooks, and the specification of its base definition (if any)  */
+    declarations, its hooks, whether its hook "ready" guards an untagged task against
+    being claimed again (as declared together with "tag-success: none" by the same
+    definition, or inherited unreplaced from a base definition guarding so), and the
+    specification of its base definition (if any)  */
 type LoadedDefinition = {
     values: Record<string, string | string[] | boolean>
     params: Record<string, ParamDecl>
     hooks:  AgentHooks
+    guards: boolean
     base?:  string
 }
 
@@ -447,9 +458,10 @@ const definitionValues = (data: unknown, where: string, dir: string): LoadedDefi
     }
     if (typeof values["prompt-file"] === "string" && dir !== "")
         values["prompt-file"] = path.resolve(dir, values["prompt-file"])
+    const guards = hooks.ready !== undefined && values["tag-success"] === "none"
     if (typeof base !== "string")
-        return { values, params, hooks }
-    return { values, params, hooks, base: base.startsWith("builtin:") || dir === "" ? base : path.resolve(dir, base) }
+        return { values, params, hooks, guards }
+    return { values, params, hooks, guards, base: base.startsWith("builtin:") || dir === "" ? base : path.resolve(dir, base) }
 }
 
 /*  the mutually exclusive alternatives of the options, which a given option replaces in the
@@ -511,7 +523,8 @@ const loadDefinition = async (spec: string, chain: string[] = []): Promise<Loade
         loaded = {
             values: overlayValues(base.values, loaded.values),
             params,
-            hooks:  { ...base.hooks, ...loaded.hooks }
+            hooks:  { ...base.hooks, ...loaded.hooks },
+            guards: loaded.guards || (base.guards && loaded.hooks.ready === undefined)
         }
     }
     if (chain.length === 0)
@@ -583,6 +596,81 @@ const resolveParams = (decls: Record<string, ParamDecl>, specs: string[]): Recor
     return params
 }
 
+/*  resolve the states of the processing type <type> through the option accessors <str>,
+    <list>, and <has>, validated against the task lifecycle models, where the incoming
+    states of an <unclaimed> agent are adapted onto the task lifecycle model of the project
+    instead (so it supports every model, e.g. with "PLANNED" as "PLANNING" for "team" and
+    as "OPEN" for "solo"), as it never changes the status of a task  */
+const resolveStates = (
+    str:       (key: string, def?: string) => string,
+    list:      (key: string) => string[],
+    has:       (key: string) => boolean,
+    type:      DefinitionType,
+    unclaimed: boolean
+) => {
+    const fail = failOption
+    const verdicts: Record<string, string> = {}
+    for (const spec of list("state-verdict")) {
+        const m = /^([A-Z]+)=([A-Z]+)$/.exec(spec)
+        if (m === null)
+            fail("state-verdict", `invalid value "${spec}" (expected "<VERDICT>=<STATE>")`)
+        verdicts[m![1]] = m![2]
+    }
+    const upper    = (key: string, def: string): string => str(key, def).toUpperCase()
+    const incoming = [ ...new Set(list("state-incoming").map((state) => state.toUpperCase()).filter((state) => state !== "")) ]
+    if (type === "phase" && incoming.length === 0)
+        fail("state-incoming", "mandatory for \"--type phase\"")
+    else if (incoming.length > 1 && !unclaimed)
+        fail("state-incoming", "multiple states allowed with \"--unclaimed\" only")
+    const first    = incoming[0] ?? ""
+    const activity = upper("state-activity", first)
+    const success  = upper("state-success", first)
+    const failure  = upper("state-failure", first)
+    const phase    = upper("state-phase", success)
+    const passed   = upper("state-passed", phase)
+    const claimKeys: [ string, string ][] = unclaimed ? [] : [
+        [ "state-activity", activity ], [ "state-success", success ],
+        [ "state-failure", failure ], [ "state-phase", phase ], [ "state-passed", passed ],
+        ...Object.values(verdicts).map((state): [ string, string ] => [ "state-verdict", state ])
+    ]
+    const stateKeys: [ string, string ][] = type === "phase" ? [
+        ...incoming.map((state): [ string, string ] => [ "state-incoming", state ]), ...claimKeys
+    ] : []
+    const models = Object.values(TaskFormat.taskLifecycles)
+    for (const model of list("lifecycle"))
+        if (!Object.hasOwn(TaskFormat.taskLifecycles, model))
+            fail("lifecycle", `unknown task lifecycle model "${model}" ` +
+                `(expected ${models.map((m) => `"${m.name}"`).join(", ")})`)
+    for (const [ key, state ] of stateKeys)
+        if (!models.some((model) => model.states.includes(state)))
+            fail(key, `state "${state}" is not a state of any task lifecycle model`)
+    const lifecycles = has("lifecycle") ? [ ...new Set(list("lifecycle")) ] :
+        unclaimed ? models.map((model) => model.name) :
+            models.filter((model) => stateKeys.every(([ , state ]) => model.states.includes(state))).map((model) => model.name)
+    if (lifecycles.length === 0)
+        fail("lifecycle", "no task lifecycle model contains all the given states")
+    for (const model of lifecycles.map((name) => TaskFormat.taskLifecycles[name])) {
+        if (unclaimed)
+            continue
+        for (const [ key, state ] of stateKeys)
+            if (!model.states.includes(state))
+                fail(key, `state "${state}" is not a state of the "${model.name}" task lifecycle model`)
+        if (type !== "phase")
+            continue
+        const transitions: [ string, string, string ][] = [
+            [ "state-activity", first, activity ], [ "state-activity", activity, first ],
+            [ "state-success", activity, success ], [ "state-failure", activity, failure ],
+            ...Object.values(verdicts).map((state): [ string, string, string ] => [ "state-verdict", activity, state ])
+        ]
+        for (const [ key, from, to ] of transitions) {
+            const error = TaskFormat.checkStatus(model, from, to)
+            if (error !== "")
+                fail(key, error)
+        }
+    }
+    return { incoming, first, activity, success, failure, phase, passed, verdicts, lifecycles }
+}
+
 /*  resolve the definition of the agent named <name> from its (camel-cased) command-line
     options <opts>: the defaults, overridden by the definition of "--definition" (if any),
     overridden by the given options, validated against the task lifecycle models  */
@@ -595,7 +683,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         if (value !== undefined && value !== false)
             given[option.key] = value as string | string[] | boolean
     }
-    const loaded = typeof given.definition === "string" ? await loadDefinition(given.definition) : { values: {}, params: {}, hooks: {} }
+    const loaded = typeof given.definition === "string" ? await loadDefinition(given.definition) : { values: {}, params: {}, hooks: {}, guards: false }
     const values = overlayValues(loaded.values, given)
     const str    = (key: string, def = ""): string => typeof values[key] === "string" ? values[key] as string : def
     const list   = (key: string): string[] => Array.isArray(values[key]) ? values[key] as string[] : []
@@ -612,7 +700,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     /*  the processing type, the working directory, and the type-specific options  */
     const type    = choice("type", definitionTypes, "phase")
     const workdir = choice("workdir", definitionWorkdirs, "project")
-    const phaseOnly = [ "state-incoming", "state-activity", "state-success", "state-failure", "state-phase",
+    const phaseOnly = [ "unclaimed", "state-incoming", "state-activity", "state-success", "state-failure", "state-phase",
         "state-passed", "state-verdict", "tag-success", "tag-failure", "tag-retry", "assign-required", "attach-skip" ]
     const requestOnly = [ "request-name", "request-done" ]
     for (const key of type === "request" ? phaseOnly : requestOnly)
@@ -625,60 +713,28 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     if (loaded.hooks.passes !== undefined && type !== "phase")
         fail("definition", "hook \"passes\" is for \"--type phase\" only")
 
+    /*  the unclaimed processing of a phase agent, which never changes the status or the
+        assignee of a task, never waits for its predecessors, and never writes into the
+        changeset or the target of a task (as another agent can claim the task meanwhile)  */
+    const unclaimed = flag("unclaimed")
+    if (unclaimed) {
+        const claimedOnly = [ "state-activity", "state-success", "state-failure", "state-phase", "state-passed",
+            "state-verdict", "assign-required", "assign-success", "assign-failure" ]
+        for (const key of claimedOnly)
+            if (has(key))
+                fail(key, "not allowed with \"--unclaimed\" (as the status and the assignee of an unclaimed task are never changed)")
+        if (workdir === "changeset" || workdir === "target")
+            fail("workdir", `"${workdir}" not allowed with "--unclaimed" (as an unclaimed task can be claimed by another agent meanwhile)`)
+        if (loaded.hooks.passes !== undefined)
+            fail("definition", "hook \"passes\" is not for \"--unclaimed\" (as an unclaimed task never waits for its predecessors)")
+    }
+
     /*  whether a verdict is determined (by "--verdict-label" or the hook "verdict")  */
     const verdicting = has("verdict-label") || loaded.hooks.verdict !== undefined
 
-    /*  the states, validated against the task lifecycle models  */
-    const verdicts: Record<string, string> = {}
-    for (const spec of list("state-verdict")) {
-        const m = /^([A-Z]+)=([A-Z]+)$/.exec(spec)
-        if (m === null)
-            fail("state-verdict", `invalid value "${spec}" (expected "<VERDICT>=<STATE>")`)
-        verdicts[m![1]] = m![2]
-    }
-    const upper    = (key: string, def: string): string => str(key, def).toUpperCase()
-    const incoming = upper("state-incoming", "")
-    if (type === "phase" && incoming === "")
-        fail("state-incoming", "mandatory for \"--type phase\"")
-    const activity = upper("state-activity", incoming)
-    const success  = upper("state-success", incoming)
-    const failure  = upper("state-failure", incoming)
-    const phase    = upper("state-phase", success)
-    const passed   = upper("state-passed", phase)
-    const stateKeys: [ string, string ][] = type === "phase" ? [
-        [ "state-incoming", incoming ], [ "state-activity", activity ], [ "state-success", success ],
-        [ "state-failure", failure ], [ "state-phase", phase ], [ "state-passed", passed ],
-        ...Object.values(verdicts).map((state): [ string, string ] => [ "state-verdict", state ])
-    ] : []
-    const models = Object.values(TaskFormat.taskLifecycles)
-    for (const model of list("lifecycle"))
-        if (!Object.hasOwn(TaskFormat.taskLifecycles, model))
-            fail("lifecycle", `unknown task lifecycle model "${model}" ` +
-                `(expected ${models.map((m) => `"${m.name}"`).join(", ")})`)
-    for (const [ key, state ] of stateKeys)
-        if (!models.some((model) => model.states.includes(state)))
-            fail(key, `state "${state}" is not a state of any task lifecycle model`)
-    const lifecycles = has("lifecycle") ? [ ...new Set(list("lifecycle")) ] :
-        models.filter((model) => stateKeys.every(([ , state ]) => model.states.includes(state))).map((model) => model.name)
-    if (lifecycles.length === 0)
-        fail("lifecycle", "no task lifecycle model contains all the given states")
-    for (const model of lifecycles.map((name) => TaskFormat.taskLifecycles[name])) {
-        for (const [ key, state ] of stateKeys)
-            if (!model.states.includes(state))
-                fail(key, `state "${state}" is not a state of the "${model.name}" task lifecycle model`)
-        if (type !== "phase")
-            continue
-        const transitions: [ string, string, string ][] = [
-            [ "state-activity", incoming, activity ], [ "state-activity", activity, incoming ],
-            [ "state-success", activity, success ], [ "state-failure", activity, failure ],
-            ...Object.values(verdicts).map((state): [ string, string, string ] => [ "state-verdict", activity, state ])
-        ]
-        for (const [ key, from, to ] of transitions) {
-            const error = TaskFormat.checkStatus(model, from, to)
-            if (error !== "")
-                fail(key, error)
-        }
-    }
+    /*  the states (see "resolveStates")  */
+    const { incoming, first, activity, success, failure, phase, passed, verdicts, lifecycles } =
+        resolveStates(str, list, has, type, unclaimed)
 
     /*  the tag and the assignee  */
     const assignName = str("assign-name", name)
@@ -720,9 +776,10 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         fail("tag-retry", "not allowed together with \"--tag-failure\"")
     const tagSuccess = tagValue("tag-success")
     const tagFailure = flag("tag-retry") ? null : tagValue("tag-failure")
-    if (tagSuccess === null && type === "phase" && (success === incoming || Object.values(verdicts).includes(incoming)) && !has("attach-skip"))
+    if (tagSuccess === null && type === "phase" && (success === first || Object.values(verdicts).includes(first))
+        && !has("attach-skip") && !loaded.guards)
         fail("tag-success", "\"none\" would let the agent claim a task again, which returns into the incoming state " +
-            "(unless guarded by \"--attach-skip\")")
+            "(unless guarded by \"--attach-skip\" or by the hook \"ready\" of a definition declaring \"tag-success: none\" itself)")
     for (const key of [ "tag-require", "tag-exclude" ])
         for (const tag of list(key))
             if (!/^[^\s,]+$/.test(tag))
@@ -775,6 +832,8 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
             fail("success-criterion", "criterion \"changed\" is for \"--type request\" only")
         else if (criterion === "status" && type !== "phase")
             fail("success-criterion", "criterion \"status\" is for \"--type phase\" only")
+        else if (criterion === "status" && unclaimed)
+            fail("success-criterion", "criterion \"status\" is not for \"--unclaimed\" (as an unclaimed task has no phase success state)")
         else if (criterion === "verdict" && !verdicting)
             fail("success-criterion", "criterion \"verdict\" requires \"--verdict-label\" (or the hook \"verdict\")")
         else if (criterion === "attachment" && !has("attach-expect"))
@@ -827,10 +886,13 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
             fail(key, "empty shell command")
 
     return {
-        name, type, workdir, lifecycles,
+        name, type, workdir, lifecycles, unclaimed,
         serial:  flag("serial"),
         state:   { incoming, activity, success, failure, phase, passed, verdict: verdicts },
-        tag:     { name: tagName, success: tagSuccess, failure: tagFailure, require: list("tag-require"), exclude: list("tag-exclude") },
+        tag:     {
+            name: tagName, success: tagSuccess, failure: tagFailure, require: list("tag-require"), exclude: list("tag-exclude"),
+            guarded: loaded.guards
+        },
         assign:  {
             name: assignName, required: flag("assign-required"),
             success: assignee("assign-success", handover), failure: assignee("assign-failure", handover)

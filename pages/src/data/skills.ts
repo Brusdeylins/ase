@@ -73,6 +73,7 @@ export const skillGroups: SkillGroup[] = [
             "ase-task-rename",
             "ase-task-condense",
             "ase-task-dissect",
+            "ase-task-estimate",
             "ase-task-delete"
         ]
     },
@@ -90,7 +91,8 @@ export const skillGroups: SkillGroup[] = [
         label: "Quick Mode",
         skills: [
             "ase-code-edit",
-            "ase-spec-edit"
+            "ase-spec-edit",
+            "ase-spec-activate"
         ]
     },
     {

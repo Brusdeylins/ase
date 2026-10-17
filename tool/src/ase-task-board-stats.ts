@@ -6,8 +6,11 @@
 
 import { DateTime }                 from "luxon"
 
-import type { Board, Tone }         from "./ase-task-board-core.js"
-import type * as TaskFormat         from "./ase-task-format.js"
+import type Log                     from "./ase-lib-log.js"
+import { Config }                   from "./ase-config-core.js"
+import { configSchema }             from "./ase-config-schema.js"
+import type { Board, Card, Tone }   from "./ase-task-board-core.js"
+import * as TaskFormat              from "./ase-task-format.js"
 
 /*  the time range of the statistics: all tasks, resp. only the tasks
     worked on within the last 30 or 7 days  */
@@ -26,9 +29,14 @@ export const statsRangeLabels: Record<StatsRange, string> = {
 export const statsRangeLabel = (range: StatsRange, days: number): string =>
     range === "total" ? `${statsRangeLabels[range]} (${days} day${days === 1 ? "" : "s"})` : statsRangeLabels[range]
 
+/*  the effort of tasks: the sum of the representative human minutes of their effort sizes
+    (see "effortMinutes"), the number of their estimated tasks, and the number of all of
+    them (without the explicit epics, as these carry no effort of their own)  */
+export type StatsEffort = { minutes: number, estimated: number, tasks: number }
+
 /*  the number of tasks of a lifecycle state, with its phase (the title of its
-    group of the lane layout) and its tone (like the tasks of its lane)  */
-export type StatsState = { phase: string, status: string, count: number, tone: Tone }
+    group of the lane layout), its tone (like the tasks of its lane), and their effort  */
+export type StatsState = { phase: string, status: string, count: number, tone: Tone, effort: StatsEffort }
 
 /*  the progress of the tasks: the numbers of the finished (in a terminal state except
     "CANCELLED"), cancelled, work-in-progress (in an active state), and open (in any other
@@ -46,6 +54,9 @@ export type StatsUsage = {
 /*  the readiness of the open tasks: the numbers of the ready tasks (all predecessors
     in a terminal state) and of the blocked tasks (any predecessor in another state)  */
 export type StatsReadiness = { ready: number, blocked: number }
+
+/*  the number of the estimated tasks of an effort size  */
+export type StatsSize = { size: TaskFormat.EffortSize, count: number }
 
 /*  a task of the highest usage: its id, its title, its tone (like the tasks of its lane),
     its total (AI and human) costs (in USD), its (uncached) input and output tokens, and its
@@ -77,17 +88,19 @@ export type StatsWeek = { week: number, start: string, count: number }
 export type StatsForecast = { backlog: number, weeks: number | null }
 
 /*  the statistics of the board: its time range, the tasks per lifecycle state, the progress
-    of the tasks, the readiness of the open tasks, the total AI usage of the tasks, the (up to
-    five) tasks of the highest usage, the efficiency of the AI usage, the throughput of
-    the last weeks (oldest first, ending with the current week), the forecast of the backlog,
-    and the number of days of the time range "total" (from the creation of the oldest task
-    until now)  */
+    of the tasks, the readiness of the open tasks, the distribution of the effort sizes of the
+    tasks (from the smallest to the largest size), the total AI usage
+    of the tasks, the (up to five) tasks of the highest usage, the efficiency of the AI usage,
+    the throughput of the last weeks (oldest first, ending with the current week), the forecast
+    of the backlog, and the number of days of the time range "total" (from the creation of the
+    oldest task until now)  */
 export type Stats = {
     range:      StatsRange
     days:       number
     states:     StatsState[]
     progress:   StatsProgress
     readiness:  StatsReadiness
+    sizes:      StatsSize[]
     usage:      StatsUsage
     top:        StatsTop[]
     efficiency: StatsEfficiency
@@ -107,6 +120,20 @@ const usageFields: [ keyof StatsUsage, (typeof TaskFormat.usageKeys)[number] ][]
     [ "cread", "token.cread" ], [ "cwrite", "token.cwrite" ], [ "input", "token.input" ], [ "output", "token.output" ],
     [ "costAI", "cost.ai" ], [ "costHR", "cost.hr" ]
 ]
+
+/*  the scale of the effort sizes (the upper band bounds of "XS" to "L" in human minutes) of the
+    "project.task.effort.scale" configuration, else (if unset or invalid) of the default one  */
+export const effortScale = (log: Log): number[] => {
+    try {
+        const cfg = new Config("config", configSchema, log)
+        cfg.read()
+        const value = cfg.get("project.task.effort.scale")
+        return TaskFormat.parseEffortScale(typeof value === "string" ? value : TaskFormat.EFFORT_SCALE)
+    }
+    catch {
+        return TaskFormat.parseEffortScale(TaskFormat.EFFORT_SCALE)
+    }
+}
 
 /*  parse a timestamp of a task (in milliseconds, or NaN if absent or unparsable)  */
 const timeOf = (text: string): number => {
@@ -203,31 +230,50 @@ const percentileOf = (values: number[], p: number): number | null => {
     time range, and its usage counts with the overlapping part of the period of its usage attachment
     (its "Created" and "Modified" keys) -- as the usage attachment does not track when the usage
     accrued, the usage is taken as being evenly spread over this period, i.e., the usage within a
-    time range other than "total" is just an approximation, and where the readiness of the tasks
-    is determined on the unfiltered board "all"  */
+    time range other than "total" is just an approximation, and where the effort of a task counts
+    with the representative human minutes of its effort size on a scale (see "effortScale"), and
+    where the readiness of the tasks is determined on the unfiltered board "all"  */
 export const statsOf = (board: Board, all: Board, usage: Map<string, { usage: TaskFormat.TaskUsage, period: TaskFormat.TaskUsagePeriod }>,
-    range: StatsRange = "total", now = Date.now()): Stats => {
+    range: StatsRange = "total", scale = TaskFormat.parseEffortScale(TaskFormat.EFFORT_SCALE), now = Date.now()): Stats => {
     /*  the tasks within the time range  */
     const within = new Set<string>()
     for (const card of board.cards.values())
         if (!board.context.has(card.id) && shareOf(card.created, card.modified, range, now) !== null)
             within.add(card.id)
 
-    /*  the tasks per state and their progress, and the tones and categories of the lanes  */
+    /*  the effort of tasks within the time range (without the explicit epics)  */
+    const effortOf = (cards: Card[]): StatsEffort => {
+        const sum = { minutes: 0, estimated: 0, tasks: 0 }
+        for (const card of cards) {
+            if (!within.has(card.id) || card.group === card.id)
+                continue
+            sum.tasks++
+            if (card.effort !== "") {
+                sum.estimated++
+                sum.minutes += TaskFormat.effortMinutes(card.effort, scale)
+            }
+        }
+        return sum
+    }
+
+    /*  the tasks per state and their progress and effort,
+        and the tones and categories of the lanes  */
     const states   = [] as StatsState[]
     const progress = { finished: 0, cancelled: 0, wip: 0, open: 0 }
     const toneOf   = new Map<string, Tone>()
     const kindOf   = new Map<string, keyof StatsProgress>()
-    for (const g of board.groups)
+    for (const g of board.groups) {
         for (const l of g.lanes) {
             const tone: Tone = l.kind === "terminal" ? "done" : l.active ? "active" : "idle"
             const kind = l.kind === "terminal" ? (l.status === "CANCELLED" ? "cancelled" : "finished") : l.active ? "wip" : "open"
-            const count = (board.lanes.get(l.status) ?? []).filter((c) => within.has(c.id)).length
-            states.push({ phase: g.title, status: l.status, count, tone })
+            const cards = board.lanes.get(l.status) ?? []
+            const count = cards.filter((c) => within.has(c.id)).length
+            states.push({ phase: g.title, status: l.status, count, tone, effort: effortOf(cards) })
             progress[kind] += count
             toneOf.set(l.status, tone)
             kindOf.set(l.status, kind)
         }
+    }
 
     /*  the readiness of the open tasks, by the states of their (known) predecessors
         (independent of the time range and the filter, as they block the tasks nevertheless)  */
@@ -239,6 +285,15 @@ export const statsOf = (board: Board, all: Board, usage: Map<string, { usage: Ta
     for (const id of within)
         if (kindOf.get(board.cards.get(id)!.status) === "open")
             readiness[(all.pred.get(id) ?? []).every(done) ? "ready" : "blocked"]++
+
+    /*  the distribution of the effort sizes of the estimated tasks within the time range
+        (without the explicit epics, like their effort), from the smallest to the largest size  */
+    const sizes = TaskFormat.effortSizes.map((size): StatsSize => ({ size, count: 0 }))
+    for (const id of within) {
+        const card = board.cards.get(id)!
+        if (card.effort !== "" && card.group !== card.id)
+            sizes[TaskFormat.effortSizes.indexOf(card.effort)].count++
+    }
 
     /*  the total AI usage of the tasks (proportionally to the overlapping parts of their usage
         periods), the usage of each task, and the total usage of the finished tasks  */
@@ -317,6 +372,6 @@ export const statsOf = (board: Board, all: Board, usage: Map<string, { usage: Ta
 
     /*  the number of days of the time range "total"  */
     const days = daysOf(board, now)
-    return { range, days, states, progress, readiness, usage: total, top, efficiency, throughput, forecast }
+    return { range, days, states, progress, readiness, sizes, usage: total, top, efficiency, throughput, forecast }
 }
 

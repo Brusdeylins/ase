@@ -166,16 +166,23 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--lifecycle` *model*\]: A supported task lifecycle model
       (`solo`, `team`, or `enterprise`, repeatable). Generic default:
       every model containing all given states, resp. all models for
-      `request`. Built-in: `enterprise`.
+      `request` and with `--unclaimed`. Built-in: `enterprise`.
 
     - \[`--serial`\]: Process the tasks serially only, ignoring
       `--parallel`. Built-in: not set.
+
+    - \[`--unclaimed`\]: Process the tasks of the incoming states
+      without claiming them, independent of their assignee and
+      predecessors, and without ever changing their status and assignee
+      (`phase` only). Built-in: not set. Not allowed, as the approver
+      claims the tasks into its activity state.
 
     - \[`--params` *name*`=`*value*\]: The value of a parameter
       declared by the definition (repeatable). Built-in: none declared.
 
     - \[`--state-incoming` *state*\]: The state of the tasks to claim
-      (mandatory for `phase`). Built-in: `IMPLEMENTED`.
+      (mandatory for `phase`, repeatable with `--unclaimed` only).
+      Built-in: `IMPLEMENTED`.
 
     - \[`--state-activity` *state*\]: The state of a task during its
       processing. Generic default: the incoming state. Built-in:
@@ -403,8 +410,9 @@ $ ase agent approver start -m approve
 
 `ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
 `ase-agent-implementer`(1), `ase-agent-integrator`(1),
-`ase-agent-editor`(1), `ase-agent-adhoc`(1), `ase-agent-fleet`(1),
-`ase-agent-relay`(1), `ase-task`(1), `ase-task-board`(1).
+`ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
+`ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),
+`ase-task-board`(1).
 
 ## AUTHOR
 

@@ -157,7 +157,7 @@ export class Task {
         store.value   ||= "ase:./.ase/task"
         const token     = scoped("project.task.store.token")
         const name      = read("project.task.lifecycle") || "solo"
-        const lifecycle = TaskFormat.taskLifecycles[name]
+        const lifecycle = Object.hasOwn(TaskFormat.taskLifecycles, name) ? TaskFormat.taskLifecycles[name] : undefined
         if (lifecycle === undefined)
             throw new Error(`task: configured "lifecycle" "${name}" must be one of: ` +
                 Object.keys(TaskFormat.taskLifecycles).join(", "))
@@ -180,7 +180,7 @@ export class Task {
         task store via "project.task.lifecycle" on scope "project"); returns
         the name of the previous lifecycle model  */
     static async setLifecycle (log: Log, name: string): Promise<string> {
-        if (TaskFormat.taskLifecycles[name] === undefined)
+        if (!Object.hasOwn(TaskFormat.taskLifecycles, name))
             throw new Error(`task: invalid lifecycle model "${name}" ` +
                 `(expected one of: ${Object.keys(TaskFormat.taskLifecycles).join(", ")})`)
         return Task.with(log, async (client) => {
@@ -807,18 +807,30 @@ export class Task {
         }, undefined, true)
     }
 
-    /*  list all persisted tasks in lexicographic id order, each with the
-        `status` and `title` of its plan and the `mtime` of its last
-        modification formatted as "YYYY-MM-DD HH:MM"  */
-    static async list (log: Log): Promise<{ id: string, status: string, title: string, mtime: string }[]> {
-        return Task.with(log, (client) => client.list())
+    /*  list all persisted tasks in natural id order (numbers by their value), each with the
+        `status`, `title`, and `effort` size (empty if not estimated) of its
+        plan and the `mtime` of its last modification formatted as "YYYY-MM-DD HH:MM"  */
+    static async list (log: Log): Promise<{ id: string, status: string, title: string, mtime: string, effort: string }[]> {
+        return Task.with(log, async (client) => Task.withEffort(await client.list("header")))
+    }
+
+    /*  reduce the entries of a header listing onto the plain entries, each with
+        the size of its "Effort:" frontmatter key (empty if not estimated)  */
+    private static withEffort (entries: { id: string, status: string, title: string, mtime: string, header?: API.TaskHeader }[]) {
+        return entries.map((entry) => ({
+            id:     entry.id,
+            status: entry.status,
+            title:  entry.title,
+            mtime:  entry.mtime,
+            effort: TaskFormat.parseEffort(String(entry.header?.Effort ?? ""))?.size ?? ""
+        }))
     }
 
     /*  list all persisted tasks (see list), plus the known states of the task lifecycle
         model and the effective state set of the "--include" and "--exclude" lifecycle
         state lists, all resolved within a single task store access  */
     static async listStates (log: Log, include: string, exclude: string): Promise<{
-        items:  { id: string, status: string, title: string, mtime: string }[],
+        items:  { id: string, status: string, title: string, mtime: string, effort: string }[],
         known:  string[],
         states: string[]
     }> {
@@ -830,7 +842,7 @@ export class Task {
             catch (err) {
                 throw new Error(`task: ${err instanceof Error ? err.message : String(err)}`, { cause: err })
             }
-            return { items: await client.list(), known: client.lifecycle.states, states }
+            return { items: Task.withEffort(await client.list("header")), known: client.lifecycle.states, states }
         })
     }
 
@@ -976,7 +988,8 @@ export default class TaskCommand {
             .command("list")
             .description("List all persisted task ids, one per line")
             .option("-v, --verbose", "also show the task plan status, the task plan " +
-                "modification time as (YYYY-MM-DD HH:MM), and the task title")
+                "modification time as (YYYY-MM-DD HH:MM), the task effort size (\"-\" if not estimated), " +
+                "and the task title")
             .option("-i, --include <states>",
                 "comma-separated list of lifecycle states to list " +
                 `(${lifecycleStates}), "finished" for the finished states, ` +
@@ -1002,7 +1015,7 @@ export default class TaskCommand {
                     })
                 for (const item of items) {
                     if (opts.verbose)
-                        await writeStdout(`${item.id}\t${item.status}\t(${item.mtime})\t${item.title}\n`)
+                        await writeStdout(`${item.id}\t${item.status}\t(${item.mtime})\t${item.effort || "-"}\t${item.title}\n`)
                     else
                         await writeStdout(`${item.id}\n`)
                 }
@@ -1297,16 +1310,18 @@ export class TaskMCP {
             title: "ASE task list",
             description:
                 "List all persisted tasks. " +
-                "Returns a `tasks` array (in lexicographic `id` order) where each item has the " +
+                "Returns a `tasks` array (in natural `id` order, numbers by their value) where each item has the " +
                 "task `id`, the `status` of its plan (the `Status:` frontmatter key, defaulting " +
                 "to the initial state of the configured task lifecycle model), and the `title` of " +
                 "its plan (the `#   TASK: <title>` heading, empty if absent). " +
                 "If `verbose` is `true`, each item additionally has an `mtime` field " +
-                "(last modification time of the task plan, formatted as `YYYY-MM-DD HH:MM`). " +
+                "(last modification time of the task plan, formatted as `YYYY-MM-DD HH:MM`) " +
+                "and an `effort` field (the T-shirt size of its valid `Effort:` frontmatter key, " +
+                "empty if not estimated). " +
                 "Returns an empty array if no tasks exist.",
             inputSchema:  {
                 verbose: z.boolean().optional()
-                    .describe("if true, also include the `mtime` field per task (default: false)")
+                    .describe("if true, also include the `mtime` and `effort` fields per task (default: false)")
             },
             outputSchema: {
                 tasks: z.array(z.object({
@@ -1315,15 +1330,18 @@ export class TaskMCP {
                         "defaulting to the initial state of the configured task lifecycle model)"),
                     title:  z.string().describe("task plan title (`#   TASK: <title>` heading, empty if absent)"),
                     mtime:  z.string().optional()
-                        .describe("task plan modification time (`YYYY-MM-DD HH:MM`); only present if `verbose` is true")
-                })).describe("all persisted tasks in lexicographic id order")
+                        .describe("task plan modification time (`YYYY-MM-DD HH:MM`); only present if `verbose` is true"),
+                    effort: z.string().optional()
+                        .describe("task effort size (`XS`, `S`, `M`, `L`, or `XL`, empty if not estimated); " +
+                            "only present if `verbose` is true")
+                })).describe("all persisted tasks in natural id order")
             }
         }, async (args) => {
             try {
                 const verbose = args.verbose ?? false
                 const items   = await Task.list(this.log)
                 const tasks   = verbose ?
-                    items.map((item) => ({ id: item.id, status: item.status, title: item.title, mtime: item.mtime })) :
+                    items.map((item) => ({ id: item.id, status: item.status, title: item.title, mtime: item.mtime, effort: item.effort })) :
                     items.map((item) => ({ id: item.id, status: item.status, title: item.title }))
                 const result  = { tasks }
                 return {

@@ -6,6 +6,28 @@
 
 import type { AgentHooks } from "../ase-agent-definition-api.js"
 import type { AgentKind }  from "../ase-agent-definition-core.js"
+import { estimable }       from "./estimator.js"
+
+/*  the parameters of the implementer: whether a task is claimed only once the estimator
+    is done with it (default), to be disabled when no estimator agent is used  */
+const params = {
+    "effort-wait": {
+        desc:    "whether to wait for the effort estimation of a task by the agent \"estimator\"",
+        default: "true",
+        allow:   [ "true", "false" ]
+    }
+}
+
+/*  with the parameter "effort-wait", a task is claimed only once the estimator is done
+    with it, i.e., once it no longer awaits its effort estimation, or once the estimator
+    failed on it (and hence tagged it, so it is not estimated again), as the estimator
+    processes the "PLANNED" tasks unclaimed and would else race against the implementer,
+    which, if claiming a task first, would keep it from being estimated at all  */
+const ready: AgentHooks["ready"] = async (task, ctx) =>
+    ctx.params["effort-wait"] !== "true"
+    || task.tags.some((tag) => tag === "ase-agent-estimator" || tag.startsWith("ase-agent-estimator:"))
+    || !(await estimable(task, ctx))
+    || "its effort estimation by the agent \"estimator\""
 
 /*  a predecessor passed the implementation phase for its successor only once its change
     set is contained in the "Source:" of the successor, from which the successor is
@@ -59,6 +81,7 @@ export default {
             also on a re-run of a declined task), and the work on it is afterwards committed onto
             it and published  */
         implement: {
+            params,
             type:      "phase",
             lifecycle: "enterprise",
             workdir:   "changeset",
@@ -72,7 +95,7 @@ export default {
             success:   { criterion: [ "status" ] },
             attach:    { changeset: "changeset" },
             finish:    { commit: true },
-            hooks:     { passes: passes() }
+            hooks:     { passes: passes(), ready }
         },
 
         /*  draft the implementation of the task into its "draft" attachment only (in a temporary
@@ -83,6 +106,7 @@ export default {
             else tagged with a tag separate from the one of the implementing, so a drafted task
             is still implemented later  */
         draft: {
+            params,
             type:      "phase",
             lifecycle: "enterprise",
             workdir:   "source",
@@ -91,7 +115,7 @@ export default {
             attach:    { skip: "text/x-diff;draft", expect: "text/x-diff;draft" },
             prompt:    { skill: "ase-task-implement", args: "--next DONE --draft --stateless {id}" },
             success:   { criterion: [ "exit", "attachment" ] },
-            hooks:     { passes: passes("ase-agent-implementer") }
+            hooks:     { passes: passes("ase-agent-implementer"), ready }
         }
     }
 } satisfies AgentKind

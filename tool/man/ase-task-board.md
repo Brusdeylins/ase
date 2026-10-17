@@ -40,6 +40,9 @@ lines. The markers are:
 - `✎`: an edit request of the task is pending (see `ase-agent-editor`(1)).
 - `✎…`: an edit request of the task is being processed.
 - `✎✗`: an edit request of the task failed.
+- `[⚖`*size*`]`: the effort of the task, i.e., the T-shirt size
+  (`XS`, `S`, `M`, `L`, or `XL`) of its valid `Effort:` key (see
+  `ase-agent-estimator`(1)), absent for an unestimated task.
 - `⚉` *name*: a badge on the top border of the card, naming an
   agent busy with the task (inverse), resp. the agent the task is
   assigned to.
@@ -121,9 +124,13 @@ matched case-insensitively against the task id and title, AND-combined
 when separated by spaces and OR-combined when separated by commas. Each
 OR-part first matches its keywords as literal substrings, and only if
 this matches no task at all, it matches them *fuzzily* (keywords of at
-least four characters also match words of a similar spelling). The
-lanes show only the matching tasks, the graph additionally their
-direct predecessors and successors (dimmed and dashed).
+least four characters also match words of a similar spelling). A
+keyword `effort:`*size* (with *size* one of `XS`, `S`, `M`, `L`, or
+`XL`, case-insensitively) instead exactly matches the tasks of this
+effort size (its `Effort:` key), while a keyword of any other size is
+an ordinary one. The lanes show only the matching tasks, the graph
+additionally their direct predecessors and successors (dimmed and
+dashed).
 
 The terminal board supports the mouse (via SGR mouse reporting): a
 click onto a card opens it, a click onto the `view:` value of the
@@ -192,9 +199,14 @@ task), `within last 30 days`, and `within last 7 days` on its top
 (selected via `←`/`→` or a click, initially `total`):
 
 - `Tasks per State`: a column chart with the number of tasks of each
-  state of the task lifecycle model, labeled by the state and, below,
-  by its phase (the group of its lane), in the colors of the lanes,
-  and with the `total tasks:` line below it.
+  state of the task lifecycle model, labeled by the state, below by the
+  effort of its estimated tasks (blank without any), and below by its
+  phase (the group of its lane), in the colors of the lanes, and with
+  the `total tasks:` line below it. An effort is the sum of the
+  representative human minutes of the effort sizes of the tasks on the
+  scale `project.task.effort.scale` (see `ase-config`(1)), shown in
+  minutes below one hour, else in hours, where the explicit epics carry
+  no effort of their own.
 - `Throughput` (besides `Tasks per State`): a column chart with the
   number of tasks finished (in a terminal state other than `CANCELLED`)
   in each of the last 12 weeks (a quarter, ending with the current
@@ -226,6 +238,11 @@ task), `within last 30 days`, and `within last 7 days` on its top
   `token` (all tokens, stacked by the cache read, cache write, input,
   and output tokens), and its `cost` (AI and human costs, in USD), with
   the bars of a column scaled to the maximum of the column.
+- `Effort` (besides `Usage`): a column chart with the
+  number of estimated tasks of each effort size, from the smallest
+  (`XS`) to the largest (`XL`), where the explicit epics carry no
+  effort of their own, and with the `estimated:` line below it, the
+  number of the estimated and of all tasks.
 - `Top-5 Tasks`: a table of the (up to) five tasks of the highest usage, ranked
   by their total (AI and human) costs and then by their input and
   output tokens, with the columns `Task Id` (inverse behind `≡`, in the

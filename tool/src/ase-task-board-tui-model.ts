@@ -24,7 +24,7 @@ import * as TaskFormat                        from "./ase-task-format.js"
 import { editRefused, editPrompt, requestEdit, requestsOf } from "./ase-task-request.js"
 import type { TaskRequests }                  from "./ase-task-request.js"
 import { filterBoard, dropStandalone }        from "./ase-task-board-filter.js"
-import { statsOf, statsRanges }               from "./ase-task-board-stats.js"
+import { statsOf, statsRanges, effortScale }  from "./ase-task-board-stats.js"
 import type { StatsRange }                    from "./ase-task-board-stats.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
@@ -434,9 +434,9 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }, [ log, all, view ])
 
     /*  the statistics of the shown tasks within the time range (while the statistics view is shown),
-        with their readiness determined against all tasks  */
+        with their effort on the configured scale (re-read on each change of the board)  */
     const stats = React.useMemo(() =>
-        view === "stats" ? statsOf(board, all, usage ?? new Map(), range) : null, [ board, all, usage, view, range ])
+        view === "stats" ? statsOf(board, all, usage ?? new Map(), range, effortScale(log)) : null, [ log, board, all, usage, view, range ])
 
     /*  step the time range of the statistics to the previous or next one (without wrapping around)  */
     const stepRange = (delta: number): void => {
