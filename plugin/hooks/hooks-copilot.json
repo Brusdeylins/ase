@@ -6,6 +6,11 @@
                 "type":       "command",
                 "bash":       "ase hook session-start --tool copilot",
                 "powershell": "ase hook session-start --tool copilot"
+            },
+            {
+                "type":       "command",
+                "bash":       "ase hook session-persona --tool copilot",
+                "powershell": "ase hook session-persona --tool copilot"
             }
         ],
         "sessionEnd": [

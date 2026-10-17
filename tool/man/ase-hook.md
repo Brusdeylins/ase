@@ -42,6 +42,11 @@ format is read and written:
   *ASE* constitution and session information into the session context.
   See `ase-hook-session-start`(1).
 
+- `ase hook session-persona`:
+  Handle the `SessionStart` (resp. `sessionStart`) event a second time:
+  inject the *ASE* persona rules into the session context.
+  See `ase-hook-session-persona`(1).
+
 - `ase hook session-end`:
   Handle the `SessionEnd` (resp. `sessionEnd`) event: remove the
   session state and detach the session from its AI usage window. See
@@ -78,7 +83,8 @@ without a sub-command exits with status `1`.
 
 ## SEE ALSO
 
-`ase`(1), `ase-hook-session-start`(1), `ase-hook-session-end`(1),
+`ase`(1), `ase-hook-session-start`(1), `ase-hook-session-persona`(1),
+`ase-hook-session-end`(1),
 `ase-hook-pre-tool-use`(1), `ase-hook-permission-request`(1),
 `ase-hook-user-prompt-submit`(1), `ase-hook-stop`(1), `ase-setup`(1).
 

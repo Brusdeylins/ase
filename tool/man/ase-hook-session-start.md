@@ -96,6 +96,11 @@ following steps:
    (relative to the referencing file, `~/` denoting the home
    directory).
 
+   The persona rules are not part of this output, but are injected
+   separately by `ase hook session-persona`, as agent tools like
+   *Anthropic Claude Code CLI* show only a preview of a hook output
+   beyond 10,000 characters.
+
    For `--tool copilot` and `--tool codex` only, the instructions of the
    output style `ase-terse` (with its YAML frontmatter stripped) are
    appended, as these agent tools have no output style concept, whereas
@@ -170,7 +175,8 @@ root directory cannot be determined, a plugin file cannot be read, or
 
 ## SEE ALSO
 
-`ase`(1), `ase-hook`(1), `ase-hook-session-end`(1), `ase-config`(1),
+`ase`(1), `ase-hook`(1), `ase-hook-session-persona`(1),
+`ase-hook-session-end`(1), `ase-config`(1),
 `ase-statusline`(1).
 
 ## AUTHOR

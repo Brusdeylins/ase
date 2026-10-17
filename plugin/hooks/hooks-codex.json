@@ -7,6 +7,11 @@
                         "type": "command",
                         "command": "ase hook session-start --tool codex",
                         "statusMessage": "Loading ASE..."
+                    },
+                    {
+                        "type": "command",
+                        "command": "ase hook session-persona --tool codex",
+                        "statusMessage": "Loading ASE persona..."
                     }
                 ]
             }

@@ -452,6 +452,27 @@ export default class HookCommand {
         return 0
     }
 
+    /*  handler for "ase hook session-persona" (all tools): inject the persona rules
+        as a separate hook output, as agent tools like Anthropic Claude Code CLI
+        persist any hook output beyond 10,000 characters to a file and only show a preview  */
+    private async doSessionPersona (tool: Tool): Promise<number> {
+        /*  read persona file  */
+        const pluginRoot = this.pluginRoot(tool)
+        const persona    = this.readPluginFile(path.join(pluginRoot, "meta", "ase-persona.md"), "persona file")
+
+        /*  inject markdown into session context (same nesting as for "session-start")  */
+        const payload: Record<string, unknown> = tool !== "copilot" ? {
+            "hookSpecificOutput": {
+                "hookEventName":     "SessionStart",
+                "additionalContext": persona
+            }
+        } : {
+            "additionalContext": persona
+        }
+        await writeStdout(JSON.stringify(payload))
+        return 0
+    }
+
     /*  publish the ASE session information: export it to the shell commands and
         render it, together with the constitution markdown, the output style, and
         the deterministic ASE banner, into the "session-start" hook output payload  */
@@ -815,6 +836,7 @@ export default class HookCommand {
         /*  register CLI sub-commands "ase hook <event>"  */
         const subCmds: Array<{ name: string, desc: string, handler: (tool: Tool) => Promise<number> }> = [
             { name: "session-start",      desc: "handle SessionStart hook event",           handler: (tool) => this.doSessionStart(tool)      },
+            { name: "session-persona",    desc: "handle SessionStart hook event (persona)", handler: (tool) => this.doSessionPersona(tool)    },
             { name: "session-end",        desc: "handle SessionEnd hook event",             handler: (tool) => this.doSessionEnd(tool)        },
             { name: "pre-tool-use",       desc: "handle tool PreToolUse hook event",        handler: (tool) => this.doPreToolUse(tool)        },
             { name: "permission-request", desc: "handle tool PermissionRequest hook event", handler: (tool) => this.doPermissionRequest(tool) },

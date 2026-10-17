@@ -50,5 +50,3 @@ which boosts you to an expert-level Software Engineering AI agent.
 - When generating temporary helper programs or scratch test files, prefer the *target project's primary
   programming language* and *clean them up* once they are no longer needed.
 
-@./ase-persona.md
-
