@@ -379,7 +379,8 @@ header
 
 /*  the task box with badges: room above it and on its top for the badges placed
     onto the left part of its top border (like in the TUI), also when scrolling it
-    into view, where the fixed-size graph nodes keep their room and get smaller badges instead  */
+    into view, where the fixed-size graph nodes always have the room on their top
+    (shared with their bottom while without badges) and keep their height  */
 .card.badged
     position: relative
     overflow: visible
@@ -390,12 +391,12 @@ header
     padding-top: 14px
     .cagents
         left: 8px
-#graph .card.badged
-    margin-top: 0
-    padding-top: 8px
-    .cagents
-        font-size: 0.75em
-        line-height: 14px
+#graph .card
+    padding-block: 12px
+    &.badged
+        margin-top: 0
+        padding-top: 16px
+        padding-bottom: 8px
 
 /*  the badges of the task (the agents busy with it, else its assignee), onto the left
     part of the top border of its box (leaving room on the right part for the pulse of the box),
@@ -1219,6 +1220,15 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
     .card
         box-sizing: border-box
         height: 100%
+
+    /*  the title within the label lines its fixed-size node has room for  */
+    &.titles .card
+        &[data-lines="1"] .cbody
+            -webkit-line-clamp: 1
+            line-clamp: 1
+        &[data-lines="2"] .cbody
+            -webkit-line-clamp: 2
+            line-clamp: 2
 
     /*  the dependency context of a filtered graph: dimmed and dashed  */
     .node.context .card

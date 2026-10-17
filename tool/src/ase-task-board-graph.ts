@@ -20,10 +20,12 @@ export type GraphLayout = { width: number, height: number, nodes: Map<string, Gr
     (width in columns, height in rows) or browser pixels, with the height of
     a single-line node, the height of each additional label line, (in
     pixel units) the estimated characters per label line of the fixed-width node,
-    and the padding and the minimum width (by its name) of a group container  */
+    and the padding and the minimum width (by its name) of a group container;
+    in pixel units, a single-line node is its card with a border of 1px, a padding of
+    24px in total (with room for the badges on its top border), and a line of 20.8px  */
 const units = {
     cell: { w: (label: string) => label.length + 4, h: 3,  line: 1,    chars: 0,  nodeNode: 1,  layers: 8,  edgeEdge: 1,  edgeNode: 1,  pad: "[top=2,left=2,bottom=1,right=2]",     gw: (name: string) => name.length + 4 },
-    px:   { w: () => 260,                            h: 36, line: 18.2, chars: 34, nodeNode: 18, layers: 64, edgeEdge: 10, edgeNode: 14, pad: "[top=30,left=14,bottom=14,right=14]", gw: (name: string) => Math.ceil(name.length * 7.5) + 28 }
+    px:   { w: () => 260,                            h: 47, line: 20.8, chars: 32, nodeNode: 18, layers: 64, edgeEdge: 10, edgeNode: 14, pad: "[top=30,left=14,bottom=14,right=14]", gw: (name: string) => Math.ceil(name.length * 7.5) + 28 }
 }
 
 /*  the id prefix of the compound node of a group (task ids never contain a colon)  */
@@ -71,9 +73,13 @@ export const layoutGraph = async (board: Board, unit: "cell" | "px", titles = fa
     }
     const node = (id: string): ElkNode => {
         /*  in cell units, a node holds its label lines, in pixel units its
-            estimated label lines (as wrapped by the browser within the card)  */
+            estimated label lines (as wrapped by the browser within the card),
+            with two placeholder columns for the "≡" in front of the task id (and
+            two more for the "♛" of an epic), where the arrow in front of the title
+            stands for the padding and margin of the task id sub-box  */
         const lines = unit === "cell" ? nodeLines(board, id, titles, width) :
-            clampLines(cardLabel(board.cards.get(id)!), u.chars, titles ? 3 : 1)
+            clampLines(glueGroup.repeat(groupLabel(board.cards.get(id)!) === id ? 4 : 2) +
+                cardLabel(board.cards.get(id)!), u.chars, titles ? 3 : 1)
         const w     = unit === "cell" ? width : u.w(id)
         const h     = Math.round(u.h + (lines.length - 1) * u.line)
 
@@ -342,7 +348,9 @@ const escapeXML = (s: string): string =>
     with its name between "♛" and "▶" in the top-left corner, and every node a "g.node" carrying
     its "data-id" and tone class (plus "context" for a context node of a filtered graph),
     for the click delegation of the page, and its "data-assignee", for the badges placed
-    by the page, and holding the same HTML card (task id sub-box and truncated title) as the lanes  */
+    by the page, and holding the same HTML card (task id sub-box and truncated title) as the lanes,
+    with the number of label lines its node has room for in "data-lines" (to which the
+    page clamps the title, as the browser may wrap it onto more lines than estimated)  */
 export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
     const out   = [ `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" ` +
         `height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}">`,
@@ -356,11 +364,12 @@ export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
         out.push(`<path class="edge" data-from="${escapeXML(e.from)}" data-to="${escapeXML(e.to)}" d="${d}" marker-end="url(#arrow)"/>`)
     }
     for (const n of layout.nodes.values()) {
-        const card = board.cards.get(n.id)!
+        const card  = board.cards.get(n.id)!
+        const lines = Math.round((n.h - units.px.h) / units.px.line) + 1
         out.push(`<g class="node tone-${toneOf(board, card)}${board.context.has(card.id) ? " context" : ""}" data-id="${escapeXML(card.id)}" ` +
             `data-assignee="${escapeXML(card.assignee.replace(/\p{Cc}/gu, ""))}">` +
             `<foreignObject x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}">` +
-            `<div xmlns="http://www.w3.org/1999/xhtml" class="card"><div class="cbody"><span class="cid">${groupLabel(card) === card.id ? "♛ " : ""}≡ ${escapeXML(card.id)}</span>` +
+            `<div xmlns="http://www.w3.org/1999/xhtml" class="card" data-lines="${lines}"><div class="cbody"><span class="cid">${groupLabel(card) === card.id ? "♛ " : ""}≡ ${escapeXML(card.id)}</span>` +
             `${escapeXML(card.title.replace(/\t/g, " ").replace(/\p{Cc}/gu, ""))
                 .replace(/`([^`]+)`/g, "<code>$1</code>")}</div></div></foreignObject></g>`)
     }
