@@ -39,11 +39,23 @@ export type Sel = { g: number, l: number, id: string }
 /*  the currently carried task (if any) and the lane states it can be moved to  */
 export type Carry = { id: string, from: string, targets: Set<string> }
 
-/*  the prompt popup of a task: its prompt with the cursor position, and, for a request by
-    prompt of any name (instead of an edit request), its request name, whether the name
-    (instead of the prompt) is focused, and the suggested request names  */
-export type PromptRequest = { name: string, focus: boolean, choices: string[] }
-export type PromptState = { id: string, text: string, pos: number, request: PromptRequest | null }
+/*  the prompt popup of a task: its prompt with the cursor position, its focused field (the
+    request name, the prompt, or the request or cancel button), and, for a request by prompt
+    of any name (instead of an edit request), its request name, the suggested request names,
+    and the request name as last typed (filtering the suggested request names, while the
+    up/down arrows select them)  */
+export type PromptFocus   = "name" | "prompt" | "request" | "cancel"
+export type PromptRequest = { name: string, choices: string[], typed: string }
+export type PromptState   = { id: string, text: string, pos: number, focus: PromptFocus, request: PromptRequest | null }
+
+/*  the suggested request names of a request by prompt, matching its request name as last
+    typed (all of them for an empty or an exactly suggested request name, to offer the
+    alternatives, and else those containing it)  */
+export const requestChoices = (request: PromptRequest): string[] => {
+    const typed = request.typed.toLowerCase()
+    return typed === "" || request.choices.includes(typed) ? request.choices :
+        request.choices.filter((choice) => choice.toLowerCase().includes(typed))
+}
 
 /*  the navigable items of a group: one per card, or one per lane
     which is minimized, empty, or within a collapsed group  */
@@ -703,13 +715,13 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         }
         const draft = promptDrafts.current.get(id)
         if (draft !== undefined) {
-            setPrompt({ id, ...draft, request: null })
+            setPrompt({ id, ...draft, focus: "prompt", request: null })
             return
         }
         const token = ++promptLoad.current
         track({ text: "loading edit prompt of task", id }, editPrompt(log, id)).then((text) => {
             if (token === promptLoad.current)
-                setPrompt({ id, text, pos: [ ...text ].length, request: null })
+                setPrompt({ id, text, pos: [ ...text ].length, focus: "prompt", request: null })
         }).catch((err: unknown) => {
             if (token === promptLoad.current)
                 setNotice(`editing task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
@@ -731,7 +743,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         const choices = requestNames(agents)
         const draft   = requestDrafts.current.get(id)
         const name    = draft?.name ?? choices[0] ?? ""
-        setPrompt({ id, text: draft?.text ?? "", pos: draft?.pos ?? 0, request: { name, focus: name === "", choices } })
+        setPrompt({ id, text: draft?.text ?? "", pos: draft?.pos ?? 0, focus: name === "" ? "name" : "prompt", request: { name, choices, typed: "" } })
     }
 
     /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if

@@ -1310,7 +1310,12 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
 
 /*  the prompt popup: in accent color, with its question in normal color (but bold),
     and with a multi-line text area for the prompt, in monospace font and accent color
-    (on the lightest visibly tinted accent color while focused)  */
+    on the lightest visibly tinted accent color (resp. in signal color on the lightest
+    visibly tinted signal color while focused, alike its buttons while hovered), for
+    a request by prompt behind the equally wide labels of the request name field (spanning
+    30% of the width of the text area, and alike colored) and the text area (for
+    left-aligning them), with the drop-down of the suggested request names directly
+    below the request name field (in signal color)  */
 #prompt
     .box
         border-color: var(--c-accent)
@@ -1318,29 +1323,76 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
         color: var(--c-text)
         .cid
             margin-right: 0
-    .name
-        align-self: stretch
+    .fields
+        display: grid
+        grid-template-columns: max-content 1fr
+        gap: 12px 8px
+        align-items: baseline
+        width: min(760px, 80vw)
         color: var(--c-text)
+        label
+            white-space: nowrap
+        textarea
+            width: 100%
+            box-sizing: border-box
+    .combo
+        position: relative
+        width: 30%
         input
-            margin-left: 6px
-            padding: 2px 6px
-            border: 1px solid var(--c-border)
+            width: 100%
+            box-sizing: border-box
+            padding: 2px 22px 2px 6px
+            border: 1px solid var(--c-accent)
             border-radius: 4px
-            background: var(--c-paper)
+            background: var(--c-accent-ground)
             color: var(--c-accent)
             font: inherit
             font-family: "DejaVu Sans Mono", monospace
             font-size: 0.875em
             &:focus
                 outline: none
-                border-color: var(--c-accent)
-                background: var(--c-accent-ground)
+                border-color: var(--c-signal)
+                background: var(--c-signal-ground)
+                color: var(--c-signal)
+        .mark
+            position: absolute
+            top: 50%
+            right: 7px
+            transform: translateY(-50%)
+            color: var(--c-accent)
+            pointer-events: none
+        &:focus-within .mark
+            color: var(--c-signal)
+        .drop
+            position: absolute
+            top: 100%
+            left: 0
+            right: 0
+            z-index: 1
+            margin: 2px 0 0 0
+            padding: 2px 0
+            list-style: none
+            border: 1px solid var(--c-signal)
+            border-radius: 4px
+            background: var(--c-paper)
+            box-shadow: 0 4px 12px unquote("color-mix(in srgb, var(--c-shade) 18%, transparent)")
+            font-family: "DejaVu Sans Mono", monospace
+            font-size: 0.875em
+            li
+                padding: 1px 6px
+                color: var(--c-signal)
+                cursor: pointer
+                &:hover
+                    background: var(--c-signal-ground)
+                &.sel
+                    background: var(--c-signal)
+                    color: var(--c-paper)
     textarea
         width: min(640px, 80vw)
         padding: 6px 8px
-        border: 1px solid var(--c-border)
+        border: 1px solid var(--c-accent)
         border-radius: 4px
-        background: var(--c-paper)
+        background: var(--c-accent-ground)
         color: var(--c-accent)
         font: inherit
         font-family: "DejaVu Sans Mono", monospace
@@ -1348,14 +1400,18 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
         resize: vertical
         &:focus
             outline: none
-            border-color: var(--c-accent)
-            background: var(--c-accent-ground)
+            border-color: var(--c-signal)
+            background: var(--c-signal-ground)
+            color: var(--c-signal)
     .buttons button
         border-color: var(--c-accent)
+        background: var(--c-accent-ground)
         color: var(--c-accent)
-        &:hover
-            background: var(--c-accent)
-            color: var(--c-paper)
+        &:hover, &:focus-visible
+            outline: none
+            border-color: var(--c-signal)
+            background: var(--c-signal-ground)
+            color: var(--c-signal)
 
 /*  the transfer popup: in accent color, with a scrollable list of the lane states
     (in bold, behind their group), where the hovered and selected states change

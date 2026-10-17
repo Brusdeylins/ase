@@ -9,12 +9,13 @@ import type { Key }                           from "ink"
 
 import { reachableStates }                    from "./ase-task-board-core.js"
 import { nearestPlace }                       from "./ase-task-board-graph.js"
-import { groupItems, relocate }               from "./ase-task-board-tui-model.js"
-import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
+import { groupItems, relocate, requestChoices } from "./ase-task-board-tui-model.js"
+import type { BoardCtx, PromptFocus }         from "./ase-task-board-tui-model.js"
 import type { StatsRange }                    from "./ase-task-board-stats.js"
 import { gridColumns }                        from "./ase-task-board-tui-view.js"
 import {
-    refSegs, tabFirst, tabLayout, confirmBox, transferBox, CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE
+    refSegs, tabFirst, tabLayout, confirmBox, transferBox, promptBox, dropFirst,
+    CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE, DROP_ROWS
 }                                             from "./ase-task-board-tui-popup.js"
 
 /*  handle a mouse press onto the deletion confirmation, the transfer popup, the
@@ -22,12 +23,33 @@ import {
 const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): boolean => {
     const {
         columns, rows, all, dialog, setDialog, setNotice, confirm, setConfirm, transfer, setTransfer,
-        prompt, dialogW, tabLabels, dialogSel, dialogScroll, transferList, remove, transferTo
+        prompt, setPrompt, cancelPrompt, submitPrompt,
+        dialogW, tabLabels, dialogSel, dialogScroll, transferList, remove, transferTo
     } = ctx
 
-    /*  the prompt popup is operated by the keyboard only  */
-    if (prompt !== null)
+    if (prompt !== null) {
+        /*  a click onto a suggested request name of the drop-down picks it (and switches to the
+            prompt), a click onto the request or cancel button presses it, and a click onto the
+            input box of the request name or the prompt focuses it  */
+        const box     = promptBox(columns, rows, prompt.request !== null)
+        const choices = prompt.request !== null && prompt.focus === "name" ? requestChoices(prompt.request) : []
+        const k       = dropFirst(choices, prompt.request?.name ?? "") + my - box.dropY - 1
+        const inBox   = mx >= box.boxX && mx < box.boxX + box.boxW
+        const inName  = mx >= box.boxX && mx < box.boxX + box.nameW
+        if (btn !== 0)
+            return true
+        if (prompt.request !== null && inName && my > box.dropY && my <= box.dropY + Math.min(DROP_ROWS, choices.length))
+            setPrompt({ ...prompt, focus: "prompt", request: { ...prompt.request, name: choices[k] } })
+        else if (my === box.buttonY && mx >= box.okX && mx < box.okX + box.okText.length)
+            submitPrompt()
+        else if (my === box.buttonY && mx >= box.noX && mx < box.noX + box.noText.length)
+            cancelPrompt()
+        else if (prompt.request !== null && inName && my >= box.nameY - 1 && my <= box.nameY + 1)
+            setPrompt({ ...prompt, focus: "name" })
+        else if (inBox && my >= box.promptY && my <= box.promptY + box.viewH + 1)
+            setPrompt({ ...prompt, focus: "prompt" })
         return true
+    }
     if (confirm !== null) {
         /*  a click onto the " delete " or " cancel " button of the deletion confirmation  */
         const box = confirmBox(columns, rows)
@@ -234,29 +256,56 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
         transfer, setTransfer, transferList, remove, transferTo, prompt, setPrompt, cancelPrompt, submitPrompt
     } = ctx
 
+    /*  operate the prompt popup: TAB resp. Shift+TAB switch the focus to the next resp.
+        previous field (the request name of a request by prompt, the prompt, and the request
+        and cancel buttons), and ESC cancels in every field  */
+    if (prompt !== null && (key.tab || key.escape)) {
+        if (key.escape)
+            cancelPrompt()
+        else {
+            const fields = (prompt.request !== null ? [ "name", "prompt", "request", "cancel" ] : [ "prompt", "request", "cancel" ]) as PromptFocus[]
+            const i      = Math.max(0, fields.indexOf(prompt.focus))
+            setPrompt({ ...prompt, focus: fields[(i + (key.shift ? fields.length - 1 : 1)) % fields.length] })
+        }
+        return
+    }
+
+    /*  press the focused button of the prompt popup: RETURN (or SPACE) presses it,
+        and the left/right arrows switch between the request and cancel buttons  */
+    if (prompt !== null && (prompt.focus === "request" || prompt.focus === "cancel")) {
+        if ((key.return || input === " ") && prompt.focus === "request")
+            submitPrompt()
+        else if (key.return || input === " ")
+            cancelPrompt()
+        else if (key.leftArrow || key.rightArrow)
+            setPrompt({ ...prompt, focus: prompt.focus === "request" ? "cancel" : "request" })
+        return
+    }
+
     /*  type the prompt of an edit request: RETURN requests the edit, Shift+RETURN
-        (under the kitty keyboard protocol only) and Alt+RETURN (in every terminal,
-        e.g. with "Option as Meta" on macOS) insert a newline, ESC cancels,
+        (under the kitty keyboard protocol only), Alt+RETURN (under the kitty keyboard
+        protocol, or where the terminal sends it as ESC+RETURN, e.g. with "Option as Meta"
+        on macOS), and Ctrl+J (in every terminal, as a plain linefeed without the kitty
+        keyboard protocol) insert a newline,
         the left/right arrows move the cursor by one character, HOME/END move it
         to the start/end, BACKSPACE removes the character before the cursor, DELETE
         removes the character at the cursor, and all other input (also pasted text,
         with its newlines kept and its other control characters turned into spaces)
         is inserted at the cursor  */
-    if (prompt !== null && prompt.request !== null && (key.tab || prompt.request.focus)) {
-        /*  type the request name of a request by prompt: TAB switches between the request name
-            and the prompt, RETURN switches to the prompt, the up/down arrows cycle through the
-            suggested request names, BACKSPACE removes the last character, ESC cancels, and all
+    if (prompt !== null && prompt.request !== null && prompt.focus === "name") {
+        /*  type the request name of a request by prompt: RETURN switches to the prompt, the
+            up/down arrows cycle through the suggested request names of the drop-down (matching
+            the request name as last typed), BACKSPACE removes the last character, and all
             other input of letters, digits, and dashes is appended (lower-cased)  */
         const request = prompt.request
-        const name    = (value: string) => setPrompt({ ...prompt, request: { ...request, name: value } })
-        if (key.tab || key.return)
-            setPrompt({ ...prompt, request: { ...request, focus: key.tab ? !request.focus : false } })
-        else if (key.escape)
-            cancelPrompt()
-        else if ((key.upArrow || key.downArrow) && request.choices.length > 0) {
-            const i = request.choices.indexOf(request.name)
-            const n = request.choices.length
-            name(request.choices[i < 0 ? 0 : (i + (key.upArrow ? n - 1 : 1)) % n])
+        const choices = requestChoices(request)
+        const name    = (value: string, typed = value) => setPrompt({ ...prompt, request: { ...request, name: value, typed } })
+        if (key.return)
+            setPrompt({ ...prompt, focus: "prompt" })
+        else if ((key.upArrow || key.downArrow) && choices.length > 0) {
+            const i = choices.indexOf(request.name)
+            const n = choices.length
+            name(choices[i < 0 ? (key.upArrow ? n - 1 : 0) : (i + (key.upArrow ? n - 1 : 1)) % n], request.typed)
         }
         else if (key.backspace || key.delete)
             name([ ...request.name ].slice(0, -1).join(""))
@@ -272,12 +321,10 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
             chars.splice(pos, 0, ...ins)
             setPrompt({ ...prompt, text: chars.join(""), pos: pos + ins.length })
         }
-        if (key.return && (key.shift || key.meta))
+        if ((key.return && (key.shift || key.meta)) || (key.ctrl && input === "j"))
             insert("\n")
         else if (key.return)
             submitPrompt()
-        else if (key.escape)
-            cancelPrompt()
         else if (key.leftArrow || key.rightArrow)
             setPrompt({ ...prompt, pos: Math.max(0, Math.min(chars.length, pos + (key.leftArrow ? -1 : 1))) })
         else if (key.home || key.end)

@@ -12,7 +12,7 @@ import { Task }                               from "./ase-task.js"
 import { buildBoard, toneOf }                 from "./ase-task-board-core.js"
 import type { Board }                         from "./ase-task-board-core.js"
 import pkg                                    from "../package.json" with { type: "json" }
-import { useBoardState, mouseReporting }      from "./ase-task-board-tui-model.js"
+import { useBoardState, mouseReporting, requestChoices } from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
 import { handleMouse, handleKey }             from "./ase-task-board-tui-control.js"
 import { h, renderLanes, renderGraph, renderAgents, renderStats } from "./ase-task-board-tui-view.js"
@@ -127,7 +127,7 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null,
         transfer !== null && transferCard !== undefined ?
             renderTransfer(transfer.id, transferCard.status, transferList, transfer.at, columns, rows) : null,
-        prompt !== null ? renderPrompt(prompt.id, prompt.text, prompt.pos, columns, rows, prompt.request) : null,
+        prompt !== null ? renderPrompt(prompt, columns, rows, prompt.request !== null ? requestChoices(prompt.request) : []) : null,
         busy !== null ? renderBusy(busy.label, busy.since, busyTick, columns, rows) : null)
 }
 

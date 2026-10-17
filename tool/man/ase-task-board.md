@@ -444,18 +444,23 @@ letter under the kitty keyboard protocol.
 ### Prompt Popup
 
 - *character*: Insert the character (also pasted text) at the cursor.
-- `⏎`: Request the edit resp. the request (on the request name field
-  of the web board: switch to the prompt).
-- `Shift`+`⏎`, `Alt`+`⏎`: Insert a line break (terminal: `Shift`+`⏎`
-  only under the kitty keyboard protocol, `Alt`+`⏎` in every terminal).
+- `⏎`: Request the edit resp. the request (on the request name field:
+  switch to the prompt; on a button: press it, also a click onto it).
+- `Shift`+`⏎`, `Alt`+`⏎`, `Ctrl`+`J`: Insert a line break (terminal:
+  `Shift`+`⏎` only under the kitty keyboard protocol, `Alt`+`⏎` only
+  under the kitty keyboard protocol or where the terminal sends it as
+  `ESC`+`⏎`, e.g. with "Option as Meta" on macOS, and `Ctrl`+`J` in
+  every terminal; web: `Shift`+`⏎` only).
 - `←`/`→`: Move the cursor by one character.
 - `Home`/`End`: Move the cursor to the start/end of the prompt.
 - `Backspace`/`Delete`: Remove the character before/at the cursor.
-- `Tab`: Switch between the request name and the prompt (`R` only;
-  web: by the regular focus switching).
-- `↑`/`↓`: Cycle through the suggested request names, while on the
-  request name (`R` only, terminal board; web: the suggestions are the
-  completions of the request name field).
+- `Tab`/`Shift`+`Tab`: Switch to the next/previous field: the request
+  name (`R` only), the prompt, and the request and cancel buttons
+  (terminal board: also a click onto a field; web: by the regular
+  focus switching).
+- `↑`/`↓`: Cycle through the suggested request names of the drop-down,
+  which offers the names containing the typed request name, while on
+  the request name (`R` only; also a click onto a name picks it).
 - `ESC`: Cancel, keeping the prompt as a draft for the task.
 
 ### Transfer Popup

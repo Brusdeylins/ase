@@ -36,17 +36,26 @@
           or of a request by prompt of any name (processed by a request agent)  -->
     <div v-if="prompt !== null" id="prompt" @click.self="cancelPrompt">
         <div class="box">
-            <div class="ask">{{ prompt.name !== null ? "Request" : "Edit" }} task <span class="cid">{{ prompt.id }}</span> by prompt:</div>
-            <div v-if="prompt.name !== null" class="name">request name:
-                <input ref="promptName" v-model="prompt.name" list="request-names" spellcheck="false" placeholder="e.g. lint" />
-                <datalist id="request-names"><option v-for="n in requestNames" :key="n" :value="n"></option></datalist>
+            <div class="ask">{{ prompt.name !== null ? "Request agent for" : "Edit" }} task <span class="cid">{{ prompt.id }}</span> by prompt:</div>
+            <div v-if="prompt.name !== null" class="fields">
+                <label for="prompt-name">request name:</label>
+                <div class="combo">
+                    <input id="prompt-name" ref="promptName" v-model="prompt.name" spellcheck="false" autocomplete="off" placeholder="e.g. lint"
+                        @input="typeRequest" @focus="focusRequest(true)" @blur="focusRequest(false)" />
+                    <span v-if="requestNames.length > 0" class="mark">▾</span>
+                    <ul v-if="promptFocus && requestChoices.length > 0" class="drop">
+                        <li v-for="n in requestChoices" :key="n" :class="{ sel: n === prompt.name }" @mousedown.prevent="pickRequest(n)">{{ n }}</li>
+                    </ul>
+                </div>
+                <label for="prompt-text">request prompt:</label>
+                <textarea id="prompt-text" ref="promptEl" v-model="prompt.text" rows="5" spellcheck="false"></textarea>
             </div>
-            <textarea ref="promptEl" v-model="prompt.text" rows="5" spellcheck="false"></textarea>
+            <textarea v-else ref="promptEl" v-model="prompt.text" rows="5" spellcheck="false"></textarea>
             <div class="buttons">
-                <button @click="submitPrompt">{{ prompt.name !== null ? "request" : "request edit" }}</button>
-                <button @click="cancelPrompt">cancel</button>
+                <button ref="promptOk" @click="submitPrompt">{{ prompt.name !== null ? "request" : "request edit" }}</button>
+                <button ref="promptNo" @click="cancelPrompt">cancel</button>
             </div>
-            <div class="keys"><kbd>⏎</kbd><span class="action">{{ prompt.name !== null ? "requests" : "requests edit" }}</span><span class="sep">·</span><kbd>Shift+⏎</kbd><span class="action">breaks line</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
+            <div class="keys"><kbd>⇥</kbd><span class="action">switch field</span><span class="sep">·</span><template v-if="prompt.name !== null"><kbd>↑</kbd>/<kbd>↓</kbd><span class="action">pick name</span><span class="sep">·</span></template><kbd>⇧⏎</kbd><span class="action">new line</span><span class="sep">·</span><kbd>⏎</kbd><span class="action">{{ prompt.name !== null ? "request" : "request edit" }}</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancel</span></div>
         </div>
     </div>
 
@@ -64,7 +73,8 @@
 import { confirmDel, transfer, prompt, busy, busyTime } from "./ase-task-board-web-client-model"
 import {
     deleteTask, transferList, cancelTransfer, transferTo,
-    requestNames, promptEl, promptName, cancelPrompt, submitPrompt
+    requestNames, requestChoices, pickRequest, typeRequest, focusRequest, promptFocus,
+    promptEl, promptName, promptOk, promptNo, cancelPrompt, submitPrompt
 } from "./ase-task-board-web-client-control"
 </script>
 

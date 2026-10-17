@@ -68,9 +68,16 @@ const promptDrafts = new Map<string, string>()
 /*  the drafts of the cancelled (or failed to be sent) requests by prompt, per task  */
 const requestDrafts = new Map<string, { name: string, text: string }>()
 
-/*  the prompt text area and the request name field of the prompt popup  */
+/*  the prompt text area, the request name field, and the request and cancel buttons of the prompt popup  */
 export const promptEl   = ref<HTMLTextAreaElement | null>(null)
 export const promptName = ref<HTMLInputElement | null>(null)
+export const promptOk   = ref<HTMLButtonElement | null>(null)
+export const promptNo   = ref<HTMLButtonElement | null>(null)
+
+/*  the request name of the prompt popup as last typed (filtering the suggested request names
+    of its drop-down, while the up/down arrows select them), and whether it is focused  */
+export const promptTyped = ref("")
+export const promptFocus = ref(false)
 
 /*  open the prompt popup of an edit request of a task (refused for a finished task, and
     while an edit of it is in progress, as a new request would change the task under the
@@ -110,6 +117,31 @@ const openPrompt = async (id: string) => {
 export const requestNames = computed(() =>
     [ ...new Set(agentList.value.map((a) => a.kind === "editor" ? "edit" : a.request ?? "").filter((n) => n !== "")) ].sort())
 
+/*  the suggested request names of the drop-down of the prompt popup, matching its request
+    name as last typed (all of them for an empty or an exactly suggested request name, to
+    offer the alternatives, and else those containing it)  */
+export const requestChoices = computed(() => {
+    const typed = promptTyped.value.trim().toLowerCase()
+    return typed === "" || requestNames.value.includes(typed) ? requestNames.value :
+        requestNames.value.filter((name) => name.toLowerCase().includes(typed))
+})
+
+/*  track the typing into and the focus of the request name field of the prompt popup  */
+export const typeRequest = () => {
+    promptTyped.value = prompt.value?.name ?? ""
+}
+export const focusRequest = (focus: boolean) => {
+    promptFocus.value = focus
+}
+
+/*  pick a suggested request name of the drop-down of the prompt popup and switch to the prompt  */
+export const pickRequest = (name: string) => {
+    if (prompt.value === null)
+        return
+    prompt.value.name = name
+    promptEl.value?.focus()
+}
+
 /*  whether a request of a name may have an empty prompt: only if it is processed solely by
     agents announced to the agent relay which ignore the prompts of their requests (e.g. the
     "estimate" requests of "ase agent estimator")  */
@@ -131,6 +163,8 @@ const openRequest = (id: string) => {
     const draft = requestDrafts.get(id)
     const name  = draft?.name ?? requestNames.value[0] ?? ""
     prompt.value = { id, text: draft?.text ?? "", name }
+    promptTyped.value = ""
+    promptFocus.value = false
     nextTick(() => (name === "" ? promptName.value : promptEl.value)?.focus())
 }
 
@@ -580,15 +614,37 @@ const onTransferKey = (ev: KeyboardEvent, t: { id: string, at: string }) => {
     ev.preventDefault()
 }
 
-/*  answer the prompt popup: RETURN requests the edit (or the request, resp. switches from
-    the request name to the prompt), ESC cancels, and all other keys (also Shift+RETURN for a
-    line break) belong to its text area (or request name field), as do all keys
-    while an input method composes text (where Safari reports the composition-ending
-    RETURN with the key code 229 only), while RETURN on a focused button presses it  */
+/*  answer the prompt popup: TAB resp. Shift+TAB switch the focus to the next resp. previous
+    field (the request name of a request by prompt, the prompt, and the request and cancel
+    buttons, like in the terminal board, and never leaving the popup), RETURN requests the
+    edit (or the request, resp. switches from the request name to the prompt), the up/down
+    arrows cycle through the suggested request names of the drop-down (on the request name),
+    ESC cancels, and all other keys (also Shift+RETURN for a line break) belong to its text
+    area (or request name field), as do all keys while an input method composes text (where
+    Safari reports the composition-ending RETURN with the key code 229 only), while RETURN on
+    a focused button presses it  */
 const onPromptKey = (ev: KeyboardEvent) => {
     if (ev.isComposing || ev.keyCode === 229)
         return
-    if (ev.key === "Enter" && !ev.shiftKey && ev.target === promptName.value && promptName.value !== null) {
+    const choices = requestChoices.value
+    if (ev.key === "Tab" && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
+        ev.preventDefault()
+        const fields = ([ promptName.value, promptEl.value, promptOk.value, promptNo.value ] as (HTMLElement | null)[])
+            .filter((el): el is HTMLElement => el !== null && el.isConnected)
+        const i = fields.findIndex((el) => el === document.activeElement)
+        const n = fields.length
+        if (n > 0)
+            fields[i < 0 ? 0 : (i + (ev.shiftKey ? n - 1 : 1)) % n].focus()
+    }
+    else if ((ev.key === "ArrowUp" || ev.key === "ArrowDown") && ev.target === promptName.value
+        && prompt.value !== null && prompt.value.name !== null && choices.length > 0) {
+        ev.preventDefault()
+        const i = choices.indexOf(prompt.value.name)
+        const n = choices.length
+        const up = ev.key === "ArrowUp"
+        prompt.value.name = choices[i < 0 ? (up ? n - 1 : 0) : (i + (up ? n - 1 : 1)) % n]
+    }
+    else if (ev.key === "Enter" && !ev.shiftKey && ev.target === promptName.value && promptName.value !== null) {
         ev.preventDefault()
         promptEl.value?.focus()
     }

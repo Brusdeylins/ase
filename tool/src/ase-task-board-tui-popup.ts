@@ -12,7 +12,7 @@ import type { Card }                          from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine }      from "./ase-agent-relay-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
 import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.js"
-import type { TransferEntry, BusyLabel, PromptRequest } from "./ase-task-board-tui-model.js"
+import type { TransferEntry, BusyLabel, PromptState } from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
     (bit 0: bold, bit 1: italic, bit 2: code, bit 3: accent, bit 4: signal, bit 5: dim)  */
@@ -374,26 +374,67 @@ export const renderConfirm = (id: string, yes: boolean, columns: number, rows: n
         h(Text, cx("dim"), keys))
 }
 
-/*  render the prompt popup of an edit request (or, with <request>, of a request by prompt of
-    any name, with its request name above the prompt) of a task, in the style of the
-    confirmation of a task deletion, with the prompt (with an inverse cursor cell at
-    the cursor position, resp. behind its end) broken at its newlines and wrapped onto
-    the five lines of the frame of an input box (like in the web board, in accent color),
-    scrolled to show the cursor, and with every inner cell written (with spaces) to hide
-    the content underneath  */
-export const renderPrompt = (id: string, text: string, pos: number, columns: number, rows: number, request: PromptRequest | null = null) => {
-    const width  = Math.min(columns - 2, 80)
-    const innerW = width - 2
+/*  the first of the at most five visible suggested request names of the drop-down of the
+    prompt popup, scrolled to show the selected one  */
+export const DROP_ROWS = 5
+export const dropFirst = (choices: string[], name: string): number => {
+    const n = Math.min(DROP_ROWS, choices.length)
+    return Math.max(0, Math.min(choices.length - n, choices.indexOf(name) - n + 1))
+}
+
+/*  the geometry of the prompt popup of an edit request (or, with <request>, of a request by
+    prompt): a box, centered on the screen and covering about 80% of the terminal width (like
+    in the web board), its input boxes (behind the equally wide labels "request name:" and
+    "request prompt:" of a request by prompt, for left-aligning them, resp. behind a margin
+    only, where the request name box spans 30% of the width of the prompt box), and its
+    inverse request and cancel buttons, centered in the row below the prompt (as screen
+    positions, for the mouse hit-testing)  */
+export const promptBox = (columns: number, rows: number, request: boolean) => {
+    const width   = Math.min(columns - 2, Math.max(82, Math.floor(columns * 0.8)))
+    const innerW  = width - 2
+    const viewH   = 5
+    const height  = viewH + 9 + (request ? 3 : 0)
+    const top     = Math.floor((rows - height) / 2)
+    const left    = Math.floor((columns - width) / 2)
+    const labelW  = 17
+    const pre     = request ? labelW : 1
+    const boxW    = Math.max(6, innerW - pre - 1)
+    const nameW   = Math.max(12, Math.round(boxW * 0.3))
+    const okText  = request ? " request " : " request edit "
+    const noText  = " cancel "
+    const pad     = Math.max(0, Math.floor((innerW - okText.length - 1 - noText.length) / 2))
+    const promptY = top + 3 + (request ? 3 : 0)
+    return {
+        width, innerW, viewH, height, top, left, labelW, pre, boxW, nameW, okText, noText, pad,
+        nameY: top + 4, dropY: top + 5, promptY, buttonY: promptY + viewH + 2,
+        boxX: left + 1 + pre, okX: left + 1 + pad, noX: left + 2 + pad + okText.length
+    }
+}
+
+/*  render the prompt popup of an edit request (or, with a request, of a request by prompt of
+    any name, with its request name in the frame of an input box above the prompt, and with
+    its suggested request names <choices> in a drop-down below it while focused) of a task,
+    in the style of the confirmation of a task deletion, with the prompt (with an inverse
+    cursor cell at the cursor position, resp. behind its end) broken at its newlines and
+    wrapped onto the five lines of the frame of an input box (like in the web board, in
+    accent color, resp. in signal color while focused), scrolled to show the cursor, with
+    the request and cancel buttons below it (in accent color, resp. in signal color while
+    focused), and with
+    every inner cell written (with spaces) to hide the content underneath  */
+export const renderPrompt = (prompt: PromptState, columns: number, rows: number, choices: string[] = []) => {
+    const { id, text, pos, request } = prompt
+    const box    = promptBox(columns, rows, request !== null)
+    const { width, innerW, viewH, height, top, left, labelW, pre, boxW, nameW } = box
     const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
 
     /*  the centered question, with the task id rendered inverse with one extra space on each side  */
-    const lead   = request !== null ? "Request task " : "Edit task "
+    const lead   = request !== null ? "Request agent for task " : "Edit task "
     const fixed  = lead.length + 11
     const tid    = ` ${sanitize(id)} `.slice(0, Math.max(0, innerW - fixed))
     const qpad   = Math.max(0, Math.floor((innerW - fixed - tid.length) / 2))
     const hint   = (request !== null ?
-        "⇥: switch field · ↑/↓: request name · ⇧⏎/⌥⏎: new line · ⏎: request · ESC: cancel" :
-        "←/→: move cursor · ⇧⏎/⌥⏎: new line · ⏎: request edit · ESC: cancel").slice(0, innerW)
+        "⇥: switch field · ↑/↓: pick name · ⇧⏎/⌥⏎/^J: new line · ⏎: request · ESC: cancel" :
+        "⇥: switch field · ⇧⏎/⌥⏎/^J: new line · ⏎: request edit · ESC: cancel").slice(0, innerW)
     const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
 
     /*  the cells of the prompt, sanitized per character (with newlines ending their line and
@@ -412,8 +453,7 @@ export const renderPrompt = (id: string, text: string, pos: number, columns: num
 
     /*  the prompt lines, broken after the newlines and cut into chunks of the inner width (minus
         the margins and the frame of the input box), scrolled to show the line of the cursor  */
-    const lineW  = Math.max(1, innerW - 6)
-    const viewH  = 5
+    const lineW  = boxW - 4
     const lines  = [ [] ] as (typeof cells)[]
     for (const cell of cells) {
         if (lines[lines.length - 1].length >= lineW)
@@ -425,43 +465,86 @@ export const renderPrompt = (id: string, text: string, pos: number, columns: num
     const curL   = lines.findIndex((line) => line.some((cell) => cell.cur))
     const first  = Math.max(0, Math.min(lines.length - viewH, curL - viewH + 1))
     const shown  = Array.from({ length: viewH }, (_, k) => lines[first + k] ?? [])
-    const height = viewH + 8 + (request !== null ? 2 : 0)
 
-    /*  the request name of a request by prompt (with an inverse cursor cell behind its end while
-        focused, where the prompt then shows no cursor), followed by the suggested request names  */
-    const named  = request !== null ? [
-        h(Text, { key: "request" },
-            h(Text, cx("normal"), " request name: "),
-            h(Text, cx("accent", "bold"), sanitize(request.name).slice(0, Math.max(0, innerW - 18))),
-            h(Text, cx(request.focus ? "inverse" : "normal"), " "),
-            h(Text, cx("dim"), (request.choices.length > 0 ? `  (${request.choices.join(", ")})` : "")
-                .slice(0, Math.max(0, innerW - 16 - Math.min(request.name.length, innerW - 18)))
-                .padEnd(Math.max(0, innerW - 16 - Math.min(request.name.length, innerW - 18))))),
-        blank("blank-request")
-    ] : []
-    const focus  = request === null || !request.focus
-    return h(Box, { key: "prompt", top: Math.floor((rows - height) / 2), left: Math.floor((columns - width) / 2), width, height, ...cx("popup", "border-dim") },
+    /*  the request name of a request by prompt in the frame of an input box behind its label
+        (in signal color while focused, also its text, with an inverse cursor cell behind its
+        end, where the prompt then shows no cursor), with a drop-down marker where request names
+        are suggested  */
+    const indent = " ".repeat(pre)
+    const fieldW = nameW - 5
+    const rest   = " ".repeat(Math.max(0, innerW - pre - nameW))
+    const named  = request !== null ? (() => {
+        const tone = prompt.focus === "name" ? "signal" : "accent"
+        const name = sanitize(request.name).slice(0, fieldW - 1)
+        return [
+            h(Text, { key: "request-top", ...cx(tone) }, `${indent}╭${"─".repeat(nameW - 2)}╮${rest}`),
+            h(Text, { key: "request" },
+                h(Text, cx("normal"), " request name:".padEnd(labelW)),
+                h(Text, cx(tone), "│ "),
+                h(Text, cx(tone, "bold"), name),
+                h(Text, cx(tone, prompt.focus === "name" && "inverse"), " "),
+                h(Text, {}, " ".repeat(fieldW - 1 - name.length)),
+                h(Text, cx(tone), `${request.choices.length > 0 ? "▾" : " "} │`),
+                rest),
+            h(Text, { key: "request-bottom", ...cx(tone) }, `${indent}╰${"─".repeat(nameW - 2)}╯${rest}`)
+        ]
+    })() : []
+
+    /*  the drop-down of the suggested request names while the request name is focused, attached
+        below its input box (overlaying the popup, in signal color), with at most five suggested
+        request names (scrolled to show the selected one, rendered inverse, and with markers
+        where scrolled)  */
+    const dropH  = Math.min(DROP_ROWS, choices.length)
+    const drop   = request !== null && prompt.focus === "name" && dropH > 0 ? (() => {
+        const sel   = choices.indexOf(request.name)
+        const first = dropFirst(choices, request.name)
+        const more  = (flag: boolean, mark: string) => flag ? mark : "─"
+        const place = { top: box.dropY, left: box.boxX, width: nameW, height: dropH + 2 }
+        return h(Box, { key: "prompt-choices", position: "absolute", flexDirection: "column", ...place },
+            h(Text, cx("signal"), `├${"─".repeat(nameW - 4)}${more(first > 0, "▴")}─┤`),
+            ...choices.slice(first, first + dropH).map((choice, k) =>
+                h(Text, { key: k },
+                    h(Text, cx("signal"), "│"),
+                    h(Text, cx("signal", first + k === sel && "inverse", first + k === sel && "bold"),
+                        ` ${sanitize(choice).slice(0, nameW - 4).padEnd(nameW - 4)} `),
+                    h(Text, cx("signal"), "│"))),
+            h(Text, cx("signal"), `╰${"─".repeat(nameW - 4)}${more(first + dropH < choices.length, "▾")}─╯`))
+    })() : null
+
+    /*  the prompt in the frame of an input box (in signal color while focused, also its text),
+        behind its label "request prompt:" for a request by prompt  */
+    const focus  = prompt.focus === "prompt"
+    const tone   = focus ? "signal" : "accent"
+    const popup  = h(Box, { key: "prompt", top, left, width, height, ...cx("popup", "border-dim") },
         h(Text, cx("normal", "bold"),
             " ".repeat(qpad) + lead,
             h(Text, cx("inverse"), tid),
             " by prompt:".padEnd(Math.max(0, innerW - qpad - lead.length - tid.length))),
         blank("blank-above"),
         ...named,
-        h(Text, { key: "input-top", ...cx("accent") }, ` ╭${"─".repeat(Math.max(0, innerW - 4))}╮ `),
+        h(Text, { key: "input-top", ...cx(tone) }, `${indent}╭${"─".repeat(boxW - 2)}╮ `),
         ...shown.map((line, k) => {
             const at = focus ? line.findIndex((cell) => cell.cur) : -1
             const ch = line.map((cell) => cell.ch)
             return h(Text, { key: k },
-                h(Text, cx("accent"), " │ "),
-                h(Text, cx("accent"), ...(at < 0 ? [ ch.join("").padEnd(lineW) ] : [
+                h(Text, cx("normal"), request !== null && k === 0 ? " request prompt:".padEnd(labelW) : indent),
+                h(Text, cx(tone), "│ "),
+                h(Text, cx(tone), ...(at < 0 ? [ ch.join("").padEnd(lineW) ] : [
                     ch.slice(0, at).join(""),
                     h(Text, cx("inverse"), ch[at]),
                     ch.slice(at + 1).join("").padEnd(Math.max(0, lineW - 1 - at)) ])),
-                h(Text, cx("accent"), " │ "))
+                h(Text, cx(tone), " │ "))
         }),
-        h(Text, { key: "input-bottom", ...cx("accent") }, ` ╰${"─".repeat(Math.max(0, innerW - 4))}╯ `),
-        blank("blank-below"),
+        h(Text, { key: "input-bottom", ...cx(tone) }, `${indent}╰${"─".repeat(boxW - 2)}╯ `),
+        h(Text, { key: "buttons" },
+            " ".repeat(box.pad),
+            h(Text, cx("button", prompt.focus === "request" ? "button-active" : "accent"), box.okText),
+            " ",
+            h(Text, cx("button", prompt.focus === "cancel" ? "button-active" : "accent"), box.noText),
+            " ".repeat(Math.max(0, innerW - box.pad - box.okText.length - 1 - box.noText.length))),
+        blank("blank-buttons"),
         h(Text, cx("dim"), keys))
+    return drop !== null ? [ popup, drop ] : popup
 }
 
 /*  render the busy popup of a slow task store operation: a small box, centered on the
