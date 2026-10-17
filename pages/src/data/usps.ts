@@ -156,18 +156,21 @@ export const usps: USP[] = [
             "Switch the persona of the agent to trade eloquence for brevity: from the explaining " +
             "<b>writer</b>, through the factual <b>engineer</b> (default) and the brief " +
             "<b>telegrapher</b>, down to the terse <b>caveman</b> — same work, fewer output " +
-            "tokens, and less reading time."
+            "tokens, and less reading time. Whatever the persona, technical terms, quoted errors, " +
+            "and code blocks always stay exactly as they are, so brevity never costs precision. " +
+            "And as the persona is a regular key of the layered configuration, set it once for " +
+            "yourself, per project, per task, or just for the current session."
         ],
         prefix:   "Claude Code",
         commands: [
-            "**/ase-meta-config** set agent.persona telegrapher"
+            "**/ase-meta-config** --scope user set agent.persona telegrapher"
         ],
         cols:     2,
         shots: [
-            { src: "/assets/usp-persona-writer.png",      label: "Persona writer"      },
-            { src: "/assets/usp-persona-engineer.png",    label: "Persona engineer"    },
-            { src: "/assets/usp-persona-telegrapher.png", label: "Persona telegrapher" },
-            { src: "/assets/usp-persona-caveman.png",     label: "Persona caveman"     }
+            { src: "/assets/usp-persona-1.png", label: "Persona writer"      },
+            { src: "/assets/usp-persona-2.png", label: "Persona engineer"    },
+            { src: "/assets/usp-persona-3.png", label: "Persona telegrapher" },
+            { src: "/assets/usp-persona-4.png", label: "Persona caveman"     }
         ]
     }
 ]
