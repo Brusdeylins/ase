@@ -123,6 +123,7 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "project.relay.token":            [ "user" ],
     "project.relay.crt":              [ "user", "project" ],
     "project.relay.key":              [ "user", "project" ],
+    "project.service.port":           [ "project" ],
     "project.artifact.spec.basedir":  [ "user", "project" ],
     "project.artifact.spec.files":    [ "user", "project" ],
     "project.artifact.spec.schema":   [ "user", "project" ],
@@ -298,6 +299,10 @@ const minutesSchema = v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.c
 const multiplierSchema = v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
     /^\d+(?:\.\d+)?$/.test(String(s)) && Number(s) >= 1, "expected a multiplier of at least 1")))
 
+/*  schema for an unprivileged TCP port number  */
+const portSchema = v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
+    /^\d+$/.test(String(s)) && Number(s) >= 1024 && Number(s) <= 65535, "expected a port number (1024-65535)")))
+
 /*  schema for ".ase/config.yaml"  */
 export const configSchema = v.nullish(v.strictObject({
     project: v.optional(v.strictObject({
@@ -335,6 +340,9 @@ export const configSchema = v.nullish(v.strictObject({
             crt:       v.optional(v.pipe(v.string(), v.minLength(1))),
             key:       v.optional(v.pipe(v.string(), v.minLength(1)))
         })),
+        service: v.optional(v.strictObject({
+            port:      portSchema
+        })),
         artifact: v.optional(v.strictObject({
             spec: artifactSpecSchema,
             code: artifactSchema,
@@ -350,8 +358,7 @@ export const configSchema = v.nullish(v.strictObject({
         enabled:  v.optional(v.union([ v.boolean(), v.picklist([ "true", "false" ]) ])),
         implicit: v.optional(v.union([ v.boolean(), v.picklist([ "true", "false" ]) ])),
         service:  v.optional(v.strictObject({
-            port:     v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
-                /^\d+$/.test(String(s)) && Number(s) >= 1024 && Number(s) <= 65535, "expected a port number (1024-65535)"))),
+            port:     portSchema,
             token:    v.optional(v.pipe(v.string(), v.minLength(1))),
             interval: v.optional(v.pipe(v.union([ v.number(), v.string() ]), v.check((s) =>
                 /^\d+$/.test(String(s)), "expected a number of minutes (0 disables)"))),

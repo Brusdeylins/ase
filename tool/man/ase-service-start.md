@@ -14,9 +14,11 @@ directory.
 
 If a service of this project already answers on the port persisted in
 `.ase/service.yaml`, the command just reports `service: already running
-on port` *port* and exits with status `0`. Otherwise, it allocates a
-fresh random free port out of the range `42000`..`44000` (trying up to
-20 candidates), spawns the service as a detached background process
+on port` *port* and exits with status `0`. Otherwise, it allocates the
+preferred port `project.service.port` (see `ase-config`(1)), if
+configured and free, else (with a warning, if configured) a fresh
+random free port out of the range `42000`..`44000` (trying up to 20
+candidates), spawns the service as a detached background process
 (with its standard output and standard error appended to
 `.ase/service.log`, trimmed to its last 2000 lines beforehand if larger
 than 1 MB), and probes its readiness for up to 5 seconds.
@@ -46,8 +48,8 @@ demand.
   Show usage information and exit.
 
 - \[`-f`|`--foreground`\]:
-  Run the service in the current process instead, on a fresh random
-  port, logging to the terminal (resp. the global `--log-file`) instead
+  Run the service in the current process instead, on a port allocated
+  as above, logging to the terminal (resp. the global `--log-file`) instead
   of `.ase/service.log` and without the idle timeout, until it is
   interrupted (via `SIGINT`, e.g., `CTRL+C`, `SIGTERM`, `SIGHUP`, or
   `SIGQUIT`) or stopped via `ase service stop`. A service of this
@@ -84,7 +86,7 @@ $ ase --log-level debug service start --foreground
 ## SEE ALSO
 
 `ase`(1), `ase-service`(1), `ase-service-status`(1),
-`ase-service-stop`(1), `ase-service-log`(1).
+`ase-service-stop`(1), `ase-service-log`(1), `ase-config`(1).
 
 ## AUTHOR
 

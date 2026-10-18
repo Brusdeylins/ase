@@ -118,6 +118,12 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
       scopes: "user, project",
       desc: "PEM certificate (chain) and private key files of the agent relay server, " +
             "relative to the directory of the configuration file defining them." },
+    { name: "project.service.port",
+      value: "",
+      scopes: "project",
+      desc: "Preferred port of the per-project background service on 127.0.0.1, " +
+            "falling back to a random port out of 42000..44000 if unavailable. " +
+            "If unset, a random port is always used." },
     { name: "project.artifact.spec.basedir",
       value: "docs/specbook",
       scopes: "user, project",

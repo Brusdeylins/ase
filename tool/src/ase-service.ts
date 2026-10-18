@@ -88,6 +88,7 @@ export const probe = async (port: number, projectId: string): Promise<boolean | 
 export interface Context {
     projectId: string
     port:      number | null
+    portPref:  number | null
     svc:       Config
     aseDir:    string
 }
@@ -109,7 +110,7 @@ const LOG_KEEP_LINES = 2000
 const LOG_ARGS_MAX   = 200
 
 /*  load the optional "config.yaml" and "service.yaml" files and derive
-    the service identity context (project id, port, service config)  */
+    the service identity context (project id, port, preferred port, service config)  */
 export const loadServiceContext = (log: Log): Context => {
     /*  load files  */
     const cfg = new Config("config", configSchema, log)
@@ -123,11 +124,15 @@ export const loadServiceContext = (log: Log): Context => {
     /*  determine service port  */
     const port      = (svc.get("port")       as number | null | undefined) ?? null
 
+    /*  determine preferred service port  */
+    const pref      = cfg.get("project.service.port") as number | string | null | undefined
+    const portPref  = pref !== null && pref !== undefined ? Number(pref) : null
+
     /*  determine path to ".ase" directory  */
     const aseDir    = path.dirname(svc.filename)
 
     /*  return context information  */
-    return { projectId, port, svc, aseDir }
+    return { projectId, port, portPref, svc, aseDir }
 }
 
 /*  reusable functionality: port allocation, persistence, and process spawning  */
@@ -146,8 +151,11 @@ export class Service {
         })
     }
 
-    /*  allocate a fresh random port in PORT_MIN..PORT_MAX  */
-    static async allocatePort (): Promise<number> {
+    /*  allocate the preferred port, if given and available,
+        else a fresh random port in PORT_MIN..PORT_MAX  */
+    static async allocatePort (pref: number | null = null): Promise<number> {
+        if (pref !== null && await Service.tryBind(pref))
+            return pref
         for (let i = 0; i < PORT_TRIES; i++) {
             const p = PORT_MIN + Math.floor(Math.random() * (PORT_MAX - PORT_MIN + 1))
             if (await Service.tryBind(p))
@@ -639,6 +647,14 @@ export default class ServiceCommand {
         }, TICK_MS).unref()
     }
 
+    /*  allocate the service port, preferring the configured one, else falling back to a random one  */
+    private async allocatePort (ctx: Context): Promise<number> {
+        const port = await Service.allocatePort(ctx.portPref)
+        if (ctx.portPref !== null && port !== ctx.portPref)
+            this.log.write("warning", `service: preferred port ${ctx.portPref} unavailable, falling back to port ${port}`)
+        return port
+    }
+
     /*  start flow: ensure port, probe, optionally detach (or run in the foreground)  */
     private async doStart (opts: { foreground?: boolean } = {}): Promise<number> {
         const ctx = this.loadContext()
@@ -666,7 +682,7 @@ export default class ServiceCommand {
 
         /*  run the service in the foreground, logging to the terminal and without idle timeout  */
         if (opts.foreground) {
-            port = await Service.allocatePort()
+            port = await this.allocatePort(ctx)
             await this.runService({ ...ctx, port }, true)
             return await new Promise<number>(() => { /*  never resolves  */ })
         }
@@ -675,7 +691,7 @@ export default class ServiceCommand {
             re-allocate, re-spawn; early-break on foreign listener  */
         let lastErr: Error = new Error("service failed to start within timeout")
         for (let attempt = 0; attempt < 3; attempt++) {
-            port = await Service.allocatePort()
+            port = await this.allocatePort(ctx)
             const { child, logFile } = Service.spawnDetached(ctx.aseDir, port, this.log.logLevel())
             let exited   = false
             let exitCode: number | null = null

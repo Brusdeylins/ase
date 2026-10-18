@@ -20,9 +20,11 @@ project:
     task:
         lifecycle: enterprise
         default:
-              source:    "branch:master"
-              changeset: "branch:cs-{id}"
-              target:    "branch:master"
+            source: "branch:master"
+            changeset: "branch:cs-{id}"
+            target: "branch:master"
+    service:
+        port: "43210"
 agent:
     persona: engineer
     guidance: minimal

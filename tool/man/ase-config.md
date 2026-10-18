@@ -242,6 +242,15 @@ Agent relay (all writable on the `user` and `project` scopes only,
   server, relative to the directory of the configuration file defining
   them.
 
+Per-project service:
+
+- `project.service.port` (*port* `1024`..`65535`, `project` scope
+  only):
+  The preferred port of the per-project background service on
+  `127.0.0.1`, falling back to a random port out of the range
+  `42000`..`44000` if unavailable (default: none). See
+  `ase-service-start`(1).
+
 Project artifacts (all writable on the `user` and `project` scopes
 only), each kind defined by a `basedir` directory (relative to the
 project root, empty for the root itself) and a whitespace-separated

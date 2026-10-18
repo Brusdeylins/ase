@@ -2,6 +2,14 @@
 ChangeLog
 =========
 
+2.0.1 (2026-10-19)
+------------------
+
+-   FEATURE [tool,pages]: Preferred Service Port
+    The new configuration key `project.service.port` (`project` scope only) sets the preferred port
+    of the per-project background service: `ase service start` (also with `--foreground`) binds it
+    if available, else warns and falls back to a random port out of `42000`..`44000` as before.
+
 2.0.0 (2026-10-18)
 ------------------
 

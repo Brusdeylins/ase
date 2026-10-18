@@ -21,9 +21,10 @@
 ## DESCRIPTION
 
 **ase service** manages the per-project background HTTP service of
-*ASE*. The service is bound to `127.0.0.1` on a random port out of the
-range `42000`..`44000`, which is persisted in `.ase/service.yaml` of the
-project, and logs into `.ase/service.log`. It is identified by the id
+*ASE*. The service is bound to `127.0.0.1` on the preferred port
+`project.service.port`, if configured and available, else on a random
+port out of the range `42000`..`44000`, which is persisted in
+`.ase/service.yaml` of the project, and logs into `.ase/service.log`. It is identified by the id
 of the project (`project.id`, else derived from the project root), so a
 port answered by the service of another project counts as a *foreign*
 service.
