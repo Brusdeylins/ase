@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-2.0.0 (2026-10-XX)
+2.0.0 (2026-10-18)
 ------------------
 
 -   FEATURE [plugin,tool]: Known Task Assignees
