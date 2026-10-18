@@ -278,7 +278,7 @@ task), `within last 30 days`, and `within last 7 days` on its top
   AI request time per human time, i.e., the higher, the more AI work
   per attended human minute) and the *AI/HR cost ratio* (the AI costs
   per human costs), each `n/a` without any human time resp. costs (as
-  booked by the agents, see `ase-agent`(1)), and the *cache hit ratio*
+  booked by the agents, see `ase-agent`(1)), and the *AI cache hit ratio*
   (the share of the cache read tokens of all input tokens, i.e., of the
   cache read, cache write, and uncached input tokens, the main lever on
   the AI costs), `n/a` without any input tokens.

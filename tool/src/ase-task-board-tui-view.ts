@@ -1041,7 +1041,7 @@ export const renderStats = (ctx: BoardCtx) => {
             }) ]
 
     /*  the averages and lead times of the finished tasks and the efficiency of the AI usage (the
-        AI/HR time and cost ratios and the cache hit ratio), side by side, in accent color (like the
+        AI/HR time and cost ratios and the AI cache hit ratio), side by side, in accent color (like the
         active lanes), each as lines of labels with their values right-aligned (where a too long
         label is cut with an ellipsis)  */
     const avgW    = Math.floor((rightW - 1) / 2) + avgGrow
@@ -1063,7 +1063,7 @@ export const renderStats = (ctx: BoardCtx) => {
     const effList = usage === null ? loading : [
         valLine("time-ratio", effW, "AI/HR time ratio", ratio(eff.timeRatio)),
         valLine("cost-ratio", effW, "AI/HR cost ratio", ratio(eff.costRatio)),
-        valLine("cache-ratio", effW, "cache hit ratio", percent(eff.cacheRatio))
+        valLine("cache-ratio", effW, "AI cache hit ratio", percent(eff.cacheRatio))
     ]
     const tops    = pair("top", TOP_H, frame("top", TOP_H, "Top-5 Tasks", 1, ...topList),
         h(Box, { height: TOP_H },

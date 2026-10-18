@@ -158,7 +158,7 @@
                         <div class="stitle">Efficiency</div>
                         <div class="sline"><span>AI/HR time ratio</span><b>{{ ratio(stats.efficiency.timeRatio) }}</b></div>
                         <div class="sline"><span>AI/HR cost ratio</span><b>{{ ratio(stats.efficiency.costRatio) }}</b></div>
-                        <div class="sline"><span>cache hit ratio</span><b>{{ percent(stats.efficiency.cacheRatio) }}</b></div>
+                        <div class="sline"><span>AI cache hit ratio</span><b>{{ percent(stats.efficiency.cacheRatio) }}</b></div>
                     </section>
                 </div>
             </div>
