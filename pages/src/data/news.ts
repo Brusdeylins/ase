@@ -28,6 +28,8 @@ export interface NewsSection {
 export interface NewsRelease {
     id:       string   /*  fragment id, e.g. "ase-1-0-to-ase-2-0"  */
     label:    string   /*  release heading, e.g. "ASE 1.0 to ASE 2.0"  */
+    title:    string   /*  target release of heading, e.g. "ASE 2.0"   */
+    intro:    string[] /*  rendered introductory paragraphs            */
     sections: NewsSection[]
 }
 
@@ -44,7 +46,8 @@ const slugify = (text: string) =>
     text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
 
 /*  walk the Markdown token stream: the level 1 heading ("NEWS") is skipped,
-    a level 2 heading opens a release, a level 3 heading opens a section, and
+    a level 2 heading opens a release, a paragraph before its first section
+    becomes its introduction, a level 3 heading opens a section, and
     every item of a list becomes an entry of the current section. The content
     is trusted, build-time, in-repo material, so it is rendered without an
     HTML sanitizer.  */
@@ -53,7 +56,10 @@ for (const token of marked.lexer(fs.readFileSync(newsFile, "utf8"))) {
     const release = newsReleases.at(-1)
     const section = release?.sections.at(-1)
     if (token.type === "heading" && token.depth === 2)
-        newsReleases.push({ id: slugify(token.text), label: token.text, sections: [] })
+        newsReleases.push({ id: slugify(token.text), label: token.text,
+            title: token.text.replace(/^.*\s+to\s+/, ""), intro: [], sections: [] })
+    else if (token.type === "paragraph" && release !== undefined && section === undefined)
+        release.intro.push(marked.parseInline(token.text.replace(/\s*\n\s*/g, " ")) as string)
     else if (token.type === "heading" && token.depth === 3 && release !== undefined)
         release.sections.push({ kind: token.text.toLowerCase(), label: capitalize(token.text), items: [] })
     else if (token.type === "list" && section !== undefined) {

@@ -75,6 +75,26 @@ function deHashAssets () {
     }
 }
 
+/*  dev-server integration: watch the top-level `NEWS.md`, which
+    `src/data/news.ts` reads via the filesystem only (outside the module
+    graph), and on change pass its module on as the updated one, so the
+    Astro HMR handling re-evaluates it and its importers and reloads the pages  */
+function watchNews () {
+    const newsFile = path.resolve(process.cwd(), "..", "NEWS.md")
+    const newsData = path.resolve(process.cwd(), "src", "data", "news.ts")
+    return {
+        name: "watch-news",
+        configureServer (server) {
+            server.watcher.add(newsFile)
+        },
+        hotUpdate ({ file }) {
+            if (file !== newsFile)
+                return
+            return [ ...(this.environment.moduleGraph.getModulesByFile(newsData) ?? []) ]
+        }
+    }
+}
+
 export default defineConfig({
     output: "static",
     outDir: "dst",
@@ -98,7 +118,7 @@ export default defineConfig({
         deHashAssets()
     ],
     vite: {
-        plugins: [ tailwindcss() ]
+        plugins: [ tailwindcss(), watchNews() ]
     }
 })
 

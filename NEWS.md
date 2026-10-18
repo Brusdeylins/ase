@@ -5,6 +5,24 @@ NEWS
 ASE 1.0 to ASE 2.0
 ------------------
 
+**ASE 2.0 is a major step forward!**
+
+The essential ad-hoc prompt and task plan **grilling** became an all-in-one compact view, with
+numbered questions and lettered answers, replied to with short responses like `1A 2c`, and
+optionally even clickable.
+
+The **task format** was revamped with lifecycle models, extended frontmatter, attachments,
+dependencies, and the **task store** was revamped into service which can persist tasks as Markdown
+files locally or remote, or as GitHub, GitLab, or Gitea issues. New **task boards** in the terminal
+(TUI) and the browser (WUI) allow you to show and manipulate all tasks live.
+
+The new **autonomous agent** facility can drive the tasks headless from planning over implementation
+and qualification to integration. You can even define your own agents with just a few lines of YAML
+or TypeScript.
+
+Finally, new skills **merge branches**, **resolve conflicts**, **estimate efforts**, and **research
+topics**, and many more.
+
 ### FEATURES
 
 -   **Task Lifecycle Models**: `project.task.lifecycle` selects the `solo` (default),

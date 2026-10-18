@@ -16,11 +16,6 @@ import GlowSide      from "./Widget-Glow-Side.astro"
 import Annotation    from "./Widget-Annotation.astro"
 import { site }      from "../data/site.ts"
 import { newsReleases } from "../data/news.ts"
-
-/*  render the release heading "ASE 1.0 to ASE 2.0" with a padded "▶" instead,
-    where the U+FE0E variation selector forces the text instead of emoji presentation  */
-const releaseLabel = (label: string) =>
-    label.replace(/\s+to\s+/, "<span class=\"mx-4\">&#x25B6;&#xFE0E;</span>")
 ---
 <section id="news" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <GlowSide variant="section" side="right" />
@@ -44,7 +39,14 @@ const releaseLabel = (label: string) =>
 
     {newsReleases.map((release) => (
         <div id={release.id} class="mt-12 scroll-mt-20">
-            <h3 class="ase-h3 text-center" data-reveal set:html={releaseLabel(release.label)}/>
+            <h3 class="ase-h3 text-center" data-reveal>{release.title}</h3>
+            {release.intro.length > 0 ?
+                <div class="ase-lead mx-auto mt-5 max-w-2xl md:columns-2 md:gap-8" data-reveal>
+                    {release.intro.map((html, i) => (
+                        <p class={i === 0 ? "ase-justify" : "ase-indent-p ase-justify"} set:html={html}/>
+                    ))}
+                </div> :
+                null}
             {release.sections.map((section) => (
                 section.kind === "incompatibilities" ?
                     <div class="mt-10 [h3+&]:mt-5" data-reveal>

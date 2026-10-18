@@ -144,7 +144,7 @@ export const navItems: NavEntry[] = [
                                   "and the incompatibilities to take into account when upgrading." },
       items: newsReleases.map((release) => ({
           path:  `/news/#${release.id}`,
-          label: release.label
+          label: release.title
       })) },
 ]
 
