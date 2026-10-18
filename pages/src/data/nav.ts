@@ -105,10 +105,12 @@ export const navItems: NavEntry[] = [
       page:        { path:        "/workflows/",
                      label:       "Workflows",
                      title:       "Workflows",
-                     description: "The ASE operation modes and the coding and specification workflows " +
-                                  "built on them, shown as concrete Claude Code CLI transcripts." },
+                     description: "The ASE operation modes, the task management with its lifecycle models, " +
+                                  "task boards, and autonomous agents, and the coding and specification " +
+                                  "workflows, shown as concrete Claude Code CLI transcripts." },
       items: [
           { path: "/workflows/#operation-modes",         label: "Operation Modes"         },
+          { path: "/workflows/#task-management",         label: "Task Management"         },
           { path: "/workflows/#specification-workflows", label: "Specification Workflows" },
           { path: "/workflows/#coding-workflows",        label: "Coding Workflows"        }
       ] },

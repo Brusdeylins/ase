@@ -5,7 +5,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-/*  "Workflows" section: the operation modes text/diagram pair, followed by
+/*  "Workflows" section: the operation modes text/diagram pair, the task
+    management with its lifecycle models, task boards, and agents, followed by
     eight text/terminal pairs laid out as alternating two-column rows
     (zig-zag), each pairing a workflow description with its Claude Code CLI
     prompt transcript in a Terminal box.  */
@@ -13,6 +14,7 @@
 import GlowSide   from "./Widget-Glow-Side.astro"
 import Terminal   from "./Widget-Terminal.astro"
 import Diagram    from "./Widget-Diagram.astro"
+import Screenshot from "./Widget-Screenshot.astro"
 import Annotation from "./Widget-Annotation.astro"
 
 /*  the interlocking blocks for the operation modes opening the section, plus
@@ -22,7 +24,9 @@ import Annotation from "./Widget-Annotation.astro"
     for the single ad-hoc plan, stacked layers for the co-existing task plans,
     a take-off for the professional planning, a refresh cycle for the
     round-trip reconciliation, a sticky note for the
-    free-form user-story card, and a checked book for the SpecBook specification model  */
+    free-form user-story card, and a checked book for the SpecBook specification model,
+    plus a route for the lifecycle models, a Kanban board for the task boards, and a
+    bot for the autonomous agents of the task management  */
 
 import Workflow      from "@lucide/astro/icons/workflow"
 import MessageSquare from "@lucide/astro/icons/message-square"
@@ -34,6 +38,9 @@ import PlaneTakeoff  from "@lucide/astro/icons/plane-takeoff"
 import RefreshCw     from "@lucide/astro/icons/refresh-cw"
 import StickyNote    from "@lucide/astro/icons/sticky-note"
 import BookCheck     from "@lucide/astro/icons/book-check"
+import Route         from "@lucide/astro/icons/route"
+import SquareKanban  from "@lucide/astro/icons/square-kanban"
+import Bot           from "@lucide/astro/icons/bot"
 ---
 <section class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header id="operation-modes" class="ase-section-head" data-reveal>
@@ -105,6 +112,162 @@ import BookCheck     from "@lucide/astro/icons/book-check"
             <div class="lg:order-2 relative" data-reveal="left">
                 <Diagram src="/assets/operation-modes-diagram.svg" label="ASE operation modes diagram" />
                 <Diagram src="/assets/operation-modes.svg" label="ASE operation modes table" />
+            </div>
+        </div>
+    </div>
+
+    <header id="task-management" class="mt-16 ase-section-head" data-reveal>
+        <GlowSide variant="text" side="left" />
+        <h2 class="ase-h2">
+            <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">
+                Engineers decide,<br/>
+                agents execute,<br/>
+                boards show it!
+            </Annotation>
+            Your <span class="text-accent">Task Management</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            In the <b>ASE</b> Task Mode, every task plan is a persisted
+            artifact which flows through the states of a task lifecycle model.
+            Follow the tasks live on a task board and let autonomous agents
+            drive them through the pipeline, while the engineers stay in charge
+            of the decisions.
+        </p>
+    </header>
+
+    <div class="mt-12 flex flex-col gap-12">
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <p class="ase-eyebrow">Task State Lifecycle Models</p>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Route class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Lifecycles from Solo to Enterprise</span>
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    The lifecycle of a task is modelled through its states,
+                    and <b>ASE</b> provides three pre-defined lifecycle models
+                    for this. The <b class="text-accent">Solo</b> model is based on
+                    a single activity phase and intended for the local use of a
+                    solo developer. The <b class="text-accent">Team</b> model is
+                    based on the two activity phases <i>Planning</i> and{" "}
+                    <i>Implementation</i> and intended for a small team of
+                    developers.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    The <b class="text-accent">Enterprise</b> model is based on the
+                    four activity phases <i>Planning</i>, <i>Implementation</i>,{" "}
+                    <i>Qualification</i>, and <i>Integration</i> and intended for an
+                    enterprise where engineers and agents act in a gated development
+                    pipeline. Each phase has an activity state (like IMPLEMENTING),
+                    a resting state for its success (like IMPLEMENTED), and a resting
+                    state for its failure (like STALLED). In each phase, either an
+                    engineer acts and an agent prepares, or an agent acts and an
+                    engineer handles the escalations.
+                </p>
+            </div>
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <Terminal
+                    prefix="Shell"
+                    helpPage={Astro.url.pathname}
+                    commands={[
+                        "**ase config set** project.task.lifecycle enterprise",
+                        "**ase task list**",
+                        "**ase task status** foo PLANNED"
+                    ]}
+                />
+            </div>
+        </div>
+
+        <div data-reveal>
+            <Diagram src="/assets/task-states.svg" label="ASE task state lifecycle models" />
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <GlowSide variant="text" side="left"/>
+                <p class="ase-eyebrow">Live Task Boards</p>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <SquareKanban class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Task Boards in Terminal and Browser</span>
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    The task board shows all tasks of the project live and is
+                    identically rendered both in the terminal and in the browser.
+                    The <b class="text-accent">lanes</b> view shows the tasks
+                    Kanban-style in the lanes of the phases and states of the
+                    lifecycle model, where the tasks can be directly transitioned,
+                    edited, and created. The <b class="text-accent">graph</b> view
+                    shows the dependencies between the tasks and their grouping
+                    into epics.
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    The <b class="text-accent">stats</b> view gives insights into the
+                    project through the task state distribution, the throughput,
+                    the task progress, the AI and human usage tracking, the effort
+                    estimations, and the efficiency metrics. Additionally, the
+                    board passes prompt-driven edit, estimate, and research requests
+                    to the agents.
+                </p>
+                <Terminal
+                    class="mt-5"
+                    prefix="Shell"
+                    helpPage={Astro.url.pathname}
+                    commands={[
+                        "**ase task board** **--web**",
+                        "**ase task board**"
+                    ]}
+                />
+            </div>
+            <div class="lg:order-2 grid grid-cols-2 gap-2" data-reveal="left">
+                <Screenshot src="/assets/usp-task-board-wui-1.png" label="Web task board: lanes view"/>
+                <Screenshot src="/assets/usp-task-board-tui-1.png" label="Terminal task board: lanes view"/>
+                <Screenshot src="/assets/usp-task-board-wui-2.png" label="Web task board: graph view"/>
+                <Screenshot src="/assets/usp-task-board-tui-2.png" label="Terminal task board: graph view"/>
+                <Screenshot src="/assets/usp-task-board-wui-3.png" label="Web task board: stats view"/>
+                <Screenshot src="/assets/usp-task-board-tui-3.png" label="Terminal task board: stats view"/>
+            </div>
+        </div>
+
+        <div class="ase-grid-split">
+            <div class="lg:order-1 relative isolate" data-reveal="right">
+                <p class="ase-eyebrow">Autonomous Agents</p>
+                <h3 class="ase-h3 flex items-start gap-2">
+                    <Bot class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
+                    <span>Agents Driving the Enterprise Pipeline</span>
+                </h3>
+                <p class="mt-4 text-foreground-secondary ase-justify">
+                    For the <b class="text-accent">Enterprise</b> lifecycle model,
+                    autonomous agents drive the tasks headless from the planned
+                    to the integrated state, each one running in its own process.
+                    The <b class="text-accent">implementer</b> claims the PLANNED
+                    tasks and implements them into their change sets (IMPLEMENTED,
+                    else STALLED). The <b class="text-accent">qualifier</b> reviews
+                    the IMPLEMENTED tasks and either leaves the final decision to
+                    the engineer or decides by its verdict (QUALIFIED, else DECLINED).
+                    The <b class="text-accent">integrator</b> lands the change sets
+                    of the QUALIFIED tasks into their targets (INTEGRATED, else DEFERRED).
+                </p>
+                <p class="text-foreground-secondary ase-indent-p ase-justify">
+                    In the Planning phase, the <b class="text-accent">researcher</b>,{" "}
+                    <b class="text-accent">rebooter</b>, and <b class="text-accent">condenser</b>{" "}
+                    agents research, re-create, and condense the drafted task plans,
+                    the <b class="text-accent">estimator</b> estimates their effort,
+                    and the <b class="text-accent">editor</b> processes the edit requests
+                    of the task boards. A fleet supervises all agents, restarts every
+                    exited one, and passes their live presence to the task boards.
+                </p>
+            </div>
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <GlowSide variant="text" side="right"/>
+                <Terminal
+                    prefix="Shell"
+                    helpPage={Astro.url.pathname}
+                    commands={[
+                        "**ase agent fleet init**",
+                        "vi .ase/**fleet.yaml**",
+                        "**ase agent fleet start**"
+                    ]}
+                />
             </div>
         </div>
     </div>
