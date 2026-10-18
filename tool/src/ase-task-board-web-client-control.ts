@@ -134,20 +134,33 @@ export const focusRequest = (focus: boolean) => {
     promptFocus.value = focus
 }
 
+/*  the use of the prompt of a request of a name by the agents announced to the agent relay
+    processing it: ignored if ignored by all of them (e.g. the "estimate" requests of "ase
+    agent estimator"), optional if optional or ignored by all of them (e.g. the "research"
+    requests of "ase agent researcher"), else (also without any such agent) required  */
+const requestPrompt = (name: string): "required" | "optional" | "ignored" => {
+    const agents = agentList.value.filter((a) => (a.kind === "editor" ? "edit" : a.request ?? "") === name)
+    return agents.length === 0 || agents.some((a) => a.prompt === undefined) ? "required" :
+        agents.every((a) => a.prompt === "ignored") ? "ignored" : "optional"
+}
+
+/*  whether the prompt of the prompt popup is ignored (and hence disabled): of a request
+    by prompt whose request name is only processed by agents ignoring their prompts  */
+export const promptIgnored = computed(() =>
+    prompt.value !== null && prompt.value.name !== null && requestPrompt(prompt.value.name.trim()) === "ignored")
+
+/*  focus the field of the prompt popup after the request name: the prompt,
+    resp. the request button if the prompt is ignored  */
+const focusNext = () => {
+    nextTick(() => (promptIgnored.value ? promptOk.value : promptEl.value)?.focus())
+}
+
 /*  pick a suggested request name of the drop-down of the prompt popup and switch to the prompt  */
 export const pickRequest = (name: string) => {
     if (prompt.value === null)
         return
     prompt.value.name = name
-    promptEl.value?.focus()
-}
-
-/*  whether a request of a name may have an empty prompt: only if it is processed solely by
-    agents announced to the agent relay which ignore the prompts of their requests (e.g. the
-    "estimate" requests of "ase agent estimator")  */
-const requestPromptless = (name: string) => {
-    const agents = agentList.value.filter((a) => (a.kind === "editor" ? "edit" : a.request ?? "") === name)
-    return agents.length > 0 && agents.every((a) => a.promptless === true)
+    focusNext()
 }
 
 /*  open the prompt popup of a request by prompt of any name of a task (see "ase task request",
@@ -165,7 +178,10 @@ const openRequest = (id: string) => {
     prompt.value = { id, text: draft?.text ?? "", name }
     promptTyped.value = ""
     promptFocus.value = false
-    nextTick(() => (name === "" ? promptName.value : promptEl.value)?.focus())
+    if (name === "")
+        nextTick(() => promptName.value?.focus())
+    else
+        focusNext()
 }
 
 /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if
@@ -181,15 +197,17 @@ export const cancelPrompt = () => {
 /*  request a task by the prompt of its popup under its request name (processed by a request
     agent of a definition, resp. by "ase agent editor" for "edit"), dropping the draft of
     the task once sent, resp. keeping the request as its draft on failure, where the prompt
-    may be empty only for the requests of agents ignoring their prompts  */
+    may be empty only for the requests of agents not requiring their prompts, and is dropped
+    for the requests of agents ignoring their prompts  */
 const submitRequest = async (p: { id: string, text: string, name: string }) => {
-    if (p.name.trim() === "" || (p.text.trim() === "" && !requestPromptless(p.name.trim()))) {
+    const use = requestPrompt(p.name.trim())
+    if (p.name.trim() === "" || (p.text.trim() === "" && use === "required")) {
         actionError.value = `requesting task "${p.id}" by prompt failed: empty ${p.name.trim() === "" ? "request name" : "prompt"}`
         return
     }
     prompt.value = null
     const res = await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(p.id)}/request`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: p.name.trim(), prompt: p.text })
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: p.name.trim(), prompt: use === "ignored" ? "" : p.text })
     })
     if (res.error !== undefined) {
         requestDrafts.set(p.id, { name: p.name, text: p.text })
@@ -637,9 +655,10 @@ const onTransferKey = (ev: KeyboardEvent, t: { id: string, at: string }) => {
 }
 
 /*  answer the prompt popup: TAB resp. Shift+TAB switch the focus to the next resp. previous
-    field (the request name of a request by prompt, the prompt, and the request and cancel
-    buttons, like in the terminal board, and never leaving the popup), RETURN requests the
-    edit (or the request, resp. switches from the request name to the prompt), the up/down
+    field (the request name of a request by prompt, the prompt unless ignored, and the request
+    and cancel buttons, like in the terminal board, and never leaving the popup), RETURN requests
+    the edit (or the request, resp. switches from the request name to the prompt, or to the
+    request button if the prompt is ignored), the up/down
     arrows cycle through the suggested request names of the drop-down (on the request name),
     ESC cancels, and all other keys (also Shift+RETURN for a line break) belong to its text
     area (or request name field), as do all keys while an input method composes text (where
@@ -668,7 +687,7 @@ const onPromptKey = (ev: KeyboardEvent) => {
     }
     else if (ev.key === "Enter" && !ev.shiftKey && ev.target === promptName.value && promptName.value !== null) {
         ev.preventDefault()
-        promptEl.value?.focus()
+        focusNext()
     }
     else if (ev.key === "Enter" && !ev.shiftKey && !(ev.target instanceof HTMLButtonElement)) {
         ev.preventDefault()

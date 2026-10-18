@@ -78,7 +78,7 @@ export type BoardStats  = {
 export type AgentLine  = { time: number, level: "error" | "warning" | "info", task: string, msg: string }
 export type AgentUsage = { walltimeSec: number, costToken: number | null, costUSD: number | null }
 export type AgentFlow  = { input: string[], activity?: string, output: string[], gate?: string }
-export type Agent      = { id: string, kind: string, name: string, mode?: string, request?: string, promptless?: boolean, states?: AgentFlow, host: string, pid: number, started?: number, state: "waiting" | "busy", tasks: string[], usage?: { total: AgentUsage, last: AgentUsage } | null, since: number, beat: number }
+export type Agent      = { id: string, kind: string, name: string, mode?: string, request?: string, prompt?: "optional" | "ignored", states?: AgentFlow, host: string, pid: number, started?: number, state: "waiting" | "busy", tasks: string[], usage?: { total: AgentUsage, last: AgentUsage } | null, since: number, beat: number }
 export type Agents     = { connected: boolean, agents: Agent[] }
 export type AgentLogs  = Record<string, { reset: boolean, lines: AgentLine[] }>
 

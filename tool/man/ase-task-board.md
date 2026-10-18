@@ -119,9 +119,12 @@ is refused.
 to the agent relay (`edit` for `ase agent editor`, else the request
 name of any other request agent), which the request agent of the name
 then processes. An empty prompt is refused, unless all request agents
-of the name announced to the agent relay ignore the prompts of their
-requests (e.g., the `estimate` requests of `ase agent estimator --mode
-request`, see `ase-agent-estimator`(1)).
+of the name announced to the agent relay accept the prompts of their
+requests as optional (e.g., the `research` requests of `ase agent
+researcher`, see `ase-agent-researcher`(1)) or ignore them. If all of
+them ignore the prompts (e.g., the `estimate` requests of `ase agent
+estimator --mode request`, see `ase-agent-estimator`(1)), the prompt
+field is disabled, skipped by `TAB`, and no prompt is sent.
 
 `/` focuses the `filter:` field of the header: its keywords are
 matched case-insensitively against the task id and title, AND-combined

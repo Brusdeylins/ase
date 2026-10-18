@@ -17,7 +17,7 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf,
-    watchAgents, busyAgents, agentsDigest, requestNames, requestPromptless, dataLoad, viewOrder
+    watchAgents, busyAgents, agentsDigest, requestNames, requestPrompt, dataLoad, viewOrder
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState, AgentsState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -47,7 +47,7 @@ export type Carry = { id: string, from: string, targets: Set<string> }
     and the request name as last typed (filtering the suggested request names, while the
     up/down arrows select them)  */
 export type PromptFocus   = "name" | "prompt" | "request" | "cancel"
-export type PromptRequest = { name: string, choices: string[], typed: string }
+export type PromptRequest = { name: string, choices: string[], ignored: string[], typed: string }
 export type PromptState   = { id: string, text: string, pos: number, focus: PromptFocus, request: PromptRequest | null }
 
 /*  the suggested request names of a request by prompt, matching its request name as last
@@ -780,9 +780,11 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             return
         }
         const choices = requestNames(agents)
+        const ignored = choices.filter((choice) => requestPrompt(agents, choice) === "ignored")
         const draft   = requestDrafts.current.get(id)
         const name    = draft?.name ?? choices[0] ?? ""
-        setPrompt({ id, text: draft?.text ?? "", pos: draft?.pos ?? 0, focus: name === "" ? "name" : "prompt", request: { name, choices, typed: "" } })
+        const focus   = name === "" ? "name" : ignored.includes(name) ? "request" : "prompt"
+        setPrompt({ id, text: draft?.text ?? "", pos: draft?.pos ?? 0, focus, request: { name, choices, ignored, typed: "" } })
     }
 
     /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if
@@ -804,7 +806,8 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     /*  request a task by the prompt of its popup under its request name (processed by a
         request agent of a definition, resp. by "ase agent editor" for "edit"), dropping
         the draft of the task once sent, resp. keeping the request as its draft on failure,
-        where the prompt may be empty only for the requests of agents ignoring their prompts  */
+        where the prompt may be empty only for the requests of agents not requiring their prompts,
+        and is dropped for the requests of agents ignoring their prompts  */
     const submitRequest = (id: string, text: string, pos: number, name: string): void => {
         let requests: TaskRequests
         try {
@@ -814,12 +817,13 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             setNotice(`requesting task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
             return
         }
-        if (text.trim() === "" && !requestPromptless(agents, name)) {
+        const use = requestPrompt(agents, name)
+        if (text.trim() === "" && use === "required") {
             setNotice(`requesting "${name}" of task "${id}" failed: empty prompt`)
             return
         }
         setPrompt(null)
-        track({ text: `requesting "${name}" of task`, id }, requests.request(log, id, text)).then(() => {
+        track({ text: `requesting "${name}" of task`, id }, requests.request(log, id, use === "ignored" ? "" : text)).then(() => {
             requestDrafts.current.delete(id)
             setNotice(`"${name}" of task "${id}" requested`)
         }).catch((err: unknown) => {

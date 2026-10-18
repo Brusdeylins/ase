@@ -395,7 +395,7 @@ export class AgentPresenceReporter {
     private stopped = false
 
     constructor (private log: Log, private client: AgentRelayClient, private kind: string, private name: string, private mode = "",
-        private request = "", private promptless = false, private states?: Relay.AgentFlow) {
+        private request = "", private prompt: Relay.AgentPrompt = "required", private states?: Relay.AgentFlow) {
         this.id = `${os.hostname()}-${process.pid}-${name}`
             .replace(/[^A-Za-z0-9_.-]+/g, "-").replace(/^[^A-Za-z0-9]+/, "").slice(0, 128)
     }
@@ -449,8 +449,8 @@ export class AgentPresenceReporter {
         }
         if (this.request !== "")
             presence.request = this.request
-        if (this.request !== "" && this.promptless)
-            presence.promptless = true
+        if (this.request !== "" && this.prompt !== "required")
+            presence.prompt = this.prompt
         if (this.states !== undefined)
             presence.states = this.states
         this.flight = this.client.announce(this.id, presence).then(() => {

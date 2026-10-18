@@ -33,7 +33,8 @@
     </div>
 
     <!--  the prompt of an edit request of a task (processed by "ase agent editor"),
-          or of a request by prompt of any name (processed by a request agent)  -->
+          or of a request by prompt of any name (processed by a request agent),
+          where the prompt is disabled for a request ignoring its prompt  -->
     <div v-if="prompt !== null" id="prompt" @click.self="cancelPrompt">
         <div class="box">
             <div class="ask">{{ prompt.name !== null ? "Request agent for" : "Edit" }} task <span class="cid">{{ prompt.id }}</span> by prompt:</div>
@@ -48,7 +49,8 @@
                     </ul>
                 </div>
                 <label for="prompt-text">request prompt:</label>
-                <textarea id="prompt-text" ref="promptEl" v-model="prompt.text" rows="5" spellcheck="false"></textarea>
+                <textarea v-if="promptIgnored" id="prompt-text" rows="5" disabled placeholder="(ignored by the agents of this request)"></textarea>
+                <textarea v-else id="prompt-text" ref="promptEl" v-model="prompt.text" rows="5" spellcheck="false"></textarea>
             </div>
             <textarea v-else ref="promptEl" v-model="prompt.text" rows="5" spellcheck="false"></textarea>
             <div class="buttons">
@@ -73,7 +75,7 @@
 import { confirmDel, transfer, prompt, busy, busyTime } from "./ase-task-board-web-client-model"
 import {
     deleteTask, transferList, cancelTransfer, transferTo,
-    requestNames, requestChoices, pickRequest, typeRequest, focusRequest, promptFocus,
+    requestNames, requestChoices, pickRequest, typeRequest, focusRequest, promptFocus, promptIgnored,
     promptEl, promptName, promptOk, promptNo, cancelPrompt, submitPrompt
 } from "./ase-task-board-web-client-control"
 </script>

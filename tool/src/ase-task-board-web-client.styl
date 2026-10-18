@@ -1396,8 +1396,9 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
     visibly tinted signal color while focused, alike its buttons while hovered), for
     a request by prompt behind the equally wide labels of the request name field (spanning
     30% of the width of the text area, and alike colored) and the text area (for
-    left-aligning them), with the drop-down of the suggested request names directly
-    below the request name field (in signal color)  */
+    left-aligning them, and muted while disabled for a request ignoring its prompt), with
+    the drop-down of the suggested request names directly below the request name field
+    (in signal color)  */
 #prompt
     .box
         border-color: var(--c-accent)
@@ -1485,6 +1486,12 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
             border-color: var(--c-signal)
             background: var(--c-signal-ground)
             color: var(--c-signal)
+        &:disabled
+            border-color: var(--c-mute)
+            background: transparent
+            color: var(--c-mute)
+            resize: none
+            cursor: not-allowed
     .buttons button
         border-color: var(--c-accent)
         background: var(--c-accent-ground)

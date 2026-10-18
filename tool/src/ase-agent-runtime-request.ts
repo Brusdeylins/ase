@@ -195,7 +195,7 @@ export abstract class RequestAgent extends Agent {
             const att = plan.attachment[i]
             if (requestRefused(lifecycle, status))
                 refused = `task is finished, status "${status}"`
-            else if ((att.Data ?? "").trim() === "" && !this.promptless)
+            else if ((att.Data ?? "").trim() === "" && this.presencePrompt === "required")
                 refused = "empty prompt"
             if (refused !== "")
                 plan.attachment[i] = { ...att, Type: this.requests.type("failed"), Desc: `failed (${refused})`, Modified: attachmentTime() }

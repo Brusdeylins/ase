@@ -12,7 +12,7 @@ import type { Card }                          from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine }      from "./ase-agent-relay-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
 import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.js"
-import type { TransferEntry, BusyLabel, PromptState } from "./ase-task-board-tui-model.js"
+import type { TransferEntry, BusyLabel, PromptState, PromptFocus } from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
     (bit 0: bold, bit 1: italic, bit 2: code, bit 3: accent, bit 4: signal, bit 5: dim)  */
@@ -411,6 +411,16 @@ export const promptBox = (columns: number, rows: number, request: boolean) => {
     }
 }
 
+/*  whether the prompt of the prompt popup is ignored: of a request by prompt
+    whose request name is only processed by agents ignoring their prompts  */
+export const promptIgnored = (prompt: PromptState): boolean =>
+    prompt.request !== null && prompt.request.ignored.includes(prompt.request.name)
+
+/*  the focus of the prompt popup after the request name: the prompt,
+    resp. the request button if the prompt is ignored  */
+export const promptNext = (prompt: PromptState): PromptFocus =>
+    promptIgnored(prompt) ? "request" : "prompt"
+
 /*  render the prompt popup of an edit request (or, with a request, of a request by prompt of
     any name, with its request name in the frame of an input box above the prompt, and with
     its suggested request names <choices> in a drop-down below it while focused) of a task,
@@ -511,10 +521,13 @@ export const renderPrompt = (prompt: PromptState, columns: number, rows: number,
             h(Text, cx("signal"), `╰${"─".repeat(nameW - 4)}${more(first + dropH < choices.length, "▾")}─╯`))
     })() : null
 
-    /*  the prompt in the frame of an input box (in signal color while focused, also its text),
-        behind its label "request prompt:" for a request by prompt  */
-    const focus  = prompt.focus === "prompt"
-    const tone   = focus ? "signal" : "accent"
+    /*  the prompt in the frame of an input box (in signal color while focused, also its text,
+        resp. dimmed with a notice instead of its text if ignored), behind its label "request
+        prompt:" for a request by prompt  */
+    const ignored = promptIgnored(prompt)
+    const notice  = "(ignored by the agents of this request)".slice(0, lineW)
+    const focus   = prompt.focus === "prompt" && !ignored
+    const tone    = focus ? "signal" : ignored ? "dim" : "accent"
     const popup  = h(Box, { key: "prompt", top, left, width, height, ...cx("popup", "border-dim") },
         h(Text, cx("normal", "bold"),
             " ".repeat(qpad) + lead,
@@ -525,7 +538,7 @@ export const renderPrompt = (prompt: PromptState, columns: number, rows: number,
         h(Text, { key: "input-top", ...cx(tone) }, `${indent}╭${"─".repeat(boxW - 2)}╮ `),
         ...shown.map((line, k) => {
             const at = focus ? line.findIndex((cell) => cell.cur) : -1
-            const ch = line.map((cell) => cell.ch)
+            const ch = ignored ? [ ...(k === 0 ? notice : "") ] : line.map((cell) => cell.ch)
             return h(Text, { key: k },
                 h(Text, cx("normal"), request !== null && k === 0 ? " request prompt:".padEnd(labelW) : indent),
                 h(Text, cx(tone), "│ "),

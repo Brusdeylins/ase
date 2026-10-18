@@ -27,6 +27,7 @@ import { AgentRelayClient }      from "./ase-agent-relay-client.js"
 import type { RelaySpec }        from "./ase-agent-relay-client.js"
 import type { AgentPresence }    from "./ase-agent-relay-core.js"
 import type { AgentUsage }       from "./ase-agent-relay-core.js"
+import type { AgentPrompt }      from "./ase-agent-relay-core.js"
 import { editOf }                from "./ase-task-request.js"
 import type { EditState }        from "./ase-task-request.js"
 
@@ -798,12 +799,14 @@ export const requestNames = (state: AgentsState | null): string[] =>
     [ ...new Set((state?.agents ?? []).map((agent) => agent.kind === "editor" ? "edit" : agent.request ?? "")
         .filter((name) => name !== "")) ].sort()
 
-/*  whether a request of a name may have an empty prompt: only if it is processed solely by
-    agents announced to the agent relay which ignore the prompts of their requests (e.g. the
-    "estimate" requests of "ase agent estimator")  */
-export const requestPromptless = (state: AgentsState | null, name: string): boolean => {
+/*  the use of the prompt of a request of a name by the agents announced to the agent relay
+    processing it: ignored if ignored by all of them (e.g. the "estimate" requests of "ase
+    agent estimator"), optional if optional or ignored by all of them (e.g. the "research"
+    requests of "ase agent researcher"), else (also without any such agent) required  */
+export const requestPrompt = (state: AgentsState | null, name: string): AgentPrompt => {
     const agents = (state?.agents ?? []).filter((agent) => (agent.kind === "editor" ? "edit" : agent.request ?? "") === name)
-    return agents.length > 0 && agents.every((agent) => agent.promptless === true)
+    return agents.length === 0 || agents.some((agent) => agent.prompt === undefined) ? "required" :
+        agents.every((agent) => agent.prompt === "ignored") ? "ignored" : "optional"
 }
 
 /*  order the agents by name (and id, for equally named agents on different hosts)  */

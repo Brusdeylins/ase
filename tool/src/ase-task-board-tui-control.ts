@@ -14,7 +14,7 @@ import type { BoardCtx, PromptFocus }         from "./ase-task-board-tui-model.j
 import type { StatsRange }                    from "./ase-task-board-stats.js"
 import { gridColumns }                        from "./ase-task-board-tui-view.js"
 import {
-    refSegs, tabFirst, tabLayout, confirmBox, transferBox, promptBox, dropFirst,
+    refSegs, tabFirst, tabLayout, confirmBox, transferBox, promptBox, promptIgnored, promptNext, dropFirst,
     CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE, DROP_ROWS
 }                                             from "./ase-task-board-tui-popup.js"
 
@@ -29,8 +29,9 @@ const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): b
 
     if (prompt !== null) {
         /*  a click onto a suggested request name of the drop-down picks it (and switches to the
-            prompt), a click onto the request or cancel button presses it, and a click onto the
-            input box of the request name or the prompt focuses it  */
+            prompt, resp. to the request button if the prompt is ignored), a click onto the request
+            or cancel button presses it, and a click onto the input box of the request name or the
+            prompt (unless ignored) focuses it  */
         const box     = promptBox(columns, rows, prompt.request !== null)
         const choices = prompt.request !== null && prompt.focus === "name" ? requestChoices(prompt.request) : []
         const k       = dropFirst(choices, prompt.request?.name ?? "") + my - box.dropY - 1
@@ -38,15 +39,17 @@ const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): b
         const inName  = mx >= box.boxX && mx < box.boxX + box.nameW
         if (btn !== 0)
             return true
-        if (prompt.request !== null && inName && my > box.dropY && my <= box.dropY + Math.min(DROP_ROWS, choices.length))
-            setPrompt({ ...prompt, focus: "prompt", request: { ...prompt.request, name: choices[k] } })
+        if (prompt.request !== null && inName && my > box.dropY && my <= box.dropY + Math.min(DROP_ROWS, choices.length)) {
+            const picked = { ...prompt, request: { ...prompt.request, name: choices[k] } }
+            setPrompt({ ...picked, focus: promptNext(picked) })
+        }
         else if (my === box.buttonY && mx >= box.okX && mx < box.okX + box.okText.length)
             submitPrompt()
         else if (my === box.buttonY && mx >= box.noX && mx < box.noX + box.noText.length)
             cancelPrompt()
         else if (prompt.request !== null && inName && my >= box.nameY - 1 && my <= box.nameY + 1)
             setPrompt({ ...prompt, focus: "name" })
-        else if (inBox && my >= box.promptY && my <= box.promptY + box.viewH + 1)
+        else if (inBox && my >= box.promptY && my <= box.promptY + box.viewH + 1 && !promptIgnored(prompt))
             setPrompt({ ...prompt, focus: "prompt" })
         return true
     }
@@ -297,13 +300,14 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
     } = ctx
 
     /*  operate the prompt popup: TAB resp. Shift+TAB switch the focus to the next resp.
-        previous field (the request name of a request by prompt, the prompt, and the request
-        and cancel buttons), and ESC cancels in every field  */
+        previous field (the request name of a request by prompt, the prompt unless ignored, and
+        the request and cancel buttons), and ESC cancels in every field  */
     if (prompt !== null && (key.tab || key.escape)) {
         if (key.escape)
             cancelPrompt()
         else {
-            const fields = (prompt.request !== null ? [ "name", "prompt", "request", "cancel" ] : [ "prompt", "request", "cancel" ]) as PromptFocus[]
+            const fields = ([ "name", "prompt", "request", "cancel" ] as PromptFocus[])
+                .filter((field) => (field !== "name" || prompt.request !== null) && (field !== "prompt" || !promptIgnored(prompt)))
             const i      = Math.max(0, fields.indexOf(prompt.focus))
             setPrompt({ ...prompt, focus: fields[(i + (key.shift ? fields.length - 1 : 1)) % fields.length] })
         }
@@ -333,7 +337,8 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
         with its newlines kept and its other control characters turned into spaces)
         is inserted at the cursor  */
     if (prompt !== null && prompt.request !== null && prompt.focus === "name") {
-        /*  type the request name of a request by prompt: RETURN switches to the prompt, the
+        /*  type the request name of a request by prompt: RETURN switches to the prompt (resp. to
+            the request button if the prompt is ignored), the
             up/down arrows cycle through the suggested request names of the drop-down (matching
             the request name as last typed), BACKSPACE removes the last character, and all
             other input of letters, digits, and dashes is appended (lower-cased)  */
@@ -341,7 +346,7 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
         const choices = requestChoices(request)
         const name    = (value: string, typed = value) => setPrompt({ ...prompt, request: { ...request, name: value, typed } })
         if (key.return)
-            setPrompt({ ...prompt, focus: "prompt" })
+            setPrompt({ ...prompt, focus: promptNext(prompt) })
         else if ((key.upArrow || key.downArrow) && choices.length > 0) {
             const i = choices.indexOf(request.name)
             const n = choices.length

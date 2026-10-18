@@ -15,6 +15,7 @@ import { projectRoot, userConfigDir } from "./ase-config-scope.js"
 import * as TaskFormat              from "./ase-task-format.js"
 import { requestsOf, typeParam }    from "./ase-task-request.js"
 import type { AgentDefinition, AgentHooks } from "./ase-agent-definition-api.js"
+import type { AgentPrompt }         from "./ase-agent-relay-core.js"
 import planner                      from "./ase-agent-definition-builtin/planner.js"
 import implementer                  from "./ase-agent-definition-builtin/implementer.js"
 import approver                     from "./ase-agent-definition-builtin/approver.js"
@@ -315,7 +316,7 @@ export type ResolvedDefinition = {
         require: string[], exclude: string[], guarded: boolean
     }
     assign:  { name: string, required: boolean, success: string, failure: string }
-    request: { name: string, done: string, prompt: boolean }
+    request: { name: string, done: string, prompt: AgentPrompt }
     prompt:  { skill: string, template: Template }
     prepare: string[]
     success: { criteria: DefinitionCriterion[], match: RegExp[] }
@@ -891,12 +892,13 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         if ((has(key) && str(key, "-") === "") || list(key).some((cmd) => cmd.trim() === ""))
             fail(key, "empty shell command")
 
-    /*  whether a request agent consumes the prompts of its requests: by the placeholder
-        "{prompt}" of its prompt template (unless used only within the conditional
-        "{?prompt:...}", which makes the prompt optional), or potentially by a hook receiving
-        the job (and hence the prompt of the request), else the requests may have an empty prompt  */
-    const consumes = type === "request" && (template.required.has("prompt")
-        || ([ "prepare", "prompt", "finish" ] as const).some((hook) => loaded.hooks[hook] !== undefined))
+    /*  whether a request agent requires the prompts of its requests: by the placeholder
+        "{prompt}" of its prompt template, or potentially by a hook receiving the job (and
+        hence the prompt of the request), resp. uses them optionally by "{prompt}" used only
+        within the conditional "{?prompt:...}", else ignores them  */
+    const consumes: AgentPrompt = type === "request" && (template.required.has("prompt")
+        || ([ "prepare", "prompt", "finish" ] as const).some((hook) => loaded.hooks[hook] !== undefined)) ? "required" :
+        type === "request" && template.names.has("prompt") ? "optional" : "ignored"
 
     return {
         name, type, workdir, lifecycles, unclaimed,

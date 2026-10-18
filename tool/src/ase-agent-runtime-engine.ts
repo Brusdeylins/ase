@@ -969,7 +969,7 @@ class DefinedRequestAgent extends RequestAgent {
         }))
         this.requests        = new TaskRequests(def.request.name, def.tag.name, def.request.done)
         this.presenceRequest = def.request.name
-        this.promptless      = !def.request.prompt
+        this.presencePrompt  = def.request.prompt
         this.serial          = def.serial
         this.worktree        = def.workdir !== "project"
         this.lifecycles      = def.lifecycles

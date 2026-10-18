@@ -13,6 +13,10 @@ import * as TaskFormat          from "./ase-task-format.js"
     processing tasks (a stopped agent has no presence at all)  */
 export type AgentState = "waiting" | "busy"
 
+/*  the use of the prompts of the requests of a request agent: required (an empty one
+    is refused), optional (an empty one is accepted), or ignored (none is to be given)  */
+export type AgentPrompt = "required" | "optional" | "ignored"
+
 /*  a processing log line of an agent: its time (in ms since the epoch, by the
     clock of the agent), its level, the id of the task it concerns (or empty
     for the agent itself), and its message  */
@@ -34,14 +38,14 @@ export type AgentFlow = { input: string[], activity?: string, output: string[], 
 
 /*  the presence of an agent as announced by itself: its kind, name, and mode of
     operation (e.g. "draft", or empty), the name of the requests it processes (of a
-    request agent of a definition, else absent), whether it ignores the prompts of these
-    requests (so they may be requested with an empty prompt, else absent), the lifecycle
+    request agent of a definition, else absent), whether the prompts of these requests are
+    optional or ignored (so they may be requested with an empty prompt, else absent), the lifecycle
     states it operates on (of a phase agent, else absent), its host and
     process id, its start time (in ms since the epoch, by the clock of the agent), its state,
     the ids of the tasks it is busy with, its usage of the agent tool, and its processing log
     lines added since its previous announcement (a delta only)  */
 export type AgentAnnounce = {
-    kind: string, name: string, mode: string, request?: string, promptless?: boolean, states?: AgentFlow,
+    kind: string, name: string, mode: string, request?: string, prompt?: Exclude<AgentPrompt, "required">, states?: AgentFlow,
     host: string, pid: number, started: number, state: AgentState, tasks: string[], usage: AgentUsages, lines: AgentLine[]
 }
 
@@ -121,7 +125,7 @@ const announceEntries = {
     name:       v.pipe(text(64), v.minLength(1)),
     mode:       v.optional(text(64), ""),
     request:    v.optional(text(64)),
-    promptless: v.optional(v.boolean()),
+    prompt:     v.optional(v.picklist([ "optional", "ignored" ])),
     host:       text(255),
     pid:        v.pipe(v.number(), v.integer(), v.minValue(0)),
     state:      v.picklist([ "waiting", "busy" ]),
