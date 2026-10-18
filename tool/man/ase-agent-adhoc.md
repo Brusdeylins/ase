@@ -358,10 +358,14 @@ and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
   tasks, and the values of the placeholders `{workdir}`, `{source-dir}`,
   and `{changeset-worktree}`.
 
-  The worktrees the agent creates itself are named *id*`-`*assign-name*
-  resp. *id*`-`*changeset-name*`-`*assign-name* (with every `#` of the
-  task id replaced by `_`), so they equal those of the built-in agents
-  if `--assign-name` is set to the built-in kind:
+  The temporary worktrees the agent creates itself are named
+  *id*`-`*assign-name* resp. *id*`-`*changeset-name*`-`*assign-name*
+  (with every `#` of the task id replaced by `_`), so they equal those
+  of the built-in agents if `--assign-name` is set to the built-in
+  kind, while the worktree of a `branch:` changeset is named after the
+  branch (with every character other than letters, digits, `_`, and
+  `-` replaced by `-`, runs of `-` reduced to one, and leading and
+  trailing `-` and `_` removed), like by the skills:
     - `project`: the project root. `--repo` and `--tempdir` are
       silently ignored.
     - `source`: the working copy holding the `Source:` (the project
@@ -376,9 +380,10 @@ and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
       onto a `branch:` source, and, processed in parallel, yields the
       ASE worktree id of the task (created by the skill) as
       `{changeset-worktree}`; a `branch:` changeset is held and checked
-      out in the agent worktree *id*`-`*assign-name* (created from the
-      source if missing, else reused if already checked out, but then
-      required free of uncommitted changes), yielding its ASE worktree
+      out in the agent worktree named after the branch (created from the
+      source if missing, refused if its directory already exists, else
+      reused if already checked out, but then required free of
+      uncommitted changes), yielding its ASE worktree
       id (unless the project root) as `{changeset-worktree}`, and
       removed afterwards only if clean (else preserved); an
       `attachment:` changeset is left to the skill.
@@ -748,7 +753,11 @@ expand the following placeholders:
 - `{source}`, `{changeset}`, `{target}`:
   The raw flow values of the frontmatter keys `Source:`, `Changeset:`,
   and `Target:`, or their configured defaults
-  `project.task.default.*`.
+  `project.task.default.*`, with their placeholder `{id}` replaced by
+  the task id (with every character other than letters, digits, `_`,
+  and `-` replaced by `-`, runs of `-` reduced to one, and leading and
+  trailing `-` and `_` removed, e.g., `12` for `#12` and `FOO-12` for
+  `FOO#12`).
 
 - `{source-type}`, `{source-name}`, `{changeset-type}`, `{changeset-name}`, `{target-type}`, `{target-name}`:
   The parsed flow values: the type `worktree`, `branch`, or

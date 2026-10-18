@@ -264,6 +264,13 @@ export const gitWorktreeDetached = async (root: string, dir: string, commit: str
 export const worktreeId = (id: string): string =>
     id.replace(/#/g, "_")
 
+/*  the safe name of a task id (for the placeholder "{id}" of the change set flow values) or
+    of a branch (for the ASE worktree of a "branch:" changeset), like by the skills: every
+    character other than "A-Za-z0-9_-" replaced by "-", runs of "-" reduced to one, and
+    leading and trailing "-" and "_" removed (e.g. "12" for "#12", "a-b" for "a/b")  */
+export const safeName = (name: string): string =>
+    name.replace(/[^A-Za-z0-9_-]/g, "-").replace(/-{2,}/g, "-").replace(/^[-_]+|[-_]+$/g, "")
+
 /*  the context worktree holding the uncommitted change set of a "worktree"
     changeset: the ASE worktree named after the task if registered (as created
     by the parallel implementer), else the working copy <root>  */

@@ -273,8 +273,10 @@ const webColorSchema = v.optional(v.pipe(v.string(), v.check((s) =>
 
 /*  schema for a default value of the "Source", "Changeset", or "Target" task
     frontmatter key, restricted to the permitted forms "worktree", "source",
-    "branch:<name>" (a safe Git branch name), and "attachment:<name>"  */
-const flowSchema = (forms: ReadonlyArray<string>) => v.optional(v.pipe(v.string(), v.check((s) => {
+    "branch:<name>" (a safe Git branch name), and "attachment:<name>", where a
+    <name> can carry the placeholder "{id}" of the task id (checked with a sample id)  */
+const flowSchema = (forms: ReadonlyArray<string>) => v.optional(v.pipe(v.string(), v.check((value) => {
+    const s    = value.replaceAll("{id}", "id")
     const i    = s.indexOf(":")
     const type = i < 0 ? s : s.slice(0, i)
     const name = i < 0 ? "" : s.slice(i + 1)

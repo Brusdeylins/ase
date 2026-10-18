@@ -312,7 +312,10 @@ frontmatter keys of a task (or their configured defaults
 
 - `branch:`*name*:
   the Git branch *name*, checked out in an *ASE* worktree below
-  `.ase/worktree/` where needed.
+  `.ase/worktree/` where needed, which is named after the branch (with
+  every character other than letters, digits, `_`, and `-` replaced by
+  `-`, runs of `-` reduced to one, and leading and trailing `-` and `_`
+  removed, e.g., `feature-x` for `feature/x`).
 
 - `attachment:`*name*:
   the task attachment *name* (a change set as a diff), handled by the
@@ -320,6 +323,13 @@ frontmatter keys of a task (or their configured defaults
 
 - `source` (`Target:` only):
   the `Source:` of the task.
+
+The placeholder `{id}` of a branch or attachment *name* reads as the id
+of the task (with every character other than letters, digits, `_`, and
+`-` replaced by `-`, runs of `-` reduced to one, and leading and
+trailing `-` and `_` removed, e.g., `12` for `#12` and `FOO-12` for
+`FOO#12`), e.g., the `Changeset:`
+default `branch:cs-{id}` implements every task onto its own branch.
 
 Without `--repo`, all tasks are processed in the Git working copy the
 agent is started in, which is hence mandatory (except for an agent of

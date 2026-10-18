@@ -246,7 +246,10 @@ Procedure
 
             -   Otherwise, set <work-id/> to <changeset-name/> with every
                 character other than `A-Z`, `a-z`, `0-9`, `_`, and `-`
-                replaced by `-`, determine <work-dir/> by calling the
+                replaced by `-`, then every run of multiple `-` reduced
+                to a single `-`, and finally all leading and trailing `-`
+                and `_` removed (e.g., `feature-x` for `feature/-x`),
+                determine <work-dir/> by calling the
                 `ase_worktree_path(id: "<work-id/>", create: true)` tool of
                 the `ase` MCP server (you *MUST* *NEVER* assemble this
                 path yourself), and set

@@ -34,7 +34,7 @@ import type { ToolCosts }           from "./ase-agent-runtime-tool.js"
 import {
     tempPreserved, tempDir, exclusive, execaJob, jobScope, withinJobTimeout,
     gitInside, gitLocked, gitWorktree, worktreeRemove, gitWorktreeRemove, gitWorktreeAdd,
-    gitWorktreeDetached, worktreeId, contextDir, worktreeName, gitClean, gitChangesetDiff
+    gitWorktreeDetached, worktreeId, safeName, contextDir, worktreeName, gitClean, gitChangesetDiff
 }                                   from "./ase-agent-runtime-exec.js"
 import type { TempDir }             from "./ase-agent-runtime-exec.js"
 import { AgentRun }                 from "./ase-agent-runtime-claim.js"
@@ -173,15 +173,17 @@ const flowDefaults: Record<string, string> = {
 }
 
 /*  the raw value of the change set flow key "Source:", "Changeset:", or "Target:"
-    of a task (or else its configured default)  */
+    of a task (or else its configured default), with every placeholder "{id}" replaced
+    by the safe name of the task id (see "safeName"), like by the skills  */
 export const taskFlowRaw = (log: Log, task: AgentTask, key: "Source" | "Changeset" | "Target"): string => {
-    const value = task.keys.get(key) ?? ""
-    if (value !== "")
-        return value
-    const cfg = new Config("config", configSchema, log)
-    cfg.read()
-    const val = cfg.getExplicit(`project.task.default.${key.toLowerCase()}`)
-    return typeof val === "string" ? val : (process.env[`ASE_PROJECT_TASK_DEFAULT_${key.toUpperCase()}`] ?? flowDefaults[key])
+    let value = task.keys.get(key) ?? ""
+    if (value === "") {
+        const cfg = new Config("config", configSchema, log)
+        cfg.read()
+        const val = cfg.getExplicit(`project.task.default.${key.toLowerCase()}`)
+        value = typeof val === "string" ? val : (process.env[`ASE_PROJECT_TASK_DEFAULT_${key.toUpperCase()}`] ?? flowDefaults[key])
+    }
+    return value.replaceAll("{id}", safeName(task.id))
 }
 
 /*  the value of the change set flow key "Source:", "Changeset:", or "Target:" of a
@@ -627,7 +629,7 @@ export abstract class Agent {
         if (workdir === "source")
             return this.sourceJob(task, suffix, options.checkout)
         else if (workdir === "changeset")
-            return this.changesetJob(task, suffix, parallel, options.commit, options.snapshot)
+            return this.changesetJob(task, parallel, options.commit, options.snapshot)
         else if (workdir === "changeset-read")
             return this.changesetReadJob(task, suffix)
         else if (workdir === "target")
@@ -710,16 +712,17 @@ export abstract class Agent {
         "Source:" (see "changesetReady"): a "worktree" changeset in the working copy itself
         (switched to a "branch:" source, if processed serially, else in the ASE worktree of the
         task, created by the skill itself), a "branch:" changeset in the worktree in which it is
-        checked out, else in an agent worktree "<id>-<suffix>" (with the branch created from the
-        source if missing), and an "attachment:" changeset left to the skill, where the work on a
-        "branch:" changeset is committed onto it on request (<commit>) and published, and where
+        checked out, else in an agent worktree named after the branch, like by the skill (with
+        the branch created from the source if missing), and an "attachment:" changeset left to
+        the skill, where the work on a "branch:" changeset is committed onto it on request
+        (<commit>) and published, and where
         the change set snapshot is captured on request (for its attachment of the kind
         <snapshot>, else empty) from the working tree carrying the change set (also for a
         "branch:" changeset, before its commit), based on the source commit (so it shows the
         entire change set, also of an earlier processing), while a snapshot is obsolete for an
         "attachment:" changeset (except for the attachment of its own kind, which is the
         change set itself)  */
-    private async changesetJob (task: AgentTask, suffix: string, parallel: boolean, commit: boolean,
+    private async changesetJob (task: AgentTask, parallel: boolean, commit: boolean,
         snapshot: string): Promise<AgentWork> {
         const source    = taskFlow(this.log, task, "Source")
         const changeset = taskFlow(this.log, task, "Changeset")
@@ -739,7 +742,12 @@ export abstract class Agent {
             let dir   = await gitWorktree(cwd, changeset.name)
             const own = dir === ""
             if (own) {
-                dir = Worktree.dir(`${worktreeId(task.id)}-${suffix}`, true, false, cwd)
+                /*  an existing directory (e.g. the worktree of another branch of the same
+                    name, like "a-b" for "a/b") is never replaced, as it is not the agent's own  */
+                dir = Worktree.dir(safeName(changeset.name), true, false, cwd)
+                if (fs.existsSync(dir))
+                    throw new Error(`agent: directory "${dir}" for branch "${changeset.name}" already exists ` +
+                        "-- cannot implement task into it")
                 await gitWorktreeAdd(cwd, dir, changeset.name, source.type === "branch" ? source.name : "HEAD")
             }
             else if (!(await gitClean(dir)))

@@ -190,7 +190,13 @@ Task plans (all writable on the `user` and `project` scopes only,
   A branch *name* has to start with a letter, digit, or `_`, consist of
   letters, digits, `_`, `.`, `/`, and `-`, must not end in `/`, `.`, or
   `.lock`, and must not contain `..` or `//`. An attachment *name*
-  consists of letters, digits, `_`, and `-`.
+  consists of letters, digits, `_`, and `-`. A branch or attachment
+  *name* can carry the placeholder `{id}`, which reads as the id of the
+  task (with every character other than letters, digits, `_`, and `-`
+  replaced by `-`, runs of `-` reduced to one, and leading and trailing
+  `-` and `_` removed, e.g., `12` for `#12` and `FOO-12` for `FOO#12`),
+  e.g., `branch:cs-{id}` for a
+  separate changeset branch per task.
 
 - `project.task.effort.scale` (*xs*`,`*s*`,`*m*`,`*l*):
   The upper bounds of the effort size bands `XS`, `S`, `M`, and `L` of

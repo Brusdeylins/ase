@@ -202,9 +202,15 @@ line. It sets <value-type/> to the form (`worktree`, `branch`,
 `branch:<name/>` and `attachment:<name/>` forms (or to empty otherwise).
 Do not output anything, except for the error below.
 
-1.  Split <arg2/> at its *first* `:` character into <value-type/> (the
-    part before) and <value-name/> (the part after, or empty if there
-    is no `:`).
+1.  Set <value-text/> to <arg2/> with every placeholder `{id}`
+    replaced by <ase-task-id/>, where every character of the task id
+    other than `A-Z`, `a-z`, `0-9`, `_`, and `-` is replaced by `-`,
+    then every run of multiple `-` is reduced to a single `-`, and
+    finally all leading and trailing `-` and `_` are removed (e.g.,
+    `branch:cs-{id}` becomes `branch:cs-12` for the task id `#12`, and
+    `branch:cs-FOO-12` for `FOO#12`). Split <value-text/>
+    at its *first* `:` character into <value-type/> (the part before)
+    and <value-name/> (the part after, or empty if there is no `:`).
 
 2.  The value is *valid* only if <value-type/> is one of <arg3/> and
     one of the following holds:

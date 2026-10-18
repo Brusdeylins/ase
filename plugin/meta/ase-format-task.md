@@ -235,6 +235,16 @@ You *MUST* honor the following hints on this *task* format:
     `draft` is the *implementation draft*, selected by the `--draft` option
     of `ase-task-implement` and `ase-task-integrate`.
 
+    A branch or attachment <name/> can carry the placeholder `{id}`, which
+    reads as the task id with every character other than `A-Z`, `a-z`,
+    `0-9`, `_`, and `-` replaced by `-`, then every run of multiple `-`
+    reduced to a single `-`, and finally all leading and trailing `-`
+    and `_` removed (e.g., the `Changeset` value
+    `branch:cs-{id}` commits the change set of the task `foo` onto the
+    branch `cs-foo`, and the one of the task `#12` onto the branch
+    `cs-12`). The placeholder is mainly intended for the
+    configured defaults, giving every task its own branch or attachment.
+
     An *absent* `Source`, `Changeset`, or `Target` key reads as its
     *configured default* at the time of use: <ase-project-task-default-source/>,
     <ase-project-task-default-changeset/>, resp. <ase-project-task-default-target/>
@@ -242,7 +252,8 @@ You *MUST* honor the following hints on this *task* format:
     built-in defaults `worktree`, `worktree`, resp. `source`). Hence, a skill
     *creating* or *rebooting* a task plan *MUST* leave these keys *out*, and a
     skill *writing* one of these keys *MUST* leave it out if its value equals
-    the configured default, so the plan keeps following the configuration.
+    the configured default (with the placeholder `{id}` of both replaced),
+    so the plan keeps following the configuration.
 
 -   A task can have zero or more attachments in the "backmatter". Each attachment is
     realized with its own dedicated block. When no attachments exist, these

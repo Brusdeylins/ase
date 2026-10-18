@@ -58,7 +58,9 @@ continuously increasing sequence number, rendered through a sprintf-style
 arbitrary unique id chosen by the agent). Additionally,
 `project.task.default.{source,changeset,target}` select the defaults of
 the `Source:`, `Changeset:`, and `Target:` task plan keys (`worktree`,
-`worktree`, and `source` by default), which an absent key reads as; they
+`worktree`, and `source` by default), which an absent key reads as, where
+a `branch:<name>` or `attachment:<name>` value can carry the placeholder
+`{id}` of the task id (e.g., `branch:cs-{id}` for a branch per task); they
 are exported at session start as
 `<ase-project-task-default-{source,changeset,target}/>`.
 

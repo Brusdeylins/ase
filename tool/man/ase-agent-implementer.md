@@ -98,11 +98,15 @@ In mode `implement`, the `Changeset:` of the task (or the configured
   each task (via the skill option `--worktree` *id*).
 
 - `branch:`*name*: The branch is checked out (created from the source if
-  missing) in the Git worktree `.ase/worktree/`*id*`-implementer` of the
-  agent (unless already checked out in the working copy or another *ASE*
-  worktree, which then has to be without uncommitted changes, as they
-  would be committed, too), implemented there in place (via the skill
-  options `--changeset worktree --worktree` *id*`-implementer`, keeping
+  missing) in the Git worktree `.ase/worktree/`*branch-id* of the agent,
+  named after the branch (with every character other than letters,
+  digits, `_`, and `-` replaced by `-`, runs of `-` reduced to one, and
+  leading and trailing `-` and `_` removed, and refused if its
+  directory already exists), unless already checked out in the working copy or
+  another *ASE* worktree, which then has to be without uncommitted
+  changes, as they would be committed, too. It is implemented there in
+  place (via the skill options `--changeset worktree --worktree`
+  *branch-id*, keeping
   the `Source:` of the plan, so the change set snapshot of the agent
   shows the entire branch), and afterwards *committed* onto the branch
   with the message *Kind*`:` *title* `(`*id*`)` (where *Kind* is the
@@ -469,10 +473,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
 - `.ase/agent/`*name*`.log`: The log of the agent run in the background.
 
-- `.ase/worktree/`*id*, `.ase/worktree/`*id*`-implementer`: The Git
-  worktree of a task with a `worktree` changeset under `--parallel`
-  greater than `1`, resp. the Git worktree of the agent for a `branch:`
-  changeset (where a `#` of the task id is replaced by `_`).
+- `.ase/worktree/`*id*, `.ase/worktree/`*branch-id*: The Git worktree
+  of a task with a `worktree` changeset under `--parallel` greater than
+  `1` (where a `#` of the task id is replaced by `_`), resp. the Git
+  worktree of the agent for a `branch:` changeset, named after the
+  branch.
 
 - *per-user state
   directory*`/agent-implementer/`*store-hash*`/`*run-id*`.lock` and
