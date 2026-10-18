@@ -59,10 +59,17 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
     const tasks = [ ...board.cards.values() ].filter((c) => !board.context.has(c.id))
     const field = (sanitize(filter) + (typing ? "▏" : "")).slice(-14).padEnd(14)
 
+    /*  the filter field is disabled (and dimmed) in the agents view, which is not filtered  */
+    const off   = view === "agents"
+
+    /*  the view value, centered within the fixed width of the longest view name  */
+    const viewW = Math.max(...[ "lanes", "graph", "stats", "agents" ].map((v) => v.length))
+    const shown = (" ".repeat(Math.floor((viewW - view.length) / 2)) + view).padEnd(viewW)
+
     /*  render the screen, with the dialog and popups on top  */
     return h(Box, { width: columns, height: rows, flexDirection: "column" },
         /*  the header, enclosed on its left and right side by the upward lines of
-            the rule below it, with the view value and the filter field (except in the
+            the rule below it, with the view value and the filter field (disabled in the
             agents view, which is not filtered) in boxes of their own, so that they
             are measurable for the mouse hit-testing; the parts
             are centered as a single box, as centering them individually places them on
@@ -82,15 +89,13 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
                         h(Text, cx("bold"), `${tasks.filter((c) => toneOf(board, c) !== "done").length}/${tasks.length}`),
                         " · view: "),
                     h(Box, { ref: headRef("view"), ...cx("fixed") },
-                        h(Text, cx("dim", "badge", dim && "dimmed"), ` ${view} `)),
-                    ...(view !== "agents" ? [
-                        h(Text, { key: "filter-label", ...cx("normal", "truncate", dim && "dimmed") }, " · filter: "),
-                        h(Box, { key: "filter", ref: headRef("filter"), ...cx("fixed") },
-                            h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"), field)),
-                        h(Box, { key: "clear", ref: headRef("clear"), ...cx("fixed") },
-                            h(Text, cx(typing ? "signal" : "dim", "badge", dim && "dimmed"),
-                                filter !== "" ? "✕ " : "  "))
-                    ] : []))),
+                        h(Text, cx("dim", "badge", dim && "dimmed"), ` ${shown} `)),
+                    h(Text, cx("normal", "truncate", (dim || off) && "dimmed"), " · filter: "),
+                    h(Box, { ref: headRef("filter"), ...cx("fixed") },
+                        h(Text, cx(typing ? "signal" : "dim", off ? "inverse" : "badge", dim && "dimmed"), field)),
+                    h(Box, { ref: headRef("clear"), ...cx("fixed") },
+                        h(Text, cx(typing ? "signal" : "dim", off ? "inverse" : "badge", dim && "dimmed"),
+                            filter !== "" && !off ? "✕ " : "  ")))),
             h(Box, cx("fixed"), h(Text, cx("dim", dim && "dimmed"), "│"))),
 
         /*  the horizontal rule below the header, turning upward with rounded corners at both ends  */

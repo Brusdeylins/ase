@@ -140,7 +140,8 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     if (typing && head !== "filter")
         setTyping(false)
     if (head === "clear") {
-        setFilter("")
+        if (view !== "agents")
+            setFilter("")
         return
     }
     if (head === "view") {

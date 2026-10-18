@@ -11,12 +11,12 @@
             <span class="sep">·</span>project: <span class="emph">{{ board?.project }}</span>
             <span class="sep">·</span>mode: <span class="emph">{{ board?.mode }}</span>
             <span class="sep">·</span>tasks: <span class="emph">{{ taskCount }}</span>
-            <span class="sep">·</span>view: <button class="val toggle" title="switch view (v)" @click="cycleView()">{{ view }}</button>
-            <span v-show="view !== 'agents'" class="sep">·</span><span v-show="view !== 'agents'" class="filter">filter:
+            <span class="sep">·</span>view: <button class="val toggle view" title="switch view (v)" @click="cycleView()"><span v-for="v in [ 'lanes', 'graph', 'stats', 'agents' ]" :key="v" :class="{ off: v !== view }">{{ v }}</span></button>
+            <span class="sep">·</span><span class="filter" :class="{ off: view === 'agents' }">filter:
                 <span class="field">
-                    <input ref="filterEl" v-model="filter" class="val" type="text" autocomplete="off" spellcheck="false"
+                    <input ref="filterEl" v-model="filter" class="val" type="text" autocomplete="off" spellcheck="false" :disabled="view === 'agents'"
                         placeholder="keywords…" title="space ANDs, comma ORs fuzzy matched keywords or effort:<size> (/)" @keydown.esc="clearFilter" @keydown.enter="filterEl?.blur()">
-                    <button v-show="filter !== ''" class="clear" title="clear filter (ESC)" @click="clearFilter">✕</button>
+                    <button v-show="filter !== '' && view !== 'agents'" class="clear" title="clear filter (ESC)" @click="clearFilter">✕</button>
                 </span>
             </span>
         </span>

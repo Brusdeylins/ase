@@ -150,6 +150,16 @@ header
             background: var(--c-signal-ground)
             color: var(--c-signal-strong)
 
+    /*  the view value with the fixed width of the longest view name, by stacking
+        all view names into the same grid cell, with only the current one visible  */
+    .view
+        display: inline-grid
+        justify-items: center
+        > span
+            grid-area: 1 / 1
+            &.off
+                visibility: hidden
+
     /*  the filter input field at the end of the header, with its clear
         button placed inside the field on its right side  */
     .filter
@@ -181,6 +191,16 @@ header
             cursor: pointer
             &:hover
                 color: var(--c-signal)
+
+        /*  the disabled filter field of the agents view (which is not filtered), dimmed  */
+        &.off
+            opacity: 0.4
+            input
+                cursor: default
+                &:hover
+                    border-color: var(--c-border)
+                    background: var(--c-ground-light)
+                    color: var(--c-text)
 
 /*  the lanes view  */
 #view
