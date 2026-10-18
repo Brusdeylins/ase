@@ -11,7 +11,7 @@
             <span class="sep">·</span>project: <span class="emph">{{ board?.project }}</span>
             <span class="sep">·</span>mode: <span class="emph">{{ board?.mode }}</span>
             <span class="sep">·</span>tasks: <span class="emph">{{ taskCount }}</span>
-            <span class="sep">·</span>view: <button class="val toggle view" title="switch view (v)" @click="cycleView()"><span v-for="(label, v) in viewLabels" :key="v" :class="{ off: v !== view }">{{ label }}</span></button>
+            <span class="sep">·</span>view: <button class="val toggle view" title="switch view (v, backward: V)" @click="cycleView()"><span v-for="(label, v) in viewLabels" :key="v" :class="{ off: v !== view }">{{ label }}</span></button>
             <span class="sep">·</span><span class="filter" :class="{ off: unfiltered }">filter:
                 <span class="field">
                     <input ref="filterEl" v-model="filter" class="val" type="text" autocomplete="off" spellcheck="false" :disabled="unfiltered"
@@ -68,7 +68,7 @@ import BoardPopup                               from "./ase-task-board-web-clien
 import {
     board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, agentNow, online, store, stats, statsRanges,
     surface, titles, grown, agentDuration, agentLabel, cycleView, clearFilter, scrollBy, updateScroll, updateTabScroll,
-    rowLanes, reload, startService, stopService, flowSel, flowAgents, viewLabels, type AgentFlow
+    rowLanes, reload, startService, stopService, flowSel, flowAgents, viewLabels, viewCycleHint, type AgentFlow, type View
 } from "./ase-task-board-web-client-model"
 import { stopEdit }                  from "./ase-task-board-web-client-editor"
 import { controlStart, controlStop } from "./ase-task-board-web-client-control"
@@ -122,6 +122,9 @@ const selStatus = computed(() => {
     return lane?.status ?? null
 })
 
+/*  the action of the key hint cycling the views forward and backward from a view  */
+const cycleHint = (v: View) => viewCycleHint(v, agents.value !== null)
+
 /*  the status line and the key hints of the footer  */
 const warning   = computed(() => {
     if (actionError.value !== null)
@@ -153,7 +156,7 @@ const hints     = computed(() => {
     ], [
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
-        { key: "v",             action: "view task graph" }
+        { key: "v/V",           action: cycleHint("lanes") }
     ], [
         { key: "Left-Click",    action: "select task" },
         { key: "Double-Click",  action: "view task / shrink lane" },
@@ -177,7 +180,7 @@ const hints     = computed(() => {
         { key: "C",             action: `${rowMin ? "expand" : "collapse"} lane row` },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
-        { key: "v",             action: "view task graph" }
+        { key: "v/V",           action: cycleHint("lanes") }
     ], [
         { key: "Left-Click",    action: "select task/lane/phase" },
         { key: "Double-Click",  action: "view task, collapse/expand lane/phase" },
@@ -188,7 +191,7 @@ const hints     = computed(() => {
         { key: "⇈/⇊/⇤/⇥",       action: "page/top/bottom agent log" },
         { key: "Wheel",         action: "scroll agent log" }
     ], [
-        { key: "v",             action: "view agent graph" },
+        { key: "v/V",           action: cycleHint("agents") },
         { key: "?",             action: "hide key hints" }
     ] ] : view.value === "flow" ? [ [
         { key: "↑/↓/←/→/Left-Click", action: "select agent/state" },
@@ -196,12 +199,12 @@ const hints     = computed(() => {
         { key: "+/-/0/Wheel",   action: "zoom in/out/reset" },
         { key: "Left-Drag",     action: "scroll canvas" }
     ], [
-        { key: "v",             action: "view task lanes" },
+        { key: "v/V",           action: cycleHint("flow") },
         { key: "?",             action: "hide key hints" }
     ] ] : view.value === "stats" ? [ [
         { key: "←/→",           action: "select time range" },
         { key: "/",             action: "filter tasks" },
-        { key: "v",             action: `view ${agents.value !== null ? "agent logs" : "task lanes"}` }
+        { key: "v/V",           action: cycleHint("stats") }
     ], [
         { key: "?",             action: "hide key hints" }
     ] ] : [ [
@@ -218,7 +221,7 @@ const hints     = computed(() => {
         { key: "s",             action: `${surface.value.standalone ? "hide" : "show"} standalone tasks` }
     ], [
         { key: "/",             action: "filter tasks" },
-        { key: "v",             action: "view statistics" },
+        { key: "v/V",           action: cycleHint("graph") },
         { key: "+/-/0/Wheel",   action: "zoom in/out/reset" },
         { key: "Left-Drag",     action: "scroll canvas" },
         { key: "?",             action: "hide key hints" }

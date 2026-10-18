@@ -712,6 +712,7 @@ export const controlStart = () => {
     Mousetrap.bind("t", () => { if (board.value !== null && (view.value === "lanes" || view.value === "graph")) toggle("titles", "") })
     Mousetrap.bind("s", () => { if (board.value !== null && view.value === "graph" && task.value === null) toggle("standalone", "") })
     Mousetrap.bind("v", () => { if (task.value === null) cycleView() })
+    Mousetrap.bind("V", () => { if (task.value === null) cycleView(true) })
     Mousetrap.bind("?", () => { if (board.value !== null) toggle("keys", "") })
     Mousetrap.bind("/", (ev) => {
         if (task.value !== null || view.value === "agents" || view.value === "flow")

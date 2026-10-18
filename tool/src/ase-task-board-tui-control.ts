@@ -690,9 +690,11 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
             setTyping(true)
         return
     }
-    if (input === "v") {
+    /*  cycle the views forward (resp. backward with "V", which arrives as "v"
+        with the shift modifier under the kitty keyboard protocol)  */
+    if (input === "v" || input === "V") {
         setCarry(null)
-        cycleView()
+        cycleView(input === "V" || key.shift)
         return
     }
     if (view === "agents") {

@@ -24,11 +24,21 @@ export type View    = "lanes" | "graph" | "stats" | "agents" | "flow"
 
 /*  the displayed names of the views (the persisted view ids being kept short)  */
 export const viewLabels: Record<View, string> = {
-    lanes:  "task lanes",
-    graph:  "task graph",
+    lanes:  "task-lanes",
+    graph:  "task-graph",
     stats:  "statistics",
-    agents: "agent logs",
-    flow:   "agent graph"
+    agents: "agent-logs",
+    flow:   "agent-graph"
+}
+
+/*  the cycle order of the views (with the agent views only with an agent relay), and
+    the action of the key hint cycling them forward ("v") and backward ("V")  */
+export const viewOrder = (relay: boolean): View[] =>
+    relay ? [ "lanes", "graph", "stats", "agents", "flow" ] : [ "lanes", "graph", "stats" ]
+export const viewCycleHint = (v: View, relay: boolean): string => {
+    const views = viewOrder(relay)
+    const i     = views.indexOf(v)
+    return `view ${viewLabels[views[(i + 1) % views.length]]}/${viewLabels[views[(i + views.length - 1) % views.length]]}`
 }
 
 /*  the statistics of the dependency graph: its numbers of tasks and dependencies  */
@@ -626,10 +636,10 @@ export const toggle = async (list: "minimized" | "collapsed" | "titles" | "keys"
     applySurface(s)
 }
 
-/*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents and flow  */
-export const cycleView = () => {
-    const views: View[] = agents.value !== null ? [ "lanes", "graph", "stats", "agents", "flow" ] : [ "lanes", "graph", "stats" ]
-    setView(views[(views.indexOf(view.value) + 1) % views.length])
+/*  cycle (forward or backward) through the views: lanes, graph, stats, and (with an agent relay) agents and flow  */
+export const cycleView = (back = false) => {
+    const views = viewOrder(agents.value !== null)
+    setView(views[(views.indexOf(view.value) + (back ? views.length - 1 : 1)) % views.length])
 }
 
 /*  switch between the lanes, the graph, the stats, the agents, and the flow view, persisting it for newly opened web boards  */

@@ -394,6 +394,7 @@ letter under the kitty keyboard protocol.
 
 - `v`: Cycle the view: task lanes, task graph, statistics, and (with an
   agent relay) agent logs and agent graph.
+- `V`: Cycle the view backward.
 - `/`: Focus the `filter:` field (not in the agent logs and agent graph
   views).
 - `?`: Hide or show the key hint lines (persisted).

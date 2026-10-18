@@ -17,7 +17,7 @@ import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
 import {
     buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf,
-    watchAgents, busyAgents, agentsDigest, requestNames, requestPromptless, dataLoad
+    watchAgents, busyAgents, agentsDigest, requestNames, requestPromptless, dataLoad, viewOrder
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState, AgentsState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -427,10 +427,10 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             setView("lanes")
     }, [ view, relayed ])
 
-    /*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents and flow  */
-    const cycleView = (): void => {
-        const views: SurfaceView[] = agents !== null ? [ "lanes", "graph", "stats", "agents", "flow" ] : [ "lanes", "graph", "stats" ]
-        setView(views[(views.indexOf(view) + 1) % views.length])
+    /*  cycle (forward or backward) through the views: lanes, graph, stats, and (with an agent relay) agents and flow  */
+    const cycleView = (back = false): void => {
+        const views = viewOrder(agents !== null)
+        setView(views[(views.indexOf(view) + (back ? views.length - 1 : 1)) % views.length])
     }
 
     /*  the agent graph of the agents (with the lifecycle states placed as in the lanes), laid out

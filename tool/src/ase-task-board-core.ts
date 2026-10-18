@@ -88,11 +88,21 @@ export type SurfaceView = "lanes" | "graph" | "stats" | "agents" | "flow"
 
 /*  the displayed names of the views (the persisted view ids being kept short)  */
 export const viewLabels: Record<SurfaceView, string> = {
-    lanes:  "task lanes",
-    graph:  "task graph",
+    lanes:  "task-lanes",
+    graph:  "task-graph",
     stats:  "statistics",
-    agents: "agent logs",
-    flow:   "agent graph"
+    agents: "agent-logs",
+    flow:   "agent-graph"
+}
+
+/*  the cycle order of the views (with the agent views only with an agent relay), and
+    the action of the key hint cycling them forward ("v") and backward ("V")  */
+export const viewOrder = (relay: boolean): SurfaceView[] =>
+    relay ? [ "lanes", "graph", "stats", "agents", "flow" ] : [ "lanes", "graph", "stats" ]
+export const viewCycleHint = (view: SurfaceView, relay: boolean): string => {
+    const views = viewOrder(relay)
+    const i     = views.indexOf(view)
+    return `view ${viewLabels[views[(i + 1) % views.length]]}/${viewLabels[views[(i + views.length - 1) % views.length]]}`
 }
 export type SurfaceList = "minimized" | "collapsed"
 export type SurfaceFlag = "titles" | "keys" | "standalone"

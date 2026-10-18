@@ -8,7 +8,7 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import { splitHeight, rowLanes, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf } from "./ase-task-board-core.js"
+import { splitHeight, rowLanes, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf, viewCycleHint } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
@@ -456,7 +456,7 @@ export const renderLanes = (ctx: BoardCtx) => {
                 (grown ? "" :
                     `c: ${folded ? "expand" : "collapse"} phase · C: ${rowMin ? "expand" : "collapse"} lane row · `) +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
-                "/: filter tasks · v: view task graph")),
+                `/: filter tasks · v/V: ${viewCycleHint("lanes", agents !== null)}`)),
         h(Box, { key: "keys4", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `Left-Click: select task/lane/phase · Double-Click: ${grown ? "view task / shrink lane" : "view task, collapse/expand lane/phase"} · ` +
@@ -517,7 +517,7 @@ export const renderGraph = (ctx: BoardCtx) => {
                 `s: ${surface.standalone ? "hide" : "show"} standalone tasks`)),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `/: filter tasks · v: view statistics · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+                `/: filter tasks · v/V: ${viewCycleHint("graph", agents !== null)} · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 
@@ -586,7 +586,7 @@ export const renderFlow = (ctx: BoardCtx) => {
                 "⇈/⇊/⇤/⇥/Wheel: scroll canvas")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `v: view task lanes · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+                `v/V: ${viewCycleHint("flow", agents !== null)} · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 
@@ -688,7 +688,7 @@ export const renderAgents = (ctx: BoardCtx) => {
                 "↑/↓/Left-Click: select agent · ⇈/⇊/⇤/⇥: page/top/bottom agent log · Mouse-Wheel: scroll agent log")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `v: view agent graph · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+                `v/V: ${viewCycleHint("agents", agents !== null)} · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 
@@ -1049,7 +1049,7 @@ export const renderStats = (ctx: BoardCtx) => {
             h(Text, cx("hint", dim && "dimmed"), [ "statistics of ", h(Text, { key: "n", ...cx("bold") }, String(shown)),
                 ` ${filter !== "" ? "filtered " : ""}tasks`, ...(range !== "total" ? [ " ", h(Text, { key: "r", ...cx("bold") }, statsRangeLabels[range]) ] : []) ])),
         h(Box, { key: "keys1", ...cx("bar") },
-            h(Text, cx("hint", dim && "dimmed"), `←/→: select time range · /: filter tasks · v: view ${agents !== null ? "agent logs" : "task lanes"}`)),
+            h(Text, cx("hint", dim && "dimmed"), `←/→: select time range · /: filter tasks · v/V: ${viewCycleHint("stats", agents !== null)}`)),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
