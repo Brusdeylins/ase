@@ -131,7 +131,7 @@ const hints     = computed(() => {
         { key: "E",             action: "edit by prompt" },
         { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
-        { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
+        { key: "m",             action: `${minned ? "maximize/expand" : "minimize/collapse"} lane` },
         { key: "g",             action: "grow lane" }
     ], [
         { key: "c",             action: `${folded ? "expand" : "collapse"} phase` },
@@ -141,13 +141,13 @@ const hints     = computed(() => {
         { key: "v",             action: "view graph" }
     ], [
         { key: "Left-Click",    action: "select task/lane/phase" },
-        { key: "Double-Click",  action: "view task / minimize/maximize lane / collapse/expand phase" },
+        { key: "Double-Click",  action: "view task, collapse/expand lane/phase" },
         { key: "Drag & Drop",   action: "directly transition task" },
         { key: "?",             action: "hide key hints" }
     ] ] : view.value === "agents" ? [ [
         { key: "↑/↓/Left-Click", action: "select agent" },
         { key: "⇈/⇊/⇤/⇥",       action: "page/top/bottom agent log" },
-        { key: "Mouse-Wheel",   action: "scroll agent log" }
+        { key: "Wheel",         action: "scroll agent log" }
     ], [
         { key: "v",             action: "view lanes" },
         { key: "?",             action: "hide key hints" }
@@ -168,11 +168,12 @@ const hints     = computed(() => {
         { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
-        { key: "s",             action: `${surface.value.standalone ? "hide" : "show"} standalone tasks` },
+        { key: "s",             action: `${surface.value.standalone ? "hide" : "show"} standalone tasks` }
+    ], [
         { key: "/",             action: "filter tasks" },
         { key: "v",             action: "view stats" },
-        { key: "+/-/0",         action: "zoom in/out/reset" }
-    ], [
+        { key: "+/-/0/Wheel",   action: "zoom in/out/reset" },
+        { key: "Left-Drag",     action: "scroll canvas" },
         { key: "?",             action: "hide key hints" }
     ] ]
 })

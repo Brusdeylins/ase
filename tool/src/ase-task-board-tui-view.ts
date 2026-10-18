@@ -448,7 +448,7 @@ export const renderLanes = (ctx: BoardCtx) => {
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 "D: delete task · E: edit by prompt · R: request by prompt · N: new task · " +
-                (grown ? "g/ESC: shrink lane" : `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane`))),
+                (grown ? "g/ESC: shrink lane" : `m: ${minned ? "maximize/expand" : "minimize/collapse"} lane · g: grow lane`))),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 (grown ? "" :
@@ -457,7 +457,7 @@ export const renderLanes = (ctx: BoardCtx) => {
                 "/: filter tasks · v: view graph")),
         h(Box, { key: "keys4", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `Left-Click: select task/lane/phase · Double-Click: view task / ${grown ? "shrink lane" : "minimize/maximize lane / collapse/expand phase"} · ` +
+                `Left-Click: select task/lane/phase · Double-Click: ${grown ? "view task / shrink lane" : "view task, collapse/expand lane/phase"} · ` +
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
@@ -512,11 +512,10 @@ export const renderGraph = (ctx: BoardCtx) => {
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `D: delete task · E: edit by prompt · R: request by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
-                `s: ${surface.standalone ? "hide" : "show"} standalone tasks · ` +
-                "/: filter tasks · v: view stats")),
+                `s: ${surface.standalone ? "hide" : "show"} standalone tasks`)),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+                `/: filter tasks · v: view stats · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 
