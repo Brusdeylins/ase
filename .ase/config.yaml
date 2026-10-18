@@ -17,6 +17,8 @@ project:
             basedir: "."
             files: "bin/** **/{.github,.claude*,etc}/**
                 **/{AGENTS.md,{package,tsconfig*}.json,.{git,npm}ignore}"
+    task:
+        lifecycle: enterprise
 agent:
     persona: engineer
     guidance: minimal
