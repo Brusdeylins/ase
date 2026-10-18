@@ -23,7 +23,7 @@
                     <div class="afields">
                         <span>kind:</span><b class="aval">{{ a.kind }}</b>
                         <span>mode:</span><b class="aval">{{ typeof a.mode === "string" && a.mode !== "" ? a.mode : "none" }}</b>
-                        <span>task:</span><span class="aval atasks"><b v-if="a.tasks.length === 0">none (waiting)</b><span v-for="id in a.tasks" :key="id" class="atask">{{ id }}</span></span>
+                        <span>task:</span><span class="aval atasks"><b v-if="a.tasks.length === 0">none (waiting)</b><span v-for="id in a.tasks" :key="id" class="atask">≡ {{ id }}</span></span>
                     </div>
                 </div>
             </div>

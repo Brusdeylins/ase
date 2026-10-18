@@ -21,7 +21,7 @@ const CARD  = "agent:"
 const CARD_W    = 32
 const CARD_H    = 6
 const CARD_PX_W = 238
-const CARD_PX_H = 81
+const CARD_PX_H = 84
 
 /*  an agent card of the agent graph: the running agents of the same kind and mode, merged
     into one card (ordered by their start time), with their name, kind, and mode (of the
@@ -245,7 +245,7 @@ export const drawFlowText = (flow: Flow, layout: GraphLayout, selected: string, 
                 for (const id of card.tasks) {
                     if (x >= end)
                         break
-                    x = put(x, y, end - x, ` ${clean(id)} `, `${tone}-id`) + 1
+                    x = put(x, y, end - x, ` ≡ ${clean(id)} `, `${tone}-id`) + 1
                 }
         })
     }
@@ -271,7 +271,7 @@ export const drawFlowSVG = (flow: Flow, layout: GraphLayout): string => {
         const field = (label: string, value: string) =>
             `<span>${label}</span><b class="aval">${escapeXML(clean(value))}</b>`
         const tasks = card.tasks.length === 0 ? `<b>none (${escapeXML(card.agents[0].state)})</b>` :
-            card.tasks.map((id) => `<span class="atask">${escapeXML(clean(id))}</span>`).join("")
+            card.tasks.map((id) => `<span class="atask">≡ ${escapeXML(clean(id))}</span>`).join("")
         out.push(`<g class="node" data-id="${escapeXML(card.id)}">` +
             `<foreignObject x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}">` +
             `<div xmlns="http://www.w3.org/1999/xhtml" class="acard${card.busy ? " busy" : ""}">` +

@@ -741,12 +741,16 @@ header
         overflow: hidden
         text-overflow: ellipsis
 
-    /*  the task ids (on the agent cards and in the agent log): inverse in the
-        color of their card (resp. their log line), like the ids on the task cards  */
+    /*  the task ids with the task icon (on the agent cards and in the agent log): inverse in
+        the color of their card (resp. their log line), like the ids on the task cards, and on
+        the agent cards with a line height of their own, as the tight one of the fields
+        would let the glyphs exceed their box  */
     .atasks
         display: flex
         flex-wrap: wrap
         gap: 4px
+        .atask
+            line-height: 1.25
     .atask
         display: inline-block
         padding: 0 4px

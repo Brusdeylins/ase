@@ -604,7 +604,7 @@ export const agentLogWidth = (columns: number): number =>
 
 /*  render the agents view: on the left the framed master list "agents" of the agents as vertically
     aligned cards (name and state, kind and mode of operation, and the ids of the tasks it is
-    busy with, inversely, else "none (waiting)"), scrolled to keep the selected agent visible, and on
+    busy with, inversely with the task icon, else "none (waiting)"), scrolled to keep the selected agent visible, and on
     the right (taking the remaining width) three equally wide framed panes of the selected agent: its
     location (host and process id), its runtime (uptime and age of its heartbeat), and its usage
     (total and last usage of the agent tool), and below them the framed detail view "agent log" with the recent processing log of
@@ -650,7 +650,7 @@ export const renderAgents = (ctx: BoardCtx) => {
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("kind:"), val(clean(a.kind))),
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("mode:"), val(mode)),
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("task:"), ...(a.tasks.length === 0 ? [ val("none (waiting)") ] :
-                a.tasks.flatMap((id, k) => [ k > 0 ? " " : "", h(Text, { key: id, ...cx("badge"), color: tint, dimColor: dim }, ` ${clean(id)} `) ])))))
+                a.tasks.flatMap((id, k) => [ k > 0 ? " " : "", h(Text, { key: id, ...cx("badge"), color: tint, dimColor: dim }, ` ≡ ${clean(id)} `) ])))))
     }
 
     /*  the space left besides the fully visible cards is filled by a partially visible
