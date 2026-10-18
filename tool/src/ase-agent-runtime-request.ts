@@ -280,7 +280,7 @@ export abstract class RequestAgent extends Agent {
                 result = `${this.requests.name} request released (requested again)`
             }
             else {
-                this.requests.finalize(plan, i, "failed", `failed (${reason}, see attachment "agent:${this.logName}")`,
+                this.requests.finalize(plan, i, "failed", `failed (${reason}, see attachment "agent")`,
                     this.handover(false, claim.assignee, task))
                 result = `task not ${this.requests.done} (${reason}, request marked as failed)`
             }

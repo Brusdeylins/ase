@@ -45,7 +45,7 @@ export default {
         "\"estimate\" requests of tasks in any unfinished status (e.g. \"DRAFTED\"), as requested with " +
         "key \"R\" on the task board, by claiming the task like the editor agent and re-estimating " +
         "its effort even if it carries a valid one (\"--mode request\"), logging to stdout and to the " +
-        "\"agent:estimator\" attachment of the task",
+        "\"agent\" attachment of the task",
     modeDesc:
         "\"phase\" to estimate the unestimated tasks in \"PLANNED\" automatically, or \"request\" " +
         "to (re-)estimate the tasks in any unfinished status on request",

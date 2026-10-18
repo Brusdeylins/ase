@@ -96,7 +96,6 @@ export interface AgentDefinition {
         allow?:    Many<string>
     }
     attach?: {
-        log?:      string
         output?:   string
         expect?:   string
         skip?:     string
@@ -167,7 +166,7 @@ export interface AgentHookAttach {
     to remove ("<tag>" with any value, or exactly "<tag>:<value>"), except the tag of the agent
     itself, and attachments to add (of the kind <kind>, with the MIME type <mime> (default:
     "text/plain"), the description <desc>, and the data <data>, replacing all attachments of
-    the same kind, unless <replace> is false), except processing logs ("agent:<name>")  */
+    the same kind, unless <replace> is false), except the processing log ("agent")  */
 export interface AgentHookUpdate {
     keys?:   Readonly<Record<string, string | null>>
     tags?:   { readonly add?: readonly string[], readonly remove?: readonly string[] }

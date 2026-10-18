@@ -48,7 +48,7 @@ export default {
         "\"DEFERRED\" otherwise (or \"APPROVED\" untagged on interrupt, or left \"INTEGRATED\" " +
         "with tag \"ase-agent-integrator:failed\" if its integrated target branch could not be " +
         "published), processing the tasks serially (ignoring \"--parallel\") and logging to " +
-        "stdout and to the \"agent:integrator\" attachment of the task",
+        "stdout and to the \"agent\" attachment of the task",
     modeDesc:
         "\"merge\", \"rebase\", or \"squash\" to integrate the changeset " +
         "into the target by a merge commit, a rebase with fast-forward, or a squash commit",

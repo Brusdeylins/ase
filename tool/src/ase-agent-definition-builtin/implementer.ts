@@ -66,7 +66,7 @@ export default {
         "\"STALLED\" unless it became \"IMPLEMENTED\" (tagged \"ase-agent-implementer:failed\" " +
         "if its branch could not be published), or, with \"--mode draft\", only draft the " +
         "implementation of tasks without a draft yet into their \"draft\" attachment and put " +
-        "them back into \"PLANNED\", logging to stdout and to the \"agent:implementer\" " +
+        "them back into \"PLANNED\", logging to stdout and to the \"agent\" " +
         "attachment of the task",
     modeDesc:
         "\"implement\" to implement the task into its changeset, or \"draft\" " +

@@ -20,7 +20,7 @@ export default {
         "untagged on interrupt), or, with \"--mode condense\", claim only those tasks without " +
         "tag \"ase-agent-planner-condense\", condense their plan via the \"ase-task-condense\" " +
         "skill, tag them with \"ase-agent-planner-condense\", and put them back into \"DRAFTED\" " +
-        "(or into \"SHELVED\" if not condensed), logging to stdout and to the \"agent:planner\" " +
+        "(or into \"SHELVED\" if not condensed), logging to stdout and to the \"agent\" " +
         "attachment of the task",
     modeDesc:
         "\"reboot\" to re-create the plan of the task from scratch, or \"condense\" " +

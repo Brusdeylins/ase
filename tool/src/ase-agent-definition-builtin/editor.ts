@@ -19,7 +19,7 @@ export default {
         "\"branch:\" one checked out in a temporary Git worktree, and saved only if not " +
         "changed meanwhile), restore its previous assignee, and remove the request if the plan " +
         "was changed (else turn it into \"edit-failed\", or back into \"edit\" on interrupt), " +
-        "logging to stdout and to the \"agent:editor\" attachment of the task",
+        "logging to stdout and to the \"agent\" attachment of the task",
     modeDesc: "",
     mode: "edit",
     modes: {

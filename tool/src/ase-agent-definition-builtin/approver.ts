@@ -40,7 +40,7 @@ export default {
         "into \"IMPLEMENTED\" for a human decision (\"--mode judge\"), or into \"APPROVED\" resp. \"DECLINED\" by " +
         "its verdict (\"--mode approve\", and back into \"IMPLEMENTED\" without a verdict), " +
         "untagged into \"IMPLEMENTED\" on interrupt, " +
-        "logging to stdout and to the \"agent:approver\" attachment of the task",
+        "logging to stdout and to the \"agent\" attachment of the task",
     modeDesc:
         "\"judge\" to just add the verdict tag, or \"approve\" to additionally " +
         "approve resp. decline the task by its verdict",

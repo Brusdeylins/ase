@@ -205,7 +205,7 @@ class DefinedCore {
             [ this.def.request.name, `${this.def.request.name}-running`, `${this.def.request.name}-failed` ] : []
         const time     = attachmentTime()
         const attach   = (change.attach ?? []).map((att) => {
-            if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/.test(att.kind) || att.kind.startsWith("agent:") || requests.includes(att.kind))
+            if (!/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/.test(att.kind) || att.kind === "agent" || requests.includes(att.kind))
                 throw new Error(`update: invalid attachment kind "${att.kind}" ` +
                     "(processing logs and the processed requests are kept by the agent itself)")
             const mime = (att.mime ?? "text/plain").trim().toLowerCase()
@@ -831,9 +831,6 @@ class DefinedPhaseAgent extends PhaseAgent {
     protected get assignee (): string {
         return this.def.assign.name
     }
-    protected get logName (): string {
-        return this.def.attach.log
-    }
     protected get role (): string {
         return this.identity.role
     }
@@ -983,9 +980,6 @@ class DefinedRequestAgent extends RequestAgent {
     /*  the identity of the agent  */
     protected get assignee (): string {
         return this.def.assign.name
-    }
-    protected get logName (): string {
-        return this.def.attach.log
     }
     protected get role (): string {
         return this.identity.role
@@ -1235,7 +1229,7 @@ export default class AgentAdhoc extends DefinedAgent {
         "into the state of its success or failure (or, with \"--unclaimed\", process it without " +
         "claiming it and just tag it), or, with \"--type request\", process the prompt " +
         "requests of \"--request-name\" attached to tasks in any status (see \"ase task request\"), " +
-        "logging to stdout and to the \"agent:<name>\" attachment of the task"
+        "logging to stdout and to the \"agent\" attachment of the task"
 
     /*  the "--repo" and "--tempdir" options are registered (but ignored with "--workdir project")  */
     protected readonly worktree = true

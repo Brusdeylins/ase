@@ -104,7 +104,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
       `integrator`): up to 64 letters, digits, underscores, and dashes,
       starting with a letter or digit, other than the name of another
       agent kind, `relay`, or `fleet`. It names the agent in its log
-      lines, its processing log attachment `agent:`*name*, the
+      lines (also in the shared processing log attachment `agent`), the
       `Assignee:` of the tasks it processes, its temporary directory,
       and its process files `.ase/agent/`*name*`.yaml` and
       `.ase/agent/`*name*`.log`.
@@ -319,10 +319,6 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--verdict-allow` *VERDICT*\]: An accepted verdict (repeatable).
       Generic default: the verdicts of `--state-verdict`, else any.
-      Built-in: not set.
-
-    - \[`--attach-log` *name*\]: The name of the processing log
-      attachment `agent:`*name*. Generic default: the agent name.
       Built-in: not set.
 
     - \[`--attach-output` *kind*\]: The kind of the attachment storing

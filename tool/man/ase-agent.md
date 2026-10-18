@@ -88,8 +88,8 @@ Every agent has a *name* (option `--name`, default: its kind, e.g.,
 underscores, and dashes, starting with a letter or digit, and which
 must not be the name of another agent kind, `relay`, or `fleet`.
 
-The name is used in the log lines of the agent, in its processing log
-attachment `agent:`*name*, as the `Assignee:` of the tasks it
+The name is used in the log lines of the agent (also in the shared
+processing log attachment `agent`), as the `Assignee:` of the tasks it
 processes, for its temporary directory, and for its process files
 `.ase/agent/`*name*`.yaml` and `.ase/agent/`*name*`.log`. Hence,
 multiple agents of the same kind are started under different names,
@@ -236,8 +236,9 @@ locally), output tokens (of `claude` and `codex`), and costs in USD
 
 At the end of each processing, the log lines of the processing (with at
 most 20 lines of each agent message) are appended to the attachment of
-the task with the type `text/plain; charset=utf-8; kind="agent:`*name*`"`
-(created if not existing yet). If the AI usage accounting is enabled
+the task with the type `text/plain; charset=utf-8; kind="agent"`
+(created if not existing yet), which is shared by all agents, whose log
+lines carry their name. If the AI usage accounting is enabled
 (`telemetry.enabled`), the usage is additionally booked onto the usage
 attachment of the task (without any human time and costs, as the agent
 runs unattended).

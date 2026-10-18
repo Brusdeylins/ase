@@ -21,7 +21,7 @@ export default {
         "the \"research\" attachment of the task and refine its plan by the recommendations " +
         "(saved only if not changed meanwhile), restore its previous assignee, and remove the " +
         "request if the research was attached (else turn it into \"research-failed\", or back into " +
-        "\"research\" on interrupt), logging to stdout and to the \"agent:researcher\" attachment of the task",
+        "\"research\" on interrupt), logging to stdout and to the \"agent\" attachment of the task",
     modeDesc: "",
     mode: "research",
     modes: {

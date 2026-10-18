@@ -166,8 +166,6 @@ export const definitionOptions: DefinitionOption[] = [
     opt("verdict-label",     "value", "label",         "label after which the verdict is given in the output"),
     opt("verdict-allow",     "list",  "verdict",       "accepted verdict (repeatable) " +
         "(default: the verdicts of \"--state-verdict\", else any)"),
-    opt("attach-log",        "value", "name",          "name of the processing log attachment \"agent:<name>\" " +
-        "(default: the agent name)"),
     opt("attach-output",     "value", "kind",          "kind of the attachment storing the output lines of the prompt"),
     opt("attach-expect",     "value", "spec",          "attachment \"[<mime-type>;]<kind>\" to be created or changed " +
         "by the processing for the \"attachment\" success criterion"),
@@ -327,7 +325,7 @@ export type ResolvedDefinition = {
     prepare: string[]
     success: { criteria: DefinitionCriterion[], match: RegExp[] }
     verdict: { label: string, allow: string[] }
-    attach:  { log: string, output: string, expect: AttachSpec | null, skip: AttachSpec | null, changeset: string }
+    attach:  { output: string, expect: AttachSpec | null, skip: AttachSpec | null, changeset: string }
     finish:  { commit: boolean, success: string, failure: string }
     params:  Record<string, string>
     hooks:   AgentHooks
@@ -894,11 +892,10 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
             fail(key, `invalid attachment "${spec}" (expected "[<mime-type>;]<kind>")`)
         return { mime, kind }
     }
-    const attachLog = str("attach-log", name)
-    if (!/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(attachLog))
-        fail("attach-log", `invalid name "${attachLog}"`)
     if (has("attach-output") && !kindRe.test(str("attach-output")))
         fail("attach-output", `invalid kind "${str("attach-output")}"`)
+    else if (str("attach-output") === "agent")
+        fail("attach-output", "kind \"agent\" is reserved for the processing log")
     if (has("attach-changeset") && !kindRe.test(str("attach-changeset")))
         fail("attach-changeset", `invalid kind "${str("attach-changeset")}"`)
     const attachExpect = attachSpec("attach-expect")
@@ -935,7 +932,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         success: { criteria: criteria as DefinitionCriterion[], match },
         verdict: { label: str("verdict-label"), allow },
         attach:  {
-            log: attachLog, output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip"),
+            output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip"),
             changeset: str("attach-changeset")
         },
         finish:  { commit: flag("finish-commit"), success: str("finish-success"), failure: str("finish-failure") },

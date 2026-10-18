@@ -237,19 +237,15 @@ export abstract class Agent {
     protected abstract readonly description: string
 
     /*  the name of the agent ("--name", default: its kind), distinguishing
-        multiple agents of the same kind in the log lines, the processing log
-        attachments, and the temporary directories  */
+        multiple agents of the same kind in the log lines (also of the shared
+        processing log attachment "agent"), and the temporary directories  */
     private _name = ""
     get name (): string {
         return this._name !== "" ? this._name : this.kind
     }
 
-    /*  the name of the processing log attachment "agent:<name>" of the tasks (default: its name),
-        the role of the agent in the recovery descriptions (default: its kind), and the namespace
+    /*  the role of the agent in the recovery descriptions (default: its kind), and the namespace
         of its runs (default: its kind, see "AgentRun"), which a configured agent can override  */
-    protected get logName (): string {
-        return this.name
-    }
     protected get role (): string {
         return this.kind
     }
@@ -1205,7 +1201,7 @@ export abstract class Agent {
         const now = DateTime.now().toFormat("yyyy-LL-dd HH:mm")
         try {
             const attached = await Task.attach(this.log, task.id, {
-                Type: `text/plain; charset=utf-8; kind="agent:${this.logName}"`,
+                Type: "text/plain; charset=utf-8; kind=\"agent\"",
                 Created: now, Modified: now, Data: `${lines.join("\n")}\n`
             }, true)
             if (attached)
@@ -1226,8 +1222,8 @@ export abstract class Agent {
             this.cmd = new Command("start")
                 .description(this.description)
                 .exitOverride()
-                .option("-n, --name <name>",        "name of the agent in its log lines, its processing log " +
-                    `attachment "agent:<name>", the "Assignee:" of its tasks, and its process files (default: "${this.kind}")`)
+                .option("-n, --name <name>",        "name of the agent in its log lines, " +
+                    `the "Assignee:" of its tasks, and its process files (default: "${this.kind}")`)
                 .option("-t, --tool <tool>",        "agent tool (\"claude\", \"copilot\", or \"codex\"; " +
                     "default: $ASE_TOOL, else \"claude\")")
                 .option("-p, --parallel <num>",     "maximum number of tasks processed in parallel (default: 1)")

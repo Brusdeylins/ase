@@ -235,8 +235,8 @@ The following options are shared by all agents (see also
   dashes, starting with a letter or digit, and neither the name of
   another agent kind, nor `relay` or `fleet`.
 
-  It names the agent in its log lines, its processing log attachment
-  `agent:`*name* (see `--attach-log`), the `Assignee:` of the tasks it
+  It names the agent in its log lines (also in the shared processing
+  log attachment `agent`), the `Assignee:` of the tasks it
   processes (see `--assign-name`), its default tag `ase-agent-`*name*
   (lower-cased, see `--tag-name`), its default request name (see
   `--request-name`), its temporary directory, and its process files
@@ -663,11 +663,6 @@ changed`, `no verdict`, `no new or changed attachment "<spec>"`, or
 An attachment *spec* is *kind* or *mime-type*`;`*kind* (e.g.,
 `text/x-diff;draft`), matching the `kind` parameter of the attachment
 type exactly and, if given, its MIME type.
-
-- \[`--attach-log` *name*\]:
-  The name of the processing log attachment `agent:`*name* of the
-  processed tasks, also wherever it is referenced, e.g., in the failure
-  description of a request (default: the agent name).
 
 - \[`--attach-output` *kind*\]:
   Store the output lines of the prompt as the task attachment of type
