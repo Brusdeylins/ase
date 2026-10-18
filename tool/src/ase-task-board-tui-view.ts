@@ -612,8 +612,13 @@ export const agentLogWidth = (columns: number): number =>
     overlaid onto its frame  */
 export const renderAgents = (ctx: BoardCtx) => {
     const { agents, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, boardH, dim, mouse, pulse, now, beatOf, agentRef } = ctx
-    const fit   = Math.max(1, Math.floor((boardH - 2) / AGENT_H))
+    /*  the visible agent cards, where a line is reserved for the indicator of the hidden ones (like in the lanes)  */
+    const room  = boardH - 2
+    const all   = Math.max(1, Math.floor(room / AGENT_H))
+    const fit   = agentList.length > all ? Math.max(1, Math.floor((room - 1) / AGENT_H)) : all
     const first = Math.max(0, Math.min(agentIdx - fit + 1, agentList.length - fit))
+    const above = first
+    const below = Math.max(0, agentList.length - first - fit)
     const empty = agents === null || !agents.connected ? "agent relay unreachable — reconnecting …" : "no agents running"
     const title = (text: string) => h(Box, { key: "title", position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
         h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), text), " ]"))
@@ -623,8 +628,8 @@ export const renderAgents = (ctx: BoardCtx) => {
         and the top right corner inside the card carries the heart of the agent (filled for a
         second after each received heartbeat, else empty)  */
     const cardW = AGENT_W - 4
-    const cards = agentList.slice(first, first + fit).map((a, i) => {
-        const on    = first + i === agentIdx && !dim
+    const card  = (a: AgentPresence, n: number) => {
+        const on    = n === agentIdx && !dim
         const tint  = on ? palette.signal : a.state === "busy" ? palette.accent : palette.normal
         const label = (text: string) => text.padEnd(9)
         const val   = (text: string) => h(Text, { bold: true }, text)
@@ -646,13 +651,30 @@ export const renderAgents = (ctx: BoardCtx) => {
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("mode:"), val(mode)),
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("task:"), ...(a.tasks.length === 0 ? [ val("none (waiting)") ] :
                 a.tasks.flatMap((id, k) => [ k > 0 ? " " : "", h(Text, { key: id, ...cx("badge"), color: tint, dimColor: dim }, ` ${clean(id)} `) ])))))
-    })
+    }
+
+    /*  the space left besides the fully visible cards is filled by a partially visible
+        card (like in the lanes), cut at its top above them if scrolled, else cut at its bottom below them  */
+    const part  = above > 0 || below > 0 ? room - 1 - fit * AGENT_H : 0
+    const clip  = (n: number, cut: "top" | "bottom") => h(Box, {
+        key: `part-${cut}`, height: part, flexShrink: 0, overflow: "hidden", flexDirection: "column",
+        justifyContent: cut === "top" ? "flex-end" : "flex-start"
+    }, card(agentList[n], n))
+    const cards = [
+        ...(part > 0 && above > 0 ? [ clip(first - 1, "top") ] : []),
+        ...agentList.slice(first, first + fit).map((a, i) => card(a, first + i)),
+        ...(part > 0 && above === 0 && below > 0 ? [ clip(first + fit, "bottom") ] : [])
+    ]
     const master = h(Box, { key: "master", width: AGENT_W, height: boardH, flexShrink: 0 },
         h(Box, { paddingX: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
-            ...(cards.length > 0 ? cards : [ h(Text, { key: "empty", ...cx("dim", dim && "dimmed") }, empty) ])),
-        title("Agents"),
-        ...(agentList.length > fit ? [ h(Box, { key: "pos", position: "absolute", bottom: 0, right: 2 },
-            h(Text, cx("dim", dim && "dimmed"), `[ ${first + 1}–${Math.min(first + fit, agentList.length)} of ${agentList.length} ]`)) ] : []))
+            ...(cards.length > 0 ? cards : [ h(Text, { key: "empty", ...cx("dim", dim && "dimmed") }, empty) ]),
+
+            /*  the centered indicator of the hidden agent cards, pushed to the bottom by a growing spacer  */
+            ...(above > 0 || below > 0 ? [ h(Box, { key: "spacer", flexGrow: 1 }),
+                h(Box, { key: "more", justifyContent: "center" },
+                    h(Text, cx("dim", dim && "dimmed"),
+                        [ ...(above > 0 ? [ `△ ${above}` ] : []), ...(below > 0 ? [ `▽ ${below}` ] : []) ].join(" "))) ] : [])),
+        title("Agents"))
 
     /*  the detail view, with a vertical scroll bar directly at its right border (like the read dialog)  */
     const lines  = logLines.slice(logFirst, logFirst + logH)
