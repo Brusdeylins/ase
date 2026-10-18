@@ -1024,7 +1024,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         return next
     }, [ agents ])
     React.useEffect(() => {
-        if (view !== "agents")
+        if (view !== "agents" && view !== "flow")
             return
         const latest = Math.max(0, ...[ ...beatsSeen.values() ].map((b) => b.seen))
         const due    = latest + BEAT_SHOWN_MS - Date.now()

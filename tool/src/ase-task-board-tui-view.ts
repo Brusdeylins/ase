@@ -526,7 +526,7 @@ export const renderGraph = (ctx: BoardCtx) => {
     the selected state (with the agent cards observing, writing, and gating on it), in the
     information line  */
 export const renderFlow = (ctx: BoardCtx) => {
-    const { agents, flow, flowLayout, flowSel, dim, boardH, x, y, viewH, viewW, graphView, mouse, pulse } = ctx
+    const { agents, flow, flowLayout, flowSel, dim, boardH, x, y, viewH, viewW, graphView, mouse, pulse, beatOf } = ctx
     const card  = flow.cards.get(flowSel)
     const rel   = card === undefined && flowSel !== "" && !isFlowCard(flowSel) ? flowRelations(flow, flowSel) : null
     const names = (cards: FlowCard[]) => cards.map((c) =>
@@ -538,7 +538,7 @@ export const renderFlow = (ctx: BoardCtx) => {
         h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " ") ]
 
     /*  draw the ELK layout, with the busy agent cards pulsing  */
-    const { lines, tones } = drawFlowText(flow, flowLayout.graph, flowSel, pulse >= 0 ? pulseFrames[pulse] : "")
+    const { lines, tones } = drawFlowText(flow, flowLayout.graph, flowSel, pulse >= 0 ? pulseFrames[pulse] : "", beatOf)
     const visible = lines.slice(y, y + viewH).map((l, i) => {
         const segs = [] as { text: string, tone: string }[]
         for (let k = x; k < Math.min(l.length, x + viewW); k++) {
@@ -631,7 +631,7 @@ export const renderAgents = (ctx: BoardCtx) => {
     const card  = (a: AgentPresence, n: number) => {
         const on    = n === agentIdx && !dim
         const tint  = on ? palette.signal : a.state === "busy" ? palette.accent : palette.normal
-        const label = (text: string) => text.padEnd(9)
+        const label = (text: string) => text.padEnd(6)
         const val   = (text: string) => h(Text, { bold: true }, text)
         const mode  = typeof a.mode === "string" && a.mode !== "" ? clean(a.mode) : "none"
         const [ cl, cm, cr ] = on ? [ "┏", "━", "┓" ] : [ "┌", "─", "┐" ]

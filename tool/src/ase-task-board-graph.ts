@@ -21,6 +21,9 @@ export type GraphLayout = { width: number, height: number, nodes: Map<string, Gr
 export type LayoutNode  = { id: string, w: number, h: number, group?: string }
 export type LayoutEdge  = { from: string, to: string, dashed?: boolean }
 
+/*  the spacing between the ports of a node with a port per edge (see "layoutBoxes" with rows)  */
+export const portSpacing = { cell: 2, px: 14 }
+
 /*  the unit systems a layout is computed in: terminal character cells
     (width in columns, height in rows) or browser pixels, with the height of
     a single-line node, the height of each additional label line, (in
@@ -71,8 +74,9 @@ export const layoutBoxes = async (unit: "cell" | "px", list: LayoutNode[], label
         "elk.spacing.edgeEdge":                             String(u.edgeEdge),
         "elk.spacing.edgeNode":                             String(u.edgeNode),
         "elk.spacing.componentComponent":                   String(u.nodeNode),
-        "elk.layered.spacing.nodeNodeBetweenLayers":        String(u.layers),
-        "elk.layered.spacing.edgeNodeBetweenLayers":        String(u.edgeNode),
+        "elk.spacing.portPort":                             String(portSpacing[unit]),
+        "elk.layered.spacing.nodeNodeBetweenLayers":       String(rows !== undefined && unit === "cell" ? u.layers / 4 : u.layers),
+        "elk.layered.spacing.edgeNodeBetweenLayers":        String(rows !== undefined && unit === "cell" ? 3 : u.edgeNode),
         "elk.layered.spacing.edgeEdgeBetweenLayers":        String(u.edgeEdge),
         "elk.layered.mergeEdges":                           "false",
         "elk.layered.considerModelOrder.components":        "MODEL_ORDER",
@@ -97,7 +101,6 @@ export const layoutBoxes = async (unit: "cell" | "px", list: LayoutNode[], label
                 id: n.id, width: n.w, height: n.h,
                 layoutOptions: {
                     "elk.portConstraints":      "FIXED_SIDE",
-                    "elk.spacing.portPort":     String(unit === "cell" ? 2 : 14),
                     "elk.nodeSize.constraints": "PORTS MINIMUM_SIZE",
                     "elk.nodeSize.minimum":     `(${n.w}, ${n.h})`,
                     ...row(n.id)

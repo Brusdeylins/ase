@@ -347,8 +347,7 @@ task lanes view, i.e., per phase as a column, the entry states, then
 the active states (the containers, plus the unclaimed phase agents),
 and then the parking states. Several running agents of the same kind
 and mode are merged into one card, with their number behind a `×` in
-its name, the union of the tasks they are busy with, their summed
-usages, and the uptime of the oldest of them.
+its name and the union of the tasks they are busy with.
 
 The information line shows the selected agent card with its incoming,
 activity, written, and gate states (resp. the name of its requests),

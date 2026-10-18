@@ -5,10 +5,8 @@
 */
 
 import * as TaskFormat             from "./ase-task-format.js"
-import { addUsage }                from "./ase-agent-relay-core.js"
-import type { AgentPresence, AgentFlow, AgentUsages } from "./ase-agent-relay-core.js"
-import { agentDuration, agentUsage } from "./ase-task-board-core.js"
-import { units, layoutBoxes, textGrid, drawContainers, drawContainerLabels, drawEdges, drawBox, drawSVGFrame, escapeXML } from "./ase-task-board-graph.js"
+import type { AgentPresence, AgentFlow } from "./ase-agent-relay-core.js"
+import { units, portSpacing, layoutBoxes, textGrid, drawContainers, drawContainerLabels, drawEdges, drawBox, drawSVGFrame, escapeXML } from "./ase-task-board-graph.js"
 import type { GraphLayout, LayoutNode, LayoutEdge } from "./ase-task-board-graph.js"
 
 /*  the id prefixes of the state nodes and of the agent cards of the agent graph
@@ -17,20 +15,21 @@ const STATE = "state:"
 const CARD  = "agent:"
 
 /*  the sizes of an agent card: in cell units (two border lines around the name line
-    and six field lines, like the agent cards of the agents view), and in pixel units  */
-const CARD_W    = 36
-const CARD_H    = 9
-const CARD_PX_W = 260
-const CARD_PX_H = 136
+    and three field lines, like the agent cards of the agents view), and in pixel units
+    (the size of the agent cards of the agents view: their 260px column without its
+    paddings and borders, and their name line and three field lines with their paddings and borders)  */
+const CARD_W    = 32
+const CARD_H    = 6
+const CARD_PX_W = 238
+const CARD_PX_H = 81
 
 /*  an agent card of the agent graph: the running agents of the same kind and mode, merged
     into one card (ordered by their start time), with their name, kind, and mode (of the
     oldest of them), whether any of them is busy, the union of the tasks they are busy with,
-    the uptime of the oldest of them, their summed usages, and the lifecycle states they
-    operate on (of a phase agent only)  */
+    and the lifecycle states they operate on (of a phase agent only)  */
 export type FlowCard = {
     id: string, agents: AgentPresence[], name: string, kind: string, mode: string,
-    busy: boolean, tasks: string[], uptime: string, usage: AgentUsages, states?: AgentFlow
+    busy: boolean, tasks: string[], states?: AgentFlow
 }
 
 /*  the place of a lifecycle state in the lanes view: its phase (column), and its row
@@ -60,15 +59,11 @@ export const flowOf = (agents: AgentPresence[], groups: { lanes: { status: strin
     const rank = (state: string | undefined) => state === undefined || !order.includes(state) ? order.length : order.indexOf(state)
     const cards = new Map<string, FlowCard>()
     const list  = [ ...merged.entries() ].map(([ id, group ]): FlowCard => {
-        const first  = group[0]
-        const usages = group.map((a) => a.usage).filter((u) => u !== null && u !== undefined)
+        const first = group[0]
         return {
             id, agents: group, name: first.name, kind: first.kind, mode: first.mode,
-            busy:   group.some((a) => a.state === "busy"),
-            tasks:  [ ...new Set(group.flatMap((a) => a.tasks)) ].sort(TaskFormat.compareIds),
-            uptime: agentDuration(Math.max(...group.map((a) => a.beat)) - first.started),
-            usage:  usages.length === 0 ? null :
-                usages.reduce((sum, u) => ({ total: addUsage(sum.total, u.total), last: addUsage(sum.last, u.last) })),
+            busy:  group.some((a) => a.state === "busy"),
+            tasks: [ ...new Set(group.flatMap((a) => a.tasks)) ].sort(TaskFormat.compareIds),
             ...(first.states !== undefined ? { states: first.states } : {})
         }
     })
@@ -117,11 +112,21 @@ export const layoutFlow = (flow: Flow, unit: "cell" | "px"): Promise<GraphLayout
     const rows   = new Map<string, number>()
     const spot   = (state: string | undefined) =>
         flow.spots.get(state ?? "") ?? { col: Number.MAX_SAFE_INTEGER, row: 1 }
+
+    /*  the common width of all state nodes: wide enough for the longest state name
+        and for the most ports on one side of a state node (as else the layout widens
+        each state node individually for its own ports)  */
+    const ports  = (state: string) => Math.max(
+        flow.edges.filter((e) => e.to   === STATE + state).length,
+        flow.edges.filter((e) => e.from === STATE + state).length)
+    const stateW = Math.max(0, ...flow.states.map((state) => Math.max(
+        unit === "cell" ? state.length + 4 : u.gw(state),
+        (ports(state) + 1) * portSpacing[unit])))
     const nodes  = [
         ...flow.states.map((state): LayoutNode & FlowSpot => {
             const s = spot(state)
             rows.set(STATE + state, s.row)
-            return { id: STATE + state, w: unit === "cell" ? state.length + 4 : u.gw(state), h: u.h, ...s }
+            return { id: STATE + state, w: stateW, h: u.h, ...s }
         }),
         ...[ ...flow.cards.values() ].map((card): LayoutNode & FlowSpot => {
             const activity = card.states?.activity
@@ -178,9 +183,10 @@ const clean = (text: string): string =>
     agent cards in tone "active" (busy), "idle" (waiting), or "sel" (selected, with a heavy border, like
     a selected state), with the name of
     the agent inverse on their first line, followed by their field lines (with the tone suffix
-    "-title" on the labels, and the busy task ids inverse), and the given pulse glyph (if any) of
-    a busy card, resp. a circle of a waiting one, in the right part of their top border  */
-export const drawFlowText = (flow: Flow, layout: GraphLayout, selected: string, pulse = "") => {
+    "-title" on the labels, "-value" on their bold values, and the busy task ids inverse), and the given pulse glyph (else a filled
+    circle) of a busy card, resp. an empty circle of a waiting one, in the right part of their top border  */
+export const drawFlowText = (flow: Flow, layout: GraphLayout, selected: string, pulse = "",
+    beat: (agent: string) => boolean = () => false) => {
     const g = textGrid(layout)
     const { W, H, chars, tones } = g
     const put = (x: number, y: number, max: number, text: string, tone: string): number => {
@@ -209,31 +215,32 @@ export const drawFlowText = (flow: Flow, layout: GraphLayout, selected: string, 
         const base = card.busy ? "active" : "idle"
         const tone = n.id === selected ? "sel" : base
         drawBox(g, n, tone, false, n.id === selected)
-        if (pulse !== "" && n.w > 6)
-            chars[n.y][n.x + n.w - 3] = card.busy ? pulse : "○"
+        if (n.w > 6)
+            chars[n.y][n.x + n.w - 3] = !card.busy ? "○" : pulse !== "" ? pulse : "●"
 
-        /*  the name line and the field lines, cut at the right border  */
+        /*  the name line (with the heart of the agents in the top right corner inside the card,
+            like in the agents view, filled for a second after a heartbeat of any of them)
+            and the field lines, cut at the right border  */
         const max  = n.w - 4
+        const room = max - 2
         const name = ` ⚉ ${clean(cardName(card))} `
-        put(n.x + 2, n.y + 1, max, name.length > max ? name.slice(0, max - 1) + "…" : name, `${tone}-id`)
+        put(n.x + 2, n.y + 1, room, name.length > room ? name.slice(0, room - 1) + "…" : name, `${tone}-id`)
+        put(n.x + n.w - 3, n.y + 1, 1, card.agents.some((a) => beat(a.id)) ? "♥" : "♡", tone)
         const fields: [ string, string ][] = [
-            [ "kind:",   clean(card.kind) ],
-            [ "mode:",   card.mode !== "" ? clean(card.mode) : "none" ],
-            [ "uptime:", card.uptime ],
-            [ "task:",   "" ],
-            [ "usage:",  agentUsage(card.usage?.total) ],
-            [ "last:",   agentUsage(card.usage?.last) ]
+            [ "kind:", clean(card.kind) ],
+            [ "mode:", card.mode !== "" ? clean(card.mode) : "none" ],
+            [ "task:", "" ]
         ]
         fields.forEach(([ label, value ], k) => {
             const y = n.y + 2 + k
             if (y >= n.y + n.h - 1)
                 return
-            let x = put(n.x + 2, y, max, label.padEnd(9), `${tone}-title`)
+            let x = put(n.x + 2, y, max, label.padEnd(6), `${tone}-title`)
             const end = n.x + 2 + max
             if (label !== "task:")
-                put(x, y, end - x, value, tone)
+                put(x, y, end - x, value, `${tone}-value`)
             else if (card.tasks.length === 0)
-                put(x, y, end - x, `none (${card.agents[0].state})`, tone)
+                put(x, y, end - x, `none (${card.agents[0].state})`, `${tone}-value`)
             else
                 for (const id of card.tasks) {
                     if (x >= end)
@@ -247,7 +254,8 @@ export const drawFlowText = (flow: Flow, layout: GraphLayout, selected: string, 
 
 /*  draw a pixel-unit layout of the agent graph as SVG, with every activity container labeled
     with its state, every state node a "g.node.state" box with its state, and every agent card a
-    "g.node" holding the same HTML card as the agents view (with the class "busy" for a busy agent),
+    "g.node" holding the same HTML card as the agents view (with the class "busy" for a busy agent,
+    and with the heart of its agents, carrying their ids, to be filled by the page on their heartbeats),
     both carrying their "data-id" (for the click delegation of the page)  */
 export const drawFlowSVG = (flow: Flow, layout: GraphLayout): string => {
     const out = drawSVGFrame(layout, containerLabel, true)
@@ -268,10 +276,10 @@ export const drawFlowSVG = (flow: Flow, layout: GraphLayout): string => {
             `<foreignObject x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}">` +
             `<div xmlns="http://www.w3.org/1999/xhtml" class="acard${card.busy ? " busy" : ""}">` +
             `<div class="aname"><span class="abadge"><span class="aicon">⚉</span> ${escapeXML(clean(cardName(card)))}</span></div>` +
+            `<span class="abeat" data-agents="${escapeXML(card.agents.map((a) => a.id).join(" "))}">♡</span>` +
             "<div class=\"afields\">" +
-            field("kind:", card.kind) + field("mode:", card.mode !== "" ? card.mode : "none") + field("uptime:", card.uptime) +
+            field("kind:", card.kind) + field("mode:", card.mode !== "" ? card.mode : "none") +
             `<span>task:</span><span class="aval atasks">${tasks}</span>` +
-            field("usage:", agentUsage(card.usage?.total)) + field("last:", agentUsage(card.usage?.last)) +
             "</div></div></foreignObject></g>")
     }
     out.push("</svg>")

@@ -54,7 +54,7 @@ import { ref, shallowRef, computed, nextTick, watch, onMounted, onBeforeUnmount,
 import {
     type Agent, type AgentLine, type AgentUsage,
     view, agents, agentLogs, agentList, agentSel, logEl, logStick, agentNow,
-    agentDuration, selectAgent
+    agentDuration, selectAgent, beatOf
 } from "./ase-task-board-web-client-model"
 
 /*  the text shown without any agents  */
@@ -96,38 +96,7 @@ const agentUsage = (usage: AgentUsage | undefined) => {
     return `${agentDuration(usage.walltimeSec * 1000)}, ${tokens} tok, ${cost}`
 }
 
-/*  the local time at which the latest heartbeat of each agent was received (measured locally,
-    as the clock of the agent relay may be skewed), for the heart of its card (filled for
-    BEAT_SHOWN_MS after a heartbeat, else empty), where the heartbeats are recognized by their
-    changed time stamps and a filled heart is re-rendered once it is due to be emptied (as the
-    wall-clock tick alone would empty it too early or too late)  */
-const BEAT_SHOWN_MS = 1000
-const agentBeats = shallowRef(new Map<string, { beat: number, seen: number }>())
-let   beatTimer  = null as ReturnType<typeof setTimeout> | null
-watch(agents, (next) => {
-    const at    = Date.now()
-    const beats = new Map<string, { beat: number, seen: number }>()
-    let   fresh = false
-    for (const a of next?.agents ?? []) {
-        const prev = agentBeats.value.get(a.id)
-        if (prev !== undefined && prev.beat === a.beat)
-            beats.set(a.id, prev)
-        else {
-            beats.set(a.id, { beat: a.beat, seen: at })
-            fresh = true
-        }
-    }
-    agentBeats.value = beats
-    if (fresh) {
-        agentNow.value = at
-        if (beatTimer !== null)
-            clearTimeout(beatTimer)
-        beatTimer = setTimeout(() => { beatTimer = null; agentNow.value = Date.now() }, BEAT_SHOWN_MS)
-    }
-})
-const beatOf = (id: string) =>
-    agentNow.value - (agentBeats.value.get(id)?.seen ?? 0) < BEAT_SHOWN_MS
-const pad         = (n: number, k = 2) => String(n).padStart(k, "0")
+const pad        = (n: number, k = 2) => String(n).padStart(k, "0")
 const logTime     = (time: number) => {
     const d = new Date(time)
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
@@ -217,8 +186,6 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
     window.removeEventListener("resize", updateLogPos)
-    if (beatTimer !== null)
-        clearTimeout(beatTimer)
 })
 </script>
 

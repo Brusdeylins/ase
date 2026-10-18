@@ -359,6 +359,38 @@ watch(view, (v) => {
     }
 }, { immediate: true })
 
+/*  the local time at which the latest heartbeat of each agent was received (measured locally,
+    as the clock of the agent relay may be skewed), for the heart of its card (filled for
+    BEAT_SHOWN_MS after a heartbeat, else empty), where the heartbeats are recognized by their
+    changed time stamps and a filled heart is re-rendered once it is due to be emptied (as the
+    wall-clock tick alone would empty it too early or too late)  */
+const BEAT_SHOWN_MS = 1000
+const agentBeats = shallowRef(new Map<string, { beat: number, seen: number }>())
+let   beatTimer  = null as ReturnType<typeof setTimeout> | null
+watch(agents, (next) => {
+    const at    = Date.now()
+    const beats = new Map<string, { beat: number, seen: number }>()
+    let   fresh = false
+    for (const a of next?.agents ?? []) {
+        const prev = agentBeats.value.get(a.id)
+        if (prev !== undefined && prev.beat === a.beat)
+            beats.set(a.id, prev)
+        else {
+            beats.set(a.id, { beat: a.beat, seen: at })
+            fresh = true
+        }
+    }
+    agentBeats.value = beats
+    if (fresh) {
+        agentNow.value = at
+        if (beatTimer !== null)
+            clearTimeout(beatTimer)
+        beatTimer = setTimeout(() => { beatTimer = null; agentNow.value = Date.now() }, BEAT_SHOWN_MS)
+    }
+})
+export const beatOf = (id: string) =>
+    agentNow.value - (agentBeats.value.get(id)?.seen ?? 0) < BEAT_SHOWN_MS
+
 /*  fall back to the lanes view once it is known that no agent relay is configured  */
 watch(() => [ agentsKnown.value, agents.value, view.value ], () => {
     if (agentsKnown.value && agents.value === null && (view.value === "agents" || view.value === "flow"))

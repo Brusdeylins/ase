@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, watch, onMounted, onBeforeUnmount } from "vue"
-import { view, flow, flowStats, flowSel, flowEl, task, showFlowAgent, raiseEdges } from "./ase-task-board-web-client-model"
+import { view, flow, flowStats, flowSel, flowEl, task, showFlowAgent, raiseEdges, agentNow, beatOf } from "./ase-task-board-web-client-model"
 
 /*  the panning of the agent graph (by dragging its background), and its zoom factor  */
 const pan  = ref<{ x: number, y: number, left: number, top: number } | null>(null)
@@ -108,7 +108,20 @@ watch([ flowSel, flow, view ], () => {
     nextTick(() => {
         applyZoom()
         showSel()
+        showBeats()
     })
+})
+
+/*  fill the heart of an agent card (like in the agents view) for a second after
+    a heartbeat of any of its agents, and keep it empty otherwise  */
+const showBeats = () => {
+    flowEl.value?.querySelectorAll<HTMLElement>(".abeat[data-agents]").forEach((el) => {
+        el.textContent = (el.dataset.agents ?? "").split(" ").some((id) => id !== "" && beatOf(id)) ? "♥" : "♡"
+    })
+}
+watch(agentNow, () => {
+    if (view.value === "flow")
+        showBeats()
 })
 
 /*  the zoom keys of the agent graph view (not bound via Mousetrap, as its
