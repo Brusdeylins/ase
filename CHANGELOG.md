@@ -6,82 +6,49 @@ ChangeLog
 ------------------
 
 -   CHANGE [plugin,pages]: Fold `ase-code-{craft,refactor,resolve}` into the Edit Skills
-    The skills `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` were removed, as
-    their approach determination and selection moved into the shared `ase-common-approach.md`
-    and into the edit skills: `ase-task-edit` now determines the kind of change of a new plan
-    (or takes it from the new option `--mode`), internalizes its tenets, stores it in the `Kind:`
-    key, reports the problem context of a resolution, and, under the new option `--approach`,
-    composes the plan along the chosen one of several proposed approaches. Additionally, it
-    accepts a bare analyzer issue id like `P1` as its instruction, allocates a new task id for
-    a new plan instead of planning under the `default` task, and its option `--dry` was renamed
-    to `--unverified`. The plan-less `ase-code-edit` and `ase-spec-edit` skills support the
-    approach selection via the same new option `--approach`. Finally, `ase-task-edit` and
-    `ase-task-implement` load the `SPEC` format on demand whenever a plan specifies or
-    changes `SPEC` artifacts.
+    The skills `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` were removed: their
+    approach selection moved into `ase-common-approach.md` and the edit skills, where
+    `ase-task-edit` gained `--mode` and `--approach`, accepts bare analyzer issue ids like `P1`,
+    and renamed `--dry` to `--unverified`, and `ase-code-edit`/`ase-spec-edit` gained `--approach`.
 
 -   FEATURE [plugin,tool]: Task Effort Estimation
-    Task plans now carry an optional `Effort:` key, the expected human time as T-shirt size
-    `XS` to `XL` on a logarithmic scale (`project.task.effort.scale`), bound to the plan content
-    by a hash, so it is dropped once the content changes. The new skill `ase-task-estimate`
-    estimates it (and with `--calibrate` checks it against finished tasks), the new agent
-    `ase agent estimator` estimates the planned tasks in the background or any task on request
-    (`--mode request`), and `ase agent implementer` by default waits for the estimation.
-    Requests to request agents ignoring their prompts, like the `estimate` requests of the
-    estimator, may now be sent with an empty prompt via `ase task request` and both task boards.
-    Task list, task view, and both task boards show the effort, filter by it, and chart its
-    distribution. Finally, `ase util mint` and `ase-meta-mint` support the new type `nanoid`.
+    Task plans now carry an optional `Effort:` key (T-shirt size `XS` to `XL` of human time, bound
+    to the plan content by a hash), estimated by the new skill `ase-task-estimate` (with
+    `--calibrate`) and the new agent `ase agent estimator`, and shown, filtered, and charted by
+    task list, task view, and both task boards. `ase util mint` gained the type `nanoid`.
 
 -   FEATURE [plugin,tool]: Grounded Task Research
-    The new skill `ase-task-research` researches a topic (or, without one, the task plan itself)
-    in depth by combining parallel Web searches of the `ase-meta-search` services with a grounding
-    in the source artifacts of the project, and appends the resulting report (findings with their
-    sources, project grounding, assessment, and recommendations) to the `research` Markdown
-    attachment of the task, with `--refine` additionally refining the plan by its recommendations.
-    The new agent `ase agent researcher` processes the `research` requests of the tasks, sent via
-    `ase task request <id> research [<topic>]` or key `R` of the task boards, this way. Agent
-    definitions can now make the request prompt optional by using `{prompt}` only within the
-    conditional `{?prompt:...}` of their prompt template.
+    The new skill `ase-task-research` researches a topic (or the plan itself) by parallel Web
+    searches grounded in the source artifacts of the project, appends the report to the `research`
+    attachment of the task (`--refine` also refines the plan), and is driven headless by the new
+    agent `ase agent researcher` via `research` requests (`ase task request` or key `R`).
 
 -   BUGFIX [tool]: Task Board Drafts, Readiness, and Tag Guarding
-    On the terminal task board, a new task draft kept after a failed save is now created again
-    even if left unchanged in `$EDITOR` (instead of being silently discarded), while an emptied
-    text discards the draft. The `Open Tasks` statistics now determine the readiness of the
-    filtered tasks against all tasks, as a predecessor hidden by the filter blocks a task
-    nevertheless. Finally, an agent definition with `tag-success: none` returning a task into its
-    incoming state is now only accepted if the hook `ready` guarding it is declared by the same
-    definition, so a definition based on e.g. `builtin:implementer` can no longer process a task
-    again and again.
+    The terminal task board re-creates a draft kept after a failed save even if left unchanged, the
+    `Open Tasks` statistics determine readiness against all tasks (not just the filtered ones), and
+    an agent definition with `tag-success: none` is only accepted if its own `ready` hook guards it,
+    so a definition based on e.g. `builtin:implementer` no longer processes a task again and again.
 
 -   CLEANUP [tool]: Internal Refactorings
-    Factored out the agent relay planning and the per-section option validation of
-    `ase agent fleet`, the parameter resolution of the agent definitions, the throughput and
-    day-span computation of the task board statistics, the parse checks of the configuration
-    schema, and the NanoId-style hashing (into `ase-lib-hash`), and let the frame titles of
-    the statistics view of the web task board share the style of those of its agents view.
+    Factored out the agent relay planning and section validation of `ase agent fleet`, the
+    parameter resolution of agent definitions, the task board statistics computations, the
+    configuration schema parse checks, and the NanoId-style hashing (into `ase-lib-hash`).
 
 -   BUGFIX [tool]: Agent Process Management and Crash Recovery
-    The `ase agent fleet` now stops an orphaned agent relay only if its process still has the
-    recorded start time, so a relay process id reused after a crash or reboot no longer gets an
-    unrelated process terminated. The `ase agent <kind> start|status|stop` commands no longer
-    act on a running agent of another kind sharing the same `--name`, and concurrent starts of
-    an agent of the same name are now serialized, so only one of them runs. Finally, the crash
-    recovery now also treats an agent with a `finish` hook as finishing its processings, so a
-    task whose `finish` hook never ran is tagged as failed instead of processed.
+    `ase agent fleet` stops an orphaned relay only if its process start time still matches, `ase
+    agent <kind> start|status|stop` no longer act on an agent of another kind with the same
+    `--name`, concurrent starts of the same agent are serialized, and the crash recovery tags a
+    task whose `finish` hook never ran as failed instead of processed.
 
 -   FEATURE [tool]: Unix Manual Pages for All CLI Commands
-    The `ase` CLI now ships Unix manual pages for all its commands and command groups, e.g.,
-    `ase`(1), `ase-task`(1), and `ase-agent-fleet`(1), each describing all options and arguments
-    in detail. They are written in Markdown (`tool/man/*.md`), rendered via *remark-man* into
-    `dst/man/*.1` at build-time, and installed by npm for use with `man`(1). The new `ase man`
-    command shows them independent of any installation, e.g., `ase man agent fleet`. They replace
-    the former single `docs/usage-tool.md`, which was removed.
+    The `ase` CLI now ships Unix manual pages for all its commands (e.g. `ase-agent-fleet`(1)),
+    written in Markdown (`tool/man/*.md`), rendered via *remark-man*, installed by npm, and shown
+    by the new `ase man` command (e.g. `ase man agent fleet`). They replace `docs/usage-tool.md`.
 
 -   FEATURE [tool]: Assignee Badges on Task Board Cards
-    The cards of the lanes and graph views of the TUI and WUI task boards now carry, besides the
-    ` ⚉ <agent> ` badges of the agents busy with a task, the badge of an assigned task on their
-    top border: ` ⚉ <name> ` for a known agent, else ` ☺ <name> ` for a person. The badges
-    are now also shown in the graph views and use the normal color, the accent color for active
-    tasks, and the signal color for the selected task.
+    The cards of the lanes and graph views of both task boards now also show the assignee of a
+    task on their top border (` ⚉ <name> ` for an agent, ` ☺ <name> ` for a person), colored
+    normal, accent (active task), or signal (selected task).
 
 -   BUGFIX [tool]: Failed or Interrupted Request Agent Runs Counted as Success
     The `linter` example definition (and its counterparts in the manual page
@@ -90,121 +57,67 @@ ChangeLog
     interrupted processing of a request now counts as success only once it changed the task plan.
 
 -   FEATURE [tool,plugin]: Usage Accounting for Task Assignments
-    The new `ase-task-assign` skill (and `ase task assign` command) assigns a task. Assigning it
-    to oneself opens a usage window, which accounts the AI time, tokens, and costs reported via
-    *OpenTelemetry* by the agent tools to the `ase service`, plus the human time and its costs.
-    Giving the task back or ending the session books the usage onto the usage attachment of the
-    task. Opt-in via `telemetry.enabled` and the new `ase setup telemetry activate` command.
+    The new `ase-task-assign` skill (and `ase task assign` command) assigns a task, where assigning
+    it to oneself accounts the AI time, tokens, and costs (via *OpenTelemetry*) plus the human time
+    until given back, booked onto the usage attachment of the task. Opt-in via `telemetry.enabled`
+    and the new `ase setup telemetry activate` command.
 
 -   IMPROVEMENT [tool]: Auto-Detected Plugin Installation Scope
-    The `ase setup update`, `ase setup uninstall`, `ase setup enable`, and `ase setup disable`
-    commands now auto-detect the scope of the existing ASE plugin installation when `--scope` is
-    omitted, instead of blindly assuming the `user` scope: the scopes `local`, `project`, and `user`
-    are probed in this order, and the first one whose settings file registers `ase@ase` under
-    `enabledPlugins` (whether enabled or disabled) is used, with `user` as the fallback. The
-    `ase setup install` command still defaults to the `user` scope.
+    `ase setup update|uninstall|enable|disable` without `--scope` now auto-detect the scope of the
+    existing plugin installation (probing `local`, `project`, and `user` for `ase@ase` in
+    `enabledPlugins`, falling back to `user`), while `ase setup install` still defaults to `user`.
 
 -   BUGFIX [tool]: Project directory of GitHub Copilot CLI sessions
-    GitHub Copilot CLI runs the hooks and starts the MCP server in the plugin installation
-    directory instead of the project, so every working-directory-relative lookup missed the
-    project. The session-start hook now adopts the `cwd` of its event payload and records the
-    resolved project directory in the new session-scoped configuration key `project.basedir`.
-    The MCP bridge, recognizing GitHub Copilot CLI by its `COPILOT_PLUGIN_ROOT` and
-    `COPILOT_AGENT_SESSION_ID` environment variables, defers the service until this key shows
-    up: meanwhile, it answers the MCP handshake and tool listing in-process and holds back the
-    tool calls, and only then starts or connects the service inside the project. All this
-    happens for GitHub Copilot CLI only.
+    GitHub Copilot CLI runs hooks and MCP server in the plugin directory, so the session-start
+    hook now adopts the `cwd` of its event payload into the new session-scoped key
+    `project.basedir`, and the MCP bridge answers handshake and tool listing in-process and defers
+    the service (and the tool calls) until this key shows up. Other agent tools are unaffected.
 
 -   FEATURE [plugin,tool]: Change Set Snapshot Attachment
-    The `ase-task-implement` and `ase-task-integrate` skills now maintain a change set snapshot for
-    `worktree` and `branch:` changesets: a view-only, text-only unified diff of the change set in
-    the task attachment of type `text/x-diff; charset=utf-8; kind="changeset"`, created or replaced
-    in place, with `base <commit>` (plus `, partial` for an incomplete change set) resp. `base
-    <commit>, merged <commit>` for the change set which finally landed on the target in its `Desc:`
-    key. This makes the change set viewable wherever the task is visible, especially during its
-    approval. If the origin working copy already carries foreign uncommitted changes (e.g. other
-    work in progress), the snapshot starts at a baseline tree of the working copy, captured right
-    before the implementation, and hence excludes these changes (marked by `, baseline <tree>`).
-    The task boards now color every diff attachment per line and mark an outdated snapshot tab
-    with `(stale)`, and `ase agent implementer` keeps the `Source:` of the plan for a `branch:`
-    changeset, so its snapshot covers the entire branch.
+    `ase-task-implement` and `ase-task-integrate` now maintain a change set snapshot, a view-only
+    unified diff of a `worktree` or `branch:` changeset in the `kind="changeset"` attachment (base
+    commit in its `Desc:` key, excluding foreign uncommitted changes), so the change set is viewable
+    during approval. The task boards color diff attachments and mark stale snapshots `(stale)`.
 
 -   FEATURE [tool]: Container Image
-    The new `build-container` build target uses `docker buildx` and `etc/ase.dockerfile` to build
-    and push the multi-architecture container image `ghcr.io/rse/ase`. The image is based on Alpine
-    Linux, contains Node.js, ASE, Git, Bash, and the Claude Code CLI with the ASE plugin
-    pre-installed, and runs `ase` by default or any other given command, like `bash` or `claude`.
-    It runs as user `ase:ase` with the home directory `/ase` on an external volume, which holds
-    the projects and the Claude Code credentials.
+    The new `build-container` build target builds and pushes the multi-architecture Alpine-based
+    container image `ghcr.io/rse/ase` (via `docker buildx` and `etc/ase.dockerfile`) with Node.js,
+    ASE, Git, Bash, and Claude Code CLI with the ASE plugin, running as user `ase:ase` with its home
+    directory `/ase` on an external volume for the projects and credentials.
 
 -   FEATURE [tool]: Fully Configurable Agents of Definitions
-    Agents can now be entirely configured instead of hard-coded: each definition file
-    `.ase/agents/<kind>.{yaml,ts,js}` of the project (or `agents/` in the per-user configuration
-    directory) yields an agent kind of its own (`ase agent <kind> start`), shadowing a built-in
-    one of the same kind, while the new `ase agent adhoc` runs an agent given entirely by flat
-    `--<group>-<item>` options, optionally based on a definition (`--definition`): either claiming
-    tasks by their lifecycle status (`--type phase`) or processing attached prompt requests (`--type
-    request`), with configurable states, tags, assignees, skill or text prompts with placeholder
-    templates, working directories, preparing and finishing commands, success criteria (like an
-    expected attachment created or changed by the processing, where a leftover of an earlier
-    processing does not count), verdicts, and attachments. A definition is a YAML file, or a
-    TypeScript or JavaScript file (typed via `AgentDefinition` of the `@rse/ase` package) which
-    additionally carries hooks along the entire processing: `start` and `stop` (agent setup and
-    teardown), `order` (prioritization), `passes` and `ready` (claiming), `prepare` and `prompt`
-    (code-based preparing and computed prompts), `verdict` and `success` (evaluation), `settle`
-    (per-task target state, tag, and assignee), and `finish` (code-based finishing), with a context
-    reading the plans and all tasks, changing tasks (frontmatter keys, tags, and attachments),
-    running commands, and honoring a cancellation signal. The five built-in agents are no longer
-    hard-coded, but declarative definitions run by the same engine, reusable via `--definition
-    builtin:<kind>-<mode>`. A definition file can extend a base definition (another definition
-    file or a built-in one) via its key `definition`, overriding its options and replacing its
-    hooks of the same name. All agents accept the `--<group>-<item>` options, which win over their
-    definition, where a given prompt source (`--prompt-skill`, `--prompt-text`, or `--prompt-file`)
-    resp. `--tag-retry` or `--tag-failure` also replaces its mutually exclusive alternative of the
-    definition. A verdict decides the tag and target state of a successfully processed task only, so
-    a failed one (an unmet success criterion or a failed finishing command) is consistently settled
-    as a failure. Requests of any name are attached via the new `ase task request` command, the
-    new `ase_task_request` MCP tool, or key `R` of the task boards. The tool now requires Node.js
-    22.18.0 or newer.
+    Agents are now declarative definitions: a file `.ase/agents/<kind>.{yaml,ts,js}` (or per-user)
+    yields its own agent kind, TypeScript/JavaScript ones add hooks along the processing, the new
+    `ase agent adhoc` runs one of flat `--<group>-<item>` options, the built-in agents are reusable
+    (`builtin:<kind>-<mode>`), and `ase task request` attaches requests. Requires Node.js 22.18.0+.
 
 -   FEATURE [tool]: Individually Managed Agents and Supervised Agent Fleets
-    Each agent now runs in its own process, managed via `ase agent <kind> start|status|log|stop`,
-    replacing the former form running multiple agents in one process. The new `ase agent fleet
-    init|start|status|log|stop` runs a fleet of agents and the agent relay of `.ase/fleet.yaml`
-    through a supervisor restarting exited members with exponential backoff. The new `log`
-    sub-command also covers `ase agent relay` and `ase task store`, like `ase service log`.
+    Each agent now runs in its own process (`ase agent <kind> start|status|log|stop`), the new
+    `ase agent fleet init|start|status|log|stop` runs the agents and agent relay of `.ase/fleet.yaml`
+    under a supervisor restarting exited members with exponential backoff, and `ase agent relay`
+    and `ase task store` gained a `log` sub-command, too.
 
 -   FEATURE [plugin]: Perspective-Focused and Grounded Grilling
-    The `ase-task-grill` skill supports the new `--perspective`/`-p` and `--ground`/`-G` options,
-    and the `ase-code-edit` and `ase-spec-edit` skills the corresponding `--grill-perspective`/`-p`
-    and `--grill-ground`/`-G` options. A perspective (a keyword or short hint like `domain`,
-    `performance`, or `security`) acts as an exclusive lens, raising only the open points relevant
-    from it. Grounding scans the artifacts of all kinds and searches the Internet/Web once before
-    the first round, so questions and answer alternatives are derived from these facts instead of
-    model knowledge alone. Both are shown in the round headline, like `GRILLING (security, grounded)`.
+    `ase-task-grill` gained `--perspective`/`-p` (an exclusive lens like `security`, raising only
+    the open points relevant from it) and `--ground`/`-G` (deriving questions and answers from an
+    artifact scan and a Web search instead of model knowledge alone), and `ase-code-edit` and
+    `ase-spec-edit` the corresponding `--grill-perspective` and `--grill-ground` options.
 
 -   FEATURE [plugin]: Change-Restricted Analyzing and Linting
-    The `ase-code-analyze` and `ase-code-lint` skills support the new `--staged` and
-    `--unstaged` options, which restrict the analyzing resp. linting to the source files with
-    staged Git changes resp. with unstaged Git changes plus the untracked files (or, with both
-    options combined, with any uncommitted Git changes), optionally further restricted to the
-    given source reference.
+    The `ase-code-analyze` and `ase-code-lint` skills gained the `--staged` and `--unstaged`
+    options, restricting them to the source files with staged resp. unstaged (plus untracked) Git
+    changes, or, combined, with any uncommitted changes, optionally narrowed by a source reference.
 
 -   FEATURE [tool,plugin]: Prompt-Driven Task Editing from the Task Board
-    In the terminal and web task boards, key `E` requests the edit of a task by a prompt, stored
-    as an edit request attachment and marked on its card (`✎` requested, `✎…` in progress, `✎✗`
-    failed). The new `ase agent editor` processes these requests in all task lifecycle models via
-    `ase-task-edit`, temporarily assigning the task to itself to keep all other agents off it.
-    A further edit request is refused while an edit of the task is in progress.
-    `ase-task-edit` now saves conditionally, so it never overwrites a plan changed meanwhile.
+    Key `E` of both task boards requests the edit of a task by a prompt, marked on its card (`✎`,
+    `✎…`, `✎✗`), processed by the new `ase agent editor` via `ase-task-edit` in all lifecycle models
+    while keeping all other agents off the task. `ase-task-edit` now saves conditionally, so it
+    never overwrites a plan changed meanwhile.
 
 -   IMPROVEMENT [tool]: Foreground Server Start
-    The new `-f`/`--foreground` option of `ase service start`, `ase task store start`, and
-    `ase agent relay start` runs the server in the current process instead of detaching it,
-    logging to the terminal instead of its log file, until it is interrupted or stopped. The
-    service then runs without its idle timeout. An already running server with an unchanged
-    configuration is reported as an error, while one with deviating options is stopped and
-    replaced by the foreground server.
+    The new `-f`/`--foreground` option of `ase service start`, `ase task store start`, and `ase
+    agent relay start` runs the server in the current process, logging to the terminal (the service
+    without idle timeout), where a running server with deviating options is replaced.
 
 -   FEATURE [tool,plugin]: D2 Diagram Rendering
     The `ase util diagram` command and the `ase_diagram` MCP tool render, with the new `--lang d2`
@@ -217,43 +130,27 @@ ChangeLog
     documented in the task format.
 
 -   IMPROVEMENT [plugin]: Review Depth and Transparency
-    The `ase-repo-review` skill no longer reports a change as clean when its severity floor
-    suppressed findings, but always reports the number of suppressed findings. The new default
-    `--severity AUTO` keeps the floor `MEDIUM` under `grey` boxing, while an explicitly given
-    floor now wins over the boxing. The new `--thorough` option reports exhaustively (including
-    minor and plausible concerns), the new `--unstaged` option (aligned with the `--staged` and
-    `--unstaged` options of `ase-code-lint` and `ase-code-analyze`) reviews the unstaged and
-    untracked changes, both `--staged` and `--unstaged` review all uncommitted changes, and the
-    new `PROPAGATION`, `COVERAGE`, and `RESIDUE` dimensions check for a fully and consistently
-    propagated change, for all special and edge cases being covered, and for leftovers which do
-    not belong into the change.
+    `ase-repo-review` always reports the number of findings suppressed by its severity floor
+    (new default `--severity AUTO`), gained `--thorough` for exhaustive reports and `--unstaged`
+    for unstaged and untracked changes, and checks the new dimensions `PROPAGATION`, `COVERAGE`,
+    and `RESIDUE` for consistently propagated changes, covered edge cases, and leftovers.
 
 -   FEATURE [plugin]: Branch and Commit Review
-    The `ase-repo-review` skill (now titled "Review Changes") reviews with the new `--branch`
-    option the commits of a branch against its automatically determined base branch (plus, with
-    `--staged` and/or `--unstaged`, the uncommitted changes of its worktree), and with the new
-    `--commit` option a single commit against its first parent. In both cases, the commit
-    messages are additionally checked for mismatches against the diff.
+    `ase-repo-review` (now "Review Changes") reviews with the new `--branch` option a branch
+    against its automatically determined base branch and with the new `--commit` option a single
+    commit against its first parent, additionally checking the commit messages against the diff.
 
 -   FEATURE [tool]: Live Agent Presence on the Task Board
-    The new `ase agent relay start|status|stop` runs a per-user agent relay server (configured
-    via `project.relay.url`), through which the `ase agent` agents pass their live state, log
-    lines, and heartbeat to the task boards without any external infrastructure. The terminal and
-    web boards provide a third view `agents` (cycled via `v`) with the agents and their logs, plus
-    a `⚙ <name>` badge on the cards of the tasks being processed. A stopping agent vanishes from
-    the boards immediately, one missing its heartbeat after 30 to 35 seconds. Relay and task
-    store connections are kept alive via WebSocket ping/pong, so a dead connection is detected
-    and re-established, and the relay limits the number of projects, agents, and subscribers.
+    The new `ase agent relay` runs a per-user relay server (`project.relay.url`) through which the
+    agents pass their live state, logs, and heartbeat to the task boards, shown in a new `agents`
+    view (cycled via `v`) and as `⚙ <name>` badges on the cards of the tasks being processed, with
+    WebSocket ping/pong keep-alive and limits on projects, agents, and subscribers.
 
 -   IMPROVEMENT [tool,plugin]: Elided Task Attachments
-    The `ase_task_load` MCP tool by default elides the attachment payloads of a task plan to
-    `[elided: <n> lines]` markers, which `ase_task_save` restores from the stored plan, so the
-    skills no longer re-emit potentially huge attachments (like agent processing logs) token by
-    token; `attachments: "full"` and the new `ase_task_attachment` MCP tool provide the payloads
-    where needed (`ase-task-view --full`, `ase-task-implement`, `ase-task-integrate`). A single
-    blank line before the `---` of the next attachment block no longer becomes part of the
-    payload. In headless runs, `ase-task-edit` skips the rendering of the plan, and the `ase
-    agent` agents keep at most 20 lines of each agent message in the processing log of a task.
+    `ase_task_load` now elides attachment payloads to `[elided: <n> lines]` markers (restored by
+    `ase_task_save`), so skills no longer re-emit huge attachments token by token, while
+    `attachments: "full"` and the new `ase_task_attachment` MCP tool provide them where needed.
+    Agents keep at most 20 lines per agent message in the processing log of a task.
 
 -   IMPROVEMENT [tool]: Agent Tool Usage Accounting
     The `ase agent` agents log the usage of the headless agent tool after each job as wall time,
@@ -263,47 +160,31 @@ ChangeLog
 
 -   FEATURE [tool]: Enterprise Lifecycle Agents
     The new `ase agent planner`, `implementer`, `approver`, and `integrator` drive the `enterprise`
-    task lifecycle model headless: each claims the tasks of its incoming state, processes them via
-    the agent tool and the skill `ase-task-reboot`, `ase-task-implement`, `ase-repo-review`, resp.
-    `ase-task-integrate`, and moves them on to their next state. The agents run concurrently,
-    also as pools, in one `ase agent` invocation, in Git worktrees or a temporary clone (`--repo`).
-    A task whose finishing failed (e.g. a push) is tagged `failed` and left for manual intervention,
-    and the tasks of a killed or crashed agent are recovered on the next start of its kind.
+    lifecycle headless via `ase-task-reboot`, `ase-task-implement`, `ase-repo-review`, resp.
+    `ase-task-integrate`, in Git worktrees or a temporary clone (`--repo`), where a task whose
+    finishing failed is tagged `failed` and the tasks of a crashed agent are recovered.
 
 -   FEATURE [plugin]: Branch Merging
-    The new `ase-repo-merge` skill merges a source branch, including its uncommitted
-    changes, into a target branch -- through a merge commit, a rebase with fast-forward, or a
-    squash commit (`--mode merge|rebase|squash`) --, resolves merge conflicts semantically (aborting the
-    merge on unresolvable ones), checks that the source branch landed, and emits the
-    verdict `MERGED`, `CONFLICT`, or `FAILED`.
+    The new `ase-repo-merge` skill merges a source branch (including its uncommitted changes) into
+    a target branch via merge commit, rebase with fast-forward, or squash commit (`--mode`),
+    resolves conflicts semantically, checks the landing, and emits `MERGED`, `CONFLICT`, or `FAILED`.
 
 -   FEATURE [plugin]: Conflict Resolution
-    The new `ase-repo-resolve` skill resolves the conflicts of an in-progress merge, rebase,
-    cherry-pick, revert, or stash apply, or the conflict markers left by `patch`, semantically
-    and without losing any change (backups and a per-hunk change preservation check), keeps
-    and escalates unresolvable hunks as-is (or lets the user decide them under `--interactive`),
-    continues the in-progress operation, and emits the verdict `RESOLVED`, `PARTIAL`, `NONE`,
-    or `FAILED`. The resolution procedure is shared with `ase-repo-merge` via the new
-    `ase-common-resolve.md` meta file.
+    The new `ase-repo-resolve` skill semantically resolves the conflicts of an in-progress merge,
+    rebase, cherry-pick, revert, stash apply, or `patch` without losing any change, escalates
+    unresolvable hunks (or asks under `--interactive`), continues the operation, and emits
+    `RESOLVED`, `PARTIAL`, `NONE`, or `FAILED` (sharing `ase-common-resolve.md` with `ase-repo-merge`).
 
 -   FEATURE [tool,plugin]: Change Set Flow of Tasks
-    The task plan key `Branch:` is superseded by `Source:`, `Changeset:`, and `Target:` (values
-    `worktree`, `branch:<name>`, or `attachment:<name>`, defaulting to the new configuration
-    `project.task.default.{source,changeset,target}`). `ase-task-implement` now creates the change
-    set from the source into the changeset (`--draft` for `attachment:draft`, else ignored with a
-    warning) and the new `ase-task-integrate` delivers it into the target via `ase-repo-merge`.
+    The task plan key `Branch:` is superseded by `Source:`, `Changeset:`, and `Target:` (`worktree`,
+    `branch:<name>`, or `attachment:<name>`, defaulting to `project.task.default.*`), where
+    `ase-task-implement` creates the change set and the new `ase-task-integrate` delivers it.
 
 -   FEATURE [tool]: GitHub Issues task store
-    The new built-in storage plugin `github` persists the task plans as the issues of a GitHub
-    repository, selected either by `ase task store start --module github` (with the repositories
-    mapped per project in `storage.options.repos`) or in-process by the `project.task.store.url` URL
-    `github:<owner>/<repo>`. The task id is the issue number rendered through the required `seq`
-    task id scheme, and the task plan maps as closely as possible onto the issue: title, body,
-    state (refined by an `ase:Status:<state>` label), labels (`Tags`), assignee, milestone
-    (`Phase`), parent issue (`Group`), blocking issues (`After`), and comments (attachments), with
-    all other header keys as `ase:<key>:<value>` labels. Deleting a task closes its issue as "not
-    planned". Issue changes made on GitHub are detected by conditional polling (ETag and `since`)
-    and delivered as task store events through the new optional storage plugin method `watch`.
+    The new built-in storage plugin `github` persists task plans as GitHub issues (via `ase task
+    store start --module github` or `project.task.store.url` `github:<owner>/<repo>`), mapping
+    status, tags, assignee, phase, group, dependencies, and attachments onto issue state, labels,
+    milestones, parent and blocking issues, and comments, and watching GitHub-side changes.
 
 -   CHANGE [plugin,pages]: New `ase-repo-*` skill family
     Rename the Git repository related skills `ase-meta-review`, `ase-meta-diff`,
@@ -312,27 +193,21 @@ ChangeLog
     `ase-meta-review` sub-agent to `ase-repo-review`.
 
 -   CHANGE [plugin,tool,pages]: Replace `ase-task-preflight` by `ase-task-implement --draft`
-    The `ase-task-preflight` skill no longer performs a throw-away dry-run, but persists its change
-    set as the implementation draft attachment of the task plan. Hence, it is dropped in favor of
-    the new `--draft` option of `ase-task-implement` (and `ase-task-integrate`, to deliver the
-    draft), its attachment is renamed from `kind="preflight"` to `kind="draft"`, and the
-    `PREFLIGHT` next-step token of the task and code skills is renamed to `DRAFT`. A legacy
-    `kind="preflight"` attachment is migrated into `kind="draft"` on load.
+    The `ase-task-preflight` skill is dropped in favor of the new `--draft` option of
+    `ase-task-implement` (and `ase-task-integrate`), persisting the change set as `kind="draft"`
+    attachment (legacy `kind="preflight"` ones are migrated on load), and the `PREFLIGHT`
+    next-step token is renamed to `DRAFT`.
 
 -   FEATURE [tool,plugin]: Task id schemes
-    The new `project.task.idscheme` configuration (`ase task idscheme`) selects the scheme of new
-    task ids: `slug[:<words>]` (default), `seq[:<template>]` (e.g. `FOO-%03d`), or `any`. The new
-    `ase task newid` (MCP: `ase_task_newid`) allocates the next free id atomically, where `seq`
-    numbers are never reused. Non-conforming ids are warned about, and a create-only save
-    (`--create`) never overwrites a concurrently created task. The `ase-code-{craft,refactor,resolve}`
-    and `ase-task-dissect` skills and the task board generate new ids after the scheme.
+    The new `project.task.idscheme` (`ase task idscheme`) selects the scheme of new task ids:
+    `slug[:<words>]` (default), `seq[:<template>]` (e.g. `FOO-%03d`), or `any`, where the new
+    `ase task newid` (`ase_task_newid`) allocates the next free id atomically and a create-only
+    save (`--create`) never overwrites a concurrently created task.
 
 -   FEATURE [tool]: TUI and Web Task Board
-    The new `ase task board` shows all task plans live as cards in the lanes of the task lifecycle
-    model, as an interactive terminal board (plan dialog, `$EDITOR` editing, dependency graph view
-    via `v`, task moves via `SPACE`), as a web board served by the ASE service (`--web`, task
-    moves via drag & drop), or as plain text (`--text`). The display state persists in
-    `.ase/board.yaml`, the colors in `board.{tui,web}.color.*`, and the skill is `ase-task-board`.
+    The new `ase task board` shows all task plans live as cards in the lanes of the lifecycle model,
+    as interactive terminal board (plan dialog, `$EDITOR` editing, dependency graph, task moves), as
+    web board served by the ASE service (`--web`), or as plain text (`--text`).
 
 -   FEATURE [tool]: Task Board task creation and deletion
     The terminal and web task board create a new task via `N` (lanes and graph view) by editing a
@@ -346,47 +221,31 @@ ChangeLog
     lifecycle model are selectable via the cursor keys, `RETURN` moves, and `ESC` cancels.
 
 -   FEATURE [tool]: Task Board filter
-    The terminal and web task board got a `filter:` field in their header (focused via `/`),
-    whose keywords are fuzzy matched (as in SpecBook) against the task id and title, AND-combined
-    when separated by spaces and OR-combined when separated by commas. The lanes show only the
-    matching tasks, the graph additionally shows their direct predecessors and successors dimmed
-    and dashed.
+    Both task boards got a `filter:` header field (focused via `/`), fuzzy matching its keywords
+    against task id and title (spaces AND, commas OR), where the graph view additionally shows the
+    direct predecessors and successors of the matching tasks dimmed.
 
 -   FEATURE [tool]: Web Task Board task plan editing
-    The task dialog of the web task board edits the task plan via `e` or `✎` in a CodeMirror 6
-    based Markdown editor, saved via `Ctrl`/`⌘`+`S` and cancelled via `ESC` (after a confirmation
-    if changed). A save is conditional: a task plan changed or deleted meanwhile is reported, with
-    the choice to overwrite or discard, and a text which failed to save is kept as a browser draft,
-    offered for restoring on the next edit. For this, the task store REST API delivers the entity
-    tag of a task plan as `ETag` and accepts a conditional, atomic `PUT` via `If-Match` (`412`).
-    The new configuration key `board.web.editor.keymap` selects `default`, `vim`, or `emacs`
-    key bindings for the editor (Vim: `:w`/`:q`/`:q!`, Emacs: `C-x C-s`/`C-x C-c`).
+    The task dialog of the web task board edits the plan via `e` or `✎` in a CodeMirror 6 Markdown
+    editor (`board.web.editor.keymap`: `default`, `vim`, or `emacs`), saved conditionally via `ETag`
+    and `If-Match` of the task store REST API, where a conflicting save offers overwrite or
+    discard and an unsaved text is kept as a browser draft.
 
 -   FEATURE [tool]: Web Task Board keyboard navigation
-    The web task board got the keyboard navigation of the terminal board: an always present
-    selection of group, lane, and task, highlighted in signal color, moved via `↑`/`↓`/`←`/`→`,
-    `PgUp`/`PgDn`, and `Tab`/`Shift+Tab` (spatially via the arrows in the graph view), `RETURN`
-    to view (and close) a task (scrolled via `↑`/`↓`/`PgUp`/`PgDn`), `m`/`c` to minimize a lane
-    or collapse a group, and `SPACE` to pick up and drop a task onto another lane (cancelled via
-    `ESC`).
+    The web task board got the keyboard navigation of the terminal board: a selection moved via
+    cursor keys, `PgUp`/`PgDn`, and `Tab`, `RETURN` to view a task, `m`/`c` to minimize a lane or
+    collapse a group, and `SPACE` to pick up and drop a task onto another lane.
 
 -   IMPROVEMENT [plugin]: Batch grilling in `ase-task-grill`
-    `ase-task-grill` now grills like `ase-code-edit --grill`: all questions of a round in one
-    `QUESTION`/`ANSWERS` table (sorted by focus area, impact, and dependencies), answered by one
-    combined reply with `nX` short responses, where unaddressed questions accept their `⚑` answer.
-    Every round saves the plan and closes with a `PLAN CHANGES` box; cancelling discards only the
-    current round. The shared round procedure moved into `ase-common-grill.md`.
+    `ase-task-grill` now grills like `ase-code-edit --grill`: all questions of a round in one table,
+    answered by one combined reply with `nX` short responses (unaddressed questions accept their `⚑`
+    answer), saving the plan each round, with the round procedure shared via `ase-common-grill.md`.
 
 -   FEATURE [plugin]: Clickable grilling table
-    In the latest grilling table redrawn by the function hooks module `ase-mods.ts`, every
-    question and every answer alternative reveals a clickable button while hovered (rendered in
-    red; at rest the styled text is shown, so bold and code styling survives). A click on a
-    question inserts its number `n` into the prompt (replacing the standalone number of another
-    question, as at most one question is selected), a click on an answer inserts its short
-    response `nX` (replacing an existing `nY` or standalone `n` of the same question in place,
-    else appending), and the pick/selection rendering (now inversed instead of red) is refreshed
-    immediately. The question numbers are right-aligned to the widest one.
-    Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`
+    In the latest grilling table redrawn by the function hooks module `ase-mods.ts`, questions and
+    answer alternatives reveal clickable buttons on hover, inserting the question number `n` resp.
+    the short response `nX` into the prompt (replacing a previous one of the same question).
+    Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`.
 
 -   REFACTOR [tool]: Utility command group
     The utility commands `ase meta`, `ase compat`, `ase diagram`, `ase worktree`, `ase mint`, and
@@ -401,22 +260,15 @@ ChangeLog
 
 -   FEATURE [tool]: Task store server with REST API and storage plugins
     The new `ase task store` server serves the task plans of all registered projects through the
-    REST API of `docs/task-api.md` (bearer token, CORS, WebSocket change events, optional HTTPS via
-    `--tls-cert`/`--tls-key`) and persists them through a storage plugin: the built-in `ase` plugin
-    or an NPM package `ase-task-store-<name>`. Requests are serialized per project, and the `ase`
-    plugin locks cross-process (`proper-lockfile`), writes atomically (`write-file-atomic`), and
-    creates its directory on first save only, so service, CLI, and server can share one directory.
+    REST API of `docs/task-api.md` (bearer token, CORS, WebSocket events, optional HTTPS) and
+    persists them through a storage plugin (built-in `ase` or NPM package `ase-task-store-<name>`),
+    with per-project serialization, cross-process locking, and atomic writes.
 
 -   FEATURE [tool]: Configurable task store
-    The new `project.task.store.url` URL selects the task plan location: `ase:<path>` (default
-    `ase:./.ase/task`, confined to the project root on `project`/`task` scope) runs the built-in
-    plugin in-process, `ase[s]://<addr>:<port>[/<token>][?insecure]` forwards to a remote server
-    via HTTP(S). The token alternatively comes from `$ASE_TASK_STORE_TOKEN`, the new user-scoped
-    `project.task.store.token`, or `store.yaml`, and the new `project.task.store.{crt,key}` supply
-    the TLS certificate and key of `ase task store start`. A remote store requires an explicit
-    `project.id` and keeps its registered lifecycle model, changed only via the new `ase task
-    lifecycle [<name>]` (mapping existing `Status` values). `project.artifact.task.{basedir,files}`
-    were removed and are migrated in place, and the legacy pre-1.0 task file migration was dropped.
+    The new `project.task.store.url` selects the task plan location: `ase:<path>` (default
+    `ase:./.ase/task`) in-process, or `ase[s]://<addr>:<port>[/<token>]` on a remote server (with
+    token and TLS via `project.task.store.{token,crt,key}`, and lifecycle changes via the new `ase
+    task lifecycle`). `project.artifact.task.{basedir,files}` were removed and migrated in place.
 
 -   FEATURE [tool]: Task view command and task listing titles
     The new `ase task view <id>` shows a task plan in `$PAGER` (default `more`) when on a terminal,
@@ -464,12 +316,10 @@ ChangeLog
     `ase-task-implement` skip `[-]` (cancelled) and `[>]` (deferred) bullet-points entirely.
 
 -   FEATURE [plugin]: Severity-bounded grilling with maximum round count
-    The round count of `ase-code-edit`/`ase-spec-edit` (`--grill-rounds`) and `ase-task-grill`
-    (`--rounds`) is now a *maximum*: the new `--grill-until`/`--until` option (`MUST`, `SHOULD`, `MAY`,
-    default `MUST`) stops the grilling early -- even in the first round, announced by a `grilling
-    finished early` status line -- once all open points of that severity or higher are clear. Every
-    open point is additionally rated by an individual impact (`HIGH`, `MEDIUM`, `LOW`), which
-    decides which points are raised and their order within a focus area.
+    The grilling round count (`--grill-rounds`, `--rounds`) is now a maximum: the new
+    `--grill-until`/`--until` option (`MUST`, `SHOULD`, `MAY`) stops the grilling early once all open
+    points of that severity are clear, and every open point is additionally rated by an impact
+    (`HIGH`, `MEDIUM`, `LOW`) deciding which points are raised and their order.
 
 -   IMPROVEMENT [plugin]: Regression and confirmation grilling in `ase-spec-edit`
     The grilling of `ase-spec-edit` now also raises `REGRESSION` (`REG`) and `CONFIRMATION`
@@ -482,18 +332,14 @@ ChangeLog
     cherry-picking answers, freely mixed with keyword text.
 
 -   IMPROVEMENT [tool]: Per-OS user state directory instead of `~/.ase`
-    The per-user state (session configurations and `task-lifecycle.json`) moved from `~/.ase` to
-    the per-OS state directory: `~/Library/Application Support/ase` on macOS (next to the user
-    configuration), `%LOCALAPPDATA%\ase` on Windows, and `$XDG_STATE_HOME/ase` (or
-    `~/.local/state/ase`) on Linux. Additionally, a `.ase` directory in the home directory no longer
-    makes the home directory a project root. A stale `~/.ase` can be removed.
+    The per-user state moved from `~/.ase` (which can be removed) to the per-OS state directory
+    (`~/Library/Application Support/ase`, `%LOCALAPPDATA%\ase`, resp. `$XDG_STATE_HOME/ase`), and
+    a `.ase` directory in the home directory no longer makes it a project root.
 
 -   IMPROVEMENT [tool]: Lazy loading of the CLI command modules
-    The `ase` CLI no longer imports the modules of all top-level commands at startup, but only
-    the module of the actually addressed command (plus those of its addressed sub-commands),
-    determined by scanning the command line before parsing it (a help request or an unknown
-    command still loads all of them, for the complete command overview). A plain `ase -V` this
-    way loads 15 instead of 2337 modules, so the startup overhead of about three seconds is gone.
+    The `ase` CLI now imports only the modules of the actually addressed command (determined by
+    scanning the command line), so a plain `ase -V` loads 15 instead of 2337 modules and the startup
+    overhead of about three seconds is gone.
 
 -   BUGFIX [tool]: Complete help output on pipes
     The help and version output of Commander (e.g. `ase agent implementer --help | less`)
