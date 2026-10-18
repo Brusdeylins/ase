@@ -823,10 +823,14 @@ header
         min-height: 0
         overflow-y: auto
     .aline
-        padding-left: 25ch
-        text-indent: -25ch
-        font-family: "DejaVu Sans Mono", monospace
+
+        /*  hang the wrapped lines behind the 25 characters of the timestamp prefix
+            (the "ch" unit does not include the letter spacing)  */
+        padding-left: calc(25ch - 25 * 0.015em)
+        text-indent: calc(-25ch + 25 * 0.015em)
+        font-family: "DejaVu Sans Mono", Menlo, monospace
         font-size: 0.8125rem
+        letter-spacing: -0.015em
         line-height: 1.2
         white-space: pre-wrap
         overflow-wrap: anywhere
