@@ -101,20 +101,20 @@ const lane = (status: string, active: boolean, weight: number): LaneLayout =>
     finished states form the final group "Done"  */
 export const laneLayouts: Record<string, GroupLayout[]> = {
     solo: [
-        { title: "1 - Work in Progress", lanes: [ lane("OPEN",         true,  2), lane("SHELVED",   false, 1) ] },
-        { title: "2 - Done",             lanes: [ lane("CLOSED",       false, 2), lane("CANCELLED", false, 1) ] }
+        { title: "1 - Work in Progress", lanes: [ lane("OPEN",         true,  1), lane("SHELVED",   false, 1) ] },
+        { title: "2 - Done",             lanes: [ lane("CLOSED",       false, 1), lane("CANCELLED", false, 1) ] }
     ],
     team: [
-        { title: "1 - Planning",         lanes: [ lane("PLANNING",     true,  2), lane("SHELVED",   false, 1) ] },
-        { title: "2 - Implementation",   lanes: [ lane("IMPLEMENTING", true,  2), lane("STALLED",   false, 1) ] },
-        { title: "3 - Done",             lanes: [ lane("IMPLEMENTED",  false, 2), lane("CANCELLED", false, 1) ] }
+        { title: "1 - Planning",         lanes: [ lane("PLANNING",     true,  1), lane("SHELVED",   false, 1) ] },
+        { title: "2 - Implementation",   lanes: [ lane("IMPLEMENTING", true,  1), lane("STALLED",   false, 1) ] },
+        { title: "3 - Done",             lanes: [ lane("IMPLEMENTED",  false, 1), lane("CANCELLED", false, 1) ] }
     ],
     enterprise: [
-        { title: "1 - Planning",         lanes: [ lane("DRAFTED",     false, 2), lane("PLANNING",     true, 2), lane("SHELVED",  false, 1) ] },
-        { title: "2 - Implementation",   lanes: [ lane("PLANNED",     false, 2), lane("IMPLEMENTING", true, 2), lane("STALLED",  false, 1) ] },
-        { title: "3 - Approval",         lanes: [ lane("IMPLEMENTED", false, 2), lane("APPROVING",    true, 2), lane("DECLINED", false, 1) ] },
-        { title: "4 - Integration",      lanes: [ lane("APPROVED",    false, 2), lane("INTEGRATING",  true, 2), lane("DEFERRED", false, 1) ] },
-        { title: "5 - Done",             lanes: [ lane("INTEGRATED",  false, 2), lane("CANCELLED",    false, 1) ] }
+        { title: "1 - Planning",         lanes: [ lane("DRAFTED",     false, 2.0), lane("PLANNING",     true,  2.0), lane("SHELVED",  false, 2.0) ] },
+        { title: "2 - Implementation",   lanes: [ lane("PLANNED",     false, 1.0), lane("IMPLEMENTING", true,  3.0), lane("STALLED",  false, 2.0) ] },
+        { title: "3 - Approval",         lanes: [ lane("IMPLEMENTED", false, 2.0), lane("APPROVING",    true,  2.0), lane("DECLINED", false, 2.0) ] },
+        { title: "4 - Integration",      lanes: [ lane("APPROVED",    false, 1.0), lane("INTEGRATING",  true,  3.0), lane("DEFERRED", false, 2.0) ] },
+        { title: "5 - Done",             lanes: [ lane("INTEGRATED",  false, 5.0), lane("CANCELLED",    false, 1.0) ] }
     ]
 }
 
