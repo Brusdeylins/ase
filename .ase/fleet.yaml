@@ -1,0 +1,44 @@
+##
+##  ASE Agent Fleet Configuration
+##
+
+default:
+    tool:           claude
+    parallel:       4
+
+relay:
+
+#   request agents for planning
+RA-RESEARCHER:
+    kind:           researcher
+    mode:           request
+RA-EDITOR:
+    kind:           editor
+RA-ESTIMATOR:
+    kind:           estimator
+    mode:           request
+
+#   phase agents for planning
+PA-RESEARCHER:
+    kind:           researcher
+    mode:           phase
+PA-REBOOTER:
+    kind:           rebooter
+PA-CONDENSER:
+    kind:           condenser
+PA-ESTIMATOR:
+    kind:           estimator
+    mode:           phase
+
+#   phase agents for realization
+PA-IMPLEMENTER:
+    kind:           implementer
+    mode:           implement
+PA-QUALIFIER:
+    kind:           qualifier
+    mode:           judge
+PA-INTEGRATOR:
+    kind:           integrator
+    mode:           squash
+    parallel:       1
+
