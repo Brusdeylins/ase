@@ -5,8 +5,9 @@
 -->
 
 <!--  the agents view: the master list "agents" of the agents as cards (name and state, kind and
-      mode of operation, uptime, the ids of the tasks it is busy with, else "none (waiting)", and its
-      total and last usage of the agent tool), and the
+      mode of operation, and the ids of the tasks it is busy with, else "none (waiting)"), and on the
+      right three equally wide panes of the selected agent: its location (host and process id),
+      its runtime (uptime and age of its heartbeat), and its usage (total and last usage of the agent tool), and below them the
       detail view "agent log" with the recent processing log of the selected agent (with the task ids
       inverse), with its lines broken and following its bottom unless scrolled up  -->
 <template>
@@ -22,21 +23,29 @@
                     <div class="afields">
                         <span>kind:</span><b class="aval">{{ a.kind }}</b>
                         <span>mode:</span><b class="aval">{{ typeof a.mode === "string" && a.mode !== "" ? a.mode : "none" }}</b>
-                        <span>uptime:</span><b class="aval">{{ agentUptime(a) }}</b>
                         <span>task:</span><span class="aval atasks"><b v-if="a.tasks.length === 0">none (waiting)</b><span v-for="id in a.tasks" :key="id" class="atask">{{ id }}</span></span>
-                        <span>usage:</span><b class="aval">{{ agentUsage(a.usage?.total) }}</b>
-                        <span>last:</span><b class="aval">{{ agentUsage(a.usage?.last) }}</b>
                     </div>
                 </div>
             </div>
         </section>
-        <section class="adetail">
-            <div class="atitle">Agent: Recent Log Entries</div>
-            <div ref="logEl" class="alog" @scroll="onLogScroll">
-                <AgentLog />
+        <div class="aright">
+            <div class="ainfos">
+                <section v-for="p in panes" :key="p.title" class="ainfo">
+                    <div class="atitle">{{ p.title }}</div>
+                    <div v-if="agentSel === null" class="aempty" :class="{ off: agents !== null && !agents.connected }">{{ agentsEmpty }}</div>
+                    <div v-else class="afields">
+                        <template v-for="f in p.fields" :key="f.name"><span>{{ f.name }}</span><b class="aval">{{ f.value }}</b></template>
+                    </div>
+                </section>
             </div>
-            <div v-if="logPos !== ''" class="apos">{{ logPos }}</div>
-        </section>
+            <section class="adetail">
+                <div class="atitle">Recent Log Entries</div>
+                <div ref="logEl" class="alog" @scroll="onLogScroll">
+                    <AgentLog />
+                </div>
+                <div v-if="logPos !== ''" class="apos">{{ logPos }}</div>
+            </section>
+        </div>
     </div>
 </template>
 
@@ -55,6 +64,24 @@ const agentsEmpty = computed(() => agents.value === null || !agents.value.connec
 /*  the uptime of an agent (the duration since its start, measured up to its latest heartbeat)  */
 const agentUptime = (agent: Agent) =>
     agentDuration(agent.beat - (agent.started ?? agent.since))
+
+/*  the panes of the selected agent: its location, its runtime, and its usage  */
+const panes = computed(() => {
+    const a = agentSel.value
+    const pane = (title: string, fields: (agent: Agent) => { name: string, value: string }[]) =>
+        ({ title, fields: a === null ? [] : fields(a) })
+    return [
+        pane("Location", (agent) => [
+            { name: "host:",      value: agent.host },
+            { name: "pid:",       value: String(agent.pid) } ]),
+        pane("Runtime", (agent) => [
+            { name: "uptime:",    value: agentUptime(agent) },
+            { name: "heartbeat:", value: `${agentDuration(agentNow.value - agent.beat)} ago` } ]),
+        pane("Usage", (agent) => [
+            { name: "total:",     value: agentUsage(agent.usage?.total) },
+            { name: "last:",      value: agentUsage(agent.usage?.last) } ])
+    ]
+})
 
 /*  a compact usage of the agent tool: its wall time, its output tokens (with
     a metric suffix), and its costs (in USD), where an unavailable field is "n/a"

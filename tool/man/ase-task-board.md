@@ -297,15 +297,19 @@ follow the running agents (see `ase-agent`(1)) live in the view
 the left, showing each agent as a card with its name (inverse, behind
 a `⚉`), a pulse on its top border while busy (resp. a circle while
 waiting), and the fields `kind:` and `mode:` of its operation (or
-`none` without a mode), `uptime:` with the duration since its start,
-`task:` with the ids of the tasks it is busy with (else `none
-(waiting)`), and `usage:` resp. `last:` with its usage of the agent tool
-in total since its start resp. by its last finished job, each as wall
-time, output tokens, and costs in USD (e.g. `12m, 9.2k tok, $3.41`,
-with `n/a` for what the agent tool does not report, and `none` before
-the first finished job).
+`none` without a mode), and `task:` with the ids of the tasks it is busy
+with (else `none (waiting)`).
 
-The framed detail view `Agent: Recent Log Entries` on the right shows
+Three equally wide framed panes on the right show the selected agent:
+`Location` with its `host:` and process id `pid:`, `Runtime` with
+`uptime:`, the duration since its start, and `heartbeat:`, the age of
+its latest heartbeat, and `Usage` with `total:`
+resp. `last:`, its usage of the agent tool in total since its start
+resp. by its last finished job, each as wall time, output tokens, and
+costs in USD (e.g. `12m, 9.2k tok, $3.41`, with `n/a` for what the agent
+tool does not report, and `none` before the first finished job).
+
+The framed detail view `Recent Log Entries` below them shows
 the recent processing log lines of the selected agent, each with its
 full timestamp, the id of its task (if any), and its level and content
 (warnings and errors in the signal color), broken onto multiple rows
@@ -313,10 +317,8 @@ instead of being cut. The detail view follows the bottom of the log
 while not scrolled up. When the selected agent vanishes, its neighbor
 is selected instead.
 
-The information line shows the selected agent with its host and process
-id, its state with the duration for which it has been in it, and the
-age of its latest heartbeat. Without an agent relay, the agent logs view
-is skipped.
+The information line shows the selected agent. Without an agent relay,
+the agent logs view is skipped.
 
 An agent stopping vanishes from the board immediately, while an agent
 missing its heartbeat vanishes after 30 to 35 seconds. A relay

@@ -627,9 +627,26 @@ header
         font-size: 0.8125rem
     .amaster
         flex: 0 0 260px
+
+    /*  the right side: the three equally wide panes of the selected agent above its log  */
+    .aright
+        flex: 1
+        min-width: 0
+        display: flex
+        flex-direction: column
+        gap: 16px
+    .ainfos
+        flex-shrink: 0
+        display: grid
+        grid-template-columns: repeat(3, minmax(0, 1fr))
+        gap: 12px
+        .afields
+            font-size: 1rem
+            line-height: 1.3
     .adetail
         flex: 1
         min-width: 0
+        min-height: 0
     .alist
         flex: 1
         min-height: 0

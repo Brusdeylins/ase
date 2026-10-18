@@ -30,7 +30,7 @@ import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
 import { flowOf, layoutFlow, flowState }      from "./ase-task-board-flow.js"
 import type { Flow }                          from "./ase-task-board-flow.js"
-import { fitGroups, agentLogWidth }           from "./ase-task-board-tui-view.js"
+import { fitGroups, agentLogWidth, AGENT_INFO_H } from "./ase-task-board-tui-view.js"
 import { dialogTabs, planLines, attachmentLines, agentLogLines, agentLogKey, DIALOG_CHROME, DIALOG_WIDTH } from "./ase-task-board-tui-popup.js"
 import type { PlanParts }                     from "./ase-task-board-tui-popup.js"
 import { pulseFrames }                        from "./ase-task-board-tui-style.js"
@@ -202,7 +202,7 @@ const useAgentsView = (agents: AgentsState | null, columns: number, boardH: numb
     const agentIdx  = agentHit >= 0 ? agentHit : Math.max(0, Math.min(agentLast.current, agentList.length - 1))
     const agent     = agentList.at(agentIdx)
     const logLines  = React.useMemo(() => agent !== undefined ? agentLogLines(agent, agentLogWidth(columns)) : [], [ agent, columns ])
-    const logH      = Math.max(1, boardH - 2)
+    const logH      = Math.max(1, boardH - AGENT_INFO_H - 2)
     const logMax    = Math.max(0, logLines.length - logH)
     let   logFirst  = logMax
     if (logScroll !== null && agentHit >= 0 && agent !== undefined) {

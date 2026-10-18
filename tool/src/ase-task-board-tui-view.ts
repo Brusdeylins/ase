@@ -590,9 +590,11 @@ export const renderFlow = (ctx: BoardCtx) => {
     ]
 }
 
-/*  the width of the master list (incl. its frame) and the height of an agent card of the agents view  */
-const AGENT_W = 40
-const AGENT_H = 9
+/*  the width of the master list (incl. its frame) and the height of an agent card of the agents view,
+    and the height of its panes with the runtime, location, and usage of the selected agent (incl. their frames)  */
+const AGENT_W = 36
+const AGENT_H = 6
+export const AGENT_INFO_H = 4
 
 /*  the inner width of the detail view of the agents view on a screen width (without the side paddings
     of the screen, the frame and its left padding, the master list, the gap between the master list
@@ -601,11 +603,13 @@ export const agentLogWidth = (columns: number): number =>
     Math.max(10, columns - 2 - AGENT_W - 1 - 3 - 2)
 
 /*  render the agents view: on the left the framed master list "agents" of the agents as vertically
-    aligned cards (name and state, kind and mode of operation, uptime, the ids of the tasks it is
-    busy with, inversely, else "none (waiting)", and its total and last usage of the agent tool),
-    scrolled to keep the selected agent visible, and on the right the framed detail view "agent log" (taking the remaining
-    width) with the recent processing log of the selected agent, scrolled to the bottom unless scrolled
-    up, and with the scroll position overlaid onto its frame  */
+    aligned cards (name and state, kind and mode of operation, and the ids of the tasks it is
+    busy with, inversely, else "none (waiting)"), scrolled to keep the selected agent visible, and on
+    the right (taking the remaining width) three equally wide framed panes of the selected agent: its
+    location (host and process id), its runtime (uptime and age of its heartbeat), and its usage
+    (total and last usage of the agent tool), and below them the framed detail view "agent log" with the recent processing log of
+    the selected agent, scrolled to the bottom unless scrolled up, and with the scroll position
+    overlaid onto its frame  */
 export const renderAgents = (ctx: BoardCtx) => {
     const { agents, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, boardH, dim, mouse, pulse, now, beatOf, agentRef } = ctx
     const fit   = Math.max(1, Math.floor((boardH - 2) / AGENT_H))
@@ -640,11 +644,8 @@ export const renderAgents = (ctx: BoardCtx) => {
                     h(Text, { color: tint, dimColor: dim }, beatOf(a.id) ? "♥" : "♡"))),
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("kind:"), val(clean(a.kind))),
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("mode:"), val(mode)),
-            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("uptime:"), val(agentUptime(a))),
             h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("task:"), ...(a.tasks.length === 0 ? [ val("none (waiting)") ] :
-                a.tasks.flatMap((id, k) => [ k > 0 ? " " : "", h(Text, { key: id, ...cx("badge"), color: tint, dimColor: dim }, ` ${clean(id)} `) ]))),
-            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("usage:"), val(agentUsage(a.usage?.total))),
-            h(Text, { color: tint, dimColor: dim, wrap: "truncate" }, label("last:"),  val(agentUsage(a.usage?.last)))))
+                a.tasks.flatMap((id, k) => [ k > 0 ? " " : "", h(Text, { key: id, ...cx("badge"), color: tint, dimColor: dim }, ` ${clean(id)} `) ])))))
     })
     const master = h(Box, { key: "master", width: AGENT_W, height: boardH, flexShrink: 0 },
         h(Box, { paddingX: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
@@ -657,7 +658,24 @@ export const renderAgents = (ctx: BoardCtx) => {
     const lines  = logLines.slice(logFirst, logFirst + logH)
     const thumbH = Math.max(1, Math.round(logH * Math.min(1, logH / Math.max(1, logLines.length))))
     const thumbY = logMax === 0 ? 0 : Math.round((logH - thumbH) * logFirst / logMax)
-    const detail = h(Box, { key: "detail", flexGrow: 1, height: boardH, marginLeft: 1 },
+    const field  = (name: string, value: string, width: number) => h(Text, { key: name, ...cx("normal", "truncate", dim && "dimmed") },
+        name.padEnd(width), h(Text, cx("bold"), value))
+    const pane   = (key: string, text: string, fields: () => ReturnType<typeof field>[], first = false) =>
+        h(Box, { key, flexGrow: 1, flexBasis: 0, marginLeft: first ? 0 : 1 },
+            h(Box, { paddingX: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
+                ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", "truncate", dim && "dimmed") }, empty) ] : fields())),
+            title(text))
+    const info   = h(Box, { key: "info", height: AGENT_INFO_H, flexShrink: 0 },
+        pane("location", "Location", () => [
+            field("host:",      clean(agent!.host), 6),
+            field("pid:",       String(agent!.pid), 6) ], true),
+        pane("runtime", "Runtime", () => [
+            field("uptime:",    agentUptime(agent!), 11),
+            field("heartbeat:", `${agentDuration(now - agent!.beat)} ago`, 11) ]),
+        pane("usage", "Usage", () => [
+            field("total:",     agentUsage(agent!.usage?.total), 7),
+            field("last:",      agentUsage(agent!.usage?.last), 7) ]))
+    const log    = h(Box, { key: "log", flexGrow: 1 },
         h(Box, { paddingLeft: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
             ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, empty) ] :
                 lines.length === 0 ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, "(no processing log lines yet)") ] :
@@ -670,19 +688,16 @@ export const renderAgents = (ctx: BoardCtx) => {
                                 h(Text, cx(line.tone, dim && "dimmed"), line.text))),
                         h(Text, cx("signal", dim && "dimmed"),
                             logLines.length <= logH ? "  " : i >= thumbY && i < thumbY + thumbH ? " █" : " ░"))))),
-        title("Agent: Recent Log Entries"),
+        title("Recent Log Entries"),
         ...(agent !== undefined ? [ h(Box, { key: "pos", position: "absolute", bottom: 0, right: 2 },
             h(Text, cx("dim", dim && "dimmed"), logLines.length <= logH ? `[ ${logLines.length} lines ]` :
                 `[ lines ${logFirst + 1}–${logFirst + lines.length} of ${logLines.length} · ${logFirst >= logMax ? "following" : "scrolled"} ]`)) ] : []))
+    const detail = h(Box, { key: "detail", flexGrow: 1, height: boardH, marginLeft: 1, flexDirection: "column" }, info, log)
     return [
         h(Box, { key: "agents", height: boardH, paddingX: 1 }, master, detail),
         h(Box, { key: "info", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"), agent === undefined ? " " : [
-                "agent: ",    h(Text, { key: "agent",  ...cx("bold") }, clean(agentLabel(agent))),
-                " · host: ",  h(Text, { key: "host",   ...cx("bold") }, clean(agent.host)),
-                " · pid: ",   h(Text, { key: "pid",    ...cx("bold") }, String(agent.pid)),
-                ` · ${clean(agent.state)}: `, h(Text, { key: "since", ...cx("bold") }, agentDuration(now - agent.since)),
-                " · heartbeat: ", h(Text, { key: "beat", ...cx("bold") }, `${agentDuration(now - agent.beat)} ago`) ])),
+                "agent: ",    h(Text, { key: "agent",  ...cx("bold") }, clean(agentLabel(agent))) ])),
         h(Box, { key: "keys1", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 "↑/↓/Left-Click: select agent · ⇈/⇊/⇤/⇥: page/top/bottom agent log · Mouse-Wheel: scroll agent log")),
