@@ -10,6 +10,11 @@ ChangeLog
     of the per-project background service: `ase service start` (also with `--foreground`) binds it
     if available, else warns and falls back to a random port out of `42000`..`44000` as before.
 
+-   BUGFIX [tool]: Stale Update Notification
+    The latest version check (`Version.latest()` of the session start hook and `ase setup`) now
+    re-persists the cached update information of `update-notifier` only while it still denotes a
+    version newer than the installed one (compared via `semver`), so a stale notice is no longer kept.
+
 2.0.0 (2026-10-18)
 ------------------
 

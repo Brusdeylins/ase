@@ -5,6 +5,7 @@
 */
 
 import updateNotifier from "update-notifier"
+import semver         from "semver"
 
 import pkg            from "../package.json" with { type: "json" }
 
@@ -23,9 +24,12 @@ export default class Version {
             updateCheckInterval: 1000 * 60 * 60
         })
 
-        /*  re-persist the cached update information, as update-notifier consumes it on read  */
-        if (notifier.update !== undefined)
-            notifier.config?.set("update", notifier.update)
-        return notifier.update?.latest ?? Version.current()
+        /*  re-persist the cached update information, as update-notifier consumes it on read,
+            but only while it still denotes a newer version (it is never cleared otherwise)  */
+        const latest = notifier.update?.latest
+        if (latest === undefined || !semver.valid(latest) || !semver.gt(latest, Version.current()))
+            return Version.current()
+        notifier.config?.set("update", notifier.update)
+        return latest
     }
 }
