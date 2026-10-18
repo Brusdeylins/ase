@@ -49,7 +49,7 @@ const releaseUSPs: Record<string, USP[]> = {
         <div id={release.id} class="mt-12 scroll-mt-20">
             <h3 class="ase-h3 text-center" data-reveal>{release.title}</h3>
             {release.intro.length > 0 ?
-                <div class="ase-lead mx-auto mt-5 max-w-2xl md:columns-2 md:gap-8" data-reveal>
+                <div class="news-intro ase-lead mx-auto mt-5 max-w-2xl md:columns-2 md:gap-8" data-reveal>
                     {release.intro.map((html, i) => (
                         <p class={i === 0 ? "ase-justify" : "ase-indent-p ase-justify"} set:html={html}/>
                     ))}
@@ -102,5 +102,13 @@ const releaseUSPs: Record<string, USP[]> = {
         narrow plates, as the option and file names can get rather long  */
     .news-item :global(code) {
         overflow-wrap: anywhere;
+    }
+
+    /*  lift the inline code chips of the news texts (but not of the
+        terminals of the USPs) off their backgrounds for better visibility  */
+    .news-intro :global(code),
+    .news-item  :global(code) {
+        border-color: var(--border-strong);
+        background: color-mix(in oklch, var(--foreground) 15%, transparent);
     }
 </style>
