@@ -15,9 +15,10 @@ import type { DOMElement }                    from "ink"
 
 import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
+import { userId }                             from "./ase-service-otel.js"
 import {
     buildBoard, watchTasks, BoardState, byCreation, newTaskText, createTask, saveTask, TaskConflict, reachableStates, toneOf,
-    watchAgents, busyAgents, agentsDigest, requestNames, requestPrompt, dataLoad, viewOrder
+    watchAgents, busyAgents, agentsDigest, requestNames, requestPrompt, assignable, dataLoad, viewOrder
 }                                             from "./ase-task-board-core.js"
 import type { Board, Card, Surface, SurfaceFlag, SurfaceList, SurfaceView, StoreState, AgentsState } from "./ase-task-board-core.js"
 import * as TaskFormat                        from "./ase-task-format.js"
@@ -57,6 +58,35 @@ export const requestChoices = (request: PromptRequest): string[] => {
     const typed = request.typed.toLowerCase()
     return typed === "" || request.choices.includes(typed) ? request.choices :
         request.choices.filter((choice) => choice.toLowerCase().includes(typed))
+}
+
+/*  the assign popup of a task: its assignee (as typed or picked), the assignee as last
+    typed (filtering the suggested assignees, while the up/down arrows select them), the
+    suggested assignees ("none", the users, and the assignable agents at the agent relay), the
+    current user, and whether the assignees are restricted (by a non-empty "project.users")  */
+export type AssignChoice = { name: string, kind: "none" | "user" | "agent" }
+export type AssignState  = { id: string, name: string, typed: string, choices: AssignChoice[], self: string, strict: boolean }
+
+/*  the suggested assignees of the assign popup (with "none" first, then the users, then the
+    agents, each sorted, where the users win on name clashes), and those matching the assignee
+    as last typed (all of them for an empty or an exactly suggested assignee, to offer the
+    alternatives, and else those containing it)  */
+export const assignOptions = (users: string[], agents: string[]): AssignChoice[] => [
+    { name: "none", kind: "none" },
+    ...[ ...new Set(users) ].sort().map((name) => ({ name, kind: "user" as const })),
+    ...[ ...new Set(agents) ].filter((name) => !users.includes(name)).sort().map((name) => ({ name, kind: "agent" as const }))
+]
+export const assignChoices = (assign: AssignState): AssignChoice[] => {
+    const typed = assign.typed.toLowerCase()
+    return typed === "" || assign.choices.some((choice) => choice.name === assign.typed) ? assign.choices :
+        assign.choices.filter((choice) => choice.name.toLowerCase().includes(typed))
+}
+
+/*  whether the assignee of the assign popup is unknown (with restricted assignees only)  */
+export const assignUnknown = (assign: AssignState): boolean => {
+    const name = assign.name.trim()
+    return assign.strict && name !== "" && name !== "me" && name !== assign.self
+        && !assign.choices.some((choice) => choice.name === name)
 }
 
 /*  the navigable items of a group: one per card, or one per lane
@@ -286,6 +316,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const [ confirm, setConfirm ] = React.useState<{ id: string, yes: boolean } | null>(null)
     const [ transfer, setTransfer ] = React.useState<{ id: string, at: string } | null>(null)
     const [ prompt,  setPrompt  ] = React.useState<PromptState | null>(null)
+    const [ assign,  setAssign  ] = React.useState<AssignState | null>(null)
     const [ store,   setStore   ] = React.useState<StoreState | null>(null)
     const [ relayed, setRelayed ] = React.useState<AgentsState | null | undefined>(undefined)
     const [ usage,   setUsage   ] = React.useState<Awaited<ReturnType<typeof Task.listUsage>> | null>(null)
@@ -370,6 +401,14 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             setNotice(`transferring task "${transfer.id}" cancelled: task vanished in the meantime`)
         }
     }, [ all, transfer ])
+
+    /*  close the assign popup if its task vanished in the meantime  */
+    React.useEffect(() => {
+        if (assign !== null && !all.cards.has(assign.id)) {
+            setAssign(null)
+            setNotice(`assigning task "${assign.id}" cancelled: task vanished in the meantime`)
+        }
+    }, [ all, assign ])
 
     /*  close the prompt popup if its task vanished in the meantime  */
     React.useEffect(() => {
@@ -704,6 +743,41 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         })
     }
 
+    /*  open the assign popup of a task, prefilled with its assignee, suggesting the users of
+        "project.users" (else the current user) and the assignable agents present at the agent relay  */
+    const startAssign = (id: string): void => {
+        const card = all.cards.get(id)
+        if (card === undefined)
+            return
+        let users: string[]
+        try {
+            users = Task.users(log)
+        }
+        catch (err: unknown) {
+            setNotice(`assigning task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+            return
+        }
+        const self    = userId()
+        const present = (latest.current ?? agents)?.agents.filter(assignable).map((a) => a.name) ?? []
+        const choices = assignOptions(users.length > 0 ? users : [ self ], present)
+        setAssign({ id, name: card.assignee, typed: "", choices, self, strict: users.length > 0 })
+    }
+
+    /*  assign a task (from its popup) to an assignee ("me" for the current user, and
+        empty or "none" to unassign it), where an unknown assignee is assigned with a warning  */
+    const assignTo = (id: string, name: string): void => {
+        setAssign(null)
+        const to = name.trim() === "me" ? userId() : name.trim()
+        const op = Task.checkAssignee(log, to).then(async (warning) =>
+            ({ warning, from: await Task.assign(log, id, to === "" || to === "none" ? null : to) }))
+        track({ text: "assigning task", id, suffix: `to ${to === "" ? "none" : to}` }, op).then(({ warning, from }) => {
+            setNotice(`task "${id}" assigned from "${from || "(nobody)"}" to "${to === "" || to === "none" ? "(nobody)" : to}"` +
+                (warning !== "" ? ` -- warning: ${warning}` : ""))
+        }).catch((err: unknown) => {
+            setNotice(`assigning task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+
     /*  drop a carried task onto a lane state, keeping it selected  */
     const drop = (id: string, to: string): void => {
         setCarry(null)
@@ -735,7 +809,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const promptLoad = React.useRef(0)
     React.useEffect(() => {
         promptLoad.current++
-    }, [ confirm, transfer, prompt, dialog?.id, sel.id, view ])
+    }, [ confirm, transfer, assign, prompt, dialog?.id, sel.id, view ])
 
     /*  open the prompt popup of an edit request of a task (refused for a finished task, and
         while an edit of it is in progress, as a new request would change the task under the
@@ -969,7 +1043,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         board.levels.get(a.id)! - board.levels.get(b.id)! || byCreation(a, b))
 
     /*  the board is dimmed while a dialog or popup is shown (incl. the busy popup)  */
-    const dim = dialog !== null || confirm !== null || transfer !== null || prompt !== null || busy !== null
+    const dim = dialog !== null || confirm !== null || transfer !== null || assign !== null || prompt !== null || busy !== null
 
     /*  pulse the tasks of active lanes (or the active nodes of the graph, or the busy agents), but only while
         any of them (or its pulse) is actually visible, in order to not needlessly re-render the board  */
@@ -1048,13 +1122,14 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     return {
         log, exit, columns, rows, all, board, surface, view, setView, filter, setFilter, typing, setTyping,
         sel, setSel, dialog, setDialog, scroll, layout, notice, setNotice, carry, setCarry, cycle,
-        confirm, setConfirm, transfer, setTransfer, prompt, setPrompt, mouse, setMouse, lastClick, grown, setGrow,
+        confirm, setConfirm, transfer, setTransfer, assign, setAssign, prompt, setPrompt, mouse, setMouse, lastClick, grown, setGrow,
         cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, rangeBoxes, cardRef, laneRef, groupRef, headRef, agentRef, rangeRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,
         agents, working, cycleView, agentList, agentIdx, agent, agentOp, logLines, logH, logFirst, logMax, selectAgent, scrollLog, stats, usage, range, setRange, stepRange,
         flow, flowLayout, flowSel, setFlowSel, flowPlaces, focusAgent, scrollFlow,
-        toggle, toggleFlag, startEdit, startPrompt, startRequest, cancelPrompt, submitPrompt, remove, transferTo, drop
+        toggle, toggleFlag, startEdit, startPrompt, startRequest, cancelPrompt, submitPrompt, remove, transferTo,
+        startAssign, assignTo, drop
     }
 }
 

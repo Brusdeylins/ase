@@ -96,6 +96,19 @@ or via the *transfer popup* of `T`, which lists all lane states (as
 *phase* `▷` *state*, starting at the current state), where the states
 not reachable from the current state are dimmed.
 
+A task is assigned (changing its `Assignee:`) via the *assign popup* of
+`A`: its assignee field, prefilled with the current assignee, accepts
+any name, while its drop-down suggests the names containing the typed
+one: `none` (unassigning the task, like an empty field), then the
+users of `project.users` (else the current user) with `☺`, then the
+agents present at the agent relay with `⚉`, each sorted, except the
+agents which never take a task by its assignee (the request agents,
+like `ase-agent-editor`(1), and the phase agents of an `unclaimed`
+definition). With a
+non-empty `project.users`, a name neither suggested nor the current
+user is marked `unknown`, and its assignment is warned about (see
+`ase-task-assign`(1)).
+
 `e` edits the selected task plan with `$EDITOR` (default: `vi`, run
 through the shell, with the file passed as `$ASE_TASK_FILE`), where a
 draft which failed to save is offered again on the next `e`. `N`
@@ -400,7 +413,7 @@ relay, the agent graph view is skipped.
 
 The following keys are supported by the terminal board (and, unless
 noted otherwise, equally by the web board). The keys `D`, `E`, `N`,
-`R`, `T`, and `M` are also accepted as `Shift` with the lower-case
+`R`, `T`, `A`, and `M` are also accepted as `Shift` with the lower-case
 letter under the kitty keyboard protocol.
 
 ### Every View
@@ -415,6 +428,8 @@ letter under the kitty keyboard protocol.
   agent logs and statistics views).
 - `T`: Transfer the selected task to another state via the transfer
   popup (not in the agent logs and statistics views).
+- `A`: Assign the selected task via the assign popup (not in the agent
+  logs and statistics views).
 - `E`: Request the edit of the selected task by a prompt (not in the
   agent logs and statistics views).
 - `R`: Request the selected task by a prompt under a request name (not
@@ -498,7 +513,7 @@ letter under the kitty keyboard protocol.
 - `↑`/`↓`: Scroll the content.
 - `PgUp`/`PgDn`: Scroll the content by one page.
 - `e`: Edit the task plan.
-- `D`, `T`, `E`, `R`, `M`: As in every view.
+- `D`, `T`, `A`, `E`, `R`, `M`: As in every view.
 - `⏎`, `ESC`: Close the task dialog.
 
 ### Filter Field
@@ -534,6 +549,15 @@ letter under the kitty keyboard protocol.
 
 - `↑`/`↓`: Select the previous/next reachable state.
 - `⏎`: Transfer the task into the selected state (also a click onto it).
+- `ESC`: Cancel (also a click outside of the popup).
+
+### Assign Popup
+
+- *character*: Extend the assignee (web board: edit it freely).
+- `Backspace`: Remove the last character of the assignee (terminal board).
+- `↑`/`↓`: Cycle through the suggested assignees of the drop-down.
+- `⏎`: Assign the task to the assignee (also a click onto a suggested
+  assignee).
 - `ESC`: Cancel (also a click outside of the popup).
 
 ### Deletion Confirmation

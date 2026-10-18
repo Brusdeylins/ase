@@ -12,7 +12,7 @@ import type { Card }                          from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine }      from "./ase-agent-relay-core.js"
 import { h }                                  from "./ase-task-board-tui-view.js"
 import { palette, cx, spinnerFrames, eighths } from "./ase-task-board-tui-style.js"
-import type { TransferEntry, BusyLabel, PromptState, PromptFocus } from "./ase-task-board-tui-model.js"
+import type { TransferEntry, BusyLabel, PromptState, PromptFocus, AssignState, AssignChoice } from "./ase-task-board-tui-model.js"
 
 /*  a text line with a per-character mask of its inline style
     (bit 0: bold, bit 1: italic, bit 2: code, bit 3: accent, bit 4: signal, bit 5: dim)  */
@@ -658,6 +658,77 @@ export const renderTransfer = (id: string, from: string, entries: TransferEntry[
         h(Text, cx("dim"), keys))
 }
 
+/*  the geometry of the assign popup: centered on the screen, with the input box of the
+    assignee (its text in the second inner row of it) spanning the inner width (minus a
+    margin), and its drop-down of at most five suggested assignees attached below it  */
+export const assignBox = (columns: number, rows: number) => {
+    const width  = Math.min(columns - 2, 60)
+    const innerW = width - 2
+    const height = DROP_ROWS + 10
+    const top    = Math.floor((rows - height) / 2)
+    const left   = Math.floor((columns - width) / 2)
+    return { width, innerW, height, top, left, nameW: innerW - 2, nameX: left + 2, nameY: top + 4, dropY: top + 5 }
+}
+
+/*  render the assign popup of a task, in the style of the request name of the prompt popup:
+    the assignee in the frame of an input box (in signal color, with an inverse cursor cell
+    behind its end, a drop-down marker, and a marker for an <unknown> assignee), with the
+    suggested assignees <choices> (with the icons of their kind) in a drop-down below it
+    (scrolled to show the selected one, rendered inverse, and with markers where scrolled),
+    and with every inner cell written (with spaces) to hide the content underneath  */
+export const renderAssign = (assign: AssignState, choices: AssignChoice[], unknown: boolean, columns: number, rows: number) => {
+    const box    = assignBox(columns, rows)
+    const { width, innerW, height, top, left, nameW } = box
+    const blank  = (key: string) => h(Text, { key }, " ".repeat(innerW))
+
+    /*  the centered question, with the task id rendered inverse with one extra space on each side  */
+    const tid    = ` ${sanitize(assign.id)} `.slice(0, Math.max(0, innerW - 16))
+    const qpad   = Math.max(0, Math.floor((innerW - 16 - tid.length) / 2))
+    const hint   = "↑/↓/Click: pick assignee · ⏎: assign · ESC: cancel".slice(0, innerW)
+    const keys   = (" ".repeat(Math.floor((innerW - hint.length) / 2)) + hint).padEnd(innerW)
+
+    /*  the assignee (its end shown if too long) and the marker of an unknown assignee  */
+    const mark   = unknown ? "(unknown) " : ""
+    const textW  = Math.max(1, nameW - 6 - mark.length)
+    const name   = [ ...sanitize(assign.name) ].slice(-textW).join("")
+
+    /*  the suggested assignees, with the selected one rendered inverse  */
+    const names  = choices.map((choice) => choice.name)
+    const dropH  = Math.min(DROP_ROWS, choices.length)
+    const sel    = names.indexOf(assign.name)
+    const first  = dropFirst(names, assign.name)
+    const more   = (flag: boolean, sign: string) => flag ? sign : "─"
+    const icon   = (choice: AssignChoice) => choice.kind === "user" ? "☺" : choice.kind === "agent" ? "⚉" : " "
+    const drop   = dropH === 0 ? [ h(Text, { key: "assign-bottom", ...cx("signal") }, ` ╰${"─".repeat(nameW - 2)}╯ `) ] : [
+        h(Text, { key: "assign-sep", ...cx("signal") }, ` ├${"─".repeat(nameW - 4)}${more(first > 0, "▴")}─┤ `),
+        ...choices.slice(first, first + dropH).map((choice, k) =>
+            h(Text, { key: `assign-${k}` },
+                h(Text, cx("signal"), " │"),
+                h(Text, cx("signal", first + k === sel && "inverse", first + k === sel && "bold"),
+                    ` ${icon(choice)} ${sanitize(choice.name).slice(0, nameW - 6).padEnd(nameW - 6)} `),
+                h(Text, cx("signal"), "│ "))),
+        h(Text, { key: "assign-bottom", ...cx("signal") }, ` ╰${"─".repeat(nameW - 4)}${more(first + dropH < choices.length, "▾")}─╯ `)
+    ]
+    return h(Box, { key: "assign", top, left, width, height, ...cx("popup", "border-dim") },
+        h(Text, cx("normal", "bold"),
+            " ".repeat(qpad) + "Assign task ",
+            h(Text, cx("inverse"), tid),
+            " to:".padEnd(Math.max(0, innerW - qpad - 12 - tid.length))),
+        blank("blank-above"),
+        h(Text, { key: "assign-top", ...cx("signal") }, ` ╭${"─".repeat(nameW - 2)}╮ `),
+        h(Text, { key: "assign-name" },
+            h(Text, cx("signal"), " │ "),
+            h(Text, cx("signal", "bold"), name),
+            h(Text, cx("signal", "inverse"), " "),
+            " ".repeat(Math.max(0, textW - name.length)),
+            h(Text, cx("signal", "bold"), mark),
+            h(Text, cx("signal"), `${names.length > 0 ? "▾" : " "} │ `)),
+        ...drop,
+        ...Array.from({ length: DROP_ROWS - dropH + (dropH === 0 ? 1 : 0) }, (_, k) => blank(`blank-drop-${k}`)),
+        blank("blank-below"),
+        h(Text, cx("dim"), keys))
+}
+
 /*  render the read dialog: full height, horizontally centered, with a
     vertical scroll bar in its right border  */
 export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, first, scroll, lines, columns, rows, notice }: DialogArgs) => {
@@ -719,7 +790,7 @@ export const renderDialog = ({ card, group, id, pred, succ, tint, tabs, tab, fir
     /*  the key hints, or instead the status notice of an edit, truncated to the free width  */
     const free   = Math.max(0, innerW - pos.length - 1)
     const keys   = (notice !== null ? " " + sanitize(notice) :
-        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · E: edit by prompt · R: request by prompt · T: transition · D: delete · M: toggle mouse · ⏎/ESC: close").slice(0, free)
+        " ←/→/⇤/⇥: switch tab · ↑/↓/⇈/⇊: scroll · e: edit · E: edit by prompt · R: request by prompt · T: transition · A: assign · D: delete · M: toggle mouse · ⏎/ESC: close").slice(0, free)
 
     return h(Box, { key: "dialog", top: 0, left, width, height: rows, ...cx("popup", "border-dim") },
         h(Text, {},

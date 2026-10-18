@@ -12,17 +12,17 @@ import { Task }                               from "./ase-task.js"
 import { buildBoard, toneOf, viewLabels }     from "./ase-task-board-core.js"
 import type { Board }                         from "./ase-task-board-core.js"
 import pkg                                    from "../package.json" with { type: "json" }
-import { useBoardState, mouseReporting, requestChoices } from "./ase-task-board-tui-model.js"
+import { useBoardState, mouseReporting, requestChoices, assignChoices, assignUnknown } from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
 import { handleMouse, handleKey }             from "./ase-task-board-tui-control.js"
 import { h, renderLanes, renderGraph, renderAgents, renderFlow, renderStats } from "./ase-task-board-tui-view.js"
 import { palette, loadPalette, cx }           from "./ase-task-board-tui-style.js"
-import { sanitize, renderDialog, renderConfirm, renderTransfer, renderPrompt, renderBusy } from "./ase-task-board-tui-popup.js"
+import { sanitize, renderDialog, renderConfirm, renderTransfer, renderAssign, renderPrompt, renderBusy } from "./ase-task-board-tui-popup.js"
 
 /*  render the whole screen  */
 const renderScreen = (ctx: BoardCtx, project: string) => {
     const {
-        columns, rows, all, board, surface, view, filter, typing, dialog, notice, carry, confirm, transfer, prompt,
+        columns, rows, all, board, surface, view, filter, typing, dialog, notice, carry, confirm, transfer, assign, prompt,
         headRef, tabLabels, dialogSel, dialogLines, transferCard, transferList, dim, store, busy, busyTick,
         agents
     } = ctx
@@ -133,6 +133,7 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         confirm !== null ? renderConfirm(confirm.id, confirm.yes, columns, rows) : null,
         transfer !== null && transferCard !== undefined ?
             renderTransfer(transfer.id, transferCard.status, transferList, transfer.at, columns, rows) : null,
+        assign !== null ? renderAssign(assign, assignChoices(assign), assignUnknown(assign), columns, rows) : null,
         prompt !== null ? renderPrompt(prompt, columns, rows, prompt.request !== null ? requestChoices(prompt.request) : []) : null,
         busy !== null ? renderBusy(busy.label, busy.since, busyTick, columns, rows) : null)
 }

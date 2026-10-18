@@ -76,7 +76,10 @@ to *id*.
 
 -   *assignee*:
     The assignee: `me` for oneself, `none` for nobody, or any other
-    name of a human or agent.
+    name of a human or agent. If the configuration key `project.users`
+    lists the known users, a name which is neither one of them nor the
+    name of an agent present at the agent relay is still assigned, but
+    reported with a `NOTICE`.
 
 ##  SCENARIOS
 

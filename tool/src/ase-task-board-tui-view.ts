@@ -449,7 +449,7 @@ export const renderLanes = (ctx: BoardCtx) => {
                     "↑/↓/←/→: select task · ⇈/⇊/⇤/⇥: select lane · ⏎: view task · e: edit task · SPACE: start/stop transition task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                "D: delete task · E: edit by prompt · R: request by prompt · N: new task · " +
+                "D: delete task · A: assign task · E: edit by prompt · R: request by prompt · N: new task · " +
                 (grown ? "g/ESC: shrink lane" : `m: ${minned ? "maximize/expand" : "minimize/collapse"} lane · g: grow lane`))),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
@@ -513,7 +513,7 @@ export const renderGraph = (ctx: BoardCtx) => {
                 "↑/↓/←/→/Left-Click: select task · ⏎/Double-Click: view task · e: edit task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `D: delete task · E: edit by prompt · R: request by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
+                `D: delete task · A: assign task · E: edit by prompt · R: request by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +
                 `s: ${surface.standalone ? "hide" : "show"} standalone tasks`)),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),

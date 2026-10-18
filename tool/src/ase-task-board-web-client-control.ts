@@ -11,7 +11,7 @@ import Mousetrap                          from "mousetrap"
 import {
     type Board, type Card, type Group, type Sel, type Surface,
     api, groupItems, rowLanes, relocate,
-    board, actionError, actionNote, view, graph, task, sel, grow, editing, confirmDel, transfer, prompt,
+    board, actionError, actionNote, view, graph, task, sel, grow, editing, confirmDel, transfer, assign, prompt,
     tab, drag, busy, boardEl, graphEl, flowEl, flowSel, planEl, filterEl, agentList, agentSel, logEl, showFlowAgent,
     surface, growable, grown, openTask, closeTask, selectTab, selectAgent, toggle, cycleView, stepStatsRange
 } from "./ase-task-board-web-client-model"
@@ -62,6 +62,76 @@ export const transferTo = (id: string, to: string) => {
         moveTask(id, to)
 }
 
+/*  the assignee field of the assign popup  */
+export const assignEl = ref<HTMLInputElement | null>(null)
+
+/*  the suggested assignees of the assign popup: "none", the users of "project.users" (else
+    the current user), and the agents present at the agent relay which claim tasks by their
+    assignee (neither request agents nor unclaimed phase agents), the latter two each sorted
+    (where the users win on name clashes), and those matching the assignee as last typed (all
+    of them for an empty or an exactly suggested assignee, to offer the alternatives, and else
+    those containing it)  */
+export type AssignChoice = { name: string, kind: "none" | "user" | "agent" }
+const assignOptions = computed<AssignChoice[]>(() => {
+    const users  = board.value?.users.length ? board.value.users : [ board.value?.self ?? "" ].filter((u) => u !== "")
+    const agents = new Set(agentList.value.filter((a) => a.kind !== "editor" && a.request === undefined
+        && (a.states === undefined || a.states.activity !== undefined)).map((a) => a.name))
+    return [
+        { name: "none", kind: "none" },
+        ...[ ...new Set(users) ].sort().map((name) => ({ name, kind: "user" as const })),
+        ...[ ...agents ].filter((name) => !users.includes(name)).sort().map((name) => ({ name, kind: "agent" as const }))
+    ]
+})
+export const assignChoices = computed(() => {
+    const typed = assign.value?.typed.toLowerCase() ?? ""
+    return typed === "" || assignOptions.value.some((choice) => choice.name === assign.value?.typed) ? assignOptions.value :
+        assignOptions.value.filter((choice) => choice.name.toLowerCase().includes(typed))
+})
+
+/*  whether the assignee of the assign popup is unknown (with a non-empty "project.users" only)  */
+export const assignUnknown = computed(() => {
+    const name = assign.value?.name.trim() ?? ""
+    return (board.value?.users.length ?? 0) > 0 && name !== "" && name !== "me" && name !== board.value?.self
+        && !assignOptions.value.some((choice) => choice.name === name)
+})
+
+/*  open the assign popup of a task, prefilled with its assignee  */
+const openAssign = (id: string) => {
+    const card = board.value?.groups.flatMap((g) => g.lanes).flatMap((l) => l.cards).find((c) => c.id === id)
+    assign.value = { id, name: card?.assignee ?? "", typed: "" }
+    nextTick(() => assignEl.value?.select())
+}
+
+/*  track the typing into the assignee field, and cancel the assign popup  */
+export const typeAssign = () => {
+    if (assign.value !== null)
+        assign.value.typed = assign.value.name
+}
+export const cancelAssign = () => {
+    assign.value = null
+}
+
+/*  assign a task (from its popup) to an assignee ("me" for the current user, and empty
+    or "none" to unassign it), where an unknown assignee is assigned with a warning  */
+export const assignTo = async (id: string, name: string) => {
+    assign.value = null
+    const res = await api<{ from: string, to: string, warning: string }>("/task-board/api/assign", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, assignee: name })
+    })
+    if (res.error !== undefined)
+        actionError.value = `assigning task "${id}" failed: ${res.error}`
+    else if (res.warning !== "")
+        actionError.value = `task "${id}" assigned to "${res.to || "(nobody)"}" -- warning: ${res.warning}`
+    else {
+        actionError.value = null
+        notify(`task "${id}" assigned from "${res.from || "(nobody)"}" to "${res.to || "(nobody)"}"`)
+    }
+}
+export const submitAssign = () => {
+    if (assign.value !== null)
+        assignTo(assign.value.id, assign.value.name)
+}
+
 /*  the drafts of the prompts of cancelled (or failed to be sent) edit requests, per task  */
 const promptDrafts = new Map<string, string>()
 
@@ -104,7 +174,7 @@ const openPrompt = async (id: string) => {
         text ??= res.prompt
 
         /*  never open the popup over another one opened meanwhile  */
-        if (confirmDel.value !== null || transfer.value !== null || prompt.value !== null)
+        if (confirmDel.value !== null || transfer.value !== null || assign.value !== null || prompt.value !== null)
             return
     }
     prompt.value = { id, text, name: null }
@@ -301,7 +371,7 @@ watch([ sel, graph, view, task, grown ], () => {
 })
 
 /*  in the task dialog, RETURN and ESC close it, "e" edits its plan, "E" edits it by a prompt,
-    "D" deletes and "T" transitions its task, the left/right arrows (also Tab/Shift+Tab) switch
+    "D" deletes, "T" transitions, and "A" assigns its task, the left/right arrows (also Tab/Shift+Tab) switch
     its tab, and the up/down arrows and PgUp/PgDn scroll its content  */
 const onDialogKey = (ev: KeyboardEvent) => {
     const win = planEl.value?.contentWindow ?? null
@@ -326,6 +396,10 @@ const onDialogKey = (ev: KeyboardEvent) => {
     else if (ev.key === "T" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
         ev.preventDefault()
         openTransfer(task.value.id)
+    }
+    else if (ev.key === "A" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
+        ev.preventDefault()
+        openAssign(task.value.id)
     }
     else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Tab") {
         ev.preventDefault()
@@ -445,6 +519,10 @@ const onTaskKey = (ev: KeyboardEvent, id: string, carrying: boolean): boolean =>
     else if (ev.key === "T") {
         if (id !== "" && !carrying)
             openTransfer(id)
+    }
+    else if (ev.key === "A") {
+        if (id !== "" && !carrying)
+            openAssign(id)
     }
     else
         return false
@@ -654,6 +732,34 @@ const onTransferKey = (ev: KeyboardEvent, t: { id: string, at: string }) => {
     ev.preventDefault()
 }
 
+/*  answer the assign popup: the up/down arrows cycle through the suggested assignees of the
+    drop-down (matching the assignee as last typed), RETURN assigns the task to the assignee,
+    ESC cancels, TAB is consumed (keeping the focus on the assignee field), and all other keys
+    belong to the assignee field, as do all keys while an input method composes text  */
+const onAssignKey = (ev: KeyboardEvent, a: { id: string, name: string, typed: string }) => {
+    if (ev.isComposing || ev.keyCode === 229)
+        return
+    const choices = assignChoices.value.map((choice) => choice.name)
+    if ((ev.key === "ArrowUp" || ev.key === "ArrowDown") && choices.length > 0) {
+        ev.preventDefault()
+        const i  = choices.indexOf(a.name)
+        const n  = choices.length
+        const up = ev.key === "ArrowUp"
+        a.name = choices[i < 0 ? (up ? n - 1 : 0) : (i + (up ? n - 1 : 1)) % n]
+        nextTick(() => document.querySelector("#assign .sel")?.scrollIntoView({ block: "nearest" }))
+    }
+    else if (ev.key === "Enter" && !(ev.target instanceof HTMLButtonElement)) {
+        ev.preventDefault()
+        submitAssign()
+    }
+    else if (ev.key === "Escape") {
+        ev.preventDefault()
+        cancelAssign()
+    }
+    else if (ev.key === "Tab")
+        ev.preventDefault()
+}
+
 /*  answer the prompt popup: TAB resp. Shift+TAB switch the focus to the next resp. previous
     field (the request name of a request by prompt, the prompt unless ignored, and the request
     and cancel buttons, like in the terminal board, and never leaving the popup), RETURN requests
@@ -699,13 +805,15 @@ const onPromptKey = (ev: KeyboardEvent) => {
     }
 }
 
-/*  dispatch a key to the deletion confirmation, the transfer popup, the prompt popup,
-    the task plan editor, the task dialog, or the board  */
+/*  dispatch a key to the deletion confirmation, the transfer popup, the assign popup,
+    the prompt popup, the task plan editor, the task dialog, or the board  */
 const onKey = (ev: KeyboardEvent) => {
     if (confirmDel.value !== null)
         onConfirmKey(ev, confirmDel.value)
     else if (transfer.value !== null)
         onTransferKey(ev, transfer.value)
+    else if (assign.value !== null)
+        onAssignKey(ev, assign.value)
     else if (prompt.value !== null)
         onPromptKey(ev)
     else if (editing.value !== null)

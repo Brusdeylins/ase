@@ -15,6 +15,7 @@ import type { Marked }           from "marked"
 
 import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
+import { userId }                from "./ase-service-otel.js"
 import { Config }                from "./ase-config-core.js"
 import { configSchema, webColorDefaults, webColorNames } from "./ase-config-schema.js"
 import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, dataLang, dataLoad, dataSpans, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
@@ -252,11 +253,13 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
 }
 
 /*  serialize the board for the browser  */
-const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle) => ({
+const boardJSON = (board: Board, lifecycle: TaskFormat.TaskLifecycle, users: string[]) => ({
     mode:     board.mode,
     project:  Task.projectIdOf(Task.projectRoot()),
     version:  pkg.version,
     warnings: board.warnings,
+    users,
+    self:     userId(),
     surface:  BoardState.load().web,
     moves:    laneMoves(board, lifecycle),
     groups:   board.groups.map((g) => ({
@@ -439,7 +442,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         method:  "GET",
         path:    "/task-board/api/board",
         handler: guarded(async (request, h) =>
-            h.response(boardJSON(filterBoard(await currentBoard(log), filterQuery(request)), await Task.lifecycle(log))))
+            h.response(boardJSON(filterBoard(await currentBoard(log), filterQuery(request)), await Task.lifecycle(log), Task.users(log))))
     })
 
     /*  the dependency graph as SVG, reduced onto the tasks matching the
@@ -592,7 +595,7 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
     })
 }
 
-/*  register the update routes of the web board: task moves, saves, creations, and deletions  */
+/*  register the update routes of the web board: task moves, assignments, saves, creations, and deletions  */
 const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
     /*  move a task to another lane by changing its status (the change
         watcher then pushes the changed board to all open web boards)  */
@@ -615,6 +618,25 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
             if (reason !== "")
                 return h.response({ error: `task "${p.id}": ${reason}` }).code(400)
             return h.response(await Task.setStatus(log, p.id, p.status))
+        })
+    })
+
+    /*  assign a task to an assignee ("me" for the current user, and empty or "none"
+        to unassign it), where an unknown assignee is assigned with a warning  */
+    server.route({
+        method:  "POST",
+        path:    "/task-board/api/assign",
+        options: { payload: { parse: true, allow: "application/json" } },
+        handler: guarded(async (request, h) => {
+            const p = request.payload as { id?: unknown, assignee?: unknown } | null
+            if (p === null || typeof p.id !== "string" || typeof p.assignee !== "string")
+                return h.response({ error: "invalid assign request" }).code(400)
+            const to = p.assignee.trim() === "me" ? userId() : p.assignee.trim()
+            if (/[\r\n,]/.test(to))
+                return h.response({ error: "assignee must be a single-line name without commas" }).code(400)
+            const warning = await Task.checkAssignee(log, to)
+            const from    = await Task.assign(log, p.id, to === "" || to === "none" ? null : to)
+            return h.response({ from, to: to === "none" ? "" : to, warning })
         })
     })
 

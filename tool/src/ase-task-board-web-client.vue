@@ -149,6 +149,7 @@ const hints     = computed(() => {
         { key: "T",             action: "transition task" }
     ], [
         { key: "D",             action: "delete task" },
+        { key: "A",             action: "assign task" },
         { key: "E",             action: "edit by prompt" },
         { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
@@ -170,6 +171,7 @@ const hints     = computed(() => {
         { key: "T",             action: "transition task" }
     ], [
         { key: "D",             action: "delete task" },
+        { key: "A",             action: "assign task" },
         { key: "E",             action: "edit by prompt" },
         { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
@@ -214,6 +216,7 @@ const hints     = computed(() => {
         { key: "T",             action: "transition task" }
     ], [
         { key: "D",             action: "delete task" },
+        { key: "A",             action: "assign task" },
         { key: "E",             action: "edit by prompt" },
         { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },

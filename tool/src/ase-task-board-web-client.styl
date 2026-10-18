@@ -1249,8 +1249,8 @@ footer
     .action
         margin-left: 0.4rem
 
-/*  the key caps of the board footer, the dialog footer, the deletion confirmation, the transfer popup, and the prompt popup  */
-footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .keys kbd
+/*  the key caps of the board footer, the dialog footer, the deletion confirmation, the transfer popup, the assign popup, and the prompt popup  */
+footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #assign .keys kbd, #prompt .keys kbd
     display: inline-block
     padding: 0 5px
     border: 1px solid var(--c-border)
@@ -1398,9 +1398,9 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
     background: unquote("color-mix(in srgb, var(--c-shade) 55%, transparent)")
     z-index: 10
 
-/*  the confirmation of a task deletion, the transfer popup, the prompt popup,
-    and the busy popup: a small box, centered over everything  */
-#confirm, #transfer, #prompt, #busy
+/*  the confirmation of a task deletion, the transfer popup, the assign popup,
+    the prompt popup, and the busy popup: a small box, centered over everything  */
+#confirm, #transfer, #assign, #prompt, #busy
     position: fixed
     inset: 0
     display: flex
@@ -1590,6 +1590,83 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
         .cur
             color: var(--c-text-soft)
             font-weight: normal
+
+/*  the assign popup: in accent color, with its question in normal color (but bold), and
+    with the assignee field in the style of the request name field of the prompt popup (in
+    signal color, as it is always focused), with a marker of an unknown assignee, and with
+    the drop-down of the suggested assignees (with the icons of their kind) directly below
+    it, which stays in the flow of the popup, as it is always shown  */
+#assign
+    .box
+        border-color: var(--c-accent)
+    .ask
+        color: var(--c-text)
+        .cid
+            margin-right: 0
+    .combo
+        position: relative
+        width: min(360px, 70vw)
+        input
+            width: 100%
+            box-sizing: border-box
+            padding: 2px 22px 2px 6px
+            border: 1px solid var(--c-signal)
+            border-radius: 4px
+            background: var(--c-signal-ground)
+            color: var(--c-signal)
+            font: inherit
+            font-family: "DejaVu Sans Mono", monospace
+            font-size: 0.875em
+            &:focus
+                outline: none
+        .unknown
+            position: absolute
+            top: 6px
+            right: 22px
+            padding: 0 4px
+            border-radius: 3px
+            background: var(--c-signal)
+            color: var(--c-paper)
+            font-size: 0.6875rem
+            pointer-events: none
+        .mark
+            position: absolute
+            top: 6px
+            right: 7px
+            color: var(--c-signal)
+            pointer-events: none
+        .drop
+            max-height: 10.5em
+            overflow-y: auto
+            margin: 2px 0 0 0
+            padding: 2px 0
+            list-style: none
+            border: 1px solid var(--c-signal)
+            border-radius: 4px
+            background: var(--c-paper)
+            font-family: "DejaVu Sans Mono", monospace
+            font-size: 0.875em
+            li
+                padding: 1px 6px
+                color: var(--c-signal)
+                cursor: pointer
+                &:hover
+                    background: var(--c-signal-ground)
+                &.sel
+                    background: var(--c-signal)
+                    color: var(--c-paper)
+            .icon
+                display: inline-block
+                width: 1.5em
+    .buttons button
+        border-color: var(--c-accent)
+        background: var(--c-accent-ground)
+        color: var(--c-accent)
+        &:hover, &:focus-visible
+            outline: none
+            border-color: var(--c-signal)
+            background: var(--c-signal-ground)
+            color: var(--c-signal)
 
 /*  the modal busy popup: in accent color, above all other popups, with a
     rotating spinner and an indeterminate progress bar with a bouncing block  */

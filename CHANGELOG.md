@@ -5,6 +5,12 @@ ChangeLog
 2.0.0 (2026-10-XX)
 ------------------
 
+-   FEATURE [plugin,tool]: Known Task Assignees
+    The new configuration key `project.users` lists the known human assignees: an assignment
+    (`ase task assign`, `ase-task-assign`) to a name neither listed nor of an agent present at the
+    agent relay is still done, but warned about. Both task boards gained the assign popup of `A`:
+    a free assignee field with a drop-down suggesting `none`, the users, and the agents.
+
 -   FEATURE [tool]: Agent Graph View on the Task Boards
     Both task boards gained the view "agent graph" (after "agent logs"): the running agents as their
     cards plus the lifecycle states they observe (incoming), operate in (as dashed containers), write

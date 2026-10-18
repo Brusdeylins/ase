@@ -704,7 +704,8 @@ export class UsageTracker {
         }
     }
     private async assignSession (id: string, to: string, self: string, session: string): Promise<AssignResult> {
-        const from = await Task.assign(this.log, id, to === "none" ? null : to)
+        const warning = await Task.checkAssignee(this.log, to)
+        const from    = await Task.assign(this.log, id, to === "none" ? null : to)
         const now  = Date.now()
         if (to === self) {
             try {
@@ -759,6 +760,7 @@ export class UsageTracker {
         }
         await this.persist()
         this.watch()
+        notice = [ warning, notice ].filter((n) => n !== "").join("; ")
         return { from, to: to === "none" ? "" : to, action, booked, notice }
     }
 

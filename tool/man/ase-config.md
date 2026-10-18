@@ -133,6 +133,14 @@ Project identity and classification:
   at all), which modulates the work depth and output visibility of the
   skills (default: `white`).
 
+- `project.users` (*string*, `user` and `project` scopes only):
+  The comma-separated list of the known human assignees of the tasks
+  (default: empty). If not empty, an assignment to anybody else than
+  `none`, the current user, one of these users, or an agent present at
+  the agent relay is warned about (see `ase-task-assign`(1)), and the
+  assign popup of the task boards suggests these users (else the
+  current user) besides the agents (see `ase-task-board`(1)).
+
 Task plans (all writable on the `user` and `project` scopes only,
 `project.task.store.token` on the `user` scope only):
 

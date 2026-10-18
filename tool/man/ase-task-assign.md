@@ -19,6 +19,14 @@ plan (retried on a concurrent change of the task), leaving the
 The change is logged as `task: assigned "`*id*`" from "`*from*`" to
 "`*to*`"`.
 
+If the configuration key `project.users` (see `ase-config`(1)) lists
+the known users, an *assignee* which is neither `none`, the current
+user, one of these users, nor the name of an agent present at the
+agent relay (see `ase-agent-relay`(1)) is still assigned, but with the
+warning `task: unknown assignee "`*assignee*`" (neither one of the
+users of "project.users" nor a known agent)` (with `--session`
+reported as part of its notice).
+
 With `--session`, the assignment is instead done on behalf of an agent
 tool session through the running `ase service` of the project (see
 `ase-service`(1)), which handles the *AI usage window* of the task, too

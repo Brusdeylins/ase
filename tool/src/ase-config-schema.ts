@@ -58,6 +58,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
         "agent.guidance":  "normal",
         "project.name":    "Example Project",
         "project.boxing":  "white",
+        "project.users":   "",
         "project.task.lifecycle":         "solo",
         "project.task.idscheme":          "slug",
         "project.task.store.url":         "ase:./.ase/task",
@@ -103,6 +104,7 @@ export const projectClassificationPresets: Record<string, Record<string, string>
     (reads always cascade through the full chain; this restricts writes only);
     keys absent from this map default to all non-"default" scope kinds  */
 export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"]>> = {
+    "project.users":                  [ "user", "project" ],
     "project.task.store.url":         [ "user", "project" ],
     "project.task.store.token":       [ "user" ],
     "project.task.store.crt":         [ "user", "project" ],
@@ -300,6 +302,7 @@ export const configSchema = v.nullish(v.strictObject({
         id:      v.optional(v.pipe(v.string(), v.minLength(1))),
         name:    v.optional(v.pipe(v.string(), v.minLength(1))),
         boxing:  v.optional(v.picklist(projectClassification.boxing)),
+        users:   v.optional(v.string()),
         task: v.optional(v.strictObject({
             lifecycle: v.optional(v.picklist(projectClassification.lifecycle)),
             store:     v.optional(v.strictObject({

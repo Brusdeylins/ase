@@ -780,6 +780,46 @@ export class Task {
         return prev
     }
 
+    /*  the known human assignees of the project ("project.users", comma-separated)  */
+    static users (log: Log): string[] {
+        const cfg = new Config("config", configSchema, log)
+        cfg.read()
+        const val = cfg.get("project.users")
+        if (val === undefined)
+            return []
+        return String(isScalar(val) ? val.value : val).split(",").map((u) => u.trim()).filter((u) => u !== "")
+    }
+
+    /*  the names of the agents currently present at the agent relay
+        (none if no agent relay is configured or reachable)  */
+    static async agentNames (log: Log): Promise<string[]> {
+        try {
+            const { relaySpec, AgentRelayClient } = await import("./ase-agent-relay-client.js")
+            const spec = relaySpec(log)
+            if (spec === null)
+                return []
+            const agents = await new AgentRelayClient(log, spec).list()
+            return [ ...new Set(agents.map((a) => a.name)) ]
+        }
+        catch {
+            return []
+        }
+    }
+
+    /*  check an assignee against the known ones (the current user, the users of
+        "project.users", and the agents present at the agent relay), answering a
+        warning for an unknown one (or empty), where an empty "project.users" knows all  */
+    static async checkAssignee (log: Log, assignee: string): Promise<string> {
+        const { userId } = await import("./ase-service-otel.js")
+        const name   = assignee === "me" ? userId() : assignee.trim()
+        const users  = Task.users(log)
+        const agents = await Task.agentNames(log)
+        if (name === "" || name === "none" || users.length === 0 || name === userId()
+            || users.includes(name) || agents.includes(name))
+            return ""
+        return `unknown assignee "${name}" (neither one of the users of "project.users" nor a known agent)`
+    }
+
     /*  accumulate the AI usage of a task plan: add each positive amount of the delta to its
         amount in the YAML data of the usage attachment (created on the first booking, and
         rounded to the precision of the amount) in a conditional save on the complete plan
@@ -1102,7 +1142,10 @@ export default class TaskCommand {
                         `(usage window: ${result.action}, booked: ${usageText(result.booked)})`)
                 }
                 else {
-                    const to   = assignee === "me" ? Usage.userId() : assignee
+                    const to      = assignee === "me" ? Usage.userId() : assignee
+                    const warning = await Task.checkAssignee(this.log, to)
+                    if (warning !== "")
+                        this.log.write("warning", `task: ${warning}`)
                     const from = await Task.assign(this.log, id, to === "none" ? null : to)
                     this.log.write("info", `task: assigned "${id}" from "${from}" to "${to === "none" ? "" : to}"`)
                 }

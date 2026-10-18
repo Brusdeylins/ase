@@ -9,21 +9,21 @@ import type { Key }                           from "ink"
 
 import { reachableStates, rowLanes }          from "./ase-task-board-core.js"
 import { nearestPlace }                       from "./ase-task-board-graph.js"
-import { groupItems, relocate, requestChoices } from "./ase-task-board-tui-model.js"
+import { groupItems, relocate, requestChoices, assignChoices } from "./ase-task-board-tui-model.js"
 import type { BoardCtx, PromptFocus }         from "./ase-task-board-tui-model.js"
 import type { StatsRange }                    from "./ase-task-board-stats.js"
 import { gridColumns }                        from "./ase-task-board-tui-view.js"
 import {
-    refSegs, tabFirst, tabLayout, confirmBox, transferBox, promptBox, promptIgnored, promptNext, dropFirst,
+    refSegs, tabFirst, tabLayout, confirmBox, transferBox, assignBox, promptBox, promptIgnored, promptNext, dropFirst,
     CONFIRM_BUTTON, DIALOG_CHROME, DIALOG_CLOSE, DROP_ROWS
 }                                             from "./ase-task-board-tui-popup.js"
 
-/*  handle a mouse press onto the deletion confirmation, the transfer popup, the
-    prompt popup, or the read dialog, returning whether one of them was open  */
+/*  handle a mouse press onto the deletion confirmation, the transfer popup, the assign
+    popup, the prompt popup, or the read dialog, returning whether one of them was open  */
 const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): boolean => {
     const {
         columns, rows, all, dialog, setDialog, setNotice, confirm, setConfirm, transfer, setTransfer,
-        prompt, setPrompt, cancelPrompt, submitPrompt,
+        assign, setAssign, assignTo, prompt, setPrompt, cancelPrompt, submitPrompt,
         dialogW, tabLabels, dialogSel, dialogScroll, transferList, remove, transferTo
     } = ctx
 
@@ -64,6 +64,23 @@ const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): b
             setNotice(`deleting task "${confirm.id}" cancelled`)
             setConfirm(null)
         }
+        return true
+    }
+    if (assign !== null) {
+        /*  a click onto a suggested assignee of the drop-down assigns the task to it,
+            while a click outside the popup cancels  */
+        const box     = assignBox(columns, rows)
+        const choices = assignChoices(assign)
+        const k       = dropFirst(choices.map((choice) => choice.name), assign.name) + my - box.dropY - 1
+        if (btn !== 0)
+            return true
+        if (mx < box.left || mx >= box.left + box.width || my < box.top || my >= box.top + box.height) {
+            setNotice(`assigning task "${assign.id}" cancelled`)
+            setAssign(null)
+        }
+        else if (mx >= box.nameX && mx < box.nameX + box.nameW
+            && my > box.dropY && my <= box.dropY + Math.min(DROP_ROWS, choices.length))
+            assignTo(assign.id, choices[k].name)
         return true
     }
     if (transfer !== null) {
@@ -291,12 +308,13 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     }
 }
 
-/*  handle a key press onto the deletion confirmation, the transfer popup,
-    the prompt popup, or the filter field (outside of the read dialog)  */
+/*  handle a key press onto the deletion confirmation, the transfer popup, the assign
+    popup, the prompt popup, or the filter field (outside of the read dialog)  */
 const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
         dialog, setFilter, typing, setTyping, setNotice, confirm, setConfirm,
-        transfer, setTransfer, transferList, remove, transferTo, prompt, setPrompt, cancelPrompt, submitPrompt
+        transfer, setTransfer, transferList, remove, transferTo, assign, setAssign, assignTo,
+        prompt, setPrompt, cancelPrompt, submitPrompt
     } = ctx
 
     /*  operate the prompt popup: TAB resp. Shift+TAB switch the focus to the next resp.
@@ -426,6 +444,31 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
             setNotice(`transferring task "${transfer.id}" cancelled`)
             setTransfer(null)
         }
+        return
+    }
+
+    /*  answer the assign popup: RETURN assigns the task to the assignee, ESC cancels, the
+        up/down arrows cycle through the suggested assignees of the drop-down (matching the
+        assignee as last typed), BACKSPACE removes the last character, and all other input
+        (without control characters and commas) is appended  */
+    if (assign !== null) {
+        const choices = assignChoices(assign).map((choice) => choice.name)
+        const name    = (value: string, typed = value) => setAssign({ ...assign, name: value, typed })
+        if (key.return)
+            assignTo(assign.id, assign.name)
+        else if (key.escape) {
+            setNotice(`assigning task "${assign.id}" cancelled`)
+            setAssign(null)
+        }
+        else if ((key.upArrow || key.downArrow) && choices.length > 0) {
+            const i = choices.indexOf(assign.name)
+            const n = choices.length
+            name(choices[i < 0 ? (key.upArrow ? n - 1 : 0) : (i + (key.upArrow ? n - 1 : 1)) % n], assign.typed)
+        }
+        else if (key.backspace || key.delete)
+            name([ ...assign.name ].slice(0, -1).join(""))
+        else if (!key.ctrl && !key.meta && /^[^\p{Cc},]+$/u.test(input))
+            name(assign.name + input)
         return
     }
 
@@ -628,15 +671,15 @@ const handleNavKey = (ctx: BoardCtx, input: string, key: Key): void => {
 export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
         exit, all, board, surface, view, setView, typing, setTyping, sel, setSel, dialog, setDialog,
-        notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
+        notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer, assign, startAssign,
         prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, startRequest, cycleView, selectAgent, scrollLog, logH, stepRange,
         flowSel, setFlowSel, flowPlaces, scrollFlow, viewH
     } = ctx
     if (notice !== null)
         setNotice(null)
 
-    /*  answer the deletion confirmation, the transfer popup, the prompt popup, or the filter field  */
-    if (confirm !== null || transfer !== null || prompt !== null || (typing && dialog === null)) {
+    /*  answer the deletion confirmation, the transfer popup, the assign popup, the prompt popup, or the filter field  */
+    if (confirm !== null || transfer !== null || assign !== null || prompt !== null || (typing && dialog === null)) {
         handlePopupKey(ctx, input, key)
         return
     }
@@ -666,6 +709,13 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
             setNotice("task lifecycle model not yet loaded")
         else if (card !== undefined)
             setTransfer({ id: card.id, at: card.status })
+        return
+    }
+
+    /*  request the assignment of a task in every view (under the kitty keyboard
+        protocol, Shift+a arrives as "a" with the shift modifier)  */
+    if ((input === "A" || (input === "a" && key.shift)) && target !== "" && carry === null) {
+        startAssign(target)
         return
     }
 

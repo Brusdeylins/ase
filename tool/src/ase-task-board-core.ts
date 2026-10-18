@@ -809,6 +809,13 @@ export const requestPrompt = (state: AgentsState | null, name: string): AgentPro
         agents.every((agent) => agent.prompt === "ignored") ? "ignored" : "optional"
 }
 
+/*  whether an agent announced to the agent relay claims tasks by their assignee (for its
+    suggestion on assigning a task): not a request agent (which reacts on the requests of
+    a task only) and not an unclaimed phase agent (which never claims a task)  */
+export const assignable = (agent: AgentPresence): boolean =>
+    agent.kind !== "editor" && agent.request === undefined
+        && (agent.states === undefined || agent.states.activity !== undefined)
+
 /*  order the agents by name (and id, for equally named agents on different hosts)  */
 const byName = (a: AgentPresence, b: AgentPresence): number =>
     a.name.localeCompare(b.name) || a.id.localeCompare(b.id)

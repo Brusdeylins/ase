@@ -4,8 +4,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 -->
 
-<!--  the modal popups: the confirmation of a task deletion, the transfer
-      of a task, the prompt of a request of a task, and the busy popup  -->
+<!--  the modal popups: the confirmation of a task deletion, the transfer of a
+      task, the assignment of a task, the prompt of a request of a task, and the busy popup  -->
 <template>
     <!--  the confirmation of a task deletion  -->
     <div v-if="confirmDel !== null" id="confirm" @click.self="confirmDel = null">
@@ -29,6 +29,29 @@
                     @click="transferTo(transfer.id, e.status)">{{ e.group }} ▷ <span class="state">{{ e.status }}</span><span v-if="e.current" class="cur"> (current)</span></button>
             </div>
             <div class="keys"><kbd>↑</kbd>/<kbd>↓</kbd><span class="action">selects</span><span class="sep">·</span><kbd>⏎</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
+        </div>
+    </div>
+
+    <!--  the assignment of a task: a free assignee field with the drop-down of the
+          suggested assignees (users and agents), marking an unknown assignee  -->
+    <div v-if="assign !== null" id="assign" @click.self="cancelAssign">
+        <div class="box">
+            <div class="ask">Assign task <span class="cid">{{ assign.id }}</span> to:</div>
+            <div class="combo">
+                <input id="assign-name" ref="assignEl" v-model="assign.name" spellcheck="false" autocomplete="off" placeholder="none"
+                    @input="typeAssign" />
+                <span v-if="assignUnknown" class="unknown">unknown</span>
+                <span class="mark">▾</span>
+                <ul v-if="assignChoices.length > 0" class="drop">
+                    <li v-for="c in assignChoices" :key="c.name" :class="{ sel: c.name === assign.name }"
+                        @mousedown.prevent="assignTo(assign.id, c.name)"><span class="icon">{{ c.kind === "user" ? "☺" : c.kind === "agent" ? "⚉" : "" }}</span>{{ c.name }}</li>
+                </ul>
+            </div>
+            <div class="buttons">
+                <button @click="submitAssign">assign</button>
+                <button @click="cancelAssign">cancel</button>
+            </div>
+            <div class="keys"><kbd>↑</kbd>/<kbd>↓</kbd><span class="action">pick assignee</span><span class="sep">·</span><kbd>⏎</kbd><span class="action">assign</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancel</span></div>
         </div>
     </div>
 
@@ -72,9 +95,10 @@
 </template>
 
 <script setup lang="ts">
-import { confirmDel, transfer, prompt, busy, busyTime } from "./ase-task-board-web-client-model"
+import { confirmDel, transfer, assign, prompt, busy, busyTime } from "./ase-task-board-web-client-model"
 import {
     deleteTask, transferList, cancelTransfer, transferTo,
+    assignEl, assignChoices, assignUnknown, typeAssign, cancelAssign, assignTo, submitAssign,
     requestNames, requestChoices, pickRequest, typeRequest, focusRequest, promptFocus, promptIgnored,
     promptEl, promptName, promptOk, promptNo, cancelPrompt, submitPrompt
 } from "./ase-task-board-web-client-control"
