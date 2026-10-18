@@ -448,12 +448,14 @@ export const renderLanes = (ctx: BoardCtx) => {
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 "D: delete task · E: edit by prompt · R: request by prompt · N: new task · " +
-                (grown ? "g/ESC: shrink lane · " :
-                    `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane · c: ${folded ? "expand" : "collapse"} phase · ` +
-                    `C: ${rowMin ? "expand" : "collapse"} lane row · `) +
+                (grown ? "g/ESC: shrink lane" : `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane`))),
+        h(Box, { key: "keys3", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
+                (grown ? "" :
+                    `c: ${folded ? "expand" : "collapse"} phase · C: ${rowMin ? "expand" : "collapse"} lane row · `) +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
                 "/: filter tasks · v: view graph")),
-        h(Box, { key: "keys3", ...cx("bar") },
+        h(Box, { key: "keys4", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `Left-Click: view task / ${grown ? "shrink lane" : "minimize/maximize lane / collapse/expand phase"} · ` +
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))

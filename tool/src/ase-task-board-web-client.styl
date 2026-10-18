@@ -1113,6 +1113,12 @@ footer
     color: var(--c-text-soft)
     font-size: 0.8125rem
 
+    /*  the key hint lines, truncated with an ellipsis instead of broken (like in the TUI)  */
+    .hints
+        overflow: hidden
+        white-space: nowrap
+        text-overflow: ellipsis
+
     /*  the status line in the last line, below the key hints, on the background of
         the header, with the line above it turning downward with rounded corners at
         both ends (keeping its height while empty)  */

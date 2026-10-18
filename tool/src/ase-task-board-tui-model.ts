@@ -841,7 +841,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }, [ grow, growable ])
 
     const headH  = 3
-    const footH  = surface.keys ? (view === "agents" || view === "stats" ? 5 : 6) : 3
+    const footH  = surface.keys ? (view === "agents" || view === "stats" ? 5 : view === "lanes" ? 7 : 6) : 3
     const boardH = rows - headH - footH
     const innerW = columns - 2
 

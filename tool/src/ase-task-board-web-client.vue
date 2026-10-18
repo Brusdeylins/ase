@@ -40,7 +40,7 @@
         <button :style="{ visibility: view === 'lanes' && !scroll.all && !grown ? 'visible' : 'hidden' }" @click="scrollBy(240)">▶</button>
     </div>
     <footer>
-        <div v-for="(line, k) in (surface.keys ? hints : [])" :key="k">
+        <div v-for="(line, k) in (surface.keys ? hints : [])" :key="k" class="hints">
             <template v-for="(hint, i) in line" :key="hint.key">
                 <span v-if="i > 0" class="sep">·</span><template v-for="(key, j) in (hint.key === '/' ? [ '/' ] : hint.key.split('/'))" :key="j"><template v-if="j > 0">/</template><kbd>{{ key }}</kbd></template><span class="action">{{ hint.action }}</span>
             </template>
@@ -110,7 +110,8 @@ const hints     = computed(() => {
         { key: "E",             action: "edit by prompt" },
         { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
-        { key: "g/ESC",         action: "shrink lane" },
+        { key: "g/ESC",         action: "shrink lane" }
+    ], [
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
         { key: "v",             action: "view graph" }
@@ -130,7 +131,8 @@ const hints     = computed(() => {
         { key: "R",             action: "request by prompt" },
         { key: "N",             action: "new task" },
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
-        { key: "g",             action: "grow lane" },
+        { key: "g",             action: "grow lane" }
+    ], [
         { key: "c",             action: `${folded ? "expand" : "collapse"} phase` },
         { key: "C",             action: `${rowMin ? "expand" : "collapse"} lane row` },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
