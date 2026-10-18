@@ -7,7 +7,7 @@
 import { measureElement }                     from "ink"
 import type { Key }                           from "ink"
 
-import { reachableStates }                    from "./ase-task-board-core.js"
+import { reachableStates, rowLanes }          from "./ase-task-board-core.js"
 import { nearestPlace }                       from "./ase-task-board-graph.js"
 import { groupItems, relocate, requestChoices } from "./ase-task-board-tui-model.js"
 import type { BoardCtx, PromptFocus }         from "./ase-task-board-tui-model.js"
@@ -195,9 +195,9 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
 
     /*  a click onto a lane outside its cards (and while moving a task,
         anywhere onto a lane) selects the lane, like PgUp/PgDn, where a click
-        onto the title of a group collapses/expands the group, a click onto the
+        onto the title of a phase collapses/expands the phase, a click onto the
         title of a lane minimizes/maximizes the lane, and a click onto a lane
-        of a collapsed group expands the group  */
+        of a collapsed phase expands the phase  */
     const card = view === "lanes" && carry === null ? boxAt(cardBoxes.current, mx, my) : undefined
     if (view === "lanes" && card === undefined) {
         const grp = boxAt(groupBoxes.current, mx, my)
@@ -471,7 +471,7 @@ const handleLaneKey = (ctx: BoardCtx, input: string, key: Key): void => {
             return
         if (!grown && (surface.collapsed.includes(board.groups[sel.g].title)
             || surface.minimized.includes(board.groups[sel.g].lanes[sel.l].status)))
-            setNotice("only a maximized lane of an expanded group can grow")
+            setNotice("only a maximized lane of an expanded phase can grow")
         else
             setGrow(!grown)
         return
@@ -509,8 +509,17 @@ const handleNavKey = (ctx: BoardCtx, input: string, key: Key): void => {
         toggle("minimized", lane.status)
         return
     }
-    if (input === "c") {
+    if (input === "c" && !key.shift) {
         toggle("collapsed", board.groups[sel.g].title)
+        return
+    }
+
+    /*  collapse or expand the lane row of the selected lane in all expanded phases at once
+        (under the kitty keyboard protocol, Shift+c arrives as "c" with the shift modifier)  */
+    if (input === "C" || (input === "c" && key.shift)) {
+        const row = rowLanes(board.groups, surface.collapsed, sel.l)
+        if (row.length > 0)
+            toggle("minimized", row)
         return
     }
     if (key.leftArrow || key.rightArrow) {
@@ -530,7 +539,7 @@ const handleNavKey = (ctx: BoardCtx, input: string, key: Key): void => {
         return
     }
     if ((key.upArrow || key.downArrow) && carry === null) {
-        /*  within a collapsed group, the items are the lanes themselves  */
+        /*  within a collapsed phase, the items are the lanes themselves  */
         const items = groupItems(board, sel.g, surface)
         const idx   = items.findIndex((it) => it.l === sel.l && it.id === sel.id)
         const next  = items[Math.max(0, Math.min(items.length - 1, idx + (key.upArrow ? -1 : 1)))]
@@ -549,9 +558,9 @@ const handleNavKey = (ctx: BoardCtx, input: string, key: Key): void => {
         return
     }
     if (key.tab) {
-        /*  step through the lanes of the expanded groups row by row: first
-            left/right through the groups, then wrap into the next/previous
-            row of lanes (and at the very end/start around the board)  */
+        /*  step through the lanes of the expanded phases lane row by lane row: first
+            left/right through the phases, then wrap into the next/previous
+            lane row (and at the very end/start around the board)  */
         const rows  = Math.max(...board.groups.map((g) => g.lanes.length))
         const lanes = [] as { g: number, l: number }[]
         for (let l = 0; l < rows; l++)

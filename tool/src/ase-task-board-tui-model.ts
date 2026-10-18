@@ -58,7 +58,7 @@ export const requestChoices = (request: PromptRequest): string[] => {
 }
 
 /*  the navigable items of a group: one per card, or one per lane
-    which is minimized, empty, or within a collapsed group  */
+    which is minimized, empty, or within a collapsed phase  */
 export const groupItems = (board: Board, g: number, surface: Surface): Sel[] => {
     const out  = [] as Sel[]
     const coll = surface.collapsed.includes(board.groups[g].title)
@@ -529,8 +529,8 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         }
     }, [ log, board, view, graphTitles, graphNodeW ])
 
-    /*  toggle a minimized lane or a collapsed group of the TUI surface  */
-    const toggle = (list: SurfaceList, entry: string): void => {
+    /*  toggle a minimized lane or a collapsed phase (resp. multiple at once) of the TUI surface  */
+    const toggle = (list: SurfaceList, entry: string | string[]): void => {
         BoardState.toggle("tui", list, entry).then((state) => {
             setSurface(state.tui)
         }).catch((err: unknown) => {
@@ -824,13 +824,13 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }
 
     /*  keep the selection valid on every board, surface, or view change
-        (the graph view shows all nodes, so it ignores minimized lanes and collapsed groups)  */
+        (the graph view shows all nodes, so it ignores minimized lanes and collapsed phases)  */
     React.useEffect(() => {
         setSel((s) => relocate(board, s, view === "graph" ? { ...surface, minimized: [], collapsed: [] } : surface))
     }, [ board, surface, view ])
 
     /*  the selected lane is grown to the full board only while it is neither
-        minimized nor within a collapsed group (else it shrinks back for good)  */
+        minimized nor within a collapsed phase (else it shrinks back for good)  */
     const growable = board.groups[sel.g] !== undefined
         && !surface.collapsed.includes(board.groups[sel.g].title)
         && !surface.minimized.includes(board.groups[sel.g].lanes[sel.l]?.status ?? "")

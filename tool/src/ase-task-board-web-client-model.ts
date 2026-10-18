@@ -75,7 +75,7 @@ export type Notice  =
 export type Sel     = { g: number, l: number, id: string }
 
 /*  the navigable items of a group: one per card, or one per lane
-    which is minimized, empty, or within a collapsed group  */
+    which is minimized, empty, or within a collapsed phase  */
 export const groupItems = (b: Board, g: number, s: Surface): Sel[] => {
     const out  = [] as Sel[]
     const coll = s.collapsed.includes(b.groups[g].title)
@@ -87,6 +87,10 @@ export const groupItems = (b: Board, g: number, s: Surface): Sel[] => {
     })
     return out
 }
+
+/*  the lane states of a lane row: the lanes at the same position in all expanded phases  */
+export const rowLanes = (b: Board, s: Surface, l: number): string[] =>
+    b.groups.filter((g) => l < g.lanes.length && !s.collapsed.includes(g.title)).map((g) => g.lanes[l].status)
 
 /*  re-locate a selection on a (possibly changed) board: a selected card
     is followed into its current lane, otherwise the lane is kept  */
@@ -333,7 +337,7 @@ watch(() => [ agentsKnown.value, agents.value, view.value ], () => {
 })
 
 /*  the selected lane is grown to the full board only while it is neither
-    minimized nor within a collapsed group (else it shrinks back for good)  */
+    minimized nor within a collapsed phase (else it shrinks back for good)  */
 export const growable  = computed(() => {
     const group = board.value?.groups[sel.value.g]
     return group !== undefined && !surface.value.collapsed.includes(group.title)
@@ -550,8 +554,9 @@ const applySurface = (s: Surface) => {
         renderGraph()
 }
 
-/*  toggle a minimized lane, a collapsed group, or the showing of task titles, key hints, or standalone tasks  */
-export const toggle = async (list: "minimized" | "collapsed" | "titles" | "keys" | "standalone", entry: string) => {
+/*  toggle a minimized lane, a collapsed phase (resp. multiple at once),
+    or the showing of task titles, key hints, or standalone tasks  */
+export const toggle = async (list: "minimized" | "collapsed" | "titles" | "keys" | "standalone", entry: string | string[]) => {
     const s = await api<Surface>("/task-board/api/toggle", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ list, entry })
     })

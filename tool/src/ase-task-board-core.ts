@@ -81,7 +81,7 @@ export type Board = {
 }
 
 /*  the per-surface view state: the shown view (the lanes, the dependency graph, the agents, or the statistics),
-    minimized lanes, collapsed groups, and whether the task titles, the key hints, and the
+    minimized lanes, collapsed phases, and whether the task titles, the key hints, and the
     standalone tasks of the graph are shown  */
 export type Surface     = { view: SurfaceView, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }
 export type SurfaceView = "lanes" | "graph" | "stats" | "agents"
@@ -141,6 +141,10 @@ export const layoutOf = (lifecycle: TaskLifecycle): GroupSpec[] => {
         lanes: g.lanes.map((l) => ({ ...l, kind: kindOf(lifecycle, l.status) }))
     }))
 }
+
+/*  the lane states of a lane row: the lanes at the same position in all expanded phases  */
+export const rowLanes = (groups: GroupSpec[], collapsed: string[], l: number): string[] =>
+    groups.filter((g) => l < g.lanes.length && !collapsed.includes(g.title)).map((g) => g.lanes[l].status)
 
 /*  split a height into integer shares by weights, where each positively
     weighted share first gets a minimum (as far as the total allows), the
@@ -227,11 +231,19 @@ export class BoardState {
         }
     }
 
-    /*  toggle an entry of a surface list (minimized lanes or collapsed groups)  */
-    static toggle (surface: "tui" | "web", list: SurfaceList, entry: string): Promise<State> {
+    /*  toggle an entry of a surface list (minimized lanes or collapsed phases), resp. multiple
+        entries at once (all removed if all are listed already, else all missing ones added)  */
+    static toggle (surface: "tui" | "web", list: SurfaceList, entry: string | string[]): Promise<State> {
         return BoardState.update((state) => {
             const items = state[surface][list]
-            const i     = items.indexOf(entry)
+            if (Array.isArray(entry)) {
+                if (entry.every((e) => items.includes(e)))
+                    state[surface][list] = items.filter((e) => !entry.includes(e))
+                else
+                    items.push(...entry.filter((e) => !items.includes(e)))
+                return
+            }
+            const i = items.indexOf(entry)
             if (i >= 0)
                 items.splice(i, 1)
             else

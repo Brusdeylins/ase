@@ -22,7 +22,7 @@ the task plans live. It comes in three variants:
   terminal on standard input or output).
 
 The lanes are grouped by the phases of the lifecycle model plus a
-final `Done` group of the finished states, where within a group the
+final `Done` phase of the finished states, where within a phase the
 entry state comes first, the active state second, and the parking
 state last. The cards of the *active* lanes (the states a task is
 actively worked on) are shown in the accent color (default: blue), the
@@ -55,7 +55,7 @@ an epic implicitly comes after all other tasks of its group), the
 the *agents* view. All views are cycled via `v` (or a click onto the
 `view:` value of the header).
 
-The last shown view, the minimized lanes, the collapsed groups, and the
+The last shown view, the minimized lanes, the collapsed phases, and the
 shown flags are persisted in `.ase/board.yaml` (separately for the
 terminal and the web board).
 
@@ -73,9 +73,10 @@ with the kind and connection state of the task store (`●` connected,
 `○` disconnected), the number of agents and the connection state of
 the agent relay (if any), and the *ASE* version, or a notice instead.
 
-In the lanes view, lanes can be minimized (`m`) and groups collapsed
-(`c`), and the selected lane can be *grown* via `g` to the full board,
-showing all its cards in a grid of at least four columns.
+In the lanes view, lanes can be minimized (`m`), lane rows collapsed
+(`C`), and phases collapsed (`c`), and the selected lane can be
+*grown* via `g` to the full board, showing all its cards in a grid of
+at least four columns.
 
 A card opens its plan in a full-height *task dialog* (`⏎` or a mouse
 click), which shows the frontmatter keys, the predecessors and successors
@@ -91,7 +92,7 @@ picking it up with `SPACE` and dropping it with a second `SPACE` onto
 the selected lane (only lanes whose state is reachable from the current
 state in the lifecycle model accept the task, and are shown in bold),
 or via the *transfer popup* of `T`, which lists all lane states (as
-*group* `▷` *state*, starting at the current state), where the states
+*phase* `▷` *state*, starting at the current state), where the states
 not reachable from the current state are dimmed.
 
 `e` edits the selected task plan with `$EDITOR` (default: `vi`, run
@@ -139,7 +140,7 @@ click onto a card opens it, a click onto the `view:` value of the
 header cycles the view, a click onto the `filter:` field focuses it, a
 click onto its `✕` clears it, a click onto the title of a lane minimizes
 or maximizes it (resp. shrinks a grown lane), a click onto the title of
-a group collapses or expands it, a click onto a lane selects it, and
+a phase collapses or expands it, a click onto a lane selects it, and
 the mouse wheel over a lane scrolls it.
 
 `M` disables the mouse support to regain the regular text selection of
@@ -159,7 +160,7 @@ It offers the same views and keys as the terminal board, where a task
 is additionally moved by dragging its card onto a reachable lane, the
 graph is zoomed by the mouse wheel (and `+`, `-`, and `0`) and panned
 by dragging it, and an image attachment is zoomed by the mouse wheel.
-Its minimized lanes and collapsed groups are stored once per project,
+Its minimized lanes and collapsed phases are stored once per project,
 not per browser, so all open web boards share them and pick up a change
 immediately.
 
@@ -183,7 +184,7 @@ build is only warned about.
 With `--text`, and also without an interactive terminal, the lane
 overview is printed as plain text and the command exits: a header line
 with the project, the lifecycle model, and the number of tasks, then
-per group (`━` *group*) and lane (*state*, marked `(active)` for an
+per phase (`━` *phase*) and lane (*state*, marked `(active)` for an
 active lane, and its number of cards) the cards with their id (plus
 the `✎` and `⚖` markers), title, and the agents busy with them (behind
 `⚙`), followed, with an agent relay, by the agents (`●` busy, `○`
@@ -203,7 +204,7 @@ task), `within last 30 days`, and `within last 7 days` on its top
 - `Tasks per State`: a column chart with the number of tasks of each
   state of the task lifecycle model, labeled by the state, below by the
   effort of its estimated tasks (blank without any), and below by its
-  phase (the group of its lane), in the colors of the lanes, and with
+  phase (of its lane), in the colors of the lanes, and with
   the `total tasks:` line below it. An effort is the sum of the
   representative human minutes of the effort sizes of the tasks on the
   scale `project.task.effort.scale` (see `ase-config`(1)), shown in
@@ -372,13 +373,13 @@ letter under the kitty keyboard protocol.
 
 ### Lanes View
 
-- `↑`/`↓`: Select the previous/next card of the group (within a
-  collapsed group, the previous/next lane).
-- `←`/`→`: Select the card of the same lane in the previous/next group.
-- `PgUp`/`PgDn`: Select the upper/lower lane of the group.
+- `↑`/`↓`: Select the previous/next card of the phase (within a
+  collapsed phase, the previous/next lane).
+- `←`/`→`: Select the card of the same lane in the previous/next phase.
+- `PgUp`/`PgDn`: Select the upper/lower lane of the phase.
 - `Home`/`End`: Select the first/last card of the lane.
-- `Tab`/`Shift`+`Tab`: Step through the lanes of the expanded groups
-  row by row, wrapping around the board.
+- `Tab`/`Shift`+`Tab`: Step through the lanes of the expanded phases
+  lane row by lane row, wrapping around the board.
 - `⏎`: Open the task dialog of the selected task.
 - `e`: Edit the selected task plan (terminal: with `$EDITOR`; web: in
   the Markdown editor of its task dialog).
@@ -387,9 +388,12 @@ letter under the kitty keyboard protocol.
   onto the selected lane (dropping it onto its own lane cancels).
 - `ESC`: Cancel the move of a picked-up task.
 - `m`: Minimize or maximize the selected lane (persisted).
-- `c`: Collapse or expand the selected group (persisted).
+- `c`: Collapse or expand the selected phase (persisted).
+- `C`: Collapse the lane row of the selected lane, i.e., the lanes at
+  the same position in all expanded phases, resp. expand it again if
+  all its lanes are collapsed already (persisted).
 - `g`: Grow the selected lane to the full board (only a maximized lane
-  of an expanded group), resp. shrink it back again.
+  of an expanded phase), resp. shrink it back again.
 - `t`: Cut the card titles onto a single line, resp. wrap them onto at
   most three lines (persisted).
 
@@ -518,7 +522,7 @@ The following configuration keys (on scope `user` or `project`, see
   The display state of the boards in the project root: separately for
   the terminal board (`tui`) and the web board (`web`), the shown `view`
   (`lanes`, `graph`, `stats`, or `agents`), the `minimized` lanes, the
-  `collapsed` groups, and whether the task `titles` are wrapped onto
+  `collapsed` phases, and whether the task `titles` are wrapped onto
   multiple lines, the key hint lines are shown (`keys`), and the graph
   shows the `standalone` tasks.
 

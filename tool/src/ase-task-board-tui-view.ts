@@ -8,7 +8,7 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import { splitHeight, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf } from "./ase-task-board-core.js"
+import { splitHeight, rowLanes, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
@@ -356,7 +356,7 @@ const renderGroup = (ctx: ViewCtx, group: GroupSpec, g: number, width: number, h
     const { board, surface, sel, dim } = ctx
     const gap = last ? 0 : GROUP_GAP
     if (surface.collapsed.includes(group.title)) {
-        /*  render each lane of the collapsed group as a narrow column with
+        /*  render each lane of the collapsed phase as a narrow column with
             its vertically written status and number of cards  */
         const heights = splitHeight(height - 1, group.lanes.map((l) => l.weight), 3)
         const label   = "▶"
@@ -431,6 +431,7 @@ export const renderLanes = (ctx: BoardCtx) => {
     const off    = Math.round(track * fit.first / total)
     const minned = surface.minimized.includes(board.groups[sel.g]?.lanes[sel.l]?.status ?? "")
     const folded = surface.collapsed.includes(board.groups[sel.g]?.title ?? "")
+    const rowMin = rowLanes(board.groups, surface.collapsed, sel.l).every((s) => surface.minimized.includes(s))
     const edges  = { left: fit.first > 0 ? fit.first : -1, right: fit.last < total - 1 ? fit.last : -1 }
     return [
         h(Box, { key: "board", height: boardH, paddingX: 1 },
@@ -448,12 +449,13 @@ export const renderLanes = (ctx: BoardCtx) => {
             h(Text, cx("hint", dim && "dimmed"),
                 "D: delete task · E: edit by prompt · R: request by prompt · N: new task · " +
                 (grown ? "g/ESC: shrink lane · " :
-                    `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane · c: ${folded ? "expand" : "collapse"} group · `) +
+                    `m: ${minned ? "maximize" : "minimize"} lane · g: grow lane · c: ${folded ? "expand" : "collapse"} phase · ` +
+                    `C: ${rowMin ? "expand" : "collapse"} lane row · `) +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
                 "/: filter tasks · v: view graph")),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `Left-Click: view task / ${grown ? "shrink lane" : "minimize/maximize lane / collapse/expand group"} · ` +
+                `Left-Click: view task / ${grown ? "shrink lane" : "minimize/maximize lane / collapse/expand phase"} · ` +
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }

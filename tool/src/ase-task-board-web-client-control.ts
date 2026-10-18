@@ -10,7 +10,7 @@ import { ref, computed, nextTick, watch } from "vue"
 import Mousetrap                          from "mousetrap"
 import {
     type Board, type Card, type Group, type Sel, type Surface,
-    api, groupItems, relocate,
+    api, groupItems, rowLanes, relocate,
     board, actionError, actionNote, view, graph, task, sel, grow, editing, confirmDel, transfer, prompt,
     tab, drag, busy, boardEl, graphEl, planEl, filterEl, agentList, agentSel, logEl,
     surface, growable, grown, openTask, closeTask, selectTab, selectAgent, toggle, cycleView, stepStatsRange
@@ -357,9 +357,9 @@ const graphStep = (key: string, id: string): string | undefined => {
     return next
 }
 
-/*  step through the lanes of the expanded groups row by row: first
-    left/right through the groups, then wrap into the next/previous
-    row of lanes (and at the very end/start around the board)  */
+/*  step through the lanes of the expanded phases lane row by lane row: first
+    left/right through the phases, then wrap into the next/previous
+    lane row (and at the very end/start around the board)  */
 const laneStep = (b: Board, s: Sel, surf: Surface, back: boolean): Sel | undefined => {
     const rows  = Math.max(...b.groups.map((x) => x.lanes.length))
     const lanes = [] as { g: number, l: number }[]
@@ -524,7 +524,7 @@ const onBoardKey = (ev: KeyboardEvent) => {
         if (carry !== null)
             return
         if (!grown.value && !growable.value)
-            actionError.value = "only a maximized lane of an expanded group can grow"
+            actionError.value = "only a maximized lane of an expanded phase can grow"
         else {
             actionError.value = null
             grow.value = !grown.value
@@ -549,6 +549,11 @@ const onBoardKey = (ev: KeyboardEvent) => {
     }
     else if (ev.key === "c")
         toggle("collapsed", group.title)
+    else if (ev.key === "C") {
+        const row = rowLanes(b, surf, s.l)
+        if (row.length > 0)
+            toggle("minimized", row)
+    }
     else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
         const g = Math.max(0, Math.min(b.groups.length - 1, s.g + (ev.key === "ArrowLeft" ? -1 : 1)))
         if (g !== s.g) {
@@ -557,7 +562,7 @@ const onBoardKey = (ev: KeyboardEvent) => {
         }
     }
     else if ((ev.key === "ArrowUp" || ev.key === "ArrowDown") && carry === null) {
-        /*  within a collapsed group, the items are the lanes themselves  */
+        /*  within a collapsed phase, the items are the lanes themselves  */
         const items = groupItems(b, s.g, surf)
         const idx   = items.findIndex((it) => it.l === s.l && it.id === s.id)
         const next  = items[Math.max(0, Math.min(items.length - 1, idx + (ev.key === "ArrowUp" ? -1 : 1)))]

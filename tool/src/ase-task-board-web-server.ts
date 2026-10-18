@@ -762,7 +762,7 @@ const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
         })
     })
 
-    /*  toggle a minimized lane, a collapsed group, or the showing of task titles,
+    /*  toggle a minimized lane, a collapsed phase, or the showing of task titles,
         key hints, or standalone tasks of the web surface  */
     server.route({
         method:  "POST",
@@ -775,17 +775,20 @@ const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
                 emit("surface", surface)
                 return h.response(surface)
             }
-            if (p === null || (p.list !== "minimized" && p.list !== "collapsed") || typeof p.entry !== "string")
+            if (p === null || (p.list !== "minimized" && p.list !== "collapsed")
+                || !(typeof p.entry === "string" || (Array.isArray(p.entry) && p.entry.every((e) => typeof e === "string"))))
                 return h.response({ error: "invalid toggle request" }).code(400)
 
             /*  accept only lanes or groups of the current board layout  */
-            const board = await currentBoard(log)
-            const names = p.list === "minimized" ?
+            const board   = await currentBoard(log)
+            const names   = p.list === "minimized" ?
                 board.groups.flatMap((g) => g.lanes.map((l) => l.status)) :
                 board.groups.map((g) => g.title)
-            if (!names.includes(p.entry))
-                return h.response({ error: `unknown ${p.list === "minimized" ? "lane" : "group"} "${p.entry}"` }).code(400)
-            const surface = (await BoardState.toggle("web", p.list, p.entry)).web
+            const entries = p.entry as string | string[]
+            const unknown = (Array.isArray(entries) ? entries : [ entries ]).find((e) => !names.includes(e))
+            if (unknown !== undefined)
+                return h.response({ error: `unknown ${p.list === "minimized" ? "lane" : "group"} "${unknown}"` }).code(400)
+            const surface = (await BoardState.toggle("web", p.list, entries)).web
 
             /*  push the shared surface state into all open web boards  */
             emit("surface", surface)

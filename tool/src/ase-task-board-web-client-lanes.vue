@@ -9,8 +9,8 @@
     <div v-show="view === 'lanes'" id="board" ref="boardEl" :class="{ titles, grown }" @scroll="updateScroll">
         <template v-if="boardError !== null">{{ boardError }}</template>
         <template v-for="(g, gi) in board?.groups ?? []" :key="g.title">
-            <!--  render each lane of a collapsed group as a narrow box with its
-                  vertically written status and number of cards (expanding the group on click)  -->
+            <!--  render each lane of a collapsed phase as a narrow box with its
+                  vertically written status and number of cards (expanding the phase on click)  -->
             <div v-if="surface.collapsed.includes(g.title)" class="group coll">
                 <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr right">▼</span></div>
                 <div v-for="(l, li) in g.lanes" :key="l.status" class="lane" tabindex="-1"

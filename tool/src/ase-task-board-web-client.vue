@@ -63,7 +63,7 @@ import BoardPopup                               from "./ase-task-board-web-clien
 import {
     board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, agentNow, online, store, stats, statsRanges,
     surface, titles, grown, agentDuration, agentLabel, cycleView, clearFilter, scrollBy, updateScroll, updateTabScroll,
-    reload, startService, stopService
+    rowLanes, reload, startService, stopService
 } from "./ase-task-board-web-client-model"
 import { stopEdit }                  from "./ase-task-board-web-client-editor"
 import { controlStart, controlStop } from "./ase-task-board-web-client-control"
@@ -97,6 +97,7 @@ const hints     = computed(() => {
     const group  = board.value?.groups[sel.value.g]
     const minned = surface.value.minimized.includes(group?.lanes[sel.value.l]?.status ?? "")
     const folded = surface.value.collapsed.includes(group?.title ?? "")
+    const rowMin = board.value !== null && rowLanes(board.value, surface.value, sel.value.l).every((s) => surface.value.minimized.includes(s))
     return grown.value ? [ [
         { key: "↑/↓/←/→",       action: "select task" },
         { key: "⇈/⇊/⇤/⇥",       action: "page/first/last task" },
@@ -130,12 +131,13 @@ const hints     = computed(() => {
         { key: "N",             action: "new task" },
         { key: "m",             action: `${minned ? "maximize" : "minimize"} lane` },
         { key: "g",             action: "grow lane" },
-        { key: "c",             action: `${folded ? "expand" : "collapse"} group` },
+        { key: "c",             action: `${folded ? "expand" : "collapse"} phase` },
+        { key: "C",             action: `${rowMin ? "expand" : "collapse"} lane row` },
         { key: "t",             action: `${titles.value ? "collapse" : "expand"} titles` },
         { key: "/",             action: "filter tasks" },
         { key: "v",             action: "view graph" }
     ], [
-        { key: "Left-Click",    action: "view task / minimize/maximize lane / collapse/expand group" },
+        { key: "Left-Click",    action: "view task / minimize/maximize lane / collapse/expand phase" },
         { key: "Drag & Drop",   action: "directly transition task" },
         { key: "?",             action: "hide key hints" }
     ] ] : view.value === "agents" ? [ [
