@@ -120,13 +120,13 @@ const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): b
 }
 
 /*  handle a mouse press (0-based column/row, button 0: left press,
-    64/65: wheel up/down): a click opens the clicked task, while a
-    click onto its " X " closes an open task view, a click onto a
+    64/65: wheel up/down): a click selects the clicked task and a double click
+    opens it, while a click onto its " X " closes an open task view, a click onto a
     predecessor/successor id jumps to its task view, and the wheel scrolls it  */
 export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): void => {
     const {
         board, surface, view, setFilter, typing, setTyping, sel, setSel, setDialog, scroll, layout,
-        carry, setCarry, opening, cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, boxAt, graphView, toggle, grown, setGrow,
+        carry, setCarry, lastClick, cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, boxAt, graphView, toggle, grown, setGrow,
         cycleView, agentList, agentIdx, selectAgent, scrollLog, rangeBoxes, setRange
     } = ctx
     if (handlePopupMouse(ctx, btn, mx, my))
@@ -193,26 +193,38 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     if (btn !== 0)
         return
 
-    /*  a click onto a lane outside its cards (and while moving a task,
-        anywhere onto a lane) selects the lane, like PgUp/PgDn, where a click
-        onto the title of a phase collapses/expands the phase, a click onto the
-        title of a lane minimizes/maximizes the lane, and a click onto a lane
-        of a collapsed phase expands the phase  */
+    /*  detect a double click: a second left click onto the same cell within 400ms  */
+    const now    = Date.now()
+    const last   = lastClick.current
+    const double = last !== null && last.x === mx && last.y === my && now - last.at <= 400
+    lastClick.current = double ? null : { x: mx, y: my, at: now }
+
+    /*  a click onto a lane outside its cards (and while moving a task, anywhere
+        onto a lane) selects the lane, like PgUp/PgDn, where a double click onto the
+        lane minimizes/maximizes it (resp. shrinks a grown lane, resp. expands its
+        collapsed phase), while a click onto the title of a phase selects it, like ←/→,
+        and a double click onto it collapses/expands it  */
     const card = view === "lanes" && carry === null ? boxAt(cardBoxes.current, mx, my) : undefined
     if (view === "lanes" && card === undefined) {
         const grp = boxAt(groupBoxes.current, mx, my)
         if (grp !== undefined && my === measureElement(groupBoxes.current.get(grp)!).y) {
-            toggle("collapsed", board.groups[Number(grp)].title)
+            const g = Number(grp)
+            if (double)
+                toggle("collapsed", board.groups[g].title)
+            else if (g !== sel.g) {
+                const items = groupItems(board, g, surface)
+                setSel(items.find((it) => it.l === sel.l) ?? items[0])
+            }
             return
         }
         const at = boxAt(laneBoxes.current, mx, my)
         if (at !== undefined) {
             const [ g, l ] = at.split(":").map(Number)
-            if (surface.collapsed.includes(board.groups[g].title))
+            if (double && surface.collapsed.includes(board.groups[g].title))
                 toggle("collapsed", board.groups[g].title)
-            else if (my === measureElement(laneBoxes.current.get(at)!).y + 1 && grown)
+            else if (double && grown)
                 setGrow(false)
-            else if (my === measureElement(laneBoxes.current.get(at)!).y + 1)
+            else if (double)
                 toggle("minimized", board.groups[g].lanes[l].status)
             const next = groupItems(board, g, surface).find((it) => it.l === l)
             if (next !== undefined && !(sel.g === g && sel.l === l))
@@ -235,16 +247,11 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
                 hit = n.id
     }
     if (hit !== undefined && board.cards.has(hit)) {
-        /*  first visibly select the clicked task, then shortly afterwards open its view  */
-        const id = hit
-        setSel(relocate(board, { g: sel.g, l: sel.l, id },
+        /*  a click selects the clicked task, a double click additionally opens its view  */
+        setSel(relocate(board, { g: sel.g, l: sel.l, id: hit },
             view === "graph" ? { ...surface, minimized: [], collapsed: [] } : surface))
-        if (opening.current !== null)
-            clearTimeout(opening.current)
-        opening.current = setTimeout(() => {
-            opening.current = null
-            setDialog({ id, tab: 0, first: 0, scrolls: {} })
-        }, 150)
+        if (double)
+            setDialog({ id: hit, tab: 0, first: 0, scrolls: {} })
     }
 }
 

@@ -79,7 +79,7 @@ In the lanes view, lanes can be minimized (`m`), lane rows collapsed
 at least four columns.
 
 A card opens its plan in a full-height *task dialog* (`⏎` or a mouse
-click), which shows the frontmatter keys, the predecessors and successors
+double click), which shows the frontmatter keys, the predecessors and successors
 of the task (a click onto one opens its task dialog), and the plan body,
 followed by the attachments of the plan as further tabs, where a diff
 attachment (type `text/x-diff`, like the implementation draft or the change
@@ -136,12 +136,16 @@ additionally their direct predecessors and successors (dimmed and
 dashed).
 
 The terminal board supports the mouse (via SGR mouse reporting): a
-click onto a card opens it, a click onto the `view:` value of the
-header cycles the view, a click onto the `filter:` field focuses it, a
-click onto its `✕` clears it, a click onto the title of a lane minimizes
-or maximizes it (resp. shrinks a grown lane), a click onto the title of
-a phase collapses or expands it, a click onto a lane selects it, and
-the mouse wheel over a lane scrolls it.
+click onto a card or a lane selects it, a double click onto a card
+opens it, a double click onto a lane minimizes or maximizes it (resp.
+shrinks a grown lane, resp. expands its collapsed phase), a click
+onto the title of a phase selects it like `←`/`→` (its lane in the row
+of the selected lane), a double click onto it collapses or expands it,
+a click onto
+the `view:` value of the header cycles the view, a click onto the
+`filter:` field focuses it, a click onto its `✕` clears it, and the
+mouse wheel over a lane scrolls it. In the graph view, a click onto a
+task selects it and a double click opens it.
 
 `M` disables the mouse support to regain the regular text selection of
 the terminal (and enables it again). The terminal board enables the

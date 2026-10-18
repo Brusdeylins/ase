@@ -10,26 +10,28 @@
         <template v-if="boardError !== null">{{ boardError }}</template>
         <template v-for="(g, gi) in board?.groups ?? []" :key="g.title">
             <!--  render each lane of a collapsed phase as a narrow box with its
-                  vertically written status and number of cards (expanding the phase on click)  -->
+                  vertically written status and number of cards (expanding the phase on double click)  -->
             <div v-if="surface.collapsed.includes(g.title)" class="group coll">
-                <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr right">▼</span></div>
+                <div class="ghd" :class="{ sel: sel.g === gi }" @click="selectPhase(gi)" @dblclick="toggle('collapsed', g.title)"><span class="arr right">▼</span></div>
                 <div v-for="(l, li) in g.lanes" :key="l.status" class="lane" tabindex="-1"
                     :class="[ { active: l.active, dashed: l.dashed, done: l.kind === 'terminal', sel: sel.g === gi && sel.l === li }, dropClass(l.status) ]"
-                    :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li); toggle('collapsed', g.title)"
+                    :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li)" @dblclick="toggle('collapsed', g.title)"
                     @dragover="dragOver($event, l.status)" @dragleave="dragLeave($event, l.status)" @drop="drop($event, l.status)">
                     <span class="arr right">▼</span>
                     <span class="vt">{{ l.status.toUpperCase() }}</span>
                     <span class="cnt">{{ l.cards.length }}</span>
                 </div>
             </div>
-            <!--  while a lane is grown, only it is shown (within its group), with its cards in a grid  -->
+            <!--  while a lane is grown, only it is shown (within its phase), with its cards in a grid,
+                  where a click selects a card, lane, or phase, and a double click opens the task of a card,
+                  minimizes/maximizes a lane (resp. shrinks a grown lane), or collapses a phase  -->
             <div v-else class="group" :class="{ grown: grown && sel.g === gi }">
-                <div class="ghd" :class="{ sel: sel.g === gi }" @click="toggle('collapsed', g.title)"><span class="arr">▼</span><span class="ttl">{{ g.title }}</span></div>
+                <div class="ghd" :class="{ sel: sel.g === gi }" @click="selectPhase(gi)" @dblclick="toggle('collapsed', g.title)"><span class="arr">▼</span><span class="ttl">{{ g.title }}</span></div>
                 <div v-for="(l, li) in g.lanes" :key="l.status" class="lane" tabindex="-1"
                     :class="[ { active: l.active, dashed: l.dashed, done: l.kind === 'terminal', min: surface.minimized.includes(l.status), sel: sel.g === gi && sel.l === li, grown: grown && sel.g === gi && sel.l === li }, dropClass(l.status) ]"
-                    :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li)"
+                    :style="{ flex: `${l.weight} 1 0` }" @click="selectLane(gi, li)" @dblclick="grown ? (grow = false) : toggle('minimized', l.status)"
                     @dragover="dragOver($event, l.status)" @dragleave="dragLeave($event, l.status)" @drop="drop($event, l.status)">
-                    <div class="lhd" :title="grown ? 'shrink lane (g)' : ''" @click="grown ? (grow = false) : toggle('minimized', l.status)">
+                    <div class="lhd" :title="grown ? 'shrink lane (g)' : ''">
                         <span>{{ grown ? "◆" : surface.minimized.includes(l.status) ? "▶" : "▼" }}<span class="ttl">{{ l.status }}</span></span>
                         <span>{{ l.cards.length }}</span>
                     </div>
@@ -40,7 +42,7 @@
                         </div>
                         <div v-for="c in l.cards" :key="c.id" class="card" draggable="true"
                             :class="[ `tone-${c.tone}`, { sel: sel.id === c.id, badged: badges.has(c.id) }, carryClass(c.id) ]"
-                            @click="sel = { g: gi, l: li, id: c.id }; openTask(c.id)"
+                            @click="sel = { g: gi, l: li, id: c.id }" @dblclick.stop="openTask(c.id)"
                             @dragstart="dragStart($event, c.id, l.status, c.moves)" @dragend="dragEnd">
                             <div v-if="badges.has(c.id)" class="cagents"><span v-for="(b, bi) in badges.get(c.id)!" :key="bi" class="cagent"><span class="aicon">{{ b.icon }}</span> {{ b.name }}</span></div>
                             <div class="cbody"><TaskTitle :id="c.id" :epic="c.group" :title="c.title" :edit="c.edit" :effort="c.effort" /></div>
@@ -69,6 +71,15 @@ const selectLane = (g: number, l: number) => {
     const next = groupItems(board.value, g, surface.value).find((it) => it.l === l)
     if (next !== undefined)
         sel.value = next
+}
+
+/*  select a phase (like ←/→), i.e., the lane of the same row as the selected lane,
+    unless the selection is already within it  */
+const selectPhase = (g: number) => {
+    if (board.value === null || sel.value.g === g)
+        return
+    const items = groupItems(board.value, g, surface.value)
+    sel.value = items.find((it) => it.l === sel.value.l) ?? items[0]
 }
 
 /*  the task carried by the keyboard while the selected lane is a reachable target (as then it is

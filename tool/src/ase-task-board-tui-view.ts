@@ -457,7 +457,7 @@ export const renderLanes = (ctx: BoardCtx) => {
                 "/: filter tasks · v: view graph")),
         h(Box, { key: "keys4", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `Left-Click: view task / ${grown ? "shrink lane" : "minimize/maximize lane / collapse/expand phase"} · ` +
+                `Left-Click: select task/lane/phase · Double-Click: view task / ${grown ? "shrink lane" : "minimize/maximize lane / collapse/expand phase"} · ` +
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
@@ -508,7 +508,7 @@ export const renderGraph = (ctx: BoardCtx) => {
                 [ "task: ", h(Text, { key: "id", ...cx("bold") }, card.id), " · status: ", h(Text, { key: "status", ...cx("bold") }, card.status) ])),
         h(Box, { key: "keys1", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                "↑/↓/←/→: select task · ⏎/Left-Click: view task · e: edit task · T: transition task")),
+                "↑/↓/←/→/Left-Click: select task · ⏎/Double-Click: view task · e: edit task · T: transition task")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `D: delete task · E: edit by prompt · R: request by prompt · N: new task · t: ${graphTitles ? "collapse" : "expand"} titles · ` +

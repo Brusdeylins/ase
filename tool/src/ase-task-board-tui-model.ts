@@ -298,7 +298,6 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         (disabling it gives the regular text selection of the terminal back)  */
     const [ mouse, setMouse ] = React.useState(true)
     const mouseOn = React.useRef(true)
-    const opening = React.useRef<ReturnType<typeof setTimeout> | null>(null)
     React.useEffect(() => {
         mouseOn.current = mouse
         mouseReporting(mouse)
@@ -306,12 +305,9 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             mouseReporting(false)
         }
     }, [ mouse ])
-    React.useEffect(() => {
-        return () => {
-            if (opening.current !== null)
-                clearTimeout(opening.current)
-        }
-    }, [])
+
+    /*  the last left click (cell and time), for detecting double clicks  */
+    const lastClick = React.useRef<{ x: number, y: number, at: number } | null>(null)
 
     /*  fetch the task lifecycle model (for checking the moves of tasks)
         whenever the board and hence possibly its lifecycle mode changes  */
@@ -983,7 +979,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     return {
         log, exit, columns, rows, all, board, surface, view, setView, filter, setFilter, typing, setTyping,
         sel, setSel, dialog, setDialog, scroll, layout, notice, setNotice, carry, setCarry, cycle,
-        confirm, setConfirm, transfer, setTransfer, prompt, setPrompt, mouse, setMouse, opening, grown, setGrow,
+        confirm, setConfirm, transfer, setTransfer, prompt, setPrompt, mouse, setMouse, lastClick, grown, setGrow,
         cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, rangeBoxes, cardRef, laneRef, groupRef, headRef, agentRef, rangeRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,

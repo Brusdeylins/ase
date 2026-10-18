@@ -195,6 +195,9 @@ header
     flex: 1
     min-height: 0
     overflow-x: auto
+
+    /*  a double click opens or toggles, so it must not select text  */
+    user-select: none
 .group
     display: flex
     flex-direction: column
@@ -1194,6 +1197,9 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
     border: 1px solid var(--c-border-soft)
     border-radius: 6px
     cursor: grab
+
+    /*  a double click opens a task, so it must not select text  */
+    user-select: none
 
     /*  a zoom-independent gap between the panel border and a larger graph (also when
         scrolled to its ends or when scrolling the selected task box into view)  */

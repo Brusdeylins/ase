@@ -116,7 +116,8 @@ const hints     = computed(() => {
         { key: "/",             action: "filter tasks" },
         { key: "v",             action: "view graph" }
     ], [
-        { key: "Left-Click",    action: "view task / shrink lane" },
+        { key: "Left-Click",    action: "select task" },
+        { key: "Double-Click",  action: "view task / shrink lane" },
         { key: "?",             action: "hide key hints" }
     ] ] : view.value === "lanes" ? [ [
         { key: "↑/↓/←/→",       action: "select task" },
@@ -139,7 +140,8 @@ const hints     = computed(() => {
         { key: "/",             action: "filter tasks" },
         { key: "v",             action: "view graph" }
     ], [
-        { key: "Left-Click",    action: "view task / minimize/maximize lane / collapse/expand phase" },
+        { key: "Left-Click",    action: "select task/lane/phase" },
+        { key: "Double-Click",  action: "view task / minimize/maximize lane / collapse/expand phase" },
         { key: "Drag & Drop",   action: "directly transition task" },
         { key: "?",             action: "hide key hints" }
     ] ] : view.value === "agents" ? [ [
@@ -156,8 +158,8 @@ const hints     = computed(() => {
     ], [
         { key: "?",             action: "hide key hints" }
     ] ] : [ [
-        { key: "↑/↓/←/→",       action: "select task" },
-        { key: "⏎/Left-Click",  action: "view task" },
+        { key: "↑/↓/←/→/Left-Click", action: "select task" },
+        { key: "⏎/Double-Click", action: "view task" },
         { key: "e",             action: "edit task" },
         { key: "T",             action: "transition task" }
     ], [

@@ -9,7 +9,7 @@
 <template>
     <div v-show="view === 'graph'" id="gframe">
         <!-- eslint-disable vue/no-v-html -->
-        <div id="graph" ref="graphEl" :class="{ titles, panning: pan !== null }" @click="graphClick"
+        <div id="graph" ref="graphEl" :class="{ titles, panning: pan !== null }" @click="graphClick" @dblclick="graphClick"
             @wheel="graphZoom" @pointerdown="graphPanStart" @pointermove="graphPanMove" @pointerup="pan = null" @pointercancel="pan = null"
             v-html="graph"></div>
         <!-- eslint-enable vue/no-v-html -->
@@ -29,12 +29,13 @@ import {
 const pan  = ref<{ x: number, y: number, left: number, top: number } | null>(null)
 let   zoom = 1
 
-/*  open the dialog of the clicked task  */
+/*  select the clicked task, resp. on a double click also open its dialog  */
 const graphClick = (ev: MouseEvent) => {
     const node = (ev.target as Element).closest<SVGGElement>("g.node[data-id]")
     if (node !== null) {
         sel.value = { ...sel.value, id: node.dataset.id! }
-        openTask(node.dataset.id!)
+        if (ev.type === "dblclick")
+            openTask(node.dataset.id!)
     }
 }
 
