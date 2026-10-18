@@ -6,16 +6,24 @@
 */
 
 /*  "News" section: the releases of the top-level `NEWS.md`, each with its
-    features and its incompatibilities as identical three-column grids of
-    plates, where only the warning icon of the heading marks the latter. The
-    plates are left-aligned, as justifying their many code chips leaves gaps.  */
+    optional USP rows, and its features and its incompatibilities as identical
+    three-column grids of plates, where only the warning icon of the heading
+    marks the latter. The plates are left-aligned, as justifying their many
+    code chips leaves gaps.  */
 
 import Sparkles      from "@lucide/astro/icons/sparkles"
 import TriangleAlert from "@lucide/astro/icons/triangle-alert"
 import GlowSide      from "./Widget-Glow-Side.astro"
 import Annotation    from "./Widget-Annotation.astro"
+import USPRow        from "./Widget-USP-Row.astro"
 import { site }      from "../data/site.ts"
 import { newsReleases } from "../data/news.ts"
+import { usps, type USP } from "../data/usps.ts"
+
+/*  the USPs showcased between the introduction and the sections of a release  */
+const releaseUSPs: Record<string, USP[]> = {
+    "ase-1-0-to-ase-2-0": usps.slice(0, 3)
+}
 ---
 <section id="news" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <GlowSide variant="section" side="right" />
@@ -45,6 +53,11 @@ import { newsReleases } from "../data/news.ts"
                     {release.intro.map((html, i) => (
                         <p class={i === 0 ? "ase-justify" : "ase-indent-p ase-justify"} set:html={html}/>
                     ))}
+                </div> :
+                null}
+            {(releaseUSPs[release.id] ?? []).length > 0 ?
+                <div class="mt-12 flex flex-col gap-16">
+                    {releaseUSPs[release.id].map((usp, index) => <USPRow usp={usp} index={index}/>)}
                 </div> :
                 null}
             {release.sections.map((section) => (
