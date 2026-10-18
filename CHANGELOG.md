@@ -5,7 +5,7 @@ ChangeLog
 2.0.0 (2026-10-XX)
 ------------------
 
--   CHANGE [plugin,pages]: Fold `ase-code-{craft,refactor,resolve}` into the Edit Skills
+-   REFACTOR [plugin,pages]: Fold `ase-code-{craft,refactor,resolve}` into the Edit Skills
     The skills `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` were removed: their
     approach selection moved into `ase-common-approach.md` and the edit skills, where
     `ase-task-edit` gained `--mode` and `--approach`, accepts bare analyzer issue ids like `P1`,
@@ -186,13 +186,13 @@ ChangeLog
     status, tags, assignee, phase, group, dependencies, and attachments onto issue state, labels,
     milestones, parent and blocking issues, and comments, and watching GitHub-side changes.
 
--   CHANGE [plugin,pages]: New `ase-repo-*` skill family
+-   REFACTOR [plugin,pages]: New `ase-repo-*` skill family
     Rename the Git repository related skills `ase-meta-review`, `ase-meta-diff`,
     `ase-meta-changelog`, `ase-meta-commit`, and `ase-code-dissect` to `ase-repo-review`,
     `ase-repo-diff`, `ase-repo-changelog`, `ase-repo-commit`, and `ase-repo-dissect`, and the
     `ase-meta-review` sub-agent to `ase-repo-review`.
 
--   CHANGE [plugin,tool,pages]: Replace `ase-task-preflight` by `ase-task-implement --draft`
+-   REFACTOR [plugin,tool,pages]: Replace `ase-task-preflight` by `ase-task-implement --draft`
     The `ase-task-preflight` skill is dropped in favor of the new `--draft` option of
     `ase-task-implement` (and `ase-task-integrate`), persisting the change set as `kind="draft"`
     attachment (legacy `kind="preflight"` ones are migrated on load), and the `PREFLIGHT`
@@ -773,11 +773,11 @@ ChangeLog
     Upgraded the dependency versions of the `plugin`, `tool`, and `pages` deliverables
     (`plugin/package.json`, `tool/package.json`, `pages/package.json`).
 
--   CHANGE [code, docs]: New SPEC artifact defaults
+-   REFACTOR [code, docs]: New SPEC artifact defaults
     Changed the `project.artifact.spec` defaults to `docs/specbook` and `*.{md,txt,svg,png,jpg}`
     (`ase-config.ts`, `configuration.md`).
 
--   CHANGE [code, docs, infr]: Removed the ARCH artifact kind
+-   REFACTOR [code, docs, infr]: Removed the ARCH artifact kind
     Removed the `ARCH` artifact kind, its configuration, the hand-written `ase-format-arch.md`, and
     all `ARCH` references, and reduced `ase-format-meta.md` to the artifact-set overview.
 
@@ -3299,7 +3299,7 @@ ChangeLog
 0.0.53 (2026-05-26)
 -------------------
 
--   REFACTORING: MCP tool prefixing
+-   REFACTOR: MCP tool prefixing
     Prefix all MCP tools with `ase_` -- technically not necessary, but a more precise matching
     becomes possible.
 
@@ -3550,7 +3550,7 @@ ChangeLog
 -   CLEANUP: Precise skill tool calls
     Be more precise in calling the `Skill` tool.
 
--   REFACTORING: Control constructs factored out
+-   REFACTOR: Control constructs factored out
     Factor out the control constructs from `ase-skill.md` into `ase-control.md` to have them
     available for `ase-persona.md`.
 
@@ -3798,10 +3798,10 @@ ChangeLog
 -   IMPROVEMENT: Elaborate age specification
     Support a more elaborate age specification in the `ase task purge` command.
 
--   REFACTORING: Bundled command registration
+-   REFACTOR: Bundled command registration
     Bundle the logic, CLI parsing, and MCP service registration together.
 
--   REFACTORING: Shared service probing
+-   REFACTOR: Shared service probing
     Move the shared service probing into the service functionality.
 
 0.0.27 (2026-05-16)
