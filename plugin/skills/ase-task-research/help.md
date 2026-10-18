@@ -41,9 +41,11 @@ configured `project.boxing`, while the attachment always carries the
 full report.
 
 The `ase agent researcher` command researches the tasks automatically
-on request, in any unfinished status, via `ase task request <id>
-research [<topic>]` or key `R` of the task boards, and always refines
-the plan by the recommendations.
+and always refines the plan by the recommendations: in its mode
+`phase`, it researches and grounds the plans of the `DRAFTED` tasks
+explicitly assigned to it, while in its mode `request`, it researches
+the topics of the requests in any unfinished status, via `ase task
+request <id> research [<topic>]` or key `R` of the task boards.
 
 ##  OPTIONS
 

@@ -105,21 +105,25 @@ const initConfig = (tool: string, lifecycle: string): string => [
     editor:
         parallel:       1               # maximum number of tasks processed in parallel
 
-    #   the effort estimation agent: estimating the effort of the unestimated tasks (${initPlanned[lifecycle]}, unclaimed)
+    #   the effort estimation agent: estimating the effort of the unestimated tasks
+    #   (${initPlanned[lifecycle]}, unclaimed), intended for their final estimation
     estimator:
         mode:           phase           # "phase" (unestimated planned tasks) or "request" (on request)
         parallel:       1               # maximum number of tasks processed in parallel
 
-    #   the effort estimation request agent: (re-)estimating the effort of the tasks
-    #   in any unfinished status on request (attached via "ase task request <id> estimate <prompt>")
+    #   the effort estimation request agent: (re-)estimating the effort of the tasks in any unfinished
+    #   status on request (attached via "ase task request <id> estimate <prompt>"), intended for dry-runs
     #estimator-request:
     #    kind:           estimator       # agent kind
     #    mode:           request         # "phase" (unestimated planned tasks) or "request" (on request)
     #    parallel:       1               # maximum number of tasks processed in parallel
 
-    #   the research request agent: researching a topic (or the plan itself) for the tasks
-    #   in any unfinished status on request (attached via "ase task request <id> research [<topic>]")
-    #researcher:
+    #   the research request agent: researching a topic (or the plan itself) for the tasks in any
+    #   unfinished status on request (attached via "ase task request <id> research [<topic>]"),
+    #   intended for topic-driven research
+    #researcher-request:
+    #    kind:           researcher      # agent kind
+    #    mode:           request         # "phase" (assigned tasks) or "request" (on request)
     #    parallel:       1               # maximum number of tasks processed in parallel
     `,
     lifecycle === "solo" ? textframe`
@@ -155,9 +159,14 @@ const initConfig = (tool: string, lifecycle: string): string => [
             commit:     true            # commit and publish the work on a "branch:" changeset
     ` : "",
     lifecycle === "enterprise" ? textframe`
-    #   the planning phase agent (DRAFTED > PLANNING > DRAFTED)
-    planner:
-        mode:           reboot          # "reboot" (re-create plan) or "condense" (compress plan)
+    #   the planning phase agents, each processing only the tasks explicitly assigned to it
+    #   (DRAFTED > PLANNING > DRAFTED, unassigned afterwards)
+    rebooter:                           # re-create the plan from scratch
+        parallel:       1               # maximum number of tasks processed in parallel
+    condenser:                          # compress the wording of the plan
+        parallel:       1               # maximum number of tasks processed in parallel
+    researcher:                         # research and ground the plan content
+        mode:           phase           # "phase" (assigned tasks) or "request" (on request)
         parallel:       1               # maximum number of tasks processed in parallel
 
     #   the implementation phase agent (PLANNED > IMPLEMENTING > IMPLEMENTED)

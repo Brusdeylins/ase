@@ -32,8 +32,11 @@ frontmatter key (see the skill `ase-task-estimate`). Unlike the phase
 agents, it drives no phase and supports all task lifecycle models
 (`solo`, `team`, and `enterprise`). It runs in one of two modes (see
 `--mode`): the mode `phase` (the default) estimates the unestimated
-planned tasks automatically, while the mode `request` (re-)estimates
-the tasks in any unfinished status on request.
+planned tasks automatically and is intended for the *final* estimation
+of the tasks, once their plans are complete, while the mode `request`
+(re-)estimates the tasks in any unfinished status on request and is
+intended for *dry-runs*, i.e., provisional estimations of plans still
+in progress.
 
 In the mode `phase`, the estimator observes the tasks in the state `PLANNED`, adapted onto
 the task lifecycle model of the project, i.e., `PLANNED` for
@@ -157,8 +160,9 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`-m`|`--mode` *mode*\]: The mode of the agent (default:
       `phase`): `phase` estimates the unestimated tasks in `PLANNED`
-      automatically and unclaimed, while `request` (re-)estimates the
-      tasks of the `estimate` requests in any unfinished status. An
+      automatically and unclaimed (intended for the final estimation),
+      while `request` (re-)estimates the tasks of the `estimate`
+      requests in any unfinished status (intended for dry-runs). An
       invalid mode is an error. The built-in values of the following
       options are given per mode where they differ, and in the mode
       `request`, the options for `phase` only (`--unclaimed`,
@@ -461,7 +465,8 @@ $ ase task request example-task estimate re-estimate
 
 ## SEE ALSO
 
-`ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
+`ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
+`ase-agent-condenser`(1), `ase-agent-researcher`(1),
 `ase-agent-implementer`(1), `ase-agent-approver`(1),
 `ase-agent-integrator`(1), `ase-agent-editor`(1), `ase-agent-adhoc`(1),
 `ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),

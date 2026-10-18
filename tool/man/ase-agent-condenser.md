@@ -1,76 +1,69 @@
-# ase-agent-planner(1) -- Planning Phase Agent
+# ase-agent-condenser(1) -- Plan Condensing Agent
 
 ## SYNOPSIS
 
-`ase agent planner start`
+`ase agent condenser start`
 \[`-n`|`--name` *name*\]
 \[`-t`|`--tool` `claude`|`copilot`|`codex`\]
 \[`-p`|`--parallel` *num*\]
 \[`-T`|`--timeout` *duration*\]
 \[`-o`|`--one-shot`\]
 \[`--agent-relay` *url*\]
-\[`-m`|`--mode` `reboot`|`condense`\]
 \[`--`*group*`-`*item* *value* \[...\]\]
 \[`-f`|`--foreground`\]
 
-`ase agent planner status`
+`ase agent condenser status`
 \[`-n`|`--name` *name*\]
 
-`ase agent planner log`
+`ase agent condenser log`
 \[`-f`|`--follow`\]
 \[`-n`|`--lines` *n*\]
 \[`--name` *name*\]
 
-`ase agent planner stop`
+`ase agent condenser stop`
 \[`-n`|`--name` *name*\]
 
 ## DESCRIPTION
 
-**ase agent planner** drives the `Planning` phase of the `enterprise`
-task lifecycle model (refused for any other model).
+**ase agent condenser** compresses the wording of the plans of tasks in
+the `Planning` phase of the `enterprise` task lifecycle model (refused
+for any other model), while preserving all their semantics.
 
-As a plan is re-created only on the explicit request of a human, the
-planner claims only the tasks in the state `DRAFTED` whose `Assignee:`
-frontmatter key already is its agent name (default: `planner`), i.e.,
-which a human assigned to the planner, and which do not carry the tag
-of its mode yet and whose `After:` predecessors (and, for an explicit
-epic, its group members) are `PLANNED` or later, or still `DRAFTED`
-and tagged by the planner of the same mode.
+As a plan is condensed only on the explicit request of a human, the
+condenser claims only the tasks in the state `DRAFTED` whose `Assignee:`
+frontmatter key already is its agent name (default: `condenser`), i.e.,
+which a human assigned to the condenser. Such a task is claimed
+immediately, without waiting for its `After:` predecessors (and, for an
+explicit epic, its group members), except for a predecessor still being
+processed by a condenser or a cancelled `After:` predecessor.
 
-In its default mode `reboot`, the planner moves each claimed task into
-`PLANNING`, tags it with `ase-agent-planner-reboot:active`, and reboots
-its plan via the skill invocation `ase-task-reboot --next DONE` *id*.
-
-The skill itself resets a successfully rebooted plan into `DRAFTED`,
-where it waits, tagged with `ase-agent-planner-reboot` and unassigned,
-for its final review and its promotion into `PLANNED` by a human (so
-removing this tag and assigning the task to the planner again requests
-another reboot). A plan left in `PLANNING` (i.e., not rebooted) is put
-into `SHELVED`.
-
-In mode `condense`, the planner instead claims only the tasks without
-the separate tag `ase-agent-planner-condense` (but likewise only those
-assigned to it), condenses the plan via `ase-task-condense --next DONE`
-*id*, tags it with `ase-agent-planner-condense`, and puts it back into
-`DRAFTED` if the agent tool succeeded and the skill reported no error,
-else into `SHELVED`.
+The condenser moves each claimed task into `PLANNING`, tags it with
+`ase-agent-condenser:active`, and condenses its plan via the skill
+invocation `ase-task-condense --next DONE` *id*. The processing succeeds
+if the agent tool succeeded and the skill reported no error, which
+includes an already condensed plan, left untouched by the skill.
+Afterwards, on success as well as on failure, the condenser puts the
+task back into `DRAFTED`, removes its tag, and unassigns it. As the
+task is no longer assigned to the condenser, it is not claimed again,
+while assigning it to the condenser again requests another condensing.
 
 On an interrupt, a task being processed is put back, untagged and with
-its previous assignee, into `DRAFTED`. The planner works in the project
-root only, so it neither requires a Git working copy nor `git`, and it
-accepts no `--repo` and `--tempdir`. See `ase-agent`(1) for the common
-mechanics of all agents.
+its previous assignee (i.e., still assigned to the condenser), into
+`DRAFTED`. The condenser works in the project root only, so it
+neither requires a Git working copy nor `git`, and it accepts no
+`--repo` and `--tempdir`. See `ase-agent`(1) for the common mechanics of
+all agents.
 
 ## OPTIONS
 
-- \[`-h`|`--help`\]: Show usage information of `ase agent planner` (or
+- \[`-h`|`--help`\]: Show usage information of `ase agent condenser` (or
   of the given sub-command) only.
 
 All other options belong to the sub-commands (see **COMMANDS**).
 
 ## COMMANDS
 
-- `ase agent planner start` \[*options*\]: Start the planner agent in
+- `ase agent condenser start` \[*options*\]: Start the condenser agent in
   the background, logging into `.ase/agent/`*name*`.log`. The agent is
   validated and initialized (e.g., its agent tool is looked up and the
   task lifecycle model is checked) before the command returns (waiting
@@ -79,14 +72,14 @@ All other options belong to the sub-commands (see **COMMANDS**).
   alone. The options are:
 
     - \[`-n`|`--name` *name*\]: The name of the agent (default:
-      `planner`): up to 64 letters, digits, underscores, and dashes,
+      `condenser`): up to 64 letters, digits, underscores, and dashes,
       starting with a letter or digit, other than the name of another
       agent kind, `relay`, or `fleet`.
 
       It names the agent in its log lines (also in the shared processing
       log attachment `agent`), the `Assignee:` of the tasks it
       processes, and its process files `.ase/agent/`*name*`.yaml` and
-      `.ase/agent/`*name*`.log`. Agents of the kind `planner` under
+      `.ase/agent/`*name*`.log`. Agents of the kind `condenser` under
       different names form a pool, competing for the same tasks, but each
       claims only the tasks explicitly assigned to its own name.
 
@@ -120,22 +113,14 @@ All other options belong to the sub-commands (see **COMMANDS**).
       HTTPS (default: the configured `project.relay.url`, else none).
       See **AGENT RELAY** in `ase-agent`(1).
 
-    - \[`-m`|`--mode` *mode*\]: The mode of the agent (default:
-      `reboot`): `reboot` re-creates the plan of a task from scratch via
-      the skill `ase-task-reboot`, while `condense` just compresses the
-      wording of its plan via the skill `ase-task-condense`. Each mode
-      uses its own tag, so a rebooted task can still be condensed later,
-      and vice versa. An invalid mode is an error.
-
     - \[`--title` *text*\]: The one-line title of the operation of the
       agent (at most 80 characters), shown on the task boards. Built-in:
-      `Reboot the plans of drafted tasks` (`reboot`) resp.
-      `Condense the plans of drafted tasks` (`condense`).
+      `Condense the plans of assigned tasks`.
 
     - \[`--description` *text*\]: The brief description of the operation
       of the agent (about 3-6 lines, at most 600 characters, with its
       whitespace collapsed), shown on the task boards. Built-in: a
-      description of the operation of the mode.
+      description of the operation.
 
     - \[`--type` `phase`|`request`\]: The processing type: `phase`
       claims the tasks by their lifecycle status, `request` processes
@@ -157,52 +142,52 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--unclaimed`\]: Process the tasks of the incoming states
       without claiming them, independent of their assignee and
       predecessors, and without ever changing their status and assignee
-      (`phase` only). Built-in: not set. Not allowed, as the planner
+      (`phase` only). Built-in: not set. Not allowed, as the condenser
       claims the tasks into its activity state.
 
     - \[`--params` *name*`=`*value*\]: The value of a parameter
       declared by the definition (repeatable). Built-in: none declared.
 
-    - \[`--state-incoming` *state*\]: The state of the tasks to claim
-      (mandatory for `phase`, repeatable with `--unclaimed` only).
-      Built-in: `DRAFTED`.
+    - \[`--state-incoming` *state*\]: A state of the tasks to claim
+      (mandatory for `phase`, repeatable with `--unclaimed` or
+      `--state-activity` only). Built-in: `DRAFTED`.
 
     - \[`--state-activity` *state*\]: The state of a task during its
       processing. Generic default: the incoming state. Built-in:
       `PLANNING`.
 
-    - \[`--state-success` *state*\]: The target state on success.
-      Generic default: the incoming state. Built-in: `DRAFTED`.
+    - \[`--state-success` *state*\]: The target state on success, or
+      `previous` for the incoming state of the claim. Generic default:
+      the incoming state. Built-in: `DRAFTED`.
 
-    - \[`--state-failure` *state*\]: The target state on failure.
-      Generic default: the incoming state. Built-in: `SHELVED`.
+    - \[`--state-failure` *state*\]: The target state on failure, or
+      `previous` for the incoming state of the claim. Generic default:
+      the incoming state. Built-in: `DRAFTED`.
 
     - \[`--state-phase` *state*\]: The phase success state, into which
       the skill itself can move a task. Generic default: the success
-      state. Built-in: not set. Hence, a predecessor counts as passed
-      while `DRAFTED` and tagged by the planner, or once `PLANNED` or
-      later.
+      state, resp. the activity state for a `previous` success state.
+      Built-in: not set (hence `DRAFTED`).
 
     - \[`--state-passed` *state*\]: The first state from which on a task
       has passed the phase for its `After:` successors. Generic default:
-      the phase success state. Built-in: `PLANNED`.
+      the phase success state. Built-in: not set (hence `DRAFTED`, the
+      first state, so the predecessors impose no gate).
 
     - \[`--state-verdict` *VERDICT*`=`*state*\]: The target state per
       verdict (repeatable). Built-in: not set.
 
     - \[`--tag-name` *tag*\]: The tag of the processed tasks
       (`ase-agent-`*word*). Generic default: `ase-agent-`*name*, resp.
-      for `request` always `ase-agent-`*request-name*. Built-in:
-      `ase-agent-planner-reboot` (mode `reboot`),
-      `ase-agent-planner-condense` (mode `condense`).
+      for `request` always `ase-agent-`*request-name*. Built-in: not set.
 
     - \[`--tag-success` *tag*\]: The tag on success: *tag-name*,
       *tag-name*`:`*value*, or `none` (`phase` only). Generic default:
-      *tag-name*. Built-in: not set.
+      *tag-name*. Built-in: `none`.
 
     - \[`--tag-failure` *tag*\]: The tag on failure: *tag-name*,
       *tag-name*`:`*value*, or `none` (`phase` only). Generic default:
-      *tag-name*. Built-in: not set.
+      *tag-name*. Built-in: `none`.
 
     - \[`--tag-require` *tag*\]: A tag a claimable task has to carry
       (repeatable). Built-in: not set.
@@ -233,16 +218,15 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--request-name` *name*\]: The name of the processed requests
       (`request` only). Generic default: the agent name. Built-in: not
-      set. Not allowed, as the planner is of type `phase`.
+      set. Not allowed, as the condenser is of type `phase`.
 
     - \[`--request-done` *word*\]: The word naming a processed task in
       the log lines (`request` only). Generic default: `processed`.
-      Built-in: not set. Not allowed, as the planner is of type `phase`.
+      Built-in: not set. Not allowed, as the condenser is of type `phase`.
 
     - \[`--prompt-skill` *name*\]: The skill to invoke (mutually
       exclusive with `--prompt-text` and `--prompt-file`). Built-in:
-      `ase-task-reboot` (mode `reboot`), `ase-task-condense` (mode
-      `condense`).
+      `ase-task-condense`.
 
     - \[`--prompt-args` *template*\]: The argument template of the
       skill. Generic default: `{id}` for `phase`, `{id}: {prompt}` for
@@ -260,8 +244,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--success-criterion` *criterion*\]: A success criterion:
       `exit`, `clean`, `changed`, `verdict`, `attachment`, or `status`
       (repeatable). Generic default: `exit` and `clean` for `phase`,
-      `clean` and `changed` for `request`. Built-in: `status` (mode
-      `reboot`), `exit` and `clean` (mode `condense`).
+      `clean` and `changed` for `request`. Built-in: `exit` and `clean`.
 
     - \[`--success-match` *regex*\]: A regular expression an output line
       has to match (repeatable). Built-in: not set.
@@ -291,7 +274,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--finish-commit`\]: Commit the work onto a `branch:` changeset
       and publish it (with `--workdir changeset` only). Built-in: not
-      set. Not allowed, as the planner works in the project root.
+      set. Not allowed, as the condenser works in the project root.
 
     - \[`--finish-success` *cmd*\]: A shell command run in the working
       directory after a successful processing. Built-in: not set.
@@ -308,20 +291,20 @@ All other options belong to the sub-commands (see **COMMANDS**).
       only.
 
   The options `--`*group*`-`*item* above override the built-in
-  definition of the mode of the agent (where an option also replaces its
-  mutually exclusive alternatives, e.g., `--prompt-text` replaces the
-  skill of `--prompt-skill`), while the agent keeps the identity of its
-  kind (its runs, its presence, and its agent-owned worktrees are named
-  after `planner`). See `ase-agent-adhoc`(1) for their full semantics.
+  definition of the agent (where an option also replaces its mutually
+  exclusive alternatives, e.g., `--prompt-text` replaces the skill of
+  `--prompt-skill`), while the agent keeps the identity of its kind (its
+  runs, its presence, and its agent-owned worktrees are named after
+  `condenser`). See `ase-agent-adhoc`(1) for their full semantics.
 
-- `ase agent planner status` \[`-n`|`--name` *name*\]: Report whether
-  the planner agent of the name *name* (default: `planner`) is running,
-  as `agent` *name*`: running (pid` *pid*`)` resp. `agent` *name*`: not
-  running` (exit status 1).
+- `ase agent condenser status` \[`-n`|`--name` *name*\]: Report whether
+  the condenser agent of the name *name* (default: `condenser`) is
+  running, as `agent` *name*`: running (pid` *pid*`)` resp. `agent`
+  *name*`: not running` (exit status 1).
 
-- `ase agent planner log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]
+- `ase agent condenser log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]
   \[`--name` *name*\]: Show the log `.ase/agent/`*name*`.log` of the
-  planner agent of the name *name* (default: `planner`) run in the
+  condenser agent of the name *name* (default: `condenser`) run in the
   background, where an agent of a fleet logs into the log of the fleet
   instead (see `ase-agent-fleet`(1)). Without a log file, an
   informational message is shown only. The options are:
@@ -333,12 +316,12 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`-n`|`--lines` *n*\]: Show the last *n* lines only (default:
       all, or 10 with `--follow`).
 
-    - \[`--name` *name*\]: The name of the agent (default: `planner`),
+    - \[`--name` *name*\]: The name of the agent (default: `condenser`),
       given in its long form only, as `-n` is the short form of
       `--lines`.
 
-- `ase agent planner stop` \[`-n`|`--name` *name*\]: Stop the planner
-  agent of the name *name* (default: `planner`) by `SIGTERM`, waiting
+- `ase agent condenser stop` \[`-n`|`--name` *name*\]: Stop the condenser
+  agent of the name *name* (default: `condenser`) by `SIGTERM`, waiting
   (up to 5 minutes) until it aborted its running processings and put
   their tasks back. An agent not running is reported informationally
   only.
@@ -361,36 +344,34 @@ All other options belong to the sub-commands (see **COMMANDS**).
 - `.ase/agent/`*name*`.log`: The log of the agent run in the background.
 
 - *per-user state
-  directory*`/agent-planner/`*store-hash*`/`*run-id*`.lock` and `.json`:
-  The run lock and the run record of each planner agent process, used to
-  recover the tasks of terminated agent processes (see **INTERRUPTS AND
-  RECOVERY** in `ase-agent`(1)).
+  directory*`/agent-condenser/`*store-hash*`/`*run-id*`.lock` and `.json`:
+  The run lock and the run record of each condenser agent process, used
+  to recover the tasks of terminated agent processes (see **INTERRUPTS
+  AND RECOVERY** in `ase-agent`(1)).
 
 ## EXIT STATUS
 
-`ase agent planner start` exits with status `0` once the agent started
+`ase agent condenser start` exits with status `0` once the agent started
 (or was already running), resp. once a foreground agent terminated
 regularly, and with status `1` on any error (e.g., an invalid option, a
 task lifecycle model other than `enterprise`, or a missing agent tool).
-`ase agent planner status` exits with status `1` if the agent is not
+`ase agent condenser status` exits with status `1` if the agent is not
 running.
 
 ## EXAMPLES
 
 ```sh
-# start the planner, rebooting the plans of the tasks assigned to it
-$ ase agent planner start
+# start the condenser, condensing the plans of the tasks assigned to it
+$ ase agent condenser start
 
-# start a second planner condensing the plans of the tasks assigned to "condenser"
-$ ase agent planner start -n condenser -m condense
-
-# request the reboot of a drafted task by assigning it to the planner
-$ ase task assign FOO-42 planner
+# request the condensing of a drafted task by assigning it to the condenser
+$ ase task assign FOO-42 condenser
 ```
 
 ## SEE ALSO
 
-`ase`(1), `ase-agent`(1), `ase-agent-implementer`(1),
+`ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
+`ase-agent-researcher`(1), `ase-agent-implementer`(1),
 `ase-agent-approver`(1), `ase-agent-integrator`(1),
 `ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
 `ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),
@@ -399,3 +380,4 @@ $ ase task assign FOO-42 planner
 ## AUTHOR
 
 Dr. Ralf S. Engelschall <rse@engelschall.com>
+

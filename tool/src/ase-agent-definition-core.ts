@@ -16,7 +16,9 @@ import * as TaskFormat              from "./ase-task-format.js"
 import { requestsOf, typeParam }    from "./ase-task-request.js"
 import type { AgentDefinition, AgentHooks } from "./ase-agent-definition-api.js"
 import type { AgentPrompt }         from "./ase-agent-relay-core.js"
-import planner                      from "./ase-agent-definition-builtin/planner.js"
+import { statePrevious }            from "./ase-agent-runtime-phase.js"
+import rebooter                     from "./ase-agent-definition-builtin/rebooter.js"
+import condenser                    from "./ase-agent-definition-builtin/condenser.js"
 import implementer                  from "./ase-agent-definition-builtin/implementer.js"
 import approver                     from "./ase-agent-definition-builtin/approver.js"
 import integrator                   from "./ase-agent-definition-builtin/integrator.js"
@@ -36,7 +38,9 @@ export type AgentKind = {
 }
 
 /*  the built-in agent kinds  */
-export const builtinKinds: AgentKind[] = [ planner, implementer, approver, integrator, editor, estimator, researcher ]
+export const builtinKinds: AgentKind[] = [
+    rebooter, condenser, implementer, approver, integrator, editor, estimator, researcher
+]
 
 /*  a definition agent kind ("ase agent <kind>"): its name (the base name of its
     definition file), its definition file, and the scope of the latter  */
@@ -127,12 +131,14 @@ export const definitionOptions: DefinitionOption[] = [
         "and without ever changing their status and assignee (for \"phase\" only)"),
     opt("params",            "list",  "name=value",    "value of a parameter declared by the definition (repeatable)"),
     opt("state-incoming",    "list",  "state",         "state of the tasks to claim (mandatory for \"phase\", " +
-        "repeatable with \"--unclaimed\" only)"),
+        "repeatable with \"--unclaimed\" or \"--state-activity\" only)"),
     opt("state-activity",    "value", "state",         "state of a task during its processing (default: incoming)"),
-    opt("state-success",     "value", "state",         "target state on success (default: incoming)"),
-    opt("state-failure",     "value", "state",         "target state on failure (default: incoming)"),
+    opt("state-success",     "value", "state",         "target state on success, or \"previous\" for the incoming state " +
+        "of the claim (default: incoming)"),
+    opt("state-failure",     "value", "state",         "target state on failure, or \"previous\" for the incoming state " +
+        "of the claim (default: incoming)"),
     opt("state-phase",       "value", "state",         "phase success state, into which the skill itself can move a task " +
-        "(default: success)"),
+        "(default: success, resp. activity for a \"previous\" success)"),
     opt("state-passed",      "value", "state",         "first state from which on a task has passed the phase " +
         "for its \"After:\" successors (default: phase)"),
     opt("state-verdict",     "list",  "verdict=state", "target state per verdict (repeatable)"),
@@ -300,8 +306,9 @@ export const attachMatches = (spec: AttachSpec, type: string): boolean =>
     typeParam(type, "kind") === spec.kind
     && (spec.mime === "" || (type.split(";")[0] ?? "").trim().toLowerCase() === spec.mime)
 
-/*  the resolved definition of an agent (where only an unclaimed phase agent has
-    multiple incoming states, else exactly one for "phase" and none for "request")  */
+/*  the resolved definition of an agent (with one or more incoming states for "phase" and
+    none for "request", and with "statePrevious" as a success or failure state restoring
+    the incoming state of the claim)  */
 export type ResolvedDefinition = {
     name:       string
     title:      string
@@ -568,6 +575,13 @@ const loadDefinitionFile = async (file: string): Promise<LoadedDefinition> => {
     return definitionValues(data, `agent: option "--definition": definition "${file}"`, path.dirname(file))
 }
 
+/*  whether a phase agent claiming only the tasks explicitly assigned to it (<required>, under
+    the assignee <name>) hands a processed task over to the assignee specification <who> of
+    somebody else, so an untagged task returning into an incoming state is guarded against
+    being claimed again by its assignment  */
+export const unassignedFrom = (required: boolean, name: string, who: string): boolean =>
+    required && who !== "previous" && who !== name
+
 /*  fail on the option "--<key>" with the message <msg>  */
 const failOption = (key: string, msg: string): never => {
     throw new Error(`agent: option "--${key}": ${msg}`)
@@ -631,17 +645,23 @@ const resolveStates = (
     const incoming = [ ...new Set(list("state-incoming").map((state) => state.toUpperCase()).filter((state) => state !== "")) ]
     if (type === "phase" && incoming.length === 0)
         fail("state-incoming", "mandatory for \"--type phase\"")
-    else if (incoming.length > 1 && !unclaimed)
-        fail("state-incoming", "multiple states allowed with \"--unclaimed\" only")
+    else if (incoming.length > 1 && !unclaimed && !has("state-activity"))
+        fail("state-incoming", "multiple states allowed with \"--unclaimed\" or \"--state-activity\" only")
     const first    = incoming[0] ?? ""
     const activity = upper("state-activity", first)
     const success  = upper("state-success", first)
     const failure  = upper("state-failure", first)
-    const phase    = upper("state-phase", success)
+    const phase    = upper("state-phase", success === statePrevious ? activity : success)
     const passed   = upper("state-passed", phase)
+
+    /*  the states of the claim, where a "previous" success or failure state stands
+        for all incoming states (as each one can be the incoming state of the claim)  */
+    const targets   = (state: string): string[] => state === statePrevious ? incoming : [ state ]
     const claimKeys: [ string, string ][] = unclaimed ? [] : [
-        [ "state-activity", activity ], [ "state-success", success ],
-        [ "state-failure", failure ], [ "state-phase", phase ], [ "state-passed", passed ],
+        [ "state-activity", activity ],
+        ...targets(success).map((state): [ string, string ] => [ "state-success", state ]),
+        ...targets(failure).map((state): [ string, string ] => [ "state-failure", state ]),
+        [ "state-phase", phase ], [ "state-passed", passed ],
         ...Object.values(verdicts).map((state): [ string, string ] => [ "state-verdict", state ])
     ]
     const stateKeys: [ string, string ][] = type === "phase" ? [
@@ -669,8 +689,10 @@ const resolveStates = (
         if (type !== "phase")
             continue
         const transitions: [ string, string, string ][] = [
-            [ "state-activity", first, activity ], [ "state-activity", activity, first ],
-            [ "state-success", activity, success ], [ "state-failure", activity, failure ],
+            ...incoming.flatMap((state): [ string, string, string ][] => [
+                [ "state-activity", state, activity ], [ "state-activity", activity, state ] ]),
+            ...targets(success).map((state): [ string, string, string ] => [ "state-success", activity, state ]),
+            ...targets(failure).map((state): [ string, string, string ] => [ "state-failure", activity, state ]),
             ...Object.values(verdicts).map((state): [ string, string, string ] => [ "state-verdict", activity, state ])
         ]
         for (const [ key, from, to ] of transitions) {
@@ -679,7 +701,7 @@ const resolveStates = (
                 fail(key, error)
         }
     }
-    return { incoming, first, activity, success, failure, phase, passed, verdicts, lifecycles }
+    return { incoming, activity, success, failure, phase, passed, verdicts, lifecycles }
 }
 
 /*  resolve the definition of the agent named <name> from its (camel-cased) command-line
@@ -755,7 +777,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     const verdicting = has("verdict-label") || loaded.hooks.verdict !== undefined
 
     /*  the states (see "resolveStates")  */
-    const { incoming, first, activity, success, failure, phase, passed, verdicts, lifecycles } =
+    const { incoming, activity, success, failure, phase, passed, verdicts, lifecycles } =
         resolveStates(str, list, has, type, unclaimed)
 
     /*  the tag and the assignee  */
@@ -796,23 +818,27 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     }
     if (flag("tag-retry") && has("tag-failure"))
         fail("tag-retry", "not allowed together with \"--tag-failure\"")
-    const tagSuccess = tagValue("tag-success")
-    const tagFailure = flag("tag-retry") ? null : tagValue("tag-failure")
-    if (tagSuccess === null && type === "phase" && (success === first || Object.values(verdicts).includes(first))
-        && !has("attach-skip") && !loaded.guards)
-        fail("tag-success", "\"none\" would let the agent claim a task again, which returns into the incoming state " +
-            "(unless guarded by \"--attach-skip\" or by the hook \"ready\" of a definition declaring \"tag-success: none\" itself)")
-    for (const key of [ "tag-require", "tag-exclude" ])
-        for (const tag of list(key))
-            if (!/^[^\s,]+$/.test(tag))
-                fail(key, `invalid tag "${tag}"`)
     const assignee = (key: string, def: string): string => {
         const who = str(key, def)
         if (who !== "none" && who !== "previous" && !/^[A-Za-z0-9][A-Za-z0-9_.@-]*$/.test(who))
             fail(key, `invalid assignee "${who}" (expected a name, "none", or "previous")`)
         return who
     }
-    const handover = type === "phase" ? "none" : "previous"
+    const handover      = type === "phase" ? "none" : "previous"
+    const assignSuccess = assignee("assign-success", handover)
+    const assignFailure = assignee("assign-failure", handover)
+    const tagSuccess = tagValue("tag-success")
+    const tagFailure = flag("tag-retry") ? null : tagValue("tag-failure")
+    const returning  = (state: string) => state === statePrevious || incoming.includes(state)
+    if (tagSuccess === null && type === "phase" && (returning(success) || Object.values(verdicts).some(returning))
+        && !has("attach-skip") && !loaded.guards && !unassignedFrom(flag("assign-required"), assignName, assignSuccess))
+        fail("tag-success", "\"none\" would let the agent claim a task again, which returns into an incoming state " +
+            "(unless guarded by \"--attach-skip\", by the hook \"ready\" of a definition declaring \"tag-success: none\" itself, " +
+            "or by \"--assign-required\" with \"--assign-success\" handing the task over to somebody else)")
+    for (const key of [ "tag-require", "tag-exclude" ])
+        for (const tag of list(key))
+            if (!/^[^\s,]+$/.test(tag))
+                fail(key, `invalid tag "${tag}"`)
 
     /*  the parameters (see "resolveParams")  */
     const decls  = loaded.params
@@ -924,7 +950,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         },
         assign:  {
             name: assignName, required: flag("assign-required"),
-            success: assignee("assign-success", handover), failure: assignee("assign-failure", handover)
+            success: assignSuccess, failure: assignFailure
         },
         request: { name: requestName, done: str("request-done", "processed"), prompt: consumes },
         prompt:  { skill, template },

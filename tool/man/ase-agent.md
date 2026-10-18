@@ -45,20 +45,30 @@ interrupted or stopped.
 
 The *agent* is one of the following agent kinds:
 
-- the built-in phase agents `planner`, `implementer`, `approver`, and
+- the built-in phase agents `implementer`, `approver`, and
   `integrator`, which each drive one phase of the `enterprise` task
-  lifecycle model, so that the four agents together realize the
-  entire model,
+  lifecycle model, so that the three agents together realize the
+  model from the planned to the integrated tasks,
+
+- the built-in phase agents `rebooter` and `condenser`, which re-create
+  resp. condense the plans of the tasks of the `Planning` phase of the
+  `enterprise` task lifecycle model explicitly assigned to them
+  (`DRAFTED` > `PLANNING` > `DRAFTED`),
 
 - the built-in request agent `editor`, which processes the edit
   requests of tasks in any task lifecycle model,
 
 - the built-in agent `estimator`, which estimates the effort of tasks
-  in any task lifecycle model, without claiming them (mode `phase`),
-  resp. on request (mode `request`),
+  in any task lifecycle model, without claiming them (mode `phase`,
+  intended for the final estimation), resp. on request (mode `request`,
+  intended for dry-runs),
 
-- the built-in request agent `researcher`, which researches a topic (or
-  the plan itself) for tasks in any task lifecycle model on request,
+- the built-in agent `researcher`, which researches and grounds the
+  plans of the tasks of the `Planning` phase of the `enterprise` task
+  lifecycle model explicitly assigned to it (mode `phase`), resp.
+  researches a topic (or the plan itself) for tasks in any task
+  lifecycle model on request (mode `request`, intended for topic-driven
+  research),
 
 - an agent of a *definition kind*, whose entire behavior is configured
   by a definition file *kind*`.`*ext* of the project or of the user,
@@ -72,7 +82,7 @@ agents are best run together as a *fleet* (see `ase-agent-fleet`(1)),
 and each agent can pass its live presence to the task boards through
 an *agent relay* (see `ase-agent-relay`(1)).
 
-The six built-in agents are not hard-coded, but each mode of them is a
+The eight built-in agents are not hard-coded, but each mode of them is a
 declarative *definition*, run by the same agent engine as the agents of
 the definition kinds and the `adhoc` agent. Hence, every agent accepts
 all options `--`*group*`-`*item* of the definitions (see
@@ -84,7 +94,7 @@ presence (with its mode), its tags, and its agent-owned worktrees
 ## AGENT NAMES
 
 Every agent has a *name* (option `--name`, default: its kind, e.g.,
-`planner` or `adhoc`), which consists of up to 64 letters, digits,
+`implementer` or `adhoc`), which consists of up to 64 letters, digits,
 underscores, and dashes, starting with a letter or digit, and which
 must not be the name of another agent kind, `relay`, or `fleet`.
 
@@ -102,9 +112,10 @@ parallel to each other.
 
 ## TASK CLAIMING
 
-A *phase* agent (all built-in agents except `editor`, `estimator`, and `researcher`,
-and every definition of `--type phase` without `--unclaimed`) observes
-the tasks in its *incoming* state which do not yet carry its *tag*
+A *phase* agent (all built-in agents except `editor`, `estimator`, and
+`researcher` in the mode `request`, and every definition of `--type
+phase` without `--unclaimed`) observes the tasks in its *incoming*
+state(s) which do not yet carry its *tag*
 (plain or with any value) in their `Tags:` frontmatter key, and whose
 `Assignee:` frontmatter key is either still empty or already the
 assignee name of the agent (default: its name), so a task can be
@@ -112,13 +123,15 @@ pre-assigned to a particular agent of a pool, while a task assigned to
 anybody else (e.g., a human) is left alone.
 
 An agent can require a task to be already assigned to it (like
-`planner`, see `--assign-required`).
+`rebooter`, `condenser`, and `researcher` in the mode `phase`, see
+`--assign-required`). Such an agent can leave a processed task untagged
+(see `--tag-success none`), as the unassignment of the task keeps it from
+being claimed again, while assigning it to the agent again requests
+another processing.
 
 The tag of a built-in agent is `ase-agent-`*kind*, resp. one per mode
-for `planner` (`ase-agent-planner-reboot` and
-`ase-agent-planner-condense`) and for `implementer` in mode `draft`
-(`ase-agent-implementer-draft`). The tag of any other agent is
-`ase-agent-`*name* (see `--tag-name`).
+for `implementer` in mode `draft` (`ase-agent-implementer-draft`). The
+tag of any other agent is `ase-agent-`*name* (see `--tag-name`).
 
 The agent claims each dispatchable task (in natural task id order,
 re-checked on every change of the task store) in a single conditional
@@ -136,7 +149,9 @@ unassigned (only if still assigned to the agent, and not meanwhile to
 somebody else, e.g., the `editor` agent), tagged with its plain tag
 (or with the label of the processing as its value, like the verdict of
 `approver`), so no agent of this kind picks it up again, and moved into
-its *success* or *failure* (parking) state.
+its *success* or *failure* (parking) state, where the pseudo state
+`previous` restores the incoming state the task was claimed from (for an
+agent claiming tasks from multiple incoming states).
 
 A processing failure, or a processing exceeding the duration of
 `--timeout`, always leads to the failure state. A task whose status the
@@ -156,8 +171,8 @@ failure is logged as an error. A final status update of a processed
 task which fails even after its retries is retried in the background
 with a growing delay.
 
-A *request* agent (`editor`, `estimator` in the mode `request`,
-`researcher`, and every definition of `--type request`) instead processes the prompt requests attached to tasks in
+A *request* agent (`editor`, `estimator` and `researcher` in the mode
+`request`, and every definition of `--type request`) instead processes the prompt requests attached to tasks in
 any lifecycle status (see `ase task request` in `ase-task-request`(1),
 `ase-agent-editor`(1), and `ase-agent-researcher`(1)).
 
@@ -178,7 +193,11 @@ A phase agent claims a task only once all its predecessors passed the
 phase of the agent (or no longer exist). The predecessors of a task are
 the tasks of its `After:` frontmatter key and, for an explicit epic (a
 task whose `Group:` is its own id), implicitly all other tasks of its
-group.
+group. An agent whose passed state (see below) is the first state of
+the task lifecycle model (like `rebooter`, `condenser`, and
+`researcher` in the mode `phase`, with `DRAFTED`) hence imposes no gate,
+except for a predecessor still being processed by an agent of its kind
+or a cancelled `After:` predecessor.
 
 A predecessor has passed the phase once it is in or beyond the
 *passed* state of the agent (see `--state-passed`), or in the *success*
@@ -223,8 +242,8 @@ un-namespaced *ASE* skill (`ase-*`) gets the plugin namespace `ase:`
 for `claude` only.
 
 The agent tool and, for an agent of a working directory other than
-`project` (i.e., all built-in agents except `planner` and `estimator`,
-see `--workdir`), `git` have to be found in `$PATH`.
+`project` (i.e., all built-in agents except `rebooter`, `condenser`,
+and `estimator`, see `--workdir`), `git` have to be found in `$PATH`.
 
 All processing information, including the output of the agent tool
 (which streams its agent messages, tool calls, failures, and final
@@ -304,10 +323,10 @@ frontmatter keys of a task (or their configured defaults
 
 Without `--repo`, all tasks are processed in the Git working copy the
 agent is started in, which is hence mandatory (except for an agent of
-the working directory `project`, like `planner` and `estimator`, which
-work in the project root only, where `planner` and `estimator` do not
-accept `--repo` and `--tempdir` at all, while any other such agent
-ignores them).
+the working directory `project`, like `rebooter`, `condenser`, and
+`estimator`, which work in the project root only, where `rebooter`,
+`condenser`, and `estimator` do not accept `--repo` and `--tempdir` at
+all, while any other such agent ignores them).
 
 With `--repo` *url*, each agent instead clones the Git repository *url* once
 into its temporary directory (removed on termination) and processes every
@@ -411,10 +430,17 @@ manual pages of the agent kinds).
 
 The following sub-command groups exist:
 
-- `ase agent planner` `start`|`status`|`log`|`stop`:
-  The agent of the `Planning` phase of the `enterprise` task lifecycle
-  model, rebooting resp. condensing the plans of the tasks explicitly
-  assigned to it. See `ase-agent-planner`(1).
+- `ase agent rebooter` `start`|`status`|`log`|`stop`:
+  The agent re-creating the plans of the `DRAFTED` tasks of the
+  `enterprise` task lifecycle model explicitly assigned to it from
+  scratch, putting them back into `DRAFTED` afterwards. See
+  `ase-agent-rebooter`(1).
+
+- `ase agent condenser` `start`|`status`|`log`|`stop`:
+  The agent compressing the wording of the plans of the `DRAFTED` tasks
+  of the `enterprise` task lifecycle model explicitly assigned to it,
+  putting them back into `DRAFTED` afterwards. See
+  `ase-agent-condenser`(1).
 
 - `ase agent implementer` `start`|`status`|`log`|`stop`:
   The agent of the `Implementation` phase of the `enterprise` task
@@ -439,14 +465,19 @@ The following sub-command groups exist:
 - `ase agent estimator` `start`|`status`|`log`|`stop`:
   The agent estimating the effort of the tasks without a valid
   `Effort:` key in any task lifecycle model, without claiming them
-  (mode `phase`), resp. of the tasks of the `estimate` requests (mode
-  `request`). See `ase-agent-estimator`(1).
+  (mode `phase`, intended for the final estimation), resp. of the tasks
+  of the `estimate` requests (mode `request`, intended for dry-runs).
+  See `ase-agent-estimator`(1).
 
 - `ase agent researcher` `start`|`status`|`log`|`stop`:
-  The agent processing the research requests of tasks in any task
-  lifecycle model, appending a research report, grounded in the Web and
-  in the source artifacts of the project, to the `research` attachment
-  of the tasks. See `ase-agent-researcher`(1).
+  The agent researching the plans of the `DRAFTED` tasks of the
+  `enterprise` task lifecycle model explicitly assigned to it
+  (mode `phase`, intended for researching and grounding the plan
+  content), resp. processing the research requests of tasks in any task
+  lifecycle model (mode `request`, intended for topic-driven research),
+  appending a research report, grounded in the Web and in the source
+  artifacts of the project, to the `research` attachment of the tasks.
+  See `ase-agent-researcher`(1).
 
 - `ase agent` *kind* `start`|`status`|`log`|`stop`:
   The agent of the definition kind *kind* (see **DEFINITION KINDS**),
@@ -534,8 +565,8 @@ The sub-commands of every agent kind *agent* are:
   The run lock (a directory, refreshed periodically and considered stale
   after 30 seconds without refresh) and the run record (process id, process
   start time, and claimed tasks) of each agent process of agent *kind*
-  (`planner`, `implementer`, `approver`, `integrator`, `editor`,
-  `estimator`, or `researcher`, resp. `tag-`*word* per tag `ase-agent-`*word* of the
+  (`rebooter`, `condenser`, `implementer`, `approver`, `integrator`,
+  `editor`, `estimator`, or `researcher`, resp. `tag-`*word* per tag `ase-agent-`*word* of the
   agents of the definition kinds and of `adhoc`), where *store-hash* is
   the first 12 hex digits of the SHA-1 digest of the identity of the
   task store.
@@ -557,8 +588,10 @@ information and exits with status `1`.
 ## EXAMPLES
 
 ```sh
-# start all four phase agents of the "enterprise" lifecycle model
-$ ase agent planner start
+# start the phase agents of the "enterprise" lifecycle model
+$ ase agent rebooter start
+$ ase agent condenser start
+$ ase agent researcher start
 $ ase agent implementer start -p 2
 $ ase agent approver start -m judge
 $ ase agent integrator start -m squash
@@ -574,7 +607,7 @@ $ ase agent implementer stop -n impl-codex
 
 ## SEE ALSO
 
-`ase`(1), `ase-agent-planner`(1), `ase-agent-implementer`(1),
+`ase`(1), `ase-agent-rebooter`(1), `ase-agent-condenser`(1), `ase-agent-implementer`(1),
 `ase-agent-approver`(1), `ase-agent-integrator`(1),
 `ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-researcher`(1),
 `ase-agent-adhoc`(1), `ase-agent-relay`(1), `ase-agent-fleet`(1), `ase-task`(1),

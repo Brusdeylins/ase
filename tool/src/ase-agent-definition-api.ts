@@ -40,7 +40,9 @@ export interface AgentParam {
     file, relative to this one, or the definition "builtin:<kind>[-<mode>]" of a built-in agent),
     whose options it overrides (where a false flag unsets the flag of the base definition), whose
     parameter declarations it extends field-wise, and whose hooks of the same name it replaces,
-    where only an "unclaimed" phase agent can have multiple incoming states  */
+    where a phase agent can have multiple incoming states only if "unclaimed" or with an explicit
+    activity state, and where a "previous" success or failure state restores the incoming state
+    of the claim  */
 export interface AgentDefinition {
     definition?: string
     title?:      string
@@ -245,7 +247,8 @@ export interface AgentHookOutcome {
     configured one: its target state ("type: phase" without "unclaimed" only, still required
     to be reachable from the activity state), the value of its tag ("type: phase" only: a
     lower-case value, or null to untag it, which is refused if the task would return into
-    the incoming state unguarded by "attach.skip" or the hook "ready"), and the assignee to
+    an incoming state unguarded by "attach.skip", the hook "ready", or its handover by a
+    required assignment), and the assignee to
     hand it over to (a name, "none", or "previous", but not with "unclaimed"), where an
     omitted field keeps the configured settling  */
 export interface AgentHookSettlement {

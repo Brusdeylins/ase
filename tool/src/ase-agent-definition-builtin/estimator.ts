@@ -41,14 +41,15 @@ export default {
         "assignee are never changed and no other agent is kept off it), estimate its effort via the " +
         "headless agent tool and the \"ase-task-estimate\" skill (which writes just its \"Effort\" key " +
         "in a conditional save), and tag it with \"ase-agent-estimator\" only if it carries no valid " +
-        "\"Effort\" key afterwards (so it is not picked again) (\"--mode phase\"), or process the " +
-        "\"estimate\" requests of tasks in any unfinished status (e.g. \"DRAFTED\"), as requested with " +
-        "key \"R\" on the task board, by claiming the task like the editor agent and re-estimating " +
-        "its effort even if it carries a valid one (\"--mode request\"), logging to stdout and to the " +
-        "\"agent\" attachment of the task",
+        "\"Effort\" key afterwards (so it is not picked again) (\"--mode phase\", intended for the " +
+        "final estimation of the planned tasks), or process the \"estimate\" requests of tasks in any " +
+        "unfinished status (e.g. \"DRAFTED\"), as requested with key \"R\" on the task board, by " +
+        "claiming the task like the editor agent and re-estimating its effort even if it carries a " +
+        "valid one (\"--mode request\", intended for dry-runs, i.e., provisional estimations of plans " +
+        "still in progress), logging to stdout and to the \"agent\" attachment of the task",
     modeDesc:
-        "\"phase\" to estimate the unestimated tasks in \"PLANNED\" automatically, or \"request\" " +
-        "to (re-)estimate the tasks in any unfinished status on request",
+        "\"phase\" for the final estimation of the unestimated tasks in \"PLANNED\" automatically, or " +
+        "\"request\" for dry-runs, (re-)estimating the tasks in any unfinished status on request",
     mode: "phase",
     modes: {
         /*  estimate the effort of the task in the project root, where the task is processed
@@ -65,7 +66,7 @@ export default {
                 "no explicit epic, without claiming it (so its status and its assignee stay untouched). " +
                 "Estimates its effort as a T-shirt size via the ase-task-estimate skill, which stores just " +
                 "its Effort: key, and tags it only if it is still unestimated afterwards, so it is not " +
-                "picked again.",
+                "picked again. Intended for the final estimation of the planned tasks.",
             type:      "phase",
             unclaimed: true,
             workdir:   "project",
@@ -99,7 +100,8 @@ export default {
                 "Claims every task with a pending estimate request (requested with key R on the task " +
                 "boards) in any unfinished status. Re-estimates its effort as a T-shirt size via the " +
                 "ase-task-estimate skill, even if it already carries a valid Effort: key (ignoring the " +
-                "prompt of the request), restores its previous assignee, and removes the request on success.",
+                "prompt of the request), restores its previous assignee, and removes the request on success. " +
+                "Intended for dry-runs, i.e., provisional estimations of plans still in progress.",
             type:      "request",
             workdir:   "project",
             request:   { name: "estimate", done: "estimated" },

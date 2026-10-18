@@ -429,7 +429,8 @@ $ ase task request FOO-42 edit "split step 3 into two steps"
 
 ## SEE ALSO
 
-`ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
+`ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
+`ase-agent-condenser`(1), `ase-agent-researcher`(1),
 `ase-agent-implementer`(1), `ase-agent-approver`(1),
 `ase-agent-integrator`(1), `ase-agent-estimator`(1),
 `ase-task-request`(1), `ase-agent-adhoc`(1), `ase-agent-fleet`(1),

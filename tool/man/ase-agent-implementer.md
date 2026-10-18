@@ -504,7 +504,8 @@ $ ase agent implementer start -n drafter -m draft
 
 ## SEE ALSO
 
-`ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
+`ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
+`ase-agent-condenser`(1), `ase-agent-researcher`(1),
 `ase-agent-approver`(1), `ase-agent-integrator`(1),
 `ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
 `ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),

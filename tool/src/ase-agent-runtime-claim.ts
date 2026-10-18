@@ -24,9 +24,10 @@ const runStale = 30 * 1000
 export const runOwner = crypto.createHash("sha1")
     .update(`${os.hostname()}\n${userStateDir()}`).digest("hex").slice(0, 12)
 
-/*  a claim of a task recorded for a run: the name and the tag of the
-    claiming agent, and the previous assignee of the task  */
-export type RunClaim = { name: string, tag: string, assignee: string }
+/*  a claim of a task recorded for a run: the name and the tag of the claiming agent,
+    the previous assignee of the task, and its previous status (absent in the records
+    of older runs and for a task processed unclaimed)  */
+export type RunClaim = { name: string, tag: string, assignee: string, status?: string }
 
 /*  the run of an agent process of a kind, guarded by a run lock in the per-user state
     directory (hence per host and user), below a sub-directory per task store (as the

@@ -1,4 +1,4 @@
-# ase-agent-researcher(1) -- Research Request Agent
+# ase-agent-researcher(1) -- Research Agent
 
 ## SYNOPSIS
 
@@ -11,6 +11,7 @@
 \[`--agent-relay` *url*\]
 \[`-r`|`--repo` *url*\]
 \[`-d`|`--tempdir` *dir*\]
+\[`-m`|`--mode` `phase`|`request`\]
 \[`--`*group*`-`*item* *value* \[...\]\]
 \[`-f`|`--foreground`\]
 
@@ -27,9 +28,43 @@
 
 ## DESCRIPTION
 
-**ase agent researcher** processes the research requests of tasks.
-Unlike the phase agents, it is bound to no phase and supports all task
-lifecycle models (`solo`, `team`, and `enterprise`).
+**ase agent researcher** researches for the plans of tasks, combining
+a Web research with a grounding in the source artifacts of the project
+(see the skill `ase-task-research`). It runs in one of two modes (see
+`--mode`): the mode `phase` (the default) researches the plans of the
+tasks explicitly assigned to it in the `Planning` phase of the
+`enterprise` task lifecycle model and is intended for *researching and
+grounding the plan content*, while the mode `request` processes the
+research requests of tasks in any task lifecycle model and is intended
+for *topic-driven research*.
+
+In the mode `phase` (refused for any task lifecycle model other than
+`enterprise`), as a plan is researched only on the explicit request of
+a human, the researcher claims only the tasks in the state `DRAFTED`
+whose `Assignee:` frontmatter key already is its agent name
+(default: `researcher`), i.e., which a human assigned to the
+researcher. Such a task is claimed immediately, without waiting for its
+`After:` predecessors (and, for an explicit epic, its group members),
+except for a predecessor still being processed by a researcher in the
+mode `phase` or a cancelled `After:` predecessor. It moves each claimed task
+into `PLANNING`, tags it with `ase-agent-researcher:active`, and
+researches the plan itself via the skill invocation `ase-task-research
+--refine` *id* in the working copy, grounded in the `Source:` of the
+task (like in the mode `request`, see below), appending the research
+report to the `research` attachment of the task and refining the plan
+by the recommendations of the report. The processing succeeds under the
+same conditions as in the mode `request`. Afterwards, on success as
+well as on failure, the researcher puts the task back into `DRAFTED`,
+removes its tag, and unassigns it. As the task is no longer assigned to
+the researcher, it is not claimed again, while assigning it to the
+researcher again requests another research. On an interrupt, the task
+is put back, untagged and with its previous assignee (i.e., still
+assigned to the researcher), into `DRAFTED`.
+
+In the mode `request`, the researcher processes the research requests
+of tasks. Like the request agent `editor`, it is then bound to no phase
+and supports all task lifecycle models (`solo`, `team`, and
+`enterprise`).
 
 A research request is added by key `R` of the task board (see
 `ase-task-board`(1)) or by `ase task request` *id* `research`
@@ -78,12 +113,15 @@ or `no new or changed attachment "text/markdown;research"`) otherwise.
 A finalization failing even after its retries is retried on every
 further dispatching.
 
-On its start, the researcher marks the requests left in
+On its start in the mode `request`, the researcher marks the requests left in
 `kind="research-running"` by any terminated researcher process of the
 same user on the same host (whose run lock is gone or stale and whose
 process is no longer alive) as failed (`kind="research-failed"`), and
-restores the previous assignees of their tasks. See `ase-agent`(1) for
-the common mechanics of all agents.
+restores the previous assignees of their tasks.
+
+Both modes can run side by side as two agents of the kind `researcher`
+under different names (e.g., `researcher` and `researcher-request`).
+See `ase-agent`(1) for the common mechanics of all agents.
 
 ## OPTIONS
 
@@ -141,9 +179,9 @@ All other options belong to the sub-commands (see **COMMANDS**).
       presence of the agent to, as `ase://`*addr*`:`*port*\[`/`*token*\]
       resp. `ases://`*addr*`:`*port*\[`/`*token*\]\[`?insecure`\] for
       HTTPS (default: the configured `project.relay.url`, else none).
-      See **AGENT RELAY** in `ase-agent`(1). The agent is announced
-      there as processing the `research` requests, which may have an
-      empty prompt.
+      See **AGENT RELAY** in `ase-agent`(1). In the mode `request`, the
+      agent is announced there as processing the `research` requests,
+      which may have an empty prompt.
 
     - \[`-r`|`--repo` *url*\]: The Git repository to clone once into the
       temporary directory of the agent, where every task without a
@@ -164,19 +202,32 @@ All other options belong to the sub-commands (see **COMMANDS**).
       private to the current user, while an existing *dir* has to be a
       directory (no symbolic link) owned by the current user.
 
+    - \[`-m`|`--mode` *mode*\]: The mode of the agent (default:
+      `phase`): `phase` researches and grounds the plans of the tasks
+      explicitly assigned to the researcher in `DRAFTED`,
+      while `request` researches the topics of the `research` requests
+      of the tasks in any task lifecycle model. An invalid mode is an
+      error. The built-in values of the following options are given per
+      mode where they differ, and in the mode `request`, the options for
+      `phase` only (`--unclaimed`, `--state-`\*, `--tag-success`,
+      `--tag-failure`, `--tag-retry`, `--assign-required`, and
+      `--attach-skip`) are not allowed.
+
     - \[`--title` *text*\]: The one-line title of the operation of the
       agent (at most 80 characters), shown on the task boards. Built-in:
-      `Research topics for tasks on request`.
+      `Research and ground the plans of assigned tasks` (mode `phase`)
+      resp. `Research topics for tasks on request` (mode `request`).
 
     - \[`--description` *text*\]: The brief description of the operation
       of the agent (about 3-6 lines, at most 600 characters, with its
       whitespace collapsed), shown on the task boards. Built-in: a
-      description of the operation of the researcher.
+      description of the operation of the mode.
 
     - \[`--type` `phase`|`request`\]: The processing type: `phase`
       claims the tasks by their lifecycle status, `request` processes
       the prompt requests attached to the tasks. Generic default:
-      `phase`. Built-in: `request`.
+      `phase`. Built-in: `phase` (mode `phase`) resp. `request` (mode
+      `request`).
 
     - \[`--workdir` *kind*\]: The working directory of the agent tool:
       `project`, `source`, `changeset`, `changeset-read`, or `target`.
@@ -185,19 +236,49 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--lifecycle` *model*\]: A supported task lifecycle model
       (`solo`, `team`, or `enterprise`, repeatable). Generic default:
       every model containing all given states, resp. all models for
-      `request` and with `--unclaimed`. Built-in: not set. Hence, all
-      task lifecycle models are supported.
+      `request` and with `--unclaimed`. Built-in: `enterprise` (mode
+      `phase`) resp. not set (mode `request`). Hence, all task lifecycle
+      models are supported in the mode `request`.
 
     - \[`--serial`\]: Process the tasks serially only, ignoring
       `--parallel`. Built-in: not set.
 
+    - \[`--unclaimed`\]: Process the tasks of the incoming states
+      without claiming them (`phase` only). Built-in: not set.
+
     - \[`--params` *name*`=`*value*\]: The value of a parameter
       declared by the definition (repeatable). Built-in: none declared.
 
+    - \[`--state-incoming` *state*\]: A state of the tasks to claim
+      (mandatory for `phase`, repeatable with `--unclaimed` or
+      `--state-activity` only). Built-in: `DRAFTED` (mode `phase`).
+
+    - \[`--state-activity` *state*\]: The state of a task during its
+      processing. Built-in: `PLANNING` (mode `phase`).
+
+    - \[`--state-success` *state*\], \[`--state-failure` *state*\]: The
+      target state on success resp. failure, or `previous` for the
+      incoming state of the claim. Built-in: `DRAFTED` (mode `phase`).
+
+    - \[`--state-phase` *state*\]: The phase success state. Built-in: not
+      set (mode `phase`), hence `DRAFTED`.
+
+    - \[`--state-passed` *state*\]: The first state from which on a task
+      has passed the phase for its `After:` successors. Built-in: not
+      set (mode `phase`), hence `DRAFTED`, the first state, so the
+      predecessors impose no gate.
+
     - \[`--tag-name` *tag*\]: The tag of the processed tasks
       (`ase-agent-`*word*). Generic default: `ase-agent-`*name*, resp.
-      for `request` always `ase-agent-`*request-name*. Built-in:
-      `ase-agent-research` (derived from the request name `research`).
+      for `request` always `ase-agent-`*request-name*. Built-in: not set
+      (mode `phase`, hence `ase-agent-researcher`) resp.
+      `ase-agent-research` (mode `request`, derived from the request
+      name `research`).
+
+    - \[`--tag-success` *tag*\], \[`--tag-failure` *tag*\]: The tag on
+      success resp. failure (`phase` only). Built-in: `none` (mode
+      `phase`), as the unassignment of a processed task keeps it from
+      being claimed again.
 
     - \[`--tag-require` *tag*\]: A tag a claimable task has to carry
       (repeatable). Built-in: not set.
@@ -210,6 +291,10 @@ All other options belong to the sub-commands (see **COMMANDS**).
       agent-owned worktrees. Generic default: the agent name. Built-in:
       not set.
 
+    - \[`--assign-required`\]: Claim only the tasks explicitly assigned
+      to *who* of `--assign-name` (`phase` only). Built-in: enabled
+      (mode `phase`).
+
     - \[`--assign-success` *who*\]: The assignee of a task after its
       successful processing: a name, `none`, or `previous`. Generic
       default: `none` for `phase`, `previous` for `request`. Built-in:
@@ -221,11 +306,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--request-name` *name*\]: The name of the processed requests
       (`request` only). Generic default: the agent name. Built-in:
-      `research`.
+      `research` (mode `request`).
 
     - \[`--request-done` *word*\]: The word naming a processed task in
       the log lines (`request` only). Generic default: `processed`.
-      Built-in: `researched`.
+      Built-in: `researched` (mode `request`).
 
     - \[`--prompt-skill` *name*\]: The skill to invoke (mutually
       exclusive with `--prompt-text` and `--prompt-file`). Built-in:
@@ -234,8 +319,10 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--prompt-args` *template*\]: The argument template of the
       skill. Generic default: `{id}` for `phase`, `{id}: {prompt}` for
       `request`. Built-in: `--refine{?source-dir: --int-source-dir
-      "{source-dir}"} {id}:{?prompt: {prompt}}`, where the conditional
-      `{?prompt:...}` makes the prompt optional.
+      "{source-dir}"} {id}` (mode `phase`) resp. `--refine{?source-dir:
+      --int-source-dir "{source-dir}"} {id}:{?prompt: {prompt}}` (mode
+      `request`), where the conditional `{?prompt:...}` makes the prompt
+      optional.
 
     - \[`--prompt-text` *template*\]: The prompt text template to invoke
       instead of a skill. Built-in: not set.
@@ -290,10 +377,8 @@ All other options belong to the sub-commands (see **COMMANDS**).
   mutually exclusive alternatives, e.g., `--prompt-text` replaces the
   skill of `--prompt-skill`), while the agent keeps the identity of its
   kind (its runs, its presence, and its agent-owned worktrees are named
-  after `researcher`). The options of the type `phase` (like
-  `--state-incoming` or `--tag-success`) are not allowed, as the
-  researcher is of type `request`. See `ase-agent-adhoc`(1) for their
-  full semantics.
+  after `researcher`). See `ase-agent-adhoc`(1) for their full
+  semantics.
 
 - `ase agent researcher status` \[`-n`|`--name` *name*\]: Report whether
   the researcher agent of the name *name* (default: `researcher`) is
@@ -356,14 +441,21 @@ All other options belong to the sub-commands (see **COMMANDS**).
 `ase agent researcher start` exits with status `0` once the agent
 started (or was already running), resp. once a foreground agent
 terminated regularly, and with status `1` on any error (e.g., an invalid
-option, or a missing agent tool). `ase agent researcher status` exits
+option, a task lifecycle model other than `enterprise` in the mode
+`phase`, or a missing agent tool). `ase agent researcher status` exits
 with status `1` if the agent is not running.
 
 ## EXAMPLES
 
 ```sh
-# process the research requests of the task board
+# research and ground the plans of the tasks assigned to the researcher
 $ ase agent researcher start
+
+# request the research of a drafted task by assigning it to the researcher
+$ ase task assign FOO-42 researcher
+
+# process the research requests of the task board
+$ ase agent researcher start -n researcher-request -m request
 
 # request a research of a topic for a task from the command line
 $ ase task request FOO-42 research "streaming JSON serialization of large data sets"
@@ -374,8 +466,8 @@ $ ase task request FOO-42 research
 
 ## SEE ALSO
 
-`ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
-`ase-agent-implementer`(1), `ase-agent-approver`(1),
+`ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
+`ase-agent-condenser`(1), `ase-agent-implementer`(1), `ase-agent-approver`(1),
 `ase-agent-integrator`(1), `ase-agent-editor`(1),
 `ase-agent-estimator`(1), `ase-task-request`(1), `ase-agent-adhoc`(1),
 `ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),

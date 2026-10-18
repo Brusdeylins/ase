@@ -17,7 +17,7 @@ import type {
 import { Agent, taskFlow, taskFlowRaw, tagsOf, setPlanTag, updateTask } from "./ase-agent-runtime.js"
 import { skillErrored, verdictOf }  from "./ase-agent-runtime-tool.js"
 import { shellJob, jobSignal, execHook } from "./ase-agent-runtime-exec.js"
-import { PhaseAgent }               from "./ase-agent-runtime-phase.js"
+import { PhaseAgent, statePrevious } from "./ase-agent-runtime-phase.js"
 import type { AgentStates }         from "./ase-agent-runtime-phase.js"
 import { RequestAgent }             from "./ase-agent-runtime-request.js"
 import type { RequestOutcome }      from "./ase-agent-runtime-request.js"
@@ -29,7 +29,7 @@ import type {
 import type { ResolvedDefinition, AgentKind, DefinitionKind } from "./ase-agent-definition-core.js"
 import {
     definitionOptions, resolveDefinition,
-    renderTemplate, attachMatches, paramEnv
+    renderTemplate, attachMatches, paramEnv, unassignedFrom
 }                                   from "./ase-agent-definition-core.js"
 
 /*  the identity of an agent of a definition: its kind ("ase agent <kind>"), its mode (as
@@ -712,11 +712,13 @@ class DefinedCore {
                 throw new Error(`invalid assignee "${String(assignee)}" (expected a name, "none", or "previous")`)
             settlement.assignee = assignee
         }
-        const to = settlement.state ?? this.target(record)
+        const to  = settlement.state ?? this.target(record)
+        const who = settlement.assignee ?? (recordSuccess(record) ? this.def.assign.success : this.def.assign.failure)
         if (settlement.tagged && settlement.tag === null && this.def.attach.skip === null
-            && !this.def.tag.guarded && this.def.state.incoming.includes(to))
+            && !this.def.tag.guarded && !unassignedFrom(this.def.assign.required, this.def.assign.name, who)
+            && (to === statePrevious || this.def.state.incoming.includes(to)))
             throw new Error("untagging would let the agent claim the task again, " +
-                `which returns into its incoming state "${to}"`)
+                `which returns into its incoming state "${to === statePrevious ? this.def.state.incoming.join("\", \"") : to}"`)
         return settlement
     }
 
@@ -787,6 +789,7 @@ class DefinedPhaseAgent extends PhaseAgent {
     protected readonly states:     AgentStates
     protected readonly unclaimed:  string[] = []
     protected readonly assigned:   boolean  = false
+    protected readonly restoring:  boolean  = false
     protected readonly finishing:  boolean  = false
     protected readonly serial:     boolean  = false
     protected readonly worktree:   boolean  = false
@@ -802,11 +805,14 @@ class DefinedPhaseAgent extends PhaseAgent {
         this.core       = new DefinedCore(log, def, () => ({
             name: this.name, kind: this.kind, mode: this.mode, lifecycle: this.lifecycle!, interruption: this.interruption
         }))
-        this.states     = { incoming: def.state.incoming[0], activity: def.state.activity, success: def.state.phase, passed: def.state.passed }
+        this.states     = { incoming: def.state.incoming, activity: def.state.activity, success: def.state.phase, passed: def.state.passed }
         this.unclaimed  = def.unclaimed ? def.state.incoming : []
+        this.restoring  = [ def.state.success, def.state.failure ].includes(statePrevious)
 
-        /*  announce the observed, activity, written, and gate states (for the agent graph of the task boards)  */
-        const output    = [ def.state.success, def.state.failure, ...Object.values(def.state.verdict) ].filter((s) => s !== "")
+        /*  announce the observed, activity, written, and gate states (for the agent graph of the
+            task boards), where a restored previous state is one of the incoming states  */
+        const output    = [ def.state.success, def.state.failure, ...Object.values(def.state.verdict) ]
+            .flatMap((s) => s === statePrevious ? def.state.incoming : [ s ]).filter((s) => s !== "")
         this.presenceStates = {
             input:  def.state.incoming,
             output: output.filter((s, i) => output.indexOf(s) === i),
@@ -1224,9 +1230,9 @@ export default class AgentAdhoc extends DefinedAgent {
 
     protected readonly description =
         "Run an ad-hoc agent, whose entire behavior is given by its options instead of a definition " +
-        "file of its own: with \"--type phase\", claim every task in the \"--state-incoming\" status, " +
+        "file of its own: with \"--type phase\", claim every task in a \"--state-incoming\" status, " +
         "process it via the headless agent tool with a skill or a prompt text, tag it, and move it " +
-        "into the state of its success or failure (or, with \"--unclaimed\", process it without " +
+        "into the state of its success or failure, or back into its previous one (or, with \"--unclaimed\", process it without " +
         "claiming it and just tag it), or, with \"--type request\", process the prompt " +
         "requests of \"--request-name\" attached to tasks in any status (see \"ase task request\"), " +
         "logging to stdout and to the \"agent\" attachment of the task"

@@ -13,11 +13,15 @@ import {
     flatKeys, setPlanTag, updateTask
 }                                   from "./ase-agent-runtime.js"
 
-/*  the lifecycle states of the phase of an agent: the "incoming" state of the tasks
+/*  the lifecycle states of the phase of an agent: the "incoming" states of the tasks
     to claim, the "activity" state during processing, the "success" state (set by the
     skill itself or by the agent), and the first state in the order of the lifecycle
     model from which on a predecessor task has "passed" the phase  */
-export type AgentStates = { incoming: string, activity: string, success: string, passed: string }
+export type AgentStates = { incoming: string[], activity: string, success: string, passed: string }
+
+/*  the pseudo state of an outcome restoring the status of a task before its claim
+    (i.e., the incoming state it was claimed from)  */
+export const statePrevious = "PREVIOUS"
 
 /*  restore the previous assignee of a task plan (or clear it with an empty <assignee>),
     but only if it is still assigned to the agent <name> (and not meanwhile to somebody
@@ -32,7 +36,7 @@ const reassign = (plan: API.TaskPlan, name: string, assignee: string): void => {
 }
 
 /*  the agent driving one phase of the "enterprise" task lifecycle model:
-    it claims every task in the "incoming" state, which does not carry the tag
+    it claims every task in one of the "incoming" states, which does not carry the tag
     "ase-agent-<kind>" yet, whose "After:" predecessors all passed the phase, and
     which is either still unassigned (unless the agent requires the assignment) or
     already assigned to the agent, into the "activity" state, processes it via an ASE skill of the headless agent
@@ -56,6 +60,15 @@ export abstract class PhaseAgent extends Agent {
         "Assignee:", e.g. explicitly by a human) are claimed, instead of also
         the still unassigned tasks  */
     protected readonly assigned: boolean = false
+
+    /*  whether an outcome of the agent can restore the status of a task before its claim
+        (see "statePrevious"), so a task which the skill itself moved back into one of the
+        "incoming" states (e.g. "ase-task-reboot", which resets it into the default state)
+        is still held by the agent  */
+    protected readonly restoring: boolean = false
+
+    /*  the status of each claimed task before its claim (one of the "incoming" states)  */
+    private origins = new Map<string, string>()
 
     /*  whether the job of the agent finishes the result of the skill afterwards (e.g. by
         committing and publishing it), so a task already in the "success" state does not
@@ -156,10 +169,16 @@ export abstract class PhaseAgent extends Agent {
         return (task.keys.get("After") ?? "").trim() !== "" || (task.keys.get("Group") ?? "").trim() === task.id
     }
 
+    /*  whether a task in the status <status> is still held in the phase by the agent: in
+        the "activity" state, or, for a restoring agent, back in one of the "incoming" states  */
+    private held (status: string): boolean {
+        return status === this.states.activity || (this.restoring && this.states.incoming.includes(status))
+    }
+
     /*  select the dispatchable tasks among all listed tasks <items> (except the
         <busy> ones already processed in a worker slot), the tasks waiting (with the
-        reason), and the tasks with a notice: by default every task in the "incoming"
-        state, which is not tagged yet, is dispatchable to the agent by its assignee,
+        reason), and the tasks with a notice: by default every task in one of the "incoming"
+        states, which is not tagged yet, is dispatchable to the agent by its assignee,
         and whose predecessors all passed the phase (see "passes") or no longer exist,
         else waiting, where the predecessors of a task are those of its "After:" key and,
         for an explicit epic (a task being its own group), implicitly all other tasks of
@@ -229,7 +248,7 @@ export abstract class PhaseAgent extends Agent {
 
         /*  select the tasks  */
         const quoted = (ids: string[]) => ids.map((id) => `"${id}"`)
-        for (const item of items.filter((item) => item.status === incoming
+        for (const item of items.filter((item) => incoming.includes(item.status)
             && !taggedWith(item.keys, this.tag) && this.assignedTo(item.keys) && !busy.has(item.id))) {
             const after   = preds(item.id)
             const unknown = after.filter((pred) => !known.has(pred))
@@ -272,8 +291,8 @@ export abstract class PhaseAgent extends Agent {
 
     /*  claim a selected task, returning the description of the claim (for the processing
         log), or null if the task was skipped (throws if the claim failed):
-        by default the claim is won only if the task is still in the "incoming" state, and
-        the task is then moved into the "activity" state, tagged as "active", and assigned
+        by default the claim is won only if the task is still in one of the "incoming" states,
+        and the task is then moved into the "activity" state, tagged as "active", and assigned
         to the agent, all in a single conditional update of the task (retried on a concurrent
         change of it), so a failed claim never leaves the task half-claimed, and the claim
         is recorded for the run of the agent, so it is recovered after a termination,
@@ -300,6 +319,7 @@ export abstract class PhaseAgent extends Agent {
             agent, so both are silently skipped, and any other task is claimed (with its
             current header keys, including the previous assignee to restore on interrupt)  */
         let from    = ""
+        let origin  = ""
         let skipped = ""
         let keys    = task.keys
 
@@ -319,11 +339,14 @@ export abstract class PhaseAgent extends Agent {
                     return false
                 }
                 keys    = current
-                skipped = from !== incoming ? "status" :
+                skipped = !incoming.includes(from) ? "status" :
                     taggedWith(keys, this.tag) || !this.assignedTo(keys) ? "silently" : ""
                 if (skipped !== "")
                     return false
-                this.runLock.claim(task.id, { name: this.assignee, tag: this.tag, assignee: (keys.get("Assignee") ?? "").trim() })
+                origin = from
+                this.runLock.claim(task.id, {
+                    name: this.assignee, tag: this.tag, assignee: (keys.get("Assignee") ?? "").trim(), status: origin
+                })
                 plan.header.Status = activity
                 setPlanTag(plan, this.tag, "active")
                 plan.header.Assignee = this.assignee
@@ -349,7 +372,8 @@ export abstract class PhaseAgent extends Agent {
             return null
         }
         task.keys = keys
-        return `claimed task (status "${incoming}" → "${activity}")`
+        this.origins.set(task.id, origin)
+        return `claimed task (status "${origin}" → "${activity}")`
     }
 
     /*  pick a selected task for its unclaimed processing, returning the description of the
@@ -380,10 +404,10 @@ export abstract class PhaseAgent extends Agent {
     /*  settle a processed task after the skill invocation (successful by <ok>,
         with the job finished by <finished>, or interrupted by <aborted>), by
         default deciding on its status: a task already in the "success" state is
-        tagged plain or labeled, unassigned, and kept, a task still in the "activity" state
-        returns untagged (and with its previous assignee) into the "incoming" state
+        tagged plain or labeled, unassigned, and kept, a task still held in the phase (see "held")
+        returns untagged (and with its previous assignee) into its "incoming" state of the claim
         on interrupt and is otherwise tagged plain or labeled, unassigned, and moved into the
-        state of the outcome, where a task already in the "success" state, but whose
+        state of the outcome (where "statePrevious" restores its "incoming" state of the claim), where a task already in the "success" state, but whose
         finishing failed (e.g. one already "INTEGRATED" resp. "IMPLEMENTED" by the
         skill, but whose publishing of the merge resp. of the changeset branch was
         rejected), and a task whose outcome is not reachable from its state, is
@@ -408,27 +432,30 @@ export abstract class PhaseAgent extends Agent {
             "success" state differs from the "activity" state (else it is decided by the outcome)  */
         const value    = aborted ? undefined : this.label(ok, output, task)
         const assignee = (task.keys.get("Assignee") ?? "").trim()
+        const origin   = this.origins.get(task.id) ?? incoming[0]
         let level: LineLevel = "info"
         let result = ""
         const finish = () => updateTask(this.log, task.id, (plan, lifecycle) => {
             const status = TaskFormat.taskStatus(plan.header, lifecycle)
-            if (status === activity && aborted) {
+            const held   = this.held(status)
+            if (held && aborted) {
                 setPlanTag(plan, this.tag, null)
                 reassign(plan, this.assignee, assignee)
-                plan.header.Status = incoming
+                plan.header.Status = origin
                 level  = "warning"
-                result = `task released (status "${status}" → "${incoming}", untagged)`
+                result = `task released (status "${status}" → "${origin}", untagged)`
             }
-            else if (status === success && status !== activity && finished) {
+            else if (status === success && status !== activity && finished && !held) {
                 const good = this.succeeded(success, value, task)
                 setPlanTag(plan, this.tag, value)
                 reassign(plan, this.assignee, this.handover(good, assignee, task))
                 level  = good ? "info" : "warning"
                 result = `task processed ${good ? "successfully" : "unsuccessfully"} (status "${success}", ${this.tagged(value)})`
             }
-            else if (status === activity || status === success) {
-                const to = this.outcome(ok, output, task)
-                if (status === success && status !== activity) {
+            else if (held || status === success) {
+                const outcome = this.outcome(ok, output, task)
+                const to      = outcome === statePrevious ? origin : outcome
+                if (status === success && !held) {
                     /*  the skill succeeded, but the finishing failed (as "finished" is
                         false here), so the result of the skill (e.g. a merge or a commit
                         not published) must not be hidden by parking the task  */
@@ -513,6 +540,7 @@ export abstract class PhaseAgent extends Agent {
                 const exists = await finish()
                 const { level, result } = report()
                 this.runLock.unclaim(task.id)
+                this.origins.delete(task.id)
                 await this.write(exists ? level : "warning", `${this.name}: ${task.id}`,
                     exists ? `${result} (finalization retried)` : "task vanished -- finalization dropped",
                     undefined, task.id)
@@ -523,6 +551,7 @@ export abstract class PhaseAgent extends Agent {
             return
         }
         this.runLock.unclaim(task.id)
+        this.origins.delete(task.id)
         const { level, result } = report()
         if (exists)
             await log(level, result)
@@ -536,14 +565,14 @@ export abstract class PhaseAgent extends Agent {
         only if still owned by the terminated agent, i.e., still tagged as "active" and assigned
         to it, and not claimed meanwhile by a live agent of this host (e.g. after its release
         by an earlier recovery, or after its settling right before the termination): such a
-        task is released (like on an interrupt) if still in the "activity" state, tagged as
+        task is released (like on an interrupt) if still held in the phase (see "held"), tagged as
         "failed" (like on a failed finishing, see "settle") if in the "success" state of an
         agent whose job finishes the result of the skill, as the finishing (e.g. the publishing
         of the change set) might never have run, and else tagged plain (as processed), where
         each recovered claim is removed from the record of the run, and the record of a run
         is removed once all its tasks are recovered  */
     protected async recover (): Promise<void> {
-        const { incoming, activity, success } = this.states
+        const { incoming, success } = this.states
         for (const { run } of await this.runLock.dead()) {
             const claims = await this.runLock.seize(run)
             if (claims === null)
@@ -562,11 +591,12 @@ export abstract class PhaseAgent extends Agent {
                         if (!tagsOf(flatKeys(plan.header)).includes(`${claim.tag}:active`)
                             || String(plan.header.Assignee ?? "").trim() !== claim.name)
                             return false
-                        else if (status === activity) {
+                        else if (this.held(status)) {
+                            const origin = claim.status !== undefined && incoming.includes(claim.status) ? claim.status : incoming[0]
                             setPlanTag(plan, claim.tag, null)
                             reassign(plan, claim.name, claim.assignee)
-                            plan.header.Status = incoming
-                            result = `released (status "${status}" → "${incoming}", untagged)`
+                            plan.header.Status = origin
+                            result = `released (status "${status}" → "${origin}", untagged)`
                         }
                         else if (status === success && this.finishing) {
                             setPlanTag(plan, claim.tag, "failed")
@@ -604,7 +634,7 @@ export abstract class PhaseAgent extends Agent {
         if (this.unclaimed.length > 0)
             return `${[ ...this.observed() ].map((state) => `"${state}"`).join(", ")} tasks without tag "${this.tag}" ` +
                 "(unclaimed, independent of their assignee and predecessors)"
-        return `"${this.states.incoming}" tasks without tag "${this.tag}" ` +
+        return `${this.states.incoming.map((state) => `"${state}"`).join(", ")} tasks without tag "${this.tag}" ` +
             (this.assigned ? `and assigned to "${this.assignee}"` : `and unassigned or assigned to "${this.assignee}"`)
     }
 }

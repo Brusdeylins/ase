@@ -59,21 +59,21 @@ An agent definition configures the behavior of an agent declaratively.
 All agents of **ase** are agents of a definition, run by the same
 agent engine:
 
-- *built-in agents* (`ase agent planner`, `implementer`, `approver`,
-  `integrator`, `editor`, `estimator`, and `researcher`): each mode of them is a
-  built-in definition, which can be referenced as
+- *built-in agents* (`ase agent rebooter`, `condenser`, `implementer`,
+  `approver`, `integrator`, `editor`, `estimator`, and `researcher`):
+  each mode of them is a built-in definition, which can be referenced as
   `builtin:`*kind*`-`*mode* (resp. `builtin:`*kind* for its default
-  mode): `builtin:planner-reboot`, `builtin:planner-condense`,
+  mode): `builtin:rebooter-reboot`, `builtin:condenser-condense`,
   `builtin:implementer-implement`, `builtin:implementer-draft`,
   `builtin:approver-judge`, `builtin:approver-approve`,
   `builtin:integrator-merge`, `builtin:integrator-rebase`,
   `builtin:integrator-squash`, `builtin:editor-edit`,
-  `builtin:estimator-phase`, `builtin:estimator-request`, and
-  `builtin:researcher-research`.
+  `builtin:estimator-phase`, `builtin:estimator-request`,
+  `builtin:researcher-phase`, and `builtin:researcher-request`.
 
   All options `--`*group*`-`*item* below are also accepted by the
   built-in agents, where they override the built-in definition (see
-  `ase-agent-planner`(1) etc.).
+  `ase-agent-rebooter`(1) etc.).
 
 - *definition kinds* (`ase agent` *kind*): an agent kind of its own,
   discovered from the definition file *kind*`.`*ext* of the project
@@ -126,11 +126,16 @@ save, settles the task: it tags it according to `--tag-success` resp.
 `--tag-failure` (or with the found verdict as the tag value), hands it
 over to the assignee of `--assign-success` resp. `--assign-failure`, and
 moves it into the state of `--state-success` resp. `--state-failure` (or
-of `--state-verdict`).
+of `--state-verdict`), where `previous` restores the incoming state the
+task was claimed from.
 
 A task whose status the skill itself moved elsewhere is tagged, too, and
-left in that state. An interrupted processing puts the task back,
-untagged and with its previous assignee, into its incoming state.
+left in that state, except that for a `previous` success or failure
+state, a task the skill itself moved back into one of the incoming
+states (e.g., `ase-task-reboot`, which resets it into its default
+state) is still settled as above. An interrupted processing puts the task back,
+untagged and with its previous assignee, into the incoming state it was
+claimed from.
 
 With `--type phase` and `--unclaimed`, an agent instead processes the
 tasks *unclaimed*, like the built-in `estimator` agent: it observes the
@@ -437,27 +442,33 @@ states have to exist in any task lifecycle model only.
 
 - \[`--state-incoming` *state*\]:
   The state of the tasks to claim. Mandatory for `phase`. Repeatable
-  with `--unclaimed` only, where each state is adapted onto the task
+  with `--unclaimed`, where each state is adapted onto the task
   lifecycle model of the project (a state of the model is kept, any
   other one is mapped onto its counterpart, e.g., `PLANNED` onto
-  `PLANNING` for `team` and onto `OPEN` for `solo`).
+  `PLANNING` for `team` and onto `OPEN` for `solo`), and with an
+  explicit `--state-activity`, where a task is claimed from any of the
+  states (e.g., `DRAFTED` and `PLANNING` into `PLANNING`).
 
 - \[`--state-activity` *state*\]:
-  The state of a task during its processing (default: the incoming
-  state, i.e., the claim is marked by the `:active` tag value only).
+  The state of a task during its processing (default: the first
+  incoming state, i.e., the claim is marked by the `:active` tag value
+  only).
 
 - \[`--state-success` *state*\]:
-  The target state on success (default: the incoming state).
+  The target state on success, or `previous` for the incoming state
+  the task was claimed from (default: the first incoming state).
 
 - \[`--state-failure` *state*\]:
-  The target state on failure (default: the incoming state).
+  The target state on failure, or `previous` for the incoming state
+  the task was claimed from (default: the first incoming state).
 
 - \[`--state-phase` *state*\]:
   The *phase success state*, decoupled from the target state: a task
   the skill itself moves there counts as processed (see the success
   criterion `status`), and a task there carrying the tag counts as
   having passed the phase for its `After:` successors (default: the
-  success state).
+  success state, resp. the activity state for a `previous` success
+  state).
 
 - \[`--state-passed` *state*\]:
   The first state of the lifecycle model from which on a task has
@@ -487,12 +498,14 @@ states have to exist in any task lifecycle model only.
   plain tag), *tag-name*`:`*value* (a lower-case *value* other than
   `active`), or `none` to untag the task. A foreign tag is refused, as
   the agent would claim the task again. `none` is refused if a task
-  returns into its incoming state on success (unless guarded by
-  `--attach-skip` or by the hook `ready` of a definition which itself
+  returns into an incoming state on success (unless guarded by
+  `--attach-skip`, by the hook `ready` of a definition which itself
   declares `tag-success: none`, like the built-in `estimator`, as a hook
   `ready` inherited from a definition without it, like the one of the
   built-in `implementer`, does not guard against claiming the untagged
-  task again), e.g., always with `--unclaimed`. A found verdict is
+  task again, or by `--assign-required` with an `--assign-success`
+  handing the task over to somebody else, like the built-in
+  `rebooter`), e.g., always with `--unclaimed`. A found verdict is
   stored as the tag value instead.
 
 - \[`--tag-failure` *tag*\]:
@@ -525,12 +538,12 @@ resulting state), which does not count as passed for its successors.
   releases the tasks, and which names its agent-owned worktrees and its
   mode as announced to the agent relay (default: the agent name), a
   name of letters, digits, `_`, `.`, `@`, and `-`, starting with a
-  letter or digit. So a configured agent can act as, e.g., `planner`,
+  letter or digit. So a configured agent can act as, e.g., `rebooter`,
   although its agent name must not clash with a built-in kind.
 
 - \[`--assign-required`\]:
   (`phase` only) Claim only the tasks explicitly assigned to *who* of
-  `--assign-name` (like `planner`), instead of the unassigned ones,
+  `--assign-name` (like `rebooter`), instead of the unassigned ones,
   too.
 
 - \[`--assign-success` *who*\]:
@@ -984,8 +997,8 @@ invocation:
   without `--unclaimed` only, still required to be reachable from the
   activity state), the value of its `tag` (`phase` only, a lower-case
   value, or `null` to untag it, refused if the task would return into
-  its incoming state unguarded by `--attach-skip` or the hook `ready`,
-  see `--tag-success`),
+  an incoming state unguarded by `--attach-skip`, the hook `ready`, or
+  the handover of a required assignment, see `--tag-success`),
   and its `assignee` (a name, `none`, or `previous`, but not with
   `--unclaimed`), where an omitted field (or `undefined` for all) keeps
   the configured settling, and a failed hook keeps the configured
@@ -1131,7 +1144,8 @@ Started via `ase agent reviewer start --params severity=MEDIUM` (resp. with
 
 ## SEE ALSO
 
-`ase`(1), `ase-agent`(1), `ase-agent-planner`(1),
+`ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
+`ase-agent-condenser`(1), `ase-agent-researcher`(1),
 `ase-agent-implementer`(1), `ase-agent-approver`(1),
 `ase-agent-integrator`(1), `ase-agent-editor`(1),
 `ase-agent-estimator`(1), `ase-agent-relay`(1), `ase-agent-fleet`(1),

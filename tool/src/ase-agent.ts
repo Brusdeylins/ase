@@ -31,9 +31,10 @@ export default class AgentCommand {
         /*  register CLI top-level command "ase agent"  */
         const cmd = program
             .command("agent")
-            .description("Autonomous agents driving the task lifecycle phases (planner, implementer, approver, integrator), " +
+            .description("Autonomous agents driving the task lifecycle phases (implementer, approver, integrator), " +
+                "rebooting and condensing the plans of tasks (rebooter, condenser), " +
                 "processing the edit requests of tasks (editor), estimating the effort of tasks (estimator), " +
-                "researching topics for tasks (researcher), " +
+                "researching the plans and topics of tasks (researcher), " +
                 "or of the definitions of the user or the project " +
                 "(\".ase/agents/<kind>.{yaml,ts,js}\") or given ad-hoc (adhoc), " +
                 "each running in its own process, individually or as a fleet, optionally reporting to the agent relay")
