@@ -123,6 +123,9 @@
     "overrides": {
         "stylus": {
             "glob":                         "13.0.6"
+        },
+        "remark-cli": {
+            "glob":                         "13.0.6"
         }
     },
     "allowScripts": {
