@@ -48,7 +48,7 @@ Procedure
     -   If <ase-project-task-lifecycle/> is `enterprise`:
         <all-states/> is `DRAFTED`, `SHELVED`, `PLANNING`, `PLANNED`,
         `STALLED`, `IMPLEMENTING`, `IMPLEMENTED`, `DECLINED`,
-        `APPROVING`, `APPROVED`, `DEFERRED`, `INTEGRATING`, `INTEGRATED`,
+        `QUALIFYING`, `QUALIFIED`, `DEFERRED`, `INTEGRATING`, `INTEGRATED`,
         and `CANCELLED`, and <finished-states/> is `INTEGRATED` and
         `CANCELLED`.
 

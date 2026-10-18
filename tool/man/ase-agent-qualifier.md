@@ -1,8 +1,8 @@
-# ase-agent-approver(1) -- Approval Phase Agent
+# ase-agent-qualifier(1) -- Qualification Phase Agent
 
 ## SYNOPSIS
 
-`ase agent approver start`
+`ase agent qualifier start`
 \[`-n`|`--name` *name*\]
 \[`-t`|`--tool` `claude`|`copilot`|`codex`\]
 \[`-p`|`--parallel` *num*\]
@@ -11,32 +11,32 @@
 \[`--agent-relay` *url*\]
 \[`-r`|`--repo` *url*\]
 \[`-d`|`--tempdir` *dir*\]
-\[`-m`|`--mode` `judge`|`approve`\]
+\[`-m`|`--mode` `judge`|`qualify`\]
 \[`--`*group*`-`*item* *value* \[...\]\]
 \[`-f`|`--foreground`\]
 
-`ase agent approver status`
+`ase agent qualifier status`
 \[`-n`|`--name` *name*\]
 
-`ase agent approver log`
+`ase agent qualifier log`
 \[`-f`|`--follow`\]
 \[`-n`|`--lines` *n*\]
 \[`--name` *name*\]
 
-`ase agent approver stop`
+`ase agent qualifier stop`
 \[`-n`|`--name` *name*\]
 
 ## DESCRIPTION
 
-**ase agent approver** drives the `Approval` phase of the `enterprise`
-task lifecycle model (refused for any other model).
+**ase agent qualifier** drives the `Qualification` phase of the
+`enterprise` task lifecycle model (refused for any other model).
 
 It claims every task in the state `IMPLEMENTED` which is unassigned or
-assigned to the agent, which does not carry any tag `ase-agent-approver`
+assigned to the agent, which does not carry any tag `ase-agent-qualifier`
 yet (i.e., without its verdict yet, so a task already carrying a
-verdict of the approver is never picked up again), and whose `After:`
+verdict of the qualifier is never picked up again), and whose `After:`
 predecessors (and, for an explicit epic, its group members) are
-`APPROVED` or later, moves it into `APPROVING`, and reviews its
+`QUALIFIED` or later, moves it into `QUALIFYING`, and reviews its
 `Changeset:` (or the configured `project.task.default.changeset`) via
 the skill `ase-repo-review`:
 
@@ -53,12 +53,12 @@ the skill `ase-repo-review`:
 
 The verdict `APPROVE` resp. `REJECT` of the review (the last upper-case
 word after the label `REVIEW VERDICT` in the output of the successfully
-exited agent tool) is added as the tag `ase-agent-approver:approve`
-resp. `ase-agent-approver:reject`, while a failed or skipped review,
-which yields no verdict, adds the plain tag `ase-agent-approver`.
+exited agent tool) is added as the tag `ase-agent-qualifier:approve`
+resp. `ase-agent-qualifier:reject`, while a failed or skipped review,
+which yields no verdict, adds the plain tag `ase-agent-qualifier`.
 
 In the default mode `judge`, the task is then put back into `IMPLEMENTED`
-for a human decision, while in mode `approve`, it is put into `APPROVED`
+for a human decision, while in mode `qualify`, it is put into `QUALIFIED`
 on the verdict `APPROVE`, into `DECLINED` on the verdict `REJECT`, and
 back into `IMPLEMENTED` without a verdict. In both modes, the task is
 unassigned afterwards.
@@ -69,14 +69,14 @@ common mechanics of all agents.
 
 ## OPTIONS
 
-- \[`-h`|`--help`\]: Show usage information of `ase agent approver` (or
+- \[`-h`|`--help`\]: Show usage information of `ase agent qualifier` (or
   of the given sub-command) only.
 
 All other options belong to the sub-commands (see **COMMANDS**).
 
 ## COMMANDS
 
-- `ase agent approver start` \[*options*\]: Start the approver agent in
+- `ase agent qualifier start` \[*options*\]: Start the qualifier agent in
   the background, logging into `.ase/agent/`*name*`.log`. The agent is
   validated and initialized (e.g., its agent tool is looked up and the
   task lifecycle model is checked) before the command returns (waiting
@@ -85,7 +85,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
   alone. The options are:
 
     - \[`-n`|`--name` *name*\]: The name of the agent (default:
-      `approver`): up to 64 letters, digits, underscores, and dashes,
+      `qualifier`): up to 64 letters, digits, underscores, and dashes,
       starting with a letter or digit, other than the name of another
       agent kind, `relay`, or `fleet`. It names the agent in its log
       lines (also in the shared processing log attachment `agent`), the
@@ -93,7 +93,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
       and its process files `.ase/agent/`*name*`.yaml` and
       `.ase/agent/`*name*`.log`.
 
-      Agents of the kind `approver` under different names form a pool,
+      Agents of the kind `qualifier` under different names form a pool,
       competing for the same tasks and processing them in parallel to
       each other.
 
@@ -148,16 +148,16 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`-m`|`--mode` *mode*\]: The mode of the agent (default:
       `judge`): `judge` just adds the verdict tag and puts the task back
-      into `IMPLEMENTED` for a human decision, while `approve`
-      additionally approves resp. declines the task by its verdict,
-      i.e., puts it into `APPROVED` on the verdict `APPROVE`, into
+      into `IMPLEMENTED` for a human decision, while `qualify`
+      additionally qualifies resp. declines the task by its verdict,
+      i.e., puts it into `QUALIFIED` on the verdict `APPROVE`, into
       `DECLINED` on the verdict `REJECT`, and back into `IMPLEMENTED`
       without a verdict. An invalid mode is an error.
 
     - \[`--title` *text*\]: The one-line title of the operation of the
       agent (at most 80 characters), shown on the task boards. Built-in:
       `Review implemented tasks and tag their verdict` (`judge`) resp.
-      `Review implemented tasks and decide by verdict` (`approve`).
+      `Review implemented tasks and decide by verdict` (`qualify`).
 
     - \[`--description` *text*\]: The brief description of the operation
       of the agent (about 3-6 lines, at most 600 characters, with its
@@ -184,7 +184,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`--unclaimed`\]: Process the tasks of the incoming states
       without claiming them, independent of their assignee and
       predecessors, and without ever changing their status and assignee
-      (`phase` only). Built-in: not set. Not allowed, as the approver
+      (`phase` only). Built-in: not set. Not allowed, as the qualifier
       claims the tasks into its activity state.
 
     - \[`--params` *name*`=`*value*\]: The value of a parameter
@@ -196,7 +196,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--state-activity` *state*\]: The state of a task during its
       processing. Generic default: the incoming state. Built-in:
-      `APPROVING`.
+      `QUALIFYING`.
 
     - \[`--state-success` *state*\]: The target state on success.
       Generic default: the incoming state. Built-in: `IMPLEMENTED`.
@@ -206,20 +206,20 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--state-phase` *state*\]: The phase success state, into which
       the skill itself can move a task. Generic default: the success
-      state. Built-in: `APPROVED`.
+      state. Built-in: `QUALIFIED`.
 
     - \[`--state-passed` *state*\]: The first state from which on a task
       has passed the phase for its `After:` successors. Generic default:
-      the phase success state. Built-in: `APPROVED`.
+      the phase success state. Built-in: `QUALIFIED`.
 
     - \[`--state-verdict` *VERDICT*`=`*state*\]: The target state per
       verdict (repeatable). Built-in: not set (mode `judge`),
-      `APPROVE=APPROVED` and `REJECT=DECLINED` (mode `approve`).
+      `APPROVE=QUALIFIED` and `REJECT=DECLINED` (mode `qualify`).
 
     - \[`--tag-name` *tag*\]: The tag of the processed tasks
       (`ase-agent-`*word*). Generic default: `ase-agent-`*name*, resp.
       for `request` always `ase-agent-`*request-name*. Built-in:
-      `ase-agent-approver`.
+      `ase-agent-qualifier`.
 
     - \[`--tag-success` *tag*\]: The tag on success: *tag-name*,
       *tag-name*`:`*value*, or `none` (`phase` only). Generic default:
@@ -258,11 +258,11 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--request-name` *name*\]: The name of the processed requests
       (`request` only). Generic default: the agent name. Built-in: not
-      set. Not allowed, as the approver is of type `phase`.
+      set. Not allowed, as the qualifier is of type `phase`.
 
     - \[`--request-done` *word*\]: The word naming a processed task in
       the log lines (`request` only). Generic default: `processed`.
-      Built-in: not set. Not allowed, as the approver is of type
+      Built-in: not set. Not allowed, as the qualifier is of type
       `phase`.
 
     - \[`--prompt-skill` *name*\]: The skill to invoke (mutually
@@ -317,7 +317,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--finish-commit`\]: Commit the work onto a `branch:` changeset
       and publish it (with `--workdir changeset` only). Built-in: not
-      set. Not allowed, as the approver works with `--workdir
+      set. Not allowed, as the qualifier works with `--workdir
       changeset-read`.
 
     - \[`--finish-success` *cmd*\]: A shell command run in the working
@@ -339,16 +339,16 @@ All other options belong to the sub-commands (see **COMMANDS**).
   mutually exclusive alternatives, e.g., `--prompt-text` replaces the
   skill of `--prompt-skill`), while the agent keeps the identity of its
   kind (its runs, its presence, and its agent-owned worktrees are named
-  after `approver`). See `ase-agent-adhoc`(1) for their full semantics.
+  after `qualifier`). See `ase-agent-adhoc`(1) for their full semantics.
 
-- `ase agent approver status` \[`-n`|`--name` *name*\]: Report whether
-  the approver agent of the name *name* (default: `approver`) is
+- `ase agent qualifier status` \[`-n`|`--name` *name*\]: Report whether
+  the qualifier agent of the name *name* (default: `qualifier`) is
   running, as `agent` *name*`: running (pid` *pid*`)` resp. `agent`
   *name*`: not running` (exit status 1).
 
-- `ase agent approver log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]
+- `ase agent qualifier log` \[`-f`|`--follow`\] \[`-n`|`--lines` *n*\]
   \[`--name` *name*\]: Show the log `.ase/agent/`*name*`.log` of the
-  approver agent of the name *name* (default: `approver`) run in the
+  qualifier agent of the name *name* (default: `qualifier`) run in the
   background, where an agent of a fleet logs into the log of the fleet
   instead (see `ase-agent-fleet`(1)). Without a log file, an
   informational message is shown only. The options are:
@@ -360,12 +360,12 @@ All other options belong to the sub-commands (see **COMMANDS**).
     - \[`-n`|`--lines` *n*\]: Show the last *n* lines only (default:
       all, or 10 with `--follow`).
 
-    - \[`--name` *name*\]: The name of the agent (default: `approver`),
+    - \[`--name` *name*\]: The name of the agent (default: `qualifier`),
       given in its long form only, as `-n` is the short form of
       `--lines`.
 
-- `ase agent approver stop` \[`-n`|`--name` *name*\]: Stop the approver
-  agent of the name *name* (default: `approver`) by `SIGTERM`, waiting
+- `ase agent qualifier stop` \[`-n`|`--name` *name*\]: Stop the qualifier
+  agent of the name *name* (default: `qualifier`) by `SIGTERM`, waiting
   (up to 5 minutes) until it aborted its running processings and put
   their tasks back. An agent not running is reported informationally
   only.
@@ -388,28 +388,28 @@ All other options belong to the sub-commands (see **COMMANDS**).
 - `.ase/agent/`*name*`.log`: The log of the agent run in the background.
 
 - *per-user state
-  directory*`/agent-approver/`*store-hash*`/`*run-id*`.lock` and
-  `.json`: The run lock and the run record of each approver agent
+  directory*`/agent-qualifier/`*store-hash*`/`*run-id*`.lock` and
+  `.json`: The run lock and the run record of each qualifier agent
   process, used to recover the tasks of terminated agent processes (see
   **INTERRUPTS AND RECOVERY** in `ase-agent`(1)).
 
 ## EXIT STATUS
 
-`ase agent approver start` exits with status `0` once the agent started
+`ase agent qualifier start` exits with status `0` once the agent started
 (or was already running), resp. once a foreground agent terminated
 regularly, and with status `1` on any error (e.g., an invalid option, a
 task lifecycle model other than `enterprise`, or a missing agent tool).
-`ase agent approver status` exits with status `1` if the agent is not
+`ase agent qualifier status` exits with status `1` if the agent is not
 running.
 
 ## EXAMPLES
 
 ```sh
 # review the implemented tasks, leaving the decision to a human
-$ ase agent approver start -m judge -p 2
+$ ase agent qualifier start -m judge -p 2
 
 # review the implemented tasks and decide on them by the verdict
-$ ase agent approver start -m approve
+$ ase agent qualifier start -m qualify
 ```
 
 ## SEE ALSO

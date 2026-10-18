@@ -78,7 +78,7 @@ researches the task plan itself.
 The researcher observes the tasks with this tag, except those in an
 activity status of the task lifecycle model, where the task is actively
 worked on (`team`: `IMPLEMENTING`; `enterprise`: `PLANNING`,
-`IMPLEMENTING`, `APPROVING`, and `INTEGRATING`), and those still held
+`IMPLEMENTING`, `QUALIFYING`, and `INTEGRATING`), and those still held
 by a phase agent (tagged `ase-agent-`*kind*`:active`), which wait until
 their status changes resp. their tag is released.
 
@@ -467,7 +467,7 @@ $ ase task request FOO-42 research
 ## SEE ALSO
 
 `ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
-`ase-agent-condenser`(1), `ase-agent-implementer`(1), `ase-agent-approver`(1),
+`ase-agent-condenser`(1), `ase-agent-implementer`(1), `ase-agent-qualifier`(1),
 `ase-agent-integrator`(1), `ase-agent-editor`(1),
 `ase-agent-estimator`(1), `ase-task-request`(1), `ase-agent-adhoc`(1),
 `ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),

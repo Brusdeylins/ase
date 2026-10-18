@@ -43,7 +43,7 @@ ASE 1.0 to ASE 2.0
 -   **Usage Accounting**: `ase-task-assign` assigns a task, and on self-assignment accounts
     the AI time, tokens, and costs of the session (via `ase setup telemetry activate`).
 
--   **Autonomous Agents**: `ase agent {planner,implementer,approver,integrator}` drive the
+-   **Autonomous Agents**: `ase agent {planner,implementer,qualifier,integrator}` drive the
     `enterprise` lifecycle headless, and `ase agent {editor,estimator,researcher}` process requests.
 
 -   **Agent Management**: each agent runs via `ase agent <kind> start|status|log|stop`,

@@ -120,7 +120,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             hooks, validation, and templates), and
             the directory
             `tool/src/ase-agent-definition-builtin/` with the files
-            `{rebooter,condenser,implementer,approver,integrator,editor,estimator,researcher}.ts`
+            `{rebooter,condenser,implementer,qualifier,integrator,editor,estimator,researcher}.ts`
             for the declarative definitions of the modes of the built-in
             agents
         -   `agent-process` for the `ase agent <kind> start|status|log|stop`
@@ -265,7 +265,7 @@ Beyond `ase setup`, the CLI provides:
 -   `ase agent`: the autonomous agents, each running in its own process,
     managed individually via `ase agent <kind> start|status|log|stop`
     (e.g. `ase agent implementer start -p 2`):
-    -   the task lifecycle agents `implementer`, `approver`, and
+    -   the task lifecycle agents `implementer`, `qualifier`, and
         `integrator`, which together drive the `enterprise` task lifecycle
         model headless from the planned to the integrated tasks
     -   the planning agents `rebooter` and `condenser`, which re-create

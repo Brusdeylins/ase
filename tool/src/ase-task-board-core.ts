@@ -132,8 +132,8 @@ export const laneLayouts: Record<string, GroupLayout[]> = {
     enterprise: [
         { title: "1 - Planning",         lanes: [ lane("DRAFTED",     false, 2.0), lane("PLANNING",     true,  2.0), lane("SHELVED",  false, 2.0) ] },
         { title: "2 - Implementation",   lanes: [ lane("PLANNED",     false, 1.0), lane("IMPLEMENTING", true,  3.0), lane("STALLED",  false, 2.0) ] },
-        { title: "3 - Approval",         lanes: [ lane("IMPLEMENTED", false, 2.0), lane("APPROVING",    true,  2.0), lane("DECLINED", false, 2.0) ] },
-        { title: "4 - Integration",      lanes: [ lane("APPROVED",    false, 1.0), lane("INTEGRATING",  true,  3.0), lane("DEFERRED", false, 2.0) ] },
+        { title: "3 - Qualification",    lanes: [ lane("IMPLEMENTED", false, 2.0), lane("QUALIFYING",   true,  2.0), lane("DECLINED", false, 2.0) ] },
+        { title: "4 - Integration",      lanes: [ lane("QUALIFIED",   false, 1.0), lane("INTEGRATING",  true,  3.0), lane("DEFERRED", false, 2.0) ] },
         { title: "5 - Done",             lanes: [ lane("INTEGRATED",  false, 5.0), lane("CANCELLED",    false, 1.0) ] }
     ]
 }

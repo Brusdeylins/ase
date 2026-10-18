@@ -60,12 +60,12 @@ All agents of **ase** are agents of a definition, run by the same
 agent engine:
 
 - *built-in agents* (`ase agent rebooter`, `condenser`, `implementer`,
-  `approver`, `integrator`, `editor`, `estimator`, and `researcher`):
+  `qualifier`, `integrator`, `editor`, `estimator`, and `researcher`):
   each mode of them is a built-in definition, which can be referenced as
   `builtin:`*kind*`-`*mode* (resp. `builtin:`*kind* for its default
   mode): `builtin:rebooter-reboot`, `builtin:condenser-condense`,
   `builtin:implementer-implement`, `builtin:implementer-draft`,
-  `builtin:approver-judge`, `builtin:approver-approve`,
+  `builtin:qualifier-judge`, `builtin:qualifier-qualify`,
   `builtin:integrator-merge`, `builtin:integrator-rebase`,
   `builtin:integrator-squash`, `builtin:editor-edit`,
   `builtin:estimator-phase`, `builtin:estimator-request`,
@@ -328,7 +328,7 @@ and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
   `builtin:`*kind*`-`*mode* (resp. `builtin:`*kind* for its default
   mode), the definition of a built-in agent (see **DESCRIPTION**),
   where all other given options override it. Example: `ase agent adhoc
-  start -n reviewer -D builtin:approver-approve --tag-name
+  start -n reviewer -D builtin:qualifier-qualify --tag-name
   ase-agent-reviewer`.
 
 - \[`--title` *text*\]:
@@ -387,7 +387,7 @@ and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
       id (unless the project root) as `{changeset-worktree}`, and
       removed afterwards only if clean (else preserved); an
       `attachment:` changeset is left to the skill.
-    - `changeset-read` (*review* access, like `approver`): a `worktree`
+    - `changeset-read` (*review* access, like `qualifier`): a `worktree`
       changeset staged in its context worktree, which becomes the
       working directory; a `branch:` changeset left in place (to be
       addressed via `{changeset-name}`); an `attachment:` changeset
@@ -666,7 +666,7 @@ changed`, `no verdict`, `no new or changed attachment "<spec>"`, or
   determine it instead.
 
   A verdict is stored lower-cased as the tag value (e.g.,
-  `ase-agent-approver:approve`, instead of `--tag-success`) and mapped to
+  `ase-agent-qualifier:approve`, instead of `--tag-success`) and mapped to
   a target state via `--state-verdict`. It is honored on success only: on
   a failed processing, the task is settled by `--tag-failure` and
   `--state-failure` instead.
@@ -840,7 +840,7 @@ For example, a `.ase/agents/implementer.mts` of
 `definition: "builtin:implementer-implement"` plus a `ready` hook shadows
 the built-in `implementer` while keeping its definition and its `passes`
 hook, and a `.ase/agents/reviewer.yaml` of
-`definition: builtin:approver-judge` plus its own
+`definition: builtin:qualifier-judge` plus its own
 `tag: { name: ase-agent-reviewer }` runs a further judging agent of its
 own tag.
 
@@ -1078,11 +1078,11 @@ with status 1 if the agent is not running. `log` exits with status 0.
 ## EXAMPLES
 
 ```sh
-# an approval agent deciding on the task status by its verdict
+# a qualification agent deciding on the task status by its verdict
 $ ase agent adhoc start -n reviewer --state-incoming IMPLEMENTED \
-    --state-activity APPROVING --state-phase APPROVED --workdir changeset-read \
+    --state-activity QUALIFYING --state-phase QUALIFIED --workdir changeset-read \
     --prompt-skill ase-repo-review --prompt-args "{?changeset-type=branch:--branch {changeset-name}}" \
-    --verdict-label "REVIEW VERDICT" --state-verdict APPROVE=APPROVED --state-verdict REJECT=DECLINED \
+    --verdict-label "REVIEW VERDICT" --state-verdict APPROVE=QUALIFIED --state-verdict REJECT=DECLINED \
     --success-criterion exit --success-criterion verdict
 
 # a request agent attaching a lint report (requested via "ase task request <id> lint <prompt>")
@@ -1094,8 +1094,8 @@ $ ase agent adhoc start -n linter --type request --request-name lint --workdir s
 $ ase agent adhoc start -n workflow --state-incoming PLANNED --tag-require workflow \
     --prompt-skill my-workflow --prompt-args "{id}"
 
-# a further approval agent of its own tag, based on a built-in definition
-$ ase agent adhoc start -n reviewer -D builtin:approver-approve --tag-name ase-agent-reviewer
+# a further qualification agent of its own tag, based on a built-in definition
+$ ase agent adhoc start -n reviewer -D builtin:qualifier-qualify --tag-name ase-agent-reviewer
 
 # an agent of a definition kind of the project (see .ase/agents/reviewer.mts below)
 $ ase agent reviewer start -p 2
@@ -1127,7 +1127,7 @@ export default {
     type:      "phase",
     lifecycle: "enterprise",
     workdir:   "changeset-read",
-    state:     { incoming: "IMPLEMENTED", activity: "APPROVING", phase: "APPROVED" },
+    state:     { incoming: "IMPLEMENTED", activity: "QUALIFYING", phase: "QUALIFIED" },
     tag:       { name: "ase-agent-reviewer", require: "security" },
     prompt:    { skill: "ase-repo-review", args: "{?changeset-type=branch:--branch {changeset-name}}" },
     verdict:   { label: "REVIEW VERDICT", allow: [ "APPROVE", "REJECT" ] },
@@ -1155,7 +1155,7 @@ Started via `ase agent reviewer start --params severity=MEDIUM` (resp. with
 
 `ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
 `ase-agent-condenser`(1), `ase-agent-researcher`(1),
-`ase-agent-implementer`(1), `ase-agent-approver`(1),
+`ase-agent-implementer`(1), `ase-agent-qualifier`(1),
 `ase-agent-integrator`(1), `ase-agent-editor`(1),
 `ase-agent-estimator`(1), `ase-agent-relay`(1), `ase-agent-fleet`(1),
 `ase-task-request`(1), `ase-task-board`(1).

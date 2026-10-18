@@ -49,8 +49,8 @@ Procedure
 
         -   If <ase-project-task-lifecycle/> is `enterprise`:
             `DRAFTED`, `SHELVED`, `PLANNING`, `PLANNED`, `STALLED`,
-            `IMPLEMENTING`, `IMPLEMENTED`, `DECLINED`, `APPROVING`,
-            `APPROVED`, `DEFERRED`, `INTEGRATING`, `INTEGRATED`, and
+            `IMPLEMENTING`, `IMPLEMENTED`, `DECLINED`, `QUALIFYING`,
+            `QUALIFIED`, `DEFERRED`, `INTEGRATING`, `INTEGRATED`, and
             `CANCELLED`.
 
         Do not output anything.

@@ -20,7 +20,7 @@ import { statePrevious }            from "./ase-agent-runtime-phase.js"
 import rebooter                     from "./ase-agent-definition-builtin/rebooter.js"
 import condenser                    from "./ase-agent-definition-builtin/condenser.js"
 import implementer                  from "./ase-agent-definition-builtin/implementer.js"
-import approver                     from "./ase-agent-definition-builtin/approver.js"
+import qualifier                    from "./ase-agent-definition-builtin/qualifier.js"
 import integrator                   from "./ase-agent-definition-builtin/integrator.js"
 import editor                       from "./ase-agent-definition-builtin/editor.js"
 import estimator                    from "./ase-agent-definition-builtin/estimator.js"
@@ -39,7 +39,7 @@ export type AgentKind = {
 
 /*  the built-in agent kinds  */
 export const builtinKinds: AgentKind[] = [
-    rebooter, condenser, implementer, approver, integrator, editor, estimator, researcher
+    rebooter, condenser, implementer, qualifier, integrator, editor, estimator, researcher
 ]
 
 /*  a definition agent kind ("ase agent <kind>"): its name (the base name of its

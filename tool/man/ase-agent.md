@@ -45,7 +45,7 @@ interrupted or stopped.
 
 The *agent* is one of the following agent kinds:
 
-- the built-in phase agents `implementer`, `approver`, and
+- the built-in phase agents `implementer`, `qualifier`, and
   `integrator`, which each drive one phase of the `enterprise` task
   lifecycle model, so that the three agents together realize the
   model from the planned to the integrated tasks,
@@ -148,7 +148,7 @@ After the processing, again in a single conditional save, the task is
 unassigned (only if still assigned to the agent, and not meanwhile to
 somebody else, e.g., the `editor` agent), tagged with its plain tag
 (or with the label of the processing as its value, like the verdict of
-`approver`), so no agent of this kind picks it up again, and moved into
+`qualifier`), so no agent of this kind picks it up again, and moved into
 its *success* or *failure* (parking) state, where the pseudo state
 `previous` restores the incoming state the task was claimed from (for an
 agent claiming tasks from multiple incoming states).
@@ -458,10 +458,10 @@ The following sub-command groups exist:
   their `Changeset:`, resp. drafting their implementation. See
   `ase-agent-implementer`(1).
 
-- `ase agent approver` `start`|`status`|`log`|`stop`:
-  The agent of the `Approval` phase of the `enterprise` task lifecycle
-  model, reviewing the `Changeset:` of the tasks. See
-  `ase-agent-approver`(1).
+- `ase agent qualifier` `start`|`status`|`log`|`stop`:
+  The agent of the `Qualification` phase of the `enterprise` task
+  lifecycle model, reviewing the `Changeset:` of the tasks. See
+  `ase-agent-qualifier`(1).
 
 - `ase agent integrator` `start`|`status`|`log`|`stop`:
   The agent of the `Integration` phase of the `enterprise` task
@@ -575,7 +575,7 @@ The sub-commands of every agent kind *agent* are:
   The run lock (a directory, refreshed periodically and considered stale
   after 30 seconds without refresh) and the run record (process id, process
   start time, and claimed tasks) of each agent process of agent *kind*
-  (`rebooter`, `condenser`, `implementer`, `approver`, `integrator`,
+  (`rebooter`, `condenser`, `implementer`, `qualifier`, `integrator`,
   `editor`, `estimator`, or `researcher`, resp. `tag-`*word* per tag `ase-agent-`*word* of the
   agents of the definition kinds and of `adhoc`), where *store-hash* is
   the first 12 hex digits of the SHA-1 digest of the identity of the
@@ -603,7 +603,7 @@ $ ase agent rebooter start
 $ ase agent condenser start
 $ ase agent researcher start
 $ ase agent implementer start -p 2
-$ ase agent approver start -m judge
+$ ase agent qualifier start -m judge
 $ ase agent integrator start -m squash
 
 # start two implementers of different agent tools as a pool
@@ -618,7 +618,7 @@ $ ase agent implementer stop -n impl-codex
 ## SEE ALSO
 
 `ase`(1), `ase-agent-rebooter`(1), `ase-agent-condenser`(1), `ase-agent-implementer`(1),
-`ase-agent-approver`(1), `ase-agent-integrator`(1),
+`ase-agent-qualifier`(1), `ase-agent-integrator`(1),
 `ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-researcher`(1),
 `ase-agent-adhoc`(1), `ase-agent-relay`(1), `ase-agent-fleet`(1), `ase-task`(1),
 `ase-task-board`(1), `ase-task-request`(1), `ase-config`(1).

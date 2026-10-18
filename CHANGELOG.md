@@ -89,7 +89,7 @@ ChangeLog
     `ase-task-implement` and `ase-task-integrate` now maintain a change set snapshot, a view-only
     unified diff of a `worktree` or `branch:` changeset in the `kind="changeset"` attachment (base
     commit in its `Desc:` key, excluding foreign uncommitted changes), so the change set is viewable
-    during approval. The task boards color diff attachments and mark stale snapshots `(stale)`.
+    during qualification. The task boards color diff attachments and mark stale snapshots `(stale)`.
 
 -   FEATURE [tool]: Container Image
     The new `build-container` build target builds and pushes the multi-architecture Alpine-based
@@ -171,7 +171,7 @@ ChangeLog
     web, and plain-text task boards show the usage per agent in total and by its last job.
 
 -   FEATURE [tool]: Enterprise Lifecycle Agents
-    The new `ase agent planner`, `implementer`, `approver`, and `integrator` drive the `enterprise`
+    The new `ase agent planner`, `implementer`, `qualifier`, and `integrator` drive the `enterprise`
     lifecycle headless via `ase-task-reboot`, `ase-task-implement`, `ase-repo-review`, resp.
     `ase-task-integrate`, in Git worktrees or a temporary clone (`--repo`), where a task whose
     finishing failed is tagged `failed` and the tasks of a crashed agent are recovered.

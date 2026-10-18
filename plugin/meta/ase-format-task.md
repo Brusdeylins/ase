@@ -312,7 +312,7 @@ You *MUST* honor the following hints on this *task* format:
     `--attach-changeset`) additionally maintain the *change set snapshot*: a
     *view-only*, text-only unified diff of the change set, which makes it
     viewable wherever the task is visible (e.g. on the task boards during its
-    approval). The skills never create or change it, but pass it through
+    qualification). The skills never create or change it, but pass it through
     *verbatim*. It carries the `Type` key value
     `text/x-diff; charset=utf-8; kind="<kind/>"` (with <kind/> being
     `changeset` for the built-in agents), is *replaced* in place on every run
@@ -561,9 +561,9 @@ The *default* state is the "activity" state `PLANNING`.
 ### Enterprise Task Lifecycle Model (`enterprise`)
 
 The 4+10 states and the transitions between them form the following state machine which realizes
-a task management scheme based on the four activity phases Planning, Implementation, Approval and
-Integration. It is intended for distributed use by an enterprise where engineers and agents act in a
-gated development pipeline.
+a task management scheme based on the four activity phases Planning, Implementation, Qualification
+and Integration. It is intended for distributed use by an enterprise where engineers and agents act
+in a gated development pipeline.
 
 ```mermaid
 stateDiagram-v2
@@ -584,22 +584,22 @@ stateDiagram-v2
     IMPLEMENTING --> IMPLEMENTED
     IMPLEMENTED  --> DECLINED
     DECLINED     --> IMPLEMENTED
-    IMPLEMENTED  --> APPROVING
-    APPROVING    --> IMPLEMENTED
-    APPROVING    --> DECLINED
+    IMPLEMENTED  --> QUALIFYING
+    QUALIFYING   --> IMPLEMENTED
+    QUALIFYING   --> DECLINED
 
-    APPROVING    --> APPROVED
-    APPROVED     --> DEFERRED
-    DEFERRED     --> APPROVED
-    APPROVED     --> INTEGRATING
-    INTEGRATING  --> APPROVED
+    QUALIFYING   --> QUALIFIED
+    QUALIFIED    --> DEFERRED
+    DEFERRED     --> QUALIFIED
+    QUALIFIED    --> INTEGRATING
+    INTEGRATING  --> QUALIFIED
     INTEGRATING  --> DEFERRED
 
     INTEGRATING  --> INTEGRATED
 
     IMPLEMENTING --> DRAFTED
-    APPROVING    --> DRAFTED
-    APPROVING    --> PLANNED
+    QUALIFYING   --> DRAFTED
+    QUALIFYING   --> PLANNED
     INTEGRATING  --> DRAFTED
     INTEGRATING  --> PLANNED
 
@@ -611,8 +611,8 @@ stateDiagram-v2
     IMPLEMENTING --> CANCELLED
     IMPLEMENTED  --> CANCELLED
     DECLINED     --> CANCELLED
-    APPROVING    --> CANCELLED
-    APPROVED     --> CANCELLED
+    QUALIFYING   --> CANCELLED
+    QUALIFIED    --> CANCELLED
     DEFERRED     --> CANCELLED
     INTEGRATING  --> CANCELLED
 
@@ -656,13 +656,13 @@ stateDiagram-v2
 │        │       ▲                  ▲             │
 │        ▼       │                  │             │
 │     ┏━━━━━━━━━━━━━━┓              │             │
-├─────┃  APPROVING   ┃──────────────┘             │
+├─────┃  QUALIFYING  ┃──────────────┘             │
 │     ┃              ┃────────────────────────────┤
 │     ┗━━━━━━━━━━━━━━┛                            │
 │            │     ┌──────────────────────────────┤
 │            ▼     │                              │
 │     ┌──────────────┐       ┌──────────────┐     │
-│     │   APPROVED   │──────▶│   DEFERRED   │─────┤
+│     │  QUALIFIED   │──────▶│   DEFERRED   │─────┤
 │     │              │◀──────│              │     │
 │     └──────────────┘       └──────────────┘     │
 │        │       ▲                  ▲             │
@@ -688,7 +688,7 @@ The 4 "activity" states express:
 
 -   `PLANNING`:     task is currently in change planning       (idea to plan).
 -   `IMPLEMENTING`: task is currently in change implementation (plan to change-set).
--   `APPROVING`:    task is currently in change approval       (change-set to decision).
+-   `QUALIFYING`:   task is currently in change qualification  (change-set to decision).
 -   `INTEGRATING`:  task is currently in change integration    (change-set to code-base).
 
 The 10 "rest" states express:
@@ -697,9 +697,9 @@ The 10 "rest" states express:
 -   `SHELVED`:      task was shelved during planning into backlog.
 -   `PLANNED`:      task is coherent and complete and ready for implementation.
 -   `STALLED`:      task was stalled during implementation by an impediment.
--   `IMPLEMENTED`:  task is implemented and is ready for approval.
--   `DECLINED`:     task was declined during approval.
--   `APPROVED`:     task is approved and ready for integration.
+-   `IMPLEMENTED`:  task is implemented and is ready for qualification.
+-   `DECLINED`:     task was declined during qualification.
+-   `QUALIFIED`:    task is qualified and ready for integration.
 -   `DEFERRED`:     task was deferred during integration due to release decision.
 -   `INTEGRATED`:   task is integrated and reached its intended outcome.
 -   `CANCELLED`:    task was cancelled at any time, because it failed, was called off, or became obsolete.

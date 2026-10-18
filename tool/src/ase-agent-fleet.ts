@@ -175,12 +175,12 @@ const initConfig = (tool: string, lifecycle: string): string => [
         parallel:       2               # maximum number of tasks processed in parallel
         #params:        { effort-wait: false }  # do not wait for the effort estimation (without "estimator")
 
-    #   the approval phase agent (IMPLEMENTED > APPROVING > IMPLEMENTED)
-    approver:
-        mode:           judge           # "judge" (verdict tag only) or "approve" (also decide status)
+    #   the qualification phase agent (IMPLEMENTED > QUALIFYING > IMPLEMENTED)
+    qualifier:
+        mode:           judge           # "judge" (verdict tag only) or "qualify" (also decide status)
         parallel:       2               # maximum number of tasks processed in parallel
 
-    #   the integration phase agent (APPROVED > INTEGRATING > INTEGRATED)
+    #   the integration phase agent (QUALIFIED > INTEGRATING > INTEGRATED)
     integrator:
         mode:           squash          # Git integration operation ("merge", "rebase", or "squash")
     ` : "",

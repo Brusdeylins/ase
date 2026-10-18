@@ -217,12 +217,12 @@ concurrently.
   to `IMPLEMENTING` or `CANCELLED`.
 
 - `enterprise`:
-  The four-phase lifecycle (planning, implementation, approval, and
+  The four-phase lifecycle (planning, implementation, qualification, and
   integration) for a gated enterprise pipeline, driven headless by the
   agents of `ase-agent`(1). States: `DRAFTED` (initial), `SHELVED`,
   `PLANNING` (activity), `PLANNED`, `STALLED`, `IMPLEMENTING`
-  (activity), `IMPLEMENTED`, `DECLINED`, `APPROVING` (activity),
-  `APPROVED`, `DEFERRED`, `INTEGRATING` (activity), `INTEGRATED`
+  (activity), `IMPLEMENTED`, `DECLINED`, `QUALIFYING` (activity),
+  `QUALIFIED`, `DEFERRED`, `INTEGRATING` (activity), `INTEGRATED`
   (finished), and `CANCELLED` (finished).
 
   Transitions: `DRAFTED` to `SHELVED`, `PLANNING`, or `CANCELLED`;
@@ -231,11 +231,11 @@ concurrently.
   `IMPLEMENTING`, or `CANCELLED`; `STALLED` to `PLANNED` or
   `CANCELLED`; `IMPLEMENTING` to `DRAFTED`, `PLANNED`, `STALLED`,
   `IMPLEMENTED`, or `CANCELLED`; `IMPLEMENTED` to `DECLINED`,
-  `APPROVING`, or `CANCELLED`; `DECLINED` to `IMPLEMENTED` or
-  `CANCELLED`; `APPROVING` to `DRAFTED`, `PLANNED`, `IMPLEMENTED`,
-  `DECLINED`, `APPROVED`, or `CANCELLED`; `APPROVED` to `DEFERRED`,
-  `INTEGRATING`, or `CANCELLED`; `DEFERRED` to `APPROVED` or
-  `CANCELLED`; `INTEGRATING` to `DRAFTED`, `PLANNED`, `APPROVED`,
+  `QUALIFYING`, or `CANCELLED`; `DECLINED` to `IMPLEMENTED` or
+  `CANCELLED`; `QUALIFYING` to `DRAFTED`, `PLANNED`, `IMPLEMENTED`,
+  `DECLINED`, `QUALIFIED`, or `CANCELLED`; `QUALIFIED` to `DEFERRED`,
+  `INTEGRATING`, or `CANCELLED`; `DEFERRED` to `QUALIFIED` or
+  `CANCELLED`; `INTEGRATING` to `DRAFTED`, `PLANNED`, `QUALIFIED`,
   `DEFERRED`, `INTEGRATED`, or `CANCELLED`.
 
 In all models, no transition leaves a finished state.

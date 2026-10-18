@@ -131,7 +131,7 @@ of type `text/x-diff; charset=utf-8; kind="changeset"` (see
 `base` *commit* (plus `, partial` for a task not put into
 `IMPLEMENTED`) in its `Desc:` key, so the change set can be viewed
 wherever the task is visible, e.g., on the task boards during its
-approval.
+qualification.
 
 For an `attachment:` changeset other than `attachment:changeset`, an
 existing snapshot is removed as obsolete.
@@ -511,7 +511,7 @@ $ ase agent implementer start -n drafter -m draft
 
 `ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
 `ase-agent-condenser`(1), `ase-agent-researcher`(1),
-`ase-agent-approver`(1), `ase-agent-integrator`(1),
+`ase-agent-qualifier`(1), `ase-agent-integrator`(1),
 `ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
 `ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),
 `ase-task-board`(1).

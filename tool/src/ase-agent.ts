@@ -31,7 +31,7 @@ export default class AgentCommand {
         /*  register CLI top-level command "ase agent"  */
         const cmd = program
             .command("agent")
-            .description("Autonomous agents driving the task lifecycle phases (implementer, approver, integrator), " +
+            .description("Autonomous agents driving the task lifecycle phases (implementer, qualifier, integrator), " +
                 "rebooting and condensing the plans of tasks (rebooter, condenser), " +
                 "processing the edit requests of tasks (editor), estimating the effort of tasks (estimator), " +
                 "researching the plans and topics of tasks (researcher), " +

@@ -120,7 +120,7 @@ export abstract class PhaseAgent extends Agent {
     /*  the tag marking the tasks picked up by any agent of its kind: with the
         value "active" ("ase-agent-<kind>:active") from the claim on, and plain
         ("ase-agent-<kind>") or with the value of its label (e.g. a verdict, like
-        "ase-agent-approver:approve") once processed, so a task which the skill itself
+        "ase-agent-qualifier:approve") once processed, so a task which the skill itself
         puts back into the "incoming" state during its processing (e.g.
         "ase-task-reboot", which takes over the tags) is never picked up again
         by a peer agent and does not count as passed for its successors yet,
@@ -413,7 +413,7 @@ export abstract class PhaseAgent extends Agent {
         rejected), and a task whose outcome is not reachable from its state, is
         tagged as "failed", unassigned, and left in its state for a manual intervention
         (instead of being parked, e.g. "STALLED", which is reachable from "IMPLEMENTED"
-        via "APPROVING" and "PLANNED" and would hide the failure), while a task processed
+        via "QUALIFYING" and "PLANNED" and would hide the failure), while a task processed
         unclaimed is just tagged (see "annotate")  */
     protected async settle (task: AgentTask, ok: boolean, finished: boolean, aborted: boolean,
         output: string[], log: AgentLog): Promise<void> {

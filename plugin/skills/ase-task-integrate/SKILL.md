@@ -385,10 +385,10 @@ Procedure
         <task-content/> to `INTEGRATING` (*creating* the key at its
         position in the key order of the plan <format/> if absent), but
         *only* if `INTEGRATING` is reachable from the current state along
-        the transitions of the task lifecycle model -- from `APPROVED`
-        or `DEFERRED` (via `APPROVED`), or from `IMPLEMENTED` (via
-        `APPROVING` and `APPROVED`, as the explicit integration request
-        of the user counts as the approval) -- and persist this
+        the transitions of the task lifecycle model -- from `QUALIFIED`
+        or `DEFERRED` (via `QUALIFIED`), or from `IMPLEMENTED` (via
+        `QUALIFYING` and `QUALIFIED`, as the explicit integration request
+        of the user counts as the qualification) -- and persist this
         frontmatter-only change -- without refreshing the `Modified:` key
         -- by calling the `ase_task_save(id: "<ase-task-id/>", text:
         "<task-content/>")` tool of the `ase` MCP server. Do not output
@@ -447,7 +447,7 @@ Procedure
             `OPEN`) or to `INTEGRATED` for the `enterprise` model (if it
             was set to `INTEGRATING` in step 1 above). Otherwise, keep
             the `Status:` key for the `solo` model (`OPEN`), and set it
-            to `APPROVED` (for <merge-verdict/> `NOOP`) or `DEFERRED`
+            to `QUALIFIED` (for <merge-verdict/> `NOOP`) or `DEFERRED`
             (otherwise) for the `enterprise` model (if it was set to
             `INTEGRATING` in step 1 above). The `team` model defines no
             integration states, so its `Status:` key stays *untouched*.

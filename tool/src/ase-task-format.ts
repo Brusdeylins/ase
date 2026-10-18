@@ -54,12 +54,12 @@ export const taskLifecycles: Record<string, TaskLifecycle> = {
         name:             "enterprise",
         states:           [
             "DRAFTED", "SHELVED", "PLANNING", "PLANNED", "STALLED", "IMPLEMENTING",
-            "IMPLEMENTED", "DECLINED", "APPROVING", "APPROVED", "DEFERRED", "INTEGRATING",
+            "IMPLEMENTED", "DECLINED", "QUALIFYING", "QUALIFIED", "DEFERRED", "INTEGRATING",
             "INTEGRATED", "CANCELLED"
         ],
         initial:          "DRAFTED",
         finished:         [ "INTEGRATED", "CANCELLED" ],
-        activity:         [ "PLANNING", "IMPLEMENTING", "APPROVING", "INTEGRATING" ],
+        activity:         [ "PLANNING", "IMPLEMENTING", "QUALIFYING", "INTEGRATING" ],
         transitions: {
             DRAFTED:      [ "SHELVED", "PLANNING", "CANCELLED" ],
             SHELVED:      [ "DRAFTED", "CANCELLED" ],
@@ -67,12 +67,12 @@ export const taskLifecycles: Record<string, TaskLifecycle> = {
             PLANNED:      [ "STALLED", "IMPLEMENTING", "CANCELLED" ],
             STALLED:      [ "PLANNED", "CANCELLED" ],
             IMPLEMENTING: [ "DRAFTED", "PLANNED", "STALLED", "IMPLEMENTED", "CANCELLED" ],
-            IMPLEMENTED:  [ "DECLINED", "APPROVING", "CANCELLED" ],
+            IMPLEMENTED:  [ "DECLINED", "QUALIFYING", "CANCELLED" ],
             DECLINED:     [ "IMPLEMENTED", "CANCELLED" ],
-            APPROVING:    [ "DRAFTED", "PLANNED", "IMPLEMENTED", "DECLINED", "APPROVED", "CANCELLED" ],
-            APPROVED:     [ "DEFERRED", "INTEGRATING", "CANCELLED" ],
-            DEFERRED:     [ "APPROVED", "CANCELLED" ],
-            INTEGRATING:  [ "DRAFTED", "PLANNED", "APPROVED", "DEFERRED", "INTEGRATED", "CANCELLED" ],
+            QUALIFYING:   [ "DRAFTED", "PLANNED", "IMPLEMENTED", "DECLINED", "QUALIFIED", "CANCELLED" ],
+            QUALIFIED:    [ "DEFERRED", "INTEGRATING", "CANCELLED" ],
+            DEFERRED:     [ "QUALIFIED", "CANCELLED" ],
+            INTEGRATING:  [ "DRAFTED", "PLANNED", "QUALIFIED", "DEFERRED", "INTEGRATED", "CANCELLED" ],
             INTEGRATED:   [],
             CANCELLED:    []
         }
@@ -126,8 +126,8 @@ const statusCandidates: Record<string, string[]> = {
     STALLED:      [ "OPEN" ],
     DECLINED:     [ "IMPLEMENTING", "OPEN" ],
     IMPLEMENTED:  [ "INTEGRATED", "CLOSED" ],
-    APPROVING:    [ "IMPLEMENTED", "CLOSED" ],
-    APPROVED:     [ "IMPLEMENTED", "CLOSED" ],
+    QUALIFYING:   [ "IMPLEMENTED", "CLOSED" ],
+    QUALIFIED:    [ "IMPLEMENTED", "CLOSED" ],
     DEFERRED:     [ "IMPLEMENTED", "CLOSED" ],
     INTEGRATING:  [ "IMPLEMENTED", "CLOSED" ],
     INTEGRATED:   [ "IMPLEMENTED", "CLOSED" ],
@@ -466,8 +466,8 @@ export const normalizeTaskText = (id: string, text: string, lifecycle: TaskLifec
         keys.set("Type", TASK_TYPE)
 
     /*  map a legacy "Status:" value unconditionally onto the configured
-        lifecycle model, as legacy values like "APPROVED" or "DEFERRED"
-        carry a different meaning than their same-named current states  */
+        lifecycle model, as legacy values like "DEFERRED" carry
+        a different meaning than their same-named current states  */
     const status = keys.get("Status")
     if (isLegacy && status !== undefined && Object.hasOwn(legacyStates, status)) {
         const state = legacyStates[status].find((state) => lifecycle.states.includes(state))

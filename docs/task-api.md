@@ -363,7 +363,7 @@ CONVENTIONS
   | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
   | `solo`       | `OPEN`, `SHELVED`, `CLOSED`, `CANCELLED`                                                                                                              | `CLOSED`, `CANCELLED`      |
   | `team`       | `PLANNING`, `SHELVED`, `IMPLEMENTING`, `STALLED`, `IMPLEMENTED`, `CANCELLED`                                                                          | `IMPLEMENTED`, `CANCELLED` |
-  | `enterprise` | `DRAFTED`, `SHELVED`, `PLANNING`, `PLANNED`, `STALLED`, `IMPLEMENTING`, `IMPLEMENTED`, `DECLINED`, `APPROVING`, `APPROVED`, `DEFERRED`, `INTEGRATING`, `INTEGRATED`, `CANCELLED` | `INTEGRATED`, `CANCELLED`  |
+  | `enterprise` | `DRAFTED`, `SHELVED`, `PLANNING`, `PLANNED`, `STALLED`, `IMPLEMENTING`, `IMPLEMENTED`, `DECLINED`, `QUALIFYING`, `QUALIFIED`, `DEFERRED`, `INTEGRATING`, `INTEGRATED`, `CANCELLED` | `INTEGRATED`, `CANCELLED`  |
 
   A plan without a `Status` key reads as the *initial* state of the
   model. States are matched *case-insensitively* on input and reported

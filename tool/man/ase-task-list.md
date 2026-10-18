@@ -48,7 +48,7 @@ listed, but warned about.
   `CANCELLED` (`solo`), `PLANNING`, `SHELVED`, `IMPLEMENTING`,
   `STALLED`, `IMPLEMENTED`, and `CANCELLED` (`team`), and `DRAFTED`,
   `SHELVED`, `PLANNING`, `PLANNED`, `STALLED`, `IMPLEMENTING`,
-  `IMPLEMENTED`, `DECLINED`, `APPROVING`, `APPROVED`, `DEFERRED`,
+  `IMPLEMENTED`, `DECLINED`, `QUALIFYING`, `QUALIFIED`, `DEFERRED`,
   `INTEGRATING`, `INTEGRATED`, and `CANCELLED` (`enterprise`). A state
   which is not one of the model is an error.
 
@@ -73,7 +73,7 @@ $ ase task list
 # list all tasks, including the finished ones, with details
 $ ase task list -v -e none
 
-# list the tasks waiting for their approval
+# list the tasks waiting for their qualification
 $ ase task list -i IMPLEMENTED,DECLINED
 ```
 

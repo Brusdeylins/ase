@@ -30,7 +30,7 @@
 
 **ase agent integrator** drives the `Integration` phase of the
 `enterprise` task lifecycle model (refused for any other model). It
-claims every task in the state `APPROVED` which is unassigned or
+claims every task in the state `QUALIFIED` which is unassigned or
 assigned to the agent, which does not carry the tag
 `ase-agent-integrator` yet, and whose `After:` predecessors (and, for an
 explicit epic, its group members) are `INTEGRATED` (or, as a cancelled
@@ -80,7 +80,7 @@ same target branch cannot run concurrently, the tasks are processed
 serially only.
 
 On an interrupt, a task being processed is put back, untagged and with
-its previous assignee, into `APPROVED`. See `ase-agent`(1) for the
+its previous assignee, into `QUALIFIED`. See `ase-agent`(1) for the
 common mechanics of all agents.
 
 ## OPTIONS
@@ -174,7 +174,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--title` *text*\]: The one-line title of the operation of the
       agent (at most 80 characters), shown on the task boards. Built-in:
-      `Integrate approved tasks by` *how*, with *how* being
+      `Integrate qualified tasks by` *how*, with *how* being
       `a merge commit` (`merge`), `a rebase with fast-forward`
       (`rebase`), resp. `a squash commit` (`squash`).
 
@@ -211,7 +211,7 @@ All other options belong to the sub-commands (see **COMMANDS**).
 
     - \[`--state-incoming` *state*\]: The state of the tasks to claim
       (mandatory for `phase`, repeatable with `--unclaimed` only).
-      Built-in: `APPROVED`.
+      Built-in: `QUALIFIED`.
 
     - \[`--state-activity` *state*\]: The state of a task during its
       processing. Generic default: the incoming state. Built-in:
@@ -428,10 +428,10 @@ agent is not running.
 ## EXAMPLES
 
 ```sh
-# integrate the approved tasks by squash commits
+# integrate the qualified tasks by squash commits
 $ ase agent integrator start
 
-# integrate the approved tasks by merge commits in a temporary clone
+# integrate the qualified tasks by merge commits in a temporary clone
 $ ase agent integrator start -m merge -r git@github.com:example/project.git
 ```
 
@@ -439,7 +439,7 @@ $ ase agent integrator start -m merge -r git@github.com:example/project.git
 
 `ase`(1), `ase-agent`(1), `ase-agent-rebooter`(1),
 `ase-agent-condenser`(1), `ase-agent-researcher`(1),
-`ase-agent-implementer`(1), `ase-agent-approver`(1),
+`ase-agent-implementer`(1), `ase-agent-qualifier`(1),
 `ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-agent-adhoc`(1),
 `ase-agent-fleet`(1), `ase-agent-relay`(1), `ase-task`(1),
 `ase-task-board`(1).

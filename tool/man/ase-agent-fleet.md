@@ -107,8 +107,8 @@ members) or `ase agent fleet stop`.
       `implementer` (mode `implement`, 2 tasks in parallel, waiting for
       the effort estimation, with its parameter `effort-wait` commented
       out, to be set to `false` if the `estimator` is removed),
-      `approver` (mode `judge`, 2 tasks in parallel, so a human still
-      decides on the approval), and `integrator` (mode `squash`).
+      `qualifier` (mode `judge`, 2 tasks in parallel, so a human still
+      decides on the qualification), and `integrator` (mode `squash`).
 
   The configuration is checked like on `ase agent fleet start` before
   it is written, and an already existing *file* is overwritten only
@@ -213,7 +213,7 @@ value omits an option, and a list repeats an option:
   neither the name of another agent kind, nor `relay` or `fleet`), with
   the options of `ase agent` *kind* `start` and an optional `kind`
   (default: the section name), i.e., one of the built-in kinds
-  `rebooter`, `condenser`, `implementer`, `approver`, `integrator`,
+  `rebooter`, `condenser`, `implementer`, `qualifier`, `integrator`,
   `editor`, `estimator`, and `researcher`, a definition kind of the project or the user, or `adhoc`
   (see `ase-agent-adhoc`(1)). Hence, an agent of a definition kind is
   given by a section of its kind (or with `kind:` *kind*), and an agent
@@ -350,7 +350,7 @@ lint:
 `ase`(1), `ase-agent`(1), `ase-agent-adhoc`(1), `ase-agent-relay`(1),
 `ase-agent-rebooter`(1), `ase-agent-condenser`(1),
 `ase-agent-researcher`(1), `ase-agent-implementer`(1),
-`ase-agent-approver`(1), `ase-agent-integrator`(1),
+`ase-agent-qualifier`(1), `ase-agent-integrator`(1),
 `ase-agent-editor`(1), `ase-agent-estimator`(1), `ase-task-board`(1).
 
 ## AUTHOR

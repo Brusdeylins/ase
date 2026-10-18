@@ -210,7 +210,7 @@ const rootHolders = new Map<string, string>()
 /*  the agents of this process currently processing tasks, and the wake-ups of the
     dispatchers of all running agents of this process, so in one-shot mode an agent
     terminates only once all agents of this process are idle (as a task processed by
-    one agent can become dispatchable to another one, e.g. an implemented task to the approver)  */
+    one agent can become dispatchable to another one, e.g. an implemented task to the qualifier)  */
 const busyAgents = new Set<Agent>()
 const wakeAgents = new Set<() => void>()
 
