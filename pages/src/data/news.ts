@@ -26,7 +26,7 @@ export interface NewsSection {
 }
 
 export interface NewsRelease {
-    id:       string   /*  fragment id, e.g. "ase-1-0-to-ase-2-0"  */
+    id:       string   /*  fragment id, e.g. "ase-2.0"                 */
     label:    string   /*  release heading, e.g. "ASE 1.0 to ASE 2.0"  */
     title:    string   /*  target release of heading, e.g. "ASE 2.0"   */
     intro:    string[] /*  rendered introductory paragraphs            */
@@ -41,9 +41,9 @@ const newsFile = path.resolve(process.cwd(), "..", "NEWS.md")
 const capitalize = (text: string) =>
     text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
 
-/*  derive a fragment id from a heading  */
+/*  derive a fragment id from a release title, e.g. "ASE 2.0" into "ase-2.0"  */
 const slugify = (text: string) =>
-    text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+    text.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-|-$/g, "")
 
 /*  walk the Markdown token stream: the level 1 heading ("NEWS") is skipped,
     a level 2 heading opens a release, a paragraph before its first section
@@ -55,9 +55,10 @@ export const newsReleases: NewsRelease[] = []
 for (const token of marked.lexer(fs.readFileSync(newsFile, "utf8"))) {
     const release = newsReleases.at(-1)
     const section = release?.sections.at(-1)
-    if (token.type === "heading" && token.depth === 2)
-        newsReleases.push({ id: slugify(token.text), label: token.text,
-            title: token.text.replace(/^.*\s+to\s+/, ""), intro: [], sections: [] })
+    if (token.type === "heading" && token.depth === 2) {
+        const title = token.text.replace(/^.*\s+to\s+/, "")
+        newsReleases.push({ id: slugify(title), label: token.text, title, intro: [], sections: [] })
+    }
     else if (token.type === "paragraph" && release !== undefined && section === undefined)
         release.intro.push(marked.parseInline(token.text.replace(/\s*\n\s*/g, " ")) as string)
     else if (token.type === "heading" && token.depth === 3 && release !== undefined)
