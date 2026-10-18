@@ -12,7 +12,7 @@ import {
     type Board, type Card, type Group, type Sel, type Surface,
     api, groupItems, rowLanes, relocate,
     board, actionError, actionNote, view, graph, task, sel, grow, editing, confirmDel, transfer, prompt,
-    tab, drag, busy, boardEl, graphEl, planEl, filterEl, agentList, agentSel, logEl,
+    tab, drag, busy, boardEl, graphEl, flowEl, flowSel, planEl, filterEl, agentList, agentSel, logEl, showFlowAgent,
     surface, growable, grown, openTask, closeTask, selectTab, selectAgent, toggle, cycleView, stepStatsRange
 } from "./ase-task-board-web-client-model"
 import { startEdit, startNew, onEditorKey } from "./ase-task-board-web-client-editor"
@@ -324,9 +324,9 @@ const onDialogKey = (ev: KeyboardEvent) => {
     }
 }
 
-/*  the centers of the rendered graph nodes, for the spatial navigation  */
-const graphPlaces = () => new Map([ ...(graphEl.value?.querySelectorAll<SVGGElement>("g.node[data-id]") ?? []) ].map((n) => {
-    const box = n.querySelector("foreignObject")
+/*  the centers of the rendered nodes of a graph (resp. the agent graph), for the spatial navigation  */
+const graphPlaces = (el: HTMLElement | null) => new Map([ ...(el?.querySelectorAll<SVGGElement>("g.node[data-id]") ?? []) ].map((n) => {
+    const box = n.querySelector("foreignObject, rect")
     const num = (attr: string) => Number(box?.getAttribute(attr) ?? 0)
     return [ n.dataset.id!, { r: num("y") + num("height") / 2, c: num("x") + num("width") / 2 } ] as const
 }))
@@ -334,8 +334,8 @@ const graphPlaces = () => new Map([ ...(graphEl.value?.querySelectorAll<SVGGElem
 /*  move spatially to the nearest graph node in the direction of the
     arrow, preferring nodes in the same row (left/right) or column
     (up/down), or initially to the first node of the left-to-right layout  */
-const graphStep = (key: string, id: string): string | undefined => {
-    const places = graphPlaces()
+const graphStep = (key: string, id: string, el = graphEl.value): string | undefined => {
+    const places = graphPlaces(el)
     const cur    = places.get(id)
     if (cur === undefined)
         return [ ...places ].sort(([ , p ], [ , q ]) => p.c - q.c || p.r - q.r)[0]?.[0]
@@ -488,6 +488,23 @@ const onCarryKey = (s: Sel, group: Group, carry: NonNullable<typeof drag.value> 
 const onBoardKey = (ev: KeyboardEvent) => {
     if (view.value === "agents") {
         onAgentsKey(ev)
+        return
+    }
+    if (view.value === "flow") {
+        /*  the arrows move spatially to the nearest agent card of the agent graph, and
+            ENTER shows the agents view with its (first) agent selected  */
+        if (ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
+            return
+        if (ev.key === "Enter")
+            showFlowAgent(flowSel.value)
+        else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+            const next = graphStep(ev.key, flowSel.value, flowEl.value)
+            if (next !== undefined)
+                flowSel.value = next
+        }
+        else
+            return
+        ev.preventDefault()
         return
     }
     if (view.value === "stats") {
@@ -697,7 +714,7 @@ export const controlStart = () => {
     Mousetrap.bind("v", () => { if (task.value === null) cycleView() })
     Mousetrap.bind("?", () => { if (board.value !== null) toggle("keys", "") })
     Mousetrap.bind("/", (ev) => {
-        if (task.value !== null || view.value === "agents")
+        if (task.value !== null || view.value === "agents" || view.value === "flow")
             return
         ev.preventDefault()
         filterEl.value?.focus()

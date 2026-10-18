@@ -22,7 +22,7 @@ import { ref, nextTick, watch, onMounted, onBeforeUnmount } from "vue"
 import Mousetrap                                            from "mousetrap"
 import {
     view, graph, graphStats, task, sel, graphEl,
-    titles, grown, working, agentNames, badgesOf, openTask
+    titles, grown, working, agentNames, badgesOf, openTask, raiseEdges
 } from "./ase-task-board-web-client-model"
 
 /*  the panning of the graph (by dragging its background), and its zoom factor  */
@@ -124,8 +124,7 @@ const showSel = () => {
     const id = sel.value.id
     graphEl.value?.querySelectorAll<SVGGElement>("g.node[data-id]").forEach((n) =>
         n.classList.toggle("sel", n.dataset.id === id))
-    graphEl.value?.querySelectorAll<SVGPathElement>("path.edge").forEach((e) =>
-        e.classList.toggle("sel", id !== "" && (e.dataset.from === id || e.dataset.to === id)))
+    raiseEdges(graphEl.value, id)
     if (view.value !== "lanes")
         graphEl.value?.querySelector(".node.sel .card")?.scrollIntoView({ block: "nearest", inline: "nearest" })
 }

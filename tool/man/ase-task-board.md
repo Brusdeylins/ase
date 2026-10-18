@@ -48,12 +48,13 @@ lines. The markers are:
 - `☺` *name*: a badge on the top border of the card, naming the
   person the task is assigned to.
 
-Besides the *lanes* view, the boards show the *graph* view, the
-dependency graph of the tasks derived from their `After:` keys (where
-an epic implicitly comes after all other tasks of its group), the
-*stats* view with the statistics of the tasks, and with an agent relay
-the *agents* view. All views are cycled via `v` (or a click onto the
-`view:` value of the header).
+Besides the *task lanes* view, the boards show the *task graph* view,
+the dependency graph of the tasks derived from their `After:` keys
+(where an epic implicitly comes after all other tasks of its group),
+the *statistics* view with the statistics of the tasks, and with an
+agent relay the *agent logs* view and the *agent graph* view. All
+views are cycled via `v` (or a click onto the `view:` value of the
+header).
 
 The last shown view, the minimized lanes, the collapsed phases, and the
 shown flags are persisted in `.ase/board.yaml` (separately for the
@@ -73,7 +74,7 @@ with the kind and connection state of the task store (`●` connected,
 `○` disconnected), the number of agents and the connection state of
 the agent relay (if any), and the *ASE* version, or a notice instead.
 
-In the lanes view, lanes can be minimized (`m`), lane rows collapsed
+In the task lanes view, lanes can be minimized (`m`), lane rows collapsed
 (`C`), and phases collapsed (`c`), and the selected lane can be
 *grown* via `g` to the full board, showing all its cards in a grid of
 at least four columns.
@@ -144,7 +145,7 @@ of the selected lane), a double click onto it collapses or expands it,
 a click onto
 the `view:` value of the header cycles the view, a click onto the
 `filter:` field focuses it, a click onto its `✕` clears it, and the
-mouse wheel over a lane scrolls it. In the graph view, a click onto a
+mouse wheel over a lane scrolls it. In the task graph view, a click onto a
 task selects it and a double click opens it.
 
 `M` disables the mouse support to regain the regular text selection of
@@ -169,7 +170,7 @@ not per browser, so all open web boards share them and pick up a change
 immediately.
 
 In the task dialog of the web board, `e` (or `✎`) edits the task plan
-in a Markdown editor (in the lanes and graph views, `e` opens the
+in a Markdown editor (in the task lanes and task graph views, `e` opens the
 selected task directly for editing): `Ctrl`/`⌘`+`S` saves it, but only
 if the plan was not changed meanwhile (else it offers to overwrite or
 discard), and `ESC` cancels (after a confirmation if changed). With the
@@ -196,9 +197,9 @@ waiting) with their status and their last processing log line, and
 finally all warnings of the board (behind `⚠`, e.g. on dependency
 cycles).
 
-### Stats View
+### Statistics View
 
-The third view `stats` shows the statistics of the tasks matching the
+The third view *statistics* shows the statistics of the tasks matching the
 `filter:` field (all tasks if empty), refreshed on every change of the
 tasks, within the time range selected by the buttons `total` (all
 tasks, with the number of days since the creation of the oldest
@@ -288,11 +289,11 @@ the usage attachment does not track when the usage accrued, the usage
 is taken as being evenly spread over this period, so the usage within
 these time ranges is just an approximation.
 
-### Agents View
+### Agent Logs View
 
 With an agent relay (see `--agent-relay`), the boards additionally
-follow the running agents (see `ase-agent`(1)) live in the last view
-`agents`: a master/detail view, with the framed master list `Agents` on
+follow the running agents (see `ase-agent`(1)) live in the view
+*agent logs*: a master/detail view, with the framed master list `Agents` on
 the left, showing each agent as a card with its name (inverse, behind
 a `⚉`), a pulse on its top border while busy (resp. a circle while
 waiting), and the fields `kind:` and `mode:` of its operation (or
@@ -314,7 +315,7 @@ is selected instead.
 
 The information line shows the selected agent with its host and process
 id, its state with the duration for which it has been in it, and the
-age of its latest heartbeat. Without an agent relay, the agents view
+age of its latest heartbeat. Without an agent relay, the agent logs view
 is skipped.
 
 An agent stopping vanishes from the board immediately, while an agent
@@ -322,6 +323,37 @@ missing its heartbeat vanishes after 30 to 35 seconds. A relay
 connection without any traffic for 15 to 30 seconds (e.g. after a
 network partition) is detected, reported as disconnected (dropping the
 shown agents), and re-established.
+
+### Agent Graph View
+
+With an agent relay, the boards additionally show, after the agent logs
+view, the last view *agent graph*: like the task graph view, but with the
+running agents as their agent cards (with the same fields as in the
+agent logs view), plus the lifecycle states referenced by these agents as
+state boxes. An edge from a state to an agent card shows a state the
+agent observes (its incoming states), a dashed edge a state the `After:`
+predecessors of its tasks have to reach first (its gate), and an edge
+from an agent card to a state a state the agent writes (its success,
+failure, and verdict states). The cards of the agents operating in the
+same activity state (e.g. `IMPLEMENTING`) are drawn within a dashed
+container labeled with this state (behind a `◉`), while unclaimed phase
+agents (e.g. `estimator --mode phase`) and request agents (e.g.
+`editor`) are drawn outside of any container, the latter without any
+edges. The agent graph is laid out top to bottom: the request agents
+in a row on top, below them the lifecycle states in the grid of the
+task lanes view, i.e., per phase as a column, the entry states, then
+the active states (the containers, plus the unclaimed phase agents),
+and then the parking states. Several running agents of the same kind
+and mode are merged into one card, with their number behind a `×` in
+its name, the union of the tasks they are busy with, their summed
+usages, and the uptime of the oldest of them.
+
+The information line shows the selected agent card with its incoming,
+activity, written, and gate states (resp. the name of its requests),
+resp. the selected state with the agents observing, writing, and gating
+on it. The states are announced by the agents themselves, so agents and
+agent relay have to be of the same *ASE* version. Without an agent
+relay, the agent graph view is skipped.
 
 ## OPTIONS
 
@@ -345,7 +377,7 @@ shown agents), and re-established.
   embedded, else from `$ASE_AGENT_RELAY_TOKEN`, else from
   `project.relay.token`, else of the locally started agent relay
   (default: the configured `project.relay.url`, else none, i.e.,
-  without agents view).
+  without agent logs and agent graph views).
 
   Honored by the terminal board and the text overview only, as the web
   board always follows the configured `project.relay.url` (and hence
@@ -360,22 +392,23 @@ letter under the kitty keyboard protocol.
 
 ### Every View
 
-- `v`: Cycle the view: lanes, graph, stats, and (with an agent relay)
-  agents.
-- `/`: Focus the `filter:` field (not in the agents view).
+- `v`: Cycle the view: task lanes, task graph, statistics, and (with an
+  agent relay) agent logs and agent graph.
+- `/`: Focus the `filter:` field (not in the agent logs and agent graph
+  views).
 - `?`: Hide or show the key hint lines (persisted).
 - `D`: Delete the selected task, after a confirmation (not in the
-  agents and stats views).
+  agent logs and statistics views).
 - `T`: Transfer the selected task to another state via the transfer
-  popup (not in the agents and stats views).
+  popup (not in the agent logs and statistics views).
 - `E`: Request the edit of the selected task by a prompt (not in the
-  agents and stats views).
+  agent logs and statistics views).
 - `R`: Request the selected task by a prompt under a request name (not
-  in the agents and stats views).
+  in the agent logs and statistics views).
 - `M`: Disable or enable the mouse support (terminal board only).
 - `q`, `Ctrl`+`C`: Quit (terminal board only).
 
-### Lanes View
+### Task Lanes View
 
 - `↑`/`↓`: Select the previous/next card of the phase (within a
   collapsed phase, the previous/next lane).
@@ -407,23 +440,23 @@ letter under the kitty keyboard protocol.
 - `PgUp`/`PgDn`: Select the card a page of rows above/below.
 - `Home`/`End`: Select the first/last card.
 - `g`, `ESC`: Shrink the lane back again.
-- `⏎`, `e`, `N`, `SPACE`, `t`: As in the lanes view.
+- `⏎`, `e`, `N`, `SPACE`, `t`: As in the task lanes view.
 
-### Graph View
+### Task Graph View
 
 - `↑`/`↓`/`←`/`→`: Select the nearest task in the direction of the arrow.
 - `⏎`: Open the task dialog of the selected task.
-- `e`, `N`, `t`: As in the lanes view.
+- `e`, `N`, `t`: As in the task lanes view.
 - `s`: Hide or show the standalone tasks, i.e., the tasks without any
   predecessors and successors (persisted).
 - `+`/`-`/`0`: Zoom in, out, resp. reset the zoom (web board only).
 
-### Stats View
+### Statistics View
 
 - `←`/`→`: Select the previous/next time range (`total`, `within last
   30 days`, or `within last 7 days`).
 
-### Agents View
+### Agent Logs View
 
 - `↑`/`↓`: Select the previous/next agent.
 - `Shift`+`↑`/`↓`: Scroll the log of the detail view by one line
@@ -431,6 +464,19 @@ letter under the kitty keyboard protocol.
 - `PgUp`/`PgDn`: Scroll the log of the detail view by one page.
 - `Home`/`End`: Scroll to the top/bottom of the log of the detail view,
   where scrolling down to its bottom follows it again.
+
+### Agent Graph View
+
+- `↑`/`↓`/`←`/`→`, mouse click: Select the nearest agent card or state
+  in the direction of the arrow, resp. the clicked one, where the edges
+  of the selection are highlighted, and the information line of a
+  selected state shows the agents observing, writing, and gating on it.
+- `⏎`, mouse double click: Show the agent logs view with the agent of the
+  selected card (of a merged card: its oldest agent) selected.
+- `+`, `-`, `0`, mouse wheel: Zoom in, out, resp. reset the zoom (web
+  board only), where dragging the background scrolls the agent graph.
+- `PgUp`/`PgDn`, `Home`/`End`, mouse wheel: Scroll the agent graph by
+  a page, resp. to its top/bottom (terminal board only).
 
 ### Task Dialog
 
@@ -525,7 +571,7 @@ The following configuration keys (on scope `user` or `project`, see
 - `.ase/board.yaml`:
   The display state of the boards in the project root: separately for
   the terminal board (`tui`) and the web board (`web`), the shown `view`
-  (`lanes`, `graph`, `stats`, or `agents`), the `minimized` lanes, the
+  (`lanes`, `graph`, `stats`, `agents`, or `flow`), the `minimized` lanes, the
   `collapsed` phases, and whether the task `titles` are wrapped onto
   multiple lines, the key hint lines are shown (`keys`), and the graph
   shows the `standalone` tasks.

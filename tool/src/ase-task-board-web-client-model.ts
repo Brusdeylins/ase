@@ -20,10 +20,22 @@ export type Board   = { mode: string, project: string, version: string, warnings
 export type Tone    = "active" | "done" | "idle"
 export type Ref     = { id: string, tone: Tone }
 export type Task    = { id: string, title: string, tone: Tone, status: string, group: string, epic: string, doc: string, tabs: string[], pred: Ref[], succ: Ref[] }
-export type View    = "lanes" | "graph" | "stats" | "agents"
+export type View    = "lanes" | "graph" | "stats" | "agents" | "flow"
+
+/*  the displayed names of the views (the persisted view ids being kept short)  */
+export const viewLabels: Record<View, string> = {
+    lanes:  "task lanes",
+    graph:  "task graph",
+    stats:  "statistics",
+    agents: "agent logs",
+    flow:   "agent graph"
+}
 
 /*  the statistics of the dependency graph: its numbers of tasks and dependencies  */
 export type GraphStats = { tasks: number, dependencies: number }
+
+/*  the statistics of the agent graph: its numbers of agents and lifecycle states  */
+export type FlowStats  = { agents: number, states: number }
 
 /*  the statistics of the tasks (see the statistics view): its time range (all tasks, resp. the
     tasks of the last 30 or 7 days), the tasks per lifecycle state (with its phase, tone, and
@@ -55,7 +67,8 @@ export type BoardStats  = {
     log lines added per agent (a delta to be appended, or a reset with all its lines)  */
 export type AgentLine  = { time: number, level: "error" | "warning" | "info", task: string, msg: string }
 export type AgentUsage = { walltimeSec: number, costToken: number | null, costUSD: number | null }
-export type Agent      = { id: string, kind: string, name: string, mode?: string, request?: string, promptless?: boolean, host: string, pid: number, started?: number, state: "waiting" | "busy", tasks: string[], usage?: { total: AgentUsage, last: AgentUsage } | null, since: number, beat: number }
+export type AgentFlow  = { input: string[], activity?: string, output: string[], gate?: string }
+export type Agent      = { id: string, kind: string, name: string, mode?: string, request?: string, promptless?: boolean, states?: AgentFlow, host: string, pid: number, started?: number, state: "waiting" | "busy", tasks: string[], usage?: { total: AgentUsage, last: AgentUsage } | null, since: number, beat: number }
 export type Agents     = { connected: boolean, agents: Agent[] }
 export type AgentLogs  = Record<string, { reset: boolean, lines: AgentLine[] }>
 
@@ -136,6 +149,7 @@ const busyLabel = (url: string, opts?: RequestInit): BusyLabel => {
     const fixed: Record<string, string> = {
         board:  "loading tasks",
         graph:  "loading graph",
+        flow:   "loading agent graph",
         stats:  "loading statistics",
         new:    "preparing new task",
         toggle: "saving board state"
@@ -190,6 +204,9 @@ export const actionNote  = ref<string | null>(null)
 export const view        = ref<View>("lanes")
 export const graph       = ref("")
 export const graphStats  = ref<GraphStats | null>(null)
+export const flow        = ref("")
+export const flowStats   = ref<FlowStats | null>(null)
+export const flowSel     = ref("")
 export const stats       = ref<BoardStats | null>(null)
 export const statsError  = ref<string | null>(null)
 export const statsRange  = ref<StatsRange>("total")
@@ -212,12 +229,14 @@ let   openId      = null as string | null
 let   openSeq     = 0
 let   reloadSeq   = 0
 let   graphSeq    = 0
+let   flowSeq     = 0
 let   statsSeq    = 0
 
 /*  the elements of the page used by more than the component rendering them  */
 export const boardEl     = ref<HTMLElement | null>(null)
 export const graphEl     = ref<HTMLElement | null>(null)
-export const planEl      = ref<HTMLIFrameElement | null>(null)
+export const flowEl      = ref<HTMLElement | null>(null)
+export const planEl     = ref<HTMLIFrameElement | null>(null)
 export const tabsEl      = ref<HTMLElement | null>(null)
 export const filterEl    = ref<HTMLInputElement | null>(null)
 
@@ -332,9 +351,22 @@ watch(view, (v) => {
 
 /*  fall back to the lanes view once it is known that no agent relay is configured  */
 watch(() => [ agentsKnown.value, agents.value, view.value ], () => {
-    if (agentsKnown.value && agents.value === null && view.value === "agents")
+    if (agentsKnown.value && agents.value === null && (view.value === "agents" || view.value === "flow"))
         setView("lanes")
 })
+
+/*  the agents merged into an agent card of the agent graph (the ones of its kind and mode),
+    ordered by their start time, and showing the agents view with the first of them selected  */
+export const flowAgents = (id: string): Agent[] =>
+    (agents.value?.agents ?? []).filter((a) => `agent:${a.kind}:${a.mode ?? ""}` === id)
+        .sort((a, b) => (a.started ?? a.since) - (b.started ?? b.since))
+export const showFlowAgent = (id: string) => {
+    const agent = flowAgents(id)[0]
+    if (agent === undefined)
+        return
+    selectAgent(agent.id)
+    setView("agents")
+}
 
 /*  the selected lane is grown to the full board only while it is neither
     minimized nor within a collapsed phase (else it shrinks back for good)  */
@@ -374,6 +406,30 @@ export const renderGraph = async (background = false) => {
     graph.value = res.error !== undefined ? `<p class="warn">${res.error.replace(/[&<>]/g, (c) => `&#${c.charCodeAt(0)};`)}</p>` :
         res.svg !== "" ? res.svg : "<p class=\"mute\">(no tasks)</p>"
     graphStats.value = res.error !== undefined ? null : res.stats
+}
+
+/*  mark the edges of the selected node of a rendered graph (resp. agent graph), and draw them
+    above all other edges (but still below the nodes), as the edges entering the same
+    target share their last part, which would else be covered by a later unmarked edge  */
+export const raiseEdges = (el: HTMLElement | null, id: string) => {
+    const edges = [ ...(el?.querySelectorAll<SVGPathElement>("path.edge") ?? []) ]
+    for (const e of edges)
+        e.classList.toggle("sel", id !== "" && (e.dataset.from === id || e.dataset.to === id))
+    const marked = edges.filter((e) => e.classList.contains("sel"))
+    const anchor = edges.findLast((e) => !e.classList.contains("sel"))
+    if (anchor !== undefined && marked.length > 0)
+        anchor.after(...marked)
+}
+
+/*  load the agent graph (laid out by the service)  */
+export const renderFlow = async (background = false) => {
+    const seq = ++flowSeq
+    const res = await api<{ svg: string, stats: FlowStats }>("/task-board/api/flow", undefined, background)
+    if (seq !== flowSeq)
+        return
+    flow.value = res.error !== undefined ? `<p class="warn">${res.error.replace(/[&<>]/g, (c) => `&#${c.charCodeAt(0)};`)}</p>` :
+        res.svg !== "" ? res.svg : "<p class=\"mute\">(no agents running)</p>"
+    flowStats.value = res.error !== undefined ? null : res.stats
 }
 
 /*  load the statistics of the tasks (computed by the service)  */
@@ -521,6 +577,8 @@ export const reload = async (background = false) => {
     board.value = data
     if (view.value === "graph")
         await renderGraph(background)
+    else if (view.value === "flow")
+        await renderFlow(background)
     else if (view.value === "stats")
         await loadStats(background || stats.value !== null)
     if (openId !== null)
@@ -568,19 +626,21 @@ export const toggle = async (list: "minimized" | "collapsed" | "titles" | "keys"
     applySurface(s)
 }
 
-/*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents  */
+/*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents and flow  */
 export const cycleView = () => {
-    const views: View[] = agents.value !== null ? [ "lanes", "graph", "stats", "agents" ] : [ "lanes", "graph", "stats" ]
+    const views: View[] = agents.value !== null ? [ "lanes", "graph", "stats", "agents", "flow" ] : [ "lanes", "graph", "stats" ]
     setView(views[(views.indexOf(view.value) + 1) % views.length])
 }
 
-/*  switch between the lanes, the graph, the stats, and the agents view, persisting it for newly opened web boards  */
+/*  switch between the lanes, the graph, the stats, the agents, and the flow view, persisting it for newly opened web boards  */
 export const setView = (v: View) => {
     view.value = v
     if (v !== "lanes")
         drag.value = null
     if (v === "graph")
         renderGraph()
+    else if (v === "flow")
+        renderFlow()
     else if (v === "stats")
         loadStats(stats.value !== null)
     api<Surface>("/task-board/api/view", {
@@ -626,6 +686,8 @@ const connect = () => {
     events.addEventListener("agents", (ev) => {
         applyAgents(JSON.parse((ev as MessageEvent).data))
         agentsKnown.value = true
+        if (view.value === "flow")
+            renderFlow(true)
     })
     events.addEventListener("logs", (ev) => applyAgentLogs(JSON.parse((ev as MessageEvent).data)))
 }

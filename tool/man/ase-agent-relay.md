@@ -28,12 +28,14 @@ both the agents and the task boards reach it, and serves any number of
 projects (by their `project.id`).
 
 The agent relay holds the presence of the agents in memory only: per
-agent its kind, name, mode, request name, host, process id, start
-time, state (`waiting` or `busy`), the ids of the tasks it is busy
-with, its usage of the agent tool (in total and by its last job), the
-time since which it is in its state, the time of its latest
-announcement (its heartbeat), and its most recent 100 processing log
-lines (each message truncated to 500 characters).
+agent its kind, name, mode, request name, the lifecycle states it
+operates on (of a phase agent: its incoming, activity, written, and
+gate states, for the agent graph of `ase-task-board`(1)), host,
+process id, start time, state (`waiting` or `busy`), the ids of the
+tasks it is busy with, its usage of the agent tool (in total and by its
+last job), the time since which it is in its state, the time of its
+latest announcement (its heartbeat), and its most recent 100
+processing log lines (each message truncated to 500 characters).
 
 An agent without heartbeat for 30 seconds is removed (checked every 5
 seconds), and a project exists only while it has agents.

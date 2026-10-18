@@ -26,16 +26,23 @@ export type AgentUsage = { walltimeSec: number, costToken: number | null, costUS
     and by its last finished job (or null before its first finished job)  */
 export type AgentUsages = { total: AgentUsage, last: AgentUsage } | null
 
+/*  the lifecycle states a phase agent operates on: the states it observes (its incoming
+    states), the activity state it works in (absent for an unclaimed one), the states it
+    writes (its success, failure, and verdict states), and the state the "After:"
+    predecessors of its tasks have to reach (its gate, if any)  */
+export type AgentFlow = { input: string[], activity?: string, output: string[], gate?: string }
+
 /*  the presence of an agent as announced by itself: its kind, name, and mode of
     operation (e.g. "draft", or empty), the name of the requests it processes (of a
     request agent of a definition, else absent), whether it ignores the prompts of these
-    requests (so they may be requested with an empty prompt, else absent), its host and
+    requests (so they may be requested with an empty prompt, else absent), the lifecycle
+    states it operates on (of a phase agent, else absent), its host and
     process id, its start time (in ms since the epoch, by the clock of the agent), its state,
     the ids of the tasks it is busy with, its usage of the agent tool, and its processing log
     lines added since its previous announcement (a delta only)  */
 export type AgentAnnounce = {
-    kind: string, name: string, mode: string, request?: string, promptless?: boolean, host: string, pid: number, started: number,
-    state: AgentState, tasks: string[], usage: AgentUsages, lines: AgentLine[]
+    kind: string, name: string, mode: string, request?: string, promptless?: boolean, states?: AgentFlow,
+    host: string, pid: number, started: number, state: AgentState, tasks: string[], usage: AgentUsages, lines: AgentLine[]
 }
 
 /*  the presence of an agent as held by the relay: the announced one (without its
@@ -96,6 +103,13 @@ const lineEntries = {
     task:  text(255),
     msg:   text(2000)
 }
+const status = v.pipe(text(64), v.minLength(1))
+const flowEntries = {
+    input:    v.pipe(v.array(status), v.maxLength(32)),
+    activity: v.optional(status),
+    output:   v.pipe(v.array(status), v.maxLength(32)),
+    gate:     v.optional(status)
+}
 const amount = v.pipe(v.number(), v.minValue(0))
 const usageEntries = {
     walltimeSec: amount,
@@ -117,6 +131,7 @@ const announceEntries = {
 /*  the valibot schema of an announcement (strict, as received by the relay)  */
 const announceSchema = v.strictObject({
     ...announceEntries,
+    states:  v.optional(v.strictObject(flowEntries)),
     started: v.optional(v.number()),
     usage:   v.optional(v.nullable(v.strictObject({
         total: v.strictObject(usageEntries),
@@ -131,6 +146,7 @@ export const frameSchema = v.object({
     reset:   v.optional(v.boolean()),
     agents:  v.optional(v.record(v.pipe(v.string(), v.regex(AGENT_ID_RE)), v.object({
         ...announceEntries,
+        states:  v.optional(v.object(flowEntries)),
         id:      v.pipe(v.string(), v.regex(AGENT_ID_RE)),
         started: v.number(),
         usage:   v.optional(v.nullable(v.object({

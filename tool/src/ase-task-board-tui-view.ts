@@ -12,6 +12,8 @@ import { splitHeight, rowLanes, toneOf, cardLabel, groupLabel, editMarker, effor
 import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
+import { drawFlowText, isFlowCard, flowRelations } from "./ase-task-board-flow.js"
+import type { FlowCard }                      from "./ase-task-board-flow.js"
 import { statsRanges, statsRangeLabels, statsRangeLabel } from "./ase-task-board-stats.js"
 import type { BoardCtx, Sel, Carry }          from "./ase-task-board-tui-model.js"
 import { palette, dashed, dashedBold, cx, isClass, pulseFrames, lowerEighths } from "./ase-task-board-tui-style.js"
@@ -454,7 +456,7 @@ export const renderLanes = (ctx: BoardCtx) => {
                 (grown ? "" :
                     `c: ${folded ? "expand" : "collapse"} phase · C: ${rowMin ? "expand" : "collapse"} lane row · `) +
                 `t: ${surface.titles ? "collapse" : "expand"} titles · ` +
-                "/: filter tasks · v: view graph")),
+                "/: filter tasks · v: view task graph")),
         h(Box, { key: "keys4", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `Left-Click: select task/lane/phase · Double-Click: ${grown ? "view task / shrink lane" : "view task, collapse/expand lane/phase"} · ` +
@@ -515,7 +517,76 @@ export const renderGraph = (ctx: BoardCtx) => {
                 `s: ${surface.standalone ? "hide" : "show"} standalone tasks`)),
         h(Box, { key: "keys3", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `/: filter tasks · v: view stats · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+                `/: filter tasks · v: view statistics · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+    ]
+}
+
+/*  render the agent graph view (like the graph view): the agent cards with the lifecycle states
+    they observe, operate in, and write, with the selected agent card (with its states), resp.
+    the selected state (with the agent cards observing, writing, and gating on it), in the
+    information line  */
+export const renderFlow = (ctx: BoardCtx) => {
+    const { agents, flow, flowLayout, flowSel, dim, boardH, x, y, viewH, viewW, graphView, mouse, pulse } = ctx
+    const card  = flow.cards.get(flowSel)
+    const rel   = card === undefined && flowSel !== "" && !isFlowCard(flowSel) ? flowRelations(flow, flowSel) : null
+    const names = (cards: FlowCard[]) => cards.map((c) =>
+        clean(agentLabel(c.agents[0])) + (c.agents.length > 1 ? ` ×${c.agents.length}` : "")).join(", ") || "none"
+    const empty = agents === null || !agents.connected ? "agent relay unreachable — reconnecting …" : "no agents running"
+    if (flowLayout === null || flow.cards.size === 0)
+        return [ h(Box, { key: "flow", height: boardH, marginX: 1, paddingX: 1, ...cx("frame", "border-dim") },
+            h(Text, cx("dim"), flow.cards.size === 0 ? empty : "laying out …")),
+        h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " ") ]
+
+    /*  draw the ELK layout, with the busy agent cards pulsing  */
+    const { lines, tones } = drawFlowText(flow, flowLayout.graph, flowSel, pulse >= 0 ? pulseFrames[pulse] : "")
+    const visible = lines.slice(y, y + viewH).map((l, i) => {
+        const segs = [] as { text: string, tone: string }[]
+        for (let k = x; k < Math.min(l.length, x + viewW); k++) {
+            const tone = tones[y + i][k]
+            if (segs.length > 0 && segs[segs.length - 1].tone === tone)
+                segs[segs.length - 1].text += l[k]
+            else
+                segs.push({ text: l[k], tone })
+        }
+        return segs
+    })
+    const states = card?.states
+    return [
+        h(Box, { key: "flow", height: boardH, marginX: 1 },
+            /*  a graph smaller than the viewport is centered in it  */
+            h(Box, { paddingX: 1, justifyContent: "center", alignItems: "center", ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
+                h(Box, { ref: graphView, ...cx("column") },
+                    ...visible.map((segs, i) => h(Box, { key: i },
+                        ...(segs.length === 0 ? [ h(Text, { key: 0 }, " ") ] : segs.map((seg, k) => {
+                            const tone = `tone-${seg.tone}`
+                            return h(Text, { key: k, ...cx(dim && "dimmed", isClass(tone) && tone) }, seg.text)
+                        })))))),
+
+            /*  overlay the graph statistics centered onto the top border  */
+            h(Box, { position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
+                h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
+                    `[ ${agents?.agents.length ?? 0} agents, ${flow.states.length} states ]`))),
+        h(Box, { key: "info", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"), rel !== null ? [
+                "state: ",          h(Text, { key: "state", ...cx("bold") }, rel.state),
+                " · observed by: ", h(Text, { key: "in",    ...cx("bold") }, names(rel.input)),
+                " · written by: ",  h(Text, { key: "out",   ...cx("bold") }, names(rel.output)),
+                ...(rel.gate.length > 0 ? [ " · gate of: ", h(Text, { key: "gate", ...cx("bold") }, names(rel.gate)) ] : [])
+            ] : card === undefined ? " " : [
+                "agent: ", h(Text, { key: "agent", ...cx("bold") }, clean(agentLabel(card.agents[0])) +
+                    (card.agents.length > 1 ? ` ×${card.agents.length}` : "")),
+                ...(states === undefined ? [ " · requests: ", h(Text, { key: "req", ...cx("bold") }, clean(card.agents[0].request ?? "none")) ] : [
+                    " · input: ",  h(Text, { key: "in",  ...cx("bold") }, states.input.join(", ") || "none"),
+                    ...(states.activity !== undefined ? [ " · activity: ", h(Text, { key: "act", ...cx("bold") }, states.activity) ] : []),
+                    " · output: ", h(Text, { key: "out", ...cx("bold") }, states.output.join(", ") || "none"),
+                    ...(states.gate !== undefined ? [ " · gate: ", h(Text, { key: "gate", ...cx("bold") }, states.gate) ] : []) ]) ])),
+        h(Box, { key: "keys1", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
+                "↑/↓/←/→/Left-Click: select agent/state · ⏎/Double-Click: view agent · " +
+                "⇈/⇊/⇤/⇥/Wheel: scroll canvas")),
+        h(Box, { key: "keys2", ...cx("bar") },
+            h(Text, cx("hint", dim && "dimmed"),
+                `v: view task lanes · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 
@@ -617,7 +688,7 @@ export const renderAgents = (ctx: BoardCtx) => {
                 "↑/↓/Left-Click: select agent · ⇈/⇊/⇤/⇥: page/top/bottom agent log · Mouse-Wheel: scroll agent log")),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
-                `v: view lanes · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
+                `v: view agent graph · M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))
     ]
 }
 
@@ -978,7 +1049,7 @@ export const renderStats = (ctx: BoardCtx) => {
             h(Text, cx("hint", dim && "dimmed"), [ "statistics of ", h(Text, { key: "n", ...cx("bold") }, String(shown)),
                 ` ${filter !== "" ? "filtered " : ""}tasks`, ...(range !== "total" ? [ " ", h(Text, { key: "r", ...cx("bold") }, statsRangeLabels[range]) ] : []) ])),
         h(Box, { key: "keys1", ...cx("bar") },
-            h(Text, cx("hint", dim && "dimmed"), `←/→: select time range · /: filter tasks · v: view ${agents !== null ? "agents" : "lanes"}`)),
+            h(Text, cx("hint", dim && "dimmed"), `←/→: select time range · /: filter tasks · v: view ${agents !== null ? "agent logs" : "task lanes"}`)),
         h(Box, { key: "keys2", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 `M: ${mouse ? "disable" : "enable"} mouse · ?: hide key hints · q: quit`))

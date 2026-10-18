@@ -27,7 +27,7 @@ import type { Tool }                from "./ase-setup-common.js"
 import { parseTool, toolSpecs }     from "./ase-setup-common.js"
 import { AgentPresenceReporter }    from "./ase-agent-relay-client.js"
 import type { AgentRelayClient }    from "./ase-agent-relay-client.js"
-import type { AgentUsage }          from "./ase-agent-relay-core.js"
+import type { AgentUsage, AgentFlow } from "./ase-agent-relay-core.js"
 import { telemetryEnabled }         from "./ase-service-otel.js"
 import { toolArgs, toolEntries, skillPrompt } from "./ase-agent-runtime-tool.js"
 import type { ToolCosts }           from "./ase-agent-runtime-tool.js"
@@ -263,6 +263,9 @@ export abstract class Agent {
     /*  whether the prompts of the requests processed by the agent are ignored (so they may be
         requested with an empty prompt), as announced in its presence (default: consumed)  */
     protected promptless = false
+
+    /*  the lifecycle states the agent operates on, as announced in its presence (default: none)  */
+    protected presenceStates: AgentFlow | undefined = undefined
 
     /*  whether tasks are processed serially only (clamping "--parallel" to 1, and
         refusing multiple agents of the kind in a fleet, see "ase agent fleet")  */
@@ -1441,7 +1444,7 @@ export abstract class Agent {
         /*  announce the presence of the agent to the agent relay (if any) while it runs  */
         if (this.relay !== null) {
             this.presence = new AgentPresenceReporter(this.log, this.relay, this.kind, this.name, this.mode, this.presenceRequest,
-                this.promptless)
+                this.promptless, this.presenceStates)
             this.presence.start()
         }
 

@@ -5,6 +5,12 @@ ChangeLog
 2.0.0 (2026-10-XX)
 ------------------
 
+-   FEATURE [tool]: Agent Graph View on the Task Boards
+    Both task boards gained the view "agent graph" (after "agent logs"): the running agents as their
+    cards plus the lifecycle states they observe (incoming), operate in (as dashed containers), write
+    (success, failure, and verdict states), and gate on (dashed edges), with the agents of the same
+    kind and mode merged into one card. The agents announce these states to the agent relay.
+
 -   REFACTOR [plugin,pages]: Fold `ase-code-{craft,refactor,resolve}` into the Edit Skills
     The skills `ase-code-craft`, `ase-code-refactor`, and `ase-code-resolve` were removed: their
     approach selection moved into `ase-common-approach.md` and the edit skills, where

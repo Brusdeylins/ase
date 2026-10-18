@@ -119,6 +119,15 @@ const handlePopupMouse = (ctx: BoardCtx, btn: number, mx: number, my: number): b
     return false
 }
 
+/*  show the agents view with the (first) agent of an agent card of the agent graph selected  */
+const showAgent = (ctx: BoardCtx, id: string): void => {
+    const card = ctx.flow.cards.get(id)
+    if (card === undefined)
+        return
+    ctx.focusAgent(card.agents[0].id)
+    ctx.setView("agents")
+}
+
 /*  handle a mouse press (0-based column/row, button 0: left press,
     64/65: wheel up/down): a click selects the clicked task and a double click
     opens it, while a click onto its " X " closes an open task view, a click onto a
@@ -127,7 +136,7 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     const {
         board, surface, view, setFilter, typing, setTyping, sel, setSel, setDialog, scroll, layout,
         carry, setCarry, lastClick, cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, boxAt, graphView, toggle, grown, setGrow,
-        cycleView, agentList, agentIdx, selectAgent, scrollLog, rangeBoxes, setRange
+        cycleView, agentList, agentIdx, selectAgent, scrollLog, rangeBoxes, setRange, flowLayout, setFlowSel, scrollFlow
     } = ctx
     if (handlePopupMouse(ctx, btn, mx, my))
         return
@@ -140,7 +149,7 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     if (typing && head !== "filter")
         setTyping(false)
     if (head === "clear") {
-        if (view !== "agents")
+        if (view !== "agents" && view !== "flow")
             setFilter("")
         return
     }
@@ -164,7 +173,7 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
         return
     }
     if (head === "filter") {
-        if (carry === null)
+        if (carry === null && view !== "flow")
             setTyping(true)
         return
     }
@@ -173,6 +182,11 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
         const range = btn === 0 ? boxAt(rangeBoxes.current, mx, my) : undefined
         if (range !== undefined)
             setRange(range as StatsRange)
+        return
+    }
+    if ((btn === 64 || btn === 65) && view === "flow") {
+        /*  the wheel scrolls the viewport of the agent graph  */
+        scrollFlow(0, btn === 64 ? -3 : 3)
         return
     }
     if ((btn === 64 || btn === 65) && view === "lanes") {
@@ -199,6 +213,24 @@ export const handleMouse = (ctx: BoardCtx, btn: number, mx: number, my: number):
     const last   = lastClick.current
     const double = last !== null && last.x === mx && last.y === my && now - last.at <= 400
     lastClick.current = double ? null : { x: mx, y: my, at: now }
+
+    /*  in the agent graph, a click selects the agent card or state under it (mapped into
+        the graph grid via the measured viewport origin), and a double click onto an agent
+        card additionally shows the agents view with its (first) agent selected  */
+    if (view === "flow") {
+        if (flowLayout === null || graphView.current === null)
+            return
+        const m  = measureElement(graphView.current)
+        const gx = mx - m.x + scroll.x
+        const gy = my - m.y + scroll.y
+        for (const n of flowLayout.graph.nodes.values())
+            if (gx >= n.x && gx < n.x + n.w && gy >= n.y && gy < n.y + n.h) {
+                setFlowSel(n.id)
+                if (double)
+                    showAgent(ctx, n.id)
+            }
+        return
+    }
 
     /*  a click onto a lane outside its cards (and while moving a task, anywhere
         onto a lane) selects the lane, like PgUp/PgDn, where a double click onto the
@@ -592,7 +624,8 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
     const {
         exit, all, board, surface, view, setView, typing, setTyping, sel, setSel, dialog, setDialog,
         notice, setNotice, carry, setCarry, cycle, confirm, setConfirm, transfer, setTransfer,
-        prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, startRequest, cycleView, selectAgent, scrollLog, logH, stepRange
+        prompt, mouse, setMouse, places, nodes, toggleFlag, startEdit, startPrompt, startRequest, cycleView, selectAgent, scrollLog, logH, stepRange,
+        flowSel, setFlowSel, flowPlaces, scrollFlow, viewH
     } = ctx
     if (notice !== null)
         setNotice(null)
@@ -613,7 +646,7 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
 
     /*  request the deletion of a task in every view (under the kitty keyboard
         protocol, Shift+d arrives as "d" with the shift modifier)  */
-    const target = dialog !== null ? dialog.id : view === "agents" || view === "stats" ? "" : sel.id
+    const target = dialog !== null ? dialog.id : view === "agents" || view === "stats" || view === "flow" ? "" : sel.id
     if ((input === "D" || (input === "d" && key.shift)) && target !== "" && carry === null) {
         setConfirm({ id: target, yes: false })
         return
@@ -653,7 +686,7 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         return
     }
     if (input === "/") {
-        if (carry === null && view !== "agents")
+        if (carry === null && view !== "agents" && view !== "flow")
             setTyping(true)
         return
     }
@@ -681,6 +714,26 @@ export const handleKey = (ctx: BoardCtx, input: string, key: Key): void => {
         /*  the left/right arrows step through the time ranges of the statistics  */
         if (key.leftArrow || key.rightArrow)
             stepRange(key.leftArrow ? -1 : 1)
+        else if (input === "?")
+            toggleFlag("keys")
+        return
+    }
+    if (view === "flow") {
+        /*  the arrows move spatially to the nearest agent card or state in their direction,
+            and ENTER on an agent card shows the agents view with its (first) agent selected, while
+            PgUp/PgDn and Home/End scroll the viewport  */
+        const dir = key.leftArrow ? "left" : key.rightArrow ? "right" : key.upArrow ? "up" : key.downArrow ? "down" : null
+        if (key.return)
+            showAgent(ctx, flowSel)
+        else if (key.pageUp || key.pageDown)
+            scrollFlow(0, (key.pageUp ? -1 : 1) * Math.max(1, viewH - 1))
+        else if (key.home || key.end)
+            scrollFlow(0, key.home ? -Infinity : Infinity)
+        else if (dir !== null) {
+            const next = nearestPlace(flowPlaces, flowSel, dir)
+            if (next !== undefined)
+                setFlowSel(next)
+        }
         else if (input === "?")
             toggleFlag("keys")
         return

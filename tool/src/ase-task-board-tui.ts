@@ -9,13 +9,13 @@ import { render, Box, Text, useInput, useStdin } from "ink"
 
 import type Log                               from "./ase-lib-log.js"
 import { Task }                               from "./ase-task.js"
-import { buildBoard, toneOf }                 from "./ase-task-board-core.js"
+import { buildBoard, toneOf, viewLabels }     from "./ase-task-board-core.js"
 import type { Board }                         from "./ase-task-board-core.js"
 import pkg                                    from "../package.json" with { type: "json" }
 import { useBoardState, mouseReporting, requestChoices } from "./ase-task-board-tui-model.js"
 import type { BoardCtx }                      from "./ase-task-board-tui-model.js"
 import { handleMouse, handleKey }             from "./ase-task-board-tui-control.js"
-import { h, renderLanes, renderGraph, renderAgents, renderStats } from "./ase-task-board-tui-view.js"
+import { h, renderLanes, renderGraph, renderAgents, renderFlow, renderStats } from "./ase-task-board-tui-view.js"
 import { palette, loadPalette, cx }           from "./ase-task-board-tui-style.js"
 import { sanitize, renderDialog, renderConfirm, renderTransfer, renderPrompt, renderBusy } from "./ase-task-board-tui-popup.js"
 
@@ -59,18 +59,18 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
     const tasks = [ ...board.cards.values() ].filter((c) => !board.context.has(c.id))
     const field = (sanitize(filter) + (typing ? "▏" : "")).slice(-14).padEnd(14)
 
-    /*  the filter field is disabled (and dimmed) in the agents view, which is not filtered  */
-    const off   = view === "agents"
+    /*  the filter field is disabled (and dimmed) in the agents view and the agent graph, which are not filtered  */
+    const off   = view === "agents" || view === "flow"
 
     /*  the view value, centered within the fixed width of the longest view name  */
-    const viewW = Math.max(...[ "lanes", "graph", "stats", "agents" ].map((v) => v.length))
-    const shown = (" ".repeat(Math.floor((viewW - view.length) / 2)) + view).padEnd(viewW)
+    const viewW = Math.max(...Object.values(viewLabels).map((v) => v.length))
+    const shown = (" ".repeat(Math.floor((viewW - viewLabels[view].length) / 2)) + viewLabels[view]).padEnd(viewW)
 
     /*  render the screen, with the dialog and popups on top  */
     return h(Box, { width: columns, height: rows, flexDirection: "column" },
         /*  the header, enclosed on its left and right side by the upward lines of
             the rule below it, with the view value and the filter field (disabled in the
-            agents view, which is not filtered) in boxes of their own, so that they
+            agents view and the agent graph, which are not filtered) in boxes of their own, so that they
             are measurable for the mouse hit-testing; the parts
             are centered as a single box, as centering them individually places them on
             half columns, which rounds the text and box parts apart by one column  */
@@ -103,7 +103,8 @@ const renderScreen = (ctx: BoardCtx, project: string) => {
         h(Box, { paddingX: 1 },
             h(Text, cx("signal", "truncate", dim && "dimmed"),
                 board.warnings.length > 0 ? `⚠ ${board.warnings.map(sanitize).join(" · ")}` : " ")),
-        ...(view === "lanes" ? renderLanes(ctx) : view === "graph" ? renderGraph(ctx) : view === "stats" ? renderStats(ctx) : renderAgents(ctx))
+        ...(view === "lanes" ? renderLanes(ctx) : view === "graph" ? renderGraph(ctx) : view === "stats" ? renderStats(ctx) :
+            view === "flow" ? renderFlow(ctx) : renderAgents(ctx))
             .filter((el) => surface.keys || !String(el.key).startsWith("keys")),
 
         /*  the horizontal rule between the key hints and the status line, turning downward with rounded corners at both ends  */

@@ -19,6 +19,7 @@ import { Config }                from "./ase-config-core.js"
 import { configSchema, webColorDefaults, webColorNames } from "./ase-config-schema.js"
 import { buildBoard, watchTasks, toneOf, laneMoves, cardMoves, BoardState, attachmentTabs, isDiff, diffTones, dataLang, dataLoad, dataSpans, newTaskText, createTask, saveTask, TaskConflict, watchAgents } from "./ase-task-board-core.js"
 import { layoutGraph, drawGraphSVG } from "./ase-task-board-graph.js"
+import { flowOf, layoutFlow, drawFlowSVG } from "./ase-task-board-flow.js"
 import { filterBoard, dropStandalone } from "./ase-task-board-filter.js"
 import { statsOf, statsRanges, effortScale } from "./ase-task-board-stats.js"
 import type { StatsRange }       from "./ase-task-board-stats.js"
@@ -460,6 +461,18 @@ const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
         })
     })
 
+    /*  the agent graph of the running agents as SVG (empty without any agents), with the
+        lifecycle states placed as in the lanes, plus its statistics  */
+    server.route({
+        method:  "GET",
+        path:    "/task-board/api/flow",
+        handler: guarded(async (_request, h) => {
+            const flow  = flowOf(agentsState?.agents ?? [], (await currentBoard(log)).groups)
+            const svg   = flow.cards.size === 0 ? "" : drawFlowSVG(flow, await layoutFlow(flow, "px"))
+            return h.response({ svg, stats: { agents: agentsState?.agents.length ?? 0, states: flow.states.length } })
+        })
+    })
+
     /*  the statistics of the tasks matching the filter query within the time range: the tasks
         per lifecycle state, their progress, their effort (on the configured scale, on each
         request), and their total AI usage (loading all plans)  */
@@ -749,14 +762,14 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
 
 /*  register the surface routes of the web board: view changes, surface toggles, keep-alive, and change events  */
 const registerSurfaceRoutes = (server: Hapi.Server, log: Log): void => {
-    /*  set the shown view (lanes, graph, stats, or agents) of the web surface, as the view of newly opened web boards  */
+    /*  set the shown view (lanes, graph, stats, agents, or flow) of the web surface, as the view of newly opened web boards  */
     server.route({
         method:  "POST",
         path:    "/task-board/api/view",
         options: { payload: { parse: true, allow: "application/json" } },
         handler: guarded(async (request, h) => {
             const p = request.payload as { view?: unknown } | null
-            if (p === null || (p.view !== "lanes" && p.view !== "graph" && p.view !== "stats" && p.view !== "agents"))
+            if (p === null || (p.view !== "lanes" && p.view !== "graph" && p.view !== "stats" && p.view !== "agents" && p.view !== "flow"))
                 return h.response({ error: "invalid view request" }).code(400)
             return h.response((await BoardState.setView("web", p.view)).web)
         })

@@ -80,11 +80,20 @@ export type Board = {
     warnings: string[]
 }
 
-/*  the per-surface view state: the shown view (the lanes, the dependency graph, the agents, or the statistics),
-    minimized lanes, collapsed phases, and whether the task titles, the key hints, and the
+/*  the per-surface view state: the shown view (the lanes, the dependency graph, the statistics, the agents,
+    or the agent graph), minimized lanes, collapsed phases, and whether the task titles, the key hints, and the
     standalone tasks of the graph are shown  */
 export type Surface     = { view: SurfaceView, minimized: string[], collapsed: string[], titles: boolean, keys: boolean, standalone: boolean }
-export type SurfaceView = "lanes" | "graph" | "stats" | "agents"
+export type SurfaceView = "lanes" | "graph" | "stats" | "agents" | "flow"
+
+/*  the displayed names of the views (the persisted view ids being kept short)  */
+export const viewLabels: Record<SurfaceView, string> = {
+    lanes:  "task lanes",
+    graph:  "task graph",
+    stats:  "statistics",
+    agents: "agent logs",
+    flow:   "agent graph"
+}
 export type SurfaceList = "minimized" | "collapsed"
 export type SurfaceFlag = "titles" | "keys" | "standalone"
 
@@ -163,7 +172,7 @@ export const splitHeight = (total: number, weights: number[], min = 0): number[]
 
 /*  the valibot schema of the persisted board state  */
 const surfaceSchema = v.object({
-    view:       v.optional(v.picklist([ "lanes", "graph", "stats", "agents" ]), "lanes"),
+    view:       v.optional(v.picklist([ "lanes", "graph", "stats", "agents", "flow" ]), "lanes"),
     minimized:  v.optional(v.array(v.string()), []),
     collapsed:  v.optional(v.array(v.string()), []),
 

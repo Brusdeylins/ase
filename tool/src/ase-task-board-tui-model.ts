@@ -28,6 +28,8 @@ import { statsOf, statsRanges, effortScale }  from "./ase-task-board-stats.js"
 import type { StatsRange }                    from "./ase-task-board-stats.js"
 import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
+import { flowOf, layoutFlow, flowState }      from "./ase-task-board-flow.js"
+import type { Flow }                          from "./ase-task-board-flow.js"
 import { fitGroups, agentLogWidth }           from "./ase-task-board-tui-view.js"
 import { dialogTabs, planLines, attachmentLines, agentLogLines, agentLogKey, DIALOG_CHROME, DIALOG_WIDTH } from "./ase-task-board-tui-popup.js"
 import type { PlanParts }                     from "./ase-task-board-tui-popup.js"
@@ -241,7 +243,13 @@ const useAgentsView = (agents: AgentsState | null, columns: number, boardH: numb
         const start = logLines.findIndex((l) => l.entry === line.entry)
         setLogScroll({ key: agentLogKey(agent.recent[line.entry]), offset: next - start })
     }
-    return { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog }
+
+    /*  select an agent by its id (e.g. from the agent graph), following its log at the bottom  */
+    const focusAgent = (id: string): void => {
+        setAgentSel(id)
+        setLogScroll(null)
+    }
+    return { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, focusAgent }
 }
 
 /*  the state of the terminal board: all state, the derived values, and the actions  */
@@ -268,6 +276,9 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const [ first,   setFirst   ] = React.useState(0)
     const [ scroll,  setScroll  ] = React.useState({ x: 0, y: 0 })
     const [ layout,  setLayout  ] = React.useState<{ board: Board, graph: GraphLayout, titles: boolean } | null>(null)
+    const [ flowLayout, setFlowLayout ] = React.useState<{ key: string, graph: GraphLayout } | null>(null)
+    const [ flowSel, setFlowSel ] = React.useState("")
+    const followed = React.useRef("")
     const [ notice,  setNotice  ] = React.useState<string | null>(null)
     const [ carry,   setCarry   ] = React.useState<Carry | null>(null)
     const [ cycle,   setCycle   ] = React.useState<TaskFormat.TaskLifecycle | null>(null)
@@ -390,36 +401,68 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }, [ log ])
 
     /*  follow the agents passed by the agent relay (if any, else null, and undefined until
-        known), where the agents view falls back to the lanes view without an agent relay,
-        and where, outside the agents view, a frame of the agent relay is taken over only
+        known), where the agents view and the agent graph fall back to the lanes view without
+        an agent relay, and where, outside of them, a frame of the agent relay is taken over only
         if it visibly changes the agents there (and not on a mere heartbeat or on new
         processing log lines), in order to not needlessly re-render the board, while the
-        latest frame is taken over as soon as the agents view is entered  */
+        latest frame is taken over as soon as the agents view or the agent graph is entered  */
     const viewRef   = React.useRef(view)
     viewRef.current = view
     const latest    = React.useRef<AgentsState | null | undefined>(undefined)
     React.useEffect(() => {
         return watchAgents(log, relay, (next) => {
             latest.current = next
-            setRelayed((prev) => viewRef.current === "agents" || agentsDigest(prev) !== agentsDigest(next) ? next : prev)
+            setRelayed((prev) => viewRef.current === "agents" || viewRef.current === "flow"
+                || agentsDigest(prev) !== agentsDigest(next) ? next : prev)
         })
     }, [ log, relay ])
     React.useEffect(() => {
-        if (view === "agents" && latest.current !== undefined)
+        if ((view === "agents" || view === "flow") && latest.current !== undefined)
             setRelayed(latest.current)
     }, [ view ])
     const agents  = relayed ?? null
     const working = React.useMemo(() => busyAgents(agents), [ agents ])
     React.useEffect(() => {
-        if (view === "agents" && relayed === null)
+        if ((view === "agents" || view === "flow") && relayed === null)
             setView("lanes")
     }, [ view, relayed ])
 
-    /*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents  */
+    /*  cycle through the views: lanes, graph, stats, and (with an agent relay) agents and flow  */
     const cycleView = (): void => {
-        const views: SurfaceView[] = agents !== null ? [ "lanes", "graph", "stats", "agents" ] : [ "lanes", "graph", "stats" ]
+        const views: SurfaceView[] = agents !== null ? [ "lanes", "graph", "stats", "agents", "flow" ] : [ "lanes", "graph", "stats" ]
         setView(views[(views.indexOf(view) + 1) % views.length])
     }
+
+    /*  the agent graph of the agents (with the lifecycle states placed as in the lanes), laid out
+        only whenever its structure changes (and not on a mere change of the contents of its cards),
+        with the selected agent card kept valid  */
+    const flow    = React.useMemo((): Flow => flowOf(agents?.agents ?? [], all.groups), [ agents, all ])
+    const flowKey = JSON.stringify([ [ ...flow.cards.keys() ], flow.states, flow.edges ])
+    React.useEffect(() => {
+        if (view !== "flow" || flowLayout?.key === flowKey)
+            return
+        let live = true
+        layoutFlow(flow, "cell").then((g) => {
+            if (live)
+                setFlowLayout({ key: flowKey, graph: g })
+        }).catch((err: unknown) => {
+            log.write("warning", `board: agent graph layout failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+        return () => {
+            live = false
+        }
+    }, [ log, view, flowKey ])
+    React.useEffect(() => {
+        if (!flow.cards.has(flowSel) && !flow.states.some((s) => flowState(s) === flowSel) && flow.cards.size > 0)
+            setFlowSel(flow.cards.keys().next().value!)
+    }, [ flow, flowSel ])
+    const flowPlaces = React.useMemo(() => {
+        const map = new Map<string, Place>()
+        if (flowLayout !== null)
+            for (const n of flowLayout.graph.nodes.values())
+                map.set(n.id, { r: n.y + Math.floor(n.h / 2), c: n.x + Math.floor(n.w / 2), top: n.y, bottom: n.y + n.h - 1, bl: n.x, br: n.x + n.w - 1 })
+        return map
+    }, [ flowLayout ])
 
     /*  fetch the AI usage of all tasks whenever the statistics view is shown or the board
         changes, but only while the statistics view is shown (as each fetching loads all
@@ -837,12 +880,12 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }, [ grow, growable ])
 
     const headH  = 3
-    const footH  = surface.keys ? (view === "agents" || view === "stats" ? 5 : view === "lanes" ? 7 : 6) : 3
+    const footH  = surface.keys ? (view === "agents" || view === "stats" || view === "flow" ? 5 : view === "lanes" ? 7 : 6) : 3
     const boardH = rows - headH - footH
     const innerW = columns - 2
 
     /*  the agents view: its agents, the selected one, and the scrolled processing log of the latter  */
-    const { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog } =
+    const { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, focusAgent } =
         useAgentsView(agents, columns, boardH)
 
     /*  the tabs of the read dialog, the lines of its selected tab (clamped to
@@ -880,22 +923,41 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     if (fit.first !== first)
         setFirst(fit.first)
 
-    /*  scroll the graph viewport so the box of the selected node stays visible,
-        with the rows of a surrounding group frame (padding) above and below it  */
-    const viewH = boardH - 2
-    const viewW = innerW - 4
+    /*  scroll the viewport of the graph (resp. the agent graph) so the box of the selected node
+        stays visible, with the rows of a surrounding group frame (padding) above and below it,
+        where the agent graph follows its selection only once per change of it, as its viewport
+        can also be scrolled freely (to its state boxes, which are not selectable)  */
+    const viewH  = boardH - 2
+    const viewW  = innerW - 4
     let   { x, y } = scroll
-    const box = view === "graph" ? places.get(sel.id) : undefined
-    if (box !== undefined && layout !== null) {
+    const box    = view === "graph" ? places.get(sel.id) : view === "flow" ? flowPlaces.get(flowSel) : undefined
+    const height = view === "graph" ? layout?.graph.height : flowLayout?.graph.height
+    const follow = `${view}:${flowSel}`
+    if (box !== undefined && height !== undefined && (view !== "flow" || followed.current !== follow)) {
         const top    = Math.max(0, box.top - 2)
-        const bottom = Math.min(layout.graph.height, box.bottom + 1)
+        const bottom = Math.min(height, box.bottom + 1)
         if (top < y)                       y = top
         if (bottom > y + viewH - 1)        y = bottom - viewH + 1
         if (box.bl < x)                    x = Math.max(0, box.bl - 2)
         if (box.br > x + viewW - 1)        x = box.br - viewW + 3
+        if (view === "flow")
+            followed.current = follow
     }
+    if (view !== "flow")
+        followed.current = ""
     if (x !== scroll.x || y !== scroll.y)
         setScroll({ x, y })
+
+    /*  scroll the viewport of the agent graph freely (within its bounds)  */
+    const scrollFlow = (dx: number, dy: number): void => {
+        const g = flowLayout?.graph
+        if (g === undefined)
+            return
+        setScroll((s) => ({
+            x: Math.max(0, Math.min(Math.max(0, g.width  + 2 - viewW), s.x + dx)),
+            y: Math.max(0, Math.min(Math.max(0, g.height + 1 - viewH), s.y + dy))
+        }))
+    }
 
     /*  the graph navigation order: by level, then by creation time  */
     const nodes = [ ...board.cards.values() ].sort((a, b) =>
@@ -907,7 +969,9 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     /*  pulse the tasks of active lanes (or the active nodes of the graph, or the busy agents), but only while
         any of them (or its pulse) is actually visible, in order to not needlessly re-render the board  */
     const shown   = grown ? [ { ...board.groups[sel.g], lanes: [ board.groups[sel.g].lanes[sel.l] ] } ] : board.groups.slice(fit.first, fit.last + 1)
-    const agentsBusy = view === "agents" && agentList.some((a) => a.state === "busy")
+    const agentsBusy = (view === "agents" && agentList.some((a) => a.state === "busy"))
+        || (view === "flow" && flowLayout !== null && [ ...flowLayout.graph.nodes.values() ].some((n) => flow.cards.get(n.id)?.busy === true
+            && n.y >= y && n.y < y + viewH && n.x + n.w - 3 >= x && n.x + n.w - 3 < x + viewW))
     const pulsing = !dim && (agentsBusy || (view === "lanes" ?
         shown.some((g) => !surface.collapsed.includes(g.title)
             && g.lanes.some((l) => l.active && !surface.minimized.includes(l.status) && (board.lanes.get(l.status)?.length ?? 0) > 0)) :
@@ -984,6 +1048,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,
         agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, stats, usage, range, setRange, stepRange,
+        flow, flowLayout, flowSel, setFlowSel, flowPlaces, focusAgent, scrollFlow,
         toggle, toggleFlag, startEdit, startPrompt, startRequest, cancelPrompt, submitPrompt, remove, transferTo, drop
     }
 }

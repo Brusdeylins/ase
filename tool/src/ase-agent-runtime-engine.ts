@@ -804,6 +804,15 @@ class DefinedPhaseAgent extends PhaseAgent {
         }))
         this.states     = { incoming: def.state.incoming[0], activity: def.state.activity, success: def.state.phase, passed: def.state.passed }
         this.unclaimed  = def.unclaimed ? def.state.incoming : []
+
+        /*  announce the observed, activity, written, and gate states (for the agent graph of the task boards)  */
+        const output    = [ def.state.success, def.state.failure, ...Object.values(def.state.verdict) ].filter((s) => s !== "")
+        this.presenceStates = {
+            input:  def.state.incoming,
+            output: output.filter((s, i) => output.indexOf(s) === i),
+            ...(def.state.activity !== "" ? { activity: def.state.activity } : {}),
+            ...(def.state.passed   !== "" ? { gate:     def.state.passed   } : {})
+        }
         this.assigned   = def.assign.required
         this.finishing  = def.finish.commit || def.finish.success !== "" || def.workdir === "target"
             || def.hooks.finish !== undefined

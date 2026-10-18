@@ -467,7 +467,7 @@ header
     of glyphs, whose font bearings would leave gaps in the line), with a dot of pulsing size,
     in a lighter accent color (or in signal color when selected), stopped on reduced motion,
     where the agent card of a waiting agent shows just the ring (in its border color)  */
-#board .lane.active .card:not(.ghost):not(.carried), #graph .node.tone-active:not(.context) .card, #agents .acard
+#board .lane.active .card:not(.ghost):not(.carried), #graph .node.tone-active:not(.context) .card, #agents .acard, #flow .acard
     position: relative
     overflow: visible
     &::after
@@ -484,12 +484,12 @@ header
         background: var(--pulse)
         content: ""
         animation: pulse 2.5s step-end infinite
-#board .lane.active .card.sel:not(.ghost):not(.carried)::after, #graph .node.tone-active.sel:not(.context) .card::after, #agents .acard.sel::after
+#board .lane.active .card.sel:not(.ghost):not(.carried)::after, #graph .node.tone-active.sel:not(.context) .card::after, #agents .acard.sel::after, #flow .acard.sel::after
     --pulse: var(--c-signal)
-#agents .acard:not(.busy)::after
+#agents .acard:not(.busy)::after, #flow .acard:not(.busy)::after
     animation: none
     background: var(--c-paper)
-#agents .acard:not(.busy):not(.sel)::after
+#agents .acard:not(.busy):not(.sel)::after, #flow .acard:not(.busy):not(.sel)::after
     --pulse: var(--c-border-strong)
 
 /*  the frames of the pulse (like "pulseFrames" of the TUI: "●", "◉", "⦿", "○", "⦿", "◉"):
@@ -508,7 +508,7 @@ header
     90%
         background: radial-gradient(circle closest-side, var(--pulse) 60%, var(--c-accent-paper) 60%)
 @media (prefers-reduced-motion: reduce)
-    #board .lane.active .card:not(.ghost):not(.carried)::after, #graph .node.tone-active:not(.context) .card::after, #agents .acard::after
+    #board .lane.active .card:not(.ghost):not(.carried)::after, #graph .node.tone-active:not(.context) .card::after, #agents .acard::after, #flow .acard::after
         animation: none
     #busy .spinner, #busy .bar .block
         animation: none
@@ -646,6 +646,9 @@ header
         font-size: 0.8125rem
         &.off
             color: var(--c-signal)
+
+/*  the agent cards (of the agents view and of the agent graph) and the agent log  */
+#agents, #flow
     .acard
         flex-shrink: 0
         padding: 6px 10px
@@ -1185,9 +1188,9 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
     font: inherit
     font-weight: bold
 
-/*  the graph view: its frame, with the graph statistics overlaid onto the top-right
+/*  the graph view (and the agent graph view): its frame, with the graph statistics overlaid onto the top-right
     corner of the graph border (like in the TUI), dimmed, in a box like the graph panel  */
-#gframe
+#gframe, #fframe
     position: relative
     flex: 1
     min-height: 0
@@ -1209,7 +1212,7 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
         color: var(--c-mute)
         font-size: 0.8125rem
         pointer-events: none
-#graph
+#graph, #flow
     flex: 1
     min-height: 0
     overflow: auto
@@ -1218,7 +1221,7 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
     border-radius: 6px
     cursor: grab
 
-    /*  a double click opens a task, so it must not select text  */
+    /*  a double click opens a task (resp. an agent), so it must not select text  */
     user-select: none
 
     /*  a zoom-independent gap between the panel border and a larger graph (also when
@@ -1272,8 +1275,38 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #prompt .k
         stroke-width: 1.4
         &.sel
             stroke: var(--c-signal)
+            stroke-width: 2.5
+            marker-end: url(#arrow-sel)
+        &.dashed
+            stroke-dasharray: 5 4
     .arrow
         fill: var(--c-line)
+    .arrow-sel
+        fill: var(--c-signal)
+
+    /*  the lifecycle states of the agent graph, and its agent cards filling their fixed-size nodes  */
+    .state
+        rect
+            fill: var(--c-paper)
+            stroke: var(--c-border-strong)
+            stroke-width: 1.2
+        text
+            fill: var(--c-mute)
+            font-size: 13px
+            font-weight: bold
+            text-anchor: middle
+            dominant-baseline: central
+        &:hover rect
+            stroke: var(--c-accent)
+        &.sel
+            rect
+                stroke: var(--c-signal)
+                stroke-width: 2
+            text
+                fill: var(--c-signal)
+    .acard
+        box-sizing: border-box
+        height: 100%
 
     /*  the dashed container of the tasks of a group, with the group name in its top-left corner  */
     .cluster
