@@ -1347,7 +1347,6 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #assign .k
         &.sel
             stroke: var(--c-signal)
             stroke-width: 2.5
-            marker-end: url(#arrow-sel)
         &.dashed
             stroke-dasharray: 5 4
     .arrow
@@ -1390,6 +1389,13 @@ footer kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys kbd, #assign .k
             fill: var(--c-mute)
             font-size: 13px
             font-weight: bold
+
+/*  the arrow marker of the marked edges of the selected node, unique per drawing
+    (as a marker of the hidden drawing of the other view does not render)  */
+#graph .edge.sel
+    marker-end: url(#graph-arrow-sel)
+#flow .edge.sel
+    marker-end: url(#flow-arrow-sel)
 
 /*  the task dialog  */
 #scrim

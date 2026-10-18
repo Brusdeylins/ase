@@ -258,7 +258,7 @@ export const drawFlowText = (flow: Flow, layout: GraphLayout, selected: string, 
     and with the heart of its agents, carrying their ids, to be filled by the page on their heartbeats),
     both carrying their "data-id" (for the click delegation of the page)  */
 export const drawFlowSVG = (flow: Flow, layout: GraphLayout): string => {
-    const out = drawSVGFrame(layout, containerLabel, true)
+    const out = drawSVGFrame("flow", layout, containerLabel, true)
     for (const n of layout.nodes.values()) {
         if (!isFlowCard(n.id)) {
             out.push(`<g class="node state" data-id="${escapeXML(n.id)}"><rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="5"/>` +

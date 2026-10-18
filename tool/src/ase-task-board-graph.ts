@@ -488,18 +488,19 @@ export const nearestPlace = (places: Map<string, Place>, from: string, dir: "lef
 export const escapeXML = (s: string): string =>
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 
-/*  start the SVG drawing of a pixel-unit layout (with its arrow markers, the second one
-    for the marked edges of the selected node, as a marker does not inherit the stroke
-    color of its edge), with every group a
+/*  start the SVG drawing of a pixel-unit layout (with its arrow markers "<name>-arrow" and
+    "<name>-arrow-sel", the second one for the marked edges of the selected node, as a marker
+    does not inherit the stroke color of its edge, and both named uniquely per drawing, as the
+    page holds several drawings and a marker of a hidden one does not render), with every group a
     dashed "g.cluster" container with its label in the top-left corner, and every edge a
     "path.edge" carrying its "data-from" and "data-to" (plus the class "dashed" for a dashed one),
     optionally with hops, i.e., where a horizontal part of an edge crosses a vertical part of
     another edge, it hops over it in a small half circle  */
-export const drawSVGFrame = (layout: GraphLayout, label: (id: string) => string, hops = false): string[] => {
+export const drawSVGFrame = (name: string, layout: GraphLayout, label: (id: string) => string, hops = false): string[] => {
     const out = [ `<svg xmlns="http://www.w3.org/2000/svg" width="${layout.width}" ` +
         `height="${layout.height}" viewBox="0 0 ${layout.width} ${layout.height}">`,
     "<defs>" + [ "arrow", "arrow-sel" ].map((id) =>
-        `<marker id="${id}" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" ` +
+        `<marker id="${name}-${id}" viewBox="0 0 10 10" refX="10" refY="5" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" ` +
         `orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="${id}"/></marker>`).join("") + "</defs>" ]
     for (const g of layout.groups)
         out.push(`<g class="cluster"><rect x="${g.x}" y="${g.y}" width="${g.w}" height="${g.h}" rx="6"/>` +
@@ -525,7 +526,7 @@ export const drawSVGFrame = (layout: GraphLayout, label: (id: string) => string,
             d += ` L${b.x},${b.y}`
         }
         out.push(`<path class="edge${e.dashed === true ? " dashed" : ""}" data-from="${escapeXML(e.from)}" ` +
-            `data-to="${escapeXML(e.to)}" d="${d}" marker-end="url(#arrow)"/>`)
+            `data-to="${escapeXML(e.to)}" d="${d}" marker-end="url(#${name}-arrow)"/>`)
     }
     return out
 }
@@ -538,7 +539,7 @@ export const drawSVGFrame = (layout: GraphLayout, label: (id: string) => string,
     with the number of label lines its node has room for in "data-lines" (to which the
     page clamps the title, as the browser may wrap it onto more lines than estimated)  */
 export const drawGraphSVG = (board: Board, layout: GraphLayout): string => {
-    const out = drawSVGFrame(layout, (id) => `♛ ${id} ▶`)
+    const out = drawSVGFrame("graph", layout, (id) => `♛ ${id} ▶`)
     for (const n of layout.nodes.values()) {
         const card  = board.cards.get(n.id)!
         const lines = Math.round((n.h - units.px.h) / units.px.line) + 1
