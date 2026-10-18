@@ -267,6 +267,10 @@ export abstract class Agent {
     /*  the lifecycle states the agent operates on, as announced in its presence (default: none)  */
     protected presenceStates: AgentFlow | undefined = undefined
 
+    /*  the title and the description of the operation of the agent, as announced in its presence (default: none)  */
+    protected presenceTitle = ""
+    protected presenceDesc  = ""
+
     /*  whether tasks are processed serially only (clamping "--parallel" to 1, and
         refusing multiple agents of the kind in a fleet, see "ase agent fleet")  */
     protected readonly serial: boolean = false
@@ -1444,7 +1448,7 @@ export abstract class Agent {
         /*  announce the presence of the agent to the agent relay (if any) while it runs  */
         if (this.relay !== null) {
             this.presence = new AgentPresenceReporter(this.log, this.relay, this.kind, this.name, this.mode, this.presenceRequest,
-                this.presencePrompt, this.presenceStates)
+                this.presencePrompt, this.presenceStates, this.presenceTitle, this.presenceDesc)
             this.presence.start()
         }
 

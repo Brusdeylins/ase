@@ -31,6 +31,12 @@ export default {
             into "DRAFTED" on success, while a task left in "PLANNING" is shelved, and where
             the tag is one per mode, so a rebooted task can still be condensed later  */
         reboot: {
+            title:     "Reboot the plans of drafted tasks",
+            description:
+                "Claims every DRAFTED task explicitly assigned to the planner, not yet rebooted, and with " +
+                "planned After: predecessors into PLANNING. Re-creates its plan from scratch via the " +
+                "ase-task-reboot skill, tags it as rebooted, unassigns it, and puts it back into DRAFTED " +
+                "for its final review by a human, or into SHELVED if it was not rebooted.",
             type:      "phase",
             lifecycle: "enterprise",
             workdir:   "project",
@@ -45,6 +51,12 @@ export default {
             "PLANNING", so it is put back into "DRAFTED" only if the agent tool succeeded and
             the skill reported no error (as the agent tool still exits successfully then)  */
         condense: {
+            title:     "Condense the plans of drafted tasks",
+            description:
+                "Claims every DRAFTED task explicitly assigned to the planner, not yet condensed, and with " +
+                "planned After: predecessors into PLANNING. Compresses the wording of its plan via the " +
+                "ase-task-condense skill, tags it as condensed, and puts it back into DRAFTED, or into " +
+                "SHELVED if it was not condensed.",
             type:      "phase",
             lifecycle: "enterprise",
             workdir:   "project",

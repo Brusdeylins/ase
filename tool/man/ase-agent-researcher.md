@@ -164,6 +164,15 @@ All other options belong to the sub-commands (see **COMMANDS**).
       private to the current user, while an existing *dir* has to be a
       directory (no symbolic link) owned by the current user.
 
+    - \[`--title` *text*\]: The one-line title of the operation of the
+      agent (at most 80 characters), shown on the task boards. Built-in:
+      `Research topics for tasks on request`.
+
+    - \[`--description` *text*\]: The brief description of the operation
+      of the agent (about 3-6 lines, at most 600 characters, with its
+      whitespace collapsed), shown on the task boards. Built-in: a
+      description of the operation of the researcher.
+
     - \[`--type` `phase`|`request`\]: The processing type: `phase`
       claims the tasks by their lifecycle status, `request` processes
       the prompt requests attached to the tasks. Generic default:

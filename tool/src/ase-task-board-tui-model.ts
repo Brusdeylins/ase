@@ -30,7 +30,7 @@ import { layoutGraph }                        from "./ase-task-board-graph.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
 import { flowOf, layoutFlow, flowState }      from "./ase-task-board-flow.js"
 import type { Flow }                          from "./ase-task-board-flow.js"
-import { fitGroups, agentLogWidth, AGENT_INFO_H } from "./ase-task-board-tui-view.js"
+import { fitGroups, agentLogWidth, agentOpLines, agentOpHeight, AGENT_INFO_H } from "./ase-task-board-tui-view.js"
 import { dialogTabs, planLines, attachmentLines, agentLogLines, agentLogKey, DIALOG_CHROME, DIALOG_WIDTH } from "./ase-task-board-tui-popup.js"
 import type { PlanParts }                     from "./ase-task-board-tui-popup.js"
 import { pulseFrames }                        from "./ase-task-board-tui-style.js"
@@ -189,7 +189,7 @@ const boxAt = (map: Map<string, DOMElement>, mx: number, my: number): string | u
 
 /*  the state of the agents view: the agents of the master list, the selected one (followed by its id,
     else, until explicitly selected again, the one at the index of the previously selected one),
-    and the lines of its recent processing log in the detail view (within its frame), scrolled
+    the lines of its operation pane, and the lines of its recent processing log in the detail view (within its frame), scrolled
     to the bottom unless explicitly scrolled up, where the scroll position is anchored to the
     processing log line at its top (as the oldest lines are dropped once the recent lines are
     complete), falling back to the top once this line was dropped, too  */
@@ -201,8 +201,9 @@ const useAgentsView = (agents: AgentsState | null, columns: number, boardH: numb
     const agentLast = React.useRef(0)
     const agentIdx  = agentHit >= 0 ? agentHit : Math.max(0, Math.min(agentLast.current, agentList.length - 1))
     const agent     = agentList.at(agentIdx)
+    const agentOp   = React.useMemo(() => agentOpLines(agent, columns), [ agent, columns ])
     const logLines  = React.useMemo(() => agent !== undefined ? agentLogLines(agent, agentLogWidth(columns)) : [], [ agent, columns ])
-    const logH      = Math.max(1, boardH - AGENT_INFO_H - 2)
+    const logH      = Math.max(1, boardH - agentOpHeight(agentOp) - AGENT_INFO_H - 2)
     const logMax    = Math.max(0, logLines.length - logH)
     let   logFirst  = logMax
     if (logScroll !== null && agentHit >= 0 && agent !== undefined) {
@@ -249,7 +250,7 @@ const useAgentsView = (agents: AgentsState | null, columns: number, boardH: numb
         setAgentSel(id)
         setLogScroll(null)
     }
-    return { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, focusAgent }
+    return { agentList, agentIdx, agent, agentOp, logLines, logH, logFirst, logMax, selectAgent, scrollLog, focusAgent }
 }
 
 /*  the state of the terminal board: all state, the derived values, and the actions  */
@@ -889,7 +890,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const innerW = columns - 2
 
     /*  the agents view: its agents, the selected one, and the scrolled processing log of the latter  */
-    const { agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, focusAgent } =
+    const { agentList, agentIdx, agent, agentOp, logLines, logH, logFirst, logMax, selectAgent, scrollLog, focusAgent } =
         useAgentsView(agents, columns, boardH)
 
     /*  the tabs of the read dialog, the lines of its selected tab (clamped to
@@ -1051,7 +1052,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         cardBoxes, laneBoxes, groupBoxes, headBoxes, agentBoxes, rangeBoxes, cardRef, laneRef, groupRef, headRef, agentRef, rangeRef, boxAt, graphView,
         places, graphTitles, boardH, dialogW, tabLabels, dialogSel, dialogLines, dialogScroll,
         transferCard, transferList, fit, viewH, viewW, x, y, nodes, dim, pulse, now, beatOf, store, busy, busyTick,
-        agents, working, cycleView, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, selectAgent, scrollLog, stats, usage, range, setRange, stepRange,
+        agents, working, cycleView, agentList, agentIdx, agent, agentOp, logLines, logH, logFirst, logMax, selectAgent, scrollLog, stats, usage, range, setRange, stepRange,
         flow, flowLayout, flowSel, setFlowSel, flowPlaces, focusAgent, scrollFlow,
         toggle, toggleFlag, startEdit, startPrompt, startRequest, cancelPrompt, submitPrompt, remove, transferTo, drop
     }

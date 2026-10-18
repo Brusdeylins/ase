@@ -34,14 +34,17 @@ export interface AgentParam {
 
 /*  the definition of an agent, with the same option groups and options as the options
     "--<group>-<item>" of "ase agent <kind> start" (see its manual page for their semantics),
-    plus the declarations of its parameters (by their names), the hooks, the code-based escape
-    hatches beyond the declarative options, and the base definition it extends (a definition
+    including the one-line title and the brief description of its operation (as shown on the
+    task boards), plus the declarations of its parameters (by their names), the hooks, the
+    code-based escape hatches beyond the declarative options, and the base definition it extends (a definition
     file, relative to this one, or the definition "builtin:<kind>[-<mode>]" of a built-in agent),
     whose options it overrides (where a false flag unsets the flag of the base definition), whose
     parameter declarations it extends field-wise, and whose hooks of the same name it replaces,
     where only an "unclaimed" phase agent can have multiple incoming states  */
 export interface AgentDefinition {
     definition?: string
+    title?:      string
+    description?: string
     params?:     Record<string, AgentParam | string | number | boolean>
     type?:       AgentType
     workdir?:    AgentWorkdir

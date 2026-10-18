@@ -111,6 +111,10 @@ export const definitionOptions: DefinitionOption[] = [
         "(with the same keys as these options, flat or nested by group, plus hooks for TypeScript and JavaScript, " +
         "and optionally a base definition it extends as \"definition\", where the given options win), " +
         "or \"builtin:<kind>[-<mode>]\" for the definition of a built-in agent"),
+    opt("title",             "value", "text",          "one-line title of the operation of the agent " +
+        "(shown on the task boards, at most 80 characters)"),
+    opt("description",       "value", "text",          "brief description of the operation of the agent " +
+        "(shown on the task boards, about 3-6 lines, at most 600 characters)"),
     opt("type",              "value", "type",          "processing type: \"phase\" (claim tasks by their lifecycle status) or " +
         "\"request\" (process the attached prompt requests of tasks) (default: \"phase\")"),
     opt("workdir",           "value", "kind",          "working directory: \"project\", \"source\", \"changeset\", " +
@@ -302,6 +306,8 @@ export const attachMatches = (spec: AttachSpec, type: string): boolean =>
     multiple incoming states, else exactly one for "phase" and none for "request")  */
 export type ResolvedDefinition = {
     name:       string
+    title:      string
+    description: string
     type:       DefinitionType
     workdir:    DefinitionWorkdir
     lifecycles: string[]
@@ -704,6 +710,17 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         return value as T
     }
 
+    /*  the title and the description of the operation, each with its whitespace collapsed
+        (as the task boards wrap the description onto their width themselves)  */
+    const prose = (key: string, max: number): string => {
+        const text = str(key).replace(/\s+/g, " ").trim()
+        if (text.length > max)
+            fail(key, `too long text (${text.length} characters, expected at most ${max})`)
+        return text
+    }
+    const title       = prose("title", 80)
+    const description = prose("description", 600)
+
     /*  the processing type, the working directory, and the type-specific options  */
     const type    = choice("type", definitionTypes, "phase")
     const workdir = choice("workdir", definitionWorkdirs, "project")
@@ -901,7 +918,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         type === "request" && template.names.has("prompt") ? "optional" : "ignored"
 
     return {
-        name, type, workdir, lifecycles, unclaimed,
+        name, title, description, type, workdir, lifecycles, unclaimed,
         serial:  flag("serial"),
         state:   { incoming, activity, success, failure, phase, passed, verdict: verdicts },
         tag:     {

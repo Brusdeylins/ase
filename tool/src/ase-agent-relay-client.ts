@@ -368,6 +368,17 @@ const BACKOFF_MIN_MS = 60 * 1000
 const BACKOFF_MAX_MS = 15 * 60 * 1000
 const STOP_MS        = 2 * 1000
 
+/*  the user name and id of the agent process (with an unknown user id, e.g. on Windows, as -1)  */
+const processUser = (): { name: string, uid: number } => {
+    try {
+        const info = os.userInfo()
+        return { name: info.username, uid: info.uid }
+    }
+    catch (_err: unknown) {
+        return { name: process.env.USER ?? process.env.USERNAME ?? "", uid: process.getuid?.() ?? -1 }
+    }
+}
+
 /*  the presence of a running agent, announced to the agent relay: immediately
     on every change of its state, tasks, and usage, coalesced on new processing log lines,
     and periodically as its heartbeat, each time with only the processing log lines
@@ -380,6 +391,8 @@ const STOP_MS        = 2 * 1000
 export class AgentPresenceReporter {
     readonly id:    string
     private started = Date.now()
+    private cwd     = process.cwd()
+    private user    = processUser()
     private state:  Relay.AgentState = "waiting"
     private tasks:  string[] = []
     private usage:  Relay.AgentUsages = null
@@ -395,7 +408,8 @@ export class AgentPresenceReporter {
     private stopped = false
 
     constructor (private log: Log, private client: AgentRelayClient, private kind: string, private name: string, private mode = "",
-        private request = "", private prompt: Relay.AgentPrompt = "required", private states?: Relay.AgentFlow) {
+        private request = "", private prompt: Relay.AgentPrompt = "required", private states?: Relay.AgentFlow,
+        private title = "", private description = "") {
         this.id = `${os.hostname()}-${process.pid}-${name}`
             .replace(/[^A-Za-z0-9_.-]+/g, "-").replace(/^[^A-Za-z0-9]+/, "").slice(0, 128)
     }
@@ -444,9 +458,14 @@ export class AgentPresenceReporter {
         const lines = this.lines
         this.lines  = []
         const presence: Relay.AgentAnnounce = {
-            kind: this.kind, name: this.name, mode: this.mode, host: os.hostname(), pid: process.pid, started: this.started,
+            kind: this.kind, name: this.name, mode: this.mode, host: os.hostname(), pid: process.pid,
+            cwd: this.cwd, user: this.user.name, uid: this.user.uid, started: this.started,
             state: this.state, tasks: this.tasks, usage: this.usage, lines
         }
+        if (this.title !== "")
+            presence.title = this.title
+        if (this.description !== "")
+            presence.description = this.description
         if (this.request !== "")
             presence.request = this.request
         if (this.request !== "" && this.prompt !== "required")

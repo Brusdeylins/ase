@@ -6,8 +6,11 @@
 
 <!--  the agents view: the master list "agents" of the agents as cards (name and state, kind and
       mode of operation, and the ids of the tasks it is busy with, else "none (waiting)"), and on the
-      right three equally wide panes of the selected agent: its location (host and process id),
-      its runtime (uptime and age of its heartbeat), and its usage (total and last usage of the agent tool), and below them the
+      right the pane of the operation of the selected agent (its name inversely with the agent icon,
+      its title in bold, and its description),
+      below it two equally wide panes of the selected agent: its process (host, process id, user
+      name and id, and working directory, cut at its start) and its accounting (uptime, age of its
+      heartbeat, and total and last usage of the agent tool), and below them the
       detail view "agent log" with the recent processing log of the selected agent (with the task ids
       inverse), with its lines broken and following its bottom unless scrolled up  -->
 <template>
@@ -29,12 +32,20 @@
             </div>
         </section>
         <div class="aright">
+            <section class="aop">
+                <div class="atitle">Operation</div>
+                <div v-if="agentSel === null" class="aempty" :class="{ off: agents !== null && !agents.connected }">{{ agentsEmpty }}</div>
+                <div v-else class="aoptext">
+                    <div class="aophead"><span class="abadge"><span class="aicon">⚉</span> {{ agentSel.name }}</span><b v-if="agentSel.title">{{ agentSel.title }}</b><span v-else-if="!agentSel.description" class="aempty">(no operation title and description)</span></div>
+                    <div v-if="agentSel.description" class="aopdesc">{{ agentSel.description }}</div>
+                </div>
+            </section>
             <div class="ainfos">
                 <section v-for="p in panes" :key="p.title" class="ainfo">
                     <div class="atitle">{{ p.title }}</div>
                     <div v-if="agentSel === null" class="aempty" :class="{ off: agents !== null && !agents.connected }">{{ agentsEmpty }}</div>
                     <div v-else class="afields">
-                        <template v-for="f in p.fields" :key="f.name"><span>{{ f.name }}</span><b class="aval">{{ f.value }}</b></template>
+                        <template v-for="f in p.fields" :key="f.name"><span>{{ f.name }}</span><b class="aval" :class="{ astart: f.start }" :title="f.value"><span dir="ltr">{{ f.value }}</span></b></template>
                     </div>
                 </section>
             </div>
@@ -65,21 +76,28 @@ const agentsEmpty = computed(() => agents.value === null || !agents.value.connec
 const agentUptime = (agent: Agent) =>
     agentDuration(agent.beat - (agent.started ?? agent.since))
 
-/*  the panes of the selected agent: its location, its runtime, and its usage  */
+/*  the user of an agent: its user id with its user name, resp. "n/a" for an older agent  */
+const agentUser = (agent: Agent) =>
+    agent.user === undefined ? "n/a" :
+        `${agent.uid !== undefined && agent.uid >= 0 ? agent.uid : "n/a"} (${agent.user !== "" ? agent.user : "unknown"})`
+
+/*  the panes of the selected agent: its process (incl. its location) and its accounting (incl.
+    its usage), where a field may be cut at its start (instead of at its end)  */
 const panes = computed(() => {
     const a = agentSel.value
-    const pane = (title: string, fields: (agent: Agent) => { name: string, value: string }[]) =>
+    const pane = (title: string, fields: (agent: Agent) => { name: string, value: string, start?: boolean }[]) =>
         ({ title, fields: a === null ? [] : fields(a) })
     return [
-        pane("Location", (agent) => [
-            { name: "host:",      value: agent.host },
-            { name: "pid:",       value: String(agent.pid) } ]),
-        pane("Runtime", (agent) => [
-            { name: "uptime:",    value: agentUptime(agent) },
-            { name: "heartbeat:", value: `${agentDuration(agentNow.value - agent.beat)} ago` } ]),
-        pane("Usage", (agent) => [
-            { name: "total:",     value: agentUsage(agent.usage?.total) },
-            { name: "last:",      value: agentUsage(agent.usage?.last) } ])
+        pane("Process", (agent) => [
+            { name: "host:",             value: agent.host },
+            { name: "pid:",              value: String(agent.pid) },
+            { name: "uid:",              value: agentUser(agent) },
+            { name: "cwd:",              value: agent.cwd ?? "n/a", start: true } ]),
+        pane("Accounting", (agent) => [
+            { name: "uptime:",           value: agentUptime(agent) },
+            { name: "heartbeat:",        value: `${agentDuration(agentNow.value - agent.beat)} ago` },
+            { name: "usage (total):",    value: agentUsage(agent.usage?.total) },
+            { name: "usage (last job):", value: agentUsage(agent.usage?.last) } ])
     ]
 })
 

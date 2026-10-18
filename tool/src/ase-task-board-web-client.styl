@@ -628,21 +628,66 @@ header
     .amaster
         flex: 0 0 260px
 
-    /*  the right side: the three equally wide panes of the selected agent above its log  */
+    /*  the right side: the pane of the operation and the three equally wide panes of the selected agent above its log  */
     .aright
         flex: 1
         min-width: 0
         display: flex
         flex-direction: column
         gap: 16px
+        section
+            padding-left: 16px
+            padding-right: 16px
     .ainfos
         flex-shrink: 0
         display: grid
-        grid-template-columns: repeat(3, minmax(0, 1fr))
+        grid-template-columns: repeat(2, minmax(0, 1fr))
         gap: 12px
         .afields
             font-size: 1rem
-            line-height: 1.3
+            line-height: 1.15
+
+        /*  colored like the active lanes (and like the averages and the efficiency
+            of the statistics view), with the title like their lane header  */
+        section.ainfo
+            border-color: var(--c-accent-line)
+            background: var(--c-accent-ground)
+            color: var(--c-accent-strong)
+            .atitle
+                border-color: var(--c-accent-line)
+                background: var(--c-accent-fill)
+                color: var(--c-accent-strong)
+
+    /*  the pane of the operation of the selected agent (above the three panes): its
+        name (inverse, like on its card) and its title in bold (cut with an ellipsis)
+        above its description, clamped to six lines of the latter  */
+    .aop
+        flex-shrink: 0
+    .aoptext
+        display: flex
+        flex-direction: column
+        gap: 2px
+        font-size: 1rem
+        line-height: 1.3
+    .aophead
+        display: flex
+        align-items: baseline
+        gap: 8px
+        min-width: 0
+        .abadge
+            flex-shrink: 0
+            white-space: nowrap
+        b, .aempty
+            min-width: 0
+            white-space: nowrap
+            overflow: hidden
+            text-overflow: ellipsis
+    .aopdesc
+        display: -webkit-box
+        -webkit-box-orient: vertical
+        -webkit-line-clamp: 6
+        line-clamp: 6
+        overflow: hidden
     .adetail
         flex: 1
         min-width: 0
@@ -740,6 +785,11 @@ header
         white-space: nowrap
         overflow: hidden
         text-overflow: ellipsis
+
+    /*  a value cut at its start (with its text itself isolated left-to-right)  */
+    .aval.astart
+        direction: rtl
+        text-align: left
 
     /*  the task ids with the task icon (on the agent cards and in the agent log): inverse in
         the color of their card (resp. their log line), like the ids on the task cards, and on

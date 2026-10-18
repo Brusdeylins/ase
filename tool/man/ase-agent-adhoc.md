@@ -12,6 +12,8 @@
 \[`-r`|`--repo` *url*\]
 \[`-d`|`--tempdir` *dir*\]
 \[`-D`|`--definition` *file*|`builtin:`*kind*\[`-`*mode*\]\]
+\[`--title` *text*\]
+\[`--description` *text*\]
 \[`--type` `phase`|`request`\]
 \[`--workdir` *kind*\]
 \[`--lifecycle` *model*\]
@@ -323,6 +325,18 @@ and `--prompt-skill` with `--prompt-args`, and `--tag-retry` and
   where all other given options override it. Example: `ase agent adhoc
   start -n reviewer -D builtin:approver-approve --tag-name
   ase-agent-reviewer`.
+
+- \[`--title` *text*\]:
+  The one-line title of the operation of the agent (at most 80
+  characters), shown on the task boards: in the information line of the
+  agent logs view and above the description in its pane `Operation`
+  (default: none).
+
+- \[`--description` *text*\]:
+  The brief description of the operation of the agent (about 3-6 lines,
+  at most 600 characters, with its whitespace collapsed), shown on the
+  task boards in the pane `Operation` of the agent logs view, word-wrapped
+  onto its width (default: none).
 
 - \[`--type` *type*\]:
   The processing type: `phase` (default) to claim tasks by their

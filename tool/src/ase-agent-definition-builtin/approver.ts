@@ -47,10 +47,26 @@ export default {
     mode: "judge",
     modes: {
         /*  just add the verdict  */
-        judge:   review([]),
+        judge: {
+            ...review([]),
+            title:     "Review implemented tasks and tag their verdict",
+            description:
+                "Claims every IMPLEMENTED task unassigned or assigned to the approver, without a verdict " +
+                "yet, and with approved After: predecessors into APPROVING. Reviews its Changeset: via the " +
+                "ase-repo-review skill, tags it with its verdict (approve or reject), and puts it back into " +
+                "IMPLEMENTED for the final decision by a human."
+        },
 
         /*  additionally decide on the resulting task status by the verdict  */
-        approve: review([ "APPROVE=APPROVED", "REJECT=DECLINED" ])
+        approve: {
+            ...review([ "APPROVE=APPROVED", "REJECT=DECLINED" ]),
+            title:     "Review implemented tasks and decide by verdict",
+            description:
+                "Claims every IMPLEMENTED task unassigned or assigned to the approver, without a verdict " +
+                "yet, and with approved After: predecessors into APPROVING. Reviews its Changeset: via the " +
+                "ase-repo-review skill, tags it with its verdict (approve or reject), and puts it into " +
+                "APPROVED resp. DECLINED by its verdict, or back into IMPLEMENTED without any verdict."
+        }
     }
 } satisfies AgentKind
 

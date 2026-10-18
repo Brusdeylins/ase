@@ -81,6 +81,13 @@ export default {
             also on a re-run of a declined task), and the work on it is afterwards committed onto
             it and published  */
         implement: {
+            title:     "Implement planned tasks into their changesets",
+            description:
+                "Claims every PLANNED task unassigned or assigned to the implementer, not yet implemented, " +
+                "and with integrated After: predecessors into IMPLEMENTING. Implements its plan from its " +
+                "Source: into its Changeset: via the ase-task-implement skill (in a Git worktree where " +
+                "needed), commits and publishes a branch: changeset, attaches a snapshot of the change " +
+                "set, and puts it into IMPLEMENTED on success, else into STALLED.",
             params,
             type:      "phase",
             lifecycle: "enterprise",
@@ -106,6 +113,12 @@ export default {
             else tagged with a tag separate from the one of the implementing, so a drafted task
             is still implemented later  */
         draft: {
+            title:     "Draft the implementation of planned tasks",
+            description:
+                "Claims every PLANNED task without an implementation draft yet into IMPLEMENTING. Drafts " +
+                "its implementation via the ase-task-implement skill into its draft attachment only (in a " +
+                "temporary worktree, leaving the working copy untouched), and puts it back into PLANNED in " +
+                "any case, so it can still be implemented later.",
             params,
             type:      "phase",
             lifecycle: "enterprise",

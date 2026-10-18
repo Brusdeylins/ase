@@ -7,13 +7,19 @@
 import type { AgentDefinition } from "../ase-agent-definition-api.js"
 import type { AgentKind }       from "../ase-agent-definition-core.js"
 
-/*  integrate the changeset of the task into its target by the Git operation <mode>, where
-    the skill itself puts the task into "INTEGRATED" on success, so the task counts as
+/*  integrate the changeset of the task into its target by the Git operation <mode> (described
+    as <how>), where the skill itself puts the task into "INTEGRATED" on success, so the task counts as
     integrated on the "plan integrated" status of the skill only (else it is deferred), where
     the agent itself attaches the change set snapshot of the change set which finally landed
     on the target, and where the tasks are processed serially only, as merges into the same
     target branch cannot run concurrently  */
-const integrate = (mode: string): AgentDefinition => ({
+const integrate = (mode: string, how: string): AgentDefinition => ({
+    title:     `Integrate approved tasks by ${how}`,
+    description:
+        "Claims every APPROVED task unassigned or assigned to the integrator, not yet integrated, " +
+        "and with integrated After: predecessors into INTEGRATING, one task at a time. Integrates " +
+        `its Changeset: into its Target: by ${how} via the ase-task-integrate skill, attaches a ` +
+        "snapshot of the landed change set, and puts it into INTEGRATED on success, else into DEFERRED.",
     type:      "phase",
     lifecycle: "enterprise",
     serial:    true,
@@ -49,13 +55,13 @@ export default {
     mode: "squash",
     modes: {
         /*  create a merge commit  */
-        merge:  integrate("merge"),
+        merge:  integrate("merge",  "a merge commit"),
 
         /*  rebase the changeset onto the target and fast-forward the target  */
-        rebase: integrate("rebase"),
+        rebase: integrate("rebase", "a rebase with fast-forward"),
 
         /*  combine the changeset into one new commit on the target  */
-        squash: integrate("squash")
+        squash: integrate("squash", "a squash commit")
     }
 } satisfies AgentKind
 

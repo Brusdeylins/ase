@@ -154,6 +154,16 @@ All other options belong to the sub-commands (see **COMMANDS**).
       `DECLINED` on the verdict `REJECT`, and back into `IMPLEMENTED`
       without a verdict. An invalid mode is an error.
 
+    - \[`--title` *text*\]: The one-line title of the operation of the
+      agent (at most 80 characters), shown on the task boards. Built-in:
+      `Review implemented tasks and tag their verdict` (`judge`) resp.
+      `Review implemented tasks and decide by verdict` (`approve`).
+
+    - \[`--description` *text*\]: The brief description of the operation
+      of the agent (about 3-6 lines, at most 600 characters, with its
+      whitespace collapsed), shown on the task boards. Built-in: a
+      description of the operation of the mode.
+
     - \[`--type` `phase`|`request`\]: The processing type: `phase`
       claims the tasks by their lifecycle status, `request` processes
       the prompt requests attached to the tasks. Generic default:

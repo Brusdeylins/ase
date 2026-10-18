@@ -813,6 +813,8 @@ class DefinedPhaseAgent extends PhaseAgent {
             ...(def.state.activity !== "" ? { activity: def.state.activity } : {}),
             ...(def.state.passed   !== "" ? { gate:     def.state.passed   } : {})
         }
+        this.presenceTitle = def.title
+        this.presenceDesc  = def.description
         this.assigned   = def.assign.required
         this.finishing  = def.finish.commit || def.finish.success !== "" || def.workdir === "target"
             || def.hooks.finish !== undefined
@@ -970,6 +972,8 @@ class DefinedRequestAgent extends RequestAgent {
         this.requests        = new TaskRequests(def.request.name, def.tag.name, def.request.done)
         this.presenceRequest = def.request.name
         this.presencePrompt  = def.request.prompt
+        this.presenceTitle   = def.title
+        this.presenceDesc    = def.description
         this.serial          = def.serial
         this.worktree        = def.workdir !== "project"
         this.lifecycles      = def.lifecycles

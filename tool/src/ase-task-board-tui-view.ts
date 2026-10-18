@@ -8,7 +8,7 @@ import React                                  from "react"
 import { Box, Text }                          from "ink"
 import type { BoxProps, DOMElement }          from "ink"
 
-import { splitHeight, rowLanes, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUptime, agentUsage, agentDuration, badgesOf, viewCycleHint } from "./ase-task-board-core.js"
+import { splitHeight, rowLanes, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUser, agentUptime, agentUsage, agentDuration, badgesOf, viewCycleHint } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence }              from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
@@ -591,10 +591,10 @@ export const renderFlow = (ctx: BoardCtx) => {
 }
 
 /*  the width of the master list (incl. its frame) and the height of an agent card of the agents view,
-    and the height of its panes with the runtime, location, and usage of the selected agent (incl. their frames)  */
+    and the height of its panes with the process and accounting of the selected agent (incl. their frames)  */
 const AGENT_W = 36
 const AGENT_H = 6
-export const AGENT_INFO_H = 4
+export const AGENT_INFO_H = 6
 
 /*  the inner width of the detail view of the agents view on a screen width (without the side paddings
     of the screen, the frame and its left padding, the master list, the gap between the master list
@@ -602,16 +602,31 @@ export const AGENT_INFO_H = 4
 export const agentLogWidth = (columns: number): number =>
     Math.max(10, columns - 2 - AGENT_W - 1 - 3 - 2)
 
+/*  the pane with the operation of the selected agent of the agents view on a screen width: its
+    name and title on its first line and its description, word-wrapped onto the inner width of the
+    pane (the one of the detail view plus the scroll bar, minus the right padding) and clamped to at
+    most six lines, and the height of this pane (incl. its frame)  */
+export type AgentOp = { name: string, title: string, desc: string[] }
+export const agentOpLines = (agent: AgentPresence | undefined, columns: number): AgentOp => ({
+    name:  clean(agent?.name ?? ""),
+    title: clean(agent?.title ?? ""),
+    desc:  clampLines(clean(agent?.description ?? ""), agentLogWidth(columns) + 1, 6)
+})
+export const agentOpHeight = (op: AgentOp): number =>
+    2 + 1 + op.desc.length
+
 /*  render the agents view: on the left the framed master list "agents" of the agents as vertically
     aligned cards (name and state, kind and mode of operation, and the ids of the tasks it is
     busy with, inversely with the task icon, else "none (waiting)"), scrolled to keep the selected agent visible, and on
-    the right (taking the remaining width) three equally wide framed panes of the selected agent: its
-    location (host and process id), its runtime (uptime and age of its heartbeat), and its usage
-    (total and last usage of the agent tool), and below them the framed detail view "agent log" with the recent processing log of
+    the right (taking the remaining width) the framed pane of the operation of the selected agent (its
+    name inversely with the agent icon, its title in bold, and its description), below it two equally wide framed panes of the selected agent
+    (in accent color, like the efficiency of the statistics view): its process (host, process id,
+    user name and id, and working directory, cut at its start) and its accounting (uptime, age of its
+    heartbeat, and total and last usage of the agent tool), and below them the framed detail view "agent log" with the recent processing log of
     the selected agent, scrolled to the bottom unless scrolled up, and with the scroll position
     overlaid onto its frame  */
 export const renderAgents = (ctx: BoardCtx) => {
-    const { agents, agentList, agentIdx, agent, logLines, logH, logFirst, logMax, boardH, dim, mouse, pulse, now, beatOf, agentRef } = ctx
+    const { agents, agentList, agentIdx, agent, agentOp, logLines, logH, logFirst, logMax, boardH, dim, mouse, pulse, now, beatOf, agentRef } = ctx
     /*  the visible agent cards, where a line is reserved for the indicator of the hidden ones (like in the lanes)  */
     const room  = boardH - 2
     const all   = Math.max(1, Math.floor(room / AGENT_H))
@@ -620,8 +635,8 @@ export const renderAgents = (ctx: BoardCtx) => {
     const above = first
     const below = Math.max(0, agentList.length - first - fit)
     const empty = agents === null || !agents.connected ? "agent relay unreachable — reconnecting …" : "no agents running"
-    const title = (text: string) => h(Box, { key: "title", position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
-        h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), text), " ]"))
+    const title = (text: string, accent = false) => h(Box, { key: "title", position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
+        h(Text, { ...cx(accent ? "accent" : "dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), text), " ]"))
 
     /*  the master list, where the top border of a card carries on its right side (like the
         task cards of the active lanes) the pulse of a busy agent, resp. the circle of a waiting one,
@@ -680,23 +695,35 @@ export const renderAgents = (ctx: BoardCtx) => {
     const lines  = logLines.slice(logFirst, logFirst + logH)
     const thumbH = Math.max(1, Math.round(logH * Math.min(1, logH / Math.max(1, logLines.length))))
     const thumbY = logMax === 0 ? 0 : Math.round((logH - thumbH) * logFirst / logMax)
-    const field  = (name: string, value: string, width: number) => h(Text, { key: name, ...cx("normal", "truncate", dim && "dimmed") },
-        name.padEnd(width), h(Text, cx("bold"), value))
-    const pane   = (key: string, text: string, fields: () => ReturnType<typeof field>[], first = false) =>
+    const field  = (name: string, value: string, width: number, wrap: "truncate" | "truncate-start" = "truncate") =>
+        h(Box, { key: name },
+            h(Box, { flexShrink: 0 },
+                h(Text, cx("accent", dim && "dimmed"), name.padEnd(width))),
+            h(Box, { flexGrow: 1, flexShrink: 1 },
+                h(Text, { ...cx("accent", "bold", dim && "dimmed"), wrap }, value)))
+    const pane   = (key: string, text: string, fields: () => ReturnType<typeof field>[], first = false, accent = false) =>
         h(Box, { key, flexGrow: 1, flexBasis: 0, marginLeft: first ? 0 : 1 },
-            h(Box, { paddingX: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
+            h(Box, { paddingX: 1, ...cx("grow", "column", "frame", accent ? "border-accent" : "border-dim", dim && "border-dimmed") },
                 ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", "truncate", dim && "dimmed") }, empty) ] : fields())),
-            title(text))
+            title(text, accent))
+    const op     = h(Box, { key: "op", height: agentOpHeight(agentOp), flexShrink: 0 },
+        pane("operation", "Operation", () => [
+            h(Text, { key: "title", ...cx("normal", "truncate", dim && "dimmed") },
+                h(Text, cx("normal", "badge", dim && "dimmed"), ` ⚉ ${agentOp.name} `), " ",
+                agentOp.title !== "" ? h(Text, cx("bold"), agentOp.title) :
+                    agentOp.desc.length === 0 ? h(Text, cx("dim"), "(no operation title and description)") : ""),
+            ...agentOp.desc.map((line, i) => h(Text, { key: `desc-${i}`, ...cx("normal", "truncate", dim && "dimmed") }, line)) ], true))
     const info   = h(Box, { key: "info", height: AGENT_INFO_H, flexShrink: 0 },
-        pane("location", "Location", () => [
-            field("host:",      clean(agent!.host), 6),
-            field("pid:",       String(agent!.pid), 6) ], true),
-        pane("runtime", "Runtime", () => [
-            field("uptime:",    agentUptime(agent!), 11),
-            field("heartbeat:", `${agentDuration(now - agent!.beat)} ago`, 11) ]),
-        pane("usage", "Usage", () => [
-            field("total:",     agentUsage(agent!.usage?.total), 7),
-            field("last:",      agentUsage(agent!.usage?.last), 7) ]))
+        pane("process", "Process", () => [
+            field("host:",              clean(agent!.host), 6),
+            field("pid:",               String(agent!.pid), 6),
+            field("uid:",               clean(agentUser(agent!)), 6),
+            field("cwd:",               clean(agent!.cwd ?? "n/a"), 6, "truncate-start") ], true, true),
+        pane("accounting", "Accounting", () => [
+            field("uptime:",            agentUptime(agent!), 18),
+            field("heartbeat:",         `${agentDuration(now - agent!.beat)} ago`, 18),
+            field("usage (total):",     agentUsage(agent!.usage?.total), 18),
+            field("usage (last job):",  agentUsage(agent!.usage?.last), 18) ], false, true))
     const log    = h(Box, { key: "log", flexGrow: 1 },
         h(Box, { paddingLeft: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
             ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, empty) ] :
@@ -714,12 +741,14 @@ export const renderAgents = (ctx: BoardCtx) => {
         ...(agent !== undefined ? [ h(Box, { key: "pos", position: "absolute", bottom: 0, right: 2 },
             h(Text, cx("dim", dim && "dimmed"), logLines.length <= logH ? `[ ${logLines.length} lines ]` :
                 `[ lines ${logFirst + 1}–${logFirst + lines.length} of ${logLines.length} · ${logFirst >= logMax ? "following" : "scrolled"} ]`)) ] : []))
-    const detail = h(Box, { key: "detail", flexGrow: 1, height: boardH, marginLeft: 1, flexDirection: "column" }, info, log)
+    const detail = h(Box, { key: "detail", flexGrow: 1, height: boardH, marginLeft: 1, flexDirection: "column" }, op, info, log)
     return [
         h(Box, { key: "agents", height: boardH, paddingX: 1 }, master, detail),
         h(Box, { key: "info", ...cx("bar") },
-            h(Text, cx("hint", dim && "dimmed"), agent === undefined ? " " : [
-                "agent: ",    h(Text, { key: "agent",  ...cx("bold") }, clean(agentLabel(agent))) ])),
+            h(Text, cx("hint", "truncate", dim && "dimmed"), agent === undefined ? " " : [
+                "agent: ",    h(Text, { key: "agent",  ...cx("bold") }, clean(agentLabel(agent))),
+                ...(agentOp.title !== "" ? [
+                    " · operation: ", h(Text, { key: "op", ...cx("bold") }, agentOp.title) ] : []) ])),
         h(Box, { key: "keys1", ...cx("bar") },
             h(Text, cx("hint", dim && "dimmed"),
                 "↑/↓/Left-Click: select agent · ⇈/⇊/⇤/⇥: page/top/bottom agent log · Mouse-Wheel: scroll agent log")),

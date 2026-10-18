@@ -59,6 +59,13 @@ export default {
             then stale "Effort" key), while a task not estimated is tagged, so it is not picked
             again and again  */
         phase: {
+            title:     "Estimate the effort of unestimated planned tasks",
+            description:
+                "Picks every PLANNED task without a valid Effort: key, with a non-empty plan, and which is " +
+                "no explicit epic, without claiming it (so its status and its assignee stay untouched). " +
+                "Estimates its effort as a T-shirt size via the ase-task-estimate skill, which stores just " +
+                "its Effort: key, and tags it only if it is still unestimated afterwards, so it is not " +
+                "picked again.",
             type:      "phase",
             unclaimed: true,
             workdir:   "project",
@@ -87,6 +94,12 @@ export default {
             estimation, as the hook "success" alone also passes on the old, still valid
             effort estimation left untouched by a failed re-estimation  */
         request: {
+            title:     "Re-estimate the effort of tasks on request",
+            description:
+                "Claims every task with a pending estimate request (requested with key R on the task " +
+                "boards) in any unfinished status. Re-estimates its effort as a T-shirt size via the " +
+                "ase-task-estimate skill, even if it already carries a valid Effort: key (ignoring the " +
+                "prompt of the request), restores its previous assignee, and removes the request on success.",
             type:      "request",
             workdir:   "project",
             request:   { name: "estimate", done: "estimated" },

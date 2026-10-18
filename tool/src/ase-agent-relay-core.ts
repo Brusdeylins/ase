@@ -37,16 +37,20 @@ export type AgentUsages = { total: AgentUsage, last: AgentUsage } | null
 export type AgentFlow = { input: string[], activity?: string, output: string[], gate?: string }
 
 /*  the presence of an agent as announced by itself: its kind, name, and mode of
-    operation (e.g. "draft", or empty), the name of the requests it processes (of a
+    operation (e.g. "draft", or empty), the one-line title and the brief description
+    of its operation (of its definition, if any, else absent), the name of the requests it processes (of a
     request agent of a definition, else absent), whether the prompts of these requests are
     optional or ignored (so they may be requested with an empty prompt, else absent), the lifecycle
     states it operates on (of a phase agent, else absent), its host and
-    process id, its start time (in ms since the epoch, by the clock of the agent), its state,
+    process id, its working directory and user name and id (absent for an older agent, with
+    an unknown user id as -1), its start time (in ms since the epoch, by the clock of the agent), its state,
     the ids of the tasks it is busy with, its usage of the agent tool, and its processing log
     lines added since its previous announcement (a delta only)  */
 export type AgentAnnounce = {
-    kind: string, name: string, mode: string, request?: string, prompt?: Exclude<AgentPrompt, "required">, states?: AgentFlow,
-    host: string, pid: number, started: number, state: AgentState, tasks: string[], usage: AgentUsages, lines: AgentLine[]
+    kind: string, name: string, mode: string, title?: string, description?: string,
+    request?: string, prompt?: Exclude<AgentPrompt, "required">, states?: AgentFlow,
+    host: string, pid: number, cwd?: string, user?: string, uid?: number,
+    started: number, state: AgentState, tasks: string[], usage: AgentUsages, lines: AgentLine[]
 }
 
 /*  the presence of an agent as held by the relay: the announced one (without its
@@ -124,10 +128,15 @@ const announceEntries = {
     kind:       v.pipe(text(64), v.minLength(1)),
     name:       v.pipe(text(64), v.minLength(1)),
     mode:       v.optional(text(64), ""),
+    title:      v.optional(text(80)),
+    description: v.optional(text(600)),
     request:    v.optional(text(64)),
     prompt:     v.optional(v.picklist([ "optional", "ignored" ])),
     host:       text(255),
     pid:        v.pipe(v.number(), v.integer(), v.minValue(0)),
+    cwd:        v.optional(text(4096)),
+    user:       v.optional(text(255)),
+    uid:        v.optional(v.pipe(v.number(), v.integer(), v.minValue(-1))),
     state:      v.picklist([ "waiting", "busy" ]),
     tasks:      v.pipe(v.array(v.pipe(text(255), v.regex(TaskFormat.TASK_ID_RE))), v.maxLength(64))
 }

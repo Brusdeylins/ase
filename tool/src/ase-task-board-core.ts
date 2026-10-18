@@ -848,7 +848,8 @@ export const watchAgents = (log: Log, relay: string | undefined, onChange: (stat
 }
 
 /*  a duration (in ms) in its coarsest unit, the label of an agent (its name, with its
-    differing kind), its uptime (the duration since its start, measured up to its latest
+    differing kind), its user (its user id with its user name, resp. "n/a" for an
+    older agent), its uptime (the duration since its start, measured up to its latest
     heartbeat), and its plain-text status (its uptime, its tasks, else "none" with its
     state, its total and last usage of the agent tool, and its host and process id)  */
 export const agentDuration = (ms: number): string => {
@@ -857,6 +858,9 @@ export const agentDuration = (ms: number): string => {
 }
 export const agentLabel = (agent: AgentPresence): string =>
     agent.name !== agent.kind ? `${agent.name} (${agent.kind})` : agent.name
+export const agentUser = (agent: AgentPresence): string =>
+    agent.user === undefined ? "n/a" :
+        `${agent.uid !== undefined && agent.uid >= 0 ? agent.uid : "n/a"} (${agent.user !== "" ? agent.user : "unknown"})`
 export const agentUptime = (agent: AgentPresence): string =>
     agentDuration(agent.beat - agent.started)
 export const agentStatus = (agent: AgentPresence): string =>

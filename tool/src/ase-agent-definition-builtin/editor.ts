@@ -30,6 +30,13 @@ export default {
             where the processing succeeded only if the plan content changed since the
             claim and the skill reported no error  */
         edit: {
+            title:     "Edit task plans by the prompts of edit requests",
+            description:
+                "Claims every task with a pending edit request (requested with key E on the task boards) " +
+                "in any task lifecycle model and in any status except an activity one. Edits its plan by " +
+                "the prompt of the request via the ase-task-edit skill (grounded in the Source: of the " +
+                "task), restores its previous assignee, and removes the request if the plan was changed, " +
+                "else marks the request as failed.",
             type:      "request",
             workdir:   "source",
             request:   { name: "edit", done: "edited" },

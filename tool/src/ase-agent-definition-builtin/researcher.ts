@@ -32,6 +32,13 @@ export default {
             one researches the task plan itself), and where the processing succeeded only if the
             research attachment was created or changed and the skill reported the attached research  */
         research: {
+            title:     "Research topics for tasks on request",
+            description:
+                "Claims every task with a pending research request (requested with key R on the task " +
+                "boards) in any status except an activity one. Researches the topic of the prompt (or, " +
+                "without a prompt, the task plan itself) on the Web and in the source artifacts via the " +
+                "ase-task-research skill, appends the report to its research attachment, refines its plan " +
+                "by the recommendations, and restores its previous assignee.",
             type:      "request",
             workdir:   "source",
             request:   { name: "research", done: "researched" },

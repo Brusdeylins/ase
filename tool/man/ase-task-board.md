@@ -303,11 +303,19 @@ waiting), and the fields `kind:` and `mode:` of its operation (or
 `none` without a mode), and `task:` with the ids of the tasks it is busy
 with (else `none (waiting)`).
 
-Three equally wide framed panes on the right show the selected agent:
-`Location` with its `host:` and process id `pid:`, `Runtime` with
-`uptime:`, the duration since its start, and `heartbeat:`, the age of
-its latest heartbeat, and `Usage` with `total:`
-resp. `last:`, its usage of the agent tool in total since its start
+The framed pane `Operation` on the right shows the operation of the
+selected agent: its one-line title (in bold) and its brief description
+(word-wrapped and cut after six lines), as given by its definition (see
+`--title` and `--description` in `ase-agent-adhoc`(1)).
+
+Two equally wide framed panes below it show the selected agent:
+`Process` with its `host:`, its process id `pid:`, its user id and user
+name `uid:` (e.g. `501 (rse)`), and its current working directory `cwd:` (cut at its
+start if too long), where `uid:` and `cwd:` are `n/a` for an older agent
+not reporting them, and `Accounting` with `uptime:`, the duration since its
+start, `heartbeat:`, the age of its latest heartbeat, and `usage
+(total):` resp. `usage (last job):`, its usage of the agent tool in
+total since its start
 resp. by its last finished job, each as wall time, output tokens, and
 costs in USD (e.g. `12m, 9.2k tok, $3.41`, with `n/a` for what the agent
 tool does not report, and `none` before the first finished job).
@@ -320,7 +328,8 @@ instead of being cut. The detail view follows the bottom of the log
 while not scrolled up. When the selected agent vanishes, its neighbor
 is selected instead.
 
-The information line shows the selected agent. Without an agent relay,
+The information line shows the selected agent and the title of its
+operation (if any). Without an agent relay,
 the agent logs view is skipped.
 
 An agent stopping vanishes from the board immediately, while an agent
