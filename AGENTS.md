@@ -118,7 +118,9 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             definition model (options, YAML, TypeScript, JavaScript, and
             built-in definition loading, discovery of the definition kinds,
             hooks, validation, and templates), and
-            `agent-definition-builtin/{rebooter,condenser,implementer,approver,integrator,editor,estimator,researcher}`
+            the directory
+            `tool/src/ase-agent-definition-builtin/` with the files
+            `{rebooter,condenser,implementer,approver,integrator,editor,estimator,researcher}.ts`
             for the declarative definitions of the modes of the built-in
             agents
         -   `agent-process` for the `ase agent <kind> start|status|log|stop`
