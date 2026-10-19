@@ -8,7 +8,7 @@
 
     Each entry pairs one core USP of ASE with the commands showcasing it and
     with one or more screenshots of the result. The screenshots live as
-    `public/assets/usp-*.png` and are laid out by `Section-USP.astro` in a grid of
+    `public/assets/usp-*.png` and are laid out by `Widget-USP-Row.astro` in a grid of
     `cols` columns, so `cols: 2` with four screenshots yields a 2x2 matrix
     (filled row by row), while a `wide` screenshot spans a whole row
     on its own. A screenshot not yet present is rendered as a

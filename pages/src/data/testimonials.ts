@@ -15,8 +15,8 @@
 
     The `Section-Testimonials.astro` component rotates the entries one at a
     time, so the order below is also the rotation order on the page. The
-    `quote` is rendered as plain text (no markup), wrapped in typographic
-    quotation marks by the component itself.  */
+    `quote` is rendered as plain text (no markup), led by a typographic
+    opening quotation mark from the component itself.  */
 
 export type Testimonial = {
     quote: string   /*  the endorsement itself, as plain text            */

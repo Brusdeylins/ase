@@ -33,7 +33,7 @@ import { manPages, manGroups } from "../data/manpages.ts"
     `node:path` style already used by the Astro config.  */
 const skillsDir = path.resolve(process.cwd(), "..", "plugin", "skills")
 
-/*  assemble a map of skill-id -> { id, title, html } by reading and rendering
+/*  assemble a map of skill-id -> { id, name, title, html } by reading and rendering
     each skill's `help.md`. The content is trusted, build-time, in-repo
     material, so it is rendered without an HTML sanitizer.  */
 interface HelpDoc {
@@ -197,7 +197,7 @@ orderedDocs.push(...cliDocs)
     pane into a "searching" mode, in which the sidebar is reduced to the
     matching skills and the pane stacks all their man-pages at once, with every
     keyword hit wrapped in a <mark>. Which man-page is shown is routed through
-    the URL fragment "#help/<skill-id>", so it survives sharing, bookmarking,
+    the URL fragment "#help/<page-id>", so it survives sharing, bookmarking,
     and the back button. This script is bundled (not `is:inline`), so it can
     import the fuzzy-matching helpers from NPM. */}
 <script>
@@ -547,7 +547,7 @@ orderedDocs.push(...cliDocs)
             while closing the modal restores the page title and strips the
             fragment again -- via "replaceState", so a mere dismissal adds no
             history entry (the same idiom the back-to-top button already uses
-            in `Progress.astro`). The final apply picks up a deep link (or a
+            in `Feature-Progress.astro`). The final apply picks up a deep link (or a
             reload) once the DOM is in place.  */
         const pageTitle = document.title
         window.addEventListener("popstate",   () => { apply(location.hash) })

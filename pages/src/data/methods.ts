@@ -6,7 +6,7 @@
 
 /*  methodology provenance: the classic, well-known reasoning and engineering
     methods ASE bakes into its skills, each mapped onto the very skill that
-    implements it. `Methodology-Strip.astro` renders this list as a strip of
+    implements it. `Widget-Methodology-Strip.astro` renders this list as a strip of
     chips whose `data-help-id` opens the man-page of the mapped skill in the
     shared help modal, exactly like the skill catalog entries do.
 

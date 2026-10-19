@@ -17,7 +17,7 @@
 
     Each entry also carries the Lucide icon `Widget-Video-Row.astro` renders
     in front of the headline. Where the showcased skill has an icon elsewhere on
-    the page -- in the methodology strip or the "Day in the Life" timeline --
+    the page -- in the methodology strip --
     the very same icon is reused, so one skill reads as one symbol throughout.  */
 
 import type { AstroComponent } from "@lucide/astro"

@@ -53,8 +53,8 @@ const { id, label = "Dialog" } = Astro.props
             return getComputedStyle(modal).display !== "none"
         }
         const lockScroll = function (lock) {
-            /*  the document scrolls on <html> (because `overflow-x: hidden`
-                on it makes the vertical axis compute to `auto`), so the lock
+            /*  the viewport takes its overflow from <html> (and not from
+                <body>, as <html> carries an `overflow-x: clip`), so the lock
                 must target the document element, not just <body>.  */
             document.documentElement.style.overflow = lock ? "hidden" : ""
             document.body.style.overflow            = lock ? "hidden" : ""

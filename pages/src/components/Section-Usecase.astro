@@ -62,9 +62,8 @@ const inline = (text: string) => text
                          alternate their side, so the washes stay sparse  */}
                     {index % 2 === 0
                         && <GlowSide variant="section" side={(index / 2) % 2 === 0 ? "right" : "left"}/>}
-                    {/*  the narrative column is given a bit more room than in
-                         the session timeline, at the expense of the terminal
-                         column, whose commands wrap anyway  */}
+                    {/*  the narrative column is given a bit more room than the
+                         terminal column, whose commands wrap anyway  */}
                     <div class="grid grid-cols-1 items-start gap-y-2 lg:grid-cols-[2.0rem_0.9fr_0.85fr] lg:gap-x-10" data-reveal>
                         <div class="self-start">
                             <span class="relative z-10 flex h-[2.5rem] w-[2.5rem] items-center justify-center rounded-full border border-border-strong bg-brand-800 font-bold text-white">

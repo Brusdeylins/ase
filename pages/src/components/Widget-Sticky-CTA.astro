@@ -10,7 +10,7 @@
     carrying the install command, a copy button (wired globally by the
     Clipboard-Copy component in BaseLayout), a shortcut to the Setup page, and
     a dismiss button; its visibility is driven by the shared scroll logic in
-    Progress.astro, which must also be on the page. The "block" is the same
+    Feature-Progress.astro, which must also be on the page. The "block" is the same
     call stacked -- brand label, command, buttons -- for places where the width
     of a single line is not available, such as the footer, and hence carries
     neither frame nor background of its own.  */
@@ -119,7 +119,7 @@ const steps = command.split(/\s*&&\s*/)
 }
 
 {/*  dismiss: drop the bar for the current page view only — no storage, so a
-     reload brings it back. The Progress.astro scroll logic notices the
+     reload brings it back. The Feature-Progress.astro scroll logic notices the
      detached node and drops its own reference to it.  */}
 <script is:inline>
     (function () {
