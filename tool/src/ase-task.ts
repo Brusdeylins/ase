@@ -1093,6 +1093,20 @@ export default class TaskCommand {
                 }
             })
 
+        /*  register the further CLI sub-commands  */
+        this.registerRequestCommands(task)
+        this.registerPlanCommands(task)
+        this.registerProjectCommands(task)
+
+        /*  register CLI sub-command group "ase task store"  */
+        new TaskStoreCommand(this.log).register(task)
+
+        /*  provide "ase task" command for further sub-commands  */
+        return task
+    }
+
+    /*  register the CLI sub-commands requesting and assigning a task  */
+    private registerRequestCommands (task: Command): void {
         /*  register CLI sub-command "ase task request"  */
         task
             .command("request")
@@ -1151,7 +1165,10 @@ export default class TaskCommand {
                 }
                 process.exit(0)
             })
+    }
 
+    /*  register the CLI sub-commands loading, viewing, editing, saving, deleting, and renaming a task  */
+    private registerPlanCommands (task: Command): void {
         /*  register CLI sub-command "ase task load"  */
         task
             .command("load")
@@ -1239,7 +1256,10 @@ export default class TaskCommand {
                     this.log.write("info", `task: no task "${oldId}" to rename`)
                 process.exit(result !== null ? 0 : 1)
             })
+    }
 
+    /*  register the CLI sub-commands of the task ids, the purging, and the project settings  */
+    private registerProjectCommands (task: Command): void {
         /*  register CLI sub-command "ase task newid"  */
         task
             .command("newid")
@@ -1310,12 +1330,6 @@ export default class TaskCommand {
                     process.exit(0)
                 }
             })
-
-        /*  register CLI sub-command group "ase task store"  */
-        new TaskStoreCommand(this.log).register(task)
-
-        /*  provide "ase task" command for further sub-commands  */
-        return task
     }
 }
 
@@ -1399,6 +1413,17 @@ export class TaskMCP {
             }
         })
 
+        /*  register the further MCP tools  */
+        this.registerLoadTool(mcp)
+        this.registerSaveTool(mcp)
+        this.registerPlanTools(mcp)
+        this.registerStatusTools(mcp)
+        this.registerAssignTool(mcp)
+        this.registerIdTools(mcp)
+    }
+
+    /*  register the MCP tool loading a task plan  */
+    private registerLoadTool (mcp: McpServer): void {
         /*  task load  */
         mcp.registerTool("ase_task_load", {
             title: "ASE task load",
@@ -1455,7 +1480,10 @@ export class TaskMCP {
                 return mcpError(err)
             }
         })
+    }
 
+    /*  register the MCP tool saving a task plan  */
+    private registerSaveTool (mcp: McpServer): void {
         /*  task save  */
         mcp.registerTool("ase_task_save", {
             title: "ASE task save",
@@ -1534,7 +1562,10 @@ export class TaskMCP {
                 return mcpError(err)
             }
         })
+    }
 
+    /*  register the MCP tools reading an attachment of, deleting, and renaming a task plan  */
+    private registerPlanTools (mcp: McpServer): void {
         /*  task attachment  */
         mcp.registerTool("ase_task_attachment", {
             title: "ASE task attachment",
@@ -1614,7 +1645,10 @@ export class TaskMCP {
                 return mcpError(err)
             }
         })
+    }
 
+    /*  register the MCP tools getting/setting the status of and requesting the processing of a task plan  */
+    private registerStatusTools (mcp: McpServer): void {
         /*  task status get/set  */
         mcp.registerTool("ase_task_status", {
             title: "ASE task status get/set",
@@ -1675,7 +1709,10 @@ export class TaskMCP {
                 return mcpError(err)
             }
         })
+    }
 
+    /*  register the MCP tool assigning a task plan (with AI usage accounting)  */
+    private registerAssignTool (mcp: McpServer): void {
         /*  task assignment (with AI usage accounting)  */
         mcp.registerTool("ase_task_assign", {
             title: "ASE task assignment",
@@ -1724,7 +1761,10 @@ export class TaskMCP {
                 return mcpError(err)
             }
         })
+    }
 
+    /*  register the MCP tools generating task ids and getting/setting the active task id  */
+    private registerIdTools (mcp: McpServer): void {
         /*  task id generation  */
         mcp.registerTool("ase_task_newid", {
             title: "ASE task id generation",
