@@ -4,7 +4,8 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-/*  Record the <TypingDemo/> capture composition as an animated GIF.
+/*  Record the <TypingDemo/> capture composition as an animated GIF and an
+    MP4 video. Requirements:
     - a prior "npm start build" (or this script runs it on demand)
     - playwright installed (npm i -D playwright && npx playwright install chromium)
     - ffmpeg available on PATH  */
@@ -134,8 +135,8 @@ try {
     const context = await browser.newContext({
         viewport:          { width, height },
         deviceScaleFactor: 2,
-        /*  the video size MUST match the viewport (see note above); a
-            higher deviceScaleFactor yields a crisper recording without
+        /*  the video size MUST match the viewport; a higher
+            deviceScaleFactor yields a crisper recording without
             changing the captured layout.  */
         recordVideo:       { dir: tmpDir, size: { width, height } }
     })

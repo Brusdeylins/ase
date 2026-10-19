@@ -6,7 +6,7 @@
 
 /*  central site configuration for the ASE website.
     Mirrors the spirit of Astro Rocket's `site.config.ts`, trimmed to the
-    handful of values a single static landing page actually needs.  */
+    handful of values the static multi-page site actually needs.  */
 export const site = {
     name:        "ASE",
     title:       "Agentic Software Engineering (ASE)",

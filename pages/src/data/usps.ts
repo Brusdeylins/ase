@@ -60,7 +60,7 @@ export const usps: USP[] = [
         ],
         prefix:   "Claude Code",
         commands: [
-            "**/ase-code-edit** **--grill** new \"ase hello\" CLI command which prints \"Hello World!\n\" in red to the terminal",
+            "**/ase-code-edit** **--grill** new \"ase hello\" CLI command which prints \"Hello World!\\n\" in red to the terminal"
         ],
         cols:     1,
         shots: [

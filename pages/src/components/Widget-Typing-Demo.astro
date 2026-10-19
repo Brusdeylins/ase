@@ -118,7 +118,7 @@ const { count = 0 } = Astro.props
 
         /*  follow the caret: when a command outgrows the fixed body height
             on mobile, pin the scroll to the bottom on every typed change.  */
-        const body = target.parentElement
+        const body = target.parentElement?.parentElement
         if (body)
             new MutationObserver(() => { body.scrollTop = body.scrollHeight })
                 .observe(target, { childList: true, subtree: true, characterData: true })

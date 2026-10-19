@@ -23,8 +23,9 @@ const H       = 220  /*  overall height                    */
 const notch   = 8    /*  depth of the two bottom V-notches */
 const peak    = 16   /*  height of the centre "W" peak     */
 
-/*  bottom edge, left-to-right: down the left side, a V-notch up to the centre
-    peak, a second V-notch, then up the right side. Straight vertical sides and
+/*  clockwise outline: across the top, down the right side, then along the
+    bottom edge right-to-left up to the centre peak and down again (via the
+    notch points), before closing up the left side. Straight vertical sides and
     a flat top keep the outer silhouette reading as a clean "W".  */
 const path = [
     "M 0 0",                       /*  top-left                          */

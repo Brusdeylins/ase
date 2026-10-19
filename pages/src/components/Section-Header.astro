@@ -184,7 +184,7 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
             const here = location.pathname.replace(/\/*$/, "/")
 
             /*  the section scrolled to: the last one whose top edge has
-                entered the upper fifth of the viewport. The mark sits well
+                passed the mark 200px below the viewport top. The mark sits well
                 below the fixed header, so a section jumped to by its fragment
                 -- which lands at the `scroll-padding-top` of 5rem, plus its
                 own top margin -- counts as entered right away.  */
