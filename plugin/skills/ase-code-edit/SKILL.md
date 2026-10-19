@@ -137,10 +137,11 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
         ⧉ **ASE**: ✪ skill: **ase-code-edit**, ⇌ issue: **<issue-id/>**, ▶ status: **issue retrieved**
         </template>
 
-        Otherwise, set <issue-id></issue-id> (empty) and only output the
-        following <template/>, then, under `--loop`, continue with the
-        *next* iteration at item 3.1 above, or, without `--loop`,
-        immediately *STOP* processing the entire current skill:
+        Otherwise, only output the following <template/>, then set
+        <issue-id></issue-id> and <query></query> (both empty, so the
+        next iteration asks for a fresh query), and then, under `--loop`,
+        continue with the *next* iteration at item 3.1 above, or, without
+        `--loop`, immediately *STOP* processing the entire current skill:
 
         <template>
         ⧉ **ASE**: ✪ skill: **ase-code-edit**, ▶ ERROR: no analyzer result exists for issue **<query/>**
