@@ -278,7 +278,7 @@ export class BoardState {
         })
     }
 
-    /*  set the shown view (lanes, graph, stats, or agents)  */
+    /*  set the shown view (lanes, graph, stats, agents, or flow)  */
     static setView (surface: "tui" | "web", view: SurfaceView): Promise<State> {
         return BoardState.update((state) => {
             state[surface].view = view

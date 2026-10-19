@@ -124,9 +124,9 @@ const token = (number: number, letter: string): RegExp =>
 /*  insert the number "n" of a clicked question or the short response "nX" of a
     clicked answer into a prompt. Answer: an existing "nY" is replaced in place
     (and a bare "n" removed), else a bare "n" is replaced in place, else "nX" is
-    appended. Question: an existing bare "n" is kept, else the bare number of
-    another question (there is at most one selected question) is replaced in
-    place, else "n" is appended.  */
+    appended. Question: an existing bare "n" is kept, else the last bare number
+    of another question (the selected one) is replaced in place, else "n" is
+    appended.  */
 const insert = (text: string, number: number, letter?: string): string => {
     const bare  = token(number, "")
     const picks = token(number, "[a-zA-Z]")

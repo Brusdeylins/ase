@@ -152,7 +152,7 @@ const visibleWidth = (line: string): number => {
     return visible
 }
 
-/*  reusable functionality: Mermaid diagram rendering as Unicode/ASCII art  */
+/*  reusable functionality: Mermaid and D2 diagram rendering as Unicode/ASCII art or SVG  */
 export class Diagram {
     static detectTermDimension (envVar: string, stdoutProp: "columns" | "rows"): number {
         let value = 0

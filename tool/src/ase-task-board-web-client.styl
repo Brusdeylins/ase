@@ -192,7 +192,7 @@ header
             &:hover
                 color: var(--c-signal)
 
-        /*  the disabled filter field of the agents view (which is not filtered), dimmed  */
+        /*  the disabled filter field of the agents view and the agent graph view (which are not filtered), dimmed  */
         &.off
             opacity: 0.4
             input
@@ -628,7 +628,7 @@ header
     .amaster
         flex: 0 0 260px
 
-    /*  the right side: the pane of the operation and the three equally wide panes of the selected agent above its log  */
+    /*  the right side: the pane of the operation and the two equally wide panes of the selected agent above its log  */
     .aright
         flex: 1
         min-width: 0
@@ -658,7 +658,7 @@ header
                 background: var(--c-accent-fill)
                 color: var(--c-accent-strong)
 
-    /*  the pane of the operation of the selected agent (above the three panes): its
+    /*  the pane of the operation of the selected agent (above the two panes): its
         name (inverse, like on its card) and its title in bold (cut with an ellipsis)
         above its description, clamped to six lines of the latter  */
     .aop
