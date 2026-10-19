@@ -5,6 +5,11 @@ ChangeLog
 2.0.2 (2026-10-19)
 ------------------
 
+-   IMPROVEMENT [code]: `ase-task-implement` Runs to Completion and Reports Decisions
+    The skill no longer concludes while a plan point is unimplemented and decides undecided
+    details itself instead of asking. It closes with the boxed summaries `OPEN POINTS` and
+    `DECISIONS`, each omitted when empty.
+
 -   IMPROVEMENT [code]: Missing Argument Detection in Skills
     The skills `ase-code-analyze`, `ase-code-lint`, and `ase-meta-quorum` now detect missing
     arguments up front instead of proceeding with an empty query.
