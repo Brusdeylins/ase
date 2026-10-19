@@ -10,6 +10,7 @@
     (odd-indexed rows place the video first) to create the zig-zag rhythm.
     On narrow screens the columns stack and the USP always leads.  */
 
+import GlowSide     from "./Widget-Glow-Side.astro"
 import VideoEmbed   from "./Widget-Video-Embed.astro"
 import Terminal     from "./Widget-Terminal.astro"
 import type { Highlight } from "../data/previews.ts"
@@ -49,12 +50,7 @@ const Icon = usp.icon
         {/* blue radial glow behind the text block, bleeding off the viewport
             on the text's side of the row (left on normal rows, right on the
             reversed/zig-zag rows). */}
-        <div
-            class:list={[ "pointer-events-none absolute top-1/2 -z-10 h-[260%] w-[240%] -translate-y-1/2",
-                reversed ? "left-0 translate-x-[10%]" : "right-0 -translate-x-[10%]" ]}
-            style="background: radial-gradient(ellipse 70% 60% at center, color-mix(in oklch, var(--brand-500) 30%, transparent), transparent 80%);"
-            aria-hidden="true"
-        ></div>
+        <GlowSide variant="text" side={reversed ? "right" : "left"}/>
         <p class="ase-eyebrow">{usp.eyebrow}</p>
         {/*  "mt-1" centers the icon on the first line box of the headline,
              so a headline wrapping to several lines keeps it on top  */}

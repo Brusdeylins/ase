@@ -229,7 +229,8 @@ import Bot           from "@lucide/astro/icons/bot"
         </div>
 
         <div class="ase-grid-split">
-            <div class="lg:order-1 relative isolate" data-reveal="right">
+            <div class="lg:order-2 relative isolate" data-reveal="left">
+                <GlowSide variant="text" side="right"/>
                 <p class="ase-eyebrow">Autonomous Agents</p>
                 <h3 class="ase-h3 flex items-start gap-2">
                     <Bot class="mt-1 h-6 w-6 shrink-0 sm:h-7 sm:w-7" stroke-width={0.75}/>
@@ -254,12 +255,21 @@ import Bot           from "@lucide/astro/icons/bot"
                     the <b class="text-accent">estimator</b> estimates their effort,
                     and the <b class="text-accent">editor</b> processes the edit requests
                     of the task boards. A fleet supervises all agents, restarts every
-                    exited one, and passes their live presence to the task boards.
+                    exited one, and passes their live presence to the task boards,
+                    where the <b class="text-accent">agent-graph</b> view shows the
+                    agents along the lifecycle model and the <b class="text-accent">agent-logs</b>{" "}
+                    view shows their operations.
                 </p>
             </div>
-            <div class="lg:order-2 relative isolate" data-reveal="left">
-                <GlowSide variant="text" side="right"/>
+            <div class="lg:order-1" data-reveal="right">
+                <div class="grid grid-cols-2 gap-2">
+                    <Screenshot src="/assets/usp-task-board-wui-4.png" label="Web task board: agent graph view"/>
+                    <Screenshot src="/assets/usp-task-board-tui-4.png" label="Terminal task board: agent graph view"/>
+                    <Screenshot src="/assets/usp-task-board-wui-5.png" label="Web task board: agent logs view"/>
+                    <Screenshot src="/assets/usp-task-board-tui-5.png" label="Terminal task board: agent logs view"/>
+                </div>
                 <Terminal
+                    class="mt-5"
                     prefix="Shell"
                     helpPage={Astro.url.pathname}
                     commands={[
@@ -272,7 +282,7 @@ import Bot           from "@lucide/astro/icons/bot"
         </div>
     </div>
 
-    <header id="specification-workflows" class="mt-16 ase-section-head" data-reveal>
+    <header id="specification-workflows" class="mt-24 ase-section-head" data-reveal>
         <GlowSide variant="text" side="left" />
         <h2 class="ase-h2">
             <Annotation flat class="hidden sm:block right-0 -translate-x-1/2">

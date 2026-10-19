@@ -22,6 +22,7 @@
 import type { AstroComponent } from "@lucide/astro"
 import MessageCircleQuestion   from "@lucide/astro/icons/message-circle-question-mark"
 import SquareKanban            from "@lucide/astro/icons/square-kanban"
+import Bot                     from "@lucide/astro/icons/bot"
 import BookCheck               from "@lucide/astro/icons/book-check"
 import Microscope              from "@lucide/astro/icons/microscope"
 import VenetianMask            from "@lucide/astro/icons/venetian-mask"
@@ -91,6 +92,35 @@ export const usps: USP[] = [
             { src: "/assets/usp-task-board-tui-2.png", label: "Terminal task board: graph view" },
             { src: "/assets/usp-task-board-wui-3.png", label: "Web task board: stats view"      },
             { src: "/assets/usp-task-board-tui-3.png", label: "Terminal task board: stats view" }
+        ]
+    },
+    {
+        id:       "usp-agents",
+        icon:     Bot,
+        eyebrow:  "Autonomous Agents",
+        title:    "Run an agentic development pipeline",
+        body:     [
+            "Let a fleet of autonomous agents drive the tasks of the <b>enterprise</b> lifecycle model headless " +
+            "from the planned to the integrated state, each one running in its own process: the <b>implementer</b> " +
+            "implements the planned tasks into their change sets, the <b>qualifier</b> reviews and judges them, " +
+            "and the <b>integrator</b> lands them into their targets. Meanwhile, the <b>researcher</b>, <b>rebooter</b>, " +
+            "<b>condenser</b>, <b>estimator</b>, and <b>editor</b> agents support you in planning the tasks. " +
+            "Supervise this agentic development pipeline live on the task board, through the agent <b>graph</b> " +
+            "along the task lifecycle model and the agent <b>logs</b> of their operations."
+        ],
+        prefix:   "Shell",
+        commands: [
+            "**ase agent fleet init**",
+            "**ase agent fleet start**",
+            "**ase task board** **--web**",
+            "**ase task board**"
+        ],
+        cols:     2,
+        shots: [
+            { src: "/assets/usp-task-board-wui-4.png", label: "Web task board: agent graph view"      },
+            { src: "/assets/usp-task-board-tui-4.png", label: "Terminal task board: agent graph view" },
+            { src: "/assets/usp-task-board-wui-5.png", label: "Web task board: agent logs view"       },
+            { src: "/assets/usp-task-board-tui-5.png", label: "Terminal task board: agent logs view"  }
         ]
     },
     {

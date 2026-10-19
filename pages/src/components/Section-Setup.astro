@@ -7,7 +7,9 @@
 
 /*  "Setup" section: prerequisites prose plus terminal-style boxes with the
     install / update / uninstall commands (each row has a "❯" prompt and a copy
-    button wired by the Clipboard-Copy component in BaseLayout).  */
+    button wired by the Clipboard-Copy component in BaseLayout), followed by
+    the optional statusline and foreign MCP services, and the table of all
+    configuration parameters.  */
 
 import GlowSide   from "./Widget-Glow-Side.astro"
 import Terminal   from "./Widget-Terminal.astro"
@@ -406,12 +408,9 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                             { label: "Copilot", commands: [
                                 "**ase** setup statusline activate --tool copilot"
                             ] },
-                            { label: "Codex", commands: [
-                                "**ase** setup statusline activate --tool codex"
-                            ] },
                             { label: "Generic", commands: [
                                 "**ase** setup statusline activate\n" +
-                                "**[**--tool claude**|**copilot**|**codex**]**\n" +
+                                "**[**--tool claude**|**copilot**]**\n" +
                                 "**[**--scope user**|**project**|**local**]**\n" +
                                 "**[**--width **<n>****]** **[**--margin **<n>****]**\n" +
                                 "**[**--padding **<n>****]**\n" +
@@ -434,12 +433,9 @@ const configParams: Array<{ name: string, value: string, scopes: string, desc: s
                             { label: "Copilot", commands: [
                                 "**ase** setup statusline deactivate --tool copilot"
                             ] },
-                            { label: "Codex", commands: [
-                                "**ase** setup statusline deactivate --tool codex"
-                            ] },
                             { label: "Generic", commands: [
                                 "**ase** setup statusline deactivate\n" +
-                                "**[**--tool claude**|**copilot**|**codex**]\n" +
+                                "**[**--tool claude**|**copilot**]\n" +
                                 "[**--scope user**|**project**|**local**]**"
                             ] }
                         ]}
