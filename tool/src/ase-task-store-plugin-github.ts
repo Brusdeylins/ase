@@ -560,11 +560,7 @@ class GitHubTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> im
         own write or detected change of the issue), as e.g. the boards load the plan
         and its attachments in separate operations  */
     private load (prjId: string, loc: Repo, n: number): Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null> {
-        const key    = `${prjId}#${n}`
-        const cached = this.loads.get(key)
-        if (cached !== undefined)
-            return cached
-        const load = (async () => {
+        return TaskIssues.memoize(this.loads, `${prjId}#${n}`, async () => {
             const [ issue, comments ] = await Promise.all([
                 this.fetch(loc, n),
                 n === 0 ? [] : found(this.gh.paginate(this.gh.rest.issues.listComments,
@@ -573,12 +569,7 @@ class GitHubTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> im
             if (issue === null)
                 return null
             return { issue, after: await this.blockers(loc, issue), comments: comments ?? [] }
-        })()
-        this.loads.set(key, load)
-        load.catch(() => {
-            this.loads.delete(key)
         })
-        return load
     }
 
     /*  ==== task plans ====  */

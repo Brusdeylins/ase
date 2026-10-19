@@ -322,14 +322,8 @@ class GitLabTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<string> 
         const key = `${path}#${issue.iid}@${issue.updated_at}`
         if (fresh)
             this.linked.delete(key)
-        let links = this.linked.get(key)
-        if (links === undefined) {
-            links = this.links.all(path, issue.iid).then((data) => data as unknown as Link[])
-            this.linked.set(key, links)
-            links.catch(() => {
-                this.linked.delete(key)
-            })
-        }
+        const links = TaskIssues.memoize(this.linked, key, () =>
+            this.links.all(path, issue.iid).then((data) => data as unknown as Link[]))
         return (await links).filter((link) => link.link_type === "is_blocked_by" && link.project_id === issue.project_id)
     }
 
@@ -551,11 +545,7 @@ class GitLabTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<string> 
         own write or detected change of the issue), as e.g. the boards load the plan
         and its attachments in separate operations  */
     private load (prjId: string, path: string, n: number): Promise<{ issue: Issue, after: Link[], notes: Note[] } | null> {
-        const key    = `${prjId}#${n}`
-        const cached = this.loads.get(key)
-        if (cached !== undefined)
-            return cached
-        const load = (async () => {
+        return TaskIssues.memoize(this.loads, `${prjId}#${n}`, async () => {
             const [ issue, notes ] = await Promise.all([
                 this.fetch(path, n),
                 n === 0 ? [] : found(this.comments(path, n))
@@ -563,12 +553,7 @@ class GitLabTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<string> 
             if (issue === null)
                 return null
             return { issue, after: await this.blockers(path, issue), notes: notes ?? [] }
-        })()
-        this.loads.set(key, load)
-        load.catch(() => {
-            this.loads.delete(key)
         })
-        return load
     }
 
     /*  ==== task plans ====  */

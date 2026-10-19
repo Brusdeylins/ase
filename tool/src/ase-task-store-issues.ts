@@ -5,6 +5,7 @@
 */
 
 import { DateTime }        from "luxon"
+import type { LRUCache }   from "lru-cache"
 
 import type * as API       from "./ase-task-store-plugin-api.js"
 import * as TaskFormat     from "./ase-task-format.js"
@@ -285,6 +286,20 @@ export const attachmentSync = (current: API.TaskAttachment[], wanted: API.TaskAt
 /*  the change detection state of a project: the "since" timestamp and the (optional)
     entity tag of the last poll, and the last seen update time per issue number  */
 export type PollState = { since: string, etag?: string, seen: Map<number, string> }
+
+/*  reuse the cached promise of a load, else start the load and cache its promise
+    (dropped again on failure), so repeated and concurrent loads share one request  */
+export const memoize = <T>(cache: LRUCache<string, Promise<T>>, key: string, load: () => Promise<T>): Promise<T> => {
+    let promise = cache.get(key)
+    if (promise === undefined) {
+        promise = load()
+        cache.set(key, promise)
+        promise.catch(() => {
+            cache.delete(key)
+        })
+    }
+    return promise
+}
 
 /*  the common base of the issue tracker storage plugins: the projects mapped onto
     their locations, the storage lifecycle polling for changes while opened and

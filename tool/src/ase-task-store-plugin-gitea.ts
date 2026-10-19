@@ -339,16 +339,10 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
         const key = `${loc.owner}/${loc.repo}#${issue.number}@${issue.updated_at}`
         if (fresh)
             this.depends.delete(key)
-        let depends = this.depends.get(key)
-        if (depends === undefined) {
-            depends = found(this.all(loc, (query) =>
+        const depends = TaskIssues.memoize(this.depends, key, () =>
+            found(this.all(loc, (query) =>
                 this.gt.repos.issueListIssueDependencies(loc.owner, loc.repo, String(issue.number), query)))
-                .then((issues) => (issues ?? []) as Issue[])
-            this.depends.set(key, depends)
-            depends.catch(() => {
-                this.depends.delete(key)
-            })
-        }
+                .then((issues) => (issues ?? []) as Issue[]))
         return (await depends).filter((blocker) => inRepo(loc, blocker))
     }
 
@@ -472,15 +466,9 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
         if (typeof assignee === "string" && assignee !== "") {
             const logins = issue?.assignees?.map((user) => user.login) ?? []
             const key    = `${loc.owner}/${loc.repo}`
-            let users    = this.assignable.get(key)
-            if (users === undefined) {
-                users = this.call(loc, this.gt.repos.repoGetAssignees(loc.owner, loc.repo))
-                    .then((list) => new Set(list.map((user) => (user.login ?? "").toLowerCase())))
-                this.assignable.set(key, users)
-                users.catch(() => {
-                    this.assignable.delete(key)
-                })
-            }
+            const users  = TaskIssues.memoize(this.assignable, key, () =>
+                this.call(loc, this.gt.repos.repoGetAssignees(loc.owner, loc.repo))
+                    .then((list) => new Set(list.map((user) => (user.login ?? "").toLowerCase()))))
             if (logins.includes(assignee))
                 assignees = logins
             else if ((await users).has(assignee.toLowerCase()))
@@ -542,11 +530,7 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
         own write or detected change of the issue), as e.g. the boards load the plan
         and its attachments in separate operations  */
     private load (prjId: string, loc: Repo, n: number): Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null> {
-        const key    = `${prjId}#${n}`
-        const cached = this.loads.get(key)
-        if (cached !== undefined)
-            return cached
-        const load = (async () => {
+        return TaskIssues.memoize(this.loads, `${prjId}#${n}`, async () => {
             const [ issue, comments ] = await Promise.all([
                 this.fetch(loc, n),
                 n === 0 ? [] : found(this.comments(loc, n))
@@ -554,12 +538,7 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
             if (issue === null)
                 return null
             return { issue, after: await this.blockers(loc, issue), comments: comments ?? [] }
-        })()
-        this.loads.set(key, load)
-        load.catch(() => {
-            this.loads.delete(key)
         })
-        return load
     }
 
     /*  ==== task plans ====  */
