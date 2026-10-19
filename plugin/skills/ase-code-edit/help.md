@@ -65,7 +65,7 @@ information.
     should be clarified), `IMPLEMENTATION` (inner technical details,
     can be clarified), `REGRESSION` (what must not break, should be
     clarified), or `CONFIRMATION` (what proves the specified behavior,
-    should be clarified) -- and a 1-2 word `TOPIC` hint. The questions
+    should be clarified) -- and a 1-3 word `TOPIC` hint. The questions
     of a round are sorted by descending focus area importance
     (`DOMAIN`, `INTERFACE`, `ARCHITECTURE`, `IMPLEMENTATION`,
     `REGRESSION`, `CONFIRMATION`). Questions of focus area
