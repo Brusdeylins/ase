@@ -13,11 +13,10 @@
 
 The `ase-help-skill` skill renders the *manual page* (`help.md`) of the
 ASE skill addressed by *skill-name*. The page is emitted verbatim,
-framed between a `( HELP )` header and footer rule.
+framed between a `MANUAL PAGE` header and footer rule.
 
 The *skill-name* is resolved against a *catalog* of all ASE skills --
-one `name: purpose` entry per skill, generated into
-`skills/ase-help-skill/data.md` by `npm start build` in `plugin/`.
+one `name: purpose` entry per skill, grouped by skill category.
 Before resolving, any leading `/` and `ase:` prefix is stripped, so
 `ase-code-lint`, `/ase-code-lint`, and `ase:ase-code-lint` are
 equivalent. Resolution then proceeds in three tiers, each tried only if
@@ -35,7 +34,7 @@ most nine answer lines, a broader abbreviation such as `task` shows the
 first nine candidates and states how many exist in total.
 
 If *skill-name* is omitted, the whole catalog is rendered as a
-browsable `Skill`/`Purpose` table instead.
+browsable list, grouped by skill category, instead.
 
 The skill exposes *no* option flags beyond `--help`/`-h`.
 

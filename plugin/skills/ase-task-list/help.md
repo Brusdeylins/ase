@@ -68,8 +68,8 @@ DEFERRED     INTEGRATING INTEGRATED CANCELLED
 -   `--include`|`-i`=*state*[`,`...]:
     Restrict the listed task plans to the given comma-separated list of
     lifecycle states (e.g. `IMPLEMENTING,STALLED`). Without this option,
-    all states are listed. The `none` sentinel selects no state at all,
-    the `finished` sentinel selects the finished states.
+    all states are listed. The `none` sentinel (the default) imposes no
+    restriction, the `finished` sentinel selects the finished states.
 
 -   `--exclude`|`-e`=*state*[`,`...]:
     Remove the given comma-separated list of lifecycle states from the
