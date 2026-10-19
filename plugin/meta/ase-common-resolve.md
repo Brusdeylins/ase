@@ -262,8 +262,8 @@ dropped change *never* is.
 
     2.  Stage every fully resolved *unmerged* file by running the
         command `git -C "<repo-root/>" add -- "<file/>"` (except for
-        files already removed from the index via `git rm` or taken via
-        `git checkout --ours`/`--theirs`, which additionally need this
+        files already removed from the index via `git rm`, while files
+        taken via `git checkout --ours`/`--theirs` do need this
         `git add`). You *MUST* *NOT* stage *marker* files, as they were
         not staged before either, and you *MUST* *NOT* stage *partially*
         resolved files, which hence stay *unmerged* (resp. carry their
