@@ -20,6 +20,15 @@ ChangeLog
     its per-tool tabs from a single helper, the scroll mark hint of the header was corrected, and
     the typing demo was re-rendered.
 
+-   IMPROVEMENT [docs,infr]: README and AGENTS Reflect the Latest Implementation State
+    `README.md` and `AGENTS.md` were updated to describe the current repository layout, CLI
+    commands, and features.
+
+-   IMPROVEMENT [code]: Stricter Option and Environment Handling
+    The integer options of `ase statusline` now reject values with trailing garbage, an empty
+    `CODEX_HOME` falls back to `~/.codex`, and `ase util diagram` validates its `--lang`,
+    `--format`, and `--color-mode` options through the Commander `choices()` support.
+
 -   BUGFIX [code]: Prompt Error Handling in the Claude Code Mod
     The function hooks module `ase-mods.ts` now ignores a prompt which is no longer accessible
     instead of failing with an unhandled error.
@@ -29,6 +38,11 @@ ChangeLog
     escapes instead of literal invisible characters, and the comments of `stopEdit` and of
     `tool/etc/remark.mjs` were added resp. clarified.
 
+-   CLEANUP [code,docs]: Formatting, Comments, and Redundancies in Tool, Mod, and Website
+    Many formatting issues were fixed, unused `catch` bindings, redundant types, and the
+    redundant `.cta-bar` style of `Widget-Sticky-CTA.astro` were removed, and the typing demo
+    script and `detectColorMode` of `ase-util-diagram.ts` were simplified.
+
 -   REFACTOR [code]: Split Large Modules into Smaller Parts
     `ase-task.ts` registers its CLI sub-commands and MCP tools through dedicated methods, and
     `ase-agent-definition-core.ts`, `ase-service.ts`, and `ase-task-board-tui-model.ts` factor
@@ -37,6 +51,16 @@ ChangeLog
 -   REFACTOR [code]: Common `memoize` for the Issue Task Store Plugins
     The GitHub, GitLab, and Gitea task store plugins share the promise caching helper `memoize`
     of `ase-task-store-issues.ts` instead of repeating it.
+
+-   REFACTOR [code]: Common `Daemon` Helper for Port Allocation and Log Handling
+    The port allocation and log file handling (`allocatePort`, `trimLog`, `readLogTail`, and
+    `showLog`) moved from `Service` of `ase-service.ts` into the new `Daemon` class of
+    `ase-lib-daemon-cli.ts`, which the background processes of all kinds now share.
+
+-   REFACTOR [code]: Shared Helpers Instead of Duplicated Code
+    `ase-service.ts` stops via a single `stopService`, `ase-statusline.ts` reuses `parseTool` of
+    `ase-setup-common.ts` and splits its rendering into placeholder renderers, and the web task
+    board client dispatches the dialog keys through a single `dialogKeys` table.
 
 2.0.2 (2026-10-19)
 ------------------
