@@ -317,8 +317,8 @@ export const submitPrompt = async () => {
         return
     }
     prompt.value = null
-    const res = await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(p.id)}/edit`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt: p.text })
+    const res = await api<{ ok: boolean }>(`/task-board/api/task/${encodeURIComponent(p.id)}/request`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "edit", prompt: p.text })
     })
     if (res.error !== undefined) {
         promptDrafts.set(p.id, p.text)
