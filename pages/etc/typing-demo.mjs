@@ -26,6 +26,8 @@ const opt  = (name, fallback) => {
 
 const port = parseInt(opt("port", "4399"), 10)
 const fps  = parseInt(opt("fps",  "10"),   10)
+if (!(port >= 1 && port <= 65535) || !(fps >= 1))
+    throw new Error("invalid --port or --fps option value")
 const url  = `http://localhost:${port}/typing-demo/`
 
 const here     = path.dirname(fileURLToPath(import.meta.url))
@@ -63,8 +65,9 @@ const waitForServer = async (probe, timeoutMs) => {
     throw new Error(`server at ${probe} did not come up within ${timeoutMs}ms`)
 }
 
-await fs.mkdir(tmpDir,                { recursive: true })
-await fs.mkdir(path.dirname(outFile), { recursive: true })
+await fs.mkdir(tmpDir,                 { recursive: true })
+await fs.mkdir(path.dirname(outFile),  { recursive: true })
+await fs.mkdir(path.dirname(outFile2), { recursive: true })
 
 /*  ensure a production build exists for "astro preview" to serve.  */
 if (!existsSync(path.join(root, "dst", "typing-demo", "index.html"))) {
@@ -143,16 +146,10 @@ try {
     const page = await context.newPage()
     await page.goto(url, { waitUntil: "domcontentloaded" })
 
-    /*  Bound the capture to exactly one full loop, ending on the LAST
-        command fully typed -- never letting the first command be typed a
-        second time (which previously left a duplicate at the tail).
-
-        The typed body cycles: it grows while a command types, pauses fully
-        shown (backDelay), then shrinks to ~empty while it erases. Each such
-        settled "peak" is one completed command. We know how many commands
-        the page cycles through (read from the DOM), so we count peaks and
-        cut during the Nth command's on-screen pause -- fully shown, before
-        it erases and the first command would be typed a second time.  */
+    /*  bound the capture to exactly one full loop, ending during the
+        on-screen pause of the LAST command, before the first command
+        is typed again: each settled "peak" of the typed body length is
+        one completed command, and the command count is read from the DOM.  */
     const typed   = page.locator("#hero-typed")
     const total   = await page.evaluate(() => {
         const el = document.querySelector(".hero-prompt")
@@ -221,7 +218,7 @@ console.log(`transcoding ${path.basename(webm)} -> ${path.relative(root, outFile
 await run("ffmpeg", [
     "-y",
     "-i",      webm,
-    "-vf",     `${filters}`,
+    "-vf",     filters,
     outFile2
 ])
 
