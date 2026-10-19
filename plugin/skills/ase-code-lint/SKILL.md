@@ -1,6 +1,6 @@
 ---
 name: ase-code-lint
-argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(LOW|MEDIUM|HIGH)] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] [--staged] [--unstaged] [<source-reference>]"
+argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] [--staged] [--unstaged] [<source-reference>]"
 description: >
     Lint source code for potential code quality problems.
     Use when the user wants to "lint" or "check" source code.
@@ -23,7 +23,7 @@ Lint Source Code
 
 <expand name="getopt"
     arg1="ase-code-lint"
-    arg2="--auto|-a --severity|-S=(LOW|MEDIUM|HIGH) --include|-i=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --exclude|-e=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --staged --unstaged">
+    arg2="--auto|-a --severity|-S=(AUTO|LOW|MEDIUM|HIGH) --include|-i=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --exclude|-e=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --staged --unstaged">
     $ARGUMENTS
 </expand>
 
@@ -36,10 +36,11 @@ related to a set of code quality aspects.
 
 1.  <step id="STEP 1: Investigation">
 
-    <if condition="<ase-project-boxing/> is equal `black`">
+    <if condition="<ase-project-boxing/> is equal `black` and <getopt-option-severity/> is equal `AUTO`">
 
     The project source artifacts are classified as a *black box*, so
-    the user does *not* want them inspected or their problems surfaced.
+    the user does *not* want them inspected or their problems surfaced
+    (an *explicitly* given severity floor lifts this skip).
     *Skip* the entire investigation and reporting: do *not* invoke any
     `Bash`, `Glob`, or `Agent` tool and do *not* read any source, only
     output the following <template/> and then *SKIP* the remaining steps
@@ -50,6 +51,11 @@ related to a set of code quality aspects.
     </template>
 
     </if>
+
+    Set <condensed>true</condensed> if <ase-project-boxing/> is equal
+    `grey` or `black` (the latter reached only under an explicitly given
+    severity floor), and <condensed>false</condensed> otherwise: a
+    *condensed* report suppresses the full unified diffs of STEP 3.
 
     First, determine the *effective aspect set* <aspects/>, i.e., the
     code quality aspects which are checked at all. For this, parse
@@ -179,16 +185,23 @@ related to a set of code quality aspects.
     `line`, and set <problems/> to that list.
 
     Then determine the *effective severity floor* <floor/>: define the
-    ordinal rank `LOW`=1, `MEDIUM`=2, `HIGH`=3, start from
-    <floor><getopt-option-severity/></floor> (default `LOW`), and - if
-    <ase-project-boxing/> is equal `grey` - raise <floor/> to `MEDIUM`
-    whenever its current rank is below `rank(MEDIUM)` (grey boxing
-    surfaces only *material* findings of severity `MEDIUM` and above).
+    ordinal rank `LOW`=1, `MEDIUM`=2, `HIGH`=3.
+
+    <if condition="<getopt-option-severity/> is equal `AUTO`">
+    Set <floor>MEDIUM</floor> if <ase-project-boxing/> is equal `grey`
+    (grey boxing surfaces only *material* findings of severity `MEDIUM`
+    and above), and <floor>LOW</floor> otherwise.
+    </if>
+    <else>
+    Set <floor><getopt-option-severity/></floor>: an *explicitly* given
+    severity floor always *wins* over the boxing, both over the `grey`
+    floor and over the `black` skip.
+    </else>
 
     Then *apply the effective severity floor* <floor/>: *Keep* a problem
     in <problems/> if and only if its `severity` field is `ACCEPTED` *or*
     `rank(severity)` is greater than or equal to `rank(<floor/>)`;
-    *silently drop* all other problems. With the default floor `LOW`, all
+    *silently drop* all other problems. With the floor `LOW`, all
     problems are kept. `ACCEPTED` problems are *never* dropped.
 
     Finally, sort the surviving problems in <problems/> by their
@@ -270,7 +283,7 @@ related to a set of code quality aspects.
             1.  Set <file/>         to the `file`         field of <item/>.
                 Set <change-hunks/> to the `change-hunks` field of <item/>.
 
-                Unless <ase-project-boxing/> is equal `grey` (where the
+                Unless <condensed/> is equal `true` (where the
                 full unified diff is suppressed and no context lines are
                 rendered at all), *silently* read the current content of
                 <file/> with the `Read` tool - reusing the content read
@@ -284,7 +297,7 @@ related to a set of code quality aspects.
                 context lines of substep 2 below, so the rendered diff
                 shows real context even when a sub-agent supplied none.
 
-                Unless <ase-project-boxing/> is equal `grey` (where the
+                Unless <condensed/> is equal `true` (where the
                 full unified diff is suppressed and this per-file header is
                 unused), set <diff-file/> to the following <template/>:
 
@@ -328,8 +341,8 @@ related to a set of code quality aspects.
                     Keep the sub-agent supplied values only when
                     <file-lines/> is empty.
 
-                2.  *Skip* this substep entirely when <ase-project-boxing/>
-                    is equal `grey` - the full unified diff is suppressed
+                2.  *Skip* this substep entirely when <condensed/>
+                    is equal `true` - the full unified diff is suppressed
                     there, so none of the <hunk-body/>, <old-count/>,
                     <new-count/>, <old-start/>, or <new-start/> values
                     below are consumed (substep 4 builds only the condensed
@@ -384,10 +397,10 @@ related to a set of code quality aspects.
 
                     <template>`<file/>`:<line/></template>
 
-                4.  <if condition="<ase-project-boxing/> is equal `grey`">
+                4.  <if condition="<condensed/> is equal `true`">
 
-                    The full unified diff is *suppressed* under grey boxing
-                    (see substep 5 below), so *skip* the full-diff append
+                    The full unified diff is *suppressed* in a condensed
+                    report (see substep 5 below), so *skip* the full-diff append
                     and instead build only a *condensed* one-line
                     representation of this hunk: determine <old-snippet/>
                     as the *single-line* collapse of <old-text/> (join its
@@ -417,7 +430,7 @@ related to a set of code quality aspects.
 
                 </for>
 
-            3.  Unless <ase-project-boxing/> is equal `grey` (where
+            3.  Unless <condensed/> is equal `true` (where
                 <diff-file/> is unused), append <diff-file/> to <diff/>.
 
             </for>
@@ -433,10 +446,11 @@ related to a set of code quality aspects.
 
         5.  <if condition="<getopt-option-auto/> is not equal `true`">
 
-            <if condition="<ase-project-boxing/> is equal `grey`">
+            <if condition="<condensed/> is equal `true`">
 
-            The project source artifacts are classified as a *grey box*, so
-            the user does *not* want the full artifact internals surfaced:
+            The project source artifacts are classified as a *grey box* (or
+            *black box*), so the user does *not* want the full artifact
+            internals surfaced:
             *suppress* the full unified diff and instead show only the
             *condensed* one-line-per-hunk representation. Report the
             solution with the following <template/>:
@@ -505,8 +519,8 @@ related to a set of code quality aspects.
             -   <if condition="<result/> is 'ACCEPT'">
                 Invoke the `Edit` tool to apply the changes exactly
                 as given by the hunks of the current <change-set/>
-                (rendered as <diff/>, unless suppressed under grey
-                boxing). The operation will be auto-approved by the ASE
+                (rendered as <diff/>, unless suppressed in a condensed
+                report). The operation will be auto-approved by the ASE
                 `pre-tool-use` hook (which tracks the active skill),
                 so *no* interactive permission prompt will appear.
                 After applying the changes, just continue with the next

@@ -306,6 +306,13 @@ Artifact Boxing Transparency
     above. Where no such branches or instructions exist, the decisions
     above apply.
 
+-   *IMPORTANT*: Severity rule: an *explicitly* given severity floor
+    (option `--severity`|`-S` other than `AUTO`) of a finding-producing
+    skill *overrules* the boxing for *which* findings are inspected and
+    acted on: it lifts the `black` skip and the `grey` floor `MEDIUM`,
+    so e.g. `-S LOW` acts on *all* findings of severity `LOW` and above.
+    The boxing still governs the *internals exposed* of each finding.
+
 Guidance Hint Level
 -------------------
 

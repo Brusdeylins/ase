@@ -75,7 +75,9 @@ before it is committed or merged.
     threshold are suppressed, ordered `LOW` < `MEDIUM` < `HIGH`. The
     default `AUTO` means `MEDIUM` for a project with `grey` boxing and
     `LOW` (keep all findings) otherwise; an explicitly given floor always
-    wins over the boxing. `ACCEPTED` findings are never suppressed, and
+    wins over the boxing, i.e. it also reviews a project with `black`
+    boxing and, e.g. with `LOW`, shows all findings of a project with
+    `grey` boxing. `ACCEPTED` findings are never suppressed, and
     the number of suppressed findings is always reported. Surviving
     findings are rendered in *descending severity* order `HIGH`,
     `MEDIUM`, `LOW`, `ACCEPTED`. The floor only affects the rendered

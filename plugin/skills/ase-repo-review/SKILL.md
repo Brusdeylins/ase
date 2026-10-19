@@ -224,11 +224,12 @@ Procedure
 
 2.  <step id="STEP 2: Review Investigation">
 
-    <if condition="<ase-project-boxing/> is equal `black`">
+    <if condition="<ase-project-boxing/> is equal `black` and <getopt-option-severity/> is equal `AUTO`">
 
     The project source artifacts are classified as a *black box*, so
     the user does *not* want the changes scrutinized or their
-    findings surfaced. *Skip* the entire review investigation: do
+    findings surfaced (an *explicitly* given severity floor lifts this
+    skip). *Skip* the entire review investigation: do
     *not* invoke the `Agent` tool and do *not* read any change, set
     <findings/> to the *empty* list, set <hidden/> to `0`, set
     <verdict/> to `SKIPPED (boxing: black)`, set <summary/> to a
@@ -288,7 +289,8 @@ Procedure
     <else>
     Set <floor><getopt-option-severity/></floor> and
     <floor-origin>--severity <getopt-option-severity/></floor-origin>:
-    an *explicitly* given severity floor always *wins* over the boxing.
+    an *explicitly* given severity floor always *wins* over the boxing,
+    both over the `grey` floor and over the `black` skip.
     </else>
 
     Then *apply the effective severity floor* <floor/>: *Keep* a finding

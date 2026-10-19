@@ -2,6 +2,15 @@
 ChangeLog
 =========
 
+2.0.3 (2026-10-19)
+------------------
+
+-   IMPROVEMENT [code]: Explicit Severity Floor Overrules the Project Boxing
+    `ase-code-lint` and `ase-code-analyze` now default `--severity` to `AUTO` (`MEDIUM` for
+    `grey` boxing, `LOW` otherwise), like `ase-repo-review`. In all three skills, an explicit
+    floor now wins over the boxing: it lifts the `MEDIUM` floor of `grey` and the skip of
+    `black`, so `-S LOW` acts on all findings, while the boxing still limits the exposed internals.
+
 2.0.2 (2026-10-19)
 ------------------
 

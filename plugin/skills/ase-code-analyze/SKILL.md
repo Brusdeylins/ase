@@ -1,6 +1,6 @@
 ---
 name: ase-code-analyze
-argument-hint: "[--help|-h] [--performance|-p] [--security|-s] [--severity|-S=(LOW|MEDIUM|HIGH)] [--prefix|-P=<prefix>] [--staged] [--unstaged] [<source-reference>]"
+argument-hint: "[--help|-h] [--performance|-p] [--security|-s] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--prefix|-P=<prefix>] [--staged] [--unstaged] [<source-reference>]"
 description: >
     Analyze the source code for problems in either the logic and
     semantics and its related control flow, performance and efficiency,
@@ -25,7 +25,7 @@ Analyze Source Code
 
 <expand name="getopt"
     arg1="ase-code-analyze"
-    arg2="--performance|-p --security|-s --severity|-S=(LOW|MEDIUM|HIGH) --prefix|-P= --staged --unstaged">
+    arg2="--performance|-p --security|-s --severity|-S=(AUTO|LOW|MEDIUM|HIGH) --prefix|-P= --staged --unstaged">
     $ARGUMENTS
 </expand>
 
@@ -56,10 +56,11 @@ problems in *performance* and *efficiency*, or problems in *security*.
 
 2.  <step id="STEP 2: Investigate Code Base">
 
-    <if condition="<ase-project-boxing/> is equal `black`">
+    <if condition="<ase-project-boxing/> is equal `black` and <getopt-option-severity/> is equal `AUTO`">
 
     The project source artifacts are classified as a *black box*, so
-    the user does *not* want them inspected or their problems surfaced.
+    the user does *not* want them inspected or their problems surfaced
+    (an *explicitly* given severity floor lifts this skip).
     *Skip* the entire investigation and analysis: do *not* invoke any
     `Bash`, `Glob`, or `Agent` tool and do *not* read any source, only
     output the following <template/> and then *SKIP* the remaining step
@@ -191,17 +192,24 @@ problems in *performance* and *efficiency*, or problems in *security*.
     do not overwrite each other.
 
     Before reporting, determine the *effective severity floor* <floor/>:
-    define the ordinal rank `LOW`=1, `MEDIUM`=2, `HIGH`=3, start from
-    <floor><getopt-option-severity/></floor> (default `LOW`), and - if
-    <ase-project-boxing/> is equal `grey` - raise <floor/> to `MEDIUM`
-    whenever its current rank is below `rank(MEDIUM)` (grey boxing
-    surfaces only *material* findings of severity `MEDIUM` and above).
+    define the ordinal rank `LOW`=1, `MEDIUM`=2, `HIGH`=3.
+
+    <if condition="<getopt-option-severity/> is equal `AUTO`">
+    Set <floor>MEDIUM</floor> if <ase-project-boxing/> is equal `grey`
+    (grey boxing surfaces only *material* findings of severity `MEDIUM`
+    and above), and <floor>LOW</floor> otherwise.
+    </if>
+    <else>
+    Set <floor><getopt-option-severity/></floor>: an *explicitly* given
+    severity floor always *wins* over the boxing, both over the `grey`
+    floor and over the `black` skip.
+    </else>
 
     Then *apply the effective severity floor* <floor/>: *Keep* a detected
     problem if and only if its `severity` field is `ACCEPTED` *or*
     `rank(severity)` is greater than or equal to `rank(<floor/>)`;
     *silently drop* all other problems (they are neither reported nor
-    persisted). With the default floor `LOW`, all problems are kept.
+    persisted). With the floor `LOW`, all problems are kept.
     `ACCEPTED` problems are *never* dropped.
 
     Then sort the surviving problems in <problems/> by their `severity`

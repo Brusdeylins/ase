@@ -8,7 +8,7 @@
 `ase-code-lint`
     [`--help`|`-h`]
     [`--auto`|`-a`]
-    [`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`)]
+    [`--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`)]
     [`--include`|`-i`=*aspect*[`,`...]]
     [`--exclude`|`-e`=*aspect*[`,`...]]
     [`--staged`]
@@ -60,11 +60,16 @@ the code, and comments contradicting the code.
     Automatically apply every proposed correction without asking the
     user via the interactive dialog.
 
--   `--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`):
-    Set the *severity floor* (default `LOW`): findings below the chosen
+-   `--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`):
+    Set the *severity floor* (default `AUTO`): findings below the chosen
     threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
-    `HIGH`. The default `LOW` keeps all findings; `ACCEPTED` findings are
-    never suppressed. Surviving findings are reported in *descending
+    `HIGH`. The default `AUTO` means `MEDIUM` for a project with `grey`
+    boxing, no linting at all for a project with `black` boxing, and
+    `LOW` (keep all findings) otherwise; an explicitly given floor always
+    wins over the boxing, i.e. it also lints a project with `black`
+    boxing and, e.g. with `LOW`, acts on all findings of a project with
+    `grey` boxing. `ACCEPTED` findings are never suppressed. Surviving
+    findings are reported in *descending
     severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`, keeping the
     `file`/`line` order within the same severity.
 

@@ -9,7 +9,7 @@
     [`--help`|`-h`]
     [`--performance`|`-p`]
     [`--security`|`-s`]
-    [`--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`)]
+    [`--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`)]
     [`--prefix`|`-P` *prefix*]
     [`--staged`]
     [`--unstaged`]
@@ -32,11 +32,16 @@ The *analysis lens* depends on the selected options:
 
 The `--performance` and `--security` options are *mutually exclusive*.
 
-The `--severity`|`-S`=(`LOW`|`MEDIUM`|`HIGH`) option sets a *severity
-floor* (default `LOW`): problems below the chosen threshold are silently
-suppressed (neither reported nor persisted), ordered `LOW` < `MEDIUM` <
-`HIGH`. The default `LOW` keeps all problems; `ACCEPTED` problems are
-never suppressed. Surviving problems are reported in *descending
+The `--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`) option sets a
+*severity floor* (default `AUTO`): problems below the chosen threshold
+are silently suppressed (neither reported nor persisted), ordered `LOW`
+< `MEDIUM` < `HIGH`. The default `AUTO` means `MEDIUM` for a project
+with `grey` boxing, no analysis at all for a project with `black`
+boxing, and `LOW` (keep all problems) otherwise; an explicitly given
+floor always wins over the boxing, i.e. it also analyzes a project with
+`black` boxing and, e.g. with `LOW`, reports all problems of a project
+with `grey` boxing. `ACCEPTED` problems are never suppressed. Surviving
+problems are reported in *descending
 severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED` - keeping the
 `file`/`line` order within the same severity - and are renumbered
 contiguously as `P<n>`, so `P1` is the most severe problem.
