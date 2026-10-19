@@ -47,9 +47,9 @@ const Icon = usp.icon
 ---
 <div class="ase-grid-split">
     <div class:list={[ "relative isolate", reversed ? "lg:order-2" : "lg:order-1" ]} data-reveal={textReveal}>
-        {/* blue radial glow behind the text block, bleeding off the viewport
-            on the text's side of the row (left on normal rows, right on the
-            reversed/zig-zag rows). */}
+        {/*  blue radial glow behind the text block, bleeding off the viewport
+             on the text's side of the row (left on normal rows, right on the
+             reversed/zig-zag rows)  */}
         <GlowSide variant="text" side={reversed ? "right" : "left"}/>
         <p class="ase-eyebrow">{usp.eyebrow}</p>
         {/*  "mt-1" centers the icon on the first line box of the headline,

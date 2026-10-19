@@ -85,11 +85,11 @@ export const navItems: NavEntry[] = [
                                   "its agent tool plugin, the available ASE configuration parameters, and the " +
                                   "known agent harness and LLM compatibility." },
       items: [
-          { path: "/setup/#installation",  label: "Installation"  },
-          { path: "/setup/#statusline",    label: "Statusline" },
-          { path: "/setup/#services",      label: "Addon Services"   },
-          { path: "/setup/#configuration", label: "Configuration" },
-          { path: "/setup/#compat",        label: "Compatibility" }
+          { path: "/setup/#installation",  label: "Installation"   },
+          { path: "/setup/#statusline",    label: "Statusline"     },
+          { path: "/setup/#services",      label: "Addon Services" },
+          { path: "/setup/#configuration", label: "Configuration"  },
+          { path: "/setup/#compat",        label: "Compatibility"  }
       ] },
     { label:       "Usage",
       page:        { path:        "/usage/",
@@ -198,3 +198,4 @@ export const navItem = (path: string): NavItem => {
         throw new Error(`no navigation entry for route path "${path}"`)
     return item
 }
+

@@ -142,7 +142,7 @@ export const mapStatus = (from: TaskLifecycle, to: TaskLifecycle, status: string
     if (!from.states.includes(status))
         return status
     const finished = from.finished.includes(status)
-    const mapped = [ status, ...(statusCandidates[status] ?? []) ]
+    const mapped   = [ status, ...(statusCandidates[status] ?? []) ]
         .find((state) => to.states.includes(state) && (!finished || to.finished.includes(state)))
     return mapped ?? (finished ? to.finished[0] : to.initial)
 }

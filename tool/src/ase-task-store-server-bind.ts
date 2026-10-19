@@ -234,7 +234,7 @@ export class TaskStoreServer {
                 })
             return
         }
-        const m    = /^\/projects\/([^/]+)\/events$/.exec(path)
+        const m = /^\/projects\/([^/]+)\/events$/.exec(path)
         if (m === null) {
             this.guard.rejectUpgrade(socket, 404, `no WebSocket endpoint "${path}"`, path)
             return

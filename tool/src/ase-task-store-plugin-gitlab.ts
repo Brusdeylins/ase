@@ -113,7 +113,7 @@ class GitLabTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<string> 
     private milestones: ProjectMilestones
     private members:    ProjectMembers
     private users:      Users
-    private registry   = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
+    private registry    = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
     private latest      = new Map<string, { etag: string, number: number, at: number }>()
     private titles      = new Map<string, Map<string, number>>()
     private userIds     = new Map<string, number | null>()

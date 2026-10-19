@@ -216,7 +216,7 @@ export class GetoptMCP {
                     const opts = cmd.opts() as Record<string, unknown>
                     for (const { long, choices } of listOpts) {
                         const key = camelKey(long)
-                        const v = opts[key]
+                        const v   = opts[key]
                         if (typeof v !== "string")
                             continue
                         const items = v.split(",").map((s) => s.trim()).filter((s) => s.length > 0)

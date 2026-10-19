@@ -28,7 +28,7 @@ export const testimonials: Testimonial[] = [
                "the agent does the chores.",
         name:  "Dr. Ralf S. Engelschall"
     },
-    {   quote: "Thanks to Agentic AI Coding, developing software is fun again. "+
+    {   quote: "Thanks to Agentic AI Coding, developing software is fun again. " +
                "ASE is a great added bonus here!",
         name:  "Matthias Brusdeylins"
     },

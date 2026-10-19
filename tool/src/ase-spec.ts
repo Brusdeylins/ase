@@ -324,7 +324,7 @@ export class SpecMCP {
                     column:   z.number().describe("column number (1-based)"),
                     severity: z.enum([ "error", "warning" ]).describe("diagnostic severity"),
                     message:  z.string().describe("diagnostic message"),
-                    snippet: z.string().optional()
+                    snippet:  z.string().optional()
                         .describe("multi-line rendering with the affected source snippet (with `verbose` only)")
                 })).describe("lint diagnostics, empty if the specification is valid")
             }
@@ -406,3 +406,4 @@ export class SpecMCP {
         })
     }
 }
+

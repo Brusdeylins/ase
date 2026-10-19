@@ -16,7 +16,7 @@ import type { JSONRPCMessage }           from "@modelcontextprotocol/sdk/types.j
 
 import type Log                 from "./ase-lib-log.js"
 import { sessionState }         from "./ase-config-core.js"
-import ServiceCommand          from "./ase-service.js"
+import ServiceCommand           from "./ase-service.js"
 import { SERVICE_HOST as HOST, probe, isConnRefused, loadServiceContext } from "./ase-service.js"
 
 /*  CLI command "ase mcp"  */

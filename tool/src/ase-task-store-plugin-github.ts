@@ -124,7 +124,7 @@ const inRepo = (loc: Repo, issue: Issue): boolean => {
 class GitHubTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> implements API.TaskStoragePlugin {
     readonly name = "github"
     private gh:         Client
-    private registry   = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
+    private registry    = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
     private latest      = new Map<string, { etag: string, number: number, at: number }>()
     private labels      = new Map<string, Set<string>>()
     private milestones  = new Map<string, Map<string, number>>()

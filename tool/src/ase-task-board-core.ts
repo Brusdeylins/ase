@@ -526,7 +526,7 @@ export const buildBoard = async (log: Log): Promise<Board> => {
         if (status !== item.status)
             warnings.push(`task "${item.id}" has status "${item.status}" unknown to lifecycle model ` +
                 `"${lifecycle.name}" (shown as "${status}")`)
-        const group  = (keys.get("Group") ?? "").trim()
+        const group    = (keys.get("Group") ?? "").trim()
         const assignee = (keys.get("Assignee") ?? "").trim()
         const effort   = TaskFormat.parseEffort(keys.get("Effort") ?? "")?.size ?? ""
         const created  = keys.get("Created")  ?? ""

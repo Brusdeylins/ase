@@ -35,7 +35,7 @@
             ticking = false
             const doc = document.documentElement
             const max = doc.scrollHeight - doc.clientHeight
-            const p = max > 0 ? doc.scrollTop / max : 0
+            const p   = max > 0 ? doc.scrollTop / max : 0
             if (bar)  bar.style.transform = "scaleX(" + p + ")"
             if (ring) ring.setAttribute("stroke-dashoffset", String(1 - p))
             if (btt) {

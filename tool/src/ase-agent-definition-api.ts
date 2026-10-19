@@ -44,15 +44,15 @@ export interface AgentParam {
     activity state, and where a "previous" success or failure state restores the incoming state
     of the claim  */
 export interface AgentDefinition {
-    definition?: string
-    title?:      string
+    definition?:  string
+    title?:       string
     description?: string
-    params?:     Record<string, AgentParam | string | number | boolean>
-    type?:       AgentType
-    workdir?:    AgentWorkdir
-    lifecycle?:  Many<string>
-    serial?:     boolean
-    unclaimed?:  boolean
+    params?:      Record<string, AgentParam | string | number | boolean>
+    type?:        AgentType
+    workdir?:     AgentWorkdir
+    lifecycle?:   Many<string>
+    serial?:      boolean
+    unclaimed?:   boolean
     state?: {
         incoming?: Many<string>
         activity?: string
@@ -131,7 +131,6 @@ export interface AgentHookFlow {
     readonly type: string
     readonly name: string
 }
-
 
 /*  an attachment of a task: its type (e.g. "text/x-diff; charset=utf-8; kind="draft""),
     its description, and its inline data (if any)  */
@@ -248,9 +247,9 @@ export interface AgentHookOutcome {
     to be reachable from the activity state), the value of its tag ("type: phase" only: a
     lower-case value, or null to untag it, which is refused if the task would return into
     an incoming state unguarded by "attach.skip", the hook "ready", or its handover by a
-    required assignment), and the assignee to
-    hand it over to (a name, "none", or "previous", but not with "unclaimed"), where an
-    omitted field keeps the configured settling  */
+    required assignment), and the assignee to hand it over to (a name, "none", or
+    "previous", but not with "unclaimed"), where an omitted field keeps the configured
+    settling  */
 export interface AgentHookSettlement {
     readonly state?:    string
     readonly tag?:      string | null

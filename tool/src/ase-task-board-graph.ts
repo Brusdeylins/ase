@@ -40,10 +40,11 @@ export const units = {
 const GROUP = "group:"
 
 /*  the label lines of a node (in cell units only) of a given box width: the
-    task id (behind "≡", and of an epic also behind "♛") and title, cut onto a single line, or with titles shown, wrapped
-    onto at most three lines, with a placeholder column glued in front of
-    the task id to reserve the extra column of its inverse rendering (plus two for
-    the "≡", and two more for the "♛" of an epic), and the arrow in front of the title replaced by a placeholder
+    task id (behind "≡", and of an epic also behind "♛") and title, cut onto a
+    single line, or with titles shown, wrapped onto at most three lines, with a
+    placeholder column glued in front of the task id to reserve the extra column
+    of its inverse rendering (plus two for the "≡", and two more for the "♛" of
+    an epic), and the arrow in front of the title replaced by a placeholder
     column glued to the title  */
 export const nodeLines = (board: Board, id: string, titles: boolean, width: number): string[] => {
     const card = board.cards.get(id)!
@@ -75,7 +76,7 @@ export const layoutBoxes = async (unit: "cell" | "px", list: LayoutNode[], label
         "elk.spacing.edgeNode":                             String(u.edgeNode),
         "elk.spacing.componentComponent":                   String(u.nodeNode),
         "elk.spacing.portPort":                             String(portSpacing[unit]),
-        "elk.layered.spacing.nodeNodeBetweenLayers":       String(rows !== undefined && unit === "cell" ? u.layers / 4 : u.layers),
+        "elk.layered.spacing.nodeNodeBetweenLayers":        String(rows !== undefined && unit === "cell" ? u.layers / 4 : u.layers),
         "elk.layered.spacing.edgeNodeBetweenLayers":        String(rows !== undefined && unit === "cell" ? 3 : u.edgeNode),
         "elk.layered.spacing.edgeEdgeBetweenLayers":        String(u.edgeEdge),
         "elk.layered.mergeEdges":                           "false",

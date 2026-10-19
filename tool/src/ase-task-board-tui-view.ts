@@ -10,7 +10,7 @@ import type { BoxProps, DOMElement }          from "ink"
 
 import { splitHeight, rowLanes, toneOf, cardLabel, groupLabel, editMarker, effortMarker, clampLines, glueId, glueTitle, glueGroup, agentLabel, agentUser, agentUptime, agentUsage, agentDuration, badgesOf, viewCycleHint } from "./ase-task-board-core.js"
 import type { Board, Card, GroupSpec, LaneSpec, Surface, AgentsState } from "./ase-task-board-core.js"
-import type { AgentPresence }              from "./ase-agent-relay-core.js"
+import type { AgentPresence }                 from "./ase-agent-relay-core.js"
 import { drawGraphText }                      from "./ase-task-board-graph.js"
 import { drawFlowText, isFlowCard, flowRelations } from "./ase-task-board-flow.js"
 import type { FlowCard }                      from "./ase-task-board-flow.js"

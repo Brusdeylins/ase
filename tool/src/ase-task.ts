@@ -153,7 +153,7 @@ export class Task {
         /*  sanitize a basename-derived project id, as it only keys the local
             solo-mode store (a remote store requires an explicit one anyway)  */
         const projectId = explicit || Task.projectIdOf(root)
-        const store    = scoped("project.task.store.url")
+        const store     = scoped("project.task.store.url")
         store.value   ||= "ase:./.ase/task"
         const token     = scoped("project.task.store.token")
         const name      = read("project.task.lifecycle") || "solo"
@@ -1216,7 +1216,7 @@ export default class TaskCommand {
             .option("-c, --create", "fail if the task already exists instead of overwriting it", false)
             .argument("<id>", "Task identifier")
             .action(async (id: string, opts: { create: boolean }) => {
-                const text    = await readStdin()
+                const text        = await readStdin()
                 const { warning } = await Task.save(this.log, id, text, undefined, opts.create)
                 if (warning !== "")
                     this.log.write("warning", `task: ${warning}`)
@@ -1332,7 +1332,6 @@ export default class TaskCommand {
             })
     }
 }
-
 
 /*  render a caught error as an MCP tool error result  */
 const mcpError = (err: unknown) => {

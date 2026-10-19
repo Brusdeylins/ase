@@ -135,11 +135,11 @@ export class TaskStore {
     }
 
     /*  delegate the task plan operations  */
-    taskList   (prjId: string):                                 Promise<API.TaskEntry[]>      { return this.plugin.taskList(prjId)                    }
-    taskLoad   (prjId: string, taskId: string):                 Promise<API.TaskPlan | null>  { return this.plugin.taskLoad(prjId, taskId)            }
-    taskSave   (prjId: string, taskId: string, plan: API.TaskPlan): Promise<API.WriteResult>      { return this.plugin.taskSave(prjId, taskId, plan)      }
-    taskDelete (prjId: string, taskId: string):                 Promise<boolean>          { return this.plugin.taskDelete(prjId, taskId)          }
-    taskRename (prjId: string, oldId: string, newId: string):   Promise<boolean>          { return this.plugin.taskRename(prjId, oldId, newId)    }
+    taskList   (prjId: string):                                     Promise<API.TaskEntry[]>     { return this.plugin.taskList(prjId)                 }
+    taskLoad   (prjId: string, taskId: string):                     Promise<API.TaskPlan | null> { return this.plugin.taskLoad(prjId, taskId)         }
+    taskSave   (prjId: string, taskId: string, plan: API.TaskPlan): Promise<API.WriteResult>     { return this.plugin.taskSave(prjId, taskId, plan)   }
+    taskDelete (prjId: string, taskId: string):                     Promise<boolean>             { return this.plugin.taskDelete(prjId, taskId)       }
+    taskRename (prjId: string, oldId: string, newId: string):       Promise<boolean>             { return this.plugin.taskRename(prjId, oldId, newId) }
 
     /*  delegate the optional observation of changes made outside of the plugin (a no-op if unsupported)  */
     watch (listener: (prjId: string, change: API.TaskChange) => void): void {

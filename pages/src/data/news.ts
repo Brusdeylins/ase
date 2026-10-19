@@ -73,3 +73,4 @@ for (const token of marked.lexer(fs.readFileSync(newsFile, "utf8"))) {
         }
     }
 }
+

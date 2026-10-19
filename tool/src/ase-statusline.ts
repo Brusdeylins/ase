@@ -766,3 +766,4 @@ export default class StatuslineCommand {
             })
     }
 }
+

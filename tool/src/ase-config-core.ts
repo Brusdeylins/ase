@@ -122,7 +122,7 @@ export class Config {
         const docs: Layer[] = []
         this.pruned = []
         for (let i = 0; i < chain.length; i++) {
-            const sc         = chain[i]
+            const sc = chain[i]
             if (sc.kind === "default") {
                 const doc = new Document()
                 doc.contents = doc.createNode({})

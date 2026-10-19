@@ -4,16 +4,16 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import path              from "node:path"
-import fs                from "node:fs"
+import path               from "node:path"
+import fs                 from "node:fs"
 
-import { Command }       from "commander"
-import { execaSync }     from "execa"
-import { z }             from "zod"
+import { Command }        from "commander"
+import { execaSync }      from "execa"
+import { z }              from "zod"
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 
-import { writeStdout }   from "./ase-lib-stdio.js"
+import { writeStdout }    from "./ase-lib-stdio.js"
 
 /*  the repository-root-relative path components of the base directory
     which holds all ASE-managed Git worktrees  */
@@ -190,3 +190,4 @@ export class WorktreeMCP {
         })
     }
 }
+

@@ -310,14 +310,14 @@ export const attachMatches = (spec: AttachSpec, type: string): boolean =>
     none for "request", and with "statePrevious" as a success or failure state restoring
     the incoming state of the claim)  */
 export type ResolvedDefinition = {
-    name:       string
-    title:      string
+    name:        string
+    title:       string
     description: string
-    type:       DefinitionType
-    workdir:    DefinitionWorkdir
-    lifecycles: string[]
-    serial:     boolean
-    unclaimed:  boolean
+    type:        DefinitionType
+    workdir:     DefinitionWorkdir
+    lifecycles:  string[]
+    serial:      boolean
+    unclaimed:   boolean
     state: {
         incoming: string[], activity: string, success: string, failure: string,
         phase: string, passed: string, verdict: Record<string, string>

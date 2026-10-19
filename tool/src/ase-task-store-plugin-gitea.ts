@@ -109,7 +109,7 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
     readonly name = "gitea"
     private source:     string
     private gt:         Client
-    private registry   = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
+    private registry    = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
     private latest      = new Map<string, { number: number, at: number }>()
     private labels      = new Map<string, Map<string, Label>>()
     private milestones  = new Map<string, Map<string, number>>()
@@ -315,7 +315,7 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
         const loc = this.repos.get(prjId)
         if (loc === undefined)
             return false
-        const label = (await this.labelMap(loc, true)).get(LABEL_PROJECT)
+        const label  = (await this.labelMap(loc, true)).get(LABEL_PROJECT)
         const result = label !== undefined ?
             await found(this.call(loc, this.gt.repos.issueDeleteLabel(loc.owner, loc.repo, label.id)).then(() => true)) : null
         this.labels.delete(`${loc.owner}/${loc.repo}`)
@@ -686,3 +686,4 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
 /*  the plugin factory  */
 const factory: API.TaskStoragePluginFactory = (ctx) => new GiteaTaskStoragePlugin(ctx)
 export default factory
+

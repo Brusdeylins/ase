@@ -179,12 +179,13 @@ const clean = (text: string): string =>
     text.replace(/\p{Cc}/gu, "")
 
 /*  draw a cell-unit layout of the agent graph onto a character grid, returning per cell the
-    character and a tone for coloring (like the task graph): the state nodes in tone "done" (or "sel"), the
-    agent cards in tone "active" (busy), "idle" (waiting), or "sel" (selected, with a heavy border, like
-    a selected state), with the name of
-    the agent inverse on their first line, followed by their field lines (with the tone suffix
-    "-title" on the labels, "-value" on their bold values, and the busy task ids inverse), and the given pulse glyph (else a filled
-    circle) of a busy card, resp. an empty circle of a waiting one, in the right part of their top border  */
+    character and a tone for coloring (like the task graph): the state nodes in tone "done"
+    (or "sel"), the agent cards in tone "active" (busy), "idle" (waiting), or "sel" (selected,
+    with a heavy border, like a selected state), with the name of the agent inverse on their
+    first line, followed by their field lines (with the tone suffix "-title" on the labels,
+    "-value" on their bold values, and the busy task ids inverse), and the given pulse glyph
+    (else a filled circle) of a busy card, resp. an empty circle of a waiting one, in the
+    right part of their top border  */
 export const drawFlowText = (flow: Flow, layout: GraphLayout, selected: string, pulse = "",
     beat: (agent: string) => boolean = () => false) => {
     const g = textGrid(layout)

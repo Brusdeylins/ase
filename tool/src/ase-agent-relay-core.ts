@@ -125,20 +125,20 @@ const usageEntries = {
     costUSD:     v.nullable(amount)
 }
 const announceEntries = {
-    kind:       v.pipe(text(64), v.minLength(1)),
-    name:       v.pipe(text(64), v.minLength(1)),
-    mode:       v.optional(text(64), ""),
-    title:      v.optional(text(80)),
+    kind:        v.pipe(text(64), v.minLength(1)),
+    name:        v.pipe(text(64), v.minLength(1)),
+    mode:        v.optional(text(64), ""),
+    title:       v.optional(text(80)),
     description: v.optional(text(600)),
-    request:    v.optional(text(64)),
-    prompt:     v.optional(v.picklist([ "optional", "ignored" ])),
-    host:       text(255),
-    pid:        v.pipe(v.number(), v.integer(), v.minValue(0)),
-    cwd:        v.optional(text(4096)),
-    user:       v.optional(text(255)),
-    uid:        v.optional(v.pipe(v.number(), v.integer(), v.minValue(-1))),
-    state:      v.picklist([ "waiting", "busy" ]),
-    tasks:      v.pipe(v.array(v.pipe(text(255), v.regex(TaskFormat.TASK_ID_RE))), v.maxLength(64))
+    request:     v.optional(text(64)),
+    prompt:      v.optional(v.picklist([ "optional", "ignored" ])),
+    host:        text(255),
+    pid:         v.pipe(v.number(), v.integer(), v.minValue(0)),
+    cwd:         v.optional(text(4096)),
+    user:        v.optional(text(255)),
+    uid:         v.optional(v.pipe(v.number(), v.integer(), v.minValue(-1))),
+    state:       v.picklist([ "waiting", "busy" ]),
+    tasks:       v.pipe(v.array(v.pipe(text(255), v.regex(TaskFormat.TASK_ID_RE))), v.maxLength(64))
 }
 
 /*  the valibot schema of an announcement (strict, as received by the relay)  */

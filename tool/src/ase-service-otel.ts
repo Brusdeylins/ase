@@ -18,13 +18,15 @@ import YAML                   from "yaml"
 import writeFileAtomic        from "write-file-atomic"
 import lockfile               from "proper-lockfile"
 
-import type Log               from "./ase-lib-log.js"
-import { Config, sessionState } from "./ase-config-core.js"
-import { configSchema, parsePrices, modelPrice, tokenCost, parseRates, userRate } from "./ase-config-schema.js"
+import type Log                         from "./ase-lib-log.js"
+import { Config, sessionState }         from "./ase-config-core.js"
+import {
+    configSchema, parsePrices, modelPrice, tokenCost, parseRates, userRate
+}                                       from "./ase-config-schema.js"
 import type { TokenCounts, TokenPrice } from "./ase-config-schema.js"
-import { parseScope, userStateDir } from "./ase-config-scope.js"
-import { Task, UsageUncertain } from "./ase-task.js"
-import type { TaskUsage }     from "./ase-task.js"
+import { parseScope, userStateDir }     from "./ase-config-scope.js"
+import { Task, UsageUncertain }         from "./ase-task.js"
+import type { TaskUsage }               from "./ase-task.js"
 
 /*  the loopback host of the OTLP ingress and of the project services  */
 const HOST = "127.0.0.1"
@@ -706,7 +708,7 @@ export class UsageTracker {
     private async assignSession (id: string, to: string, self: string, session: string): Promise<AssignResult> {
         const warning = await Task.checkAssignee(this.log, to)
         const from    = await Task.assign(this.log, id, to === "none" ? null : to)
-        const now  = Date.now()
+        const now     = Date.now()
         if (to === self) {
             try {
                 this.adopted.set(session, Task.getId(this.log, session))
@@ -1018,7 +1020,7 @@ export class UsageTracker {
         cfg.read()
         const interval = Number(cfg.get("telemetry.service.interval") ?? INTERVAL_DFLT) * MINUTE_MS
         const enabled  = telemetryEnabled(this.log)
-        const now = Date.now()
+        const now      = Date.now()
         for (const w of this.journal.windows) {
             if (w.closed !== null && now - w.closed >= GRACE_MS * 2)
                 this.bookAsync(w, true)

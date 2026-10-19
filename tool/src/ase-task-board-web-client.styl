@@ -1219,6 +1219,8 @@ header
             background: var(--c-accent)
         &.output
             background: var(--c-accent-strong)
+
+/*  the footer: the key hint lines and the status line  */
 footer
     padding: 4px 16px 6px
     text-align: center
@@ -1740,6 +1742,8 @@ footer kbd, #hscroll kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys k
         left: 0
     to
         left: 75%
+
+/*  the task dialog: horizontally centered, of a fixed height, with its rows stacked  */
 #dlg
     position: absolute
     left: 50%
@@ -1864,10 +1868,8 @@ footer kbd, #hscroll kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys k
             &:hover
                 opacity: 0.8
 
-    /*  the content: the rendered task plan or attachment of the selected tab  */
-
-    /*  the content fills the remaining height of the fixed-height dialog,
-        so the dialog keeps the same margin at the top and the bottom  */
+    /*  the content: the rendered task plan or attachment of the selected tab, filling the remaining
+        height of the fixed-height dialog, so the dialog keeps the same margin at the top and the bottom  */
     #plan
         flex: 1
         min-height: 0
@@ -1964,6 +1966,8 @@ footer kbd, #hscroll kbd, #dlg .dfoot kbd, #confirm .keys kbd, #transfer .keys k
         /*  the actions after the key caps of the key hints  */
         .action
             margin-left: 0.4rem
+
+/*  the edit and close buttons of the header of the task dialog  */
 .close
     border: 0
     background: none

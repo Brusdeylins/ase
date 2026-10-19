@@ -149,3 +149,4 @@ export const skillPrefixGroups: SkillGroup[] = prefixes.flatMap((prefix) => {
     return subs.concat([ { label: prefix.toUpperCase(), skills: skills.filter((id) => !listed.has(id)) } ])
         .filter((group) => group.skills.length > 0)
 })
+

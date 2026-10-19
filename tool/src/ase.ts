@@ -6,10 +6,10 @@
 */
 
 import { Command, CommanderError, Option } from "commander"
-import Log                         from "./ase-lib-log.js"
-import type { LogLevel }           from "./ase-lib-log.js"
-import { writeStdout }             from "./ase-lib-stdio.js"
-import pkg                         from "../package.json" with { type: "json" }
+import Log                                 from "./ase-lib-log.js"
+import type { LogLevel }                   from "./ase-lib-log.js"
+import { writeStdout }                     from "./ase-lib-stdio.js"
+import pkg                                 from "../package.json" with { type: "json" }
 
 /*  type of top-level (global) options  */
 export type GlobalOpts = {
@@ -184,3 +184,4 @@ main().catch(async (err: unknown) => {
     await log.close()
     process.exit(1)
 })
+

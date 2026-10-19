@@ -64,7 +64,7 @@ import BoardLanes                               from "./ase-task-board-web-clien
 import BoardGraph                               from "./ase-task-board-web-client-graph.vue"
 import BoardAgents                              from "./ase-task-board-web-client-agents.vue"
 import BoardFlow                                from "./ase-task-board-web-client-flow.vue"
-import BoardStats                            from "./ase-task-board-web-client-stats.vue"
+import BoardStats                               from "./ase-task-board-web-client-stats.vue"
 import TaskDialog                               from "./ase-task-board-web-client-dialog.vue"
 import BoardPopup                               from "./ase-task-board-web-client-popup.vue"
 import {

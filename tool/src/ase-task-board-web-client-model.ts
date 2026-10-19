@@ -247,7 +247,7 @@ let   statsSeq    = 0
 export const boardEl     = ref<HTMLElement | null>(null)
 export const graphEl     = ref<HTMLElement | null>(null)
 export const flowEl      = ref<HTMLElement | null>(null)
-export const planEl     = ref<HTMLIFrameElement | null>(null)
+export const planEl      = ref<HTMLIFrameElement | null>(null)
 export const tabsEl      = ref<HTMLElement | null>(null)
 export const filterEl    = ref<HTMLInputElement | null>(null)
 

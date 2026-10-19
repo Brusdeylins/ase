@@ -1008,6 +1008,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
             setGrow(false)
     }, [ grow, growable ])
 
+    /*  the heights of the header, footer, and board area, and the inner board width  */
     const headH  = 3
     const footH  = surface.keys ? (view === "agents" || view === "stats" || view === "flow" ? 5 : view === "lanes" ? 7 : 6) : 3
     const boardH = rows - headH - footH

@@ -429,8 +429,7 @@ export const promptNext = (prompt: PromptState): PromptFocus =>
     wrapped onto the five lines of the frame of an input box (like in the web board, in
     accent color, resp. in signal color while focused), scrolled to show the cursor, with
     the request and cancel buttons below it (in accent color, resp. in signal color while
-    focused), and with
-    every inner cell written (with spaces) to hide the content underneath  */
+    focused), and with every inner cell written (with spaces) to hide the content underneath  */
 export const renderPrompt = (prompt: PromptState, columns: number, rows: number, choices: string[] = []) => {
     const { id, text, pos, request } = prompt
     const box    = promptBox(columns, rows, request !== null)
@@ -528,7 +527,7 @@ export const renderPrompt = (prompt: PromptState, columns: number, rows: number,
     const notice  = "(ignored by the agents of this request)".slice(0, lineW)
     const focus   = prompt.focus === "prompt" && !ignored
     const tone    = focus ? "signal" : ignored ? "dim" : "accent"
-    const popup  = h(Box, { key: "prompt", top, left, width, height, ...cx("popup", "border-dim") },
+    const popup   = h(Box, { key: "prompt", top, left, width, height, ...cx("popup", "border-dim") },
         h(Text, cx("normal", "bold"),
             " ".repeat(qpad) + lead,
             h(Text, cx("inverse"), tid),

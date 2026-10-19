@@ -114,7 +114,8 @@ const agentUsage = (usage: AgentUsage | undefined) => {
     return `${agentDuration(usage.walltimeSec * 1000)}, ${tokens} tok, ${cost}`
 }
 
-const pad        = (n: number, k = 2) => String(n).padStart(k, "0")
+/*  the full local timestamp of an agent log line as "YYYY-MM-DD HH:MM:SS.mmm"  */
+const pad         = (n: number, k = 2) => String(n).padStart(k, "0")
 const logTime     = (time: number) => {
     const d = new Date(time)
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +

@@ -219,7 +219,9 @@ const TOP_N = 5
     highest usage, to vertically align the "▷" between them (like in the TUI)  */
 const tokInW  = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) => tokens(t.input).length)))
 const tokOutW = computed(() => Math.max(0, ...(stats.value?.top ?? []).map((t) => tokens(t.output).length)))
-const share  = (value: number, max: number) => `${max > 0 ? value / max * 100 : 0}%`
+
+/*  the share of a value of a maximum, as a CSS percentage  */
+const share = (value: number, max: number) => `${max > 0 ? value / max * 100 : 0}%`
 
 /*  the explanation of the effort of a state (its human minutes and its numbers of tasks)  */
 const effortTitle = (label: string, e: StatsEffort) =>

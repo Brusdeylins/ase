@@ -400,7 +400,7 @@ export class TaskStoreCore {
             const entry = await this.store.projectGet(prjId)
             if (createOnly && entry !== null)
                 throw problem(412, `project "${prjId}" already registered`)
-            const name = rawLifecycle ?? entry?.lifecycle ?? "solo"
+            const name      = rawLifecycle ?? entry?.lifecycle ?? "solo"
             const lifecycle = Object.hasOwn(TaskFormat.taskLifecycles, name) ? TaskFormat.taskLifecycles[name] : undefined
             if (lifecycle === undefined)
                 throw problem(422, `unknown lifecycle model "${name}" ` +

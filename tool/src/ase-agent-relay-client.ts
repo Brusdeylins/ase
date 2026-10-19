@@ -190,8 +190,8 @@ export class AgentRelayError extends Error {
     any traffic for this interval is pinged and without any traffic for twice this interval
     is terminated), the timeout of its WebSocket handshake, and the minimum and maximum
     delay of its reconnection (doubled on each failed connection attempt in a row)  */
-const KEEPALIVE_MS = 15 * 1000
-const HANDSHAKE_MS = 10 * 1000
+const KEEPALIVE_MS     = 15 * 1000
+const HANDSHAKE_MS     = 10 * 1000
 const RECONNECT_MIN_MS = 2 * 1000
 const RECONNECT_MAX_MS = 60 * 1000
 

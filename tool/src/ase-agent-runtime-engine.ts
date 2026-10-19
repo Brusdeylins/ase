@@ -821,13 +821,13 @@ class DefinedPhaseAgent extends PhaseAgent {
         }
         this.presenceTitle = def.title
         this.presenceDesc  = def.description
-        this.assigned   = def.assign.required
-        this.finishing  = def.finish.commit || def.finish.success !== "" || def.workdir === "target"
+        this.assigned      = def.assign.required
+        this.finishing     = def.finish.commit || def.finish.success !== "" || def.workdir === "target"
             || def.hooks.finish !== undefined
-        this.serial     = def.serial
-        this.worktree   = def.workdir !== "project"
-        this.lifecycles = def.lifecycles
-        this.mode       = identity.mode
+        this.serial        = def.serial
+        this.worktree      = def.workdir !== "project"
+        this.lifecycles    = def.lifecycles
+        this.mode          = identity.mode
     }
 
     /*  the identity of the agent  */
@@ -1148,7 +1148,6 @@ export abstract class DefinedAgent extends Agent {
         return this.unsupported()
     }
 }
-
 
 /*  agent "ase agent <kind>" of a built-in kind: the agent of the definition of the mode of
     "--mode" (if the kind has multiple modes), overridden by the given options, with the

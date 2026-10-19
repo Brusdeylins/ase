@@ -10,14 +10,14 @@
     and the top-level CLI commands, whose names open the shared man-page
     modal on click.  */
 
-import GlowSide        from "./Widget-Glow-Side.astro"
-import Terminal        from "./Widget-Terminal.astro"
-import Annotation      from "./Widget-Annotation.astro"
+import GlowSide              from "./Widget-Glow-Side.astro"
+import Terminal              from "./Widget-Terminal.astro"
+import Annotation            from "./Widget-Annotation.astro"
 import { skillPrefixGroups } from "../data/skills.ts"
-import { manColumns }  from "../data/manpages.ts"
-import Compass        from "@lucide/astro/icons/compass"
-import Search          from "@lucide/astro/icons/search"
-import BookOpenText    from "@lucide/astro/icons/book-open-text"
+import { manColumns }        from "../data/manpages.ts"
+import Compass               from "@lucide/astro/icons/compass"
+import Search                from "@lucide/astro/icons/search"
+import BookOpenText          from "@lucide/astro/icons/book-open-text"
 
 /*  arrange the skill prefix groups (shared with the sidebar of the manpage
     browser) into the five catalog columns, which, read top to bottom and
@@ -94,7 +94,7 @@ const commandColumns = manColumns
                     commands={[
                         "**/ase-help-intent** create a \"hello\" CLI command which prints \"Hello World\" in red to the terminal",
                         "**/ase-help-intent** find 10 new clever ideas for Software Engineering skills",
-                        "**/ase-help-intent** locate a good library for option parsing in TypeScript",
+                        "**/ase-help-intent** locate a good library for option parsing in TypeScript"
                     ]}
                 />
                 <Terminal

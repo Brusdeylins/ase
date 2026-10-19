@@ -236,7 +236,7 @@ export const register: Register = (on, options) => {
     /*  the last known width of the terminal, the already seen tables, the
         latest (still unanswered) table, the picks and the selected question of the
         still unsubmitted prompt, and the frozen picks of the already answered tables  */
-    let columns = 80
+    let columns  = 80
     const seen   = new Set<string>()
     let latest: string | undefined
     let picks    = new Map<number, string>()

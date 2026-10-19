@@ -786,8 +786,8 @@ const onPromptKey = (ev: KeyboardEvent) => {
     else if ((ev.key === "ArrowUp" || ev.key === "ArrowDown") && ev.target === promptName.value
         && prompt.value !== null && prompt.value.name !== null && choices.length > 0) {
         ev.preventDefault()
-        const i = choices.indexOf(prompt.value.name)
-        const n = choices.length
+        const i  = choices.indexOf(prompt.value.name)
+        const n  = choices.length
         const up = ev.key === "ArrowUp"
         prompt.value.name = choices[i < 0 ? (up ? n - 1 : 0) : (i + (up ? n - 1 : 1)) % n]
     }
