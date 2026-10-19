@@ -168,12 +168,15 @@ related to a set of code quality aspects.
     parallel invocation is distinguishable in the progress display.
 
     Parse the result message of each `Agent` tool invocation as a JSON
-    array and concatenate all those arrays. Then *deduplicate* the
-    combined list: when two problems share the same `file`, `line`, and
+    array and concatenate all those arrays. Determine the *anchor* of
+    each problem as the `file` of its *first* `change-set` entry and the
+    `line` of that entry's *first* `change-hunks` entry, as problems carry
+    no top-level `file` and `line` fields. Then *deduplicate* the
+    combined list: when two problems share the same anchor and
     `aspect`, *silently drop* all but the first one (sub-agents may
     have read overlapping *related* files for comprehension). Finally
-    sort the list by `file` and then numerically by `line`, and set
-    <problems/> to that list.
+    sort the list by the anchor `file` and then numerically by the anchor
+    `line`, and set <problems/> to that list.
 
     Then determine the *effective severity floor* <floor/>: define the
     ordinal rank `LOW`=1, `MEDIUM`=2, `HIGH`=3, start from
