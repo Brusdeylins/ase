@@ -343,17 +343,6 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
             setPrompt({ ...prompt, focus: prompt.focus === "request" ? "cancel" : "request" })
         return
     }
-
-    /*  type the prompt of an edit request: RETURN requests the edit, Shift+RETURN
-        (under the kitty keyboard protocol only), Alt+RETURN (under the kitty keyboard
-        protocol, or where the terminal sends it as ESC+RETURN, e.g. with "Option as Meta"
-        on macOS), and Ctrl+J (in every terminal, as a plain linefeed without the kitty
-        keyboard protocol) insert a newline,
-        the left/right arrows move the cursor by one character, HOME/END move it
-        to the start/end, BACKSPACE removes the character before the cursor, DELETE
-        removes the character at the cursor, and all other input (also pasted text,
-        with its newlines kept and its other control characters turned into spaces)
-        is inserted at the cursor  */
     if (prompt !== null && prompt.request !== null && prompt.focus === "name") {
         /*  type the request name of a request by prompt: RETURN switches to the prompt (resp. to
             the request button if the prompt is ignored), the
@@ -376,6 +365,17 @@ const handlePopupKey = (ctx: BoardCtx, input: string, key: Key): void => {
             name(request.name + input.toLowerCase())
         return
     }
+
+    /*  type the prompt of an edit request: RETURN requests the edit, Shift+RETURN
+        (under the kitty keyboard protocol only), Alt+RETURN (under the kitty keyboard
+        protocol, or where the terminal sends it as ESC+RETURN, e.g. with "Option as Meta"
+        on macOS), and Ctrl+J (in every terminal, as a plain linefeed without the kitty
+        keyboard protocol) insert a newline,
+        the left/right arrows move the cursor by one character, HOME/END move it
+        to the start/end, BACKSPACE removes the character before the cursor, DELETE
+        removes the character at the cursor, and all other input (also pasted text,
+        with its newlines kept and its other control characters turned into spaces)
+        is inserted at the cursor  */
     if (prompt !== null) {
         const chars  = [ ...prompt.text ]
         const pos    = Math.max(0, Math.min(prompt.pos, chars.length))
