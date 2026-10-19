@@ -17,9 +17,11 @@ Analyze and Resolve Source Code Problems
 
 <expand name="getopt"
     arg1="optimizer"
-    arg2="--id|-i <id>=optimizer">
+    arg2="--id|-i=optimizer">
     $ARGUMENTS
 </expand>
+
+Set <id><getopt-option-id/></id>.
 
 <flow>
 
@@ -29,7 +31,7 @@ Analyze and Resolve Source Code Problems
         subagent_type="general-purpose"
         run_in_background=false>
 
-        Run <skill name="ase-code-analyze" args="--prefix <id/> <getopt-arguments/>"/>
+        Run <skill name="ase:ase-code-analyze" args="--prefix <id/> <getopt-arguments/>"/>
 
     </agent>
 
@@ -39,7 +41,7 @@ Analyze and Resolve Source Code Problems
 
     <parallel>
 
-    For each `P<n/>` in the result set, in ascending order and strictly *one at a time*:
+    For each `P<n/>` in the result set, in ascending order:
 
     1.  Call the Agent:
 
