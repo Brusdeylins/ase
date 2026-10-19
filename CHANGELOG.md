@@ -11,6 +11,33 @@ ChangeLog
     floor now wins over the boxing: it lifts the `MEDIUM` floor of `grey` and the skip of
     `black`, so `-S LOW` acts on all findings, while the boxing still limits the exposed internals.
 
+-   IMPROVEMENT [code]: Extra Sanity Checks in the Hook and Config Handling
+    `ase hook` now rejects the session ids `.` and `..`, and the `ConfigMCP` getter of
+    `ase-config` now fails with an error for a key which is not a leaf key.
+
+-   IMPROVEMENT [docs]: Website Setup Section Cleanup and New Typing Demo
+    The Setup section of the website documents the configuration key `project.users` and derives
+    its per-tool tabs from a single helper, the scroll mark hint of the header was corrected, and
+    the typing demo was re-rendered.
+
+-   BUGFIX [code]: Prompt Error Handling in the Claude Code Mod
+    The function hooks module `ase-mods.ts` now ignores a prompt which is no longer accessible
+    instead of failing with an unhandled error.
+
+-   CLEANUP [code,infr]: ASCII Escapes and Comments
+    The control character filter `sanitize` of the terminal task board popup now uses `\u{...}`
+    escapes instead of literal invisible characters, and the comments of `stopEdit` and of
+    `tool/etc/remark.mjs` were added resp. clarified.
+
+-   REFACTOR [code]: Split Large Modules into Smaller Parts
+    `ase-task.ts` registers its CLI sub-commands and MCP tools through dedicated methods, and
+    `ase-agent-definition-core.ts`, `ase-service.ts`, and `ase-task-board-tui-model.ts` factor
+    out their oversized parts.
+
+-   REFACTOR [code]: Common `memoize` for the Issue Task Store Plugins
+    The GitHub, GitLab, and Gitea task store plugins share the promise caching helper `memoize`
+    of `ase-task-store-issues.ts` instead of repeating it.
+
 2.0.2 (2026-10-19)
 ------------------
 
