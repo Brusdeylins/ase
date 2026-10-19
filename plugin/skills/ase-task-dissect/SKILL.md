@@ -142,7 +142,8 @@ Procedure
 
     2.  *Identify the parts* according to the task id scheme of the
         project: for *every* part in <parts/>, in their derived order,
-        call the `ase_task_newid(title: "<scope/>", proposal:
+        remember its <part-id/> as its <part-proposal/> and call the
+        `ase_task_newid(title: "<scope/>", proposal:
         "<part-id/>", taken: [ <previous/> ])` tool of the `ase` MCP
         server, where <previous/> lists the already re-identified
         <part-id/> of all preceding parts (as the tool reserves ids for
@@ -175,8 +176,9 @@ Procedure
         Call the `ase_task_list(verbose: false)` tool of the `ase` MCP
         server and set <existing/> to the `id` fields of the returned
         `tasks` array. Do not output anything related to this MCP tool
-        call. Set <collisions/> to all <part-id/> of <parts/> which are
-        already present in <existing/>.
+        call. Set <collisions/> to all <part-proposal/> of <parts/> which
+        are already present in <existing/> (as each <part-id/> itself was
+        re-identified to a free id in step 3.2).
 
         <if condition="<collisions/> is not empty AND <getopt-option-force/> is not equal `true`">
         Only output the following <template/> -- with <collisions/>
@@ -200,8 +202,9 @@ Procedure
         </if>
 
         <if condition="<collisions/> is not empty AND <getopt-option-force/> is equal `true`">
-        The colliding sub-task plans are *overwritten* in sub-step 4.3
-        below. Do not output anything.
+        Set the <part-id/> of every colliding part back to its
+        <part-proposal/>, so the colliding sub-task plans are
+        *overwritten* in sub-step 4.3 below. Do not output anything.
         </if>
 
     3.  *Compose and persist one sub-task plan per part*:
@@ -263,7 +266,8 @@ Procedure
             </elseif>
 
         2.  Call the `ase_task_save(id: "<part-id/>", text:
-            "<part-content/>", create: true)` tool of the `ase` MCP server to persist
+            "<part-content/>", create: true)` tool of the `ase` MCP server -- for
+            a part of <collisions/> *without* the `create` argument -- to persist
             the sub-task plan -- this MCP tool call is the *only*
             permitted way to persist it, *NEVER* write the plan file
             via `Write`/`Edit` or by executing a shell command. If this
