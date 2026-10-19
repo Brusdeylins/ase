@@ -22,6 +22,10 @@ ChangeLog
     updated, agent screenshots of both task boards and new highlights were added, and the title
     hints at the task management and the autonomous agents.
 
+-   IMPROVEMENT [code,docs]: Task Board Reminder of Hidden Key Hints
+    While the key hint lines are hidden via `?`, the information line of both the terminal and
+    the web task board now ends with the hint `?: show key hints`.
+
 -   BUGFIX [code]: Secret Masking in the MCP Configuration Getter
     The `ConfigMCP` getter of `ase-config` now returns `***` instead of the value of a secret
     configuration key.
