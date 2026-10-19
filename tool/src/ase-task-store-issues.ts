@@ -282,3 +282,88 @@ export const attachmentSync = (current: API.TaskAttachment[], wanted: API.TaskAt
     return ops
 }
 
+/*  the change detection state of a project: the "since" timestamp and the (optional)
+    entity tag of the last poll, and the last seen update time per issue number  */
+export type PollState = { since: string, etag?: string, seen: Map<number, string> }
+
+/*  the common base of the issue tracker storage plugins: the projects mapped onto
+    their locations, the storage lifecycle polling for changes while opened and
+    observed (without keeping the process alive), and the project listing  */
+export abstract class IssueTaskStoragePlugin<L> {
+    protected url       = ""
+    protected poll      = 0
+    protected repos     = new Map<string, L>()
+    protected listener: ((prjId: string, change: API.TaskChange) => void) | null = null
+    protected timer:    ReturnType<typeof setInterval> | null = null
+    protected opened:   string
+    private   polling   = false
+    private   polls     = new Map<string, PollState>()
+
+    constructor (protected ctx: API.TaskStorageContext, private unit: string, private now: () => string) {
+        this.opened = now()
+    }
+
+    /*  get a registered project, and poll the issues of a project for changes  */
+    abstract projectGet (prjId: string): Promise<API.ProjectEntry | null>
+    protected abstract pollProject (prjId: string): Promise<void>
+
+    /*  the storage lifecycle  */
+    async open (): Promise<void> {
+        this.opened = this.now()
+        if (this.poll > 0 && this.listener !== null) {
+            this.timer = setInterval(() => {
+                this.pollAll().catch(() => {})
+            }, this.poll * 1000)
+            this.timer.unref()
+        }
+        this.ctx.log("debug", `opened ${this.repos.size} ${this.unit} on ${this.url} (polling every ${this.poll}s)`)
+    }
+    async close (): Promise<void> {
+        if (this.timer !== null)
+            clearInterval(this.timer)
+        this.timer = null
+    }
+
+    /*  observe the changes of the issues made outside of this plugin instance  */
+    watch (listener: (prjId: string, change: API.TaskChange) => void): void {
+        this.listener = listener
+    }
+
+    /*  list the registered ones of the mapped projects  */
+    async projectList (): Promise<API.ProjectEntry[]> {
+        const out: API.ProjectEntry[] = []
+        for (const prjId of this.repos.keys()) {
+            const entry = await this.projectGet(prjId)
+            if (entry !== null)
+                out.push(entry)
+        }
+        return out
+    }
+
+    /*  the change detection state of a project (starting at the opening time)  */
+    protected pollState (prjId: string): PollState {
+        let state = this.polls.get(prjId)
+        if (state === undefined) {
+            state = { since: this.opened, seen: new Map() }
+            this.polls.set(prjId, state)
+        }
+        return state
+    }
+
+    /*  poll all mapped projects, never overlapping itself  */
+    private async pollAll (): Promise<void> {
+        if (this.polling)
+            return
+        this.polling = true
+        try {
+            for (const prjId of this.repos.keys())
+                await this.pollProject(prjId).catch((err: unknown) => {
+                    this.ctx.log("warning", `polling project "${prjId}" failed: ${err instanceof Error ? err.message : String(err)}`)
+                })
+        }
+        finally {
+            this.polling = false
+        }
+    }
+}
+

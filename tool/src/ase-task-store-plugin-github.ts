@@ -60,10 +60,6 @@ type Comment = {
 /*  the "seq" task id scheme, the only one whose ids can be issue numbers  */
 type SeqScheme = TaskIssues.SeqScheme
 
-/*  the change detection state of a project: the "since" timestamp and the
-    entity tag of the last poll, and the last seen update time per issue number  */
-type PollState = { since: string, etag?: string, seen: Map<number, string> }
-
 /*  the reserved labels, the task id mapping, and the timestamp of the common issue tracker parts  */
 const { LABEL_PROJECT, LABEL_DELETED, LABEL_KEY_RE, idOf, numberOf, stamp } = TaskIssues
 
@@ -125,18 +121,10 @@ const inRepo = (loc: Repo, issue: Issue): boolean => {
     the attachments onto the issue comments (where "Group" and "After" fall back
     onto "ase:Group:<id>" resp. "ase:After:<ids>" labels on instances without
     sub-issues resp. issue dependencies)  */
-class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
+class GitHubTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> implements API.TaskStoragePlugin {
     readonly name = "github"
-    private url:        string
     private gh:         Client
-    private repos       = new Map<string, Repo>()
-    private poll:       number
-    private listener:   ((prjId: string, change: API.TaskChange) => void) | null = null
-    private timer:      ReturnType<typeof setInterval> | null = null
-    private polling     = false
-    private opened      = now()
-    private polls       = new Map<string, PollState>()
-    private registry    = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
+    private registry   = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
     private latest      = new Map<string, { etag: string, number: number, at: number }>()
     private labels      = new Map<string, Set<string>>()
     private milestones  = new Map<string, Map<string, number>>()
@@ -144,7 +132,8 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
     private recent      = new Map<string, Map<number, { issue: Issue, at: number }>>()
     private loads       = new LRUCache<string, Promise<{ issue: Issue, after: Issue[], comments: Comment[] } | null>>({ max: 256, ttl: 2 * 1000 })
 
-    constructor (private ctx: API.TaskStorageContext) {
+    constructor (ctx: API.TaskStorageContext) {
+        super(ctx, "repositories", now)
         const options = ctx.options as TaskStoragePluginOptions
         const token   = options.token ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? ""
         if (typeof token !== "string" || token === "")
@@ -213,29 +202,6 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
         })
     }
 
-    /*  the storage lifecycle: polling for changes while opened and observed
-        (without keeping the process alive)  */
-    async open (): Promise<void> {
-        this.opened = now()
-        if (this.poll > 0 && this.listener !== null) {
-            this.timer = setInterval(() => {
-                this.pollAll().catch(() => {})
-            }, this.poll * 1000)
-            this.timer.unref()
-        }
-        this.ctx.log("debug", `opened ${this.repos.size} repositories on ${this.url} (polling every ${this.poll}s)`)
-    }
-    async close (): Promise<void> {
-        if (this.timer !== null)
-            clearInterval(this.timer)
-        this.timer = null
-    }
-
-    /*  observe the changes of the issues made outside of this plugin instance  */
-    watch (listener: (prjId: string, change: API.TaskChange) => void): void {
-        this.listener = listener
-    }
-
     /*  ==== project registry ====  */
 
     /*  the repository of a project  */
@@ -297,16 +263,6 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
             }
             throw err
         }
-    }
-
-    async projectList (): Promise<API.ProjectEntry[]> {
-        const out: API.ProjectEntry[] = []
-        for (const prjId of this.repos.keys()) {
-            const entry = await this.projectGet(prjId)
-            if (entry !== null)
-                out.push(entry)
-        }
-        return out
     }
 
     /*  get a project, with the highest issue number as the sequence number high-water
@@ -730,38 +686,12 @@ class GitHubTaskStoragePlugin implements API.TaskStoragePlugin {
 
     /*  ==== change detection ====  */
 
-    /*  the change detection state of a project (starting at the opening time)  */
-    private pollState (prjId: string): PollState {
-        let state = this.polls.get(prjId)
-        if (state === undefined) {
-            state = { since: this.opened, seen: new Map() }
-            this.polls.set(prjId, state)
-        }
-        return state
-    }
-
-    /*  poll all registered projects, never overlapping itself  */
-    private async pollAll (): Promise<void> {
-        if (this.polling)
-            return
-        this.polling = true
-        try {
-            for (const prjId of this.repos.keys())
-                await this.pollProject(prjId).catch((err: unknown) => {
-                    this.ctx.log("warning", `polling project "${prjId}" failed: ${err instanceof Error ? err.message : String(err)}`)
-                })
-        }
-        finally {
-            this.polling = false
-        }
-    }
-
     /*  poll the issues of a project updated since the last poll, conditionally
         via the entity tag of the last poll (a "304" answer is free of rate limit),
         and report the issues not seen at their update time yet: as added if created
         after the opening, as deleted if soft deleted, else as updated (issues deleted
         on GitHub are not reported, as GitHub reports no deletions)  */
-    private async pollProject (prjId: string): Promise<void> {
+    protected async pollProject (prjId: string): Promise<void> {
         const listener = this.listener
         if (listener === null || await this.registered(prjId) === null)
             return

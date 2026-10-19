@@ -63,10 +63,6 @@ type Listing = { issues: Issue[], etag?: string, more: boolean }
 /*  the "seq" task id scheme, the only one whose ids can be issue numbers  */
 type SeqScheme = TaskIssues.SeqScheme
 
-/*  the change detection state of a project: the "since" timestamp and the
-    entity tag of the last poll, and the last seen update time per issue number  */
-type PollState = { since: string, etag?: string, seen: Map<number, string> }
-
 /*  the reserved labels, the task id mapping, and the timestamp of the common issue tracker parts  */
 const { LABEL_PROJECT, LABEL_DELETED, idOf, numberOf, stamp } = TaskIssues
 
@@ -106,9 +102,8 @@ const live = (issue: Issue): boolean =>
     "Created"/"Modified" onto the issue timestamps, any other key (including "Group",
     as GitLab has no parent issues) onto "ase:<key>:<value>" labels, and the attachments
     onto the issue notes  */
-class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
+class GitLabTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<string> implements API.TaskStoragePlugin {
     readonly name = "gitlab"
-    private url:        string
     private token:      string
     private source:     string
     private issues:     Issues
@@ -118,14 +113,7 @@ class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
     private milestones: ProjectMilestones
     private members:    ProjectMembers
     private users:      Users
-    private repos       = new Map<string, string>()
-    private poll:       number
-    private listener:   ((prjId: string, change: API.TaskChange) => void) | null = null
-    private timer:      ReturnType<typeof setInterval> | null = null
-    private polling     = false
-    private opened      = now()
-    private polls       = new Map<string, PollState>()
-    private registry    = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
+    private registry   = new LRUCache<string, { value: TaskIssues.RegistryEntry | null }>({ max: 64, ttl: 60 * 1000 })
     private latest      = new Map<string, { etag: string, number: number, at: number }>()
     private titles      = new Map<string, Map<string, number>>()
     private userIds     = new Map<string, number | null>()
@@ -134,7 +122,8 @@ class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
     private recent      = new Map<string, Map<number, { issue: Issue, at: number }>>()
     private loads       = new LRUCache<string, Promise<{ issue: Issue, after: Link[], notes: Note[] } | null>>({ max: 256, ttl: 2 * 1000 })
 
-    constructor (private ctx: API.TaskStorageContext) {
+    constructor (ctx: API.TaskStorageContext) {
+        super(ctx, "projects", now)
         const options = ctx.options as TaskStoragePluginOptions
         const token   = options.token ?? process.env.GITLAB_TOKEN ?? ""
         if (typeof token !== "string" || token === "")
@@ -201,29 +190,6 @@ class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
                 }
             }
         })
-    }
-
-    /*  the storage lifecycle: polling for changes while opened and observed
-        (without keeping the process alive)  */
-    async open (): Promise<void> {
-        this.opened = now()
-        if (this.poll > 0 && this.listener !== null) {
-            this.timer = setInterval(() => {
-                this.pollAll().catch(() => {})
-            }, this.poll * 1000)
-            this.timer.unref()
-        }
-        this.ctx.log("debug", `opened ${this.repos.size} projects on ${this.url} (polling every ${this.poll}s)`)
-    }
-    async close (): Promise<void> {
-        if (this.timer !== null)
-            clearInterval(this.timer)
-        this.timer = null
-    }
-
-    /*  observe the changes of the issues made outside of this plugin instance  */
-    watch (listener: (prjId: string, change: API.TaskChange) => void): void {
-        this.listener = listener
     }
 
     /*  ==== project registry ====  */
@@ -304,16 +270,6 @@ class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
         if (r?.etag !== undefined)
             this.latest.set(path, { etag: r.etag, number, at: Date.now() })
         return number
-    }
-
-    async projectList (): Promise<API.ProjectEntry[]> {
-        const out: API.ProjectEntry[] = []
-        for (const prjId of this.repos.keys()) {
-            const entry = await this.projectGet(prjId)
-            if (entry !== null)
-                out.push(entry)
-        }
-        return out
     }
 
     /*  get a project, with the highest issue number as the sequence number high-water
@@ -710,38 +666,12 @@ class GitLabTaskStoragePlugin implements API.TaskStoragePlugin {
 
     /*  ==== change detection ====  */
 
-    /*  the change detection state of a project (starting at the opening time)  */
-    private pollState (prjId: string): PollState {
-        let state = this.polls.get(prjId)
-        if (state === undefined) {
-            state = { since: this.opened, seen: new Map() }
-            this.polls.set(prjId, state)
-        }
-        return state
-    }
-
-    /*  poll all registered projects, never overlapping itself  */
-    private async pollAll (): Promise<void> {
-        if (this.polling)
-            return
-        this.polling = true
-        try {
-            for (const prjId of this.repos.keys())
-                await this.pollProject(prjId).catch((err: unknown) => {
-                    this.ctx.log("warning", `polling project "${prjId}" failed: ${err instanceof Error ? err.message : String(err)}`)
-                })
-        }
-        finally {
-            this.polling = false
-        }
-    }
-
     /*  poll the issues of a project updated since the last poll, conditionally via
         the entity tag of the last poll (a "304" answer still counts against the rate
         limit of GitLab), and report the issues not seen at their update time yet: as
         added if created after the opening, as deleted if soft deleted, else as updated
         (issues deleted on GitLab are not reported, as GitLab reports no deletions)  */
-    private async pollProject (prjId: string): Promise<void> {
+    protected async pollProject (prjId: string): Promise<void> {
         const listener = this.listener
         if (listener === null || await this.registered(prjId) === null)
             return
