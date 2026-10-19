@@ -326,16 +326,16 @@ export const register: Register = (on, options) => {
         }
 
         /*  draw a line of a cell: its styled runs, padded to the column width  */
-        const paint = (chars: Char[], columns: number): (string | RenderElement)[] => [
+        const paint = (chars: Char[], span: number): (string | RenderElement)[] => [
             ...split(chars).map(({ text, bold, color }) =>
                 bold || color !== undefined ? Text({ bold, color, children: text }) : text),
-            " ".repeat(Math.max(0, columns - width(chars)))
+            " ".repeat(Math.max(0, span - width(chars)))
         ]
 
         /*  insert the number of a clicked question or the short response of a clicked
             answer into the prompt and refresh the picks and the selection from it  */
         const press = (number: number, letter?: string) => () => {
-            void $.prompt.read()
+            $.prompt.read()
                 .then(({ text }) => $.prompt.fill({ text: insert(text, number, letter) }))
                 .then((box) => {
                     picks    = pick(box.text)
@@ -354,11 +354,11 @@ export const register: Register = (on, options) => {
             the run's bold style, but not its color, as its hover style, because the
             engine leaves the space cells uncolored) on top of it; otherwise as
             styled text only  */
-        const draw = (chars: Char[], columns: number, group: string, line: number,
+        const draw = (chars: Char[], span: number, group: string, line: number,
             onPress: () => void): RenderElement[] => {
             const w = width(chars)
             if (e.requestId !== latest || w === 0)
-                return [ Text({ children: paint(chars, columns) }) ]
+                return [ Text({ children: paint(chars, span) }) ]
             const buttons = split(chars).map(({ text, bold }, r) =>
                 Button({ key: `${group}/${line}/${r}`, label: text, plain: true, onPress,
                     hover: { scope: group, inverse: true, bold } }))
@@ -368,7 +368,7 @@ export const register: Register = (on, options) => {
                     Box({ position: "absolute", top: 0, left: 0, display: "none",
                         hover: { scope: group, display: "flex" }, flexDirection: "row", children: buttons })
                 ] }),
-                Text({ children: " ".repeat(Math.max(0, columns - w)) })
+                Text({ children: " ".repeat(Math.max(0, span - w)) })
             ]
         }
 
