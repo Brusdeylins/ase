@@ -370,6 +370,12 @@ watch([ sel, graph, view, task, grown ], () => {
         d.over = group === undefined || surface.value.collapsed.includes(group.title) ? null : group.lanes[sel.value.l]?.status ?? null
 })
 
+/*  the single-key actions of the task dialog on its task  */
+const dialogKeys: Record<string, (id: string) => void> = {
+    E: openPrompt, R: openRequest, T: openTransfer, A: openAssign,
+    D: (id) => { confirmDel.value = id }
+}
+
 /*  in the task dialog, RETURN and ESC close it, "e" edits its plan, "E" edits it by a prompt,
     "D" deletes, "T" transitions, and "A" assigns its task, the left/right arrows (also Tab/Shift+Tab) switch
     its tab, and the up/down arrows and PgUp/PgDn scroll its content  */
@@ -381,25 +387,9 @@ const onDialogKey = (ev: KeyboardEvent) => {
         ev.preventDefault()
         startEdit()
     }
-    else if (ev.key === "E" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
+    else if (Object.hasOwn(dialogKeys, ev.key) && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
         ev.preventDefault()
-        openPrompt(task.value.id)
-    }
-    else if (ev.key === "R" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
-        ev.preventDefault()
-        openRequest(task.value.id)
-    }
-    else if (ev.key === "D" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
-        ev.preventDefault()
-        confirmDel.value = task.value.id
-    }
-    else if (ev.key === "T" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
-        ev.preventDefault()
-        openTransfer(task.value.id)
-    }
-    else if (ev.key === "A" && !ev.ctrlKey && !ev.metaKey && !ev.altKey && task.value !== null) {
-        ev.preventDefault()
-        openAssign(task.value.id)
+        dialogKeys[ev.key](task.value.id)
     }
     else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "Tab") {
         ev.preventDefault()

@@ -19,6 +19,7 @@ import { Config, sessionState }                     from "./ase-config-core.js"
 import { configSchema }                             from "./ase-config-schema.js"
 import { parseScope, userStateDir, projectIdOf }    from "./ase-config-scope.js"
 import { readStdin, writeStdout }                   from "./ase-lib-stdio.js"
+import { parseTool, type Tool }                     from "./ase-setup-common.js"
 import pkg                                          from "../package.json" with { type: "json" }
 
 /*  forced-color chalk instance: stdout is a pipe under Anthropic Claude Code CLI,
@@ -30,9 +31,6 @@ const c = new Chalk({ level: 1 })
 const COLORS: ReadonlySet<string> = new Set<ForegroundColorName | "default">([
     "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white", "default"
 ])
-
-/*  type of supported tool (host) systems  */
-type Tool = "claude" | "copilot" | "codex"
 
 /*  shape of the JSON payload Anthropic Claude Code CLI / Copilot CLI passes on stdin
     (Copilot CLI's payload is mostly a subset of Anthropic Claude Code CLI's, with the
@@ -376,13 +374,6 @@ const fetchCodexLimits = async (): Promise<RateLimits | undefined> => {
 export default class StatuslineCommand {
     constructor (private log: Log) {}
 
-    /*  parse and validate the --tool option  */
-    private parseTool (value: string): Tool {
-        if (value !== "claude" && value !== "copilot" && value !== "codex")
-            throw new InvalidArgumentError(`invalid --tool value: "${value}" (expected "claude", "copilot", or "codex")`)
-        return value
-    }
-
     /*  register commands  */
     register (program: Command): void {
         /*  default for --tool derived from ASE_TOOL environment variable
@@ -416,7 +407,7 @@ export default class StatuslineCommand {
                 "(default: single line \"%m %e %t\")")
             .action(async (lines: string[], opts: StatuslineOpts) => {
                 /*  validate target tool  */
-                const tool = this.parseTool(opts.tool)
+                const tool = parseTool(opts.tool)
 
                 /*  OpenAI Codex CLI has no scriptable custom statusline
                     mechanism, so reject the request explicitly  */

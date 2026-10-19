@@ -131,19 +131,6 @@ const steps = command.split(/\s*&&\s*/)
 </script>
 
 <style>
-    /*  frosted bar background: the same translucent brand gradient plus
-        backdrop blur as the site header, so the bar reads as the header's
-        counterpart along the bottom edge.  */
-    .cta-bar {
-        background: linear-gradient(to right,
-            color-mix(in oklch, var(--background) 80%, transparent),
-            color-mix(in oklch, color-mix(in oklch, var(--background) 70%, var(--brand-600)) 80%, transparent),
-            color-mix(in oklch, var(--background) 80%, transparent)
-        );
-        -webkit-backdrop-filter: blur(8px);
-        backdrop-filter: blur(8px);
-    }
-
     /*  the Setup shortcut is rendered as a button, exactly like the copy
         button next to it. Its colours are restated here because the unlayered
         global `a {}` rule outranks Tailwind's layered colour utilities -- the

@@ -469,6 +469,19 @@ export default class ServiceCommand {
             lastActivity = Date.now()
         })
 
+        /*  stop the HTTP server and the usage tracker, clear the persisted port, and exit  */
+        const stopService = async (): Promise<void> => {
+            try {
+                await server.stop({ timeout: 1000 })
+            }
+            catch (err: unknown) {
+                this.log.write("error", `service: stop failed: ${err instanceof Error ? err.message : String(err)}`)
+            }
+            await usage.stop()
+            Service.clearPort(ctx.svc)
+            process.exit(0)
+        }
+
         /*  listen to HTTP/REST endpoints  */
         server.route({
             method:  "OPTIONS",
@@ -487,17 +500,7 @@ export default class ServiceCommand {
                 if (!ct.startsWith("application/json"))
                     return h.response({ error: "unsupported media type" }).code(415)
                 this.log.write("info", "service: stop requested")
-                setImmediate(async () => {
-                    try {
-                        await server.stop({ timeout: 1000 })
-                    }
-                    catch (err: unknown) {
-                        const e = err as Error
-                        this.log.write("error", `service: stop failed: ${e.message}`)
-                    }
-                    await usage.stop()
-                    process.exit(0)
-                })
+                setImmediate(stopService)
                 return h.response({ ok: true }).code(200)
             }
         })
@@ -604,16 +607,7 @@ export default class ServiceCommand {
                     return
                 stopping = true
                 this.log.write("info", `service: received ${signal}, stopping`)
-                try {
-                    await server.stop({ timeout: 1000 })
-                }
-                catch (err: unknown) {
-                    const e = err as Error
-                    this.log.write("error", `service: stop failed: ${e.message}`)
-                }
-                await usage.stop()
-                Service.clearPort(ctx.svc)
-                process.exit(0)
+                await stopService()
             }
             process.on("SIGTERM", () => shutdown("SIGTERM"))
             process.on("SIGINT",  () => shutdown("SIGINT"))
@@ -635,19 +629,7 @@ export default class ServiceCommand {
             if (Date.now() - lastActivity > IDLE_MS) {
                 stopping = true
                 this.log.write("info", "service: idle timeout reached, stopping")
-                try {
-                    await server.stop({ timeout: 1000 })
-                    await usage.stop()
-                    Service.clearPort(ctx.svc)
-                    process.exit(0)
-                }
-                catch (err: unknown) {
-                    const e = err as Error
-                    this.log.write("error", `service: stop failed: ${e.message}`)
-                    await usage.stop()
-                    Service.clearPort(ctx.svc)
-                    process.exit(1)
-                }
+                await stopService()
             }
         }, TICK_MS).unref()
     }

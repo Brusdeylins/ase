@@ -309,7 +309,9 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
         above; a bare label carries no .nav-spy class at all.  */
     .nav-group-toggle.is-active { color: var(--foreground); }
 
-    /*  header background layer and collapsed mobile drop-down panel: the
+    /*  header background layer, collapsed mobile drop-down panel, and the
+        sticky install bar of Widget-Sticky-CTA (the header's counterpart
+        along the bottom edge): the
         translucent brand gradient plus the frosted backdrop blur, kept off the
         <header> element itself (see the markup comment) so it does not trap
         the mobile nav panel's own blur. The panel shares the exact style so
@@ -317,7 +319,8 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
         cleared again from the `lg` breakpoint upwards, where the nav is an
         inline, transparent part of the header.  */
     .nav-bar-bg,
-    .nav-menu-panel {
+    .nav-menu-panel,
+    .cta-bar {
         background: linear-gradient(to right,
             color-mix(in oklch, var(--background) 80%, transparent),
             color-mix(in oklch, color-mix(in oklch, var(--background) 70%, var(--brand-600)) 80%, transparent),
