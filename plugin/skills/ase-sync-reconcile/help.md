@@ -70,13 +70,13 @@ a unified diff instead.
     as nothing is written to disk.
 
 -   `--target`|`-t` *target*[,...]:
-    The comma-separated list of artifact kinds to update. Required (the
-    skill errors out on an empty target).
+    The comma-separated list of artifact kinds to update (default:
+    `CODE,DOCS,INFR,OTHR`). An empty target lets the skill error out.
 
 -   `--source`|`-s` *source*[,...]:
     The comma-separated list of artifact kinds to update *from*. The
-    special value `auto` resolves to all recognized kinds except those
-    in *target*.
+    special value `auto` (the default) resolves to all recognized kinds
+    except those in *target*.
 
 ##  ARGUMENTS
 
