@@ -114,14 +114,14 @@ Processing
     level-2 section (next patch version, current date) *above* it, which
     then becomes the *first* (most recent) section all subsequent steps
     operate on - the already released section *MUST* *NOT* be modified.
-    If this command produces *no* output, the
-    first section is still in-progress/untagged, so use the `N.M.K` from
-    the *second* level-2 header as the baseline tag instead. If *no*
+    If this command produces *no* output, the first section is still
+    in-progress/untagged, so use the `N.M.K` from the *second* level-2
+    header as the baseline tag instead. Then check all Git commits
+    between `HEAD` and this baseline tag with the command
+    `git log N.M.K..HEAD --numstat --pretty=format:'%h: %s'`. If *no*
     second level-2 header exists (very first, still untagged release),
     skip the baseline tag and check *all* Git commits with the command
-    `git log HEAD --numstat --pretty=format:'%h: %s'` instead. Then
-    check all Git commits between `HEAD` and this baseline tag with the
-    command `git log N.M.K..HEAD --numstat --pretty=format:'%h: %s'`.
+    `git log HEAD --numstat --pretty=format:'%h: %s'` instead.
 
     For finding the corresponding staged Git *changes* in the Git
     *index*, use the command `git diff --cached --numstat`, but silently
