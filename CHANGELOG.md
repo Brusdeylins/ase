@@ -2,6 +2,63 @@
 ChangeLog
 =========
 
+2.0.2 (2026-10-19)
+------------------
+
+-   IMPROVEMENT [code]: Missing Argument Detection in Skills
+    The skills `ase-code-analyze`, `ase-code-lint`, and `ase-meta-quorum` now detect missing
+    arguments up front instead of proceeding with an empty query.
+
+-   IMPROVEMENT [code]: `ase-spec-edit` May Update an Existing ChangeLog
+    Besides the `SPEC` artifacts, `ase-spec-edit` may now add an entry to an already existing
+    `CHANGELOG.md` file.
+
+-   IMPROVEMENT [code]: `ase-repo-changelog` Baseline Tag Instructions
+    The baseline-tag instructions are reordered to read in a sensible order, and the artifact
+    kind list no longer contains the removed kind `arch`.
+
+-   IMPROVEMENT [docs]: Website Workflows Section and Task Board Screenshots
+    The Workflows section renders better, the task board screenshots of the terminal UI were
+    updated, agent screenshots of both task boards and new highlights were added, and the title
+    hints at the task management and the autonomous agents.
+
+-   BUGFIX [code]: Secret Masking in the MCP Configuration Getter
+    The `ConfigMCP` getter of `ase-config` now returns `***` instead of the value of a secret
+    configuration key.
+
+-   BUGFIX [code]: Issue Handling of the Analyzer and Edit Skills
+    `ase-code-lint` dedupes and sorts by the file and first hunk line of the first change-set
+    entry, `ase-code-edit` clears `<query/>` for an unknown issue id before the next `--loop`
+    round, and `ase-arch-analyze` stores a `TRADEOFF` issue with the trade-off's own fields.
+
+-   BUGFIX [code]: `ase-task-dissect` Collision Detection and `--force`
+    The collision detection works again, and `--force` overwrites without failing.
+
+-   BUGFIX [code]: Question Number Insertion in `ase-mods`
+    When a question is clicked, only the last bare number in the prompt is replaced.
+
+-   BUGFIX [code]: Web Task Board Busy Label and Build Hash
+    The busy label of the edit prompt loading is correct, and `flow.js` is now part of the
+    `BOARD_BUILD` hash.
+
+-   CLEANUP [code]: Wording of Skills, Help Pages, and Meta Files
+    Clarified the wording of the help pages of `ase-meta-quorum`, `ase-task-grill`,
+    `ase-sync-reconcile`, `ase-help-skill`, `ase-task-list`, and `ase-code-edit`, of
+    `ase-common-resolve.md`, and of the sample of `ase-meta-workflow`.
+
+-   CLEANUP [code,docs]: Comment Cleanups
+    Cleaned up the comments of `ase-mods`, the task board core, TUI control, and web client
+    styles, `ase-util-diagram`, and the website components and data.
+
+-   REFACTOR [code]: Web Task Board Edit Request Route
+    The dedicated `/task/{id}/edit` route of the web task board server was removed: the web
+    client now sends the edit prompt through the generic `/task/{id}/request` route.
+
+-   REFACTOR [code]: Redundancy Removal
+    Factored out the common parts of the GitHub, GitLab, and Gitea task store plugins into
+    `ase-task-store-issues`, the `--tool` parsing of `ase-hook` into `ase-setup-common`, the
+    `writeStdout` use in `ase-lib-server-cli` and `ase-util-diagram`, and code of the TUI model.
+
 2.0.1 (2026-10-19)
 ------------------
 
