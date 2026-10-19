@@ -259,6 +259,8 @@ EmacsHandler.bindKey("C-x C-c", () => {
     leaveEdit(false)
     return true
 })
+
+/*  stop editing the task plan, destroying its editor and dropping its notice  */
 export const stopEdit = () => {
     const direct = editing.value?.direct === true
     editor?.destroy()
