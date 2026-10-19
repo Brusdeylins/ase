@@ -70,7 +70,7 @@ const wrap = (line: Line, width: number): Line[] => {
 
 /*  make a text safe for the terminal: expand tabs and strip control characters  */
 export const sanitize = (text: string): string =>
-    text.replace(/\t/g, "    ").replace(/[\p{Cc}؜‎‏‪-‮⁦-⁩]/gu, "")
+    text.replace(/\t/g, "    ").replace(/[\p{Cc}\u{061C}\u{200E}\u{200F}\u{202A}-\u{202E}\u{2066}-\u{2069}]/gu, "")
 
 /*  mark the checkbox of a plan line in the read dialog: checkboxes of items
     which are done, in progress, or open are accented, while checkboxes of
