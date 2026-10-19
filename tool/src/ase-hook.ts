@@ -116,7 +116,7 @@ export default class HookCommand {
 
     /*  validate a session id against the accepted character set  */
     private isValidSessionId (id: string): boolean {
-        return /^[A-Za-z0-9._-]+$/.test(id)
+        return /^[A-Za-z0-9._-]+$/.test(id) && id !== "." && id !== ".."
     }
 
     /*  resolve the base directory holding all per-session state  */
