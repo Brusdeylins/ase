@@ -21,9 +21,7 @@ import { parseScope, userStateDir }                       from "./ase-config-sco
 import { readStdin, writeStdout }                         from "./ase-lib-stdio.js"
 import { Task }                                           from "./ase-task.js"
 import * as TaskFormat                                    from "./ase-task-format.js"
-
-/*  type of supported tool (host) systems  */
-type Tool = "claude" | "copilot" | "codex"
+import { parseTool, type Tool }                           from "./ase-setup-common.js"
 
 /*  per-tool dispatch table for the parts that actually differ between
     Anthropic Claude Code CLI, GitHub Copilot CLI, and OpenAI Codex CLI hook integrations.  */
@@ -809,13 +807,6 @@ export default class HookCommand {
         return 0
     }
 
-    /*  parse and validate the --tool option  */
-    private parseTool (value: string): Tool {
-        if (value !== "claude" && value !== "copilot" && value !== "codex")
-            throw new Error(`invalid --tool value: "${value}" (expected "claude", "copilot", or "codex")`)
-        return value
-    }
-
     /*  register commands  */
     register (program: Command): void {
         /*  default for --tool derived from ASE_TOOL environment variable
@@ -849,7 +840,7 @@ export default class HookCommand {
                 .description(desc)
                 .option("-t, --tool <tool>", "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
                 .action(async (opts: { tool: string }) => {
-                    process.exitCode = await handler(this.parseTool(opts.tool))
+                    process.exitCode = await handler(parseTool(opts.tool))
                 })
     }
 }
