@@ -475,7 +475,9 @@ interface quality, quality attributes, and architecture governance.
       followed by one `{ command: "set", key: "ase-issue-<id-prefix/>P<n/>",
       val: "<title/>: <description/>" }` entry per reported PROBLEM and one
       `{ command: "set", key: "ase-issue-<id-prefix/>T<n/>", val: "<title/>:
-      <description/>" }` entry per reported TRADEOFF.
+      <focal-aspect/> (<focal-state/>) in tension with <partner-list/>,
+      lean toward <lean-toward/>: <rationale/>" }` entry per reported
+      TRADEOFF (as a TRADEOFF carries no <description/>).
 
     Finally, give a final hint by expanding the following (which,
     depending on the configured <ase-guidance-level/>, may expand into
