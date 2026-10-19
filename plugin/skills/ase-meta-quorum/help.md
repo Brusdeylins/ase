@@ -29,9 +29,11 @@ complete, unmodified individual responses.
 -   `--models`|`-m` *model*[,...]:
     Restrict the *foreign* LLMs that are queried to the given
     comma-separated list of *model* tokens. Recognized tokens are
-    `all`, `chatgpt`, `gemini`, `deepseek`, `grok`, `glm`, and `qwen`,
-    where `all` selects every model. The default is `all`. Models that
-    are not selected (or not available) are *silently skipped*.
+    `all`, `chatgpt`, `gemini`, `deepseek`, `grok`, `glm`, `qwen`,
+    `claude`, `codex`, and `copilot`, where `all` selects every API-based
+    model, but *not* the harness-based `claude`, `codex`, and `copilot`
+    models, which are queried only when given explicitly. The default
+    is `all`. Models that are not selected (or not available) are *silently skipped*.
     Anthropic Claude (the skill itself) is *always* included,
     independent of this option.
 
