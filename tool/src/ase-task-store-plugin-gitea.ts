@@ -320,7 +320,7 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
             await found(this.call(loc, this.gt.repos.issueDeleteLabel(loc.owner, loc.repo, label.id)).then(() => true)) : null
         this.labels.delete(`${loc.owner}/${loc.repo}`)
         this.registry.delete(prjId)
-        return label !== undefined && result !== null
+        return result !== null
     }
 
     /*  ==== issue mapping ====  */
@@ -400,10 +400,10 @@ class GiteaTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> imp
                 label = await this.call(loc, this.gt.repos.issueCreateLabel(loc.owner, loc.repo,
                     { name, color: name.startsWith("ase:") ? "#c5def5" : "#ededed" })).catch(async (err: unknown) => {
                     /*  tolerate a label created concurrently  */
-                    const label = statusOf(err) === 422 ? (await this.labelMap(loc, true)).get(name.toLowerCase()) : undefined
-                    if (label === undefined)
+                    const existing = statusOf(err) === 422 ? (await this.labelMap(loc, true)).get(name.toLowerCase()) : undefined
+                    if (existing === undefined)
                         throw err
-                    return label
+                    return existing
                 }) as Label
                 const map = await this.labelMap(loc)
                 map.set(name.toLowerCase(), label)

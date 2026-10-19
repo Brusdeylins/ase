@@ -171,7 +171,7 @@ export class Artifact {
     /*  resolve a base-relative "filename" within a kind's "basedir" to a
         project-root-relative POSIX path; the implicit "othr" catch-all
         has no configured "basedir" and is therefore rejected  */
-    static name (log: Log, kind: ArtifactKind, filename: string): string {
+    static resolveName (log: Log, kind: ArtifactKind, filename: string): string {
         if (kind === "othr")
             throw new Error("artifact: kind \"othr\" has no configured basedir")
         const file = filename.replace(/\\/g, "/").replace(/^\/+/, "")
@@ -244,7 +244,7 @@ export default class ArtifactCommand {
                 "code")
             .action(async (filename: string, opts: { kind: string }) => {
                 const kind = Artifact.validateKind(opts.kind.trim())
-                await writeStdout(`${Artifact.name(this.log, kind, filename)}\n`)
+                await writeStdout(`${Artifact.resolveName(this.log, kind, filename)}\n`)
             })
     }
 }
@@ -316,7 +316,7 @@ export class ArtifactMCP {
         }, async (args) => {
             try {
                 const kind   = Artifact.validateKind(args.kind ?? "code")
-                const result = { name: Artifact.name(this.log, kind, args.filename) }
+                const result = { name: Artifact.resolveName(this.log, kind, args.filename) }
                 return {
                     structuredContent: result,
                     content: [ { type: "text", text: JSON.stringify(result) } ]

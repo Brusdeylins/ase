@@ -135,7 +135,7 @@ class GitHubTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> im
     constructor (ctx: API.TaskStorageContext) {
         super(ctx, "repositories", now)
         const options = ctx.options as TaskStoragePluginOptions
-        const token   = options.token ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? ""
+        const token   = options.token ?? (process.env.GITHUB_TOKEN || process.env.GH_TOKEN) ?? ""
         if (typeof token !== "string" || token === "")
             throw new Error("task store: plugin \"github\" requires the \"token\" option (or $GITHUB_TOKEN resp. $GH_TOKEN)")
         const url = options.url ?? "https://github.com"
@@ -187,7 +187,7 @@ class GitHubTaskStoragePlugin extends TaskIssues.IssueTaskStoragePlugin<Repo> im
         /*  explain a denied access (but not an exceeded rate limit), as the
             GitHub message names neither the token source nor the missing permission  */
         const source = options.token !== undefined ? "the \"token\" option (resp. \"project.task.store.token\")" :
-            process.env.GITHUB_TOKEN !== undefined ? "$GITHUB_TOKEN" : "$GH_TOKEN"
+            process.env.GITHUB_TOKEN !== undefined && process.env.GITHUB_TOKEN !== "" ? "$GITHUB_TOKEN" : "$GH_TOKEN"
         this.gh.hook.error("request", (err, request) => {
             const status = statusOf(err)
             if ((status === 401 || status === 403) && !/rate limit/i.test(err.message)) {

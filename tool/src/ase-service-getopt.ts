@@ -29,7 +29,7 @@ const tokenizeRanges = (input: string): Array<{ start: number, end: number }> =>
                 const quote = ch
                 i++
                 while (i < input.length && input[i] !== quote) {
-                    if (input[i] === "\\" && i + 1 < input.length)
+                    if (quote === "\"" && input[i] === "\\" && i + 1 < input.length)
                         i++
                     i++
                 }
@@ -57,7 +57,7 @@ const unquote = (s: string): string => {
             const quote = ch
             j++
             while (j < s.length && s[j] !== quote) {
-                if (s[j] === "\\" && j + 1 < s.length) {
+                if (quote === "\"" && s[j] === "\\" && j + 1 < s.length) {
                     out += s[j + 1]
                     j += 2
                 }

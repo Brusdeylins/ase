@@ -93,7 +93,7 @@ export default class TaskBoardCommand {
         return port
     }
 
-    /*  open an URL in the default browser of the platform, waiting only for
+    /*  open a URL in the default browser of the platform, waiting only for
         the opener to spawn, as e.g. "xdg-open" can stay attached to the browser  */
     private async openBrowser (url: string): Promise<void> {
         const [ cmd, ...args ] = process.platform === "darwin" ? [ "open", url ] :

@@ -385,7 +385,7 @@ export class Task {
             try {
                 url = new URL(store.value)
             }
-            catch (_err: unknown) {
+            catch {
                 throw unsupported()
             }
             if (url.hostname === "" || url.port === "" || url.username !== "" || url.password !== ""
@@ -497,21 +497,12 @@ export class Task {
         }
     }
 
-    /*  save a task as text under the given id; throws if its "Status:"
-        frontmatter key is unknown to the task lifecycle model or not
-        reachable from the previous status, on a conditional save (with
-        an entity tag) a problem 412 if the task was changed in the meantime,
-        and on a create-only save an error if the task already exists;
-        returns a warning (else empty) if the id does not conform to the task id scheme,
-        the entity tag of the just-saved plan, and the text of the just-saved plan
-        (as sent, re-serialized from its parsed form, i.e., before any
-        normalization by the task store, and with its elided attachment
-        payloads still elided, while they are restored from the stored
-        plan for the save itself); the entity tag
-        is the one the task store reports for the plan as stored, and only on a
-        task store server predating this report the one of the plan as sent (which
-        never is the one of a plan saved by somebody else in the meantime, so a
-        conditional save based on it at worst is refused spuriously)  */
+    /*  save a task as text under the given id, throwing on a "Status:" unknown to or not
+        reachable in the task lifecycle model, on a conditional save (with an entity tag) a
+        problem 412 on a concurrent change, and on a create-only save an error if the task
+        exists; elided attachment payloads are restored from the stored plan; returns the
+        id scheme warning (else empty), the entity tag of the saved plan (as reported by the
+        task store, else of the plan as sent), and the text of the plan as sent  */
     static async save (log: Log, id: string, text: string, tag?: string, create = false): Promise<{ warning: string, tag: string, text: string }> {
         if (typeof text !== "string")
             throw new Error("task: text must be a string")
@@ -1398,9 +1389,8 @@ export class TaskMCP {
             try {
                 const verbose = args.verbose ?? false
                 const items   = await Task.list(this.log)
-                const tasks   = verbose ?
-                    items.map((item) => ({ id: item.id, status: item.status, title: item.title, mtime: item.mtime, effort: item.effort })) :
-                    items.map((item) => ({ id: item.id, status: item.status, title: item.title }))
+                const tasks   = verbose ? items :
+                    items.map(({ id, status, title }) => ({ id, status, title }))
                 const result  = { tasks }
                 return {
                     structuredContent: result,

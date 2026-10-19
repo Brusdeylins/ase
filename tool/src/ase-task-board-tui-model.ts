@@ -190,9 +190,9 @@ const useHitBoxes = () => {
     const groupBoxes = React.useRef(new Map<string, DOMElement>())
     const headBoxes  = React.useRef(new Map<string, DOMElement>())
     const agentBoxes = React.useRef(new Map<string, DOMElement>())
-    const rangeBoxes = React.useRef(new Map<string, DOMElement>())
+    const rangeBoxes = React.useRef(new Map<StatsRange, DOMElement>())
     const graphView  = React.useRef<DOMElement | null>(null)
-    const register   = (map: Map<string, DOMElement>, key: string) => (el: DOMElement | null) => {
+    const register   = <K extends string>(map: Map<K, DOMElement>, key: K) => (el: DOMElement | null) => {
         if (el !== null)
             map.set(key, el)
         else
@@ -208,7 +208,7 @@ const useHitBoxes = () => {
 }
 
 /*  find the registered box under a (0-based) mouse position  */
-const boxAt = (map: Map<string, DOMElement>, mx: number, my: number): string | undefined => {
+const boxAt = <K extends string>(map: Map<K, DOMElement>, mx: number, my: number): K | undefined => {
     for (const [ key, el ] of map) {
         const m = measureElement(el)
         if (mx >= m.x && mx < m.x + m.width && my >= m.y && my < m.y + m.height)
@@ -345,6 +345,151 @@ const useBeats = (agents: AgentsState | null, view: SurfaceView) => {
     return { now, beatOf }
 }
 
+/*  the actions of the prompt popup of the terminal board: opening it for an edit request
+    or for a request by prompt of any name, cancelling it, and submitting it, with the
+    drafts of the cancelled (or failed to be sent) prompts and requests, per task  */
+const usePromptActions = (ctx: {
+    log:        Log
+    all:        Board
+    cycle:      TaskFormat.TaskLifecycle | null
+    agents:     AgentsState | null
+    prompt:     PromptState | null
+    setPrompt:  (prompt: PromptState | null) => void
+    setNotice:  (notice: string | null) => void
+    track:      ReturnType<typeof useBusy>["track"]
+    promptLoad: React.RefObject<number>
+}) => {
+    const { log, all, cycle, agents, prompt, setPrompt, setNotice, track, promptLoad } = ctx
+
+    /*  the drafts of the prompts of cancelled (or failed to be sent) edit requests, per task  */
+    const promptDrafts = React.useRef(new Map<string, { text: string, pos: number }>())
+
+    /*  the drafts of the cancelled (or failed to be sent) requests by prompt, per task  */
+    const requestDrafts = React.useRef(new Map<string, { name: string, text: string, pos: number }>())
+
+    /*  open the prompt popup of an edit request of a task (refused for a finished task, and
+        while an edit of it is in progress, as a new request would change the task under the
+        running edit), prefilled with its draft of a cancelled (or failed to be sent) prompt,
+        else with the prompt of its most recent failed edit request (for a retry)  */
+    const startPrompt = (id: string): void => {
+        const card = all.cards.get(id)
+        if (card === undefined)
+            return
+        if (cycle !== null && editRefused(cycle, card.actual)) {
+            setNotice(`editing task "${id}" by prompt refused: task is finished`)
+            return
+        }
+        if (card.edit === "active") {
+            setNotice(`editing task "${id}" by prompt refused: edit in progress`)
+            return
+        }
+        const draft = promptDrafts.current.get(id)
+        if (draft !== undefined) {
+            setPrompt({ id, ...draft, focus: "prompt", request: null })
+            return
+        }
+        const token = ++promptLoad.current
+        track({ text: "loading edit prompt of task", id }, editPrompt(log, id)).then((text) => {
+            if (token === promptLoad.current)
+                setPrompt({ id, text, pos: [ ...text ].length, focus: "prompt", request: null })
+        }).catch((err: unknown) => {
+            if (token === promptLoad.current)
+                setNotice(`editing task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+
+    /*  open the prompt popup of a request by prompt of any name of a task (see "ase task
+        request", refused for a finished task), with the request name suggested from the
+        request agents announced to the agent relay, prefilled with its draft of a cancelled
+        (or failed to be sent) request, where a missing request name is to be entered first  */
+    const startRequest = (id: string): void => {
+        const card = all.cards.get(id)
+        if (card === undefined)
+            return
+        if (cycle !== null && editRefused(cycle, card.actual)) {
+            setNotice(`requesting task "${id}" by prompt refused: task is finished`)
+            return
+        }
+        const choices = requestNames(agents)
+        const ignored = choices.filter((choice) => requestPrompt(agents, choice) === "ignored")
+        const draft   = requestDrafts.current.get(id)
+        const name    = draft?.name ?? choices[0] ?? ""
+        const focus   = name === "" ? "name" : ignored.includes(name) ? "request" : "prompt"
+        setPrompt({ id, text: draft?.text ?? "", pos: draft?.pos ?? 0, focus, request: { name, choices, ignored, typed: "" } })
+    }
+
+    /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if
+        empty, so that a cleared prompt is not prefilled again on reopening)  */
+    const cancelPrompt = (): void => {
+        if (prompt === null)
+            return
+        if (prompt.request !== null) {
+            requestDrafts.current.set(prompt.id, { name: prompt.request.name, text: prompt.text, pos: prompt.pos })
+            setNotice(`requesting task "${prompt.id}" by prompt cancelled`)
+        }
+        else {
+            promptDrafts.current.set(prompt.id, { text: prompt.text, pos: prompt.pos })
+            setNotice(`editing task "${prompt.id}" by prompt cancelled`)
+        }
+        setPrompt(null)
+    }
+
+    /*  request a task by the prompt of its popup under its request name (processed by a
+        request agent of a definition, resp. by "ase agent editor" for "edit"), dropping
+        the draft of the task once sent, resp. keeping the request as its draft on failure,
+        where the prompt may be empty only for the requests of agents not requiring their prompts,
+        and is dropped for the requests of agents ignoring their prompts  */
+    const submitRequest = (id: string, text: string, pos: number, name: string): void => {
+        let requests: TaskRequests
+        try {
+            requests = requestsOf(name)
+        }
+        catch (err: unknown) {
+            setNotice(`requesting task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
+            return
+        }
+        const use = requestPrompt(agents, name)
+        if (text.trim() === "" && use === "required") {
+            setNotice(`requesting "${name}" of task "${id}" failed: empty prompt`)
+            return
+        }
+        setPrompt(null)
+        track({ text: `requesting "${name}" of task`, id }, requests.request(log, id, use === "ignored" ? "" : text)).then(() => {
+            requestDrafts.current.delete(id)
+            setNotice(`"${name}" of task "${id}" requested`)
+        }).catch((err: unknown) => {
+            requestDrafts.current.set(id, { name, text, pos })
+            setNotice(`requesting "${name}" of task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+
+    /*  request the edit of a task by the prompt of its popup (processed by "ase agent editor"),
+        dropping the draft of the task once sent, resp. keeping the prompt as its draft on failure,
+        or request a task by the prompt of its popup under its request name  */
+    const submitPrompt = (): void => {
+        if (prompt === null)
+            return
+        const { id, text, pos } = prompt
+        if (prompt.request !== null) {
+            submitRequest(id, text, pos, prompt.request.name)
+            return
+        }
+        if (text.trim() === "") {
+            setNotice(`requesting edit of task "${id}" failed: empty edit prompt`)
+            return
+        }
+        setPrompt(null)
+        track({ text: "requesting edit of task", id }, requestEdit(log, id, text)).then(() => {
+            promptDrafts.current.delete(id)
+            setNotice(`edit of task "${id}" requested`)
+        }).catch((err: unknown) => {
+            promptDrafts.current.set(id, { text, pos })
+            setNotice(`requesting edit of task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    }
+    return { startPrompt, startRequest, cancelPrompt, submitPrompt }
+}
+
 /*  the state of the terminal board: all state, the derived values, and the actions  */
 export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const { exit, suspendTerminal } = useApp()
@@ -386,12 +531,6 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const [ grow,    setGrow    ] = React.useState(false)
     const editing = React.useRef(false)
     const drafts  = React.useRef(new Map<string, string>())
-
-    /*  the drafts of the prompts of cancelled (or failed to be sent) edit requests, per task  */
-    const promptDrafts = React.useRef(new Map<string, { text: string, pos: number }>())
-
-    /*  the drafts of the cancelled (or failed to be sent) requests by prompt, per task  */
-    const requestDrafts = React.useRef(new Map<string, { name: string, text: string, pos: number }>())
 
     /*  the busy popup of slow task store operations  */
     const { busy, busyTick, track } = useBusy()
@@ -492,7 +631,9 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         }
         const stop = watchTasks(log, refresh, setStore)
         return () => {
-            stop().catch(() => {})
+            stop().catch((err: unknown) => {
+                log.write("warning", `board: stopping task watcher failed: ${err instanceof Error ? err.message : String(err)}`)
+            })
         }
     }, [ log ])
 
@@ -861,126 +1002,9 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         promptLoad.current++
     }, [ confirm, transfer, assign, prompt, dialog?.id, sel.id, view ])
 
-    /*  open the prompt popup of an edit request of a task (refused for a finished task, and
-        while an edit of it is in progress, as a new request would change the task under the
-        running edit), prefilled with its draft of a cancelled (or failed to be sent) prompt,
-        else with the prompt of its most recent failed edit request (for a retry)  */
-    const startPrompt = (id: string): void => {
-        const card = all.cards.get(id)
-        if (card === undefined)
-            return
-        if (cycle !== null && editRefused(cycle, card.actual)) {
-            setNotice(`editing task "${id}" by prompt refused: task is finished`)
-            return
-        }
-        if (card.edit === "active") {
-            setNotice(`editing task "${id}" by prompt refused: edit in progress`)
-            return
-        }
-        const draft = promptDrafts.current.get(id)
-        if (draft !== undefined) {
-            setPrompt({ id, ...draft, focus: "prompt", request: null })
-            return
-        }
-        const token = ++promptLoad.current
-        track({ text: "loading edit prompt of task", id }, editPrompt(log, id)).then((text) => {
-            if (token === promptLoad.current)
-                setPrompt({ id, text, pos: [ ...text ].length, focus: "prompt", request: null })
-        }).catch((err: unknown) => {
-            if (token === promptLoad.current)
-                setNotice(`editing task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
-        })
-    }
-
-    /*  open the prompt popup of a request by prompt of any name of a task (see "ase task
-        request", refused for a finished task), with the request name suggested from the
-        request agents announced to the agent relay, prefilled with its draft of a cancelled
-        (or failed to be sent) request, where a missing request name is to be entered first  */
-    const startRequest = (id: string): void => {
-        const card = all.cards.get(id)
-        if (card === undefined)
-            return
-        if (cycle !== null && editRefused(cycle, card.actual)) {
-            setNotice(`requesting task "${id}" by prompt refused: task is finished`)
-            return
-        }
-        const choices = requestNames(agents)
-        const ignored = choices.filter((choice) => requestPrompt(agents, choice) === "ignored")
-        const draft   = requestDrafts.current.get(id)
-        const name    = draft?.name ?? choices[0] ?? ""
-        const focus   = name === "" ? "name" : ignored.includes(name) ? "request" : "prompt"
-        setPrompt({ id, text: draft?.text ?? "", pos: draft?.pos ?? 0, focus, request: { name, choices, ignored, typed: "" } })
-    }
-
-    /*  cancel the prompt popup, keeping its prompt as the draft of the task (even if
-        empty, so that a cleared prompt is not prefilled again on reopening)  */
-    const cancelPrompt = (): void => {
-        if (prompt === null)
-            return
-        if (prompt.request !== null) {
-            requestDrafts.current.set(prompt.id, { name: prompt.request.name, text: prompt.text, pos: prompt.pos })
-            setNotice(`requesting task "${prompt.id}" by prompt cancelled`)
-        }
-        else {
-            promptDrafts.current.set(prompt.id, { text: prompt.text, pos: prompt.pos })
-            setNotice(`editing task "${prompt.id}" by prompt cancelled`)
-        }
-        setPrompt(null)
-    }
-
-    /*  request a task by the prompt of its popup under its request name (processed by a
-        request agent of a definition, resp. by "ase agent editor" for "edit"), dropping
-        the draft of the task once sent, resp. keeping the request as its draft on failure,
-        where the prompt may be empty only for the requests of agents not requiring their prompts,
-        and is dropped for the requests of agents ignoring their prompts  */
-    const submitRequest = (id: string, text: string, pos: number, name: string): void => {
-        let requests: TaskRequests
-        try {
-            requests = requestsOf(name)
-        }
-        catch (err: unknown) {
-            setNotice(`requesting task "${id}" by prompt failed: ${err instanceof Error ? err.message : String(err)}`)
-            return
-        }
-        const use = requestPrompt(agents, name)
-        if (text.trim() === "" && use === "required") {
-            setNotice(`requesting "${name}" of task "${id}" failed: empty prompt`)
-            return
-        }
-        setPrompt(null)
-        track({ text: `requesting "${name}" of task`, id }, requests.request(log, id, use === "ignored" ? "" : text)).then(() => {
-            requestDrafts.current.delete(id)
-            setNotice(`"${name}" of task "${id}" requested`)
-        }).catch((err: unknown) => {
-            requestDrafts.current.set(id, { name, text, pos })
-            setNotice(`requesting "${name}" of task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
-        })
-    }
-
-    /*  request the edit of a task by the prompt of its popup (processed by "ase agent editor"),
-        dropping the draft of the task once sent, resp. keeping the prompt as its draft on failure,
-        or request a task by the prompt of its popup under its request name  */
-    const submitPrompt = (): void => {
-        if (prompt === null)
-            return
-        const { id, text, pos } = prompt
-        if (prompt.request !== null) {
-            submitRequest(id, text, pos, prompt.request.name)
-            return
-        }
-        if (text.trim() === "") {
-            setNotice(`requesting edit of task "${id}" failed: empty edit prompt`)
-            return
-        }
-        setPrompt(null)
-        track({ text: "requesting edit of task", id }, requestEdit(log, id, text)).then(() => {
-            promptDrafts.current.delete(id)
-            setNotice(`edit of task "${id}" requested`)
-        }).catch((err: unknown) => {
-            promptDrafts.current.set(id, { text, pos })
-            setNotice(`requesting edit of task "${id}" failed: ${err instanceof Error ? err.message : String(err)}`)
-        })
-    }
+    /*  the actions of the prompt popup (with the drafts of its prompts and requests, per task)  */
+    const { startPrompt, startRequest, cancelPrompt, submitPrompt } =
+        usePromptActions({ log, all, cycle, agents, prompt, setPrompt, setNotice, track, promptLoad })
 
     /*  toggle a flag (task titles, key hints, or standalone tasks) of the TUI surface  */
     const toggleFlag = (flag: SurfaceFlag): void => {

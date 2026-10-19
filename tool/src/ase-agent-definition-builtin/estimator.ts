@@ -5,8 +5,7 @@
 */
 
 import { parseEffort }              from "../ase-task-format.js"
-import type { AgentHookTask }       from "../ase-agent-definition-api.js"
-import type { AgentHookContext }    from "../ase-agent-definition-api.js"
+import type { AgentHookTask, AgentHookContext } from "../ase-agent-definition-api.js"
 import type { AgentKind }           from "../ase-agent-definition-core.js"
 
 /*  whether a task carries a valid effort estimation (its "Effort" key), as the task store

@@ -84,7 +84,7 @@ export default class MCPCommand {
             const value = state.getExplicit("basedir")
             return typeof value === "string" && value !== "" ? value : null
         }
-        catch (_e) {
+        catch {
             /*  best-effort: an unreadable session config just defers the lookup  */
             return null
         }
@@ -161,7 +161,7 @@ export default class MCPCommand {
                 this.log.write("error", `mcp: http: ${err.message}`)
             }
 
-            /*  service closed the connection — try to recover  */
+            /*  service closed the connection -- try to recover  */
             next.onclose = () => {
                 if (client !== next || closedByUs.has(next) || bridgeDone || reconnecting)
                     return
@@ -208,7 +208,7 @@ export default class MCPCommand {
             if (reconnecting)
                 return
             reconnecting = true
-            this.log.write("warning", `mcp: ${reason} — reconnecting`)
+            this.log.write("warning", `mcp: ${reason} -- reconnecting`)
             reconnect(0).catch(() => {})
         }
 
@@ -348,7 +348,7 @@ export default class MCPCommand {
                 await connectClient()
             }
             catch (err: unknown) {
-                /*  service vanished between probe and connect — recover instead of crashing  */
+                /*  service vanished between probe and connect -- recover instead of crashing  */
                 triggerReconnect(`initial connect failed: ${this.asError(err).message}`)
             }
         }

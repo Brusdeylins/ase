@@ -474,34 +474,20 @@ export class Config {
                 next.setIn(prefix, next.createNode({}))
         }
         next.setIn(segments, value)
-        const saved = td.doc
-        td.doc      = next
-        try {
-            this.validateDoc(td.doc, td.filename, "strict")
-        }
-        catch (err) {
-            td.doc = saved
-            throw err
-        }
+        this.validateDoc(next, td.filename, "strict")
+        td.doc = next
     }
 
     /*  delete a value at a dotted key from the target scope  */
     delete (key: string): void {
         this.assertWritable(key)
-        const td    = this.docs[this.target]
+        const td   = this.docs[this.target]
         if (td.doc.contents === null || td.doc.contents === undefined)
             return
-        const next  = td.doc.clone()
+        const next = td.doc.clone()
         next.deleteIn(this.resolveKey(key).split("."))
-        const saved = td.doc
-        td.doc      = next
-        try {
-            this.validateDoc(td.doc, td.filename, "strict")
-        }
-        catch (err) {
-            td.doc = saved
-            throw err
-        }
+        this.validateDoc(next, td.filename, "strict")
+        td.doc = next
     }
 }
 

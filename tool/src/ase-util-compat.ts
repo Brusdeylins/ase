@@ -62,7 +62,7 @@ export default class CompatCommand {
     }
 }
 
-/*  MCP tool "ase_compat" — lets the skill call this without a Bash tool  */
+/*  MCP tool "ase_compat" -- lets the skill call this without a Bash tool  */
 export class CompatMCP {
     register (mcp: McpServer): void {
         mcp.registerTool("ase_compat", {

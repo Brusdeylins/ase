@@ -399,10 +399,9 @@ export default class SetupCommand {
 
         /*  parser for the non-negative integer "ase setup statusline" options  */
         const parseNonNeg = (name: string) => (value: string): number => {
-            const n = Number.parseInt(value, 10)
-            if (!Number.isFinite(n) || n < 0)
+            if (!/^\d+$/.test(value))
                 throw new Error(`invalid --${name} value: "${value}" (expected a non-negative integer)`)
-            return n
+            return Number.parseInt(value, 10)
         }
 
         /*  register CLI sub-command "ase setup statusline"  */

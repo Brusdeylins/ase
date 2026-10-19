@@ -30,9 +30,9 @@ const GROUP_GAP  = 1
 const GRID_MIN   = 30
 const GRID_GAP   = 1
 
-/*  make a text of the agent relay safe for the terminal (strip control characters)  */
+/*  make a text of the agent relay safe for the terminal (strip control and bidirectional formatting characters)  */
 const clean = (text: string): string =>
-    text.replace(/\p{Cc}/gu, "")
+    text.replace(/[\p{Cc}\u{061C}\u{200E}\u{200F}\u{202A}-\u{202E}\u{2066}-\u{2069}]/gu, "")
 
 /*  append to the content of an info line (" " if empty) the hint how to show the
     hidden key hints again, so it need not be remembered while the key hints are hidden  */
@@ -54,8 +54,7 @@ export const fitGroups = (groups: GroupSpec[], collapsed: string[], first: numbe
         widths.push(w)
         used += gap + w
     }
-    const expanded = widths.map((w, i) => w === GROUP_COLL && collapsed.includes(groups[first + i].title) ? -1 : i)
-        .filter((i) => i >= 0)
+    const expanded = [ ...widths.keys() ].filter((i) => !collapsed.includes(groups[first + i].title))
     if (expanded.length > 0) {
         const extra = Math.max(0, width - used)
         const each  = Math.floor(extra / expanded.length)
@@ -708,10 +707,10 @@ export const renderAgents = (ctx: BoardCtx) => {
                 h(Text, cx("accent", dim && "dimmed"), name.padEnd(width))),
             h(Box, { flexGrow: 1, flexShrink: 1 },
                 h(Text, { ...cx("accent", "bold", dim && "dimmed"), wrap }, value)))
-    const pane   = (key: string, text: string, fields: () => ReturnType<typeof field>[], first = false, accent = false) =>
+    const pane   = (key: string, text: string, fields: (a: AgentPresence) => ReturnType<typeof field>[], first = false, accent = false) =>
         h(Box, { key, flexGrow: 1, flexBasis: 0, marginLeft: first ? 0 : 1 },
             h(Box, { paddingX: 1, ...cx("grow", "column", "frame", accent ? "border-accent" : "border-dim", dim && "border-dimmed") },
-                ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", "truncate", dim && "dimmed") }, empty) ] : fields())),
+                ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", "truncate", dim && "dimmed") }, empty) ] : fields(agent))),
             title(text, accent))
     const op     = h(Box, { key: "op", height: agentOpHeight(agentOp), flexShrink: 0 },
         pane("operation", "Operation", () => [
@@ -721,16 +720,16 @@ export const renderAgents = (ctx: BoardCtx) => {
                     agentOp.desc.length === 0 ? h(Text, cx("dim"), "(no operation title and description)") : ""),
             ...agentOp.desc.map((line, i) => h(Text, { key: `desc-${i}`, ...cx("normal", "truncate", dim && "dimmed") }, line)) ], true))
     const info   = h(Box, { key: "info", height: AGENT_INFO_H, flexShrink: 0 },
-        pane("process", "Process", () => [
-            field("host:",              clean(agent!.host), 6),
-            field("pid:",               String(agent!.pid), 6),
-            field("uid:",               clean(agentUser(agent!)), 6),
-            field("cwd:",               clean(agent!.cwd ?? "n/a"), 6, "truncate-start") ], true, true),
-        pane("accounting", "Accounting", () => [
-            field("uptime:",            agentUptime(agent!), 18),
-            field("heartbeat:",         `${agentDuration(now - agent!.beat)} ago`, 18),
-            field("usage (total):",     agentUsage(agent!.usage?.total), 18),
-            field("usage (last job):",  agentUsage(agent!.usage?.last), 18) ], false, true))
+        pane("process", "Process", (a) => [
+            field("host:",              clean(a.host), 6),
+            field("pid:",               String(a.pid), 6),
+            field("uid:",               clean(agentUser(a)), 6),
+            field("cwd:",               clean(a.cwd ?? "n/a"), 6, "truncate-start") ], true, true),
+        pane("accounting", "Accounting", (a) => [
+            field("uptime:",            agentUptime(a), 18),
+            field("heartbeat:",         `${agentDuration(now - a.beat)} ago`, 18),
+            field("usage (total):",     agentUsage(a.usage?.total), 18),
+            field("usage (last job):",  agentUsage(a.usage?.last), 18) ], false, true))
     const log    = h(Box, { key: "log", flexGrow: 1 },
         h(Box, { paddingLeft: 1, ...cx("grow", "column", "frame", "border-dim", dim && "border-dimmed") },
             ...(agent === undefined ? [ h(Text, { key: "none", ...cx("dim", dim && "dimmed") }, empty) ] :
@@ -766,8 +765,8 @@ export const renderAgents = (ctx: BoardCtx) => {
 }
 
 /*  the heights of the buttons of the time ranges (with a blank line below them), and of the
-    frames "Task Progress" (and "Open Tasks" besides it), "Usage" (and "Effort" besides
-    it), and "Top-5 Tasks" (and "Finished Tasks" and "Efficiency" besides it), each
+    frames "Task Progress" (and "Open Tasks" beside it), "Usage" (and "Effort" beside
+    it), and "Top-5 Tasks" (and "Finished Tasks" and "Efficiency" beside it), each
     with an inner blank line at its top and bottom (except for the column charts), of the
     statistics view  */
 const RANGES_H   = 2
@@ -825,15 +824,85 @@ const statsBar = (value: number, max: number, width: number): string => {
     return "█".repeat(n).padEnd(width, "░")
 }
 
+/*  the color of a tone of the statistics view (like the lanes)  */
+const statsTint = (tone: string) =>
+    tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
+
+/*  a framed section of a height of the statistics view (dimmed, resp. in accent color),
+    with its title centered onto its top border  */
+const statsFrame = (dim: boolean, accent: boolean) => (key: string, height: number, title: string, padY: number, ...content: React.ReactNode[]) =>
+    h(Box, { key, height, flexShrink: 0 },
+        h(Box, { paddingX: 1, paddingY: padY, ...cx("grow", "column", "frame", accent ? "border-accent" : "border-dim", dim && "border-dimmed") }, ...content),
+        h(Box, { position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
+            h(Text, { ...cx(accent ? "accent" : "dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), title), " ]")))
+
+/*  a framed column chart of an inner width of the statistics view, where the highest column leaves the top row
+    for its number, each number sits on top of its column (being at least a thin line,
+    even without any number, like in the web board), the columns stand on a blank line above
+    their labels (each cut to its first five characters, without an ellipsis, for
+    readability) and their sub-labels below them (like the effort of a state, cut with
+    an ellipsis, and blank if empty, to keep the columns of all charts aligned), and each
+    group of columns is labeled below its line spanning its columns
+    (like in the web board), followed by a footer line (blank if empty, to keep the columns
+    of all charts aligned), where the columns start directly at the left padding of the
+    frame, are separated by a gap of one column, and leave the remaining width on the right,
+    and where a compact chart of a height omits the blank line, the sub-labels, and the groups  */
+const statsColChart = (dim: boolean, key: string, title: string, width: number,
+    cols: { label: string, count: number, tone: string, sub?: string }[], groups: { label: string, n: number }[], footer: string,
+    height: number, compact = false) => {
+    const frame  = statsFrame(dim, false)
+    const areaH  = Math.max(1, height - (compact ? 4 : 8))
+    const colW   = Math.max(2, Math.floor((width + 1) / cols.length))
+    const lineW  = colW - 1
+    const fitW   = Math.max(1, Math.min(14, lineW))
+    const barW   = fitW > 1 && (lineW - fitW) % 2 !== 0 ? fitW - 1 : fitW
+    const barL   = Math.floor((lineW - barW) / 2)
+    const max    = Math.max(1, ...cols.map((c) => c.count))
+    const gapOf  = (i: number, n: number) => i < n - 1 ? " " : ""
+    const column = (k: number, tone: string, text: string) =>
+        h(Text, { key: k, color: statsTint(tone), dimColor: dim },
+            " ".repeat(barL) + text + " ".repeat(Math.max(0, lineW - barW - barL)) + gapOf(k, cols.length))
+    const rows   = Array.from({ length: areaH }, (_x, r) => {
+        const level = areaH - 1 - r
+        return h(Box, { key: `row${r}` }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) => {
+            const fill = Math.max(1, Math.round(c.count / max * (areaH - 1) * 8))
+            const cell = Math.max(0, Math.min(8, fill - level * 8))
+            const text = String(c.count)
+            if (cell === 0 && level === Math.ceil(fill / 8) && text.length > barW)
+                return h(Text, { key: i, color: statsTint(c.tone), dimColor: dim }, center(text, lineW) + gapOf(i, cols.length))
+            return column(i, c.tone, cell > 0 ? lowerEighths[cell].repeat(barW) :
+                level === Math.ceil(fill / 8) ? center(text, barW) : " ".repeat(barW))
+        })))
+    })
+    const labels = h(Box, { key: "labels" }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) =>
+        h(Text, { key: i, color: statsTint(c.tone), dimColor: dim, bold: true },
+            center(c.label.slice(0, Math.min(5, lineW)), lineW) + gapOf(i, cols.length)))))
+    const foot   = h(Box, { key: "footer" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
+        center(footer, Math.max(0, cols.length * colW - 1))))
+    if (compact)
+        return frame(key, height, title, 0, ...rows, labels, foot)
+    return frame(key, height, title, 0, ...rows,
+        h(Box, { key: "base" }, h(Text, { wrap: "truncate" }, " ")),
+        labels,
+        h(Box, { key: "subs" }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) =>
+            h(Text, { key: i, color: statsTint(c.tone), dimColor: dim },
+                center(c.sub ?? "", lineW) + gapOf(i, cols.length))))),
+        h(Box, { key: "groups" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
+            "─".repeat(Math.max(0, g.n * colW - 1)) + gapOf(i, groups.length)).join(""))),
+        h(Box, { key: "group-labels" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
+            center(g.label, g.n * colW - 1) + gapOf(i, groups.length)).join(""))),
+        foot)
+}
+
 /*  render the statistics view: the framed column chart "Tasks per State" of the numbers of tasks per
     lifecycle state (labeled by state, its effort, and phase, in the colors of their lanes, with the framed column
-    chart "Throughput" of the finished tasks of the last weeks besides it), the framed stacked bar
+    chart "Throughput" of the finished tasks of the last weeks beside it), the framed stacked bar
     "Task Progress" of the cancelled, finished, work-in-progress, and open tasks (with the framed
-    stacked bar "Open Tasks" of the ready and blocked open tasks besides it), the framed bars "Usage"
+    stacked bar "Open Tasks" of the ready and blocked open tasks beside it), the framed bars "Usage"
     of the total times, tokens, and costs of the tasks (with the framed column chart "Effort"
-    of the numbers of tasks per effort size besides it), and the framed table "Top-5 Tasks" of the
+    of the numbers of tasks per effort size beside it), and the framed table "Top-5 Tasks" of the
     tasks of the highest usage (with the framed "Finished Tasks" of the usage per finished task and
-    the framed "Efficiency" of the AI usage besides it), below the buttons of the time ranges  */
+    the framed "Efficiency" of the AI usage beside it), below the buttons of the time ranges  */
 export const renderStats = (ctx: BoardCtx) => {
     const { stats, usage, range, rangeRef, columns, boardH, dim, mouse, filter, agents } = ctx
     const innerW = Math.max(20, columns - 6)
@@ -852,78 +921,17 @@ export const renderStats = (ctx: BoardCtx) => {
     /*  the number of columns the frames "Finished Tasks" and "Efficiency" are each grown by
         (at the expense of the frame "Top-5 Tasks")  */
     const avgGrow = 4
-    const tint   = (tone: string) => tone === "active" ? palette.accent : tone === "done" ? palette.dim : palette.normal
-    const frameOf = (accent: boolean) => (key: string, height: number, title: string, padY: number, ...content: React.ReactNode[]) =>
-        h(Box, { key, height, flexShrink: 0 },
-            h(Box, { paddingX: 1, paddingY: padY, ...cx("grow", "column", "frame", accent ? "border-accent" : "border-dim", dim && "border-dimmed") }, ...content),
-            h(Box, { position: "absolute", top: 0, left: 0, width: "100%", justifyContent: "center" },
-                h(Text, { ...cx(accent ? "accent" : "dim", dim && "dimmed"), wrap: "truncate" }, "[ ", h(Text, cx("bold"), title), " ]")))
-    const frame       = frameOf(false)
-    const accentFrame = frameOf(true)
+    const frame       = statsFrame(dim, false)
+    const accentFrame = statsFrame(dim, true)
     if (stats === null)
         return [ h(Box, { key: "stats", height: boardH }), h(Text, { key: "info" }, " "), h(Text, { key: "keys1" }, " "), h(Text, { key: "keys2" }, " ") ]
 
-    /*  a framed column chart of an inner width, where the highest column leaves the top row
-        for its number, each number sits on top of its column (being at least a thin line,
-        even without any number, like in the web board), the columns stand on a blank line above
-        their labels (each cut to its first five characters, without an ellipsis, for
-        readability) and their sub-labels below them (like the effort of a state, cut with
-        an ellipsis, and blank if empty, to keep the columns of all charts aligned), and each
-        group of columns is labeled below its line spanning its columns
-        (like in the web board), followed by a footer line (blank if empty, to keep the columns
-        of all charts aligned), where the columns start directly at the left padding of the
-        frame, are separated by a gap of one column, and leave the remaining width on the right,
-        and where a compact chart of a height omits the blank line, the sub-labels, and the groups  */
+    /*  the height of the column charts, taking the height left by the other rows  */
     const chartH   = Math.max(9, boardH - RANGES_H - PROGRESS_H - USAGE_H - TOP_H)
-    const colChart = (key: string, title: string, width: number,
-        cols: { label: string, count: number, tone: string, sub?: string }[], groups: { label: string, n: number }[], footer = "",
-        height = chartH, compact = false) => {
-        const areaH  = Math.max(1, height - (compact ? 4 : 8))
-        const colW   = Math.max(2, Math.floor((width + 1) / cols.length))
-        const lineW  = colW - 1
-        const fitW   = Math.max(1, Math.min(14, lineW))
-        const barW   = fitW > 1 && (lineW - fitW) % 2 !== 0 ? fitW - 1 : fitW
-        const barL   = Math.floor((lineW - barW) / 2)
-        const max    = Math.max(1, ...cols.map((c) => c.count))
-        const gapOf  = (i: number, n: number) => i < n - 1 ? " " : ""
-        const column = (k: number, tone: string, text: string) =>
-            h(Text, { key: k, color: tint(tone), dimColor: dim },
-                " ".repeat(barL) + text + " ".repeat(Math.max(0, lineW - barW - barL)) + gapOf(k, cols.length))
-        const rows   = Array.from({ length: areaH }, (_x, r) => {
-            const level = areaH - 1 - r
-            return h(Box, { key: `row${r}` }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) => {
-                const fill = Math.max(1, Math.round(c.count / max * (areaH - 1) * 8))
-                const cell = Math.max(0, Math.min(8, fill - level * 8))
-                const text = String(c.count)
-                if (cell === 0 && level === Math.ceil(fill / 8) && text.length > barW)
-                    return h(Text, { key: i, color: tint(c.tone), dimColor: dim }, center(text, lineW) + gapOf(i, cols.length))
-                return column(i, c.tone, cell > 0 ? lowerEighths[cell].repeat(barW) :
-                    level === Math.ceil(fill / 8) ? center(text, barW) : " ".repeat(barW))
-            })))
-        })
-        const labels = h(Box, { key: "labels" }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) =>
-            h(Text, { key: i, color: tint(c.tone), dimColor: dim, bold: true },
-                center(c.label.slice(0, Math.min(5, lineW)), lineW) + gapOf(i, cols.length)))))
-        const foot   = h(Box, { key: "footer" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" },
-            center(footer, Math.max(0, cols.length * colW - 1))))
-        if (compact)
-            return frame(key, height, title, 0, ...rows, labels, foot)
-        return frame(key, height, title, 0, ...rows,
-            h(Box, { key: "base" }, h(Text, { wrap: "truncate" }, " ")),
-            labels,
-            h(Box, { key: "subs" }, h(Text, { wrap: "truncate" }, ...cols.map((c, i) =>
-                h(Text, { key: i, color: tint(c.tone), dimColor: dim },
-                    center(c.sub ?? "", lineW) + gapOf(i, cols.length))))),
-            h(Box, { key: "groups" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
-                "─".repeat(Math.max(0, g.n * colW - 1)) + gapOf(i, groups.length)).join(""))),
-            h(Box, { key: "group-labels" }, h(Text, { ...cx("dim", dim && "dimmed"), wrap: "truncate" }, groups.map((g, i) =>
-                center(g.label, g.n * colW - 1) + gapOf(i, groups.length)).join(""))),
-            foot)
-    }
 
     /*  the column chart of the number of tasks per state (labeled by the states and below by the
         effort of their estimated tasks, grouped by their phases, and with the total number of tasks
-        as its footer), with the column chart of the throughput of the last weeks besides it (labeled by
+        as its footer), with the column chart of the throughput of the last weeks beside it (labeled by
         their week numbers, prefixed with "W" if fitting, and grouped by all weeks with the total
         and average number of finished tasks, and with the forecast of the backlog as its footer),
         grown like the frames "Finished Tasks" and "Efficiency" together, to align with them  */
@@ -940,16 +948,16 @@ export const renderStats = (ctx: BoardCtx) => {
     const weekSum = stats.throughput.reduce((n, w) => n + w.count, 0)
     const weekAvg = stats.throughput.length > 0 ? weekSum / stats.throughput.length : 0
     const chart   = pair("charts", chartH,
-        colChart("chart", "Tasks per State", leftW - 2 * avgGrow - 4,
+        statsColChart(dim, "chart", "Tasks per State", leftW - 2 * avgGrow - 4,
             stats.states.map((s) => ({
                 label: s.status, count: s.count, tone: s.tone,
                 sub:   s.effort.estimated > 0 ? statsHoursN(s.effort.minutes) : ""
             })), phases,
-            `total tasks: ${stats.states.reduce((n, s) => n + s.count, 0)}`),
-        colChart("throughput", "Throughput", weeksW,
+            `total tasks: ${stats.states.reduce((n, s) => n + s.count, 0)}`, chartH),
+        statsColChart(dim, "throughput", "Throughput", weeksW,
             stats.throughput.map((w) => ({ label: weekW >= 3 ? `W${w.week}` : String(w.week), count: w.count, tone: "idle" })),
             [ { label: `${weekSum} finished · ⌀ ${weekAvg.toFixed(1)}/week`, n: stats.throughput.length } ],
-            statsForecast(stats.forecast.backlog, stats.forecast.weeks)),
+            statsForecast(stats.forecast.backlog, stats.forecast.weeks), chartH),
         2 * avgGrow)
 
     /*  a framed stacked bar of the numbers of tasks of parts, with its legend  */
@@ -1038,11 +1046,11 @@ export const renderStats = (ctx: BoardCtx) => {
 
     /*  the compact column chart of the distribution of the effort sizes (the numbers of the
         estimated tasks per size, from the smallest to the largest size), with the numbers of
-        the estimated and of all tasks as its footer, besides the bars of the total usage  */
+        the estimated and of all tasks as its footer, beside the bars of the total usage  */
     const effort  = stats.states.reduce((sum, s) =>
         ({ estimated: sum.estimated + s.effort.estimated, tasks: sum.tasks + s.effort.tasks }), { estimated: 0, tasks: 0 })
     const usages  = pair("usage", USAGE_H, matrix,
-        colChart("sizes", "Effort", rightW + 2 * avgGrow - 4,
+        statsColChart(dim, "sizes", "Effort", rightW + 2 * avgGrow - 4,
             stats.sizes.map((s) => ({ label: s.size, count: s.count, tone: "idle" })), [],
             `estimated: ${effort.estimated} of ${effort.tasks} tasks`, USAGE_H, true),
         2 * avgGrow)
@@ -1069,7 +1077,7 @@ export const renderStats = (ctx: BoardCtx) => {
             [ topHead, ...stats.top.map((t, i) => {
                 const id = fit(t.id, idW - 4).trimEnd()
                 return h(Text, { key: `top${i}`, ...cx("normal", "truncate", dim && "dimmed") },
-                    h(Text, { key: "id", color: tint(t.tone), dimColor: dim, ...cx("badge") }, ` ≡ ${id} `),
+                    h(Text, { key: "id", color: statsTint(t.tone), dimColor: dim, ...cx("badge") }, ` ≡ ${id} `),
                     " ".repeat(idW - id.length - 4) + gap + fit(clean(t.title), titleW) + gap,
                     h(Text, { key: "bar", color: palette.accent, dimColor: dim }, statsBar(t.share, 1, pctW)),
                     gap + statsCost(t.cost).padStart(costW) + gap +

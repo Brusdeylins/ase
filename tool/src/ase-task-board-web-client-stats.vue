@@ -6,14 +6,14 @@
 
 <!--  the statistics view (like in the TUI): the buttons of the time ranges (the one of "total" with its number of days), the framed
       column chart "Tasks per State" of the numbers of tasks per lifecycle state (labeled by state, its effort, and phase, in the colors of their
-      lanes, with the framed column chart "Throughput" of the finished tasks of the last weeks besides it), the
+      lanes, with the framed column chart "Throughput" of the finished tasks of the last weeks beside it), the
       framed stacked bar "Task Progress" of the cancelled, finished, work-in-progress, and open tasks
-      (with the framed stacked bar "Open Tasks" of the ready and blocked open tasks besides it), the
+      (with the framed stacked bar "Open Tasks" of the ready and blocked open tasks beside it), the
       framed bars "Usage" of the total times, tokens, and costs of the tasks, with the bars of a
       column scaled to the maximum of the column (with the framed column chart "Effort"
-      of the numbers of tasks per effort size besides it), and the framed table "Top-5 Tasks" of the
+      of the numbers of tasks per effort size beside it), and the framed table "Top-5 Tasks" of the
       tasks of the highest usage (with the framed "Finished Tasks" of the average usage per finished
-      task and the framed "Efficiency" of the AI usage besides it)  -->
+      task and the framed "Efficiency" of the AI usage beside it)  -->
 <template>
     <div v-show="view === 'stats'" id="stats">
         <div class="sranges">

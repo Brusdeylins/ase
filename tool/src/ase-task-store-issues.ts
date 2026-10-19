@@ -327,7 +327,9 @@ export abstract class IssueTaskStoragePlugin<L> {
         this.opened = this.now()
         if (this.poll > 0 && this.listener !== null) {
             this.timer = setInterval(() => {
-                this.pollAll().catch(() => {})
+                this.pollAll().catch(() => {
+                    /*  failures are already logged per project  */
+                })
             }, this.poll * 1000)
             this.timer.unref()
         }

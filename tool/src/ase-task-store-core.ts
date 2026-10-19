@@ -4,13 +4,13 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import crypto          from "node:crypto"
+import crypto              from "node:crypto"
 
-import { DateTime }    from "luxon"
+import { DateTime }        from "luxon"
 
-import * as API        from "./ase-task-store-plugin-api.js"
-import * as Delegate   from "./ase-task-store-plugin-delegate.js"
-import * as TaskFormat from "./ase-task-format.js"
+import type * as API       from "./ase-task-store-plugin-api.js"
+import type * as Delegate  from "./ase-task-store-plugin-delegate.js"
+import * as TaskFormat     from "./ase-task-format.js"
 
 /*  the RFC 9457 problem titles per status code  */
 export const problemTitles: Record<number, string> = {
@@ -180,7 +180,7 @@ export class TaskStoreCore {
         if (effort !== undefined)
             header.Effort = effort
         else
-            Reflect.deleteProperty(header, "Effort")
+            delete header.Effort
         return header
     }
 
@@ -466,7 +466,7 @@ export class TaskStoreCore {
                 if (lifecycle.states.includes(status) && !states.includes(status))
                     continue
                 const att = fields === "usage" ? (await this.store.taskLoad(prjId, entry.id))?.attachment
-                    .find((att) => TaskFormat.isUsage(att) && att.Data !== undefined) : undefined
+                    .find((a) => TaskFormat.isUsage(a) && a.Data !== undefined) : undefined
                 const header = fields === "header" ? await this.boundHeader(prjId, entry) : entry.header
                 result.push({
                     id:     entry.id,
@@ -672,12 +672,10 @@ export class TaskStoreCore {
                     references: referrers.length
                 }
             }
-            else {
-                await this.store.taskSave(prjId, taskId, plan)
-                this.emitUpdated(prjId, taskId, plan, lifecycle, [ "header" ])
-            }
+            await this.store.taskSave(prjId, taskId, plan)
+            this.emitUpdated(prjId, taskId, plan, lifecycle, [ "header" ])
             return {
-                id:     newId ?? taskId,
+                id:     taskId,
                 status: TaskFormat.taskStatus(plan.header, lifecycle),
                 ...(status !== null ? { from } : {})
             }

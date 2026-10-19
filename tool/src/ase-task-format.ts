@@ -853,7 +853,7 @@ export const bindEffort = (plan: API.TaskPlan): API.TaskPlan => {
     if (effort !== null && effort.hash === "")
         plan.header.Effort = `${effort.size} ${hash}`
     else if (effort === null || effort.hash !== hash)
-        Reflect.deleteProperty(plan.header, "Effort")
+        delete plan.header.Effort
     return plan
 }
 

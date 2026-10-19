@@ -73,7 +73,7 @@ export const assignEl = ref<HTMLInputElement | null>(null)
     those containing it)  */
 export type AssignChoice = { name: string, kind: "none" | "user" | "agent" }
 const assignOptions = computed<AssignChoice[]>(() => {
-    const users  = board.value?.users.length ? board.value.users : [ board.value?.self ?? "" ].filter((u) => u !== "")
+    const users  = board.value !== null && board.value.users.length > 0 ? board.value.users : [ board.value?.self ?? "" ].filter((u) => u !== "")
     const agents = new Set(agentList.value.filter((a) => a.kind !== "editor" && a.request === undefined
         && (a.states === undefined || a.states.activity !== undefined)).map((a) => a.name))
     return [
@@ -377,7 +377,7 @@ const dialogKeys: Record<string, (id: string) => void> = {
 }
 
 /*  in the task dialog, RETURN and ESC close it, "e" edits its plan, "E" edits it by a prompt,
-    "D" deletes, "T" transitions, and "A" assigns its task, the left/right arrows (also Tab/Shift+Tab) switch
+    "R" requests it by a prompt, "D" deletes, "T" transitions, and "A" assigns its task, the left/right arrows (also Tab/Shift+Tab) switch
     its tab, and the up/down arrows and PgUp/PgDn scroll its content  */
 const onDialogKey = (ev: KeyboardEvent) => {
     const win = planEl.value?.contentWindow ?? null
@@ -477,8 +477,8 @@ const onAgentsKey = (ev: KeyboardEvent) => {
     ev.preventDefault()
 }
 
-/*  on the board, act on the selected task: view, edit, edit by prompt, delete, or
-    transition it, or create a new task (answering whether the key is such an action)  */
+/*  on the board, act on the selected task: view, edit, edit by prompt, request by prompt, delete,
+    transition, or assign it, or create a new task (answering whether the key is such an action)  */
 const onTaskKey = (ev: KeyboardEvent, id: string, carrying: boolean): boolean => {
     if (ev.key === "Enter") {
         if (id !== "")
@@ -569,6 +569,33 @@ const onCarryKey = (s: Sel, group: Group, carry: NonNullable<typeof drag.value> 
     }
 }
 
+/*  in the agent graph view, the arrows move spatially to the nearest agent card (resp.
+    state), and ENTER shows the agents view with its (first) agent selected  */
+const onFlowKey = (ev: KeyboardEvent) => {
+    if (ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
+        return
+    if (ev.key === "Enter")
+        showFlowAgent(flowSel.value)
+    else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+        const next = graphStep(ev.key, flowSel.value, flowEl.value)
+        if (next !== undefined)
+            flowSel.value = next
+    }
+    else
+        return
+    ev.preventDefault()
+}
+
+/*  in the statistics view, the left/right arrows step through its time ranges  */
+const onStatsKey = (ev: KeyboardEvent) => {
+    if (ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
+        return
+    if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+        stepStatsRange(ev.key === "ArrowLeft" ? -1 : 1)
+        ev.preventDefault()
+    }
+}
+
 /*  on the board, navigate the selection like in the TUI (but not while typing the filter),
     where the statistics view has no selection at all, but steps through its time ranges  */
 const onBoardKey = (ev: KeyboardEvent) => {
@@ -577,30 +604,11 @@ const onBoardKey = (ev: KeyboardEvent) => {
         return
     }
     if (view.value === "flow") {
-        /*  the arrows move spatially to the nearest agent card of the agent graph, and
-            ENTER shows the agents view with its (first) agent selected  */
-        if (ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
-            return
-        if (ev.key === "Enter")
-            showFlowAgent(flowSel.value)
-        else if (ev.key === "ArrowLeft" || ev.key === "ArrowRight" || ev.key === "ArrowUp" || ev.key === "ArrowDown") {
-            const next = graphStep(ev.key, flowSel.value, flowEl.value)
-            if (next !== undefined)
-                flowSel.value = next
-        }
-        else
-            return
-        ev.preventDefault()
+        onFlowKey(ev)
         return
     }
     if (view.value === "stats") {
-        /*  the left/right arrows step through the time ranges of the statistics  */
-        if (ev.target instanceof HTMLInputElement || ev.ctrlKey || ev.metaKey || ev.altKey)
-            return
-        if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
-            stepStatsRange(ev.key === "ArrowLeft" ? -1 : 1)
-            ev.preventDefault()
-        }
+        onStatsKey(ev)
         return
     }
     const b = board.value

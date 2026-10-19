@@ -282,7 +282,6 @@ export class SetupSettings {
         /*  the OpenAI Codex CLI has no scriptable statusline mechanism at all  */
         if (tool === "codex")
             return []
-        const home    = os.homedir()
         const scopes: Scope[] = tool === "claude" ? [ "user", "project", "local" ] : [ "user" ]
         const entries: { file: string, scope: string, status: string }[] = []
         for (const scope of scopes) {
@@ -299,7 +298,7 @@ export class SetupSettings {
             if (member === undefined)
                 continue
             entries.push({
-                file:   file.startsWith(home + path.sep) ? `~${file.slice(home.length)}` : file,
+                file:   this.fileDisplay(file),
                 scope:  tool === "claude" ? scope : "(n/a)",
                 status: this.statuslineIsOwned(member) ? "activated" : "foreign"
             })
@@ -373,7 +372,6 @@ export class SetupSettings {
     async outputStyleStatus (tool: Tool): Promise<{ file: string, scope: string, status: string }[]> {
         if (tool !== "claude")
             return []
-        const home    = os.homedir()
         const scopes: Scope[] = [ "user", "project", "local" ]
         const entries: { file: string, scope: string, status: string }[] = []
         for (const scope of scopes) {
@@ -390,7 +388,7 @@ export class SetupSettings {
             if (member === undefined)
                 continue
             entries.push({
-                file:   file.startsWith(home + path.sep) ? `~${file.slice(home.length)}` : file,
+                file:   this.fileDisplay(file),
                 scope,
                 status: this.outputStyleIsOwned(member) ? "selected" : "foreign"
             })
@@ -429,8 +427,7 @@ export class SetupSettings {
             /*  a match is the presence of the "ase@ase" key under
                 "enabledPlugins", regardless of its true/false value  */
             const plugins = (settings as { enabledPlugins?: Record<string, unknown> })?.enabledPlugins
-            if (plugins !== undefined && plugins !== null
-                && Object.prototype.hasOwnProperty.call(plugins, "ase@ase")) {
+            if (plugins !== undefined && plugins !== null && Object.hasOwn(plugins, "ase@ase")) {
                 if (scope !== "user")
                     this.log.write("info", `setup: detected ASE plugin installation in scope "${scope}"`)
                 return scope
@@ -541,7 +538,7 @@ export class SetupSettings {
     }
 
     /*  abbreviate the home directory of a file path as "~"  */
-    private telemetryFileDisplay (file: string): string {
+    private fileDisplay (file: string): string {
         const home = os.homedir()
         return file.startsWith(home + path.sep) ? `~${file.slice(home.length)}` : file
     }
@@ -876,7 +873,7 @@ export class SetupSettings {
             const present = env !== undefined && env.type() === "object" ? this.telemetryClaudePresent(env) : []
             if (env !== undefined && present.length > 0)
                 entries.push({
-                    file:   this.telemetryFileDisplay(file),
+                    file:   this.fileDisplay(file),
                     scope:  "user",
                     status: this.telemetryClaudeIsOwned(env) ? "activated" : "foreign"
                 })
@@ -902,7 +899,7 @@ export class SetupSettings {
                 else if ([ ...block.head, ...block.tail ].some((line) => foreign.test(line)))
                     status = "foreign"
                 if (status !== "")
-                    entries.push({ file: this.telemetryFileDisplay(file), scope: "(n/a)", status })
+                    entries.push({ file: this.fileDisplay(file), scope: "(n/a)", status })
             }
             if (tool === "copilot" && this.telemetryCopilotForeignEnv() !== undefined)
                 entries.push({ file: "$OTEL_EXPORTER_OTLP_ENDPOINT", scope: "(n/a)", status: "foreign" })

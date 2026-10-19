@@ -35,6 +35,8 @@ type ToolSpec = {
     preToolUseEvent:         "PreToolUse" | "preToolUse"
     approvalEvent:           "PreToolUse" | "PermissionRequest"
 }
+
+/*  the addon MCP servers whose tools get auto-approved  */
 const addonMcpServers = [
     "chat-alibaba-qwen",
     "chat-deepseek",
@@ -58,6 +60,7 @@ const addonMcpToolNamePattern = (prefix: string, suffix: string): RegExp => {
     return new RegExp(`^${prefix}(?:${alternatives})${suffix}`)
 }
 
+/*  the per-tool dispatch table of the hook integrations  */
 const toolSpecs: Record<Tool, ToolSpec> = {
     "claude": {
         toolNameField:           "tool_name",
@@ -135,7 +138,7 @@ export default class HookCommand {
         try {
             entries = fs.readdirSync(base, { withFileTypes: true })
         }
-        catch (_e) {
+        catch {
             /*  best-effort: no base directory yet, or unreadable  */
             return
         }
@@ -150,7 +153,7 @@ export default class HookCommand {
                 fs.rmSync(dir, { recursive: true, force: true })
                 this.log.write("debug", `hook: pruned stale session directory: ${dir}`)
             }
-            catch (_e) {
+            catch {
                 /*  best-effort: ignore vanished or undeletable directories  */
             }
         }
@@ -175,7 +178,7 @@ export default class HookCommand {
         try {
             raw = JSON.parse(text)
         }
-        catch (_e) {
+        catch {
             /*  best-effort: return empty object on malformed JSON  */
             return empty
         }
@@ -201,7 +204,7 @@ export default class HookCommand {
             try {
                 content = fs.readFileSync(abs, "utf8")
             }
-            catch (_e) {
+            catch {
                 return match
             }
             const next = new Set(visited)
@@ -235,7 +238,7 @@ export default class HookCommand {
         try {
             return this.pluginRoot(tool)
         }
-        catch (_e) {
+        catch {
             return ""
         }
     }
@@ -501,7 +504,7 @@ export default class HookCommand {
             ASE_AGENT_TOOL:                     tool
         })
 
-        /*  prepend ASE information to constitution markdown  */
+        /*  prepend ASE information to the constitution markdown (with its @<file> references expanded)  */
         let context =
             `<ase-version>${version}</ase-version>\n` +
             `<ase-version-hint>${versionHint}</ase-version-hint>\n` +
@@ -521,10 +524,7 @@ export default class HookCommand {
             `<ase-session-id>${sessionId}</ase-session-id>\n` +
             `<ase-headless>${headless}</ase-headless>\n` +
             `<ase-agent-tool>${tool}</ase-agent-tool>\n` +
-            "\n" + md
-
-        /*  expand all @<file> references manually  */
-        context = this.expandReferences(context, mdDir)
+            "\n" + this.expandReferences(md, mdDir)
 
         /*  append the output style to the constitution markdown (GitHub
             Copilot CLI and OpenAI Codex CLI only -- Anthropic Claude Code CLI
@@ -615,7 +615,7 @@ export default class HookCommand {
             try {
                 fs.rmSync(dir, { recursive: true, force: true })
             }
-            catch (_e) {
+            catch {
                 /*  best-effort: ignore failures  */
             }
 
@@ -666,7 +666,7 @@ export default class HookCommand {
             })
             return val
         }
-        catch (_e) {
+        catch {
             return ""
         }
     }

@@ -1050,9 +1050,8 @@ export abstract class Agent {
         const cli  = toolSpecs[tool].cli
         const cmd  = job.cmd ?? ""
         const i    = cmd.indexOf(" ")
-        const args = toolArgs[tool](job.prompt ?? skillPrompt(tool, i < 0 ? cmd : cmd.slice(0, i), i < 0 ? "" : cmd.slice(i + 1)), (job.dirs ?? [])
-            .filter((dir, i, dirs) => dir !== cwd && dirs.indexOf(dir) === i)
-            .flatMap((dir) => [ "--add-dir", dir ]))
+        const args = toolArgs[tool](job.prompt ?? skillPrompt(tool, i < 0 ? cmd : cmd.slice(0, i), i < 0 ? "" : cmd.slice(i + 1)),
+            [ ...new Set(job.dirs ?? []) ].filter((dir) => dir !== cwd).flatMap((dir) => [ "--add-dir", dir ]))
         await log("info", `running: ${cli} ${args.map((arg) => arg.includes(" ") ? `"${arg}"` : arg).join(" ")}`)
         const started = Date.now()
         const costs: ToolCosts = { costToken: null, costUSD: null, cread: 0, cwrite: 0, input: 0, apiMs: null }
@@ -1264,8 +1263,8 @@ export abstract class Agent {
             ...Object.fromEntries(Object.entries(own).filter((entry) => entry[1] !== undefined))
         } as AgentOpts
         this._name = opts.name ?? ""
-        if (this._name !== "" && !/^[A-Za-z0-9][A-Za-z0-9_.-]*$/.test(this._name))
-            throw new Error(`agent: invalid name "${this._name}" (expected letters, digits, "_", ".", or "-")`)
+        if (this._name !== "" && !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(this._name))
+            throw new Error(`agent: invalid name "${this._name}" (expected up to 64 letters, digits, "_", ".", or "-")`)
         this.relay = relay
         this.tool = parseTool(opts.tool)
         for (const cli of [ toolSpecs[this.tool].cli, ...(this.worktree ? [ "git" ] : []) ])

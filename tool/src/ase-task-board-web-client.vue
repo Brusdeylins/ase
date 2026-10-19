@@ -68,8 +68,8 @@ import BoardStats                               from "./ase-task-board-web-clien
 import TaskDialog                               from "./ase-task-board-web-client-dialog.vue"
 import BoardPopup                               from "./ase-task-board-web-client-popup.vue"
 import {
-    board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, agentNow, online, store, stats, statsRanges,
-    surface, titles, grown, agentDuration, agentLabel, cycleView, clearFilter, scrollBy, updateScroll, updateTabScroll,
+    board, actionError, actionNote, view, sel, drag, scroll, filter, filterEl, agents, agentSel, online, store, stats, statsRanges,
+    surface, titles, grown, agentLabel, cycleView, clearFilter, scrollBy, updateScroll, updateTabScroll,
     rowLanes, reload, startService, stopService, flowSel, flowAgents, viewLabels, viewCycleHint, type AgentFlow, type View
 } from "./ase-task-board-web-client-model"
 import { stopEdit }                  from "./ase-task-board-web-client-editor"
@@ -257,11 +257,11 @@ onMounted(() => {
     reload()
 })
 onBeforeUnmount(() => {
-    stopService()
-    controlStop()
-    stopEdit()
-    window.removeEventListener("resize", onResize)
     document.removeEventListener("animationstart", onAnimationStart)
+    window.removeEventListener("resize", onResize)
+    stopEdit()
+    controlStop()
+    stopService()
 })
 </script>
 

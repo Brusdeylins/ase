@@ -16,7 +16,7 @@ import type Log                                           from "./ase-lib-log.js
 import { Config }                                         from "./ase-config-core.js"
 import { configSchema }                                   from "./ase-config-schema.js"
 import { parseScope, userStateDir }                       from "./ase-config-scope.js"
-import * as API                                           from "./ase-task-store-plugin-api.js"
+import type * as API                                      from "./ase-task-store-plugin-api.js"
 import * as Delegate                                      from "./ase-task-store-plugin-delegate.js"
 import * as Core                                          from "./ase-task-store-core.js"
 import * as TaskFormat                                    from "./ase-task-format.js"
@@ -91,6 +91,7 @@ export class LocalTaskStoreClient implements TaskStoreClient {
         this.configure("project.task.idscheme", spec)
         this.idscheme = (await this.core.projectSet(this.prjId, { idscheme: spec })).project.idscheme
     }
+    /*  run an operation, yielding a fallback for a missing (404) task plan  */
     private async missing<T> (op: () => Promise<T>, fallback: T): Promise<T> {
         try {
             return await op()
@@ -101,6 +102,7 @@ export class LocalTaskStoreClient implements TaskStoreClient {
             throw err
         }
     }
+    /*  open the storage delegate shared by all clients of the store and register the project  */
     async open (): Promise<void> {
         let entry = LocalTaskStoreClient.shared.get(this.storage.key)
         if (entry === undefined) {
@@ -132,6 +134,7 @@ export class LocalTaskStoreClient implements TaskStoreClient {
             throw err
         }
     }
+    /*  release the shared storage delegate, closing it with its last client  */
     async close (): Promise<void> {
         const entry = this.entry
         if (entry === undefined)
@@ -140,7 +143,9 @@ export class LocalTaskStoreClient implements TaskStoreClient {
         if (--entry.refs === 0) {
             if (LocalTaskStoreClient.shared.get(this.storage.key) === entry)
                 LocalTaskStoreClient.shared.delete(this.storage.key)
-            await entry.opened.then((opened) => opened.store.close(), () => {})
+            await entry.opened.then((opened) => opened.store.close(), () => {
+                /*  a failed opening was already raised to its opener  */
+            })
         }
     }
     list (fields?: "header" | "usage"): Promise<Core.TaskListEntry[]> {
@@ -187,11 +192,13 @@ export class LocalTaskStoreClient implements TaskStoreClient {
                 onChange()
         }
         let stopped = false
+        let started = false
         const start = async (): Promise<void> => {
             await this.open()
             if (stopped)
                 await this.close()
             else {
+                started = true
                 this.entry?.listeners.add(listener)
                 onState?.(true)
             }
@@ -201,6 +208,8 @@ export class LocalTaskStoreClient implements TaskStoreClient {
         })
         return () => {
             stopped = true
+            if (!started)
+                return
             this.entry?.listeners.delete(listener)
             this.close().catch(() => {})
         }
@@ -213,9 +222,10 @@ type RemoteProject = { id: string, lifecycle: { name: string }, idscheme?: strin
 
 /*  the interval of the keepalive pings of the event subscription (where a connection without
     any traffic for this interval is pinged and without any traffic for twice this interval
-    is terminated) and the timeout of its WebSocket handshake  */
+    is terminated), the timeout of its WebSocket handshake, and the timeout of the REST API requests  */
 const KEEPALIVE_MS = 15 * 1000
 const HANDSHAKE_MS = 10 * 1000
+const REQUEST_MS   = 10 * 1000
 
 /*  the remote client: the REST API of a task store server, with the
     project registered under its configured lifecycle model and task id
@@ -259,7 +269,7 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
             },
             body:                body !== undefined ? JSON.stringify(body) : undefined,
             dispatcher:          this.dispatcher,
-            signal:              AbortSignal.timeout(10000),
+            signal:              AbortSignal.timeout(REQUEST_MS),
             ignoreResponseError: true
         }).catch((err: unknown) => this.unreachable(err))
         if (r.status === 404 || tolerated.includes(r.status))
@@ -436,7 +446,7 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
             headers:             { Authorization: `Bearer ${this.token}` },
             responseType:        "arrayBuffer",
             dispatcher:          this.dispatcher,
-            signal:              AbortSignal.timeout(10000),
+            signal:              AbortSignal.timeout(REQUEST_MS),
             ignoreResponseError: true
         }).catch((err: unknown) => this.unreachable(err))
         if (r.status === 404)
@@ -526,7 +536,9 @@ export class RemoteTaskStoreClient implements TaskStoreClient {
             if (timer !== null)
                 clearTimeout(timer)
             ws?.close()
-            this.close().catch(() => {})
+            this.close().catch(() => {
+                /*  best-effort release of the dispatcher on unsubscribe  */
+            })
         }
     }
 }

@@ -75,7 +75,7 @@ export const discoverKinds = (log: Log, reserved: string[]): DefinitionKind[] =>
         }
         const seen = new Set<string>()
         const rank = (entry: string) => definitionExts.indexOf(path.extname(entry).toLowerCase())
-        for (const entry of entries.filter((entry) => rank(entry) >= 0).sort((a, b) => rank(a) - rank(b))) {
+        for (const entry of entries.filter((e) => rank(e) >= 0).sort((a, b) => rank(a) - rank(b))) {
             const kind = path.basename(entry, path.extname(entry))
             const file = path.join(dir, entry)
             if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(kind) || kind.length > 64)
@@ -518,11 +518,11 @@ const loadDefinition = async (spec: string, chain: string[] = []): Promise<Loade
     if (spec.startsWith("builtin:")) {
         const where = `agent: option "--definition": definition "${spec}"`
         const m     = /^builtin:([a-z]+)(?:-([a-z]+))?$/.exec(spec)
-        const kind  = builtinKinds.find((kind) => kind.kind === m?.[1])
+        const kind  = builtinKinds.find((k) => k.kind === m?.[1])
         const mode  = m?.[2] ?? kind?.mode ?? ""
         if (m === null || kind === undefined || !Object.hasOwn(kind.modes, mode))
             throw new Error(`${where}: unknown built-in definition (expected ` +
-                builtinKinds.flatMap((kind) => Object.keys(kind.modes).map((mode) => `"builtin:${kind.kind}-${mode}"`)).join(", ") + ")")
+                builtinKinds.flatMap((k) => Object.keys(k.modes).map((n) => `"builtin:${k.kind}-${n}"`)).join(", ") + ")")
         id     = `builtin:${kind.kind}-${mode}`
         loaded = definitionValues(kind.modes[mode], where, "")
     }
@@ -789,6 +789,39 @@ const resolveSuccess = (
     return { criteria: criteria as DefinitionCriterion[], match, allow }
 }
 
+/*  resolve the attachments through the option accessors <str> and <has>: the expected
+    attachment and the attachment leaving a task unclaimed, validated together with the
+    kinds of the output and change set attachments  */
+const resolveAttach = (
+    str: (key: string, def?: string) => string,
+    has: (key: string) => boolean
+): { expect: AttachSpec | null, skip: AttachSpec | null } => {
+    const fail   = failOption
+    const kindRe = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/
+    const attachSpec = (key: string): AttachSpec | null => {
+        if (!has(key))
+            return null
+        const spec = str(key)
+        const i    = spec.indexOf(";")
+        const mime = i < 0 ? "" : spec.slice(0, i).trim().toLowerCase()
+        const kind = i < 0 ? spec.trim() : spec.slice(i + 1).trim()
+        if (!kindRe.test(kind) || (i >= 0 && !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mime)))
+            fail(key, `invalid attachment "${spec}" (expected "[<mime-type>;]<kind>")`)
+        return { mime, kind }
+    }
+    if (has("attach-output") && !kindRe.test(str("attach-output")))
+        fail("attach-output", `invalid kind "${str("attach-output")}"`)
+    else if (str("attach-output") === "agent")
+        fail("attach-output", "kind \"agent\" is reserved for the processing log")
+    if (has("attach-changeset") && !kindRe.test(str("attach-changeset")))
+        fail("attach-changeset", `invalid kind "${str("attach-changeset")}"`)
+    const expect = attachSpec("attach-expect")
+    if (expect !== null && has("attach-output")
+        && attachMatches(expect, `text/plain; kind="${str("attach-output")}"`))
+        fail("attach-expect", `attachment "${str("attach-expect")}" is always met by the output attachment of "--attach-output"`)
+    return { expect, skip: attachSpec("attach-skip") }
+}
+
 /*  resolve the definition of the agent named <name> from its (camel-cased) command-line
     options <opts>: the defaults, overridden by the definition of "--definition" (if any),
     overridden by the given options, validated against the task lifecycle models  */
@@ -935,29 +968,8 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     /*  the success criteria and the verdict (see "resolveSuccess")  */
     const { criteria, match, allow } = resolveSuccess(list, has, type, unclaimed, verdicting, verdicts)
 
-    /*  the attachments  */
-    const kindRe = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/
-    const attachSpec = (key: string): AttachSpec | null => {
-        if (!has(key))
-            return null
-        const spec = str(key)
-        const i    = spec.indexOf(";")
-        const mime = i < 0 ? "" : spec.slice(0, i).trim().toLowerCase()
-        const kind = i < 0 ? spec.trim() : spec.slice(i + 1).trim()
-        if (!kindRe.test(kind) || (i >= 0 && !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mime)))
-            fail(key, `invalid attachment "${spec}" (expected "[<mime-type>;]<kind>")`)
-        return { mime, kind }
-    }
-    if (has("attach-output") && !kindRe.test(str("attach-output")))
-        fail("attach-output", `invalid kind "${str("attach-output")}"`)
-    else if (str("attach-output") === "agent")
-        fail("attach-output", "kind \"agent\" is reserved for the processing log")
-    if (has("attach-changeset") && !kindRe.test(str("attach-changeset")))
-        fail("attach-changeset", `invalid kind "${str("attach-changeset")}"`)
-    const attachExpect = attachSpec("attach-expect")
-    if (attachExpect !== null && has("attach-output")
-        && attachMatches(attachExpect, `text/plain; kind="${str("attach-output")}"`))
-        fail("attach-expect", `attachment "${str("attach-expect")}" is always met by the output attachment of "--attach-output"`)
+    /*  the attachments (see "resolveAttach")  */
+    const { expect: attachExpect, skip: attachSkip } = resolveAttach(str, has)
     for (const key of [ "prepare-run", "finish-success", "finish-failure" ])
         if ((has(key) && str(key, "-") === "") || list(key).some((cmd) => cmd.trim() === ""))
             fail(key, "empty shell command")
@@ -988,7 +1000,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         success: { criteria, match },
         verdict: { label: str("verdict-label"), allow },
         attach:  {
-            output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip"),
+            output: str("attach-output"), expect: attachExpect, skip: attachSkip,
             changeset: str("attach-changeset")
         },
         finish:  { commit: flag("finish-commit"), success: str("finish-success"), failure: str("finish-failure") },

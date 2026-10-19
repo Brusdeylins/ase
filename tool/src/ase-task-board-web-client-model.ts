@@ -758,5 +758,7 @@ export const stopService = () => {
         clearInterval(busyTimer)
     if (agentTimer !== null)
         clearInterval(agentTimer)
+    if (beatTimer !== null)
+        clearTimeout(beatTimer)
 }
 

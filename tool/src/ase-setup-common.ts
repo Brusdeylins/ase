@@ -76,8 +76,7 @@ export class SetupRunner {
             return false
 
         /*  already running as root  */
-        const getuid = (process as unknown as { getuid?: () => number }).getuid
-        if (typeof getuid === "function" && getuid.call(process) === 0)
+        if (process.getuid?.() === 0)
             return false
 
         /*  determine the npm global prefix and probe writability of the

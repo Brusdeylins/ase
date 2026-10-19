@@ -102,9 +102,6 @@ type DefinedRecord = {
     settlement?: Settlement
 }
 
-/*  the selected tasks (and the waiting ones, with the reason, and the noticed ones, with the notice)  */
-type Selection = AgentSelection
-
 /*  whether a record of an agent of a definition succeeded (where a missing one counts as failure)  */
 const recordSuccess = (record: DefinedRecord | undefined): boolean =>
     record !== undefined && record.fixed === "" && record.checks.every((check) => check.ok)
@@ -361,7 +358,7 @@ class DefinedCore {
     }
 
     /*  filter the selected tasks (and the waiting ones) by their tags and their retry hold-off  */
-    filter (items: AgentItem[], selected: Selection): Selection {
+    filter (items: AgentItem[], selected: AgentSelection): AgentSelection {
         const known   = new Map(items.map((item) => [ item.id, item.keys ]))
         const now     = Date.now()
         const waiting = new Map([ ...selected.waiting ].filter(([ id ]) => this.selectable(known.get(id) ?? new Map())))
@@ -501,7 +498,7 @@ class DefinedCore {
         }
         catch (err: unknown) {
             await work.cleanup?.(log).catch((err2: unknown) =>
-                log("warning", err2 instanceof Error ? err2.message : String(err2)))
+                log("warning", reason(err2)))
             throw err
         }
     }
@@ -854,7 +851,7 @@ class DefinedPhaseAgent extends PhaseAgent {
 
     /*  select the tasks by the phase semantics and by their tags,
         noticing the tasks whose predecessors failed the hook "passes"  */
-    protected select (items: AgentItem[], busy: Set<string>): Selection {
+    protected select (items: AgentItem[], busy: Set<string>): AgentSelection {
         this.passFailures.clear()
         const selected = this.core.filter(items, super.select(items, busy))
         if (this.passFailures.size === 0)
@@ -1003,7 +1000,7 @@ class DefinedRequestAgent extends RequestAgent {
     }
 
     /*  select the tasks by the request semantics and by their tags  */
-    protected select (items: AgentItem[], busy: Set<string>): Selection {
+    protected select (items: AgentItem[], busy: Set<string>): AgentSelection {
         return this.core.filter(items, super.select(items, busy))
     }
 
@@ -1135,7 +1132,7 @@ export abstract class DefinedAgent extends Agent {
     protected prepare (): Promise<AgentJob> {
         return this.unsupported()
     }
-    protected select (): Selection {
+    protected select (): AgentSelection {
         return this.unsupported()
     }
     protected claim (): Promise<string | null> {

@@ -226,7 +226,7 @@ const attachmentDocument = async (log: Log, id: string, n: number): Promise<stri
         try {
             text = new TextDecoder("utf-8", { fatal: true }).decode(a.content)
         }
-        catch (_err: unknown) {
+        catch {
             text = "\0"
         }
         if (text.includes("\0"))
@@ -435,7 +435,7 @@ const registerPageRoutes = (server: Hapi.Server, log: Log): void => {
 const filterQuery = (request: Hapi.Request): string =>
     typeof request.query.filter === "string" ? request.query.filter : ""
 
-/*  register the view routes of the web board: the board, the graph, the statistics, and the tasks with their attachments  */
+/*  register the view routes of the web board: the board, the task and agent graphs, the statistics, the new task text, and the tasks with their attachments  */
 const registerViewRoutes = (server: Hapi.Server, log: Log): void => {
     /*  the board model, reduced onto the tasks matching the filter query  */
     server.route({

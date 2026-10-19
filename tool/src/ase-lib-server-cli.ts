@@ -20,8 +20,7 @@ import { Config }                 from "./ase-config-core.js"
 import { parseScope }             from "./ase-config-scope.js"
 import { isLogLevel }             from "./ase-lib-log.js"
 import { writeStdout }            from "./ase-lib-stdio.js"
-import { Service }              from "./ase-service.js"
-import { DaemonCommand }          from "./ase-lib-daemon-cli.js"
+import { Daemon, DaemonCommand }  from "./ase-lib-daemon-cli.js"
 import { urlHost, isLoopback, serverHeader } from "./ase-lib-server-bind.js"
 import type { ServerConfig }      from "./ase-lib-server-bind.js"
 
@@ -59,7 +58,7 @@ export const configuredTls = (cfg: Config, prefix: string): { cert: string | nul
             if (isLocal(new URL(url.value).hostname.replace(/^\[|\]$/g, "")))
                 return { cert: null, key: null }
         }
-        catch (_err: unknown) {
+        catch {
             /*  an invalid URL is reported by its users  */
         }
     }
@@ -352,7 +351,7 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
             child.kill("SIGTERM")
             child.unref()
         }
-        const tail   = Service.readLogTail(logFile, 20)
+        const tail   = Daemon.readLogTail(logFile, 20)
         const reason = exited ?
             `${this.label}: server exited during startup (code ${exitCode})` :
             probed === "foreign" ?
@@ -441,7 +440,7 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
             /*  re-allocate a configured port held by a foreign service  */
             if (foreign)
                 this.log.write("warning", `${this.label}: configured port ${port} in use by foreign service, re-allocating`)
-            port = await Service.allocatePort()
+            port = await Daemon.allocatePort()
         }
         let token = opts.token ?? process.env[this.env("TOKEN")] ?? ctx.token
         if (token === undefined || token === null || token === "")

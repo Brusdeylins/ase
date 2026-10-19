@@ -573,7 +573,7 @@ export abstract class PhaseAgent extends Agent {
         is removed once all its tasks are recovered  */
     protected async recover (): Promise<void> {
         const { incoming, success } = this.states
-        for (const { run } of await this.runLock.dead()) {
+        for (const run of await this.runLock.dead()) {
             const claims = await this.runLock.seize(run)
             if (claims === null)
                 continue

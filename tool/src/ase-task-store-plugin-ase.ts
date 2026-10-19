@@ -13,7 +13,7 @@ import lockfile               from "proper-lockfile"
 import { watch }              from "chokidar"
 import type { FSWatcher }     from "chokidar"
 
-import * as API               from "./ase-task-store-plugin-api.js"
+import type * as API          from "./ase-task-store-plugin-api.js"
 import * as TaskFormat        from "./ase-task-format.js"
 
 /*  the options of the built-in storage plugin: the base directory, the
@@ -164,10 +164,10 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
         const text = await fs.promises.readFile(file, "utf8")
         let doc: { id?: unknown, lifecycle?: unknown, idscheme?: unknown, seqmark?: unknown } | null
         try {
-            doc = parseYAML(text) as { id?: unknown, lifecycle?: unknown, idscheme?: unknown, seqmark?: unknown } | null
+            doc = parseYAML(text) as typeof doc
         }
         catch (err) {
-            this.ctx.log("warning", `malformed project file "${file}" ignored: ${(err as Error).message}`)
+            this.ctx.log("warning", `malformed project file "${file}" ignored: ${err instanceof Error ? err.message : String(err)}`)
             return { lifecycle: this.lifecycle, idscheme: this.idscheme, seqmark: 0, broken: true }
         }
         return {
@@ -217,7 +217,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
     }
     async projectSet (prjId: string, lifecycle: string, idscheme: string): Promise<API.WriteResult> {
         const dir    = this.dir(prjId)
-        const result: API.WriteResult = await exists(path.join(dir, PROJECT_FILE)) ? "updated" : "created"
+        const result = await exists(path.join(dir, PROJECT_FILE)) ? "updated" : "created"
         const prev   = await this.projectOf(dir)
         if (result === "created" || prev.broken || prev.lifecycle !== lifecycle || prev.idscheme !== idscheme)
             await this.projectWrite(dir, prev.id ?? prjId, lifecycle, idscheme, prev.seqmark)
@@ -297,7 +297,7 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
     }
     async taskSave (prjId: string, taskId: string, plan: API.TaskPlan): Promise<API.WriteResult> {
         const file   = this.file(prjId, taskId)
-        const result: API.WriteResult = await exists(file) ? "updated" : "created"
+        const result = await exists(file) ? "updated" : "created"
         await fs.promises.mkdir(path.dirname(file), { recursive: true })
         await writeFileAtomic(file, TaskFormat.formatTaskText(plan), { encoding: "utf8" })
         await this.written(prjId, taskId)
@@ -376,7 +376,9 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
                 if (this.watcher !== w)
                     return
                 this.watcher = null
-                w.close().catch(() => {}).finally(() => {
+                w.close().catch(() => {
+                    /*  re-arm even if the outdated watcher fails to close  */
+                }).finally(() => {
                     this.arm()
                     this.schedule()
                 })
@@ -460,7 +462,9 @@ class FileTaskStoragePlugin implements API.TaskStoragePlugin {
             clearTimeout(this.timer)
         this.timer = setTimeout(() => {
             this.timer = null
-            this.rescan().catch(() => {})
+            this.rescan().catch(() => {
+                /*  failures are already logged per directory  */
+            })
         }, 100)
         this.timer.unref()
     }

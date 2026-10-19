@@ -6,14 +6,134 @@
 
 import path                       from "node:path"
 import fs                         from "node:fs"
+import net                        from "node:net"
 import { fileURLToPath }          from "node:url"
 import { spawn }                  from "node:child_process"
 import type { ChildProcess }      from "node:child_process"
 
 import type { Command }           from "commander"
+import { Tail }                   from "tail"
 
 import type Log                   from "./ase-lib-log.js"
-import { Service }                from "./ase-service.js"
+
+/*  the loopback host to probe the ports on, the range and the number of attempts
+    of the random port allocation, and the bounds of the append-only log files:
+    maximum tolerated size and number of tail lines surviving a trim  */
+const HOST           = "127.0.0.1"
+const PORT_MIN       = 42000
+const PORT_MAX       = 44000
+const PORT_TRIES     = 20
+const LOG_MAX_SIZE   = 1024 * 1024
+const LOG_KEEP_LINES = 2000
+
+/*  reusable functionality: port allocation and log file handling of the background processes  */
+export class Daemon {
+    /*  try binding a single candidate port to verify availability  */
+    static tryBind (port: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            const s = net.createServer()
+            s.once("error", () => {
+                resolve(false)
+            })
+            s.once("listening", () => {
+                s.close(() => resolve(true))
+            })
+            s.listen(port, HOST)
+        })
+    }
+
+    /*  allocate the preferred port, if given and available,
+        else a fresh random port in PORT_MIN..PORT_MAX  */
+    static async allocatePort (pref: number | null = null): Promise<number> {
+        if (pref !== null && await Daemon.tryBind(pref))
+            return pref
+        for (let i = 0; i < PORT_TRIES; i++) {
+            const p = PORT_MIN + Math.floor(Math.random() * (PORT_MAX - PORT_MIN + 1))
+            if (await Daemon.tryBind(p))
+                return p
+        }
+        throw new Error(`failed to allocate a port in ${PORT_MIN}..${PORT_MAX} after ${PORT_TRIES} attempts`)
+    }
+
+    /*  trim the log file down to its tail if it grew beyond the size limit  */
+    static trimLog (logFile: string): void {
+        try {
+            if (!fs.existsSync(logFile) || fs.statSync(logFile).size <= LOG_MAX_SIZE)
+                return
+            const tail = Daemon.readLogTail(logFile, LOG_KEEP_LINES)
+            fs.writeFileSync(logFile, tail.length > 0 ? `${tail}\n` : "")
+        }
+        catch {
+            /*  intentionally ignore all trimming errors, as a
+                non-trimmable log file must never block the service  */
+        }
+    }
+
+    /*  read the last N non-empty lines of a log file for diagnostics  */
+    static readLogTail (logFile: string, lines: number): string {
+        let fd: number | null = null
+        try {
+            fd = fs.openSync(logFile, "r")
+            const size  = fs.fstatSync(fd).size
+            const CHUNK = 8192
+            const chunks: Buffer[] = []
+            let pos     = size
+            let count   = 0
+            while (pos > 0 && count <= lines) {
+                const n   = Math.min(CHUNK, pos)
+                const buf = Buffer.alloc(n)
+                pos -= n
+                fs.readSync(fd, buf, 0, n, pos)
+                chunks.unshift(buf)
+                for (let i = 0; i < n; i++)
+                    if (buf[i] === 10) count++
+            }
+
+            /*  decode once after re-assembly to avoid splitting
+                multi-byte UTF-8 sequences at chunk boundaries  */
+            const all = Buffer.concat(chunks).toString("utf8")
+                .split("\n").filter((l) => l.length > 0)
+            return all.slice(-lines).join("\n")
+        }
+        catch {
+            return ""
+        }
+        finally {
+            if (fd !== null)
+                fs.closeSync(fd)
+        }
+    }
+
+    /*  show a log file on stdout, either completely or its last <lines> lines only, and
+        optionally follow it for newly appended lines (default: the last 10 lines first),
+        where each line is passed through <transform> (e.g. to colorize parts of it)  */
+    static async showLog (logFile: string, opts: { follow?: boolean, lines?: string },
+        transform: (line: string) => string = (line) => line): Promise<number> {
+        const lines = opts.lines !== undefined ? Number(opts.lines) : null
+        if (lines !== null && (!Number.isInteger(lines) || lines < 1))
+            throw new Error(`invalid number of lines: ${opts.lines}`)
+        if (!fs.existsSync(logFile))
+            return 0
+        if (opts.follow) {
+            /*  follow until interrupted (on log trimming,
+                "tail" continues at the new end of the file)  */
+            const tail = new Tail(logFile, { nLines: lines ?? 10 })
+            tail.on("line", (line: string) => {
+                process.stdout.write(`${transform(line)}\n`)
+            })
+            return await new Promise<number>((_resolve, reject) => {
+                tail.on("error", (err: unknown) => {
+                    reject(err instanceof Error ? err : new Error(String(err)))
+                })
+            })
+        }
+        const text = lines !== null ?
+            Daemon.readLogTail(logFile, lines) :
+            fs.readFileSync(logFile, "utf8").replace(/\n$/, "")
+        process.stdout.write(text.length > 0 ? `${text.split("\n").map(transform).join("\n")}\n` : "")
+        return 0
+    }
+}
 
 /*  the CLI command group managing a long-running process (a server, an agent, or a fleet
     of them) in the background or in the foreground: it registers the command group, spawns
@@ -60,7 +180,7 @@ export abstract class DaemonCommand {
                     "(not yet run in the background, as one run in the foreground logs to the terminal)")
                 return
             }
-            process.exitCode = await Service.showLog(file, opts, transform)
+            process.exitCode = await Daemon.showLog(file, opts, transform)
         })
     }
 
@@ -68,7 +188,7 @@ export abstract class DaemonCommand {
         environment <env>, logging into the (trimmed) log file <logFile>  */
     protected spawnDetached (args: string[], env: NodeJS.ProcessEnv, logFile: string): ChildProcess {
         fs.mkdirSync(path.dirname(logFile), { recursive: true })
-        Service.trimLog(logFile)
+        Daemon.trimLog(logFile)
         const fd    = fs.openSync(logFile, "a")
         const entry = fileURLToPath(new URL("./ase.js", import.meta.url))
         const child = spawn(process.execPath, [ entry, ...args ], {
@@ -111,7 +231,7 @@ export abstract class DaemonCommand {
         if (failure === null)
             return
         const reason = `${this.label}: ${failure}`
-        const tail   = Service.readLogTail(logFile, 20)
+        const tail   = Daemon.readLogTail(logFile, 20)
         throw new Error(tail.length > 0 ? `${reason}\n---- ${logFile} (tail) ----\n${tail}` : reason)
     }
 

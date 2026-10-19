@@ -137,9 +137,9 @@ const main = async (): Promise<void> => {
         the command line actually addresses; when no sub-command matches
         at all, all of them are registered, as only then Commander can
         render the complete sub-command overview of a help or a typo  */
-    const register = async (name: string, rest: string[]): Promise<void> => {
-        const parent = await commands[name](program)
-        const subs   = subCommands[name]
+    const register = async (top: string): Promise<void> => {
+        const parent = await commands[top](program)
+        const subs   = subCommands[top]
         if (subs === undefined || !(parent instanceof Command))
             return
         const wanted = Object.keys(subs).filter((sub) => rest.includes(sub))
@@ -159,10 +159,10 @@ const main = async (): Promise<void> => {
         answered by the program itself and hence needs no command module,
         while an unknown command and any help request need all of them  */
     if (Object.hasOwn(commands, name))
-        await register(name, rest)
+        await register(name)
     else if (!(name === "" && version))
         for (const command of Object.keys(commands))
-            await register(command, rest)
+            await register(command)
 
     /*  parse program arguments  */
     await program.parseAsync(process.argv)

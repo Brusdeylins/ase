@@ -10,7 +10,7 @@ import os                           from "node:os"
 import { Task }                     from "./ase-task.js"
 import * as TaskFormat              from "./ase-task-format.js"
 import type * as API                from "./ase-task-store-plugin-api.js"
-import type { AgentTask, AgentItem, AgentLog } from "./ase-agent-runtime.js"
+import type { AgentTask, AgentItem, AgentSelection, AgentLog } from "./ase-agent-runtime.js"
 import { Agent, updateTask, tagsOf, flatKeys } from "./ase-agent-runtime.js"
 import { skillErrored }             from "./ase-agent-runtime-tool.js"
 import { runOwner }                 from "./ase-agent-runtime-claim.js"
@@ -135,13 +135,13 @@ export abstract class RequestAgent extends Agent {
             })
             await this.write("warning", this.name, `task "${item.id}": ${this.requests.name} request of terminated ${this.role} marked as failed`)
         }
-        for (const { run } of runs)
+        for (const run of runs)
             await this.runLock.purge(run)
     }
 
     /*  select every task with a request (except one whose finalization is still retried),
         deferring those in an activity status or still held by a phase agent  */
-    protected select (items: AgentItem[], busy: Set<string>): { tasks: AgentTask[], waiting: Map<string, string> } {
+    protected select (items: AgentItem[], busy: Set<string>): AgentSelection {
         const lifecycle = this.lifecycle!
         const tasks: AgentTask[] = []
         const waiting = new Map<string, string>()

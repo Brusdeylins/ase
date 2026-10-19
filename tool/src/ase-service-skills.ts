@@ -245,7 +245,8 @@ export class Skills {
             if (m === null)
                 return "N.A."
             const base = parseFloat(m[1].replace(/,/g, ""))
-            const mult = m[2] === "K" ? 1_000 : m[2] === "M" ? 1_000_000 : m[2] === "B" ? 1_000_000_000 : 1
+            const unit = m[2].toUpperCase()
+            const mult = unit === "K" ? 1_000 : unit === "M" ? 1_000_000 : unit === "B" ? 1_000_000_000 : 1
             const n    = Math.round(base * mult)
             return Number.isFinite(n) ? n : "N.A."
         }
@@ -322,20 +323,9 @@ export class Skills {
         const now        = Date.now()
         const msPerDay   = 1000 * 60 * 60 * 24
         const halfLife   = 365 / 2
-        /*  lifespan requires both timestamps; recentness requires the
-            updated timestamp -- any unavailable date-derived factor is
-            given a neutral default so the entry can still be ranked by the
-            remaining metrics, instead of collapsing the product to zero.
-            For `lifespan` (an unbounded duration) the multiplicative-neutral
-            `1` is also the low floor, so a missing value cannot unfairly
-            inflate the rank. For `recentness`, however, the value is an
-            exp-decay factor bounded in `(0,1]` where `1` is the *ceiling*
-            (a just-now update), not a floor -- defaulting a missing update
-            date to `1` would hand packages with absent metadata the highest
-            possible recentness and let them outrank genuinely fresh ones.
-            We therefore default a missing `recentness` to the decay value at
-            one half-life (`0.5`), a conservative midpoint that keeps the
-            entry rankable without rewarding the missing date.  */
+        /*  an unavailable date-derived factor gets a neutral default: a missing lifespan
+            its floor "1", a missing recentness (whose ceiling is "1") the decay value at
+            one half-life ("0.5"), so a missing date is never rewarded  */
         const lifespan   = (!Number.isNaN(cMs) && !Number.isNaN(uMs)) ? Math.max(1, uMs - cMs) : 1
         const recentness = !Number.isNaN(uMs) ? 0.5 ** (Math.max(0, (now - uMs) / msPerDay) / halfLife) : 0.5
         let rank = d * s * lifespan * recentness

@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, computed, nextTick, watch, onMounted, onBeforeUnmount, defineComponent, h } from "vue"
+import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount, defineComponent, h } from "vue"
 import {
     type Agent, type AgentLine, type AgentUsage,
     view, agents, agentLogs, agentList, agentSel, logEl, logStick, agentNow,

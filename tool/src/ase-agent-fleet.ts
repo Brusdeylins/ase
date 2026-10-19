@@ -419,7 +419,7 @@ export default class AgentFleetCommand extends DaemonCommand {
             const { kind = name, ...options } = section(name)
             if (typeof kind !== "string" || !this.kinds.has(kind))
                 throw new Error(`fleet: section "${name}": unknown agent kind "${String(kind)}" ` +
-                    `(expected ${kinds.map((name) => `"${name}"`).join(", ")})`)
+                    `(expected ${kinds.map((k) => `"${k}"`).join(", ")})`)
             validateName(name, kind, kinds)
 
             /*  the options of the definition of an agent can be nested by group, and the

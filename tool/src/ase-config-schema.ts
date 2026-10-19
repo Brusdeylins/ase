@@ -8,9 +8,7 @@ import * as v                    from "valibot"
 import { foregroundColorNames }  from "chalk"
 
 import type { ScopeTerm }        from "./ase-config-scope.js"
-import { checkIdScheme }         from "./ase-task-format.js"
-import { parseEffortScale }      from "./ase-task-format.js"
-import { EFFORT_SCALE }          from "./ase-task-format.js"
+import { checkIdScheme, parseEffortScale, EFFORT_SCALE } from "./ase-task-format.js"
 
 /*  classification taxonomy  */
 export const projectClassification = {

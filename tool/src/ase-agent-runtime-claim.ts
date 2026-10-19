@@ -61,8 +61,10 @@ export class AgentRun {
     /*  the record (process id, its start time, and claims) of a run  */
     private record (run: string): { pid: number, start: string, claims: Record<string, RunClaim> } {
         try {
-            const data = JSON.parse(fs.readFileSync(this.file(run, ".json"), "utf8"))
-            return { pid: Number(data.pid ?? 0), start: String(data.start ?? ""), claims: data.claims ?? {} }
+            const data   = JSON.parse(fs.readFileSync(this.file(run, ".json"), "utf8")) as { pid?: unknown, start?: unknown, claims?: unknown }
+            const claims = data.claims !== null && typeof data.claims === "object" && !Array.isArray(data.claims) ?
+                data.claims as Record<string, RunClaim> : {}
+            return { pid: Number(data.pid ?? 0), start: String(data.start ?? ""), claims }
         }
         catch (_err) {
             return { pid: 0, start: "", claims: {} }
@@ -129,12 +131,12 @@ export class AgentRun {
             .map((entry) => entry.replace(/\.(?:lock|json)$/, ""))) ]
     }
 
-    /*  the terminated runs of the agent kind for the task store, with their recorded claims  */
-    async dead (): Promise<{ run: string, claims: Record<string, RunClaim> }[]> {
-        const dead: { run: string, claims: Record<string, RunClaim> }[] = []
+    /*  the terminated runs of the agent kind for the task store  */
+    async dead (): Promise<string[]> {
+        const dead: string[] = []
         for (const run of this.runs())
             if (!(await this.alive(run)))
-                dead.push({ run, claims: this.record(run).claims })
+                dead.push(run)
         return dead
     }
 

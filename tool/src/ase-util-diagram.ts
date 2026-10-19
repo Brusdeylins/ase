@@ -4,16 +4,16 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-import fs                                from "node:fs"
+import fs                                        from "node:fs"
 
-import { Command, InvalidArgumentError } from "commander"
-import { z }                             from "zod"
+import { Command, InvalidArgumentError, Option } from "commander"
+import { z }                                     from "zod"
 
-import type { McpServer }                from "@modelcontextprotocol/sdk/server/mcp.js"
-import type { D2 }                       from "@d2lang/d2"
+import type { McpServer }                        from "@modelcontextprotocol/sdk/server/mcp.js"
+import type { D2 }                               from "@d2lang/d2"
 
-import type Log                          from "./ase-lib-log.js"
-import { readStdin, writeStdout }        from "./ase-lib-stdio.js"
+import type Log                                  from "./ase-lib-log.js"
+import { readStdin, writeStdout }                from "./ase-lib-stdio.js"
 
 /*  options accepted by the pure rendering helper  */
 export interface DiagramRenderOpts {
@@ -41,27 +41,6 @@ const parseInteger = (name: string) => (value: string): number => {
     if (!Number.isFinite(n) || n < 0)
         throw new InvalidArgumentError(`${name} must be a non-negative integer`)
     return n
-}
-
-/*  custom argument parser for Commander: color mode  */
-const parseColorMode = (name: string) => (value: string): "none" | "ansi16" | "ansi256" => {
-    if (value !== "none" && value !== "ansi16" && value !== "ansi256")
-        throw new InvalidArgumentError(`${name} must be "none", "ansi16", or "ansi256"`)
-    return value
-}
-
-/*  custom argument parser for Commander: diagram language  */
-const parseLang = (name: string) => (value: string): "mermaid" | "d2" => {
-    if (value !== "mermaid" && value !== "d2")
-        throw new InvalidArgumentError(`${name} must be "mermaid" or "d2"`)
-    return value
-}
-
-/*  custom argument parser for Commander: output format  */
-const parseFormat = (name: string) => (value: string): "ascii" | "svg" => {
-    if (value !== "ascii" && value !== "svg")
-        throw new InvalidArgumentError(`${name} must be "ascii" or "svg"`)
-    return value
 }
 
 /*  the D2 compiler, created on first use only (as it spins up the
@@ -154,6 +133,7 @@ const visibleWidth = (line: string): number => {
 
 /*  reusable functionality: Mermaid and D2 diagram rendering as Unicode/ASCII art or SVG  */
 export class Diagram {
+    /*  detect a terminal dimension from an environment variable, else from stdout (0 if unknown)  */
     static detectTermDimension (envVar: string, stdoutProp: "columns" | "rows"): number {
         let value = 0
 
@@ -187,24 +167,14 @@ export class Diagram {
 
     /*  detect terminal color capability  */
     static detectColorMode (): "none" | "ansi16" | "ansi256" {
-        let mode: "none" | "ansi16" | "ansi256" = "none"
-        let explicit = false
-
         /*  attempt 1: query environment variable (explicitly)  */
-        if (process.env.ASE_TERM_COLORS !== undefined)
-            if (/^(?:none|ansi16|ansi256)$/.test(process.env.ASE_TERM_COLORS)) {
-                mode = process.env.ASE_TERM_COLORS as "none" | "ansi16" | "ansi256"
-                explicit = true
-            }
+        const env = process.env.ASE_TERM_COLORS
+        if (env === "none" || env === "ansi16" || env === "ansi256")
+            return env
 
         /*  attempt 2: query stdout  */
-        if (!explicit && process.stdout.isTTY) {
-            const depth = process.stdout.getColorDepth()
-            if      (depth >= 8) mode = "ansi256"
-            else if (depth >= 4) mode = "ansi16"
-        }
-
-        return mode
+        const depth = process.stdout.isTTY ? process.stdout.getColorDepth() : 0
+        return depth >= 8 ? "ansi256" : depth >= 4 ? "ansi16" : "none"
     }
 
     /*  dispose the D2 compiler (if any), so its worker thread no longer
@@ -341,18 +311,15 @@ export default class DiagramCommand {
             .description("Render Mermaid or D2 diagram specification as Unicode/ASCII art or SVG")
             .option("-i, --input <file>",
                 "read diagram source from file instead of stdin")
-            .option("-l, --lang <lang>",
-                "diagram language (\"mermaid\" or \"d2\")",
-                parseLang("--lang"), "mermaid")
-            .option("-f, --format <format>",
-                "output format (\"ascii\" or \"svg\")",
-                parseFormat("--format"), "ascii")
+            .addOption(new Option("-l, --lang <lang>", "diagram language")
+                .choices([ "mermaid", "d2" ]).default("mermaid"))
+            .addOption(new Option("-f, --format <format>", "output format")
+                .choices([ "ascii", "svg" ]).default("ascii"))
             .option("-a, --ascii",
                 "emit plain ASCII (+-|) instead of Unicode box-drawing",
                 false)
-            .option("-c, --color-mode <mode>",
-                "force color mode (\"none\", \"ansi16\", or \"ansi256\") (Mermaid only)",
-                parseColorMode("--color-mode"), Diagram.detectColorMode())
+            .addOption(new Option("-c, --color-mode <mode>", "force color mode (Mermaid only)")
+                .choices([ "none", "ansi16", "ansi256" ]).default(Diagram.detectColorMode()))
             .option("--node-margin-x <n>",
                 "horizontal margin between nodes of <n> characters (Mermaid only)",
                 parseInteger("--node-margin-x"), 3)

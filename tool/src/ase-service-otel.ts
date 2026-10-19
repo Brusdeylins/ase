@@ -693,7 +693,7 @@ export class UsageTracker {
         const self = userId()
         if (assignee.trim() === "")
             throw new Error("usage: empty assignee (use \"none\" to unassign)")
-        const to   = assignee === "me" ? self : assignee.trim()
+        const to   = assignee.trim() === "me" ? self : assignee.trim()
 
         /*  (keep the session out of the adoptions meanwhile, and let an assignment to oneself
             settle the adoption of its active task, as the explicit assignment takes precedence)  */
@@ -705,6 +705,8 @@ export class UsageTracker {
             this.explicit.delete(session)
         }
     }
+
+    /*  perform the assignment of "assign" (with the session kept out of the adoptions)  */
     private async assignSession (id: string, to: string, self: string, session: string): Promise<AssignResult> {
         const warning = await Task.checkAssignee(this.log, to)
         const from    = await Task.assign(this.log, id, to === "none" ? null : to)
@@ -1081,6 +1083,8 @@ export class UsageTracker {
             this.unwatch = null
         }
     }
+
+    /*  close resp. implicitly account the open windows of the watched tasks whose assignee changed elsewhere  */
     private async check (): Promise<void> {
         for (const task of Array.from(this.watched)) {
             const w = this.openWindow(task)
@@ -1354,9 +1358,7 @@ export class UsageTracker {
         (dropping the records of unregistered sessions), with the session registry
         re-read from the telemetry state file only once the file changed  */
     private route (records: UsageRecord[]): void {
-        const bySession = new Map<string, UsageRecord[]>()
-        for (const r of records)
-            bySession.set(r.session, [ ...(bySession.get(r.session) ?? []), r ])
+        const bySession = Map.groupBy(records, (r) => r.session)
         let registry: Record<string, SessionEntry>
         try {
             const file = UsageTracker.stateFile()

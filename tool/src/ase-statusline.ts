@@ -24,7 +24,7 @@ import pkg                                          from "../package.json" with 
 
 /*  forced-color chalk instance: stdout is a pipe under Anthropic Claude Code CLI,
     so chalk auto-detection would yield level 0; force level 1 to keep
-    emitting ANSI sequences as the original implementation did  */
+    emitting ANSI sequences  */
 const c = new Chalk({ level: 1 })
 
 /*  set of valid <color>...</color> markup names (chalk basic foreground colors plus "default")  */
@@ -111,10 +111,9 @@ interface StatuslineOpts {
 
 /*  custom argument parser for Commander: non-negative integer  */
 const parseInteger = (name: string) => (value: string): number => {
-    const n = Number.parseInt(value, 10)
-    if (!Number.isFinite(n) || n < 0)
+    if (!/^\d+$/.test(value))
         throw new InvalidArgumentError(`${name} must be a non-negative integer`)
-    return n
+    return Number.parseInt(value, 10)
 }
 
 /*  detect terminal column width via /dev/tty (stdout is a pipe under Anthropic Claude Code CLI)  */
@@ -126,7 +125,7 @@ const detectTermWidth = (): number => {
         const out = execFileSync("tput", [ "cols" ], { stdio: [ tty, "pipe", "ignore" ] })
         width = Number.parseInt(out.toString("utf8").trim(), 10) || 0
     }
-    catch (_e) {
+    catch {
         /*  no controlling terminal  */
     }
     finally {
@@ -134,7 +133,7 @@ const detectTermWidth = (): number => {
             try {
                 fs.closeSync(tty)
             }
-            catch (_e) {
+            catch {
                 /*  best-effort  */
             }
         }
@@ -236,12 +235,12 @@ const probeGit = (cwd: string): { branch: string, untracked: number, added: numb
             if (mAdd !== null) added   = Number.parseInt(mAdd[1]!, 10)
             if (mDel !== null) removed = Number.parseInt(mDel[1]!, 10)
         }
-        catch (_e) {
+        catch {
             /*  no HEAD yet or git failure; leave counts at 0  */
         }
         return { branch, untracked, added, removed }
     }
-    catch (_e) {
+    catch {
         return { branch: "", untracked: 0, added: 0, removed: 0 }
     }
 }
@@ -253,7 +252,7 @@ const probeMemory = (): { used: number, total: number } => {
         const free  = os.freemem()
         return { used: total - free, total }
     }
-    catch (_e) {
+    catch {
         return { used: 0, total: 0 }
     }
 }
@@ -317,7 +316,7 @@ const fetchCodexLimits = async (): Promise<RateLimits | undefined> => {
     try {
         cache = (JSON.parse(fs.readFileSync(cacheFile, "utf8")) ?? {}) as typeof cache
     }
-    catch (_e) {
+    catch {
         /*  no (valid) cache yet  */
     }
     if (typeof cache.time === "number" && Math.abs(Date.now() - cache.time) < CODEX_USAGE_TTL)
@@ -326,7 +325,8 @@ const fetchCodexLimits = async (): Promise<RateLimits | undefined> => {
     /*  query the usage endpoint (keeping the stale result on any failure)  */
     let limits = cache.limits
     try {
-        const home  = process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex")
+        const dir   = process.env.CODEX_HOME ?? ""
+        const home  = dir !== "" ? dir : path.join(os.homedir(), ".codex")
         const auth  = JSON.parse(fs.readFileSync(path.join(home, "auth.json"), "utf8")) as
             { tokens?: { access_token?: string, account_id?: string } } | null
         const token = auth?.tokens?.access_token
@@ -355,7 +355,7 @@ const fetchCodexLimits = async (): Promise<RateLimits | undefined> => {
             }
         }
     }
-    catch (_e) {
+    catch {
         /*  credential unreadable or endpoint unreachable  */
     }
 
@@ -364,10 +364,187 @@ const fetchCodexLimits = async (): Promise<RateLimits | undefined> => {
         fs.mkdirSync(path.dirname(cacheFile), { recursive: true })
         fs.writeFileSync(cacheFile, JSON.stringify({ time: Date.now(), limits }) + "\n", "utf8")
     }
-    catch (_e) {
+    catch {
         /*  best-effort  */
     }
     return limits
+}
+
+/*  type of the configuration values shown in the statusline  */
+type StatuslineCfg = { taskId: string, persona: string, guidance: string, boxing: string, lifecycle: string }
+
+/*  type of the context of the placeholder renderers: the input data, the target tool,
+    the rate-limit windows, the output helpers, and the lazy memoized probes  */
+type RenderCtx = {
+    data:       StatuslineInput
+    tool:       Tool
+    limits:     RateLimits | undefined
+    emit:       (chunk: string) => void
+    prefix:     (icon: string, label: string) => string
+    getSession: () => string
+    getCfg:     () => StatuslineCfg
+    getModel:   () => { name: string, effort: string }
+    getGit:     () => ReturnType<typeof probeGit>
+    getMem:     () => ReturnType<typeof probeMemory>
+}
+
+/*  create the identifier to renderer map: each callback fetches its own information
+    directly from data (or via the lazy probes for shared values)  */
+const createRenderers = (ctx: RenderCtx): Record<string, () => void> => {
+    const { data, tool, limits, emit, prefix, getSession, getCfg, getModel, getGit, getMem } = ctx
+
+    /*  render a configuration value (if non-empty) with its icon and label  */
+    const cfgValue = (key: keyof StatuslineCfg, icon: string, label: string) => () => {
+        const value = getCfg()[key]
+        if (value !== "")
+            emit(`${prefix(icon, label)}${c.bold(value)}`)
+    }
+    return {
+        /*  ==== SCOPE ====  */
+        u: () => {
+            const user = process.env.USER ?? process.env.LOGNAME ?? "unknown"
+            emit(`${prefix("※", "user")}${c.bold(user)}`)
+        },
+        p: () => {
+            const id = projectIdOf(data.workspace?.current_dir ?? "")
+            emit(`${prefix("⚑", "project")}${c.bold(id)}`)
+        },
+        T: cfgValue("taskId", "◉", "task"),
+        s: () => emit(`${prefix("⏻", "session")}${c.bold(getSession())}`),
+
+        /*  ==== MODEL ====  */
+        m: () => {
+            const { name } = getModel()
+            emit(`${prefix("⚙", "model")}${c.bold(name)}`)
+        },
+        e: () => {
+            const { effort } = getModel()
+            emit(`${prefix("⚒", "effort")}${c.bold(effort !== "" ? effort : "unknown")}`)
+        },
+        t: () => {
+            const thinking = data.thinking?.enabled === true ? "yes" : "no"
+            emit(`${prefix("⚛", "thinking")}${c.bold(thinking)}`)
+        },
+
+        /*  ==== OUTPUT ====  */
+        O: () => {
+            const styleName = data.output_style?.name ?? ""
+            if (styleName !== "")
+                emit(`${prefix("≡", "style")}${c.bold(styleName)}`)
+        },
+        P: cfgValue("persona",   "☯", "persona"),
+        h: cfgValue("guidance",  "▶", "guidance"),
+        B: cfgValue("boxing",    "▢", "boxing"),
+        L: cfgValue("lifecycle", "⟳", "lifecycle"),
+
+        /*  ==== CONTEXT ====  */
+        c: () => {
+            const pct     = Math.min(100, Math.max(0, Math.floor(data.context_window?.used_percentage ?? 0)))
+            const barSize = 20
+            const filled  = Math.round(pct / 100 * barSize)
+            const bar     = "█".repeat(filled) + "░".repeat(barSize - filled)
+            emit(`${prefix("◔", "context")}${bar} ${pct}%`)
+        },
+        C: () => {
+            /*  probe the live-context fields first and fall back to the
+                cumulative ones, so each harness contributes its own view:
+                GitHub Copilot CLI reports the live window separately (its
+                "total_*" are session sums), whereas Anthropic Claude Code CLI
+                folds it into "total_input_tokens". Output tokens stay out --
+                "used_percentage" is input-side only.  */
+            const cw        = data.context_window
+            const pct       = cw?.used_percentage ?? 0
+            const tokensCur = cw?.current_context_tokens ??
+                cw?.last_call_input_tokens ?? cw?.total_input_tokens ?? 0
+            const tokensLim = cw?.displayed_context_limit ?? cw?.context_window_size ??
+                (pct > 0 && tokensCur > 0 ? Math.round(tokensCur * 100 / pct) : 0)
+            if (tokensLim > 0)
+                emit(`${prefix("◆", "tokens")}${c.bold(formatTokens(tokensCur) + "/" + formatTokens(tokensLim))}`)
+        },
+
+        /*  ==== RATE LIMITS ====  */
+        S: () => {
+            const pct5h = limits?.five_hour?.used_percentage
+            const s     = pct5h !== undefined ? `${pct5h.toFixed(1)}%` : "-"
+            emit(`${prefix("⏲", "5h-usage")}${c.bold(s)}`)
+        },
+        D: () => {
+            const until5h = limits?.five_hour?.resets_at
+            const s       = formatTimeUntil(until5h)
+            emit(`${prefix("⏱", "5h-resets")}${c.bold(s !== "" ? s : "-")}`)
+        },
+        W: () => {
+            const pctWk = limits?.seven_day?.used_percentage
+            const s     = pctWk !== undefined ? `${pctWk.toFixed(1)}%` : "-"
+            emit(`${prefix("⏲", "7d-usage")}${c.bold(s)}`)
+        },
+        Q: () => {
+            const untilWk = limits?.seven_day?.resets_at
+            const s       = formatTimeUntil(untilWk)
+            emit(`${prefix("⏱", "7d-resets")}${c.bold(s !== "" ? s : "-")}`)
+        },
+
+        /*  ==== COSTS ====  */
+        H: () => {
+            const sessDurMs = data.cost?.total_duration_ms ?? 0
+            if (sessDurMs > 0)
+                emit(`${prefix("⏱", "elapsed")}${c.bold(formatHoursMinutes(sessDurMs))}`)
+        },
+        X: () => {
+            const sessCost = data.cost?.total_cost_usd
+            if (sessCost !== undefined)
+                emit(`${prefix("$", "cost")}${c.bold(formatCostUsd(sessCost))}`)
+        },
+
+        /*  ==== VERSION CONTROL ====  */
+        a: () => {
+            const linesAdded = data.cost?.total_lines_added ?? 0
+            emit(`${prefix("⊕", "added")}${c.bold(String(linesAdded))}`)
+        },
+        r: () => {
+            const linesRemoved = data.cost?.total_lines_removed ?? 0
+            emit(`${prefix("⊖", "removed")}${c.bold(String(linesRemoved))}`)
+        },
+        b: () => {
+            const g     = getGit()
+            const label = g.branch !== "" ? g.branch : "no git"
+            emit(`${prefix("⎇", "branch")}${c.bold(label)}`)
+        },
+        g: () => {
+            const g = getGit()
+            if (g.branch !== "")
+                emit(`${prefix("±", "changed")}${c.bold(`+${g.added}/-${g.removed}`)}`)
+        },
+        G: () => {
+            const g = getGit()
+            if (g.branch !== "")
+                emit(`${prefix("⁈", "untracked")}${c.bold(String(g.untracked))}`)
+        },
+        d: () => {
+            const cwd = data.workspace?.current_dir ?? ""
+            if (cwd !== "")
+                emit(`${prefix("▶", "cwd")}${c.bold(cwd)}`)
+        },
+
+        /*  ==== RESOURCES ====  */
+        M: () => {
+            const m = getMem()
+            if (m.total > 0)
+                emit(`${prefix("⛁", "mem")}${c.bold(`${formatBytes(m.used)}/${formatBytes(m.total)}`)}`)
+        },
+
+        /*  ==== VERSIONS ====  */
+        V: () => {
+            const toolVersion = data.version ?? ""
+            const aseVersion  = pkg.version  ?? ""
+            let version = ""
+            if (toolVersion !== "")
+                version += `${tool}/${toolVersion}`
+            if (aseVersion !== "")
+                version += `${version !== "" ? " " : ""}ase/${aseVersion}`
+            emit(`${prefix("⎈", "version")}${c.bold(version)}`)
+        }
+    }
 }
 
 /*  command-line handling  */
@@ -483,7 +660,7 @@ export default class StatuslineCommand {
                     once per run and only when first requested by a renderer (or by the
                     post-loop tmux publish for the Config cascade)  */
                 const getSession = memoize((): string => data.session_id ?? "unknown")
-                const getCfg = memoize((): { taskId: string, persona: string, guidance: string, boxing: string, lifecycle: string } => {
+                const getCfg = memoize((): StatuslineCfg => {
                     let taskId    = process.env.ASE_TASK_ID                ?? "default"
                     let persona   = process.env.ASE_PERSONA_STYLE          ?? ""
                     let guidance  = process.env.ASE_GUIDANCE_LEVEL         ?? ""
@@ -500,7 +677,7 @@ export default class StatuslineCommand {
                         boxing    = get("project.boxing",         boxing)
                         lifecycle = get("project.task.lifecycle", lifecycle)
                     }
-                    catch (_e) {
+                    catch {
                         /*  cascade unavailable; keep env-var fallbacks  */
                     }
                     try {
@@ -508,7 +685,7 @@ export default class StatuslineCommand {
                         state.read("lenient")
                         taskId = String(state.get("task") ?? "").trim() || taskId
                     }
-                    catch (_e) {
+                    catch {
                         /*  session state unavailable; keep env-var fallback  */
                     }
                     return { taskId, persona, guidance, boxing, lifecycle }
@@ -534,161 +711,8 @@ export default class StatuslineCommand {
                     && tmpl.some((line) => /%[SDWQ]/.test(line)))
                     limits = await fetchCodexLimits()
 
-                /*  render a configuration value (if non-empty) with its icon and label  */
-                const cfgValue = (key: keyof ReturnType<typeof getCfg>, icon: string, label: string) => () => {
-                    const value = getCfg()[key]
-                    if (value !== "")
-                        emit(`${prefix(icon, label)}${c.bold(value)}`)
-                }
-
-                /*  identifier to renderer map: each callback fetches its own information
-                    directly from data (or via the lazy helpers above for shared values)  */
-                const renderers: Record<string, () => void> = {
-                    /*  ==== SCOPE ====  */
-                    u: () => {
-                        const user = process.env.USER ?? process.env.LOGNAME ?? "unknown"
-                        emit(`${prefix("※", "user")}${c.bold(user)}`)
-                    },
-                    p: () => {
-                        const id = projectIdOf(data.workspace?.current_dir ?? "")
-                        emit(`${prefix("⚑", "project")}${c.bold(id)}`)
-                    },
-                    T: cfgValue("taskId", "◉", "task"),
-                    s: () => emit(`${prefix("⏻", "session")}${c.bold(getSession())}`),
-
-                    /*  ==== MODEL ====  */
-                    m: () => {
-                        const { name } = getModel()
-                        emit(`${prefix("⚙", "model")}${c.bold(name)}`)
-                    },
-                    e: () => {
-                        const { effort } = getModel()
-                        emit(`${prefix("⚒", "effort")}${c.bold(effort !== "" ? effort : "unknown")}`)
-                    },
-                    t: () => {
-                        const thinking = data.thinking?.enabled === true ? "yes" : "no"
-                        emit(`${prefix("⚛", "thinking")}${c.bold(thinking)}`)
-                    },
-
-                    /*  ==== OUTPUT ====  */
-                    O: () => {
-                        const styleName = data.output_style?.name ?? ""
-                        if (styleName !== "")
-                            emit(`${prefix("≡", "style")}${c.bold(styleName)}`)
-                    },
-                    P: cfgValue("persona",   "☯", "persona"),
-                    h: cfgValue("guidance",  "▶", "guidance"),
-                    B: cfgValue("boxing",    "▢", "boxing"),
-                    L: cfgValue("lifecycle", "⟳", "lifecycle"),
-
-                    /*  ==== CONTEXT ====  */
-                    c: () => {
-                        const pct     = Math.min(100, Math.max(0, Math.floor(data.context_window?.used_percentage ?? 0)))
-                        const barSize = 20
-                        const filled  = Math.round(pct / 100 * barSize)
-                        const bar     = "█".repeat(filled) + "░".repeat(barSize - filled)
-                        emit(`${prefix("◔", "context")}${bar} ${pct}%`)
-                    },
-                    C: () => {
-                        /*  probe the live-context fields first and fall back to the
-                            cumulative ones, so each harness contributes its own view:
-                            GitHub Copilot CLI reports the live window separately (its
-                            "total_*" are session sums), whereas Anthropic Claude Code CLI
-                            folds it into "total_input_tokens". Output tokens stay out --
-                            "used_percentage" is input-side only.  */
-                        const cw        = data.context_window
-                        const pct       = cw?.used_percentage ?? 0
-                        const tokensCur = cw?.current_context_tokens ??
-                            cw?.last_call_input_tokens ?? cw?.total_input_tokens ?? 0
-                        const tokensLim = cw?.displayed_context_limit ?? cw?.context_window_size ??
-                            (pct > 0 && tokensCur > 0 ? Math.round(tokensCur * 100 / pct) : 0)
-                        if (tokensLim > 0)
-                            emit(`${prefix("◆", "tokens")}${c.bold(formatTokens(tokensCur) + "/" + formatTokens(tokensLim))}`)
-                    },
-
-                    /*  ==== RATE LIMITS ====  */
-                    S: () => {
-                        const pct5h = limits?.five_hour?.used_percentage
-                        const s     = pct5h !== undefined ? `${pct5h.toFixed(1)}%` : "-"
-                        emit(`${prefix("⏲", "5h-usage")}${c.bold(s)}`)
-                    },
-                    D: () => {
-                        const until5h = limits?.five_hour?.resets_at
-                        const s       = formatTimeUntil(until5h)
-                        emit(`${prefix("⏱", "5h-resets")}${c.bold(s !== "" ? s : "-")}`)
-                    },
-                    W: () => {
-                        const pctWk = limits?.seven_day?.used_percentage
-                        const s     = pctWk !== undefined ? `${pctWk.toFixed(1)}%` : "-"
-                        emit(`${prefix("⏲", "7d-usage")}${c.bold(s)}`)
-                    },
-                    Q: () => {
-                        const untilWk = limits?.seven_day?.resets_at
-                        const s       = formatTimeUntil(untilWk)
-                        emit(`${prefix("⏱", "7d-resets")}${c.bold(s !== "" ? s : "-")}`)
-                    },
-
-                    /*  ==== COSTS ====  */
-                    H: () => {
-                        const sessDurMs = data.cost?.total_duration_ms ?? 0
-                        if (sessDurMs > 0)
-                            emit(`${prefix("⏱", "elapsed")}${c.bold(formatHoursMinutes(sessDurMs))}`)
-                    },
-                    X: () => {
-                        const sessCost = data.cost?.total_cost_usd
-                        if (sessCost !== undefined)
-                            emit(`${prefix("$", "cost")}${c.bold(formatCostUsd(sessCost))}`)
-                    },
-
-                    /*  ==== VERSION CONTROL ====  */
-                    a: () => {
-                        const linesAdded = data.cost?.total_lines_added ?? 0
-                        emit(`${prefix("⊕", "added")}${c.bold(String(linesAdded))}`)
-                    },
-                    r: () => {
-                        const linesRemoved = data.cost?.total_lines_removed ?? 0
-                        emit(`${prefix("⊖", "removed")}${c.bold(String(linesRemoved))}`)
-                    },
-                    b: () => {
-                        const g     = getGit()
-                        const label = g.branch !== "" ? g.branch : "no git"
-                        emit(`${prefix("⎇", "branch")}${c.bold(label)}`)
-                    },
-                    g: () => {
-                        const g = getGit()
-                        if (g.branch !== "")
-                            emit(`${prefix("±", "changed")}${c.bold(`+${g.added}/-${g.removed}`)}`)
-                    },
-                    G: () => {
-                        const g = getGit()
-                        if (g.branch !== "")
-                            emit(`${prefix("⁈", "untracked")}${c.bold(String(g.untracked))}`)
-                    },
-                    d: () => {
-                        const cwd = data.workspace?.current_dir ?? ""
-                        if (cwd !== "")
-                            emit(`${prefix("▶", "cwd")}${c.bold(cwd)}`)
-                    },
-
-                    /*  ==== RESOURCES ====  */
-                    M: () => {
-                        const m = getMem()
-                        if (m.total > 0)
-                            emit(`${prefix("⛁", "mem")}${c.bold(`${formatBytes(m.used)}/${formatBytes(m.total)}`)}`)
-                    },
-
-                    /*  ==== VERSIONS ====  */
-                    V: () => {
-                        const toolVersion = data.version ?? ""
-                        const aseVersion  = pkg.version  ?? ""
-                        let version = ""
-                        if (toolVersion !== "")
-                            version += `${tool}/${toolVersion}`
-                        if (aseVersion !== "")
-                            version += `${version !== "" ? " " : ""}ase/${aseVersion}`
-                        emit(`${prefix("⎈", "version")}${c.bold(version)}`)
-                    }
-                }
+                /*  identifier to renderer map (see "createRenderers")  */
+                const renderers = createRenderers({ data, tool, limits, emit, prefix, getSession, getCfg, getModel, getGit, getMem })
 
                 /*  walk each template line and render  */
                 const closeSpan = () => {
@@ -734,8 +758,8 @@ export default class StatuslineCommand {
                     out = out.split("\n").map((line) =>
                         line !== "" ? `${pad}${line}${pad}` : line).join("\n")
 
-                    /*  for Copilot, prefix with a zero-width non-breaking space
-                        to prevent the first line to be unindented  */
+                    /*  for Copilot, prefix with a zero-width space
+                        to prevent the first line from being unindented  */
                     if (tool === "copilot")
                         out = "\u200B" + out
                 }
