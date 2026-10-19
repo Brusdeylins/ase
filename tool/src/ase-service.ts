@@ -373,6 +373,69 @@ export default class ServiceCommand {
         return { method: bMethod, info }
     }
 
+    /*  register the endpoints of the AI usage accounting: the usage records forwarded
+        by the OTLP ingress, the session end, the task assignment on behalf of a session,
+        and the task rename  */
+    private static registerUsageRoutes (server: Hapi.Server, usage: UsageTracker): void {
+        server.route({
+            method:  "POST",
+            path:    "/usage/records",
+            options: { payload: { parse: true, allow: "application/json", maxBytes: 32 * 1024 * 1024 } },
+            handler: (request, h) => {
+                const payload = request.payload as { records?: unknown } | null
+                if (!Array.isArray(payload?.records))
+                    return h.response({ error: "missing or invalid 'records' field" }).code(400)
+                usage.ingest(payload.records as UsageRecord[])
+                return h.response({ ok: true }).code(200)
+            }
+        })
+        server.route({
+            method:  "POST",
+            path:    "/usage/detach",
+            options: { payload: { parse: true, allow: "application/json" } },
+            handler: (request, h) => {
+                const payload = request.payload as { session?: unknown } | null
+                if (typeof payload?.session !== "string")
+                    return h.response({ error: "missing or invalid 'session' field" }).code(400)
+                usage.detach(payload.session)
+                return h.response({ ok: true }).code(200)
+            }
+        })
+        server.route({
+            method:  "POST",
+            path:    "/usage/rename",
+            options: { payload: { parse: true, allow: "application/json" } },
+            handler: (request, h) => {
+                const payload = request.payload as { old?: unknown, new?: unknown } | null
+                if (typeof payload?.old !== "string" || typeof payload.new !== "string")
+                    return h.response({ error: "missing or invalid 'old' or 'new' field" }).code(400)
+                try {
+                    usage.rename(payload.old, payload.new)
+                }
+                catch (err: unknown) {
+                    return h.response({ error: err instanceof Error ? err.message : String(err) }).code(422)
+                }
+                return h.response({ ok: true }).code(200)
+            }
+        })
+        server.route({
+            method:  "POST",
+            path:    "/usage/assign",
+            options: { payload: { parse: true, allow: "application/json" } },
+            handler: async (request, h) => {
+                const payload = request.payload as { id?: unknown, assignee?: unknown, session?: unknown } | null
+                if (typeof payload?.id !== "string" || typeof payload.assignee !== "string" || typeof payload.session !== "string")
+                    return h.response({ error: "missing or invalid 'id', 'assignee', or 'session' field" }).code(400)
+                try {
+                    return h.response(await usage.assign(payload.id, payload.assignee, payload.session)).code(200)
+                }
+                catch (err: unknown) {
+                    return h.response({ error: err instanceof Error ? err.message : String(err) }).code(422)
+                }
+            }
+        })
+    }
+
     /*  service-side: bind HAPI server until "/stop" command is received or idle timeout happens
         (or, in the foreground, until "/stop" command is received or a termination signal arrives)  */
     private async runService (ctx: Context & { port: number }, foreground = false): Promise<void> {
@@ -503,66 +566,8 @@ export default class ServiceCommand {
             }
         })
 
-        /*  listen to the endpoints of the AI usage accounting: the usage records forwarded
-            by the OTLP ingress, the session end, the task assignment on behalf of a session,
-            and the task rename  */
-        server.route({
-            method:  "POST",
-            path:    "/usage/records",
-            options: { payload: { parse: true, allow: "application/json", maxBytes: 32 * 1024 * 1024 } },
-            handler: (request, h) => {
-                const payload = request.payload as { records?: unknown } | null
-                if (!Array.isArray(payload?.records))
-                    return h.response({ error: "missing or invalid 'records' field" }).code(400)
-                usage.ingest(payload.records as UsageRecord[])
-                return h.response({ ok: true }).code(200)
-            }
-        })
-        server.route({
-            method:  "POST",
-            path:    "/usage/detach",
-            options: { payload: { parse: true, allow: "application/json" } },
-            handler: (request, h) => {
-                const payload = request.payload as { session?: unknown } | null
-                if (typeof payload?.session !== "string")
-                    return h.response({ error: "missing or invalid 'session' field" }).code(400)
-                usage.detach(payload.session)
-                return h.response({ ok: true }).code(200)
-            }
-        })
-        server.route({
-            method:  "POST",
-            path:    "/usage/rename",
-            options: { payload: { parse: true, allow: "application/json" } },
-            handler: (request, h) => {
-                const payload = request.payload as { old?: unknown, new?: unknown } | null
-                if (typeof payload?.old !== "string" || typeof payload.new !== "string")
-                    return h.response({ error: "missing or invalid 'old' or 'new' field" }).code(400)
-                try {
-                    usage.rename(payload.old, payload.new)
-                }
-                catch (err: unknown) {
-                    return h.response({ error: err instanceof Error ? err.message : String(err) }).code(422)
-                }
-                return h.response({ ok: true }).code(200)
-            }
-        })
-        server.route({
-            method:  "POST",
-            path:    "/usage/assign",
-            options: { payload: { parse: true, allow: "application/json" } },
-            handler: async (request, h) => {
-                const payload = request.payload as { id?: unknown, assignee?: unknown, session?: unknown } | null
-                if (typeof payload?.id !== "string" || typeof payload.assignee !== "string" || typeof payload.session !== "string")
-                    return h.response({ error: "missing or invalid 'id', 'assignee', or 'session' field" }).code(400)
-                try {
-                    return h.response(await usage.assign(payload.id, payload.assignee, payload.session)).code(200)
-                }
-                catch (err: unknown) {
-                    return h.response({ error: err instanceof Error ? err.message : String(err) }).code(422)
-                }
-            }
-        })
+        /*  listen to the endpoints of the AI usage accounting  */
+        ServiceCommand.registerUsageRoutes(server, usage)
 
         /*  serve the web board of the project (imported dynamically to keep it out of all
             other CLI commands; its rendering dependencies marked, MRCS, and ELK load on

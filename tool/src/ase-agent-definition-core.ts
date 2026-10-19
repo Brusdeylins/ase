@@ -704,6 +704,91 @@ const resolveStates = (
     return { incoming, activity, success, failure, phase, passed, verdicts, lifecycles }
 }
 
+/*  resolve the prompt of the processing type <type> through the option accessors <str>
+    and <has>: the skill (if any) and the parsed template of its arguments, of the prompt
+    text, or of the prompt file, with the declared parameters <params>  */
+const resolvePrompt = (
+    str:    (key: string, def?: string) => string,
+    has:    (key: string) => boolean,
+    type:   DefinitionType,
+    params: string[]
+): { skill: string, template: Template } => {
+    const fail    = failOption
+    const prompts = [ "prompt-skill", "prompt-text", "prompt-file" ].filter((key) => has(key))
+    if (prompts.length !== 1)
+        fail(prompts[1] ?? "prompt-skill", "exactly one of \"--prompt-skill\", \"--prompt-text\", or \"--prompt-file\" is required")
+    if (has("prompt-args") && !has("prompt-skill"))
+        fail("prompt-args", "allowed with \"--prompt-skill\" only")
+    const skill = str("prompt-skill")
+    if (has("prompt-skill") && !/^(?:[A-Za-z0-9_.-]+:)?[A-Za-z0-9_.-]+$/.test(skill))
+        fail("prompt-skill", `invalid skill name "${skill}"`)
+    let template: Template
+    if (has("prompt-skill"))
+        template = parseTemplate(str("prompt-args", type === "phase" ? "{id}" : "{id}: {prompt}"), "prompt-args", type, params)
+    else if (has("prompt-text"))
+        template = parseTemplate(str("prompt-text"), "prompt-text", type, params)
+    else {
+        let text = ""
+        try {
+            text = fs.readFileSync(path.resolve(str("prompt-file")), "utf8")
+        }
+        catch (err: unknown) {
+            fail("prompt-file", `cannot read prompt file: ${err instanceof Error ? err.message : String(err)}`)
+        }
+        template = parseTemplate(text, "prompt-file", type, params)
+    }
+    return { skill, template }
+}
+
+/*  resolve the success criteria, the output line matches, and the accepted verdicts of the
+    processing type <type> through the option accessors <list> and <has>, validated against
+    the determination of a verdict <verdicting> and the target states per verdict <verdicts>  */
+const resolveSuccess = (
+    list:       (key: string) => string[],
+    has:        (key: string) => boolean,
+    type:       DefinitionType,
+    unclaimed:  boolean,
+    verdicting: boolean,
+    verdicts:   Record<string, string>
+) => {
+    const fail     = failOption
+    const criteria = has("success-criterion") ? [ ...new Set(list("success-criterion")) ] :
+        (type === "phase" ? [ "exit", "clean" ] : [ "clean", "changed" ])
+    for (const criterion of criteria) {
+        if (!(definitionCriteria as readonly string[]).includes(criterion))
+            fail("success-criterion", `invalid criterion "${criterion}" ` +
+                `(expected ${definitionCriteria.map((c) => `"${c}"`).join(", ")})`)
+        else if (criterion === "changed" && type !== "request")
+            fail("success-criterion", "criterion \"changed\" is for \"--type request\" only")
+        else if (criterion === "status" && type !== "phase")
+            fail("success-criterion", "criterion \"status\" is for \"--type phase\" only")
+        else if (criterion === "status" && unclaimed)
+            fail("success-criterion", "criterion \"status\" is not for \"--unclaimed\" (as an unclaimed task has no phase success state)")
+        else if (criterion === "verdict" && !verdicting)
+            fail("success-criterion", "criterion \"verdict\" requires \"--verdict-label\" (or the hook \"verdict\")")
+        else if (criterion === "attachment" && !has("attach-expect"))
+            fail("success-criterion", "criterion \"attachment\" requires \"--attach-expect\"")
+    }
+    const match = list("success-match").map((spec) => {
+        try {
+            return new RegExp(spec)
+        }
+        catch (err: unknown) {
+            return fail("success-match", `invalid regular expression "${spec}": ${err instanceof Error ? err.message : String(err)}`)
+        }
+    })
+    if ((Object.keys(verdicts).length > 0 || has("verdict-allow")) && !verdicting)
+        fail(Object.keys(verdicts).length > 0 ? "state-verdict" : "verdict-allow", "requires \"--verdict-label\" (or the hook \"verdict\")")
+    const allow = has("verdict-allow") ? list("verdict-allow") : Object.keys(verdicts)
+    for (const verdict of allow)
+        if (!/^[A-Z]+$/.test(verdict))
+            fail("verdict-allow", `invalid verdict "${verdict}" (expected an upper-case word)`)
+    for (const verdict of Object.keys(verdicts))
+        if (!allow.includes(verdict))
+            fail("state-verdict", `verdict "${verdict}" is not accepted by "--verdict-allow"`)
+    return { criteria: criteria as DefinitionCriterion[], match, allow }
+}
+
 /*  resolve the definition of the agent named <name> from its (camel-cased) command-line
     options <opts>: the defaults, overridden by the definition of "--definition" (if any),
     overridden by the given options, validated against the task lifecycle models  */
@@ -844,66 +929,11 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
     const decls  = loaded.params
     const params = resolveParams(decls, list("params"))
 
-    /*  the prompt  */
-    const prompts = [ "prompt-skill", "prompt-text", "prompt-file" ].filter((key) => has(key))
-    if (prompts.length !== 1)
-        fail(prompts[1] ?? "prompt-skill", "exactly one of \"--prompt-skill\", \"--prompt-text\", or \"--prompt-file\" is required")
-    if (has("prompt-args") && !has("prompt-skill"))
-        fail("prompt-args", "allowed with \"--prompt-skill\" only")
-    const skill = str("prompt-skill")
-    if (has("prompt-skill") && !/^(?:[A-Za-z0-9_.-]+:)?[A-Za-z0-9_.-]+$/.test(skill))
-        fail("prompt-skill", `invalid skill name "${skill}"`)
-    let template: Template
-    if (has("prompt-skill"))
-        template = parseTemplate(str("prompt-args", type === "phase" ? "{id}" : "{id}: {prompt}"), "prompt-args", type, Object.keys(decls))
-    else if (has("prompt-text"))
-        template = parseTemplate(str("prompt-text"), "prompt-text", type, Object.keys(decls))
-    else {
-        let text = ""
-        try {
-            text = fs.readFileSync(path.resolve(str("prompt-file")), "utf8")
-        }
-        catch (err: unknown) {
-            fail("prompt-file", `cannot read prompt file: ${err instanceof Error ? err.message : String(err)}`)
-        }
-        template = parseTemplate(text, "prompt-file", type, Object.keys(decls))
-    }
+    /*  the prompt (see "resolvePrompt")  */
+    const { skill, template } = resolvePrompt(str, has, type, Object.keys(decls))
 
-    /*  the success criteria and the verdict  */
-    const criteria = has("success-criterion") ? [ ...new Set(list("success-criterion")) ] :
-        (type === "phase" ? [ "exit", "clean" ] : [ "clean", "changed" ])
-    for (const criterion of criteria) {
-        if (!(definitionCriteria as readonly string[]).includes(criterion))
-            fail("success-criterion", `invalid criterion "${criterion}" ` +
-                `(expected ${definitionCriteria.map((c) => `"${c}"`).join(", ")})`)
-        else if (criterion === "changed" && type !== "request")
-            fail("success-criterion", "criterion \"changed\" is for \"--type request\" only")
-        else if (criterion === "status" && type !== "phase")
-            fail("success-criterion", "criterion \"status\" is for \"--type phase\" only")
-        else if (criterion === "status" && unclaimed)
-            fail("success-criterion", "criterion \"status\" is not for \"--unclaimed\" (as an unclaimed task has no phase success state)")
-        else if (criterion === "verdict" && !verdicting)
-            fail("success-criterion", "criterion \"verdict\" requires \"--verdict-label\" (or the hook \"verdict\")")
-        else if (criterion === "attachment" && !has("attach-expect"))
-            fail("success-criterion", "criterion \"attachment\" requires \"--attach-expect\"")
-    }
-    const match = list("success-match").map((spec) => {
-        try {
-            return new RegExp(spec)
-        }
-        catch (err: unknown) {
-            return fail("success-match", `invalid regular expression "${spec}": ${err instanceof Error ? err.message : String(err)}`)
-        }
-    })
-    if ((Object.keys(verdicts).length > 0 || has("verdict-allow")) && !verdicting)
-        fail(Object.keys(verdicts).length > 0 ? "state-verdict" : "verdict-allow", "requires \"--verdict-label\" (or the hook \"verdict\")")
-    const allow = has("verdict-allow") ? list("verdict-allow") : Object.keys(verdicts)
-    for (const verdict of allow)
-        if (!/^[A-Z]+$/.test(verdict))
-            fail("verdict-allow", `invalid verdict "${verdict}" (expected an upper-case word)`)
-    for (const verdict of Object.keys(verdicts))
-        if (!allow.includes(verdict))
-            fail("state-verdict", `verdict "${verdict}" is not accepted by "--verdict-allow"`)
+    /*  the success criteria and the verdict (see "resolveSuccess")  */
+    const { criteria, match, allow } = resolveSuccess(list, has, type, unclaimed, verdicting, verdicts)
 
     /*  the attachments  */
     const kindRe = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/
@@ -955,7 +985,7 @@ export const resolveDefinition = async (opts: Record<string, unknown>, name: str
         request: { name: requestName, done: str("request-done", "processed"), prompt: consumes },
         prompt:  { skill, template },
         prepare: list("prepare-run"),
-        success: { criteria: criteria as DefinitionCriterion[], match },
+        success: { criteria, match },
         verdict: { label: str("verdict-label"), allow },
         attach:  {
             output: str("attach-output"), expect: attachExpect, skip: attachSpec("attach-skip"),

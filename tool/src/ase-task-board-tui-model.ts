@@ -292,6 +292,59 @@ const useAgentsView = (agents: AgentsState | null, columns: number, boardH: numb
     return { agentList, agentIdx, agent, agentOp, logLines, logH, logFirst, logMax, selectAgent, scrollLog, focusAgent }
 }
 
+/*  the wall-clock and the heartbeats of the agents of the agents view and the agent graph  */
+const useBeats = (agents: AgentsState | null, view: SurfaceView) => {
+    /*  tick the wall-clock every second while the agents view is shown, for the live
+        durations of its footer (the time in the current state and the age of the heartbeat)  */
+    const [ now, setNow ] = React.useState(Date.now())
+    React.useEffect(() => {
+        if (view !== "agents")
+            return
+        setNow(Date.now())
+        const timer = setInterval(() => {
+            setNow(Date.now())
+        }, 1000)
+        return () => {
+            clearInterval(timer)
+        }
+    }, [ view ])
+
+    /*  the local time at which the latest heartbeat of each agent was received (measured
+        locally, as the clock of the agent relay may be skewed), for the heart of its card
+        (filled for BEAT_SHOWN_MS after a heartbeat, else empty), where the heartbeats are
+        recognized by their changed time stamps and a filled heart is re-rendered once it is
+        due to be emptied (as the wall-clock tick alone would empty it too early or too late)  */
+    const beats     = React.useRef(new Map<string, { beat: number, seen: number }>())
+    const beatsSeen = React.useMemo(() => {
+        const at   = Date.now()
+        const list = agents?.agents ?? []
+        const next = new Map<string, { beat: number, seen: number }>()
+        for (const a of list) {
+            const prev = beats.current.get(a.id)
+            next.set(a.id, prev !== undefined && prev.beat === a.beat ? prev : { beat: a.beat, seen: at })
+        }
+        beats.current = next
+        return next
+    }, [ agents ])
+    React.useEffect(() => {
+        if (view !== "agents" && view !== "flow")
+            return
+        const latest = Math.max(0, ...[ ...beatsSeen.values() ].map((b) => b.seen))
+        const due    = latest + BEAT_SHOWN_MS - Date.now()
+        if (latest === 0 || due <= 0)
+            return
+        const timer = setTimeout(() => {
+            setNow(Date.now())
+        }, due)
+        return () => {
+            clearTimeout(timer)
+        }
+    }, [ view, beatsSeen ])
+    const beatOf = (id: string): boolean =>
+        now - (beatsSeen.get(id)?.seen ?? 0) < BEAT_SHOWN_MS
+    return { now, beatOf }
+}
+
 /*  the state of the terminal board: all state, the derived values, and the actions  */
 export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     const { exit, suspendTerminal } = useApp()
@@ -1067,54 +1120,8 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }, [ pulsing ])
     const pulse = pulsing ? pulseTick : -1
 
-    /*  tick the wall-clock every second while the agents view is shown, for the live
-        durations of its footer (the time in the current state and the age of the heartbeat)  */
-    const [ now, setNow ] = React.useState(Date.now())
-    React.useEffect(() => {
-        if (view !== "agents")
-            return
-        setNow(Date.now())
-        const timer = setInterval(() => {
-            setNow(Date.now())
-        }, 1000)
-        return () => {
-            clearInterval(timer)
-        }
-    }, [ view ])
-
-    /*  the local time at which the latest heartbeat of each agent was received (measured
-        locally, as the clock of the agent relay may be skewed), for the heart of its card
-        (filled for BEAT_SHOWN_MS after a heartbeat, else empty), where the heartbeats are
-        recognized by their changed time stamps and a filled heart is re-rendered once it is
-        due to be emptied (as the wall-clock tick alone would empty it too early or too late)  */
-    const beats     = React.useRef(new Map<string, { beat: number, seen: number }>())
-    const beatsSeen = React.useMemo(() => {
-        const at   = Date.now()
-        const list = agents?.agents ?? []
-        const next = new Map<string, { beat: number, seen: number }>()
-        for (const a of list) {
-            const prev = beats.current.get(a.id)
-            next.set(a.id, prev !== undefined && prev.beat === a.beat ? prev : { beat: a.beat, seen: at })
-        }
-        beats.current = next
-        return next
-    }, [ agents ])
-    React.useEffect(() => {
-        if (view !== "agents" && view !== "flow")
-            return
-        const latest = Math.max(0, ...[ ...beatsSeen.values() ].map((b) => b.seen))
-        const due    = latest + BEAT_SHOWN_MS - Date.now()
-        if (latest === 0 || due <= 0)
-            return
-        const timer = setTimeout(() => {
-            setNow(Date.now())
-        }, due)
-        return () => {
-            clearTimeout(timer)
-        }
-    }, [ view, beatsSeen ])
-    const beatOf = (id: string): boolean =>
-        now - (beatsSeen.get(id)?.seen ?? 0) < BEAT_SHOWN_MS
+    /*  the wall-clock and the heartbeats of the agents (for the agents view and the agent graph)  */
+    const { now, beatOf } = useBeats(agents, view)
 
     return {
         log, exit, columns, rows, all, board, surface, view, setView, filter, setFilter, typing, setTyping,
