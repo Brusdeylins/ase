@@ -19,7 +19,8 @@ import type * as v                from "valibot"
 import { Config }                 from "./ase-config-core.js"
 import { parseScope }             from "./ase-config-scope.js"
 import { isLogLevel }             from "./ase-lib-log.js"
-import { Service }                from "./ase-service.js"
+import { writeStdout }            from "./ase-lib-stdio.js"
+import { Service }              from "./ase-service.js"
 import { DaemonCommand }          from "./ase-lib-daemon-cli.js"
 import { urlHost, isLoopback, serverHeader } from "./ase-lib-server-bind.js"
 import type { ServerConfig }      from "./ase-lib-server-bind.js"
@@ -476,26 +477,26 @@ export abstract class ServerCommand<C extends ServerContext, O extends ServerSta
     private async doStatus (): Promise<number> {
         const ctx = this.loadContext()
         if (ctx.port === null) {
-            process.stdout.write(`${this.label}: not running (no port configured)\n`)
+            await writeStdout(`${this.label}: not running (no port configured)\n`)
             return 1
         }
         const address = ctx.address ?? DEFAULT_ADDRESS
         const scheme  = ctx.tlsCert !== null ? "https" : "http"
         const state   = await this.probe(address, ctx.port, ctx.token, ctx.tlsCert !== null)
         if (state === "running") {
-            process.stdout.write(`${this.label}: running on ${scheme}://${urlHost(address)}:${ctx.port}` +
+            await writeStdout(`${this.label}: running on ${scheme}://${urlHost(address)}:${ctx.port}` +
                 (ctx.pid !== null ? ` (pid ${ctx.pid})` : "") + this.running(ctx) + "\n")
             return 0
         }
         if (state === "unauthorized") {
-            process.stdout.write(`${this.label}: running on ${scheme}://${urlHost(address)}:${ctx.port}, but the configured token is rejected\n`)
+            await writeStdout(`${this.label}: running on ${scheme}://${urlHost(address)}:${ctx.port}, but the configured token is rejected\n`)
             return 1
         }
         if (state === "foreign") {
-            process.stdout.write(`${this.label}: not running (port ${ctx.port} in use by foreign service)\n`)
+            await writeStdout(`${this.label}: not running (port ${ctx.port} in use by foreign service)\n`)
             return 1
         }
-        process.stdout.write(`${this.label}: not running (port ${ctx.port} not responding)\n`)
+        await writeStdout(`${this.label}: not running (port ${ctx.port} not responding)\n`)
         return 1
     }
 

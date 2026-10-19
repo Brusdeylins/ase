@@ -13,7 +13,7 @@ import type { McpServer }                from "@modelcontextprotocol/sdk/server/
 import type { D2 }                       from "@d2lang/d2"
 
 import type Log                          from "./ase-lib-log.js"
-import { readStdin }                     from "./ase-lib-stdio.js"
+import { readStdin, writeStdout }        from "./ase-lib-stdio.js"
 
 /*  options accepted by the pure rendering helper  */
 export interface DiagramRenderOpts {
@@ -409,9 +409,7 @@ export default class DiagramCommand {
                 }
 
                 /*  output diagram rendering  */
-                process.stdout.write(out)
-                if (!out.endsWith("\n"))
-                    process.stdout.write("\n")
+                await writeStdout(out.endsWith("\n") ? out : `${out}\n`)
             })
     }
 }
