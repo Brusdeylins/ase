@@ -152,7 +152,7 @@ in state `[-]` (cancelled) or `[>]` (deferred) are never questioned.
 ##  ARGUMENTS
 
 -   *id*:
-    Grill the task with the unique identifier *id* (default: `default`).
+    Grill the task with the unique identifier *id* (default: the current task).
     The skill accepts *only* an optional *id* argument and never a
     free-text instruction.
 
