@@ -172,7 +172,7 @@ const busyLabel = (url: string, opts?: RequestInit): BusyLabel => {
     if (req !== undefined)
         return { text: "requesting task", id: decodeURIComponent(req) }
     if (edit !== undefined)
-        return { text: method === "POST" ? "requesting edit of task" : "loading edit prompt of task", id: decodeURIComponent(edit) }
+        return { text: "loading edit prompt of task", id: decodeURIComponent(edit) }
     const text   = method === "DELETE" ? "deleting" : method !== "GET" ? "saving" : "loading"
     const id     = /\/api\/task\/([^/?]+)/.exec(url)?.[1]
     return id !== undefined ? { text: `${text} task`, id: decodeURIComponent(id) } : { text }
