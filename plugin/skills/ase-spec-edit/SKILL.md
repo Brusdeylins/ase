@@ -47,7 +47,8 @@ and *MUST* *NOT* call `ase_task_save(...)`. Instead, it applies the
 requested edit *in place*, so the *implementing* state *requires* `Edit`
 and `Write` to modify the affected artifacts. Every modification *MUST*
 stay restricted to the `SPEC` artifacts the edit actually demands -- the
-kinds `CODE`, `DOCS`, `TASK`, `INFR`, and `OTHR` are *never* touched.
+kinds `CODE`, `DOCS`, `TASK`, `INFR`, and `OTHR` are *never* touched,
+except for an entry in an already existing `CHANGELOG.md` file.
 
 <define name="todo-box">
 

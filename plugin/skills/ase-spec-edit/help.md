@@ -44,7 +44,8 @@ approach selection close with an `EDIT TODO` box showing the established
 
 The change set stays strictly restricted to the `SPEC` artifacts -- the
 artifact kinds `CODE`, `DOCS`, `TASK`, `INFR`, and `OTHR` are never
-touched. Every generated artifact carries the current `Created:` and
+touched, except for an entry in an already existing `CHANGELOG.md`
+file. Every generated artifact carries the current `Created:` and
 `Modified:` timestamps, and every changed artifact gets its `Modified:`
 timestamp refreshed.
 
