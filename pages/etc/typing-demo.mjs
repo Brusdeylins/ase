@@ -25,7 +25,7 @@ const opt  = (name, fallback) => {
 
 const port = parseInt(opt("port", "4399"), 10)
 const fps  = parseInt(opt("fps",  "10"),   10)
-const url  = `http://localhost:${port}/typing-demo`
+const url  = `http://localhost:${port}/typing-demo/`
 
 const here     = path.dirname(fileURLToPath(import.meta.url))
 const root     = path.resolve(here, "..")
@@ -82,10 +82,12 @@ if (occupied)
 
 /*  start a self-contained preview server. It is detached to become the
     leader of its own process group, as the spawned "npx" is merely a
-    wrapper around the actual "astro preview" grandchild process.  */
+    wrapper around the actual "astro preview" grandchild process. It
+    ignores the preview lock file, as any other running preview server
+    would otherwise make it exit immediately.  */
 console.log(`starting preview server on port ${port} ...`)
 const server = spawn("npx",
-    [ "astro", "preview", "--config", "etc/astro.config.mjs", "--port", String(port) ],
+    [ "astro", "preview", "--config", "etc/astro.config.mjs", "--port", String(port), "--ignore-lock" ],
     { cwd: root, stdio: "ignore", detached: true })
 
 /*  stop the preview server and its entire process group, as signalling
