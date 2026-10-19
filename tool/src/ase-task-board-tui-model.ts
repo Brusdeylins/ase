@@ -217,6 +217,15 @@ const boxAt = (map: Map<string, DOMElement>, mx: number, my: number): string | u
     return undefined
 }
 
+/*  the box of every node of a laid out graph, for the spatial navigation and the scrolling  */
+const placesOf = (graph: GraphLayout | undefined): Map<string, Place> => {
+    const map = new Map<string, Place>()
+    if (graph !== undefined)
+        for (const n of graph.nodes.values())
+            map.set(n.id, { r: n.y + Math.floor(n.h / 2), c: n.x + Math.floor(n.w / 2), top: n.y, bottom: n.y + n.h - 1, bl: n.x, br: n.x + n.w - 1 })
+    return map
+}
+
 /*  the state of the agents view: the agents of the master list, the selected one (followed by its id,
     else, until explicitly selected again, the one at the index of the previously selected one),
     the lines of its operation pane, and the lines of its recent processing log in the detail view (within its frame), scrolled
@@ -419,13 +428,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
     }, [ all, prompt ])
 
     /*  remember the box of every graph node for the spatial navigation and the scrolling  */
-    const places = React.useMemo(() => {
-        const map = new Map<string, Place>()
-        if (layout !== null)
-            for (const n of layout.graph.nodes.values())
-                map.set(n.id, { r: n.y + Math.floor(n.h / 2), c: n.x + Math.floor(n.w / 2), top: n.y, bottom: n.y + n.h - 1, bl: n.x, br: n.x + n.w - 1 })
-        return map
-    }, [ layout ])
+    const places = React.useMemo(() => placesOf(layout?.graph), [ layout ])
 
     /*  follow changes of the task storage and of the lifecycle mode,
         and the kind and connection state of the task store
@@ -496,13 +499,7 @@ export const useBoardState = (log: Log, initial: Board, relay?: string) => {
         if (!flow.cards.has(flowSel) && !flow.states.some((s) => flowState(s) === flowSel) && flow.cards.size > 0)
             setFlowSel(flow.cards.keys().next().value!)
     }, [ flow, flowSel ])
-    const flowPlaces = React.useMemo(() => {
-        const map = new Map<string, Place>()
-        if (flowLayout !== null)
-            for (const n of flowLayout.graph.nodes.values())
-                map.set(n.id, { r: n.y + Math.floor(n.h / 2), c: n.x + Math.floor(n.w / 2), top: n.y, bottom: n.y + n.h - 1, bl: n.x, br: n.x + n.w - 1 })
-        return map
-    }, [ flowLayout ])
+    const flowPlaces = React.useMemo(() => placesOf(flowLayout?.graph), [ flowLayout ])
 
     /*  fetch the AI usage of all tasks whenever the statistics view is shown or the board
         changes, but only while the statistics view is shown (as each fetching loads all
