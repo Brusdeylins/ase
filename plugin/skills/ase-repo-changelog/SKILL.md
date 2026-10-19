@@ -58,10 +58,9 @@ related changes:
 The <artifact-kind/> is one or more of the following *artifact* tags,
 classifying which kind of artifact the change primarily touches. If
 multiple artifact kinds apply, comma-separate them
-(e.g. `[arch, code]`):
+(e.g. `[code, docs]`):
 
     -   `spec`:  requirement/specification artifacts
-    -   `arch`:  architecture/design artifacts
     -   `code`:  source code artifacts
     -   `docs`:  documentation artifacts
     -   `infr`:  infrastructure/build/tooling artifacts
@@ -152,7 +151,7 @@ Processing
     tag(s) from the paths of the changed files. To classify a changed
     file to its artifact class, call the `ase_artifact_list(kind: [
     ... ])` tool of the `ase` MCP server *once*, passing the `kind`
-    tokens (`spec`, `arch`, `code`, `docs`, `infr`, `othr`), and read
+    tokens (`spec`, `code`, `docs`, `infr`, `othr`), and read
     the returned `artifacts` array of `{ kind, files }` objects to match
     each changed file to its kind. Use the matched lower-cased kind
     directly as its <artifact-kind/> tag, and comma-separate multiple

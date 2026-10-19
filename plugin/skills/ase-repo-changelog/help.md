@@ -18,8 +18,8 @@ changes in the Git *index*.
 Each entry is formatted as `<change-type> [<artifact-kind>]: <summary>`
 where *change-type* is one of `FEATURE`, `IMPROVEMENT`, `BUGFIX`,
 `UPDATE`, `CLEANUP`, or `REFACTOR`, and *artifact-kind* is one or more
-comma-separated *artifact class* tags out of `spec`, `arch`, `code`,
-`docs`, `infr`, or `othr`. Entries are grouped and sorted by this
+comma-separated *artifact class* tags out of `spec`, `code`, `docs`,
+`infr`, or `othr`. Entries are grouped and sorted by this
 prefix. The date in the section header is also updated to the current
 date.
 
