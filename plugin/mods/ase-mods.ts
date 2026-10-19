@@ -135,8 +135,9 @@ const insert = (text: string, number: number, letter?: string): string => {
             .replace(new RegExp(`\\s*${bare.source}`, "g"), "").trimStart()
     if (text.search(bare) !== -1)
         return letter !== undefined ? text.replace(bare, `${number}${letter}`) : text
-    if (letter === undefined && text.search(SELECT) !== -1)
-        return text.replace(SELECT, String(number))
+    const last = letter === undefined ? [ ...text.matchAll(SELECT) ].at(-1) : undefined
+    if (last !== undefined)
+        return text.slice(0, last.index) + String(number) + text.slice(last.index + last[0].length)
     const head = text.trimEnd()
     return `${head}${head !== "" ? " " : ""}${number}${letter ?? ""}`
 }
