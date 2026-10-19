@@ -135,6 +135,14 @@ related to a set of code quality aspects.
     list <sources/> of individual source code files, expanding any
     directory or wildcard references with the `Glob` tool.
 
+    If <sources/> is empty (no *source-reference* given or none of it
+    resolvable), only output the following <template/> and then *STOP*
+    the entire flow (do not perform any further steps):
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-code-lint**, ▶ ERROR: no source files to lint -- give a *source-reference* or use `--staged`/`--unstaged`
+    </template>
+
     </else>
 
     Then partition <sources/>, preserving order, into at most *eight*

@@ -38,6 +38,15 @@ by querying *multiple* AIs for an *optimal consensus*.
 
 1.  <step id="STEP 1: Preview Own Answer">
 
+    <if condition="<getopt-arguments/> is empty">
+    Only output the following <template/> and then immediately *STOP*
+    processing the entire current skill:
+
+    <template>
+    ⧉ **ASE**: ✪ skill: **ase-meta-quorum**, ▶ ERROR: expected a `<question>` argument
+    </template>
+    </if>
+
     The user-selectable foreign models are restricted by the
     `--models`/`-m` option, parsed into <getopt-option-models/>
     as a comma-separated list of model tokens. The getopt parser
