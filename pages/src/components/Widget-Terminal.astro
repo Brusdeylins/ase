@@ -108,9 +108,9 @@ const skillId = (text: string) => (text.match(/^\/(ase-[a-z]+-[a-z0-9]+)$/) ?? [
                         <code class="code-plain flex-1 text-foreground">{tokenize(cmd).map((t) => {
                             /*  a plain run keeps each of its options on one
                                 line as an unbreakable unit  */
-                            const runs = t.text.split("\n").map((line, i) => (
+                            const runs = t.text.split("\n").map((line, j) => (
                                 <>
-                                    {i > 0 && <br/>}
+                                    {j > 0 && <br/>}
                                     {t.tint ? <span class={t.tint}>{line}</span> :
                                         options(line).map((part) => part.option ?
                                             <span class="whitespace-nowrap">{part.text}</span> : part.text)}

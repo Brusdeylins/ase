@@ -26,7 +26,7 @@ import {
     page-root modal (Modal-YouTube), so id and label must match between both.  */
 const video = { id: "yNFSVDRa_kM", label: "Agentic Software Engineering (ASE)" }
 
-/*  rotating hero quotes, swipeable via the <Swiper> carousel below.  */
+/*  rotating hero quotes, shown one at a time by the <Swiper> carousel below.  */
 const quotes = [
     "Boost your daily productivity while<br/>keeping yourself in the driver's seat!",
     "Fuse Agentic AI Coding with<br/>traditional Software Engineering!",
@@ -81,16 +81,14 @@ const badges = [
                 </span>
             </h1>
 
-            {/* quotes — swipeable carousel, auto-rotating, with pagination */}
+            {/* quotes — vertical, auto-rotating carousel */}
             <Swiper
                 class="hero-quotes mt-6 w-full max-w-xl"
                 options={{
                     direction:      "vertical",
                     allowTouchMove: false,
                     loop:           true,
-                    autoplay:       { delay: 6000, disableOnInteraction: false },
-                    pagination:     { el: ".swiper-pagination", clickable: true },
-                    a11y:           { enabled: true },
+                    autoplay:       { delay: 6000, disableOnInteraction: false },                    a11y:           { enabled: true },
                     keyboard:       { enabled: true }
                 }}
             >
@@ -212,9 +210,7 @@ const badges = [
         the horizontal offset is set here instead: a left auto-margin nudges
         the carousel right while a right margin keeps it off the right edge.  */
     .hero-quotes.hero-quotes {
-        --swiper-theme-color: var(--brand-500);
-        --swiper-pagination-bullet-inactive-color: var(--brand-400);
-        height: 3rem;
+        --swiper-theme-color: var(--brand-500);        height: 3rem;
         margin-left:  auto;
         margin-right: 2rem;
         touch-action: pan-y;
@@ -222,7 +218,7 @@ const badges = [
 
     /*  on small viewports the smaller quote font (text-xs) needs less
         vertical room, so shrink the fixed carousel height accordingly.  */
-    @media (max-width: 639px) {
+    @media (width < 40rem) {
         .hero-quotes.hero-quotes {
             height: 2rem;
         }

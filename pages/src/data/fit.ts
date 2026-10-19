@@ -113,7 +113,7 @@ export const fitAgainst: Fit[] = [
     },
     {
         icon:  BatteryLow,
-        title: "You are on weak LLM or non-mainstream harness",
+        title: "You are on a weak LLM or a non-mainstream harness",
         body:  "<b>ASE</b> leans on elaborate control constructs and XML placeholders. Weaker models " +
                "and non-mainstream harnesses follow them only partially."
     }

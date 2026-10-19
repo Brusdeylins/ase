@@ -34,11 +34,6 @@ const columns = [
 ].map((labels) => labels.map((label) => skillPrefixGroups.find((group) => group.label === label)!))
 const placed = new Set(columns.flat())
 columns[columns.length - 1].push(...skillPrefixGroups.filter((group) => !placed.has(group)))
-
-/*  the CLI command groups, arranged into the five catalog columns (shared
-    with the sidebar of the manpage browser, which follows their order), so
-    they align with the skill groups above  */
-const commandColumns = manColumns
 ---
 <section id="usage" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
     <header id="getstarted" class="ase-section-head" data-reveal>
@@ -195,7 +190,7 @@ const commandColumns = manColumns
             <div class="mt-8">
                 <p class="text-sm font-bold uppercase tracking-wider text-white">CLI Commands</p>
                 <div class="mt-4 grid grid-cols-1 gap-x-3 gap-y-5 sm:grid-cols-2 lg:grid-cols-5">
-                    {commandColumns.map((column) => (
+                    {manColumns.map((column) => (
                         <div class="min-w-0 space-y-4">
                             {column.map((group) => (
                                 <div>

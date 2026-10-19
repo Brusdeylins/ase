@@ -97,24 +97,18 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
         const menu = document.getElementById("nav-menu")
         if (!btn || !menu) return
         const setOpen = function (open) {
-            if (open)
-                menu.setAttribute("data-open", "")
-            else
-                menu.removeAttribute("data-open")
+            menu.toggleAttribute("data-open", open)
             btn.setAttribute("aria-expanded", open ? "true" : "false")
             btn.querySelector(".nav-toggle-open").classList.toggle("hidden", open)
             btn.querySelector(".nav-toggle-close").classList.toggle("hidden", !open)
         }
         /*  open/close the pull-down panel of a single navigation group (above
             the `lg` breakpoint, hovering a group opens it via CSS as well).  */
-        const groups = Array.prototype.slice.call(menu.querySelectorAll(".nav-group"))
+        const groups = Array.from(menu.querySelectorAll(".nav-group"))
         const setGroupOpen = function (group, open) {
             const toggle = group.querySelector(".nav-group-toggle")
             const panel  = group.querySelector(".nav-group-menu")
-            if (open)
-                panel.setAttribute("data-open", "")
-            else
-                panel.removeAttribute("data-open")
+            panel.toggleAttribute("data-open", open)
             if (toggle.tagName === "BUTTON")
                 toggle.setAttribute("aria-expanded", open ? "true" : "false")
         }

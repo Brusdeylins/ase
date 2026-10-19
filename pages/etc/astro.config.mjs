@@ -65,7 +65,7 @@ function deHashAssets () {
                         let text = fs.readFileSync(p, "utf8")
                         let changed = false
                         for (const [ from, to ] of Object.entries(renames))
-                            if (text.includes(from)) { text = text.split(from).join(to); changed = true }
+                            if (text.includes(from)) { text = text.replaceAll(from, to); changed = true }
                         if (changed) fs.writeFileSync(p, text)
                     }
                 }

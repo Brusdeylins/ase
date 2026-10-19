@@ -32,10 +32,9 @@ const clipId = `usp-video-wave-${name}`
         aria-label={`Play demo: ${label}`}
     >
         {/* wave-clip definition: an `objectBoundingBox` clip path (0..1 coords)
-            whose lower edge follows the same wave as the former overlay ribbon,
-            so the poster is genuinely cut off along the wave instead of being
-            painted over. The clip id is derived from the `name` prop to keep
-            DOM ids unique across multiple `Video-Embed` instances per page. */}
+            whose lower edge cuts the poster off along a wave. The clip id is
+            derived from the `name` prop to keep DOM ids unique across multiple
+            `Video-Embed` instances per page. */}
         <svg class="absolute h-0 w-0" aria-hidden="true">
             <clipPath id={clipId} clipPathUnits="objectBoundingBox">
                 <path

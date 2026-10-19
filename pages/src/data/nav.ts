@@ -43,7 +43,7 @@ export type NavEntry = NavItem | NavGroup
 
 /*  distinguish a group entry from a plain page entry  */
 export const isNavGroup = (entry: NavEntry): entry is NavGroup =>
-    (entry as NavGroup).items !== undefined
+    "items" in entry
 
 /*  distinguish a page entry from a bare section entry  */
 export const isNavPage = (entry: NavItem | NavSection): entry is NavItem =>
@@ -147,7 +147,7 @@ export const navItems: NavEntry[] = [
       items: newsReleases.map((release) => ({
           path:  `/news/#${release.id}`,
           label: release.title
-      })) },
+      })) }
 ]
 
 /*  the author entry, shown separately in the right-hand header group  */

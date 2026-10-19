@@ -29,8 +29,7 @@ import { skillPrefixGroups }   from "../data/skills.ts"
 import { manPages, manGroups } from "../data/manpages.ts"
 
 /*  locate the in-repo skills directory relative to the `pages/` project root
-    (`pages/etc/astro.config.mjs` runs from there), mirroring the `node:fs` +
-    `node:path` style already used by the Astro config.  */
+    (`pages/etc/astro.config.mjs` runs from there).  */
 const skillsDir = path.resolve(process.cwd(), "..", "plugin", "skills")
 
 /*  assemble a map of skill-id -> { id, name, title, html } by reading and rendering
@@ -454,7 +453,7 @@ orderedDocs.push(...cliDocs)
                 const words = docWords.get(id)!
                 const variants: string[] = []
                 const hit = keywords.every((k) => {
-                    if (text.indexOf(k) >= 0) return true
+                    if (text.includes(k)) return true
                     if (!useFuzzy) return false
                     const near = fuzzyWords(k).filter((w) => words.has(w))
                     variants.push(...near)
@@ -490,13 +489,13 @@ orderedDocs.push(...cliDocs)
             if (fuzzed) hits = collect(keywords, true)
             const matched = hits.map((h) => h.id)
             articles().forEach((article) => {
-                article.classList.toggle("hidden", matched.indexOf(article.id.slice(5)) < 0)
+                article.classList.toggle("hidden", !matched.includes(article.id.slice(5)))
             })
             hits.forEach((h) => { highlight(h.article, h.id, buildRE(keywords, h.variants)) })
             /*  reduce the sidebar to the matching skills, dropping the group
                 headings that ran empty in the process.  */
             helpModal.querySelectorAll("nav [data-help-id]").forEach((b) => {
-                b.parentElement?.classList.toggle("hidden", matched.indexOf(b.getAttribute("data-help-id") ?? "") < 0)
+                b.parentElement?.classList.toggle("hidden", !matched.includes(b.getAttribute("data-help-id") ?? ""))
             })
             helpModal.querySelectorAll("[data-help-group]").forEach((g) => {
                 g.classList.toggle("hidden", g.querySelectorAll("li:not(.hidden)").length === 0)
@@ -546,9 +545,8 @@ orderedDocs.push(...cliDocs)
             forward) and a manually edited fragment both re-apply the route,
             while closing the modal restores the page title and strips the
             fragment again -- via "replaceState", so a mere dismissal adds no
-            history entry (the same idiom the back-to-top button already uses
-            in `Feature-Progress.astro`). The final apply picks up a deep link (or a
-            reload) once the DOM is in place.  */
+            history entry. The final apply picks up a deep link (or a reload)
+            once the DOM is in place.  */
         const pageTitle = document.title
         window.addEventListener("popstate",   () => { apply(location.hash) })
         window.addEventListener("hashchange", () => { apply(location.hash) })

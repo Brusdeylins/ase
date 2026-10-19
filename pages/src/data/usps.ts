@@ -55,7 +55,7 @@ export const usps: USP[] = [
             "Let the agent interview <i>you</i> instead of guessing: round by round, it stress-tests " +
             "your query or task plan with prioritized <b>MUST</b>, <b>SHOULD</b>, and <b>MAY</b> " +
             "questions, each with recommended answers, until the decision tree is resolved and " +
-            "the result really meets your intention. This way you have to perform less post-adjustments " +
+            "the result really meets your intention. This way you have to perform fewer post-adjustments " +
             "to your code base, because the interpretation of the LLM is minimized."
         ],
         prefix:   "Claude Code",

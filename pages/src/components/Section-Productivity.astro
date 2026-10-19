@@ -56,11 +56,10 @@ const inline = (text: string) => text
     </header>
 
     <div class="mt-6 overflow-hidden rounded-xl border border-border-strong p-3 shadow-xl sm:p-4" data-reveal>
-        <table class="ase-compat-table w-full text-left text-xs sm:text-sm">
+        <table class="ase-comparison-table w-full text-left text-xs sm:text-sm">
             <thead>
                 {/*  the icon sits on its own flex line, which makes the
-                     following <i> subtitle start a new line by itself and
-                     so replaces the former <br/>  */}
+                     following <i> subtitle start a new line by itself  */}
                 <tr class="text-accent">
                     <th class="pb-2 pr-1 font-semibold sm:pr-2"></th>
                     <th class="pb-2 px-1 font-semibold sm:px-2">
@@ -133,37 +132,37 @@ const inline = (text: string) => text
         single-column, stacked-card layout: the header row is hidden, each
         row becomes a card, the topic cell its heading, and every data cell
         a labelled line prefixed by its column name via the "data-label"
-        attribute. above the "sm" breakpoint the native table layout applies.  */
-    @media (max-width: 639px) {
-        .ase-compat-table,
-        .ase-compat-table tbody,
-        .ase-compat-table tr,
-        .ase-compat-table td {
+        attribute. Above the "sm" breakpoint the native table layout applies.  */
+    @media (width < 40rem) {
+        .ase-comparison-table,
+        .ase-comparison-table tbody,
+        .ase-comparison-table tr,
+        .ase-comparison-table td {
             display: block;
             width: 100%;
         }
-        .ase-compat-table thead {
+        .ase-comparison-table thead {
             display: none;
         }
-        .ase-compat-table tr {
+        .ase-comparison-table tr {
             padding: 0.75rem 0;
         }
-        .ase-compat-table td {
+        .ase-comparison-table td {
             padding-left: 0;
             padding-right: 0;
         }
-        .ase-compat-table td:first-child {
+        .ase-comparison-table td:first-child {
             margin-bottom: 0.375rem;
             font-size: 0.875rem;
         }
-        .ase-compat-table td[data-label]::before {
+        .ase-comparison-table td[data-label]::before {
             content: attr(data-label);
             display: block;
             font-weight: 600;
             font-style: italic;
-            color: var(--color-accent);
+            color: var(--accent);
         }
-        .ase-compat-table td[data-label] {
+        .ase-comparison-table td[data-label] {
             margin-top: 0.375rem;
         }
     }

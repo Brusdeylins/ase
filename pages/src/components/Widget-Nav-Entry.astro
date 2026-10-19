@@ -12,8 +12,7 @@
     itself and hence deliberately carries no `nav-spy` hover. A plain entry
     renders as the direct link to its page.  */
 
-import { isNavGroup } from "../data/nav.ts"
-import type { NavEntry } from "../data/nav.ts"
+import { isNavGroup, type NavEntry } from "../data/nav.ts"
 
 interface Props {
     entry:        NavEntry           /*  the navigation entry to render                    */
