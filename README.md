@@ -23,10 +23,11 @@ Code](https://claude.com/product/claude-code) — and with reduced support also 
 tool [GitHub Copilot CLI](https://github.com/features/copilot/cli) or
 [OpenAI Codex CLI](https://github.com/openai/codex).
 
-**ASE** ships with 49 agent skills, agent hooks, agent sub-agents, an
+**ASE** ships with 56 agent skills, agent hooks, agent sub-agents, an
 underlying Model-Context-Protocol (MCP) service and a Command-Line Interface
-(CLI), incorporating reasonable methodology and automation aspects, to
-support the recurring tasks of a *Software Developer* and *Software Architect*.
+(CLI) with a task store, task boards, and autonomous agents, incorporating
+reasonable methodology and automation aspects, to support the recurring
+tasks of a *Software Developer* and *Software Architect*.
 
 **ASE** is primarily motivated by the following statement of its primary
 author, [*Dr. Ralf S. Engelschall*](https://ase.tools/#author):
@@ -48,7 +49,8 @@ Notices
 > strictly based on autonomous agents. Instead, **ASE** focuses on
 > supporting the role of a Software Engineer with *Agentic AI Coding
 > Tools* towards multi-step operations and a plan/task-driven approach,
-> but still strongly focuses on Human-in-the-Loop.
+> but still strongly focuses on Human-in-the-Loop. Its autonomous
+> agents, which drive tasks headless, are an optional addition only.
 
 > [!NOTE]
 > **TOOL SUPPORT FOCUS**: The primary focus of **ASE** is on the Agentic AI Coding tool [*Claude
@@ -220,8 +222,29 @@ see whether **ASE** is right for you:
   &rarr; [`/ase-sync-export`](plugin/skills/ase-sync-export/help.md)
   `-o docs/spec.html,docs/spec.pdf`
 
+- **Task Plan Research**:
+  You want a topic of a task plan researched in depth, combining Web
+  research with a grounding in your project artifacts, and the plan
+  optionally refined by the recommendations of the research report?
+  &rarr; [`/ase-task-research`](plugin/skills/ase-task-research/help.md)
+  `--refine hello: colored terminal output`
+
+- **Effort Estimation**:
+  You want the effort of your task plans estimated as T-shirt sizes of
+  expected human time, and the estimation calibrated against the actual
+  human time of your finished tasks?
+  &rarr; [`/ase-task-estimate`](plugin/skills/ase-task-estimate/help.md)
+  `--all`
+
+- **Live Task Boards**:
+  You want all your tasks shown and manipulated live, as Kanban-style
+  lanes, as a dependency graph, or as statistics, in the terminal or
+  in the browser?
+  &rarr; `ase task board` or
+  `ase task board --web`
+
 - **Task Plan Life-Cycle**:
-  You want your named, persisted task plans switched, listed, watched on a board, viewed,
+  You want your named, persisted task plans switched, listed, viewed,
   status-changed, assigned (with their AI usage accounted), renamed, condensed, rebooted, or
   deleted right from within the session?
   &rarr; [`/ase-task-id`](plugin/skills/ase-task-id/help.md),
@@ -296,6 +319,20 @@ see whether **ASE** is right for you:
   persisted task plan?
   &rarr; [`/ase-task-edit`](plugin/skills/ase-task-edit/help.md)
   `-a -m refactor extract the config loading into a dedicated module`
+
+- **Plan-less Code Editing**:
+  You want the code base edited directly from a query in one shot,
+  without any task plan ceremony, but optionally grilled, verified, and
+  isolated in a Git WorkTree?
+  &rarr; [`/ase-code-edit`](plugin/skills/ase-code-edit/help.md)
+  `-g -v add a --verbose option to the CLI`
+
+- **Autonomous Agent Pipeline**:
+  You want a fleet of autonomous agents to drive your tasks headless
+  from planning over implementation and qualification to integration,
+  supervised live on the task board?
+  &rarr; `ase agent fleet init` and
+  `ase agent fleet start`
 
 - **Architecture Analysis**:
   You want your software architecture reviewed for package cohesion and
@@ -416,7 +453,7 @@ User Setup
 
 - Operating System: macOS, Linux, Windows
 - Agent Tool: [Anthropic Claude Code CLI](https://code.claude.com), [GitHub Copilot CLI](https://github.com/features/copilot/cli), or [OpenAI Codex CLI](https://github.com/openai/codex)
-- Runtime Engine: [Node.js](https://nodejs.org)
+- Runtime Engine: [Node.js](https://nodejs.org) 22.18 or higher
 - Optional, for the `pdf` output of `/ase-sync-export` only: a Chromium-class browser, i.e. either a system-wide [Google Chrome](https://www.google.com/chrome) or the Playwright Chromium, fetched once via `npx playwright install chromium`
 
 ### Installation
@@ -433,7 +470,7 @@ ase setup install [--tool claude|copilot|codex] [--scope user|project|local]
 
 ```
 #   update ASE tool in PATH and ASE plugin in agent tool
-ase setup update [--tool claude|copilot|codex] [--scope user|project|local]
+ase setup update [--tool claude|copilot|codex] [--scope user|project|local] [--force]
 ```
 
 ### Uninstallation
@@ -454,7 +491,7 @@ ase setup disable   [--tool claude|copilot|codex] [--scope user|project|local]
 ### Status
 
 ```
-#   report ASE plugin, MCP server, output style, and statusline registrations in agent tool
+#   report ASE plugin, MCP server, output style, statusline, and telemetry registrations in agent tool
 ase setup status    [--tool claude|copilot|codex]
 ```
 
@@ -462,10 +499,12 @@ The report lists, across *all* scopes at once, the registration scope
 and enabled/disabled state of the *ASE* plugin, the registration scope
 of each currently registered MCP server, the settings files carrying a
 `selected` (*ASE*-owned) or `foreign` (hand-selected) `outputStyle`
-entry, and the settings files carrying an `activated` (*ASE*-owned) or
-`foreign` (hand-crafted) `statusLine` entry. It is read-only, takes no
-`--scope` (reporting every scope is the point), and always exits with
-status 0.
+entry, the settings files carrying an `activated` (*ASE*-owned) or
+`foreign` (hand-crafted) `statusLine` entry, and the configuration files
+carrying an `activated` (towards *ASE*) or `foreign` telemetry export.
+It is read-only, takes no `--scope` (reporting every scope is the
+point), and exits with status 0 in all regular cases, i.e., unless the
+agent tool CLI is missing or an option is invalid.
 
 ### Output Style
 
@@ -484,21 +523,42 @@ by the *ASE* session-start hook instead.
 
 ```
 #   activate/deactivate ASE statusline in agent tool
-ase setup statusline activate   [--tool claude|copilot] [--scope user|project|local] [<line> ...]
+ase setup statusline activate   [--tool claude|copilot] [--scope user|project|local]
+                                [--width <n>] [--margin <n>] [--padding <n>] [--no-icons] [--no-labels]
+                                [<line> ...]
 ase setup statusline deactivate [--tool claude|copilot] [--scope user|project|local]
 ```
 
 The statusline is only supported for `--tool claude` and `--tool
 copilot`; `codex` has no statusline concept. Each optional `<line>`
-argument is a format template of literal text and `%`-prefixed
-placeholders (e.g. `"%u %p %T"`); without any, a single default line
-`"%m %e %t"` is rendered.
+argument is a format template of literal text, `%`-prefixed
+placeholders, and `<color>...</color>` markup (e.g. `"%u %p %T"`);
+without any, the three default lines `"<blue>%u</blue> <red>%p</red>
+<black>%T</black> %s"` (user, project, task, and session), `"%m %e %t"`
+(model, effort, and thinking), and `"%P %h %B %c"` (persona, guidance
+level, boxing, and context usage) are used.
 
 The `--scope` option defaults to `user` (today's global, machine-wide behavior). Use
 `--scope project` to share the plugin registration via the repository, or `--scope
 local` to keep it out of version control and confined to a single repository. `--scope`
 is only supported for `--tool claude`; a non-`user` scope is rejected for `copilot` and
 `codex`, whose CLIs have no scope concept.
+
+### Telemetry
+
+```
+#   activate/deactivate OpenTelemetry export of agent tool towards ASE
+ase setup telemetry activate    [--tool claude|copilot|codex]
+ase setup telemetry deactivate  [--tool claude|copilot|codex]
+```
+
+The telemetry export feeds the *opt-in* AI usage accounting (time,
+tokens, and costs) of the task assignments of `/ase-task-assign`, and
+hence `activate` requires `ase config set telemetry.enabled true`
+first. The export is always configured on user level (so it takes no
+`--scope`), targets the per-user *ASE* OTLP ingress on
+`http://127.0.0.1:44318` (configuration `telemetry.service.port`), and
+never touches a telemetry export configured for foreign receivers.
 
 Foreign MCP Servers
 -------------------

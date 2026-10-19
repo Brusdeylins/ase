@@ -91,7 +91,8 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             resp. GitHub, GitLab, and Gitea Issues), and `task-store-issues`
             for the common parts of all issue tracker storage plugins
         -   the task board: `task-board` for the `ase task board` CLI
-            command, `task-board-{core,graph,filter,stats}` for its model,
+            command, `task-board-{core,graph,flow,filter,stats}` for its
+            model (where `flow` is the agent graph along the lifecycle model),
             `task-board-tui` (split into `task-board-tui-{model,control,view,popup,style}`)
             for the terminal UI, and `task-board-web-server` for the browser
             UI, served by the service, with its client in
@@ -100,7 +101,7 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
             into the modules `task-board-web-client-{model,editor,control}`
             (shared state and service access, task plan editor, and
             actions and key dispatching) and the components
-            `task-board-web-client-{lanes,graph,agents,stats,dialog,popup,title}`
+            `task-board-web-client-{lanes,graph,flow,agents,stats,dialog,popup,title}`
     -   `tool/src/ase-agent-*.ts`: the parts of `ase agent`:
         -   `agent-runtime` for the runtime base of all agents,
             `agent-runtime-tool` for the headless agent tool invocation
@@ -150,24 +151,30 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `plugin/` and `.claude-plugin/` -- never edit them, they are regenerated
 -   `pages/`: the GitHub Pages site (https://ase.tools), an *Astro* project
     -   `pages/src/pages/`: the pages of the site (`index.astro`, `author`,
-        `design`, `highlights`, `project`, `setup`, `usage`, `workflows`,
-        `typing-demo`, and `usecases/[usecase]`), all based on
+        `design`, `highlights`, `news`, `project`, `setup`, `usage`,
+        `workflows`, `typing-demo`, and `usecases/[usecase]`), all based on
         `pages/src/layouts/BaseLayout.astro`
     -   `pages/src/components/*.astro`: the page sections (`Section-*`),
         modals (`Modal-*`), widgets (`Widget-*`), and client-side features
         (`Feature-*`)
     -   `pages/src/data/*.ts`: the content data, especially `skills.ts` (the
-        single source of truth for skill grouping and ordering), and
-        `comparison.ts`, `fit.ts`, `methods.ts`, `nav.ts`, `previews.ts`,
-        `site.ts`, `testimonials.ts`, and `usecases.ts`
+        single source of truth for skill grouping and ordering),
+        `manpages.ts` (the CLI command tree, read at build-time from
+        `tool/man/*.md`), `news.ts` (the release news, read at build-time
+        from `NEWS.md`), and `comparison.ts`, `fit.ts`, `methods.ts`,
+        `nav.ts`, `previews.ts`, `site.ts`, `testimonials.ts`,
+        `usecases.ts`, and `usps.ts`
 
 Additionally, the repository root carries `docs/` (hand-written
 documentation and diagram sources), `etc/` (the top-level `stx.conf` and the
-version bumping script `version.mts`), `.claude-plugin/marketplace.json`
-and `.github/plugin/marketplace.json` (the plugin marketplace manifests),
-`.github/workflows/static.yml` (the GitHub Pages deployment of `pages/`),
-and `bin/ase` (a development shim which builds `tool/` on demand and runs
-it with `ASE_SETUP_DEV=1`).
+version bumping script `version.mts`), `CHANGELOG.md` (the detailed
+change log, also the source of the GitHub release notes), `NEWS.md` (the
+user-facing release news, also rendered by `pages/`),
+`.claude-plugin/marketplace.json` and `.github/plugin/marketplace.json`
+(the plugin marketplace manifests), `.github/workflows/static.yml` (the
+GitHub Pages deployment of `pages/`), and `bin/ase` (resp. `bin/ase.bat`
+on Windows, both delegating to `bin/ase.js`), a development shim which
+builds `tool/` on demand and runs it with `ASE_SETUP_DEV=1`.
 
 ## Build System
 
@@ -186,6 +193,8 @@ npm start tokei         # show project statistics
 npm start clean         # remove regularly built files
 npm start distclean     # also remove node_modules and package-lock.json
 npm start publish       # lint, bump version, build, commit, tag, push, npm publish, GitHub release
+npm start publish-minor # same as "publish", but bumping the minor instead of the release version
+npm start publish-major # same as "publish", but bumping the major instead of the release version
 ```
 
 The per-deliverable targets are:
@@ -248,7 +257,8 @@ which reports *all* scopes at once, and `ase setup telemetry
 activate|deactivate`, which always writes user-level configuration, and
 hence both take no `--scope`. Additionally, `install`, `update`, and
 `uninstall` accept `--dev` (default: `$ASE_SETUP_DEV`) to use the local
-working copy instead of the remote or bundled repository.
+working copy instead of the remote or bundled repository, and `update`
+accepts `--force` to update even if already at the latest version.
 
 ## CLI Commands
 
