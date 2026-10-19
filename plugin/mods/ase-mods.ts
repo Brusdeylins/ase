@@ -342,6 +342,9 @@ export const register: Register = (on, options) => {
                     selected = select(box.text)
                     $.ui.invalidate("ui.render")
                 })
+                .catch(() => {
+                    /*  ignore a prompt which is no longer accessible  */
+                })
         }
 
         /*  draw a line of a cell: in the latest table as the styled text inside a
