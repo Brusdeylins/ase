@@ -208,6 +208,8 @@ export class ConfigMCP {
                 const cfg   = new Config("config", configSchema, this.log, scope)
                 cfg.read()
                 const val  = cfg.get(args.key)
+                if (isMap(val))
+                    throw new Error(`key "${args.key}" is not a leaf key`)
                 const text = val === undefined ? "" :
                     JSON.stringify(configSecretKeys.includes(cfg.resolveKey(args.key)) ? "***" : val)
                 return { content: [ { type: "text", text } ] }
