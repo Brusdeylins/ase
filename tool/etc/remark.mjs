@@ -11,7 +11,7 @@ import remarkMan from "remark-man"
 /*  determine the version of the tool  */
 const pkg = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"))
 
-/*  render the Markdown manual pages "man/*.md" into Unix roff manual pages "*.<section>"  */
+/*  name the rendered roff manual pages "*.<section>" by the section of their "<name>(<section>)" title line  */
 const remarkManFile = () => (_tree, file) => {
     const m = /^.+?\((\d+)\)/.exec(String(file.value).split(/\r?\n/)[0] ?? "")
     file.extname = `.${m !== null ? m[1] : "1"}`
