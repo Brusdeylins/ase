@@ -1,6 +1,6 @@
 ---
 name: ase-task-implement
-argument-hint: "[--help|-h] [--next|-n <option>[,...]] [--worktree|-w <name>] [--source|-s <source>] [--changeset|-c <changeset>] [--draft|-d] [--stateless|-S] [<id>]"
+argument-hint: "[--help|-h] [--next|-n <option>[,...]] [--worktree|-w <name>] [--source|-s <source>] [--changeset|-c <changeset>] [--draft|-d] [--no-cleanup|-K] [--stateless|-S] [<id>]"
 description: >
     Implement current or given task plan, optionally as an implementation
     draft attachment only. Use when the user calls to "implement", "realize",
@@ -22,7 +22,7 @@ Implement a Task Plan
 
 <expand name="getopt"
     arg1="ase-task-implement"
-    arg2="--next|-n=(none|DONE|EDIT|INTEGRATE|DELETE)... --worktree|-w= --source|-s= --changeset|-c= --draft|-d --stateless|-S --int-reuse-task">
+    arg2="--next|-n=(none|DONE|EDIT|INTEGRATE|DELETE)... --worktree|-w= --source|-s= --changeset|-c= --draft|-d --no-cleanup|-K --stateless|-S --int-reuse-task">
     $ARGUMENTS
 </expand>
 
@@ -233,8 +233,10 @@ Procedure
             `git worktree list --porcelain` (taken exactly as given).
 
             -   If the branch <changeset-name/> is checked out in a
-                registered worktree, set <work-dir/> to its directory and
-                <work-label/> to its path. If the command
+                registered worktree, set <work-dir/> to its directory,
+                <work-label/> to its path, and
+                <work-created>false</work-created>, as this *pre-existing*
+                worktree is never removed by this skill. If the command
                 `git -C "<work-dir/>" status --porcelain` reports any
                 output, the change set could not be committed separately,
                 so only output the following <template/> and then
@@ -271,7 +273,8 @@ Procedure
                 (each taken exactly as given). If the command fails, only
                 output the same error <template/> as above and then
                 immediately *STOP* processing the entire current skill.
-                Otherwise, only output the following <template/>:
+                Otherwise, set <work-created>true</work-created> and only
+                output the following <template/>:
 
                 <template>
                 ⧉ **ASE**: ◉ task: **<ase-task-id/>**, ◉ worktree: **<work-label/>**, ⎇ branch: **<changeset-name/>**, ▶ status: **worktree created**
@@ -489,6 +492,15 @@ Procedure
             `git -C "<work-dir/>" commit -m "<message/>"`. Never add
             `Co-Authored-By` trailers to commit messages. If the commit
             fails, treat the change set as *not* applied successfully.
+            Set <work-removed>false</work-removed>. If
+            <getopt-option-no-cleanup/> is not equal `true`,
+            <work-created/> is `true`, and the commit (if any) succeeded,
+            the change set lives on the branch alone, so remove the
+            worktree created by this run by running the commands
+            `git worktree remove "<work-dir/>"` and `git worktree prune`
+            (taken exactly as given, *never* with `--force`, so a
+            worktree with uncommitted changes is kept), and set
+            <work-removed>true</work-removed> if the removal succeeded.
             Do not output anything.
 
         -   `attachment`: Capture the *cumulative* change set into
@@ -661,6 +673,11 @@ Procedure
         The change set is uncommitted in `<context-label/>` -- review it there, then use `/ase-task-integrate` to deliver it.
         </ase-tpl-hint>
         </if>
+        <elseif condition="<changeset-type/> is `branch` and <work-removed/> is `true`">
+        <ase-tpl-hint level="minimal">
+        The change set is committed on branch `<changeset-name/>` -- review it via `git diff <source-commit/>...<changeset-name/>`, then use `/ase-task-integrate` to deliver it.
+        </ase-tpl-hint>
+        </elseif>
         <elseif condition="<changeset-type/> is `branch`">
         <ase-tpl-hint level="minimal">
         The change set is committed on branch `<changeset-name/>` in `<work-label/>` -- review it there, then use `/ase-task-integrate` to deliver it.

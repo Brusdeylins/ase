@@ -12,6 +12,7 @@
     [`--source`|`-s` *source*]
     [`--changeset`|`-c` *changeset*]
     [`--draft`|`-d`]
+    [`--no-cleanup`|`-K`]
     [`--stateless`|`-S`]
     [*id*]
 
@@ -54,7 +55,9 @@ overridable via `--changeset`:
 -   `branch:`*name*: the change set is *committed* onto the branch
     *name* -- created from the source if missing -- inside the worktree
     in which this branch is checked out, or inside a newly created
-    worktree `.ase/worktree/<name>`.
+    worktree `.ase/worktree/<name>`, which is removed again after the
+    commit (unless `--no-cleanup` is given), while an already existing
+    worktree is always kept.
 -   `attachment:`*name*: the change set is made and verified in a
     *temporary* worktree, detached at the source commit, and stored as
     the attachment block of type `text/x-diff; charset=utf-8;
@@ -160,6 +163,13 @@ plan, unless `--next` pre-selects this choice.
     Shorthand for `--changeset attachment:draft`: create the
     *implementation draft* of the plan only, leaving all artifacts
     untouched (a dry-run). Mutually exclusive with `--changeset`.
+
+-   `--no-cleanup`|`-K`:
+    For a `branch:` changeset, keep the worktree `.ase/worktree/<name>`
+    newly created by this run, instead of removing it after the commit,
+    so the change set can be reviewed, built, and tested there. Without
+    this option, the worktree is removed only if it has no uncommitted
+    changes, as the change set lives on the branch alone.
 
 -   `--stateless`|`-S`:
     Leave the plan's `Status:` key untouched.

@@ -5,6 +5,13 @@ ChangeLog
 2.0.4 (2026-10-20)
 ------------------
 
+-   IMPROVEMENT [code]: Branch Changeset Worktree Cleanup after Implementation
+    `ase-task-implement` now removes the worktree `.ase/worktree/<name>` it newly created for a
+    `branch:` changeset again after the commit, as the change set lives on the branch alone, so
+    the branch can be checked out elsewhere. A pre-existing worktree of the branch and a worktree
+    with uncommitted changes are always kept, and the new option `--no-cleanup`|`-K` keeps the
+    worktree, like the same option of `ase-task-integrate`.
+
 -   IMPROVEMENT [code]: No Co-Authored-By Trailers in Commit Messages
     `ase-repo-merge` and `ase-task-implement` now explicitly instruct the agent to never add the
     noisy `Co-Authored-By` trailers to the commit messages they craft, and `ase-repo-commit` carries
