@@ -121,6 +121,7 @@ processing the entire current skill:
         imperative-mood summary without a trailing period, without
         Markdown formatting, and without any double-quote (`"`),
         backtick (`` ` ``), dollar (`$`), or backslash (`\`) characters.
+        Never add `Co-Authored-By` trailers to commit messages.
 
     4.  Commit the changes by running the command
         `git -C "<source-dir/>" commit -m "<message/>"`. If it fails,

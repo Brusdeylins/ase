@@ -2,6 +2,14 @@
 ChangeLog
 =========
 
+2.0.4 (2026-10-20)
+------------------
+
+-   IMPROVEMENT [code]: No Co-Authored-By Trailers in Commit Messages
+    `ase-repo-merge` and `ase-task-implement` now explicitly instruct the agent to never add the
+    noisy `Co-Authored-By` trailers to the commit messages they craft, and `ase-repo-commit` carries
+    the same rule for its proposed commit message.
+
 2.0.3 (2026-10-19)
 ------------------
 

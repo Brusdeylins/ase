@@ -71,6 +71,7 @@ currently staged Git changes.
     -   Use imperative mood ("add" not "added")
     -   Use *no* period at the end
     -   Use *no* Markdown formatting
+    -   Never add `Co-Authored-By` trailers to commit messages
 
     Output this crafted commit message with the following <template/>:
 

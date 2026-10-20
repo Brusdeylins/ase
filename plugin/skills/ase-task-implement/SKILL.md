@@ -486,7 +486,8 @@ Procedure
             double-quote (`"`), backtick (`` ` ``), dollar (`$`), or
             backslash (`\`) characters, and commit the change set by
             running the command
-            `git -C "<work-dir/>" commit -m "<message/>"`. If the commit
+            `git -C "<work-dir/>" commit -m "<message/>"`. Never add
+            `Co-Authored-By` trailers to commit messages. If the commit
             fails, treat the change set as *not* applied successfully.
             Do not output anything.
 
