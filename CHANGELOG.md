@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-2.0.4 (2026-10-20)
+2.0.4 (2026-10-21)
 ------------------
 
 -   FEATURE [code,docs]: Specification Linting via `ase-spec-lint`
