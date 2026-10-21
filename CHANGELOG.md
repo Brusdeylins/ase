@@ -37,12 +37,22 @@ ChangeLog
     noisy `Co-Authored-By` trailers to the commit messages they craft, and `ase-repo-commit` carries
     the same rule for its proposed commit message.
 
+-   IMPROVEMENT [code,infr]: Linting of the Plugin Agent Files
+    The plugin lint targets (markdownlint and eslint) now also cover `plugin/agents/*.md`, with the
+    same eslint relaxations as for the skills, and the `+ <n/>` line wraps in the agents
+    `ase-code-lint`, `ase-docs-proofread`, and `ase-docs-refine`, which Markdown parsed as list
+    items, were re-wrapped. `AGENTS.md` reflects the extended lint scope.
+
 -   BUGFIX [code]: Direct NPM Registry Version Check of `ase setup update`
     `ase setup update` now queries the NPM registry directly for the latest ASE version, instead
     of relying on the cached, at most hourly background check of *update-notifier*, which, up to
     ASE 1.0.7, was consumed by the session start hook and hence let `ase setup update` regularly
     report the current version as the latest one. Only if the registry query fails, it falls back
     to the cached check, and a newer version found is persisted for the session start hook.
+
+-   BUGFIX [docs]: Website Menu Item Overlap in Narrow Renderings
+    The website header (`Section-Header.astro`) and its navigation entries (`Widget-Nav-Entry.astro`)
+    no longer let menu items overlap each other in narrow viewport widths.
 
 -   UPDATE [infr]: NPM dependencies
     Updated NPM dependencies.
