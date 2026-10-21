@@ -374,6 +374,17 @@ const current = Astro.url.pathname.replace(/\/*$/, "/")
         }
     }
 
+    /*  below the `xl` breakpoint the nav entries sit just 0.5rem apart, so
+        the label box bleeds out by half of that gap only, never covering the
+        neighbouring entries  */
+    @media (64rem <= width < 80rem) {
+        .nav-group:hover        .nav-group-toggle::before,
+        .nav-group:focus-within .nav-group-toggle::before,
+        .nav-group-toggle[aria-expanded="true"]::before {
+            inset: -0.375rem -0.25rem 0;
+        }
+    }
+
     /*  a group held shut after a click on one of its entries, until the
         pointer has left it again. It comes last on purpose: it has to beat
         the hover-driven opening above, which carries the very same
