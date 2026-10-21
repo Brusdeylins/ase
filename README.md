@@ -453,7 +453,7 @@ User Setup
 
 - Operating System: macOS, Linux, Windows
 - Agent Tool: [Anthropic Claude Code CLI](https://code.claude.com), [GitHub Copilot CLI](https://github.com/features/copilot/cli), or [OpenAI Codex CLI](https://github.com/openai/codex)
-- Runtime Engine: [Node.js](https://nodejs.org) 22.18 or higher
+- Runtime Engine: [Node.js](https://nodejs.org) 22.22 or higher
 - Optional, for the `pdf` output of `/ase-sync-export` only: a Chromium-class browser, i.e. either a system-wide [Google Chrome](https://www.google.com/chrome) or the Playwright Chromium, fetched once via `npx playwright install chromium`
 
 ### Installation
