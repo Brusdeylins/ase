@@ -115,9 +115,10 @@ The following top-level commands exist:
   reporting to the agent relay. See `ase-agent`(1).
 
 - `ase man` \[*page* \[...\]\]:
-  Show one of the manual pages shipped internally with **ase** with
-  `man`(1), e.g., `ase man agent fleet` for `ase-agent-fleet`(1). See
-  `ase-man`(1).
+  Browse the manual pages of all commands and skills interactively,
+  with *page* selected, e.g., `ase man agent fleet` for
+  `ase-agent-fleet`(1), or (outside a terminal) print one of them as
+  plain text. See `ase-man`(1).
 
 - `ase help` \[*command*\]:
   Show the usage information of *command* (or of `ase` itself).

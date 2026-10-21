@@ -8,11 +8,12 @@ import type { Board, Card } from "./ase-task-board-core.js"
 import { effortSizes }      from "./ase-task-format.js"
 
 /*  shortest keyword still eligible for fuzzy matching: below it the
-    edit distance would equate it with almost any short word  */
-const fuzzyMin = 4
+    edit distance would equate it with almost any short word
+    (shared with the search of the manual page browser)  */
+export const fuzzyMin = 4
 
 /*  the Levenshtein edit distance of two words  */
-const levenshtein = (a: string, b: string): number => {
+export const levenshtein = (a: string, b: string): number => {
     let prev = [] as number[]
     let curr = [] as number[]
     for (let j = 0; j <= b.length; j++)
@@ -30,7 +31,7 @@ const levenshtein = (a: string, b: string): number => {
 }
 
 /*  the Sorensen-Dice bigram similarity coefficient of two words  */
-const diceCoefficient = (a: string, b: string): number => {
+export const diceCoefficient = (a: string, b: string): number => {
     if (a === b)
         return 1
     if (a.length < 2 || b.length < 2)

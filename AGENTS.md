@@ -140,8 +140,8 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `tool/man/ase{,-xxx{,-yyy}}.md`: the Unix manual pages of all CLI
         commands (one per command and command group, where the pages of a
         group with third-level commands like `ase task store` cover them),
-        in the *remark-man* Markdown format, rendered at build-time into
-        `dst/man/*.1` (installed by npm via `directories.man`); they
+        in the *remark-man* Markdown format, copied at build-time into
+        `dst/man/*.md` (shown by `ase man`); they
         document only the user-facing CLI surface (commands, options,
         arguments, configuration, and files), *not* the internals of
         `tool/src/` (modules, classes, functions, types, and their
@@ -212,7 +212,7 @@ npm start lint          # eslint over src/ + vue-tsc type-check of the web board
 npm start build         # lint + build-cmd + build-man + build-plugin
 npm start build-cmd     # tsc of the program and its public types + vite build
                         # of the web board client (emits into dst/)
-npm start build-man     # remark-man rendering of man/*.md into dst/man/*.1
+npm start build-man     # copy of man/*.md into dst/man/*.md
 npm start build-plugin  # copy ../plugin and ../.claude-plugin into the package
 npm start build-container # build and push the multi-arch container image (etc/ase.dockerfile)
 npm start build-watch   # nodemon rebuild on src/**/*.{ts,vue,styl,html}
@@ -313,7 +313,8 @@ Beyond `ase setup`, the CLI provides:
         every exited member with an exponential backoff
 -   `ase artifact`: the artifact kind resolution
 -   `ase spec`: the SpecBook specification linting, exporting, and previewing
--   `ase man`: the manual pages of `tool/man/` shipped with the tool, shown via `man`(1)
+-   `ase man`: the interactive browser of the manual pages of `tool/man/`
+    and of the skills shipped with the tool (plain text outside a terminal)
 -   `ase util`: the utility commands `ase util meta` (plugin meta file
     output), `ase util diagram` (Mermaid rendering), `ase util worktree`
     (ASE worktree path resolution), `ase util mint` (hash-derived

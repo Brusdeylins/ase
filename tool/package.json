@@ -15,7 +15,6 @@
     },
     "type":                                 "module",
     "bin":                                  { "ase": "bin/ase" },
-    "directories":                          { "man": "dst/man" },
     "types":                                "dst/ase-agent-definition-api.d.ts",
     "exports": {
         ".":                                { "types": "./dst/ase-agent-definition-api.d.ts" },
@@ -38,8 +37,6 @@
         "@rse/stx":                         "1.1.7",
         "nodemon":                          "3.1.14",
         "shx":                              "0.4.0",
-        "remark-cli":                       "12.0.1",
-        "remark-man":                       "9.0.0",
         "stylus":                           "0.64.0",
         "vite":                             "8.3.4",
         "@vitejs/plugin-vue":               "6.0.10",
@@ -124,9 +121,6 @@
     },
     "overrides": {
         "stylus": {
-            "glob":                         "13.0.6"
-        },
-        "remark-cli": {
             "glob":                         "13.0.6"
         }
     },

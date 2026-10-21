@@ -113,7 +113,9 @@ export const skillGroups: SkillGroup[] = [
     the manual page browser. The large "meta" and "task" prefix groups are
     further split into explicitly listed sub-groups, where any skill not
     listed in them is caught by a trailing plain "META" resp. "TASK" group. The leading skills
-    are moved to the top of their prefix group.  */
+    are moved to the top of their prefix group. The resulting groups are copied into
+    "skillGroups" of "tool/src/ase-man-catalog.ts" (the manual page browser of "ase man"),
+    so keep both in sync.  */
 const prefixOf  = (id: string): string => id.split("-")[1] ?? ""
 const prefixes  = [ "help", "meta", "arch", "docs", "spec", "code", "repo", "sync", "task" ]
 const leading   = [ "ase-code-edit" ]

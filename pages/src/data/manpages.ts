@@ -98,7 +98,9 @@ for (const page of manPages) {
     also defines the order of the groups in the sidebar of
     `Modal-Help.astro`, where any group not explicitly placed here (like
     the one of a newly added top-level command) is appended to the last
-    column, so it never silently drops out of the catalogs.  */
+    column, so it never silently drops out of the catalogs. The resulting
+    group order is copied into "commandGroups" of "tool/src/ase-man-catalog.ts"
+    (the manual page browser of "ase man"), so keep both in sync.  */
 export const manColumns: ManGroup[][] = [
     [ "Top-Level", "setup" ],
     [ "config", "service" ],

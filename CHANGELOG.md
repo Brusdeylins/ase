@@ -5,6 +5,19 @@ ChangeLog
 2.0.4 (2026-10-20)
 ------------------
 
+-   FEATURE [code,docs]: Interactive Manual Page Browser
+    `ase man` without any page now opens an interactive, Ink-based manual page browser in the
+    terminal, resembling the skill and command deep-dive of the website: a start page with a
+    search field and the grouped catalog of all skills and CLI commands, and a browser page with
+    the grouped master (filtered live by the search) and the rendered, syntax-highlighted
+    manual page as the detail, whose references to other manual pages can be followed by
+    keyboard and mouse. `ase man <page>` opens the browser, too, with the manual page fitting
+    exactly onto `<page>` selected, else with `<page>` as the search. Without a terminal,
+    `ase man [<page>]` prints the manual page (or `ase`(1)) as plain text. As `man`(1) is no
+    longer used, the manual pages are no longer rendered into the roff format via *remark-man*
+    (dropping `directories.man` of the package and the option `--path` of `ase man`), but are
+    shipped as Markdown in `dst/man/` only.
+
 -   IMPROVEMENT [code]: Branch Changeset Worktree Cleanup after Implementation
     `ase-task-implement` now removes the worktree `.ase/worktree/<name>` it newly created for a
     `branch:` changeset again after the commit, as the change set lives on the branch alone, so
