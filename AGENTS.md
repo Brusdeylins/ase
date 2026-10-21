@@ -312,7 +312,8 @@ Beyond `ase setup`, the CLI provides:
         agent fleet init`), run through a supervising process, restarting
         every exited member with an exponential backoff
 -   `ase artifact`: the artifact kind resolution
--   `ase spec`: the SpecBook specification linting, exporting, and previewing
+-   `ase spec`: the SpecBook specification initializing, linting, exporting,
+    and previewing
 -   `ase man`: the interactive browser of the manual pages of `tool/man/`
     and of the skills shipped with the tool (plain text outside a terminal)
 -   `ase util`: the utility commands `ase util meta` (plugin meta file

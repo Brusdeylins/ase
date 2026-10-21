@@ -6,6 +6,7 @@
 
 import path                     from "node:path"
 import fs                       from "node:fs"
+import os                       from "node:os"
 
 import { Command }              from "commander"
 import { isScalar }             from "yaml"
@@ -25,9 +26,10 @@ import { Artifact }             from "./ase-artifact.js"
 import { Meta }                 from "./ase-util-meta.js"
 import { writeStdout }          from "./ase-lib-stdio.js"
 
-/*  reusable functionality: lint, export, and preview the SpecBook-based
-    project specification, located via the "project.artifact.spec.basedir"
-    and "project.artifact.spec.schema" configuration  */
+/*  reusable functionality: initialize, lint, export, and preview the
+    SpecBook-based project specification, located via the
+    "project.artifact.spec.basedir" and "project.artifact.spec.schema"
+    configuration  */
 export class Spec {
     /*  the SpecBook export formats, mirrored here (and checked for completeness
         against SpecBook at compile-time) to not load SpecBook for the MCP schema  */
@@ -108,12 +110,32 @@ export class Spec {
         return rel.replace(/\\/g, "/")
     }
 
-    /*  every specification command honors the Git exclude rules, so that
+    /*  every reading specification command honors the Git exclude rules, so that
         SpecBook resolves the very same artifact files as "ase artifact
         list --kind spec": both consult ".gitignore", so a specification
         the project does not track is invisible to both instead of only
         to one of them  */
     private static readonly gitignore = true
+
+    /*  initialize the absent artifact files of the schema configuration below
+        the "spec" artifact base directory, letting SpecBook persist its project
+        options file ".specbook.yaml" into a throw-away working directory, as
+        ASE keeps these options in its own configuration  */
+    static async init (log: Log): Promise<string[]> {
+        const basedir = Artifact.basedir(log, "spec")
+        const cwd     = await fs.promises.mkdtemp(path.join(os.tmpdir(), "ase-spec-"))
+        try {
+            const result = await Spec.unmarked(Spec.api(log).then((api) => api.init({
+                config: Spec.configFiles(log),
+                basedir,
+                cwd
+            })))
+            return result.files.map((file) => Spec.relativize(path.join(basedir, file)))
+        }
+        finally {
+            await fs.promises.rm(cwd, { recursive: true, force: true })
+        }
+    }
 
     /*  lint the specification Markdown files below the "spec" artifact
         base directory against the schema configuration  */
@@ -206,10 +228,21 @@ export default class SpecCommand {
         /*  register CLI top-level command "ase spec"  */
         const spec = program
             .command("spec")
-            .description("Lint, export, and preview the SpecBook-based project specification")
+            .description("Initialize, lint, export, and preview the SpecBook-based project specification")
             .action(() => {
                 spec.outputHelp()
                 process.exit(1)
+            })
+
+        /*  register CLI sub-command "ase spec init"  */
+        spec
+            .command("init")
+            .description("Initialize the absent specification Markdown files of the SpecBook schema configuration")
+            .action(async () => {
+                const files = await Spec.init(this.log)
+                await writeStdout(files.length > 0 ?
+                    `initialized artifact file(s): ${files.join(", ")}\n` :
+                    "no artifact files were created\n")
             })
 
         /*  register CLI sub-command "ase spec lint"  */

@@ -18,6 +18,13 @@ ChangeLog
     (dropping `directories.man` of the package and the option `--path` of `ase man`), but are
     shipped as Markdown in `dst/man/` only.
 
+-   FEATURE [code,docs]: Specification Initialization via `ase spec init`
+    The new command `ase spec init` resembles `specbook init` through the embedded *SpecBook* API,
+    like the other `ase spec` commands: it creates the absent specification Markdown files of the
+    schema configuration `project.artifact.spec.schema` below `project.artifact.spec.basedir`, each
+    with its frontmatter and artifact headings. Unlike `specbook init`, it creates no
+    `.specbook.yaml`, as ASE keeps these options in its own configuration.
+
 -   IMPROVEMENT [code]: Branch Changeset Worktree Cleanup after Implementation
     `ase-task-implement` now removes the worktree `.ase/worktree/<name>` it newly created for a
     `branch:` changeset again after the commit, as the change set lives on the branch alone, so
