@@ -8,6 +8,7 @@
 `ase spec init`
 
 `ase spec lint`
+\[`-m`|`--markdown`\]
 \[`-v`|`--verbose`\]
 
 `ase spec export`
@@ -57,9 +58,9 @@ exits with status `1`.
   Initialize the absent specification Markdown files of the schema
   configuration. See `ase-spec-init`(1).
 
-- `ase spec lint` \[`-v`|`--verbose`\]:
-  Lint the specification against the schema configuration. See
-  `ase-spec-lint`(1).
+- `ase spec lint` \[`-m`|`--markdown`\] \[`-v`|`--verbose`\]:
+  Lint the specification against the schema configuration, and
+  optionally for its generic Markdown formatting. See `ase-spec-lint`(1).
 
 - `ase spec export` \[`-o`|`--output` \[*format*`:`\]*file*\] \[...\] \[`-w`|`--watch`\]:
   Export the specification as JSON, JSON5, YAML, TOON, HTML, PDF, or

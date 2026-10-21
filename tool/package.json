@@ -107,6 +107,7 @@
         "picomatch":                        "4.0.7",
         "lru-cache":                        "11.5.3",
         "@rse/specbook":                    "1.5.2",
+        "markdownlint":                     "0.42.0",
         "tail":                             "2.2.6",
         "source-code-error":                "1.2.0",
         "pure-uuid":                        "2.0.0",

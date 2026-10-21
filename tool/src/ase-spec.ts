@@ -138,14 +138,58 @@ export class Spec {
     }
 
     /*  lint the specification Markdown files below the "spec" artifact
-        base directory against the schema configuration  */
-    static async lint (log: Log): Promise<Diagnostic[]> {
+        base directory against the schema configuration, optionally
+        followed by the generic Markdown linting  */
+    static async lint (log: Log, markdown = false): Promise<Diagnostic[]> {
         const result = await Spec.unmarked(Spec.api(log).then((api) => api.lint({
             config:    Spec.configFiles(log),
             basedir:   Artifact.basedir(log, "spec"),
             gitignore: Spec.gitignore
         })))
-        return result.diagnostics.map((d) => ({ ...d, file: Spec.relativize(d.file) }))
+        const diagnostics = result.diagnostics.map((d) => ({ ...d, file: Spec.relativize(d.file) }))
+        return markdown ? diagnostics.concat(await Spec.markdownlint(log)) : diagnostics
+    }
+
+    /*  the markdownlint rules conflicting with the SpecBook format
+        (trailing blank line, mixed ATX and Setext headings, free ordered list numbering,
+        padded list markers and headings, unwrapped lines, frontmatter first, images without
+        alternate text, and multiple artifacts or same-named objects per file)  */
+    private static readonly markdownConfig = {
+        "no-multiple-blanks":    { maximum: 2 },
+        "heading-style":         false,
+        "ol-prefix":             false,
+        "no-alt-text":           false,
+        "list-marker-space":     false,
+        "ul-indent":             false,
+        "no-multiple-space-atx": false,
+        "line-length":           false,
+        "first-line-heading":    false,
+        "single-title":          false,
+        "no-duplicate-heading":  false,
+        "no-inline-html":        false
+    }
+
+    /*  the message prefix of the markdownlint diagnostics  */
+    static readonly markdownPrefix = "markdownlint: "
+
+    /*  lint the specification Markdown files with markdownlint, reporting
+        its findings as warnings, as they never break the SpecBook parsing
+        (markdownlint itself is loaded on first use only)  */
+    private static async markdownlint (log: Log): Promise<Diagnostic[]> {
+        const { lint } = await import("markdownlint/promise")
+        const files = Artifact.list(log, [ "spec" ]).flatMap((entry) => entry.files)
+            .filter((file) => /\.md$/i.test(file))
+            .map((file) => path.resolve(Task.projectRoot(), file))
+        const results = await lint({ files, config: Spec.markdownConfig })
+        return Object.entries(results).flatMap(([ file, errors ]) => errors.map((e) => ({
+            file:     Spec.relativize(file),
+            line:     e.lineNumber,
+            column:   e.errorRange?.[0] ?? 1,
+            severity: "warning" as const,
+            message:  `${Spec.markdownPrefix}${e.ruleNames.join("/")}: ${e.ruleDescription}` +
+                (e.errorDetail  !== null ? ` [${e.errorDetail}]` : "") +
+                (e.errorContext !== null ? ` [context: "${e.errorContext}"]` : "")
+        })))
     }
 
     /*  render a diagnostic as a multi-line message with the affected
@@ -249,13 +293,20 @@ export default class SpecCommand {
         spec
             .command("lint")
             .description("Lint the specification Markdown files against the SpecBook schema configuration")
+            .option("-m, --markdown", "additionally lint the generic Markdown formatting via markdownlint")
             .option("-v, --verbose", "print each diagnostic with its affected source snippet")
-            .action(async (opts: { verbose?: boolean }) => {
-                const diagnostics = await Spec.lint(this.log)
-                for (const diagnostic of diagnostics)
-                    await writeStdout(opts.verbose === true ?
-                        Spec.render(diagnostic, process.stdout.isTTY === true) :
-                        `${renderDiagnostic(diagnostic)}\n`)
+            .action(async (opts: { markdown?: boolean, verbose?: boolean }) => {
+                const diagnostics = await Spec.lint(this.log, opts.markdown === true)
+                for (const diagnostic of diagnostics) {
+                    /*  report a diagnostic as a log message of its severity, tagged with its linter  */
+                    const { file, line, column, severity, message } = diagnostic
+                    const markdown = message.startsWith(Spec.markdownPrefix)
+                    if (opts.verbose === true)
+                        await writeStdout(Spec.render(diagnostic, process.stdout.isTTY === true))
+                    else
+                        this.log.write(severity, `lint: ${markdown ? "markdownlint" : "specbook"}: ` +
+                            `${file}:${line}:${column}: ${markdown ? message.slice(Spec.markdownPrefix.length) : message}`)
+                }
                 if (diagnostics.some((diagnostic) => diagnostic.severity === "error"))
                     process.exitCode = 1
             })
@@ -338,7 +389,9 @@ export class SpecMCP {
                 "`project.artifact.spec.basedir` configuration) against the SpecBook YAML schema " +
                 "configuration (`project.artifact.spec.schema`, a whitespace-separated list of schema files " +
                 "merged in order, with `std` naming the bundled standard `ase-format-specbook.yaml`, " +
-                "which is also the default). " +
+                "which is also the default). With `markdown`, the files are additionally linted " +
+                "for their generic Markdown formatting via markdownlint, whose findings are reported " +
+                "as `warning` diagnostics with a message prefixed by `markdownlint: `. " +
                 "Returns a `diagnostics` array of `{ file, line, column, severity, message }` objects (with " +
                 "project-relative `file` and a `severity` of `error` or `warning`), rendered as bullet " +
                 "points in `text`. With `verbose`, " +
@@ -347,6 +400,8 @@ export class SpecMCP {
                 "(`text` of `specification valid`) means the specification is valid; only " +
                 "diagnostics of `error` severity make an export fail.",
             inputSchema: {
+                markdown: z.boolean().optional()
+                    .describe("if true, additionally lint the generic Markdown formatting via markdownlint (default: false)"),
                 verbose: z.boolean().optional()
                     .describe("if true, render each diagnostic with its affected source snippet (default: false)")
             },
@@ -364,7 +419,7 @@ export class SpecMCP {
         }, async (args) => {
             try {
                 const verbose = args.verbose ?? false
-                const diagnostics: Array<Diagnostic & { snippet?: string }> = (await Spec.lint(this.log))
+                const diagnostics: Array<Diagnostic & { snippet?: string }> = (await Spec.lint(this.log, args.markdown ?? false))
                     .map((d) => verbose ? { ...d, snippet: Spec.render(d, false) } : d)
                 const text = diagnostics.length === 0 ? "specification valid" :
                     verbose ?
