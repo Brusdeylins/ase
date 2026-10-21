@@ -23,7 +23,7 @@ Code](https://claude.com/product/claude-code) — and with reduced support also 
 tool [GitHub Copilot CLI](https://github.com/features/copilot/cli) or
 [OpenAI Codex CLI](https://github.com/openai/codex).
 
-**ASE** ships with 56 agent skills, agent hooks, agent sub-agents, an
+**ASE** ships with 57 agent skills, agent hooks, agent sub-agents, an
 underlying Model-Context-Protocol (MCP) service and a Command-Line Interface
 (CLI) with a task store, task boards, and autonomous agents, incorporating
 reasonable methodology and automation aspects, to support the recurring
@@ -201,6 +201,13 @@ see whether **ASE** is right for you:
   contract?
   &rarr; [`/ase-spec-edit`](plugin/skills/ase-spec-edit/help.md)
   `-g -v add a Reviewer persona`
+
+- **Specification Linting**:
+  You want your SpecBook-based specification checked for syntax and
+  formatting problems, weak statements, logical gaps in its model, and
+  open ends which would force an implementer to guess?
+  &rarr; [`/ase-spec-lint`](plugin/skills/ase-spec-lint/help.md)
+  `-i S09,S10`
 
 - **Artifact Reconciliation**:
   You want one set of artifacts (e.g. CODE, DOCS) automatically aligned

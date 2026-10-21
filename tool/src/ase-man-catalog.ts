@@ -49,7 +49,7 @@ const skillGroups: [ string, string[] ][] = [
     [ "META: GENERATE", [ "ase-meta-mint", "ase-meta-workflow" ] ],
     [ "ARCH",           [ "ase-arch-analyze", "ase-arch-discover" ] ],
     [ "DOCS",           [ "ase-docs-shorten", "ase-docs-refine", "ase-docs-proofread", "ase-docs-distill" ] ],
-    [ "SPEC",           [ "ase-spec-edit", "ase-spec-activate" ] ],
+    [ "SPEC",           [ "ase-spec-lint", "ase-spec-edit", "ase-spec-activate" ] ],
     [ "CODE",           [ "ase-code-edit", "ase-code-analyze", "ase-code-insight", "ase-code-explain", "ase-code-lint" ] ],
     [ "REPO",           [ "ase-repo-review", "ase-repo-diff", "ase-repo-changelog", "ase-repo-commit",
         "ase-repo-dissect", "ase-repo-merge", "ase-repo-resolve" ] ],

@@ -215,5 +215,5 @@ Loop over multiple specification edits inside a dedicated Git worktree:
 
 ##  SEE ALSO
 
-[`ase-spec-activate`](../ase-spec-activate/help.md), [`ase-code-edit`](../ase-code-edit/help.md), [`ase-sync-import`](../ase-sync-import/help.md),
+[`ase-spec-activate`](../ase-spec-activate/help.md), [`ase-spec-lint`](../ase-spec-lint/help.md), [`ase-code-edit`](../ase-code-edit/help.md), [`ase-sync-import`](../ase-sync-import/help.md),
 [`ase-sync-reconcile`](../ase-sync-reconcile/help.md), [`ase-sync-export`](../ase-sync-export/help.md), [`ase-task-grill`](../ase-task-grill/help.md).

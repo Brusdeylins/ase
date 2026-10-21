@@ -23,6 +23,7 @@
 ⎈   **SPECIFICATION**
 ○   `ase-spec-activate`:   Activate Specification Know-How
 ○   `ase-spec-edit`:       Edit Specification
+○   `ase-spec-lint`:       Lint Specification
 
 ⎈   **CODING**
 ○   `ase-code-analyze`:    Analyze Source Code

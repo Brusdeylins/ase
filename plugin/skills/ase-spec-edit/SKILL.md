@@ -393,9 +393,9 @@ empty <todo-what/> or <todo-how/> renders as `(none)`:
 
         <if condition="<worktree-dir/> is not empty">
         Run the command `ase spec lint` with <worktree-dir/> as its
-        working directory and parse its
-        `<file/>:<line/>:<column/>: <message/>` output lines into
-        <diagnostics/> -- the `ase_specbook_lint` tool always validates
+        working directory and parse its logged
+        `lint: specbook: <file/>:<line/>:<column/>: <message/>` lines
+        (on standard error) into <diagnostics/> -- the `ase_specbook_lint` tool always validates
         the *project* working copy and hence *MUST* *NOT* be used here.
         </if>
         <else>

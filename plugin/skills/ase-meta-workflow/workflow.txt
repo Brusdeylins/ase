@@ -15,6 +15,7 @@ START               -> ase-arch-discover
 START               -> ase-code-insight
 START               -> ase-code-explain
 START               -> ase-code-lint
+START               -> ase-spec-lint
 START               -> ase-docs-shorten
 START               -> ase-docs-refine
 START               -> ase-docs-proofread
@@ -46,6 +47,7 @@ ase-arch-discover   -> END
 ase-code-insight    -> END
 ase-code-explain    -> END
 ase-code-lint       -> END
+ase-spec-lint       -> END
 ase-docs-shorten    -> END
 ase-docs-refine     -> END
 ase-docs-proofread  -> END

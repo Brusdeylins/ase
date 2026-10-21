@@ -42,7 +42,7 @@ the user is not prompted for it, if it is one of the following:
   directory (e.g., the meta files included by the skills);
 
 - a file edit (tool `Edit`) while one of the edit-capable skills
-  `ase-code-lint`, `ase-docs-shorten`, `ase-docs-refine`, or
+  `ase-code-lint`, `ase-spec-lint`, `ase-docs-shorten`, `ase-docs-refine`, or
   `ase-docs-proofread` is recorded as active in the internal session
   state of the session.
 
