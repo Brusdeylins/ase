@@ -23,7 +23,6 @@ import { Config }               from "./ase-config-core.js"
 import { configSchema }         from "./ase-config-schema.js"
 import { Task }                 from "./ase-task.js"
 import { Artifact }             from "./ase-artifact.js"
-import { Meta }                 from "./ase-util-meta.js"
 import { writeStdout }          from "./ase-lib-stdio.js"
 
 /*  reusable functionality: initialize, lint, export, and preview the
@@ -40,8 +39,9 @@ export class Spec {
     /*  resolve the YAML schema configuration files: the whitespace-separated
         entries of the configured "project.artifact.spec.schema", merged in
         the given order, where each entry is either the literal "std" for the
-        bundled standard "ase-format-specbook.yaml" plugin meta file or a file
-        path relative to the project root, and an unset or empty value means "std"  */
+        full SpecBook standard schema (not the agent-compressed plugin meta file
+        "ase-format-specbook.yaml") or a file path relative to the project
+        root, and an unset or empty value means "std"  */
     static configFiles (log: Log): string[] {
         const cfg = new Config("config", configSchema, log)
         cfg.read()
@@ -51,7 +51,7 @@ export class Spec {
         if (entries.length === 0)
             entries.push("std")
         return entries.map((entry) => entry === "std" ?
-            Meta.resolve("ase-format-specbook.yaml") :
+            "std" :
             path.resolve(Task.projectRoot(), entry))
     }
 
@@ -388,7 +388,7 @@ export class SpecMCP {
                 "Lint the SpecBook specification Markdown files of the project (located via the " +
                 "`project.artifact.spec.basedir` configuration) against the SpecBook YAML schema " +
                 "configuration (`project.artifact.spec.schema`, a whitespace-separated list of schema files " +
-                "merged in order, with `std` naming the bundled standard `ase-format-specbook.yaml`, " +
+                "merged in order, with `std` naming the standard schema bundled with SpecBook, " +
                 "which is also the default). With `markdown`, the files are additionally linted " +
                 "for their generic Markdown formatting via markdownlint, whose findings are reported " +
                 "as `warning` diagnostics with a message prefixed by `markdownlint: `. " +

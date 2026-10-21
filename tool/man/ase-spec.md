@@ -31,9 +31,10 @@ the project root).
 The specification is governed by the *SpecBook* YAML schema
 configuration `project.artifact.spec.schema`: a whitespace-separated
 list of schema files, merged in the given order, where the entry `std`
-names the standard schema `ase-format-specbook.yaml` bundled with the
-plugin (see `ase-util-meta`(1)) and every other entry is a file path
-relative to the project root. An unset or empty value means `std`.
+names the full standard schema bundled with *SpecBook* (not its
+compressed variant `ase-format-specbook.yaml` bundled with the plugin
+for the agents, see `ase-util-meta`(1)) and every other entry is a file
+path relative to the project root. An unset or empty value means `std`.
 
 All reading specification commands honor the Git exclude rules exactly
 like `ase artifact list` does (see `ase-artifact`(1)): an artifact file

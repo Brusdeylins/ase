@@ -5,6 +5,18 @@ ChangeLog
 2.0.4 (2026-10-20)
 ------------------
 
+-   FEATURE [code,docs]: Specification Linting via `ase-spec-lint`
+    The new skill `ase-spec-lint` lints the SpecBook-based specification like `ase-code-lint` lints
+    the source code, through investigation sub-agents (`ase:ase-spec-lint`) and with the same options
+    `--auto`, `--severity`, `--include`/`--exclude`, and `--staged`/`--unstaged`, but linting the
+    entire specification by default. It checks the ten aspects `S01 SYNTAX` (the SpecBook and
+    markdownlint diagnostics), `S02 FORMAT`, `S03 RATIONALE`, `S04 AMBIGUITY`, `S05 ATOMICITY`,
+    `S06 REALIZATION`, and the model-wide `S07 REDUNDANCY`, `S08 CONSISTENCY`, `S09 LOGIC` (logical
+    gaps of the specification model), and `S10 COMPLETENESS` (sufficiency for an implementation),
+    where the best-guess corrections of the latter two are never applied under `--auto`. For this,
+    `ase spec lint` and the MCP tool `ase_specbook_lint` can now additionally lint the generic Markdown
+    formatting of the specification via markdownlint (option `--markdown`|`-m` resp. input `markdown`).
+
 -   FEATURE [code,docs]: Interactive Manual Page Browser
     `ase man` without any page now opens an interactive, Ink-based manual page browser in the
     terminal, resembling the skill and command deep-dive of the website: a start page with a
@@ -53,6 +65,13 @@ ChangeLog
 -   BUGFIX [docs]: Website Menu Item Overlap in Narrow Renderings
     The website header (`Section-Header.astro`) and its navigation entries (`Widget-Nav-Entry.astro`)
     no longer let menu items overlap each other in narrow viewport widths.
+
+-   BUGFIX [code,docs]: Full SpecBook Standard Schema for `ase spec`
+    The schema configuration entry `std` of `project.artifact.spec.schema` now names the full
+    standard schema bundled with *SpecBook*, instead of the plugin meta file `ase-format-specbook.yaml`,
+    which is compressed for the agents and hence lacks the `refs`, `diagram`, and `format` fields.
+    This lets `ase spec export`/`preview` again render the graph, grid, and hub diagrams, and lets
+    `ase spec lint` and the MCP tool `ase_specbook_lint` again check the references and value formats.
 
 -   UPDATE [infr]: NPM dependencies
     Updated NPM dependencies.
