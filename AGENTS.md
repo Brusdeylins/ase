@@ -201,8 +201,8 @@ The per-deliverable targets are:
 
 ```
 cd plugin
-npm start lint          # markdownlint-cli2 + eslint over meta/, skills/, and output-styles/,
-                        # tsc over mods/, and "claude plugin validate"
+npm start lint          # markdownlint-cli2 + eslint over meta/, skills/, agents/,
+                        # and output-styles/, tsc over mods/, and "claude plugin validate"
 npm start build         # lint, then regenerate skills/ase-help-intent/data.md
                         # and meta/ase-format-specbook.{md,yaml}
 npm start fetch-types   # force re-download of mods/claude-code.d.ts

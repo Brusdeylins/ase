@@ -81,9 +81,9 @@ Workflow
 
     6.  Set <context-after/> to exactly *up to two* lines of
         *unchanged* text content which occurs in the document
-        directly *after* <old-text/>, i.e., the lines (<line/>
-        + <n/>) and (<line/> + <n/> + 1), where <n/> is the
-        number of lines in <old-text/>. Reduce to just one line
+        directly *after* <old-text/>, i.e., the lines
+        (<line/> + <n/>) and (<line/> + <n/> + 1), where <n/> is
+        the number of lines in <old-text/>. Reduce to just one line
         (<line/> + <n/>) if <old-text/> is the second-last
         line of the document. Set <context-after/> to empty if
         <old-text/> is the last line in the document.

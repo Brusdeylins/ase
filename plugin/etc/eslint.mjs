@@ -13,6 +13,7 @@ export default defineConfig([
         files: [
             "meta/*.md",
             "skills/**/*.md",
+            "agents/*.md",
             "output-styles/*.md"
         ],
         rules: {
