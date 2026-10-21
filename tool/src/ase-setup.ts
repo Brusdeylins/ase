@@ -85,10 +85,10 @@ export default class SetupCommand {
             await this.runner.run(spec.cli, [ "plugin", spec.pInstall, "ase@ase", ...scopeArgs ], { retries: 3 })
         }
         else {
-            /*  perform NPM version check  */
+            /*  perform direct NPM registry version check  */
             const current = Version.current()
             this.log.write("info", `setup: update: used ASE version: ${current}`)
-            const latest  = await Version.latest()
+            const latest  = await Version.latest(true)
             if (!force && latest !== "" && latest === current) {
                 this.log.write("info", `setup: update: ASE already at latest version ${current}`)
                 return 0

@@ -37,6 +37,13 @@ ChangeLog
     noisy `Co-Authored-By` trailers to the commit messages they craft, and `ase-repo-commit` carries
     the same rule for its proposed commit message.
 
+-   BUGFIX [code]: Direct NPM Registry Version Check of `ase setup update`
+    `ase setup update` now queries the NPM registry directly for the latest ASE version, instead
+    of relying on the cached, at most hourly background check of *update-notifier*, which, up to
+    ASE 1.0.7, was consumed by the session start hook and hence let `ase setup update` regularly
+    report the current version as the latest one. Only if the registry query fails, it falls back
+    to the cached check, and a newer version found is persisted for the session start hook.
+
 -   UPDATE [infr]: NPM dependencies
     Updated NPM dependencies.
 

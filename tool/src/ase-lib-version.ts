@@ -17,19 +17,29 @@ export default class Version {
     }
 
     /*  return latest ASE version known from the NPM registry
-        (cached background check, falling back to the current version)  */
-    static async latest (): Promise<string> {
+        (cached background check or, if requested, immediate direct check,
+        both falling back to the current version)  */
+    static async latest (direct = false): Promise<string> {
         const notifier = updateNotifier({
             pkg,
             updateCheckInterval: 1000 * 60 * 60
         })
 
-        /*  re-persist the cached update information, as update-notifier consumes it on read,
+        /*  optionally query the NPM registry directly, where only
+            a successful query supersedes the cached update information  */
+        let update = notifier.update
+        if (direct) {
+            const info = await Promise.resolve(notifier.fetchInfo()).catch(() => undefined)
+            if (info !== undefined)
+                update = info
+        }
+
+        /*  re-persist the update information, as update-notifier consumes it on read,
             but only while it still denotes a newer version (it is never cleared otherwise)  */
-        const latest = notifier.update?.latest
+        const latest = update?.latest
         if (latest === undefined || !semver.valid(latest) || !semver.gt(latest, Version.current()))
             return Version.current()
-        notifier.config?.set("update", notifier.update)
+        notifier.config?.set("update", update)
         return latest
     }
 }
