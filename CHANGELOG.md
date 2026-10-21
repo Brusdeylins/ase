@@ -30,6 +30,9 @@ ChangeLog
     noisy `Co-Authored-By` trailers to the commit messages they craft, and `ase-repo-commit` carries
     the same rule for its proposed commit message.
 
+-   UPDATE [infr]: NPM dependencies
+    Updated NPM dependencies.
+
 2.0.3 (2026-10-19)
 ------------------
 
