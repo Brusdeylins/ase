@@ -2,6 +2,13 @@
 ChangeLog
 =========
 
+2.0.5 (2026-10-22)
+------------------
+
+-   IMPROVEMENT [code]: Intent Matching of `ase-help-intent` by NAME and SYNOPSIS
+    `ase-help-intent` now judges the fit of a skill to the intent primarily by its `SCENARIOS`
+    and `DESCRIPTION` sections, and additionally secondarily by its `NAME` and `SYNOPSIS` sections.
+
 2.0.4 (2026-10-21)
 ------------------
 
