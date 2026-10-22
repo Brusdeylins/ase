@@ -72,7 +72,8 @@ catalog you match <intent/> against:
         Match the current <intent/> against the <corpus/> and select
         *every* skill that adequately fits it -- judging the fit
         primarily by each skill's `##  SCENARIOS` ("You want ...") and
-        `##  DESCRIPTION` sections. Order the selected skills from
+        `##  DESCRIPTION` sections, and secondarily by its `##  NAME`
+        and `##  SYNOPSIS` sections. Order the selected skills from
         best-fitting to worst-fitting and keep at most the *8* best
         ones, so the dispatch dialog of sub-step 4 stays addressable.
         Set <count/> to the number of kept skills. Then, for each kept
