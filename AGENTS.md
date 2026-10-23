@@ -41,9 +41,21 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `plugin/hooks/`: the per-agent-tool hook wiring
         (`hooks.json`, `hooks-copilot.json`, `hooks-codex.json`)
     -   `plugin/output-styles/`: the output style `ase-terse`
-    -   `plugin/mods/`: the Claude Code function hooks module ("mod")
-        `ase-mods.ts`, re-rendering the grilling tables of ASE,
-        type-checked against the downloaded `claude-code.d.ts`
+    -   `plugin/mods/`: the Claude Code function hooks module ("mod"),
+        type-checked against the downloaded `claude-code.d.ts`:
+        `ase-mods.ts` for the hooking infrastructure (the only module
+        loaded by the engine, registering the hooks, dispatching them
+        into the other modules, and binding the engine services for
+        them), `ase-mods-common.ts` for the shared parts (styled
+        characters, Markdown conversion, wrapping, framing, and the
+        geometry of the band above the prompt), `ase-mods-grill.ts` for
+        re-rendering the grilling tables of ASE, `ase-mods-help-intent.ts`
+        for the intent help (a prompt suffixed with a blank and `??`
+        matched against the help of all skills, with the proposed
+        commands in the band above the prompt), and
+        `ase-mods-help-skill.ts` for the synopsis form (a bare skill
+        command suffixed with `??` composed through a form of its
+        SYNOPSIS in the band above the prompt)
     -   `plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
         `plugin/.github/plugin/`: the per-agent-tool plugin manifests
 -   `tool/`: the `@rse/ase` CLI

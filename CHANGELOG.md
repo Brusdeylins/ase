@@ -5,6 +5,21 @@ ChangeLog
 2.0.5 (2026-10-22)
 ------------------
 
+-   FEATURE [code]: Intent Help in the Prompt via `??` Suffix
+    The Claude Code function hooks module (`plugin/mods/`, early access) now matches the still
+    unsubmitted prompt, once suffixed with a blank and `??`, as an intent
+    against the help of all ASE skills (like `ase-help-intent`, but over the session context), and
+    shows the proposed skill commands in a master/detail view in the band above the prompt, where
+    LEFT/RIGHT selects a skill, UP/DOWN and `b`/`f`/SPACE scroll its details, RETURN picks its
+    command into the prompt, and BACKSPACE (or any other key) restores the prompt as typed.
+
+-   FEATURE [code]: Synopsis Form in the Prompt via `??` Suffix
+    The Claude Code function hooks module now shows, for a bare skill command suffixed with `??`,
+    the SYNOPSIS of its manual page as a form in the band above the prompt, where LEFT/RIGHT steps
+    through its options and arguments (with their descriptions), SPACE toggles them, RETURN edits
+    their values (with a drop-down box for fixed values), RETURN at the end takes over the composed
+    command into the prompt, and BACKSPACE cancels.
+
 -   IMPROVEMENT [code]: Intent Matching of `ase-help-intent` by NAME and SYNOPSIS
     `ase-help-intent` now judges the fit of a skill to the intent primarily by its `SCENARIOS`
     and `DESCRIPTION` sections, and additionally secondarily by its `NAME` and `SYNOPSIS` sections.

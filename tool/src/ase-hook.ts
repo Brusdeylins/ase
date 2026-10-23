@@ -538,7 +538,8 @@ export default class HookCommand {
             guaranteed to appear once in every non-headless session;
             Anthropic Claude Code CLI and OpenAI Codex CLI surface a top-level
             "systemMessage" field for this -- GitHub Copilot CLI has no equivalent);
-            the trailing help hint is emitted only if the guidance level asks for it  */
+            the trailing help hints are emitted only if the guidance level asks for them,
+            and the inline ones only for Anthropic Claude Code CLI, which alone runs the mods  */
         const banner =
             "\n" +
             `\n⧉ ASE: ⎈ version: ${version}${versionHint !== "" ? " " + versionHint.replace(/\*/g, "") : ""}` +
@@ -547,8 +548,12 @@ export default class HookCommand {
             `\n⧉ ASE: ☯ persona: ${persona}, ▶ guidance: ${guidance}, ▢ boxing: ${boxing}` +
             (guidance === "normal" || guidance === "verbose" ?
                 "\n" +
-                "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent-description>\" for skill command proposals" +
-                "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill-name>]\" for skill catalog or skill manpage" : "")
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent-description>\" for conversational skill command proposals" +
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill-name>]\" for conversational skill catalog or manpage lookup" +
+                (tool === "claude" ?
+                    "\n⧉ ASE: ▷ hint: use \"<intent-description> ??\" for inline skill command proposals" : "") +
+                (tool === "claude" ?
+                    "\n⧉ ASE: ▷ hint: use \"/<skill-name> ??\" for inline skill command composition" : "") : "")
 
         /*  inject markdown into session context.
             Anthropic Claude Code CLI and OpenAI Codex CLI expect the context nested in
