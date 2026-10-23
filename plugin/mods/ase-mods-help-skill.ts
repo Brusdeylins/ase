@@ -7,23 +7,23 @@
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
     Synopsis form, showing for a skill command (bare or with its options and
     arguments already typed, which prefill the form), once suffixed with
-    "??", the SYNOPSIS of its manual page as a form in a master/detail view
+    "!!", the SYNOPSIS of its manual page as a form in a master/detail view
     in the band above the prompt, where LEFT/RIGHT steps through its options
     and arguments (and shows their descriptions, scrolled by "b"/"f"),
     SPACE toggles them, RETURN edits their values (with a drop-down box for
-    fixed values), RETURN at the end takes over the composed command into
-    the prompt, and BACKSPACE cancels.  */
+    fixed values), RETURN at the end (or "!!" outside a value) takes over
+    the composed command into the prompt, and BACKSPACE cancels.  */
 
 import type { Elements, Frozen, PromptBox, PromptEditInput, RenderElement } from "claude-code"
 import { type Engine, type Text, type Key, type BandRender, type BandScroll, type View, PICKED, CODE,
     held, decode, section, wrap, uniform, flow, frame, paint, layout, wheel, panel } from "./ase-mods-common.ts"
 
 /*  the trigger of a synopsis form inside the prompt (a skill command suffixed
-    with "??", and with its typed options and arguments, if any, separated by
+    with "!!", and with its typed options and arguments, if any, separated by
     a blank from it), the color of the drop-down box of a field with fixed
     values, the title placed into the top edge of the frame, and the name of
     the extra field with the typed words not recognized as of the synopsis  */
-const SYNOPSIS = /^(\/(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+))(?:\s+(\S(?:[^]*\S)?)\s+|\s*)\?\?$/
+const SYNOPSIS = /^(\/(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+))(?:\s+(\S(?:[^]*\S)?)\s+|\s*)!!$/
 const CHOICES  = "gray"
 const TITLE    = "[ ⧉ ASE: Craft Skill Command ]"
 const UNKNOWN  = "unrecognized"
@@ -49,8 +49,8 @@ type Field = {
 /*  a synopsis form: the scroll state of its band, the skill command, the prompt
     to restore on cancel (the command as typed), its fields, the focused field
     (the apply position after the last field), the state of an edited field,
-    and the focus and editing state shown (resetting the scrolling on change)
-    of the detail view  */
+    the focus and editing state shown (resetting the scrolling on change) of
+    the detail view, and the last key outside a field, if a "!" or "?"  */
 type Form = View & {
     command: string,
     typed:   string,
@@ -61,7 +61,8 @@ type Form = View & {
     caret:   number,
     choice:  number,
     picked:  Set<string>,
-    anchor:  string
+    anchor:  string,
+    pending: string
 }
 
 /*  extract the descriptions of the (usually bulleted) items of a manual page
@@ -362,18 +363,21 @@ const draw = (Text: Text, form: Form, field: Field, i: number): RenderElement =>
     return Text({ wrap: "truncate-end", children })
 }
 
-/*  determine the key hints below the frame of a synopsis form
-    (with the scroll keys only while its detail view is scrollable)  */
-const hints = (form: Form, scrollable: boolean): string => {
+/*  determine the key hints below the frame of a synopsis form (with the scroll
+    keys only while its detail view is scrollable, and the wheel only where the
+    band receives it)  */
+const hints = (form: Form, scrollable: boolean, wheel: boolean): string => {
     const focused = form.fields[form.pos]
     if (focused === undefined || !form.edit)
-        return "⌫: cancel · ←/→: select" +
-            (focused === undefined ? " · ⏎: apply" : focused.valued ? " · ⏎: edit value" : "") +
+        return `←/→${wheel ? "/wheel" : ""}: select` +
+            (focused?.valued === true ? " · ⏎: edit value" : "") +
+            ` · ⌫: cancel+close · ${focused === undefined ? "⏎/!!" : "!!"}: apply+close` +
+            " · ??: switch to manpage" +
             (focused !== undefined && togglable(focused) ?
                 ` · SPACE: ${focused.enabled ? "deactivate" : "activate"}` : "") +
-            (scrollable ? " · b/f: scroll bwd/fwd" : "")
-    return focused.choices.length > 0 ? `⌫: abort · ⏎: accept · ←/→: choose${focused.list ? " · SPACE: pick" : ""}` :
-        "⏎: accept · ←/→: move · type the value"
+            (scrollable ? ` · b/f${wheel ? "/wheel" : ""}: scroll bwd/fwd` : "")
+    return (focused.choices.length > 0 ? `⌫: abort · ⏎: accept · ←/→: choose${focused.list ? " · SPACE: pick" : ""}` :
+        "⏎: accept · ←/→: move · type the value") + (wheel && scrollable ? " · wheel: scroll" : "")
 }
 
 /*  the synopsis form: its state and its operations  */
@@ -403,15 +407,29 @@ export const modHelpSkill = () => {
     const hold = (current: Form): PromptBox => held(compose(current))
 
     /*  while the synopsis form is shown, every edit is a key of the form, where
-        outside a field "b"/"f" scroll the detail view of the form by a page  */
+        outside a field "b"/"f" scroll the detail view of the form by a page, "!!"
+        (two "!" in a row) applies the form (as RETURN at its end does), and "??"
+        (two "?" in a row) closes the form with the composed command suffixed
+        with the trigger of the manual band (to switch over to it)  */
     const edit = (e: Frozen<PromptEditInput>): PromptBox => {
-        const current = form!
-        const key     = decode(e)
+        const current   = form!
+        const key       = decode(e)
+        const pending   = current.pending
+        const repeat    = current.edit ? "" :
+            /^([!?])\1$/.exec(key.text)?.[1] ?? (pending !== "" && key.text === pending ? pending : "")
+        current.pending = !current.edit && repeat === "" && /^[!?]$/.test(key.text) ? key.text : ""
+        if (current.pending !== "")
+            return hold(current)
         if (!current.edit && (key.text === "b" || key.text === "f")) {
             current.scroll = Math.max(0, current.scroll + (key.text === "b" ? -1 : 1) * current.page)
             return hold(current)
         }
-        const result = operate(current, key)
+        if (repeat === "?") {
+            form = undefined
+            const text = `${compose(current)} ??`
+            return { text, cursor: text.length }
+        }
+        const result = repeat === "!" ? "apply" : operate(current, key)
         if (result !== undefined) {
             form = undefined
             const text = result === "apply" ? `${compose(current)} ` : current.typed
@@ -440,7 +458,7 @@ export const modHelpSkill = () => {
         prefill(filled, args)
         form = { command: command[1]!, typed: `${command[1]!} ${args !== "" ? `${args} ` : ""}`, fields: filled,
             pos: 0, edit: false, buffer: "", caret: 0, choice: 0, picked: new Set(),
-            top: 0, scroll: 0, page: 1, anchor: "", split: 0 }
+            top: 0, scroll: 0, page: 1, anchor: "", split: 0, pending: "" }
         return hold(form)
     }
 
@@ -530,7 +548,7 @@ export const modHelpSkill = () => {
             view), and the key hints  */
         return panel(ui, geometry, current, {
             title: TITLE,
-            hints: hints(current, lines.length > body),
+            hints: hints(current, lines.length > body, geometry.overflow),
             rows:  (i) => entries[current.top + i],
             lines,
             dim:   focused === undefined

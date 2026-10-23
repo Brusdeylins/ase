@@ -5,23 +5,31 @@ ChangeLog
 2.0.5 (2026-10-22)
 ------------------
 
--   FEATURE [code]: Intent Help in the Prompt via `??` Suffix
+-   FEATURE [code]: Intent Help in the Prompt via `!!` Suffix
     The Claude Code function hooks module (`plugin/mods/`, early access) now matches the still
-    unsubmitted prompt, once suffixed with a blank and `??`, as an intent
+    unsubmitted prompt, once suffixed with a blank and `!!`, as an intent
     against the help of all ASE skills (like `ase-help-intent`, but over the session context), and
     shows the proposed skill commands in a master/detail view in the band above the prompt, where
     LEFT/RIGHT selects a skill, UP/DOWN and `b`/`f`/SPACE scroll its details, RETURN picks its
-    command into the prompt, and BACKSPACE (or any other key) restores the prompt as typed.
+    command into the prompt, and `!!`, BACKSPACE, or any other key restores the prompt as typed
+    without the trigger.
 
--   FEATURE [code]: Synopsis Form in the Prompt via `??` Suffix
-    The Claude Code function hooks module now shows, for a skill command suffixed with `??`,
+-   FEATURE [code]: Synopsis Form in the Prompt via `!!` Suffix
+    The Claude Code function hooks module now shows, for a skill command suffixed with `!!`,
     the SYNOPSIS of its manual page as a form in the band above the prompt, prefilled with the
     options and arguments already typed (so a typed command can be edited, too, with long options
     also recognized by an unambiguous prefix and unrecognized words kept verbatim in the last
     argument field), where LEFT/RIGHT steps
     through its options and arguments (with their descriptions), SPACE toggles them, RETURN edits
-    their values (with a drop-down box for fixed values), RETURN at the end takes over the composed
-    command into the prompt, and BACKSPACE cancels.
+    their values (with a drop-down box for fixed values), RETURN at the end (or `!!` outside a
+    value) takes over the composed command into the prompt, and BACKSPACE cancels.
+
+-   FEATURE [code]: Manual Band in the Prompt via `??` Suffix
+    The Claude Code function hooks module now toggles, for a skill command (bare or with its
+    options and arguments already typed) suffixed with a blank and `??`, the entire manual page
+    of the skill in the band above the prompt, while the command can be typed on. The band is
+    scrolled by the wheel (in fullscreen) and closes once the prompt no longer starts with the
+    skill command, the synopsis form opens, or the prompt is submitted.
 
 -   IMPROVEMENT [code]: Intent Matching of `ase-help-intent` by NAME and SYNOPSIS
     `ase-help-intent` now judges the fit of a skill to the intent primarily by its `SCENARIOS`

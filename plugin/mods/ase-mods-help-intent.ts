@@ -6,24 +6,24 @@
 
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
     Intent help, matching the still unsubmitted prompt, once suffixed with
-    a blank and "??", as an intent against the help of all ASE skills (like
+    a blank and "!!", as an intent against the help of all ASE skills (like
     the skill "ase-help-intent", but over the session context), and showing
     the proposed skills in a master/detail view in the band above the
     prompt, where LEFT/RIGHT (or the wheel over the skills) selects a skill,
     UP/DOWN and "b"/"f"/SPACE (or the wheel over the details) scroll its
-    details, RETURN picks its command into the prompt, and BACKSPACE or any
-    other key restores the prompt as typed.  */
+    details, RETURN picks its command into the prompt, and "!!", BACKSPACE, or
+    any other key restores the prompt as typed without the trigger.  */
 
 import type { Elements, Frozen, PromptBox, PromptEditInput, RenderElement } from "claude-code"
 import { type Engine, type Char, type BandRender, type BandScroll, type View, PICKED, CODE,
     held, decode, section, wrap, uniform, flow, frame, layout, wheel, panel } from "./ase-mods-common.ts"
 
-/*  the trigger of an intent inside the prompt (suffixed with a blank and "??",
-    so the doubled question mark of a sentence is no trigger), the skill of
+/*  the trigger of an intent inside the prompt (suffixed with a blank and "!!",
+    so the doubled exclamation mark of a sentence is no trigger), the skill of
     a proposed command (with or without its "ase:" plugin prefix), the maximum
     number of command proposals, the help corpus of all skills (relative to
     the plugin directory), and the fallback model without any session to fork  */
-const INTENT    = /\s+\?\?$/
+const INTENT    = /\s+!!$/
 const SKILL     = /^\/?(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+)(?![\w-])/
 const PROPOSALS = 8
 const CORPUS    = "skills/ase-help-intent/data.md"
@@ -48,8 +48,10 @@ type Help = { catalog: string, manual: string }
 type Proposal = { skill: string, command: string, rationale: string }
 
 /*  an intent under matching: the scroll state of its band, the original prompt
-    (without and with the trigger), the matching state, the status message,
-    the spinner frame, the command proposals, and the selected proposal  */
+    (without the trigger and its blank, resp. without the trigger only), the
+    matching state, the status message,
+    the spinner frame, the command proposals, the selected proposal, and
+    whether the last key was a "!"  */
 type Intent = View & {
     draft:     string,
     typed:     string,
@@ -57,7 +59,8 @@ type Intent = View & {
     message:   string,
     spin:      number,
     proposals: Proposal[],
-    select:    number
+    select:    number,
+    banged:    boolean
 }
 
 /*  parse the help corpus into the help of each skill, where
@@ -197,14 +200,17 @@ export const modHelpIntent = () => {
         prompt held): LEFT/RIGHT select a proposal, UP/DOWN scroll its details by
         a line and "b"/"f"/SPACE by a page (as the engine consumes PAGEUP/PAGEDOWN),
         RETURN (arriving as a typed newline in the held prompt) operates the band
-        as at the prompt, a deletion (like BACKSPACE) closes the band and restores
-        the prompt as typed without its last character, and any other key closes
-        the band and restores the prompt as typed (onto whose end the edit of a
-        typed text is still to be applied)  */
+        as at the prompt, and "!!" (two "!" in a row), a deletion (like BACKSPACE),
+        or any other key closes the band and restores the prompt as typed without
+        the trigger (onto whose end the edit of a typed text is still to be applied)  */
     const edit = (e: Frozen<PromptEditInput>): PromptBox | string => {
         const current = intent!
         const { draft, typed, state, proposals } = current
-        const key = decode(e)
+        const key      = decode(e)
+        const banged   = current.banged
+        current.banged = key.text === "!" && !banged
+        if (current.banged)
+            return held(draft)
         if (key.name === "return") {
             const text = submit()
             return intent !== undefined ? held(draft) : { text, cursor: text.length }
@@ -222,9 +228,7 @@ export const modHelpIntent = () => {
             return held(draft)
         }
         reset()
-        if (key.erase !== 0)
-            return { text: typed.slice(0, -1), cursor: typed.length - 1 }
-        if (key.text === "")
+        if (key.text === "" || key.text === "!!" || (key.text === "!" && banged))
             return { text: typed, cursor: typed.length }
         return typed
     }
@@ -235,9 +239,9 @@ export const modHelpIntent = () => {
         const draft = box.text.replace(INTENT, "")
         if (!INTENT.test(box.text) || draft.trim() === "")
             return undefined
-        const current: Intent = { draft, typed: box.text, state: "busy",
+        const current: Intent = { draft, typed: box.text.slice(0, -2), state: "busy",
             message: "matching intent...", spin: 0, proposals: [],
-            select: 0, top: 0, scroll: 0, page: 1, split: 0 }
+            select: 0, top: 0, scroll: 0, page: 1, split: 0, banged: false }
         intent = current
 
         /*  update the intent, unless it was closed in the meantime  */
@@ -395,8 +399,8 @@ export const modHelpIntent = () => {
             (the intent itself stays visible in the prompt)  */
         return panel(ui, geometry, current, {
             title: TITLE,
-            hints: current.state === "done" ? "⌫: cancel · ⏎: pick · ←/→: select · b/f/SPACE: scroll" :
-                "⌫/any key: cancel",
+            hints: current.state === "done" ? "⌫/!!: cancel+close · ⏎: apply+close · ←/→: select · b/f/SPACE: scroll" +
+                (geometry.overflow ? " · wheel: select/scroll" : "") : "⌫/!!/any key: cancel+close",
             rows:  (i) => {
                 if (proposal === undefined)
                     return Text({ dimColor: true, wrap: "truncate-end", children: hint[i] ?? " " })

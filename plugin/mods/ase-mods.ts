@@ -7,7 +7,8 @@
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
     Hooking infrastructure, registering the function hooks and dispatching
     them into the grill table ("ase-mods-grill.ts"), the intent help
-    ("ase-mods-help-intent.ts"), and the synopsis form ("ase-mods-help-skill.ts").
+    ("ase-mods-help-intent.ts"), the synopsis form ("ase-mods-help-skill.ts"),
+    and the manual band ("ase-mods-help-manual.ts").
     As the engine loads only a module spelling "on", "$", and "next" literally,
     this is the only module touching the engine, and it binds the engine
     services needed by the other modules as plain functions.  */
@@ -17,6 +18,7 @@ import { type Band, TRIGGER } from "./ase-mods-common.ts"
 import { modGrill }           from "./ase-mods-grill.ts"
 import { modHelpIntent }      from "./ase-mods-help-intent.ts"
 import { modHelpSkill }       from "./ase-mods-help-skill.ts"
+import { modHelpManual }      from "./ase-mods-help-manual.ts"
 
 /*  function hook registration entry point  */
 export const register: Register = (on, options) => {
@@ -24,10 +26,11 @@ export const register: Register = (on, options) => {
     if (options.enabled === false)
         return
 
-    /*  the grill table, the intent help, and the synopsis form  */
+    /*  the grill table, the intent help, the synopsis form, and the manual band  */
     const grill  = modGrill()
     const intent = modHelpIntent()
     const skill  = modHelpSkill()
+    const manual = modHelpManual()
 
     /*  the bands above the prompt (the synopsis form and the intent band, opened
         in this order), the shown one (as at most one is shown at a time), and
@@ -43,23 +46,30 @@ export const register: Register = (on, options) => {
 
     /*  handle the still unsubmitted prompt of the user: while the intent band
         or the synopsis form is shown, every edit is a key of it, else act on the
-        typed trigger suffix at the end of the prompt only (showing the synopsis
-        form for a skill command with a manual page, else arming the matching
-        of the prompt as an intent), and track the picks of the grill table
-        inside the edited prompt while neither is shown  */
+        typed trigger suffix at the end of the prompt only (toggling the manual
+        band for a skill command with "??", resp. showing the synopsis form for
+        a skill command with a manual page with "!!", else arming the matching
+        of the prompt as an intent with "!!"), close the manual band once the
+        prompt left its skill command or the synopsis form opened, and track the
+        picks of the grill table inside the edited prompt while neither is shown  */
     on("prompt.edit", async ($, e, next) => {
-        const band = shown()
+        const band  = shown()
+        const paged = manual.active()
+        const read  = (file: string) => $.fs.read(`${$.plugin.root}/${file}`)
         let box: PromptBox
         if (band !== undefined) {
             const result = band.edit(e)
             box = typeof result !== "string" ? result :
                 await next({ ...e, text: result, cursor: result.length, start: result.length, end: result.length })
+
+            /*  switch over from a closed synopsis form to the manual band  */
+            if (shown() === undefined && TRIGGER.test(box.text))
+                box = await manual.toggle(box, { read }) ?? box
         }
         else {
             box = await next(e)
-            if (e.inputText.endsWith("?") && box.cursor === box.text.length && TRIGGER.test(box.text)) {
-                const read = (file: string) => $.fs.read(`${$.plugin.root}/${file}`)
-                box = await skill.open(box, { read }) ?? intent.open(box, {
+            if (/[?!]$/.test(e.inputText) && box.cursor === box.text.length && TRIGGER.test(box.text)) {
+                box = await manual.toggle(box, { read }) ?? await skill.open(box, { read }) ?? intent.open(box, {
                     read,
                     invalidate: () => $.ui.invalidate("ui.render"),
                     fork:       (prompt) => $.model.fork({ prompt }),
@@ -68,7 +78,10 @@ export const register: Register = (on, options) => {
                 }) ?? box
             }
         }
-        if (shown() !== undefined || grill.track(box.text) || band !== undefined)
+        manual.track(box.text)
+        if (skill.active())
+            manual.reset()
+        if (shown() !== undefined || grill.track(box.text) || band !== undefined || paged || manual.active())
             $.ui.invalidate("ui.render")
         return box
     }).catch(($, e, next) => {
@@ -80,14 +93,16 @@ export const register: Register = (on, options) => {
         return text !== undefined ? { text, cursor: text.length } : next(e)
     })
 
-    /*  operate the synopsis form resp. the intent band by the wheel  */
+    /*  operate the synopsis form resp. the intent band, else scroll the manual
+        page in the band, by the wheel, and never let the engine move the window
+        over our (overflowing) band, even while it takes no scrolling  */
     on("ui.scroll", { component: "AbovePrompt" }, ($, e, next) => {
-        if (!bands.some((band) => band.scroll(e)))
-            return next(e)
+        if (!bands.some((band) => band.scroll(e)) && !manual.scroll(e))
+            return shown() === undefined && !manual.active() ? next(e) : {}
         $.ui.invalidate("ui.render")
         return {}
     }).catch(($, e, next) =>
-        /*  let a failed scrolling of the synopsis form resp. the intent band pass  */
+        /*  let a failed scrolling of the synopsis form, the intent band, resp. the manual page pass  */
         next(e))
 
     /*  operate the intent band and the synopsis form by RETURN, resp. freeze the
@@ -141,6 +156,7 @@ export const register: Register = (on, options) => {
         submissions++
         grill.submit(e.text)
         reset()
+        manual.reset()
         $.ui.invalidate("ui.render")
         return next(e)
     }).catch(($, e, next) =>
@@ -160,15 +176,19 @@ export const register: Register = (on, options) => {
         }) ?? drawn
     })
 
-    /*  draw the intent band resp. the synopsis form into the band above the prompt (terminal only)  */
+    /*  draw the intent band resp. the synopsis form, else the manual page,
+        into the band above the prompt (terminal only)  */
     on("ui.render", { component: "AbovePrompt", surface: "terminal" }, async ($, e, next) => {
         const drawn = await next(e)
-        return shown()?.render(e, $.ui.resolve(e)) ?? drawn
+        const ui    = $.ui.resolve(e)
+        return shown()?.render(e, ui) ?? manual.render(e, ui) ?? drawn
     }).catch(($, e, next) => {
         /*  close a failed intent band resp. synopsis form, restore the prompt
-            resp. the command as typed (instead of the held prompt), and keep the
-            drawing beneath  */
+            resp. the command as typed (instead of the held prompt), resp. close
+            a failed manual band, and keep the drawing beneath  */
         const text = cancel()
+        if (text === undefined)
+            manual.reset()
         if (text !== undefined)
             $.prompt.fill({ text }).catch(() => {
                 /*  ignore a prompt which is no longer accessible  */

@@ -50,13 +50,19 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         characters, Markdown conversion, wrapping, framing, and the
         geometry of the band above the prompt), `ase-mods-grill.ts` for
         re-rendering the grilling tables of ASE, `ase-mods-help-intent.ts`
-        for the intent help (a prompt suffixed with a blank and `??`
-        matched against the help of all skills, with the proposed
-        commands in the band above the prompt), and
+        for the intent help (a prompt, other than a skill command,
+        suffixed with a blank and `!!` matched against the help of all
+        skills, with the proposed commands in the band above the prompt,
+        and closed by `!!` again),
         `ase-mods-help-skill.ts` for the synopsis form (a skill command,
-        bare or with its typed options and arguments, suffixed with `??`
+        bare or with its typed options and arguments, suffixed with `!!`
         composed resp. edited through a form of its SYNOPSIS in the band
-        above the prompt)
+        above the prompt, and applied by `!!` again), and
+        `ase-mods-help-manual.ts` for the manual band (a skill command,
+        bare or with its typed options and arguments, suffixed with a
+        blank and `??` toggling the entire manual page of the skill in
+        the band above the prompt, while the command is typed on, until
+        the synopsis form opens)
     -   `plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
         `plugin/.github/plugin/`: the per-agent-tool plugin manifests
 -   `tool/`: the `@rse/ase` CLI

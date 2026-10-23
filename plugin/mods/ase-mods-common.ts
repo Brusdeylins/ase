@@ -5,8 +5,8 @@
 */
 
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
-    Common parts, shared by the grill table, the intent help, and the
-    synopsis form: the styled characters of the terminal drawing, their
+    Common parts, shared by the grill table, the intent help, the synopsis
+    form, and the manual band: the styled characters of the terminal drawing, their
     Markdown conversion, wrapping, and framing, and the contract, keys,
     geometry, and drawing of the master/detail view in the band above the prompt.  */
 
@@ -31,9 +31,10 @@ export type Engine = {
 export const PICKED = "red"
 export const CODE   = "blue"
 
-/*  the trigger suffix of an intent (resp. of a synopsis form) inside the prompt
-    (each further constrained by the pattern of the intent resp. synopsis form)  */
-export const TRIGGER = /\?\?$/
+/*  the trigger suffix of a manual band ("??") resp. of a synopsis form or an intent ("!!")
+    inside the prompt (each further constrained by the pattern of the manual band, the
+    synopsis form, resp. the intent)  */
+export const TRIGGER = /(?:\?\?|!!)$/
 
 /*  the share of the terminal height taken by the band above the prompt  */
 const BAND = 0.25
@@ -212,8 +213,9 @@ const strip = (text: string): string =>
 
 /*  convert the Markdown blocks of a manual page section (paragraphs, list items,
     and code fences) into lines of styled characters, hard-wrapped to the given
-    columns (except for the code lines), with a blank line between the blocks  */
-export const flow = (text: string, columns: number): Char[][] => {
+    columns (except for the code lines), with a blank line between the blocks,
+    where "nested" keeps the indentation of the blocks and of the list item texts  */
+export const flow = (text: string, columns: number, nested = false): Char[][] => {
     const result: Char[][] = []
     let block: string[] = []
     let fence = false
@@ -222,17 +224,20 @@ export const flow = (text: string, columns: number): Char[][] => {
             return
         if (result.length > 0)
             result.push([])
+        const pad  = nested ? /^ */.exec(block[0]!)![0].length : 0
         const body = strip(block.map((line) => line.trim()).join(" "))
         const item = /^(-|\d+\.)\s+/.exec(body)
         if (item !== null) {
-            const mark = item[1] === "-" ? "•" : item[1]!
-            result.push(...wrap(style(`${mark} ${body.slice(item[0].length)}`, undefined), columns, mark.length + 1))
+            const mark  = (item[1] === "-" ? "•" : item[1]!).padEnd(nested ? item[0].length : item[1]!.length + 1)
+            const lines = wrap(style(body.slice(item[0].length), undefined), columns, pad + mark.length, pad + mark.length)
+            lines[0]!.splice(pad, mark.length, ...uniform(mark, false, undefined))
+            result.push(...lines)
         }
         else
-            result.push(...wrap(style(body, undefined), columns, 0))
+            result.push(...wrap(style(body, undefined), columns, pad, pad))
         block = []
     }
-    for (const line of text.trim().split("\n")) {
+    for (const line of text.replace(/^\s*\n|\s+$/g, "").split("\n")) {
         if (line.startsWith("```")) {
             flush()
             if (!fence && result.length > 0)
@@ -328,21 +333,26 @@ const bar = (Text: Text, mark: Mark | undefined): RenderElement =>
         mark === "track" ? Text({ dimColor: true, children: "░" }) : Text({ children: " " })
 
 /*  the geometry of the band above the prompt: the inner columns of the self-drawn
-    frame, the rows of its views, and the columns of its master and detail view  */
-export type Layout = { span: number, body: number, master: number, detail: number }
+    frame, the rows of its views, the columns of its master and detail view, and
+    whether the band overflows (to receive the scrolling)  */
+export type Layout = { span: number, body: number, master: number, detail: number, overflow: boolean }
 
 /*  determine the geometry of the band above the prompt: the inner columns (both
-    borders and the left padding subtracted), the rows out of a share of the terminal
-    height (but never more than the rows of the band, with the frame and the footer
-    subtracted), and the columns of the master view (by the given share) and of the
-    detail view (with a separator column between them, and a gap of two columns
-    and a scrollbar column right of the detail view)  */
-export const layout = (e: BandRender, share: number): Layout => {
-    const span   = Math.max(20, e.props.bodyColumns - FRAME.cols)
-    const height = Math.min(e.props.maxRows,
-        Math.max(FRAME.rows + 2, Math.floor((e.viewport?.rows ?? e.props.maxRows) * BAND)))
-    const master = Math.floor((span - 3 - 3) * share)
-    return { span, body: Math.max(1, height - FRAME.rows - 1), master, detail: span - master - 3 - 3 }
+    borders and the left padding subtracted), the rows (with the frame and the footer
+    subtracted) out of a share of the terminal height (but never more than the rows of
+    the band), resp., in fullscreen (where the engine raises the scrolling by the wheel
+    and, once focused, by the keys only for a tree taller than the band), all rows of
+    the band but the one of the engine's "n more" row (as the band then takes them
+    anyway), and the columns of the master view (by the given share) and of the
+    detail view (with a separator column between them, and a gap of two columns and
+    a scrollbar column right of the detail view)  */
+export const layout = (e: BandRender, share: number, band = BAND): Layout => {
+    const span     = Math.max(20, e.props.bodyColumns - FRAME.cols)
+    const overflow = e.viewport?.isFullscreen === true
+    const height   = overflow ? Math.max(FRAME.rows + 2, e.props.maxRows - 1) : Math.min(e.props.maxRows,
+        Math.max(FRAME.rows + 2, Math.floor((e.viewport?.rows ?? e.props.maxRows) * band)))
+    const master   = Math.floor((span - 3 - 3) * share)
+    return { span, body: Math.max(1, height - FRAME.rows - 1), master, detail: span - master - 3 - 3, overflow }
 }
 
 /*  the scroll state of the band above the prompt: the first shown row of the
@@ -361,48 +371,55 @@ export const wheel = (e: BandScroll, view: View, step?: (by: number) => void): v
 }
 
 /*  draw the band above the prompt: inside the self-drawn frame (with the title
-    in its top edge) either a single view of the given rows, or a master view of
-    the given rows and, joined by a separator, a detail view of the given lines
-    (optionally dimmed) with its scrollbar, into the bottom edge the scroll
-    position of the detail view, and below the frame the key hints, where the
-    scroll position is clamped, and the page size (for the scroll keys) and the
-    end of the master view (for the wheel) are remembered in the view  */
-export const panel = (ui: Elements["terminal"], { span, body, master, detail }: Layout, view: View, spec: {
+    in its top edge) either a single view of the given rows, a single view of the
+    given lines with its scrollbar, or a master view of the given rows and, joined
+    by a separator, a detail view of the given lines (optionally dimmed) with its
+    scrollbar, into the bottom edge the scroll position of the lines, and below
+    the frame the key hints (followed by blank rows for an overflowing band),
+    where the scroll position is clamped, and the page size (for the scroll keys)
+    and the end of the master view (for the wheel) are remembered in the view  */
+export const panel = (ui: Elements["terminal"], { span, body, master, detail, overflow }: Layout, view: View, spec: {
     title:  string,
     hints:  string,
-    rows:   (i: number) => RenderElement | undefined,
+    rows?:  (i: number) => RenderElement | undefined,
     lines?: Char[][],
     dim?:   boolean
 }): RenderElement => {
     const { Box, Text } = ui
     const lines = spec.lines ?? []
+    const solo  = spec.rows === undefined
     view.page   = Math.max(1, body - 1)
-    view.split  = FRAME.lead + master
+    view.split  = solo ? 0 : FRAME.lead + master
     view.scroll = Math.max(0, Math.min(view.scroll, lines.length - body))
     const marks  = scrollbar(body, lines.length, view.scroll)
     const blank  = Text({ children: " " })
     const border = (left: string, joint: string, right: string) =>
-        left + (spec.lines === undefined ? "─".repeat(span + 1) :
+        left + (spec.lines === undefined || solo ? "─".repeat(span + 1) :
             "─".repeat(master + 2) + joint + "─".repeat(detail + 4)) + right
+    const scrolled = (i: number, width: number) => [
+        Box({ width, flexShrink: 0, children:
+            Text({ wrap: "truncate-end", dimColor: spec.dim ?? false,
+                children: paint(Text, lines[view.scroll + i] ?? []) }) }),
+        Text({ children: "  " }),
+        bar(Text, marks[i])
+    ]
     const rows: RenderElement[] = [ edge(Text, border("╭", "┬", "╮"), spec.title) ]
     for (let i = 0; i < body; i++)
         rows.push(Box({ flexDirection: "row", children: [
             Text({ ...BORDER, children: "│ " }),
-            ...(spec.lines === undefined ? [
-                Box({ width: span, flexShrink: 0, children: spec.rows(i) ?? blank })
+            ...(solo ? scrolled(i, span - 3) : spec.lines === undefined ? [
+                Box({ width: span, flexShrink: 0, children: spec.rows!(i) ?? blank })
             ] : [
-                Box({ width: master, flexShrink: 0, children: spec.rows(i) ?? blank }),
+                Box({ width: master, flexShrink: 0, children: spec.rows!(i) ?? blank }),
                 Text({ ...BORDER, children: " │ " }),
-                Box({ width: detail, flexShrink: 0, children:
-                    Text({ wrap: "truncate-end", dimColor: spec.dim ?? false,
-                        children: paint(Text, lines[view.scroll + i] ?? []) }) }),
-                Text({ children: "  " }),
-                bar(Text, marks[i])
+                ...scrolled(i, detail)
             ]),
             Text({ ...BORDER, children: "│" })
         ] }))
     rows.push(edge(Text, border("╰", "┴", "╯"), position(body, lines.length, view.scroll), true))
     rows.push(Box({ paddingLeft: 1, children: Text({ dimColor: true, wrap: "truncate-end", children: spec.hints }) }))
+    if (overflow)
+        rows.push(blank, blank)
     return Box({ flexDirection: "column", width: "100%", children: rows })
 }
 
