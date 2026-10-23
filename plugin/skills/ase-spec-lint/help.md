@@ -9,6 +9,7 @@
     [`--help`|`-h`]
     [`--auto`|`-a`]
     [`--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`)]
+    [`--force`|`-f`]
     [`--include`|`-i`=*aspect*[`,`...]]
     [`--exclude`|`-e`=*aspect*[`,`...]]
     [`--staged`]
@@ -80,14 +81,20 @@ are *never* applied under `--auto`.
     Set the *severity floor* (default `AUTO`): findings below the chosen
     threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
     `HIGH`. The default `AUTO` means `MEDIUM` for a project with `grey`
-    boxing, no linting at all for a project with `black` boxing, and
-    `LOW` (keep all findings) otherwise; an explicitly given floor always
-    wins over the boxing, i.e. it also lints a project with `black`
-    boxing and, e.g. with `LOW`, acts on all findings of a project with
-    `grey` boxing. `ACCEPTED` findings are never suppressed. Surviving
-    findings are reported in *descending severity* order `HIGH`,
-    `MEDIUM`, `LOW`, `ACCEPTED`, keeping the `file`/`line` order within
-    the same severity.
+    boxing (unless `--force` is given) and `LOW` (keep all findings)
+    otherwise; an explicitly given floor always wins over the `grey`
+    boxing, i.e. e.g. with `LOW`, it acts on all findings of a project
+    with `grey` boxing. `ACCEPTED` findings are never suppressed.
+    Surviving findings are reported in *descending severity* order
+    `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`, keeping the `file`/`line` order
+    within the same severity.
+
+-   `--force`|`-f`:
+    Ignore the project boxing entirely: lint a project with `black`
+    boxing (which is otherwise not linted at all), and show the full
+    unified diffs and the default `LOW` severity floor for a project
+    with `grey` boxing (which otherwise shows only condensed one-line
+    diffs and defaults to the `MEDIUM` severity floor).
 
 -   `--include`|`-i`=*aspect*[`,`...]:
     Restrict the checked specification quality aspects to the given
@@ -157,6 +164,12 @@ Lint the specification, reporting only `MEDIUM` and `HIGH` findings:
 
 ```text
 ❯ /ase-spec-lint -S MEDIUM
+```
+
+Lint the specification regardless of the project boxing:
+
+```text
+❯ /ase-spec-lint --force
 ```
 
 Lint only the specification files with staged Git changes:

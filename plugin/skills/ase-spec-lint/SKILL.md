@@ -1,6 +1,6 @@
 ---
 name: ase-spec-lint
-argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] [--staged] [--unstaged] [<spec-reference>]"
+argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--force|-f] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] [--staged] [--unstaged] [<spec-reference>]"
 description: >
     Lint the SpecBook-based specification (SPEC) for potential quality
     problems: its syntax, its formatting, its statements, the logical
@@ -26,7 +26,7 @@ Lint Specification
 
 <expand name="getopt"
     arg1="ase-spec-lint"
-    arg2="--auto|-a --severity|-S=(AUTO|LOW|MEDIUM|HIGH) --include|-i=(none|S01|S02|S03|S04|S05|S06|S07|S08|S09|S10)... --exclude|-e=(none|S01|S02|S03|S04|S05|S06|S07|S08|S09|S10)... --staged --unstaged">
+    arg2="--auto|-a --severity|-S=(AUTO|LOW|MEDIUM|HIGH) --force|-f --include|-i=(none|S01|S02|S03|S04|S05|S06|S07|S08|S09|S10)... --exclude|-e=(none|S01|S02|S03|S04|S05|S06|S07|S08|S09|S10)... --staged --unstaged">
     $ARGUMENTS
 </expand>
 
@@ -39,11 +39,11 @@ problems* related to a set of specification quality aspects.
 
 1.  <step id="STEP 1: Investigation">
 
-    <if condition="<ase-project-boxing/> is equal `black` and <getopt-option-severity/> is equal `AUTO`">
+    <if condition="<ase-project-boxing/> is equal `black` and <getopt-option-force/> is not equal `true`">
 
     The project source artifacts are classified as a *black box*, so
     the user does *not* want them inspected or their problems surfaced
-    (an *explicitly* given severity floor lifts this skip).
+    (the `--force` option lifts this skip).
     *Skip* the entire investigation and reporting: do *not* invoke any
     `Bash`, `Glob`, or `Agent` tool and do *not* read any source, only
     output the following <template/> and then *SKIP* the remaining steps
@@ -56,9 +56,9 @@ problems* related to a set of specification quality aspects.
     </if>
 
     Set <condensed>true</condensed> if <ase-project-boxing/> is equal
-    `grey` or `black` (the latter reached only under an explicitly given
-    severity floor), and <condensed>false</condensed> otherwise: a
-    *condensed* report suppresses the full unified diffs of STEP 3.
+    `grey` and <getopt-option-force/> is not equal `true`, and
+    <condensed>false</condensed> otherwise: a *condensed* report
+    suppresses the full unified diffs of STEP 3.
 
     First, determine the *effective aspect set* <aspects/>, i.e., the
     specification quality aspects which are checked at all. For this,
@@ -250,13 +250,13 @@ problems* related to a set of specification quality aspects.
 
     <if condition="<getopt-option-severity/> is equal `AUTO`">
     Set <floor>MEDIUM</floor> if <ase-project-boxing/> is equal `grey`
-    (grey boxing surfaces only *material* findings of severity `MEDIUM`
-    and above), and <floor>LOW</floor> otherwise.
+    and <getopt-option-force/> is not equal `true` (grey boxing surfaces
+    only *material* findings of severity `MEDIUM` and above), and
+    <floor>LOW</floor> otherwise.
     </if>
     <else>
     Set <floor><getopt-option-severity/></floor>: an *explicitly* given
-    severity floor always *wins* over the boxing, both over the `grey`
-    floor and over the `black` skip.
+    severity floor always *wins* over the `grey` boxing floor.
     </else>
 
     Then *apply the effective severity floor* <floor/>: *Keep* a problem
@@ -535,9 +535,9 @@ problems* related to a set of specification quality aspects.
 
             <if condition="<condensed/> is equal `true`">
 
-            The project source artifacts are classified as a *grey box* (or
-            *black box*), so the user does *not* want the full artifact
-            internals surfaced:
+            The project source artifacts are classified as a *grey box*,
+            so the user does *not* want the full artifact internals
+            surfaced:
             *suppress* the full unified diff and instead show only the
             *condensed* one-line-per-hunk representation. Report the
             solution with the following <template/>:
@@ -685,7 +685,7 @@ problems* related to a set of specification quality aspects.
 
         <if condition="<getopt-option-auto/> is not equal `true`">
         <ase-tpl-hint level="verbose">
-        Use `/ase-spec-lint --auto` to apply all non-gap corrections unattended, `--severity` to raise the reporting floor, `--include`/`--exclude` to narrow the checked aspects, and `--staged`/`--unstaged` to lint only the changed specification files.
+        Use `/ase-spec-lint --auto` to apply all non-gap corrections unattended, `--severity` to raise the reporting floor, `--force` to ignore the project boxing, `--include`/`--exclude` to narrow the checked aspects, and `--staged`/`--unstaged` to lint only the changed specification files.
         </ase-tpl-hint>
         </if>
 

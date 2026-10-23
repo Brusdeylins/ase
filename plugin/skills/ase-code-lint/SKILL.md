@@ -1,6 +1,6 @@
 ---
 name: ase-code-lint
-argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] [--staged] [--unstaged] [<source-reference>]"
+argument-hint: "[--help|-h] [--auto|-a] [--severity|-S=(AUTO|LOW|MEDIUM|HIGH)] [--force|-f] [--include|-i=<aspect>[,...]] [--exclude|-e=<aspect>[,...]] [--staged] [--unstaged] [<source-reference>]"
 description: >
     Lint source code for potential code quality problems.
     Use when the user wants to "lint" or "check" source code.
@@ -23,7 +23,7 @@ Lint Source Code
 
 <expand name="getopt"
     arg1="ase-code-lint"
-    arg2="--auto|-a --severity|-S=(AUTO|LOW|MEDIUM|HIGH) --include|-i=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --exclude|-e=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --staged --unstaged">
+    arg2="--auto|-a --severity|-S=(AUTO|LOW|MEDIUM|HIGH) --force|-f --include|-i=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --exclude|-e=(none|A01|A02|A03|A04|A05|A06|A07|A08|A09|A10|A11|A12|A13|A14|A15|A16|A17|A18|A19|A20|A21)... --staged --unstaged">
     $ARGUMENTS
 </expand>
 
@@ -36,11 +36,11 @@ related to a set of code quality aspects.
 
 1.  <step id="STEP 1: Investigation">
 
-    <if condition="<ase-project-boxing/> is equal `black` and <getopt-option-severity/> is equal `AUTO`">
+    <if condition="<ase-project-boxing/> is equal `black` and <getopt-option-force/> is not equal `true`">
 
     The project source artifacts are classified as a *black box*, so
     the user does *not* want them inspected or their problems surfaced
-    (an *explicitly* given severity floor lifts this skip).
+    (the `--force` option lifts this skip).
     *Skip* the entire investigation and reporting: do *not* invoke any
     `Bash`, `Glob`, or `Agent` tool and do *not* read any source, only
     output the following <template/> and then *SKIP* the remaining steps
@@ -53,9 +53,9 @@ related to a set of code quality aspects.
     </if>
 
     Set <condensed>true</condensed> if <ase-project-boxing/> is equal
-    `grey` or `black` (the latter reached only under an explicitly given
-    severity floor), and <condensed>false</condensed> otherwise: a
-    *condensed* report suppresses the full unified diffs of STEP 3.
+    `grey` and <getopt-option-force/> is not equal `true`, and
+    <condensed>false</condensed> otherwise: a *condensed* report
+    suppresses the full unified diffs of STEP 3.
 
     First, determine the *effective aspect set* <aspects/>, i.e., the
     code quality aspects which are checked at all. For this, parse
@@ -189,13 +189,13 @@ related to a set of code quality aspects.
 
     <if condition="<getopt-option-severity/> is equal `AUTO`">
     Set <floor>MEDIUM</floor> if <ase-project-boxing/> is equal `grey`
-    (grey boxing surfaces only *material* findings of severity `MEDIUM`
-    and above), and <floor>LOW</floor> otherwise.
+    and <getopt-option-force/> is not equal `true` (grey boxing surfaces
+    only *material* findings of severity `MEDIUM` and above), and
+    <floor>LOW</floor> otherwise.
     </if>
     <else>
     Set <floor><getopt-option-severity/></floor>: an *explicitly* given
-    severity floor always *wins* over the boxing, both over the `grey`
-    floor and over the `black` skip.
+    severity floor always *wins* over the `grey` boxing floor.
     </else>
 
     Then *apply the effective severity floor* <floor/>: *Keep* a problem
@@ -448,9 +448,9 @@ related to a set of code quality aspects.
 
             <if condition="<condensed/> is equal `true`">
 
-            The project source artifacts are classified as a *grey box* (or
-            *black box*), so the user does *not* want the full artifact
-            internals surfaced:
+            The project source artifacts are classified as a *grey box*,
+            so the user does *not* want the full artifact internals
+            surfaced:
             *suppress* the full unified diff and instead show only the
             *condensed* one-line-per-hunk representation. Report the
             solution with the following <template/>:
@@ -578,7 +578,7 @@ related to a set of code quality aspects.
 
         <if condition="<getopt-option-auto/> is not equal `true`">
         <ase-tpl-hint level="verbose">
-        Use `/ase-code-lint --auto` to apply all corrections unattended, `--severity` to raise the reporting floor, `--include`/`--exclude` to narrow the checked aspects, and `--staged`/`--unstaged` to lint only the changed files.
+        Use `/ase-code-lint --auto` to apply all corrections unattended, `--severity` to raise the reporting floor, `--force` to ignore the project boxing, `--include`/`--exclude` to narrow the checked aspects, and `--staged`/`--unstaged` to lint only the changed files.
         </ase-tpl-hint>
         </if>
 

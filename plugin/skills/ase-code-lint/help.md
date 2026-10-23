@@ -9,6 +9,7 @@
     [`--help`|`-h`]
     [`--auto`|`-a`]
     [`--severity`|`-S`=(`AUTO`|`LOW`|`MEDIUM`|`HIGH`)]
+    [`--force`|`-f`]
     [`--include`|`-i`=*aspect*[`,`...]]
     [`--exclude`|`-e`=*aspect*[`,`...]]
     [`--staged`]
@@ -64,14 +65,20 @@ the code, and comments contradicting the code.
     Set the *severity floor* (default `AUTO`): findings below the chosen
     threshold are silently suppressed, ordered `LOW` < `MEDIUM` <
     `HIGH`. The default `AUTO` means `MEDIUM` for a project with `grey`
-    boxing, no linting at all for a project with `black` boxing, and
-    `LOW` (keep all findings) otherwise; an explicitly given floor always
-    wins over the boxing, i.e. it also lints a project with `black`
-    boxing and, e.g. with `LOW`, acts on all findings of a project with
-    `grey` boxing. `ACCEPTED` findings are never suppressed. Surviving
-    findings are reported in *descending
-    severity* order `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`, keeping the
-    `file`/`line` order within the same severity.
+    boxing (unless `--force` is given) and `LOW` (keep all findings)
+    otherwise; an explicitly given floor always wins over the `grey`
+    boxing, i.e. e.g. with `LOW`, it acts on all findings of a project
+    with `grey` boxing. `ACCEPTED` findings are never suppressed.
+    Surviving findings are reported in *descending severity* order
+    `HIGH`, `MEDIUM`, `LOW`, `ACCEPTED`, keeping the `file`/`line` order
+    within the same severity.
+
+-   `--force`|`-f`:
+    Ignore the project boxing entirely: lint a project with `black`
+    boxing (which is otherwise not linted at all), and show the full
+    unified diffs and the default `LOW` severity floor for a project
+    with `grey` boxing (which otherwise shows only condensed one-line
+    diffs and defaults to the `MEDIUM` severity floor).
 
 -   `--include`|`-i`=*aspect*[`,`...]:
     Restrict the checked code quality aspects to the given
@@ -130,6 +137,12 @@ Lint a directory, reporting only `MEDIUM` and `HIGH` findings:
 
 ```text
 ❯ /ase-code-lint -S MEDIUM src/handlers/
+```
+
+Lint a directory regardless of the project boxing:
+
+```text
+❯ /ase-code-lint --force src/handlers/
 ```
 
 Lint a source file for the formatting and spelling aspects only:

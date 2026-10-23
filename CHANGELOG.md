@@ -9,6 +9,19 @@ ChangeLog
     `ase-help-intent` now judges the fit of a skill to the intent primarily by its `SCENARIOS`
     and `DESCRIPTION` sections, and additionally secondarily by its `NAME` and `SYNOPSIS` sections.
 
+-   IMPROVEMENT [code]: Boxing Override via `--force` in `ase-code-lint` and `ase-spec-lint`
+    `ase-code-lint` and `ase-spec-lint` now accept `--force`/`-f` to ignore the project boxing
+    entirely: they lint a project with `black` boxing, and show the full unified diffs and default
+    to the `LOW` severity floor for a project with `grey` boxing. An explicit `--severity` now only
+    overrides the `grey` floor and no longer lifts the `black` skip.
+
+-   REFACTOR [code,infr]: Split of the Claude Code Function Hooks Module
+    The single module `plugin/mods/ase-mods.ts` is now split into the hooking infrastructure
+    `ase-mods.ts` (the only module loaded by the engine, dispatching the hooks), the shared parts
+    `ase-mods-common.ts`, the grill table `ase-mods-grill.ts`, the intent help
+    `ase-mods-help-intent.ts`, and the synopsis form `ase-mods-help-skill.ts`. `AGENTS.md`
+    reflects the new module layout.
+
 2.0.4 (2026-10-21)
 ------------------
 
