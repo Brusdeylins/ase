@@ -14,9 +14,9 @@
     fixed values), RETURN at the end takes over the composed command into
     the prompt, and BACKSPACE cancels.  */
 
-import type { Elements, Frozen, MatchedEvent, PromptBox, PromptEditInput, RenderElement } from "claude-code"
-import { type Engine, type Text, PICKED, CODE, BAND, FRAME, BORDER,
-    held, section, wrap, uniform, flow, frame, scrollbar, position, paging, paint, edge, bar } from "./ase-mods-common.ts"
+import type { Elements, Frozen, PromptBox, PromptEditInput, RenderElement } from "claude-code"
+import { type Engine, type Text, type Key, type BandRender, type BandScroll, type View, PICKED, CODE,
+    held, decode, section, wrap, uniform, flow, frame, paint, layout, wheel, panel } from "./ase-mods-common.ts"
 
 /*  the trigger of a synopsis form inside the prompt (a skill command suffixed
     with "??", and with its typed options and arguments, if any, separated by
@@ -46,13 +46,12 @@ type Field = {
     value:    string
 }
 
-/*  a synopsis form: the skill command, the prompt to restore on cancel (the
-    command as typed), its fields, the focused field (the apply position after
-    the last field), the state of an edited field, the first shown line of the
-    master view, the first shown line, the lines of a page, and the focus and
-    editing state shown (resetting the scrolling on change) of the detail view,
-    and the first band column right of the master view  */
-type Form = {
+/*  a synopsis form: the scroll state of its band, the skill command, the prompt
+    to restore on cancel (the command as typed), its fields, the focused field
+    (the apply position after the last field), the state of an edited field,
+    and the focus and editing state shown (resetting the scrolling on change)
+    of the detail view  */
+type Form = View & {
     command: string,
     typed:   string,
     fields:  Field[],
@@ -62,16 +61,8 @@ type Form = {
     caret:   number,
     choice:  number,
     picked:  Set<string>,
-    top:     number,
-    scroll:  number,
-    page:    number,
-    anchor:  string,
-    split:   number
+    anchor:  string
 }
-
-/*  a key pressed in a synopsis form: its name, its typed text, its cursor
-    step (-1 left, +1 right), and its deletion (-1 backward, +1 forward)  */
-type Key = { name: string, text: string, step: number, erase: number }
 
 /*  extract the descriptions of the (usually bulleted) items of a manual page
     section, keyed by every match of a global pattern in the head line of each item  */
@@ -412,23 +403,15 @@ export const modHelpSkill = () => {
     const hold = (current: Form): PromptBox => held(compose(current))
 
     /*  while the synopsis form is shown, every edit is a key of the form, where
-        cursor moves and deletions are told by their splice, and outside a field
-        "b"/"f" scroll the detail view of the form by a page  */
+        outside a field "b"/"f" scroll the detail view of the form by a page  */
     const edit = (e: Frozen<PromptEditInput>): PromptBox => {
         const current = form!
-        if (!current.edit && (e.inputText === "b" || e.inputText === "f")) {
-            current.scroll = Math.max(0, current.scroll + (e.inputText === "b" ? -1 : 1) * current.page)
+        const key     = decode(e)
+        if (!current.edit && (key.text === "b" || key.text === "f")) {
+            current.scroll = Math.max(0, current.scroll + (key.text === "b" ? -1 : 1) * current.page)
             return hold(current)
         }
-        const name    = e.inputText === "\n" ? "return" : e.key?.key ?? ""
-        const erased  = e.inputText === "" && e.end > e.start
-        const result  = operate(current, {
-            name,
-            text:  e.inputText === "\n" ? "" : e.inputText,
-            step:  name === "left" ? -1 : name === "right" ? 1 :
-                e.inputText === "" && !erased ? Math.sign(e.start - e.cursor) : 0,
-            erase: erased ? (e.start < e.cursor ? -1 : 1) : 0
-        })
+        const result = operate(current, key)
         if (result !== undefined) {
             form = undefined
             const text = result === "apply" ? `${compose(current)} ` : current.typed
@@ -455,7 +438,7 @@ export const modHelpSkill = () => {
         const args   = command[3] ?? ""
         const filled = fields.map((field) => ({ ...field }))
         prefill(filled, args)
-        form ={ command: command[1]!, typed: `${command[1]!} ${args !== "" ? `${args} ` : ""}`, fields: filled,
+        form = { command: command[1]!, typed: `${command[1]!} ${args !== "" ? `${args} ` : ""}`, fields: filled,
             pos: 0, edit: false, buffer: "", caret: 0, choice: 0, picked: new Set(),
             top: 0, scroll: 0, page: 1, anchor: "", split: 0 }
         return hold(form)
@@ -465,13 +448,12 @@ export const modHelpSkill = () => {
         focused field, over the detail view scroll it, resp. scroll it by a page
         with the scroll keys (PAGEUP/PAGEDOWN) while the band is focused
         (and tell whether the form took the scrolling)  */
-    const scroll = (e: Frozen<MatchedEvent<"ui.scroll", { component: "AbovePrompt" }>>): boolean => {
+    const scroll = (e: BandScroll): boolean => {
         if (form === undefined)
             return false
-        if (e.pointer !== undefined && e.pointer.column < form.split && !form.edit)
-            operate(form, { name: "", text: "", step: Math.sign(e.by), erase: 0 })
-        else
-            form.scroll = Math.max(0, form.scroll + paging(e, form.page))
+        const current = form
+        wheel(e, current, current.edit ? undefined : (by) =>
+            operate(current, { name: "", text: "", step: by, erase: 0 }))
         return true
     }
 
@@ -489,8 +471,7 @@ export const modHelpSkill = () => {
     }
 
     /*  draw the synopsis form into the band above the prompt (terminal only)  */
-    const render = (e: Frozen<MatchedEvent<"ui.render", { component: "AbovePrompt", surface: "terminal" }>>,
-        ui: Elements["terminal"]): RenderElement | undefined => {
+    const render = (e: BandRender, ui: Elements["terminal"]): RenderElement | undefined => {
         /*  yield to a survey and draw nothing without a synopsis form  */
         if (form === undefined || e.props.hasSurvey)
             return undefined
@@ -498,15 +479,10 @@ export const modHelpSkill = () => {
         const focused = current.fields[current.pos]
         const editing = focused !== undefined && current.edit
 
-        /*  resolve the UI elements and determine the inner columns of the self-drawn
-            frame (both borders and the left padding subtracted) and the rows of both
-            views, out of a share of the terminal height (but never more than the rows
-            of the band), with the frame and the footer subtracted  */
-        const { Box, Text } = ui
-        const span   = Math.max(20, e.props.bodyColumns - FRAME.cols)
-        const height = Math.min(e.props.maxRows,
-            Math.max(FRAME.rows + 2, Math.floor((e.viewport?.rows ?? e.props.maxRows) * BAND)))
-        const body   = Math.max(1, height - FRAME.rows - 1)
+        /*  determine the geometry of the band (with master and detail view of equal widths)  */
+        const { Text } = ui
+        const geometry = layout(e, 0.5)
+        const { body, detail } = geometry
 
         /*  determine the lines of the master view (the command in bold blue after
             the prompt marker, as in the prompt, and indented below it each field on
@@ -533,62 +509,32 @@ export const modHelpSkill = () => {
                 Text({ wrap: "truncate-end", children: [ " ".repeat(indent), ...paint(Text, line) ] })))
         }
 
-        /*  determine the equal widths of the master view and the detail view (with a
-            separator column between them, and a gap of two columns and a scrollbar
-            column right of the detail view), and the lines of the detail view: the
-            description of the focused field (resp. the hint of the apply position,
-            dimmed as the key hints)  */
-        const master = Math.floor((span - 3 - 3) / 2)
-        const detail = span - master - 3 - 3
-        const lines  = focused === undefined ?
+        /*  determine the lines of the detail view: the description of the focused
+            field (resp. the hint of the apply position, dimmed as the key hints)  */
+        const lines = focused === undefined ?
             wrap(uniform("Take over the composed command into the prompt.", false, undefined), detail, 0) :
             flow(focused.help !== "" ? focused.help : `*${focused.label}*`, detail)
 
         /*  reset the scroll position of the detail view once the focused field or its
-            editing changes, clamp the scroll positions of both views (keeping the
-            focused field and, if possible, its drop-down box in the master view),
-            remember the page size for the scroll keys and the end of the master view
-            (after the left frame) for the wheel, and determine the scrollbar of the
-            detail view  */
+            editing changes, and keep the focused field and, if possible, its drop-down
+            box in the master view  */
         const anchor = `${current.pos}/${current.edit}`
         if (current.anchor !== anchor) {
             current.anchor = anchor
             current.scroll = 0
         }
-        current.page   = Math.max(1, body - 1)
-        current.split  = FRAME.lead + master
-        current.scroll = Math.max(0, Math.min(current.scroll, lines.length - body))
-        current.top    = Math.max(0, Math.min(row,
+        current.top = Math.max(0, Math.min(row,
             Math.max(Math.min(current.top, row), row + popup - body + 1)))
-        const marks    = scrollbar(body, lines.length, current.scroll)
 
-        /*  determine a horizontal edge of the self-drawn frame,
-            with the joint of the separator between both views  */
-        const border = (left: string, joint: string, right: string) =>
-            left + "─".repeat(master + 2) + joint + "─".repeat(detail + 4) + right
-
-        /*  draw inside the frame the rows of both views (the master view with the
-            synopsis, the separator joining the frame, and the detail view with its
-            scrollbar), into the bottom edge the scroll position of the detail view,
-            and below the frame the key hints  */
-        const rows: RenderElement[] = [ edge(Text, border("╭", "┬", "╮"), TITLE) ]
-        for (let i = 0; i < body; i++)
-            rows.push(Box({ flexDirection: "row", children: [
-                Text({ ...BORDER, children: "│ " }),
-                Box({ width: master, flexShrink: 0, children:
-                    entries[current.top + i] ?? Text({ children: " " }) }),
-                Text({ ...BORDER, children: " │ " }),
-                Box({ width: detail, flexShrink: 0, children:
-                    Text({ wrap: "truncate-end", dimColor: focused === undefined,
-                        children: paint(Text, lines[current.scroll + i] ?? []) }) }),
-                Text({ children: "  " }),
-                bar(Text, marks[i]),
-                Text({ ...BORDER, children: "│" })
-            ] }))
-        rows.push(edge(Text, border("╰", "┴", "╯"), position(body, lines.length, current.scroll), true))
-        rows.push(Box({ paddingLeft: 1, children: Text({ dimColor: true, wrap: "truncate-end",
-            children: hints(current, lines.length > body) }) }))
-        return Box({ flexDirection: "column", width: "100%", children: rows })
+        /*  draw both views (the master view with the synopsis, and the detail
+            view), and the key hints  */
+        return panel(ui, geometry, current, {
+            title: TITLE,
+            hints: hints(current, lines.length > body),
+            rows:  (i) => entries[current.top + i],
+            lines,
+            dim:   focused === undefined
+        })
     }
 
     return { active, reset, cancel, edit, open, scroll, submit, render }

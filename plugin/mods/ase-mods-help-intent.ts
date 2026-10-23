@@ -14,9 +14,9 @@
     details, RETURN picks its command into the prompt, and BACKSPACE or any
     other key restores the prompt as typed.  */
 
-import type { Elements, Frozen, MatchedEvent, PromptBox, PromptEditInput, RenderElement } from "claude-code"
-import { type Engine, type Char, PICKED, CODE, BAND, MASTER, FRAME, BORDER,
-    held, section, wrap, uniform, flow, frame, scrollbar, position, paging, paint, edge, bar } from "./ase-mods-common.ts"
+import type { Elements, Frozen, PromptBox, PromptEditInput, RenderElement } from "claude-code"
+import { type Engine, type Char, type BandRender, type BandScroll, type View, PICKED, CODE,
+    held, decode, section, wrap, uniform, flow, frame, layout, wheel, panel } from "./ase-mods-common.ts"
 
 /*  the trigger of an intent inside the prompt (suffixed with a blank and "??",
     so the doubled question mark of a sentence is no trigger), the skill of
@@ -30,9 +30,11 @@ const CORPUS    = "skills/ase-help-intent/data.md"
 const FALLBACK  = "sonnet"
 
 /*  the color of the box around (and of the rationale inside) the command and
-    rationale of a proposal, and the title placed into the top edge of the frame  */
-const BOXED = "blue"
-const TITLE = "[ ⧉ ASE: Find Skill Command ]"
+    rationale of a proposal, the title placed into the top edge of the frame,
+    and the share of the band columns taken by the master view  */
+const BOXED  = "blue"
+const TITLE  = "[ ⧉ ASE: Find Skill Command ]"
+const MASTER = 0.3
 
 /*  the frames of the spinner animating the status message while matching,
     and the milliseconds between two frames  */
@@ -45,23 +47,17 @@ type Help = { catalog: string, manual: string }
 /*  a command proposal for an intent  */
 type Proposal = { skill: string, command: string, rationale: string }
 
-/*  an intent under matching: the original prompt (without and with the
-    trigger), the matching state, the status message, the spinner frame, the command proposals,
-    the selected proposal, the first shown proposal of the master view, the
-    first shown line of the detail view, the lines of a page of the detail
-    view, and the first band column right of the master view  */
-type Intent = {
+/*  an intent under matching: the scroll state of its band, the original prompt
+    (without and with the trigger), the matching state, the status message,
+    the spinner frame, the command proposals, and the selected proposal  */
+type Intent = View & {
     draft:     string,
     typed:     string,
     state:     "busy" | "done" | "fail",
     message:   string,
     spin:      number,
     proposals: Proposal[],
-    select:    number,
-    top:       number,
-    scroll:    number,
-    page:      number,
-    split:     number
+    select:    number
 }
 
 /*  parse the help corpus into the help of each skill, where
@@ -208,15 +204,14 @@ export const modHelpIntent = () => {
     const edit = (e: Frozen<PromptEditInput>): PromptBox | string => {
         const current = intent!
         const { draft, typed, state, proposals } = current
-        if (e.inputText === "\n") {
+        const key = decode(e)
+        if (key.name === "return") {
             const text = submit()
             return intent !== undefined ? held(draft) : { text, cursor: text.length }
         }
-        const name = e.key?.key ?? ""
-        const roll = name === "up" ? -1 : name === "down" ? 1 :
-            e.inputText === "b" ? -current.page : e.inputText === "f" || e.inputText === " " ? current.page : 0
-        const step = roll !== 0 ? 0 : name === "left" ? -1 : name === "right" ? 1 :
-            e.inputText === "" && e.end === e.start ? Math.sign(e.start - e.cursor) : 0
+        const roll = key.name === "up" ? -1 : key.name === "down" ? 1 :
+            key.text === "b" ? -current.page : key.text === "f" || key.text === " " ? current.page : 0
+        const step = roll !== 0 ? 0 : key.step
         if (state === "done" && (roll !== 0 || step !== 0)) {
             if (step !== 0) {
                 current.select = Math.max(0, Math.min(proposals.length - 1, current.select + step))
@@ -227,9 +222,9 @@ export const modHelpIntent = () => {
             return held(draft)
         }
         reset()
-        if (e.inputText === "" && e.end > e.start)
+        if (key.erase !== 0)
             return { text: typed.slice(0, -1), cursor: typed.length - 1 }
-        if (e.inputText === "")
+        if (key.text === "")
             return { text: typed, cursor: typed.length }
         return typed
     }
@@ -329,18 +324,17 @@ export const modHelpIntent = () => {
         selection, over the detail view scroll it, resp. scroll it by a page
         with the scroll keys (PAGEUP/PAGEDOWN) while the band is focused
         (and tell whether the band took the scrolling)  */
-    const scroll = (e: Frozen<MatchedEvent<"ui.scroll", { component: "AbovePrompt" }>>): boolean => {
+    const scroll = (e: BandScroll): boolean => {
         if (intent === undefined || intent.state !== "done")
             return false
-        if (e.pointer !== undefined && e.pointer.column < intent.split) {
-            const select = Math.max(0, Math.min(intent.proposals.length - 1, intent.select + Math.sign(e.by)))
-            if (select !== intent.select) {
-                intent.select = select
-                intent.scroll = 0
+        const current = intent
+        wheel(e, current, (by) => {
+            const select = Math.max(0, Math.min(current.proposals.length - 1, current.select + by))
+            if (select !== current.select) {
+                current.select = select
+                current.scroll = 0
             }
-        }
-        else
-            intent.scroll = Math.max(0, intent.scroll + paging(e, intent.page))
+        })
         return true
     }
 
@@ -360,50 +354,28 @@ export const modHelpIntent = () => {
 
     /*  draw the intent into the band above the prompt (terminal only): a master view
         of the proposed skills and a detail view of the selected one side by side  */
-    const render = (e: Frozen<MatchedEvent<"ui.render", { component: "AbovePrompt", surface: "terminal" }>>,
-        ui: Elements["terminal"]): RenderElement | undefined => {
+    const render = (e: BandRender, ui: Elements["terminal"]): RenderElement | undefined => {
         /*  yield to a survey and draw nothing without an intent  */
         if (intent === undefined || e.props.hasSurvey)
             return undefined
         const current = intent
         const { proposals } = current
 
-        /*  resolve the UI elements and determine the inner columns and the rows
-            of both views, out of a share of the terminal height (but never more
-            than the rows of the band), with the self-drawn frame (both borders and
-            the left padding only, so the scrollbar touches the frame) and the
-            footer subtracted  */
-        const { Box, Text } = ui
-        const span   = Math.max(20, e.props.bodyColumns - FRAME.cols)
-        const height = Math.min(e.props.maxRows,
-            Math.max(FRAME.rows + 2, Math.floor((e.viewport?.rows ?? e.props.maxRows) * BAND)))
-        const body   = Math.max(1, height - FRAME.rows - 1)
-        const clip   = (text: string, n: number) =>
-            text.length > n ? `${text.slice(0, n - 1)}…` : text
-
-        /*  determine the widths of the master view and the detail view in a fixed
-            ratio (with a separator column between them, and a gap of two columns
-            and a scrollbar column right of the detail view)  */
-        const master = Math.floor((span - 3 - 3) * MASTER)
-        const detail = span - master - 3 - 3
-
-        /*  determine the lines of the detail view: the command and rationale of the
+        /*  determine the geometry of the band (with the master view in a fixed ratio)
+            and the lines of the detail view: the command and rationale of the
             selected proposal (inside a box), and the name, title, and description
             of its skill  */
+        const { Text } = ui
+        const geometry = layout(e, MASTER)
+        const { span, body, master, detail } = geometry
+        const clip     = (text: string, n: number) =>
+            text.length > n ? `${text.slice(0, n - 1)}…` : text
         const proposal = current.state === "done" ? proposals[current.select] : undefined
         const lines    = proposal !== undefined ?
-            details(proposal, corpus?.get(proposal.skill)?.manual ?? "", detail) : []
+            details(proposal, corpus?.get(proposal.skill)?.manual ?? "", detail) : undefined
 
-        /*  clamp the scroll positions of both views (keeping the selected proposal
-            in the master view), and remember the page size for the scroll keys
-            and the end of the master view (after the left frame) for the wheel  */
-        current.page   = Math.max(1, body - 1)
-        current.split  = FRAME.lead + master
-        current.scroll = Math.max(0, Math.min(current.scroll, lines.length - body))
-        current.top    = Math.max(0, current.select - body + 1, Math.min(current.top, current.select))
-
-        /*  determine the scrollbar of the detail view  */
-        const marks = scrollbar(body, lines.length, current.scroll)
+        /*  keep the selected proposal in the master view  */
+        current.top = Math.max(0, current.select - body + 1, Math.min(current.top, current.select))
 
         /*  determine the rows of the status message (as long as no proposals exist):
             a box of half the columns, centered vertically and horizontally  */
@@ -418,46 +390,23 @@ export const modHelpIntent = () => {
                 ...boxed.map((line) => pad + line.map((char) => char.ch).join("")))
         }
 
-        /*  determine a horizontal edge of the self-drawn frame, with the joint of
-            the separator between both views (once the proposals exist)  */
-        const border = (left: string, joint: string, right: string) =>
-            left + (proposal === undefined ? "─".repeat(span + 1) :
-                "─".repeat(master + 2) + joint + "─".repeat(detail + 4)) + right
-
-        /*  draw inside the frame the status message resp. the rows of both views
-            (the master view with the selected proposal in red, the separator
-            joining the frame, and the detail view with its scrollbar), into the
-            bottom edge the scroll position of the detail view, and below the frame
-            the key hints (the intent itself stays visible in the prompt)  */
-        const rows: RenderElement[] = [ edge(Text, border("╭", "┬", "╮"), TITLE) ]
-        for (let i = 0; i < body; i++) {
-            const k = current.top + i
-            const p = proposal !== undefined ? proposals[k] : undefined
-            rows.push(Box({ flexDirection: "row", children: [
-                Text({ ...BORDER, children: "│ " }),
-                ...(proposal === undefined ? [
-                    Box({ width: span, flexShrink: 0, children:
-                        Text({ dimColor: true, wrap: "truncate-end", children: hint[i] ?? " " }) })
-                ] : [
-                    Box({ width: master, flexShrink: 0, children: p !== undefined ?
-                        Text({ color: k === current.select ? PICKED : undefined, children: clip(p.skill, master) }) :
-                        Text({ children: " " }) }),
-                    Text({ ...BORDER, children: " │ " }),
-                    Box({ width: detail, flexShrink: 0, children:
-                        Text({ wrap: "truncate-end", children: paint(Text, lines[current.scroll + i] ?? []) }) }),
-                    Text({ children: "  " }),
-                    bar(Text, marks[i])
-                ]),
-                Text({ ...BORDER, children: "│" })
-            ] }))
-        }
-        rows.push(edge(Text, border("╰", "┴", "╯"), position(body, lines.length, current.scroll), true))
-        return Box({ flexDirection: "column", width: "100%", children: [
-            ...rows,
-            Box({ paddingLeft: 1, children: Text({ dimColor: true, wrap: "truncate-end", children:
-                current.state === "done" ? "⌫: cancel · ⏎: pick · ←/→: select · b/f/SPACE: scroll" :
-                    "⌫/any key: cancel" }) })
-        ] })
+        /*  draw the status message resp. both views (the master view with the
+            selected proposal in red, and the detail view), and the key hints
+            (the intent itself stays visible in the prompt)  */
+        return panel(ui, geometry, current, {
+            title: TITLE,
+            hints: current.state === "done" ? "⌫: cancel · ⏎: pick · ←/→: select · b/f/SPACE: scroll" :
+                "⌫/any key: cancel",
+            rows:  (i) => {
+                if (proposal === undefined)
+                    return Text({ dimColor: true, wrap: "truncate-end", children: hint[i] ?? " " })
+                const k = current.top + i
+                const p = proposals[k]
+                return p !== undefined ?
+                    Text({ color: k === current.select ? PICKED : undefined, children: clip(p.skill, master) }) : undefined
+            },
+            lines
+        })
     }
 
     return { active, reset, cancel, edit, open, scroll, submit, render }
