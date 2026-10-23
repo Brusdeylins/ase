@@ -35,7 +35,7 @@ export const register: Register = (on, options) => {
     /*  handle the still unsubmitted prompt of the user: while the intent band
         or the synopsis form is shown, every edit is a key of it, else act on the
         typed trigger suffix at the end of the prompt only (showing the synopsis
-        form for a bare skill command with a manual page, else arming the matching
+        form for a skill command with a manual page, else arming the matching
         of the prompt as an intent), and track the picks of the grill table
         inside the edited prompt while neither is shown  */
     on("prompt.edit", async ($, e, next) => {
@@ -67,8 +67,8 @@ export const register: Register = (on, options) => {
         return box
     }).catch(($, e, next) => {
         /*  close a failed intent band resp. synopsis form and restore the prompt
-            as typed resp. the bare command (instead of the held prompt), else
-            let the edit pass  */
+            resp. the command as typed (instead of the held prompt), else let the
+            edit pass  */
         const text = [ intent.cancel(), skill.cancel() ].find((text) => text !== undefined)
         $.ui.invalidate("ui.render")
         return text !== undefined ? { text, cursor: text.length } : next(e)
@@ -160,9 +160,9 @@ export const register: Register = (on, options) => {
         const ui    = $.ui.resolve(e)
         return intent.render(e, ui) ?? skill.render(e, ui) ?? drawn
     }).catch(($, e, next) => {
-        /*  close a failed intent band resp. synopsis form, restore the prompt as
-            typed resp. the bare command (instead of the held prompt), and keep
-            the drawing beneath  */
+        /*  close a failed intent band resp. synopsis form, restore the prompt
+            resp. the command as typed (instead of the held prompt), and keep the
+            drawing beneath  */
         const text = [ intent.cancel(), skill.cancel() ].find((text) => text !== undefined)
         if (text !== undefined)
             $.prompt.fill({ text }).catch(() => {

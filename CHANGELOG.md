@@ -14,8 +14,11 @@ ChangeLog
     command into the prompt, and BACKSPACE (or any other key) restores the prompt as typed.
 
 -   FEATURE [code]: Synopsis Form in the Prompt via `??` Suffix
-    The Claude Code function hooks module now shows, for a bare skill command suffixed with `??`,
-    the SYNOPSIS of its manual page as a form in the band above the prompt, where LEFT/RIGHT steps
+    The Claude Code function hooks module now shows, for a skill command suffixed with `??`,
+    the SYNOPSIS of its manual page as a form in the band above the prompt, prefilled with the
+    options and arguments already typed (so a typed command can be edited, too, with long options
+    also recognized by an unambiguous prefix and unrecognized words kept verbatim in the last
+    argument field), where LEFT/RIGHT steps
     through its options and arguments (with their descriptions), SPACE toggles them, RETURN edits
     their values (with a drop-down box for fixed values), RETURN at the end takes over the composed
     command into the prompt, and BACKSPACE cancels.

@@ -53,9 +53,10 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         for the intent help (a prompt suffixed with a blank and `??`
         matched against the help of all skills, with the proposed
         commands in the band above the prompt), and
-        `ase-mods-help-skill.ts` for the synopsis form (a bare skill
-        command suffixed with `??` composed through a form of its
-        SYNOPSIS in the band above the prompt)
+        `ase-mods-help-skill.ts` for the synopsis form (a skill command,
+        bare or with its typed options and arguments, suffixed with `??`
+        composed resp. edited through a form of its SYNOPSIS in the band
+        above the prompt)
     -   `plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
         `plugin/.github/plugin/`: the per-agent-tool plugin manifests
 -   `tool/`: the `@rse/ase` CLI
