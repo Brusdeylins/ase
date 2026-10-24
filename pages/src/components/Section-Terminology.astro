@@ -1,0 +1,55 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  "Terminology" section: the layered definitions of the
+    `src/data/terminology.md`, as one numbered plate per definition, where the
+    terms referenced by a definition link to the plates of their own
+    definitions. The first half of the definitions forms the left column, the
+    second half the right one (stacked below it on narrow screens).  */
+
+import GlowSide            from "./Widget-Glow-Side.astro"
+import Annotation          from "./Widget-Annotation.astro"
+import { termDefinitions } from "../data/terminology.ts"
+
+const half    = Math.ceil(termDefinitions.length / 2)
+const columns = [ termDefinitions.slice(0, half), termDefinitions.slice(half) ]
+---
+<section id="terminology" class="mt-4 sm:mt-12 relative isolate mx-auto max-w-4xl px-6 py-8">
+    <GlowSide variant="section" side="right" />
+    <header class="ase-section-head" data-reveal>
+        <h2 class="ase-h2 relative inline-block">
+            <Annotation flat class="hidden sm:block right-0 translate-x-2/3">
+                More precision,<br/>
+                less confusion!
+            </Annotation>
+            Learn the Underlying <span class="text-accent">Terminology</span>
+        </h2>
+        <p class="ase-lead ase-justify">
+            <b>ASE</b> is based on a small set of precisely defined terms.
+            They are layered: each definition builds only on the terms
+            defined before it, from <b>Software</b> and <b>Engineering</b>{" "}
+            up to <b>Agentic Software Engineering</b> itself.
+        </p>
+    </header>
+
+    <div class="mt-12 grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-x-8">
+        {columns.map((definitions) => (
+            <div class="flex flex-col gap-3">
+                {definitions.map((definition) => (
+                    <div id={definition.id} class="scroll-mt-20 rounded-xl border border-border-strong bg-accent/10 px-4 py-3 transition hover:border-accent target:border-accent" data-reveal>
+                        <div class="flex items-center gap-2">
+                            <span class="rounded-full border border-accent/60 px-2 text-sm text-accent">{definition.no}</span>
+                            <span class="text-lg font-bold text-accent">{definition.term}</span>
+                        </div>
+                        <div class="mt-1 text-foreground-secondary ase-justify" set:html={definition.html}/>
+                    </div>
+                ))}
+            </div>
+        ))}
+    </div>
+</section>
+

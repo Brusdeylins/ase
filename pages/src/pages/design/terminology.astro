@@ -1,0 +1,22 @@
+---
+/*
+**  Agentic Software Engineering (ASE)
+**  Copyright (c) 2025-2026 Dr. Ralf S. Engelschall <rse@engelschall.com>
+**  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
+*/
+
+/*  the "Terminology" page below the "Design" page: the layered definitions
+    of the terms ASE is based on.  */
+
+import BaseLayout         from "../../layouts/BaseLayout.astro"
+import SectionTerminology from "../../components/Section-Terminology.astro"
+import GlowTop            from "../../components/Widget-Glow-Top.astro"
+import { navItem }        from "../../data/nav.ts"
+
+const page = navItem("/design/terminology/")
+---
+<BaseLayout title={page.title} description={page.description} pad>
+    <GlowTop/>
+    <SectionTerminology/>
+</BaseLayout>
+

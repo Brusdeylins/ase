@@ -42,7 +42,7 @@ Notices
 -------
 
 > [!NOTE]
-> **TERMINOLOGY**: The discipline of [*Agentic Software Engineering*](docs/agentic-software-engineering.md)
+> **TERMINOLOGY**: The discipline of [*Agentic Software Engineering*](https://ase.tools/design/terminology/)
 > in *general* is *Software Engineering*, supported by autonomous *AI
 > Agents* to perform tasks across the software development lifecycle.
 > This **ASE** product in *particular* is also *agentic*, but not

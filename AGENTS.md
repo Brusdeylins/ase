@@ -175,8 +175,9 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         `plugin/` and `.claude-plugin/` -- never edit them, they are regenerated
 -   `pages/`: the GitHub Pages site (https://ase.tools), an *Astro* project
     -   `pages/src/pages/`: the pages of the site (`index.astro`, `author`,
-        `design`, `highlights`, `news`, `project`, `setup`, `usage`,
-        `workflows`, `typing-demo`, and `usecases/[usecase]`), all based on
+        `design`, `design/terminology`, `highlights`, `news`, `project`,
+        `setup`, `usage`, `workflows`, `typing-demo`, and
+        `usecases/[usecase]`), all based on
         `pages/src/layouts/BaseLayout.astro`
     -   `pages/src/components/*.astro`: the page sections (`Section-*`),
         modals (`Modal-*`), widgets (`Widget-*`), and client-side features
@@ -185,7 +186,9 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         single source of truth for skill grouping and ordering),
         `manpages.ts` (the CLI command tree, read at build-time from
         `tool/man/*.md`), `news.ts` (the release news, read at build-time
-        from `NEWS.md`), and `comparison.ts`, `fit.ts`, `methods.ts`,
+        from `NEWS.md`), `terminology.ts` (the term definitions, imported at
+        build-time from the sibling `terminology.md`), and
+        `comparison.ts`, `fit.ts`, `methods.ts`,
         `nav.ts`, `previews.ts`, `site.ts`, `testimonials.ts`,
         `usecases.ts`, and `usps.ts`
 

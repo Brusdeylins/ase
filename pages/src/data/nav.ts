@@ -135,7 +135,12 @@ export const navItems: NavEntry[] = [
           { path: "/design/#assumptions",  label: "Assumptions"  },
           { path: "/design/#decisions",    label: "Decisions"    },
           { path: "/design/#methodology",  label: "Methodology"  },
-          { path: "/design/#architecture", label: "Architecture" }
+          { path: "/design/#architecture", label: "Architecture" },
+          { path:        "/design/terminology/",
+            label:       "Terminology",
+            title:       "Terminology",
+            description: "The layered definitions of the terms ASE is based on, from Software and " +
+                         "Engineering up to Agentic AI and Agentic Software Engineering." }
       ] },
     /*  the pull-down of the news is derived from the releases of `NEWS.md`  */
     { label:       "News",
