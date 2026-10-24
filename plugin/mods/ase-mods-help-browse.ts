@@ -212,11 +212,16 @@ export const modHelpBrowse = () => {
     }
 
     /*  determine the matching manual pages of the filter (all of them for an empty
-        filter), with the regular expressions of their matches  */
+        filter), with the regular expressions of their matches, cached per filter
+        (and manual pages)  */
+    let cache: { filter: string, docs: Doc[] | undefined, list: { doc: Doc, re: RegExp | undefined }[] } | undefined
     const matching = (current: Browse): { doc: Doc, re: RegExp | undefined }[] => {
-        const hits = search(docs ?? [], vocab, current.filter)
-        return (docs ?? []).filter((doc) => hits === null || hits.has(doc.skill))
-            .map((doc) => ({ doc, re: hits?.get(doc.skill) }))
+        if (cache?.filter !== current.filter || cache.docs !== docs) {
+            const hits = search(docs ?? [], vocab, current.filter)
+            cache = { filter: current.filter, docs, list: (docs ?? []).filter((doc) => hits === null || hits.has(doc.skill))
+                .map((doc) => ({ doc, re: hits?.get(doc.skill) })) }
+        }
+        return cache.list
     }
 
     /*  hold the prompt as the current filter while the browser is shown  */
@@ -247,8 +252,13 @@ export const modHelpBrowse = () => {
         const pending   = current.pending
         current.pending = (key.text === "/" || (key.text === "!" && current.filter.trim() !== "")) &&
             key.text !== pending ? key.text : ""
-        if (current.pending !== "")
+        if (current.pending !== "") {
+            if (pending !== "") {
+                current.filter += pending
+                current.select = 0
+            }
             return hold(current)
+        }
         if (key.text === "//" || (key.text === "/" && pending === "/")) {
             reset()
             const text = leave(current)

@@ -230,12 +230,13 @@ const prefill = (fields: Field[], line: string): void => {
 }
 
 /*  compose the command of a synopsis form out of its enabled fields
-    (double-quoting option values with whitespace or quotes)  */
+    (double-quoting option values with whitespace or quotes, and omitting
+    valued options without a value yet)  */
 const compose = (form: Form): string => {
     const words = [ form.command ]
     for (const field of form.fields.filter((field) => field.enabled)) {
         const value = field.value !== "" && !field.value.endsWith(field.suffix) ? field.value + field.suffix : field.value
-        if (field.kind === "option")
+        if (field.kind === "option" && (!field.valued || value !== ""))
             words.push(value === "" ? field.name : `${field.name} ` +
                 (/[\s"'\\]/.test(value) ? `"${value.replace(/(["\\])/g, "\\$1")}"` : value))
         else if (value !== "")

@@ -6,9 +6,10 @@
 
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
     Common parts, shared by the grill table, the intent help, the synopsis
-    form, and the manual band: the styled characters of the terminal drawing, their
-    Markdown conversion, wrapping, and framing, and the contract, keys,
-    geometry, and drawing of the master/detail view in the band above the prompt.  */
+    form, the manual band, the manpage browser, and the hint band: the styled
+    characters of the terminal drawing, their Markdown conversion, wrapping,
+    and framing, and the contract, keys, geometry, and drawing of the
+    master/detail view in the band above the prompt.  */
 
 import type { Elements, Frozen, MatchedEvent, ModelCompleteRequest, ModelForkResult,
     PromptBox, PromptEditInput, PromptFilled, RenderElement } from "claude-code"
@@ -55,12 +56,13 @@ const BORDER = { dimColor: true } as const
 export type BandRender = Frozen<MatchedEvent<"ui.render", { component: "AbovePrompt", surface: "terminal" }>>
 export type BandScroll = Frozen<MatchedEvent<"ui.scroll", { component: "AbovePrompt" }>>
 
-/*  a band above the prompt (the intent band or the synopsis form, of which at
-    most one is shown at a time), as dispatched by the hooking infrastructure:
-    whether it is shown, closing it, closing it on a failure (determining the
-    prompt to restore), operating it by a key (determining the prompt to hold,
-    resp. the text onto whose end the edit is still to be applied), by the wheel,
-    and by RETURN at the prompt (determining the prompt to refill), and drawing it  */
+/*  a band above the prompt (the synopsis form, the intent band, or the manpage
+    browser, of which at most one is shown at a time), as dispatched by the
+    hooking infrastructure: whether it is shown, closing it, closing it on a
+    failure (determining the prompt to restore), operating it by a key
+    (determining the prompt to hold, resp. the text onto whose end the edit is
+    still to be applied), by the wheel, and by RETURN at the prompt
+    (determining the prompt to refill), and drawing it  */
 export type Band = {
     active: () => boolean,
     reset:  () => void,

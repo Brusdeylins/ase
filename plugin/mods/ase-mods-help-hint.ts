@@ -60,12 +60,15 @@ const tint = (text: string): Char[] => {
 /*  the hint band: its state and its operations  */
 export const modHelpHint = () => {
     /*  the argument hints of the skills (loaded on first use, undefined
-        for an unknown skill) and the currently shown band  */
+        for an unknown skill), the currently shown band, and the generation
+        of the latest tracking resp. closing (discarding any older tracking)  */
     const hints = new Map<string, string | undefined>()
     let shown: Hint | undefined
+    let generation = 0
 
     /*  close the hint band  */
     const reset = () => {
+        generation++
         shown = undefined
     }
 
@@ -96,11 +99,14 @@ export const modHelpHint = () => {
         (and tell whether the band changed)  */
     const track = async (text: string, engine: Pick<Engine, "read">): Promise<boolean> => {
         const prior   = shown
+        const current = ++generation
         const command = SKILL.exec(text)
         if (command === null)
             shown = undefined
         else if (shown?.command !== command[0]) {
             const hint = await synopsis(command[1]!, engine)
+            if (current !== generation)
+                return false
             shown = hint !== undefined ? { command: command[0], hint, lines: [], columns: 0,
                 top: 0, scroll: 0, page: 1, split: 0 } : undefined
         }
