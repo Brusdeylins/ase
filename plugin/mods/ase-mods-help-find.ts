@@ -51,7 +51,7 @@ type Proposal = { skill: string, command: string, rationale: string }
     (without the trigger and its blank, resp. without the trigger only), the
     matching state, the status message,
     the spinner frame, the command proposals, the selected proposal, and
-    whether the last key was a "!"  */
+    the last key, if a "!" or "/"  */
 type Intent = View & {
     draft:     string,
     typed:     string,
@@ -60,7 +60,7 @@ type Intent = View & {
     spin:      number,
     proposals: Proposal[],
     select:    number,
-    banged:    boolean
+    pending:   string
 }
 
 /*  parse the help corpus into the help of each skill, where
@@ -175,7 +175,7 @@ const details = (proposal: Proposal, manual: string, columns: number): Char[][] 
 }
 
 /*  the intent help: its state and its operations  */
-export const modHelpIntent = () => {
+export const modHelpFind = () => {
     /*  the help of all skills (loaded on first use) and the currently shown intent  */
     let corpus: Map<string, Help> | undefined
     let intent: Intent | undefined
@@ -200,17 +200,24 @@ export const modHelpIntent = () => {
         prompt held): LEFT/RIGHT select a proposal, UP/DOWN scroll its details by
         a line and "b"/"f"/SPACE by a page (as the engine consumes PAGEUP/PAGEDOWN),
         RETURN (arriving as a typed newline in the held prompt) operates the band
-        as at the prompt, and "!!" (two "!" in a row), a deletion (like BACKSPACE),
-        or any other key closes the band and restores the prompt as typed without
-        the trigger (onto whose end the edit of a typed text is still to be applied)  */
+        as at the prompt, "//" (two "/" in a row) closes the band with the prompt
+        as typed suffixed with the trigger of the manpage browser (to switch over
+        to it), and "!!" (two "!" in a row), a deletion (like BACKSPACE), or any
+        other key closes the band and restores the prompt as typed without the
+        trigger (onto whose end the edit of a typed text is still to be applied)  */
     const edit = (e: Frozen<PromptEditInput>): PromptBox | string => {
         const current = intent!
         const { draft, typed, state, proposals } = current
-        const key      = decode(e)
-        const banged   = current.banged
-        current.banged = key.text === "!" && !banged
-        if (current.banged)
+        const key       = decode(e)
+        const pending   = current.pending
+        current.pending = /^[!/]$/.test(key.text) && key.text !== pending ? key.text : ""
+        if (current.pending !== "")
             return held(draft)
+        if (key.text === "//" || (key.text === "/" && pending === "/")) {
+            reset()
+            const text = `${typed}//`
+            return { text, cursor: text.length }
+        }
         if (key.name === "return") {
             const text = submit()
             return intent !== undefined ? held(draft) : { text, cursor: text.length }
@@ -228,7 +235,7 @@ export const modHelpIntent = () => {
             return held(draft)
         }
         reset()
-        if (key.text === "" || key.text === "!!" || (key.text === "!" && banged))
+        if (key.text === "" || key.text === "!!" || (key.text === "!" && pending === "!"))
             return { text: typed, cursor: typed.length }
         return typed
     }
@@ -241,7 +248,7 @@ export const modHelpIntent = () => {
             return undefined
         const current: Intent = { draft, typed: box.text.slice(0, -2), state: "busy",
             message: "matching intent...", spin: 0, proposals: [],
-            select: 0, top: 0, scroll: 0, page: 1, split: 0, banged: false }
+            select: 0, top: 0, scroll: 0, page: 1, split: 0, pending: "" }
         intent = current
 
         /*  update the intent, unless it was closed in the meantime  */
@@ -400,14 +407,15 @@ export const modHelpIntent = () => {
         return panel(ui, geometry, current, {
             title: TITLE,
             hints: current.state === "done" ? "⌫/!!: cancel+close · ⏎: apply+close · ←/→: select · b/f/SPACE: scroll" +
-                (geometry.overflow ? " · wheel: select/scroll" : "") : "⌫/!!/any key: cancel+close",
+                (geometry.overflow ? " · wheel: select/scroll" : "") + " · //: switch to browsing" :
+                "⌫/!!/any key: cancel+close · //: switch to browsing",
             rows:  (i) => {
                 if (proposal === undefined)
                     return Text({ dimColor: true, wrap: "truncate-end", children: hint[i] ?? " " })
                 const k = current.top + i
                 const p = proposals[k]
-                return p !== undefined ?
-                    Text({ color: k === current.select ? PICKED : undefined, children: clip(p.skill, master) }) : undefined
+                return p !== undefined ? Text({ color: k === current.select ? PICKED : undefined,
+                    children: clip(`${k === current.select ? "▶" : " "} ${p.skill}`, master) }) : undefined
             },
             lines
         })

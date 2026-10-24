@@ -6,9 +6,9 @@
 
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
     Manual band, toggling for a skill command (bare or with its options and
-    arguments already typed), once suffixed with a blank and "??", the entire
+    arguments already typed), once suffixed with a blank and "//", the entire
     manual page of the skill in the band above the prompt (scrolled by the
-    wheel), while the "??" is removed again from the prompt, so the command
+    wheel), while the "//" is removed again from the prompt, so the command
     can be typed on, and the band also closes once the prompt no longer starts
     with the skill command, the synopsis form opens, or the prompt is
     submitted.  */
@@ -18,12 +18,12 @@ import { type Engine, type Char, type BandRender, type BandScroll, type View,
     uniform, flow, layout, wheel, panel } from "./ase-mods-common.ts"
 
 /*  the trigger of a manual band inside the prompt (a skill command suffixed
-    with a blank and "??", with its typed options and arguments, if any,
+    with a blank and "//", with its typed options and arguments, if any,
     separated by a blank from it), the skill command at the start of the prompt,
     the share of the terminal height taken by the band outside fullscreen, the
     indentation of the section bodies, and the title placed into the top edge
     of the band  */
-const MANUAL  = /^\/(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+)(?:\s[^]*)?\s\?\?$/
+const MANUAL  = /^\/(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+)(?:\s[^]*)?\s\/\/$/
 const COMMAND = /^\/(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+)(?![\w-])/
 const HEIGHT  = 0.5
 const INDENT  = 2
@@ -41,7 +41,7 @@ type Manual = View & {
 /*  convert a manual page into lines of styled characters, hard-wrapped to the
     given columns: each section with its heading in bold and its body indented
     (with the lines of the SYNOPSIS kept apart, as in the manual page)  */
-const page = (manual: string, columns: number): Char[][] => {
+export const page = (manual: string, columns: number): Char[][] => {
     const lines: Char[][] = []
     for (const part of manual.split(/^(?=## {2})/m).filter((part) => part.startsWith("##  "))) {
         const [ head, ...body ] = part.split("\n")
@@ -58,7 +58,7 @@ const page = (manual: string, columns: number): Char[][] => {
 }
 
 /*  the manual band: its state and its operations  */
-export const modHelpManual = () => {
+export const modHelpShow = () => {
     /*  the manual pages of the skills (loaded on first use, undefined
         for a skill without a manual page) and the currently shown band  */
     const manuals = new Map<string, string | undefined>()
@@ -133,7 +133,7 @@ export const modHelpManual = () => {
         return panel(ui, geometry, shown, {
             title: TITLE,
             hints: (geometry.overflow ? "wheel or CTRL+x + TAB + ↑/↓/PgUp/PgDn: scroll · " : "") +
-                "??: close · !!: switch to crafting · (keep typing the command)",
+                "//: close · !!: switch to crafting · (keep typing the command)",
             lines: wrapped(shown, geometry.span - 3)
         })
     }

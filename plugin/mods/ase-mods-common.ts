@@ -15,11 +15,13 @@ import type { Elements, Frozen, MatchedEvent, ModelCompleteRequest, ModelForkRes
 
 /*  the services of the engine, bound by the hooking infrastructure for the
     modules (as the engine refuses to load a module passing "$" itself): the
-    redrawing, the reading of a plugin file, the forked and the plain model
-    completion, the waiting, and the reading and filling of the prompt  */
+    redrawing, the reading of a plugin file and of the names of the directories
+    in a plugin directory, the forked and the plain model completion, the
+    waiting, and the reading and filling of the prompt  */
 export type Engine = {
     invalidate: () => void,
     read:       (file: string) => Promise<string>,
+    dirs:       (dir: string) => Promise<string[]>,
     fork:       (prompt: string) => Promise<ModelForkResult | null>,
     complete:   (request: ModelCompleteRequest) => Promise<string>,
     sleep:      (ms: number) => Promise<void>,
@@ -31,10 +33,10 @@ export type Engine = {
 export const PICKED = "red"
 export const CODE   = "blue"
 
-/*  the trigger suffix of a manual band ("??") resp. of a synopsis form or an intent ("!!")
-    inside the prompt (each further constrained by the pattern of the manual band, the
-    synopsis form, resp. the intent)  */
-export const TRIGGER = /(?:\?\?|!!)$/
+/*  the trigger suffix of a synopsis form or an intent ("!!"), resp. of a manual band
+    or a manpage browser ("//") inside the prompt (each further constrained by the
+    pattern of the synopsis form, the intent, the manual band, resp. the browser)  */
+export const TRIGGER = /(?:!!|\/\/)$/
 
 /*  the share of the terminal height taken by the band above the prompt  */
 const BAND = 0.25
@@ -271,13 +273,17 @@ export const frame = (lines: Char[][], columns: number, color: string | undefine
 }
 
 /*  split a horizontal edge of a frame into runs with a title placed after its
-    first (resp. before its last) two characters (if it fits), flagged whether
-    they are the title  */
-const titled = (line: string, title: string, end = false): [ string, boolean ][] => {
-    if (title === "" || line.length < title.length + 4)
-        return [ [ line, false ] ]
-    const k = end ? line.length - 2 - title.length : 2
-    return [ [ line.slice(0, k), false ], [ title, true ], [ line.slice(k + title.length), false ] ]
+    first and another one before its last two characters (each if it fits, the
+    one at the end with precedence), flagged whether they are a title  */
+const titled = (line: string, head: string, tail: string): [ string, boolean ][] => {
+    const end   = tail !== "" && line.length >= tail.length + 4 ? tail : ""
+    const start = head !== "" && line.length >= head.length + (end !== "" ? end.length + 6 : 4) ? head : ""
+    const k     = end !== "" ? line.length - 2 - end.length : line.length
+    return [
+        ...(start !== "" ? [ [ line.slice(0, 2), false ], [ start, true ] ] as [ string, boolean ][] : []),
+        [ line.slice(start !== "" ? 2 + start.length : 0, k), false ],
+        ...(end !== "" ? [ [ end, true ], [ line.slice(k + end.length), false ] ] as [ string, boolean ][] : [])
+    ]
 }
 
 /*  the scroll position of a view with the given rows over the given lines
@@ -311,11 +317,11 @@ export const paint = (Text: Text, chars: Char[]): (string | RenderElement)[] =>
     split(chars).map(({ text, bold, color }) =>
         bold || color !== undefined ? Text({ bold, color, children: text }) : text)
 
-/*  draw a horizontal edge of the self-drawn frame (dimmed), with a title at its
-    start (with its brackets dimmed, its "ASE" prefix in bold, and the rest dimmed)
-    resp. at its end (dimmed)  */
-const edge = (Text: Text, line: string, title = "", end = false): RenderElement =>
-    Text({ children: titled(line, title, end).flatMap(([ text, label ]) => {
+/*  draw a horizontal edge of the self-drawn frame (dimmed), with titles at its
+    start and its end (with their brackets dimmed, an "ASE" prefix before a colon
+    in bold, and the rest dimmed)  */
+const edge = (Text: Text, line: string, head = "", tail = ""): RenderElement =>
+    Text({ children: titled(line, head, tail).flatMap(([ text, label ]) => {
         const m = /^(\[ )?([^:]*)(:.*?)( \])?$/.exec(text)
         if (!label || m === null)
             return [ Text({ ...BORDER, children: text }) ]
@@ -372,18 +378,22 @@ export const wheel = (e: BandScroll, view: View, step?: (by: number) => void): v
 
 /*  draw the band above the prompt: inside the self-drawn frame (with the title
     in its top edge) either a single view of the given rows, a single view of the
-    given lines with its scrollbar, or a master view of the given rows and, joined
-    by a separator, a detail view of the given lines (optionally dimmed) with its
-    scrollbar, into the bottom edge the scroll position of the lines, and below
+    given lines with its scrollbar, or a master view of the given rows (where the
+    given rule rows are horizontal lines joining the borders) and, joined by a
+    separator, a detail view of the given lines (optionally dimmed) with its
+    scrollbar, into the bottom edge the given status (if any) at its start and
+    the scroll position of the lines at its end, and below
     the frame the key hints (followed by blank rows for an overflowing band),
     where the scroll position is clamped, and the page size (for the scroll keys)
     and the end of the master view (for the wheel) are remembered in the view  */
 export const panel = (ui: Elements["terminal"], { span, body, master, detail, overflow }: Layout, view: View, spec: {
-    title:  string,
-    hints:  string,
-    rows?:  (i: number) => RenderElement | undefined,
-    lines?: Char[][],
-    dim?:   boolean
+    title:   string,
+    status?: string,
+    hints:   string,
+    rows?:   (i: number) => RenderElement | undefined,
+    rule?:   (i: number) => boolean,
+    lines?:  Char[][],
+    dim?:    boolean
 }): RenderElement => {
     const { Box, Text } = ui
     const lines = spec.lines ?? []
@@ -404,19 +414,22 @@ export const panel = (ui: Elements["terminal"], { span, body, master, detail, ov
         bar(Text, marks[i])
     ]
     const rows: RenderElement[] = [ edge(Text, border("╭", "┬", "╮"), spec.title) ]
-    for (let i = 0; i < body; i++)
+    for (let i = 0; i < body; i++) {
+        const rule = !solo && spec.lines !== undefined && spec.rule?.(i) === true
         rows.push(Box({ flexDirection: "row", children: [
-            Text({ ...BORDER, children: "│ " }),
+            Text({ ...BORDER, children: rule ? "├─" : "│ " }),
             ...(solo ? scrolled(i, span - 3) : spec.lines === undefined ? [
                 Box({ width: span, flexShrink: 0, children: spec.rows!(i) ?? blank })
             ] : [
-                Box({ width: master, flexShrink: 0, children: spec.rows!(i) ?? blank }),
-                Text({ ...BORDER, children: " │ " }),
+                rule ? Text({ ...BORDER, children: `${"─".repeat(master + 1)}┤ ` }) :
+                    Box({ width: master, flexShrink: 0, children: spec.rows!(i) ?? blank }),
+                ...(rule ? [] : [ Text({ ...BORDER, children: " │ " }) ]),
                 ...scrolled(i, detail)
             ]),
             Text({ ...BORDER, children: "│" })
         ] }))
-    rows.push(edge(Text, border("╰", "┴", "╯"), position(body, lines.length, view.scroll), true))
+    }
+    rows.push(edge(Text, border("╰", "┴", "╯"), spec.status, position(body, lines.length, view.scroll)))
     rows.push(Box({ paddingLeft: 1, children: Text({ dimColor: true, wrap: "truncate-end", children: spec.hints }) }))
     if (overflow)
         rows.push(blank, blank)

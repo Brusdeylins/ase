@@ -25,7 +25,7 @@ import { type Engine, type Text, type Key, type BandRender, type BandScroll, typ
     the extra field with the typed words not recognized as of the synopsis  */
 const SYNOPSIS = /^(\/(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+))(?:\s+(\S(?:[^]*\S)?)\s+|\s*)!!$/
 const CHOICES  = "gray"
-const TITLE    = "[ ⧉ ASE: Craft Skill Command ]"
+const TITLE    = "[ ⧉ ASE: Compose Skill Command ]"
 const UNKNOWN  = "unrecognized"
 
 /*  a field of a synopsis form: an option (a flag or with a value) or an argument,
@@ -50,7 +50,7 @@ type Field = {
     to restore on cancel (the command as typed), its fields, the focused field
     (the apply position after the last field), the state of an edited field,
     the focus and editing state shown (resetting the scrolling on change) of
-    the detail view, and the last key outside a field, if a "!" or "?"  */
+    the detail view, and the last key outside a field, if a "!" or "/"  */
 type Form = View & {
     command: string,
     typed:   string,
@@ -346,13 +346,13 @@ const input = (Text: Text, form: Form, field: Field,
 }
 
 /*  draw a field of a synopsis form, as in the prompt: grey while disabled,
-    bold while enabled, and red while focused, with options by their name
+    bold while enabled, and red (and marked by "▶") while focused, with options by their name
     and, if valued, their input box, marked in front as a drop-down box (for
     fixed values) resp. as a text field (for free-text values)  */
 const draw = (Text: Text, form: Form, field: Field, i: number): RenderElement => {
     const focus = form.pos === i
     const look  = { color: focus ? PICKED : undefined, dimColor: !field.enabled && !focus, bold: field.enabled }
-    const children: RenderElement[] = [ Text({ children: "  " }) ]
+    const children: RenderElement[] = [ Text({ color: look.color, children: focus ? "▶ " : "  " }) ]
     if (field.kind === "option")
         children.push(Text({ ...look, children: field.name }))
     if (field.kind === "option" && field.valued)
@@ -372,7 +372,7 @@ const hints = (form: Form, scrollable: boolean, wheel: boolean): string => {
         return `←/→${wheel ? "/wheel" : ""}: select` +
             (focused?.valued === true ? " · ⏎: edit value" : "") +
             ` · ⌫: cancel+close · ${focused === undefined ? "⏎/!!" : "!!"}: apply+close` +
-            " · ??: switch to manpage" +
+            " · //: switch to manpage" +
             (focused !== undefined && togglable(focused) ?
                 ` · SPACE: ${focused.enabled ? "deactivate" : "activate"}` : "") +
             (scrollable ? ` · b/f${wheel ? "/wheel" : ""}: scroll bwd/fwd` : "")
@@ -381,7 +381,7 @@ const hints = (form: Form, scrollable: boolean, wheel: boolean): string => {
 }
 
 /*  the synopsis form: its state and its operations  */
-export const modHelpSkill = () => {
+export const modHelpCompose = () => {
     /*  the synopsis fields of the skills (loaded on first use, undefined
         for a skill without a manual page) and the currently shown form  */
     const synopses = new Map<string, Field[] | undefined>()
@@ -408,25 +408,25 @@ export const modHelpSkill = () => {
 
     /*  while the synopsis form is shown, every edit is a key of the form, where
         outside a field "b"/"f" scroll the detail view of the form by a page, "!!"
-        (two "!" in a row) applies the form (as RETURN at its end does), and "??"
-        (two "?" in a row) closes the form with the composed command suffixed
+        (two "!" in a row) applies the form (as RETURN at its end does), and "//"
+        (two "/" in a row) closes the form with the composed command suffixed
         with the trigger of the manual band (to switch over to it)  */
     const edit = (e: Frozen<PromptEditInput>): PromptBox => {
         const current   = form!
         const key       = decode(e)
         const pending   = current.pending
         const repeat    = current.edit ? "" :
-            /^([!?])\1$/.exec(key.text)?.[1] ?? (pending !== "" && key.text === pending ? pending : "")
-        current.pending = !current.edit && repeat === "" && /^[!?]$/.test(key.text) ? key.text : ""
+            /^([!/])\1$/.exec(key.text)?.[1] ?? (pending !== "" && key.text === pending ? pending : "")
+        current.pending = !current.edit && repeat === "" && /^[!/]$/.test(key.text) ? key.text : ""
         if (current.pending !== "")
             return hold(current)
         if (!current.edit && (key.text === "b" || key.text === "f")) {
             current.scroll = Math.max(0, current.scroll + (key.text === "b" ? -1 : 1) * current.page)
             return hold(current)
         }
-        if (repeat === "?") {
+        if (repeat === "/") {
             form = undefined
-            const text = `${compose(current)} ??`
+            const text = `${compose(current)} //`
             return { text, cursor: text.length }
         }
         const result = repeat === "!" ? "apply" : operate(current, key)
@@ -511,8 +511,8 @@ export const modHelpSkill = () => {
             Text({ wrap: "truncate-end", children: [ "❯ ",
                 Text({ bold: true, color: CODE, children: current.command }) ] }),
             ...current.fields.map((field, i) => draw(Text, current, field, i)),
-            Text({ children: [ "  ",
-                Text({ bold: true, color: focused === undefined ? PICKED : undefined, children: "⏎" }) ] })
+            Text({ bold: true, color: focused === undefined ? PICKED : undefined,
+                children: focused === undefined ? "▶ ⏎" : "  ⏎" })
         ]
         const row = current.pos + 1
         let popup = 0

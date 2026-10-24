@@ -11,8 +11,8 @@ ChangeLog
     against the help of all ASE skills (like `ase-help-intent`, but over the session context), and
     shows the proposed skill commands in a master/detail view in the band above the prompt, where
     LEFT/RIGHT selects a skill, UP/DOWN and `b`/`f`/SPACE scroll its details, RETURN picks its
-    command into the prompt, and `!!`, BACKSPACE, or any other key restores the prompt as typed
-    without the trigger.
+    command into the prompt, `//` switches over to the manpage browser for the intent, and `!!`,
+    BACKSPACE, or any other key restores the prompt as typed without the trigger.
 
 -   FEATURE [code]: Synopsis Form in the Prompt via `!!` Suffix
     The Claude Code function hooks module now shows, for a skill command suffixed with `!!`,
@@ -24,12 +24,22 @@ ChangeLog
     their values (with a drop-down box for fixed values), RETURN at the end (or `!!` outside a
     value) takes over the composed command into the prompt, and BACKSPACE cancels.
 
--   FEATURE [code]: Manual Band in the Prompt via `??` Suffix
+-   FEATURE [code]: Manual Band in the Prompt via `//` Suffix
     The Claude Code function hooks module now toggles, for a skill command (bare or with its
-    options and arguments already typed) suffixed with a blank and `??`, the entire manual page
+    options and arguments already typed) suffixed with a blank and `//`, the entire manual page
     of the skill in the band above the prompt, while the command can be typed on. The band is
     scrolled by the wheel (in fullscreen) and closes once the prompt no longer starts with the
     skill command, the synopsis form opens, or the prompt is submitted.
+
+-   FEATURE [code]: Manpage Browser in the Prompt via `//` Suffix
+    The Claude Code function hooks module now shows, for a prompt of just `//` (or of a free text
+    suffixed with a blank and `//`), a browser of the manual pages of all skills in the band above
+    the prompt, with a filter field (initially the free text) narrowing the listed skills by a
+    fuzzy search (like `ase man`), the manual page of the selected skill with the matches marked,
+    LEFT/RIGHT selecting a skill, UP/DOWN (and the wheel) scrolling its manual page, RETURN taking
+    over its command into the prompt, `!!` (for a non-empty filter) switching over to the intent
+    help for the filter, and `//` again leaving the filter in the prompt (which mirrors the filter
+    while the browser is shown).
 
 -   IMPROVEMENT [code]: Intent Matching of `ase-help-intent` by NAME and SYNOPSIS
     `ase-help-intent` now judges the fit of a skill to the intent primarily by its `SCENARIOS`
@@ -45,7 +55,7 @@ ChangeLog
     The single module `plugin/mods/ase-mods.ts` is now split into the hooking infrastructure
     `ase-mods.ts` (the only module loaded by the engine, dispatching the hooks), the shared parts
     `ase-mods-common.ts`, the grill table `ase-mods-grill.ts`, the intent help
-    `ase-mods-help-intent.ts`, and the synopsis form `ase-mods-help-skill.ts`. `AGENTS.md`
+    `ase-mods-help-find.ts`, and the synopsis form `ase-mods-help-compose.ts`. `AGENTS.md`
     reflects the new module layout.
 
 2.0.4 (2026-10-21)

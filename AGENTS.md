@@ -49,20 +49,25 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         them), `ase-mods-common.ts` for the shared parts (styled
         characters, Markdown conversion, wrapping, framing, and the
         geometry of the band above the prompt), `ase-mods-grill.ts` for
-        re-rendering the grilling tables of ASE, `ase-mods-help-intent.ts`
+        re-rendering the grilling tables of ASE, `ase-mods-help-find.ts`
         for the intent help (a prompt, other than a skill command,
         suffixed with a blank and `!!` matched against the help of all
         skills, with the proposed commands in the band above the prompt,
         and closed by `!!` again),
-        `ase-mods-help-skill.ts` for the synopsis form (a skill command,
+        `ase-mods-help-compose.ts` for the synopsis form (a skill command,
         bare or with its typed options and arguments, suffixed with `!!`
         composed resp. edited through a form of its SYNOPSIS in the band
-        above the prompt, and applied by `!!` again), and
-        `ase-mods-help-manual.ts` for the manual band (a skill command,
+        above the prompt, and applied by `!!` again),
+        `ase-mods-help-show.ts` for the manual band (a skill command,
         bare or with its typed options and arguments, suffixed with a
-        blank and `??` toggling the entire manual page of the skill in
+        blank and `//` toggling the entire manual page of the skill in
         the band above the prompt, while the command is typed on, until
-        the synopsis form opens)
+        the synopsis form opens), and `ase-mods-help-browse.ts` for the
+        manpage browser (a prompt of just `//`, or of a free text
+        suffixed with a blank and `//`, browsing the manual pages of all
+        skills, filtered by a fuzzy search initially of the free text, in
+        the band above the prompt, with RETURN taking over the command of
+        the selected skill)
     -   `plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
         `plugin/.github/plugin/`: the per-agent-tool plugin manifests
 -   `tool/`: the `@rse/ase` CLI
