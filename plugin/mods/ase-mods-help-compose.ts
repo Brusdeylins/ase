@@ -372,7 +372,7 @@ const hints = (form: Form, scrollable: boolean, wheel: boolean): string => {
         return `←/→${wheel ? "/wheel" : ""}: select` +
             (focused?.valued === true ? " · ⏎: edit value" : "") +
             ` · ⌫: cancel+close · ${focused === undefined ? "⏎/!!" : "!!"}: apply+close` +
-            " · //: switch to manpage" +
+            " · //: Show Skill Manpage" +
             (focused !== undefined && togglable(focused) ?
                 ` · SPACE: ${focused.enabled ? "deactivate" : "activate"}` : "") +
             (scrollable ? ` · b/f${wheel ? "/wheel" : ""}: scroll bwd/fwd` : "")

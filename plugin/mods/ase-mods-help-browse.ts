@@ -384,7 +384,7 @@ export const modHelpBrowse = () => {
             hints:  `←/→${wheeled}: select · ` +
                 `${geometry.overflow ? "wheel or CTRL+x + TAB + ↑/↓/PgUp/PgDn" : "↑/↓"}: scroll · ` +
                 "//: cancel+close · ⏎: apply+close" +
-                (current.filter.trim() !== "" ? " · !!: switch to finding" : "") + " · (type for filtering)",
+                (current.filter.trim() !== "" ? " · !!: Find Skill Command" : "") + " · (type for filtering)",
             rows:   (i) => i === 0 ? field : entry(current.top + i - 2),
             rule:   (i) => i === 1,
             lines

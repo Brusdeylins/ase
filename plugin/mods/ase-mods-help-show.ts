@@ -133,7 +133,7 @@ export const modHelpShow = () => {
         return panel(ui, geometry, shown, {
             title: TITLE,
             hints: (geometry.overflow ? "wheel or CTRL+x + TAB + ↑/↓/PgUp/PgDn: scroll · " : "") +
-                "//: close · !!: switch to crafting · (keep typing the command)",
+                "//: close · !!: Compose Skill Command · (keep typing the command)",
             lines: wrapped(shown, geometry.span - 3)
         })
     }

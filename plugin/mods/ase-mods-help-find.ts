@@ -407,8 +407,8 @@ export const modHelpFind = () => {
         return panel(ui, geometry, current, {
             title: TITLE,
             hints: current.state === "done" ? "⌫/!!: cancel+close · ⏎: apply+close · ←/→: select · b/f/SPACE: scroll" +
-                (geometry.overflow ? " · wheel: select/scroll" : "") + " · //: switch to browsing" :
-                "⌫/!!/any key: cancel+close · //: switch to browsing",
+                (geometry.overflow ? " · wheel: select/scroll" : "") + " · //: Browse Skill Manpages" :
+                "⌫/!!/any key: cancel+close · //: Browse Skill Manpages",
             rows:  (i) => {
                 if (proposal === undefined)
                     return Text({ dimColor: true, wrap: "truncate-end", children: hint[i] ?? " " })
