@@ -9,7 +9,7 @@
     "type":                                       "module",
     "devDependencies": {
         "@rse/stx":                               "1.1.7",
-        "@astrojs/check":                         "0.9.11",
+        "@astrojs/check":                         "0.9.12",
         "typescript":                             "6.0.3",
         "eslint":                                 "10.13.0",
         "@eslint/js":                             "10.0.1",
@@ -23,7 +23,7 @@
         "playwright":                             "1.64.1"
     },
     "dependencies": {
-        "astro":                                  "7.4.1",
+        "astro":                                  "7.4.2",
         "@astrojs/sitemap":                       "3.7.4",
         "@astro-community/astro-embed-youtube":   "0.5.10",
         "astro-robots-txt":                       "1.0.0",
@@ -35,7 +35,7 @@
         "marked":                                 "18.1.1",
         "dice-coefficient":                       "2.1.1",
         "fast-levenshtein":                       "3.0.0",
-        "@videojs/html":                          "10.1.0",
+        "@videojs/html":                          "10.2.0",
         "typed.js":                               "3.0.0"
     },
     "engines": {
