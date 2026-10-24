@@ -548,12 +548,16 @@ export default class HookCommand {
             `\n⧉ ASE: ☯ persona: ${persona}, ▶ guidance: ${guidance}, ▢ boxing: ${boxing}` +
             (guidance === "normal" || guidance === "verbose" ?
                 "\n" +
-                "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent-description>\" for conversational skill command proposals" +
-                "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill-name>]\" for conversational skill catalog or manpage lookup" +
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-intent <intent>\" for conversational skill command proposals" +
+                "\n⧉ ASE: ▷ hint: use \"/ase-help-skill [<skill>]\" for conversational skill catalog or manpage lookup" +
                 (tool === "claude" ?
-                    "\n⧉ ASE: ▷ hint: use \"<intent-description> ??\" for inline skill command proposals" : "") +
+                    "\n⧉ ASE: ▷ hint: use \"<intent> !!\" for inline skill command proposals" : "") +
                 (tool === "claude" ?
-                    "\n⧉ ASE: ▷ hint: use \"/<skill-name> ??\" for inline skill command composition" : "") : "")
+                    "\n⧉ ASE: ▷ hint: use \"/<skill> !!\" for inline skill command composition" : "") +
+                (tool === "claude" ?
+                    "\n⧉ ASE: ▷ hint: use \"/<skill> //\" for inline skill manpage lookup" : "") +
+                (tool === "claude" ?
+                    "\n⧉ ASE: ▷ hint: use \"[<filter>] //\" for inline skill manpage browsing" : "")  : "")
 
         /*  inject markdown into session context.
             Anthropic Claude Code CLI and OpenAI Codex CLI expect the context nested in
