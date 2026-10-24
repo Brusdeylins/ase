@@ -5,14 +5,15 @@
 **  Licensed under Apache 2.0 <https://spdx.org/licenses/Apache-2.0>
 */
 
-/*  the "Design" page: the philosophy behind ASE, the assumptions, the design
-    decisions derived from them, the methodology-provenance strip backing them,
-    and the resulting architecture.  */
+/*  the "Design" page: the terminology underlying ASE, the philosophy behind
+    it, the assumptions, the design decisions derived from them, the
+    methodology-provenance strip backing them, and the resulting architecture.  */
 
 import BaseLayout          from "../layouts/BaseLayout.astro"
 import SectionPhilosophy   from "../components/Section-Philosophy.astro"
 import SectionDesign       from "../components/Section-Design.astro"
 import SectionArchitecture from "../components/Section-Architecture.astro"
+import SectionTerminology  from "../components/Section-Terminology.astro"
 import GlowTop             from "../components/Widget-Glow-Top.astro"
 import { navItem }         from "../data/nav.ts"
 
@@ -20,6 +21,7 @@ const page = navItem("/design/")
 ---
 <BaseLayout title={page.title} description={page.description} pad>
     <GlowTop/>
+    <SectionTerminology/>
     <SectionPhilosophy/>
     <SectionDesign/>
     <SectionArchitecture/>

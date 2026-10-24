@@ -127,20 +127,17 @@ export const navItems: NavEntry[] = [
       page:        { path:        "/design/",
                      label:       "Design",
                      title:       "Design Decisions",
-                     description: "The philosophy behind ASE, the assumptions it is based on, the four design " +
-                                  "decisions derived from them, the named Software Engineering methods ASE " +
-                                  "builds upon, and the architecture resulting from them." },
+                     description: "The terminology underlying ASE, the philosophy behind it, the assumptions " +
+                                  "it is based on, the four design decisions derived from them, the named " +
+                                  "Software Engineering methods ASE builds upon, and the architecture " +
+                                  "resulting from them." },
       items: [
+          { path: "/design/#terminology",  label: "Terminology"  },
           { path: "/design/#philosophy",   label: "Philosophy"   },
           { path: "/design/#assumptions",  label: "Assumptions"  },
           { path: "/design/#decisions",    label: "Decisions"    },
           { path: "/design/#methodology",  label: "Methodology"  },
-          { path: "/design/#architecture", label: "Architecture" },
-          { path:        "/design/terminology/",
-            label:       "Terminology",
-            title:       "Terminology",
-            description: "The layered definitions of the terms ASE is based on, from Software and " +
-                         "Engineering up to Agentic AI and Agentic Software Engineering." }
+          { path: "/design/#architecture", label: "Architecture" }
       ] },
     /*  the pull-down of the news is derived from the releases of `NEWS.md`  */
     { label:       "News",
