@@ -2,7 +2,7 @@
 ChangeLog
 =========
 
-2.0.5 (2026-10-22)
+2.0.5 (2026-10-24)
 ------------------
 
 -   FEATURE [code]: Intent Help in the Prompt via `!!` Suffix
@@ -41,6 +41,16 @@ ChangeLog
     help for the filter, and `//` again leaving the filter in the prompt (which mirrors the filter
     while the browser is shown).
 
+-   FEATURE [code]: Hint Band in the Prompt for Skill Commands
+    The Claude Code function hooks module (`ase-mods-help-hint.ts`) now shows, for a prompt
+    starting with a skill command, the entire argument hint of the skill, wrapped over multiple
+    lines, in the band above the prompt, instead of the truncated one-line argument hint of
+    Claude Code, which is dropped for the skills.
+
+-   FEATURE [docs]: Terminology Section on the Website
+    The website now provides a terminology section within the design page, with the term
+    definitions imported at build-time from `pages/src/data/terminology.md`.
+
 -   IMPROVEMENT [code]: Intent Matching of `ase-help-intent` by NAME and SYNOPSIS
     `ase-help-intent` now judges the fit of a skill to the intent primarily by its `SCENARIOS`
     and `DESCRIPTION` sections, and additionally secondarily by its `NAME` and `SYNOPSIS` sections.
@@ -50,6 +60,18 @@ ChangeLog
     entirely: they lint a project with `black` boxing, and show the full unified diffs and default
     to the `LOW` severity floor for a project with `grey` boxing. An explicit `--severity` now only
     overrides the `grey` floor and no longer lifts the `black` skip.
+
+-   IMPROVEMENT [code]: Inline Help Hints in the Session Start Context
+    The `ase hook` session start context now hints at the `!!` suffix for inline skill command
+    proposals and composition (formerly `??`), and at the `//` suffix for inline skill manpage
+    lookup and browsing.
+
+-   UPDATE [infr]: Upgrade of NPM Dependencies
+    The dependency versions of the `package.json` files of `plugin/`, `tool/`, and `pages/`
+    were upgraded.
+
+-   CLEANUP [code]: Polishing of the Claude Code Function Hooks Module
+    The rendering, formatting, and comments of the `plugin/mods/` modules were cleaned up.
 
 -   REFACTOR [code,infr]: Split of the Claude Code Function Hooks Module
     The single module `plugin/mods/ase-mods.ts` is now split into the hooking infrastructure
