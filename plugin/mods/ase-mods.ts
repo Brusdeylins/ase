@@ -8,19 +8,20 @@
     Hooking infrastructure, registering the function hooks and dispatching
     them into the grill table ("ase-mods-grill.ts"), the intent help
     ("ase-mods-help-find.ts"), the synopsis form ("ase-mods-help-compose.ts"),
-    the manual band ("ase-mods-help-show.ts"), and the manpage browser
-    ("ase-mods-help-browse.ts").
+    the manual band ("ase-mods-help-show.ts"), the manpage browser
+    ("ase-mods-help-browse.ts"), and the hint band ("ase-mods-help-hint.ts").
     As the engine loads only a module spelling "on", "$", and "next" literally,
     this is the only module touching the engine, and it binds the engine
     services needed by the other modules as plain functions.  */
 
-import type { Register, PromptBox } from "claude-code"
+import type { Register, PromptBox, Timer } from "claude-code"
 import { type Band, TRIGGER } from "./ase-mods-common.ts"
 import { modGrill }           from "./ase-mods-grill.ts"
 import { modHelpFind }        from "./ase-mods-help-find.ts"
 import { modHelpCompose }     from "./ase-mods-help-compose.ts"
 import { modHelpShow }        from "./ase-mods-help-show.ts"
 import { modHelpBrowse }      from "./ase-mods-help-browse.ts"
+import { modHelpHint }        from "./ase-mods-help-hint.ts"
 
 /*  function hook registration entry point  */
 export const register: Register = (on, options) => {
@@ -29,12 +30,13 @@ export const register: Register = (on, options) => {
         return
 
     /*  the grill table, the intent help, the synopsis form, the manual band,
-        and the manpage browser  */
+        the manpage browser, and the hint band  */
     const grill  = modGrill()
     const intent = modHelpFind()
     const skill  = modHelpCompose()
     const manual = modHelpShow()
     const browse = modHelpBrowse()
+    const hint   = modHelpHint()
 
     /*  the bands above the prompt (the synopsis form, the intent band, and the
         manpage browser, opened in this order), the shown one (as at most one is
@@ -48,6 +50,12 @@ export const register: Register = (on, options) => {
     /*  the generation of the latest submission (ending any older refilling of the prompt)  */
     let submissions = 0
 
+    /*  the partial slash command inside the prompt, and the poller of the prompt
+        for the hint band while one is typed (as a completion of the typeahead
+        raises no edit)  */
+    const partial = /^\/\S*$/
+    let poller: Timer | undefined
+
     /*  handle the still unsubmitted prompt of the user: while the intent band,
         the synopsis form, or the manpage browser is shown, every edit is a key of
         it, else act on the typed trigger suffix at the end of the prompt only
@@ -55,8 +63,9 @@ export const register: Register = (on, options) => {
         synopsis form for a skill command with a manual page with "!!", else arming
         the matching of the prompt as an intent with "!!", resp. showing the manpage
         browser for any other prompt with "//"), close the manual band once the
-        prompt left its skill command or another band opened, and track the picks
-        of the grill table inside the edited prompt while no band is shown  */
+        prompt left its skill command or another band opened, track the skill
+        command of the hint band, and track the picks of the grill table inside
+        the edited prompt while no band is shown  */
     on("prompt.edit", async ($, e, next) => {
         const band  = shown()
         const paged = manual.active()
@@ -89,7 +98,23 @@ export const register: Register = (on, options) => {
         manual.track(box.text)
         if (shown() !== undefined)
             manual.reset()
-        if (shown() !== undefined || grill.track(box.text) || band !== undefined || paged || manual.active())
+        const hinted = await hint.track(box.text, { read })
+        if (poller === undefined && partial.test(box.text)) {
+            const stop  = () => {
+                timer.cancel()
+                poller = undefined
+            }
+            const timer = $.clock.every(100, () => {
+                $.prompt.read().then(async ({ text }) => {
+                    if (!partial.test(text))
+                        stop()
+                    if (shown() === undefined && await hint.track(text, { read }))
+                        $.ui.invalidate("ui.render")
+                }).catch(stop)
+            })
+            poller = timer
+        }
+        if (shown() !== undefined || grill.track(box.text) || band !== undefined || paged || manual.active() || hinted)
             $.ui.invalidate("ui.render")
         return box
     }).catch(($, e, next) => {
@@ -165,6 +190,7 @@ export const register: Register = (on, options) => {
         grill.submit(e.text)
         reset()
         manual.reset()
+        hint.reset()
         $.ui.invalidate("ui.render")
         return next(e)
     }).catch(($, e, next) =>
@@ -185,23 +211,36 @@ export const register: Register = (on, options) => {
     })
 
     /*  draw the intent band resp. the synopsis form, else the manual page,
-        into the band above the prompt (terminal only)  */
+        else the argument hint, into the band above the prompt (terminal only)  */
     on("ui.render", { component: "AbovePrompt", surface: "terminal" }, async ($, e, next) => {
         const drawn = await next(e)
         const ui    = $.ui.resolve(e)
-        return shown()?.render(e, ui) ?? manual.render(e, ui) ?? drawn
+        return shown()?.render(e, ui) ?? manual.render(e, ui) ?? hint.render(e, ui) ?? drawn
     }).catch(($, e, next) => {
         /*  close a failed intent band resp. synopsis form, restore the prompt
             resp. the command as typed (instead of the held prompt), resp. close
-            a failed manual band, and keep the drawing beneath  */
+            a failed manual band and hint band, and keep the drawing beneath  */
         const text = cancel()
-        if (text === undefined)
+        if (text === undefined) {
             manual.reset()
+            hint.reset()
+        }
         if (text !== undefined)
             $.prompt.fill({ text }).catch(() => {
                 /*  ignore a prompt which is no longer accessible  */
             })
         return next(e)
+    })
+
+    /*  drop the one-line (and hence usually truncated) argument hint of the
+        skills from the typeahead and "/help", as the hint band shows it entirely  */
+    on("command.describe", async ($, e, next) => {
+        const result  = await next(e)
+        const command = /^(?:ase:)?(ase-[a-z0-9]+-[a-z0-9]+)$/.exec(e.command)
+        const read    = (file: string) => $.fs.read(`${$.plugin.root}/${file}`)
+        if (command === null || await hint.synopsis(command[1]!, { read }) === undefined)
+            return result
+        return { description: result.description, isHidden: result.isHidden }
     })
 }
 

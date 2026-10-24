@@ -62,12 +62,16 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         bare or with its typed options and arguments, suffixed with a
         blank and `//` toggling the entire manual page of the skill in
         the band above the prompt, while the command is typed on, until
-        the synopsis form opens), and `ase-mods-help-browse.ts` for the
+        the synopsis form opens), `ase-mods-help-browse.ts` for the
         manpage browser (a prompt of just `//`, or of a free text
         suffixed with a blank and `//`, browsing the manual pages of all
         skills, filtered by a fuzzy search initially of the free text, in
         the band above the prompt, with RETURN taking over the command of
-        the selected skill)
+        the selected skill), and `ase-mods-help-hint.ts` for the hint band
+        (a prompt starting with a skill command showing the entire argument
+        hint of the skill, wrapped over multiple lines, in the band above
+        the prompt, instead of the truncated one-line argument hint of
+        Claude Code, which is dropped for the skills)
     -   `plugin/.claude-plugin/`, `plugin/.codex-plugin/`,
         `plugin/.github/plugin/`: the per-agent-tool plugin manifests
 -   `tool/`: the `@rse/ase` CLI

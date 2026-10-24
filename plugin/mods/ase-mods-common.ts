@@ -384,7 +384,7 @@ export const wheel = (e: BandScroll, view: View, step?: (by: number) => void): v
     given rule rows are horizontal lines joining the borders) and, joined by a
     separator, a detail view of the given lines (optionally dimmed) with its
     scrollbar, into the bottom edge the given status (if any) at its start and
-    the scroll position of the lines at its end, and below
+    the scroll position of the lines (unless they always fit) at its end, and below
     the frame the key hints (followed by blank rows for an overflowing band),
     where the scroll position is clamped, and the page size (for the scroll keys)
     and the end of the master view (for the wheel) are remembered in the view  */
@@ -395,7 +395,8 @@ export const panel = (ui: Elements["terminal"], { span, body, master, detail, ov
     rows?:   (i: number) => RenderElement | undefined,
     rule?:   (i: number) => boolean,
     lines?:  Char[][],
-    dim?:    boolean
+    dim?:    boolean,
+    fit?:    boolean
 }): RenderElement => {
     const { Box, Text } = ui
     const lines = spec.lines ?? []
@@ -431,7 +432,8 @@ export const panel = (ui: Elements["terminal"], { span, body, master, detail, ov
             Text({ ...BORDER, children: "│" })
         ] }))
     }
-    rows.push(edge(Text, border("╰", "┴", "╯"), spec.status, position(body, lines.length, view.scroll)))
+    rows.push(edge(Text, border("╰", "┴", "╯"), spec.status,
+        spec.fit === true ? "" : position(body, lines.length, view.scroll)))
     rows.push(Box({ paddingLeft: 1, children: Text({ dimColor: true, wrap: "truncate-end", children: spec.hints }) }))
     if (overflow)
         rows.push(blank, blank)
