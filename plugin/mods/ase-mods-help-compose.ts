@@ -15,7 +15,7 @@
     the composed command into the prompt, and BACKSPACE cancels.  */
 
 import type { Elements, Frozen, PromptBox, PromptEditInput, RenderElement } from "claude-code"
-import { type Engine, type Text, type Key, type BandRender, type BandScroll, type View, PICKED, CODE,
+import { type Engine, type Text, type Key, type BandRender, type BandScroll, type View, PICKED, COMMAND,
     held, decode, section, wrap, uniform, flow, frame, paint, layout, wheel, panel } from "./ase-mods-common.ts"
 
 /*  the trigger of a synopsis form inside the prompt (a skill command suffixed
@@ -502,14 +502,14 @@ export const modHelpCompose = () => {
         const geometry = layout(e, 0.5)
         const { body, detail } = geometry
 
-        /*  determine the lines of the master view (the command in bold blue after
-            the prompt marker, as in the prompt, and indented below it each field on
+        /*  determine the lines of the master view (the command after the prompt
+            marker, colored as in the prompt, and indented below it each field on
             its own line and the apply position), with the drop-down box of a field
             with fixed values while being chosen directly below the field (aligned
             with its input box), and the line of the focused field  */
         const entries: RenderElement[] = [
             Text({ wrap: "truncate-end", children: [ "❯ ",
-                Text({ bold: true, color: CODE, children: current.command }) ] }),
+                Text({ color: COMMAND, children: current.command }) ] }),
             ...current.fields.map((field, i) => draw(Text, current, field, i)),
             Text({ bold: true, color: focused === undefined ? PICKED : undefined,
                 children: focused === undefined ? "▶ ⏎" : "  ⏎" })
