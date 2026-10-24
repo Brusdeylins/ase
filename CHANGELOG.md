@@ -2,6 +2,14 @@
 ChangeLog
 =========
 
+2.0.6 (2026-10-25)
+------------------
+
+-   IMPROVEMENT [code, docs]: Plugin Icon for Claude Code Plugin Validation
+    The plugin now ships a square `plugin/.claude-plugin/icon.png` (1024x1024), rendered from the
+    new `docs/ase-icon.svg` (the ASE logo centered on a white square), so the newer Claude Code
+    `claude plugin validate` no longer warns about the missing icon (`ICON_MISSING`).
+
 2.0.5 (2026-10-24)
 ------------------
 
