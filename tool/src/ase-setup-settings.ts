@@ -18,7 +18,7 @@ import { toolSpecs }     from "./ase-setup-common.js"
 import type { Tool, Scope } from "./ase-setup-common.js"
 import { telemetryEndpoint, telemetryEnabled } from "./ase-service-otel.js"
 
-/*  settings file handling of "ase setup statusline", "ase setup telemetry", and the output style  */
+/*  settings file handling of "ase setup statusline", "ase setup telemetry", the output style, and the function hooks  */
 export class SetupSettings {
     constructor (private log: Log) {}
 
@@ -391,6 +391,129 @@ export class SetupSettings {
                 file:   this.fileDisplay(file),
                 scope,
                 status: this.outputStyleIsOwned(member) ? "selected" : "foreign"
+            })
+        }
+        return entries
+    }
+
+    /*  the environment variable enabling the function hooks of the plugin-shipped mods
+        (Anthropic Claude Code CLI only, as the other tools have no function hooks concept)  */
+    private readonly functionHooksVar = "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS"
+
+    /*  determine the value of the function hooks variable in an "env" object  */
+    private functionHooksValue (env: AstNode): string | undefined {
+        const val = this.settingsFindMember(env, this.functionHooksVar)?.query("/ * [ pos() == 2 ]")[0]
+        return val !== undefined ? String(val.get("value") ?? "") : undefined
+    }
+
+    /*  enable the function hooks of the plugin-shipped mods by setting their
+        variable in the "env" of the settings file of the scope  */
+    async functionHooksActivate (action: string, scope: Scope): Promise<void> {
+        const file = this.settingsFile("claude", scope)
+        const root = await this.settingsReadAst(file)
+
+        /*  reject a non-object "env" member  */
+        let member = this.settingsFindMember(root, "env")
+        let env    = member?.query("/ * [ pos() == 2 ]")[0]
+        if (member !== undefined && (env === undefined || env.type() !== "object")) {
+            this.log.write("warning", `setup: ${action}: a non-object "env" ` +
+                `is present in ${file}: preserving it (skipped)`)
+            return
+        }
+
+        /*  leave an ASE variable as is and preserve a foreign value: skip and warn  */
+        const value = env !== undefined ? this.functionHooksValue(env) : undefined
+        if (value !== undefined) {
+            if (value !== "1")
+                this.log.write("warning", `setup: ${action}: a non-ASE "${this.functionHooksVar}" ` +
+                    `is already present in "env" of ${file}: preserving it (skipped)`)
+            return
+        }
+
+        /*  insert a fresh (still empty) "env" member  */
+        if (member === undefined || env === undefined) {
+            env    = root.create("object").set({ prolog: "{", epilog: "}" })
+            member = root.create("member").add(
+                root.create("string").set({ body: JSON.stringify("env"), value: "env", epilog: ": " }), env)
+            this.settingsAddMember(root, member, false)
+        }
+
+        /*  add the variable  */
+        const key = root.create("string").set({
+            body:   JSON.stringify(this.functionHooksVar),
+            value:  this.functionHooksVar,
+            epilog: ": "
+        })
+        const val = root.create("string").set({ body: JSON.stringify("1"), value: "1" })
+        env.add(root.create("member").add(key, val))
+        this.settingsNormalizeObject(env, 1, this.settingsTrailing(root, member))
+        await this.settingsWriteAst(file, root)
+        this.log.write("info", `setup: ${action}: enabling function hooks in "env" of ${file}`)
+    }
+
+    /*  disable the function hooks of the plugin-shipped mods by removing
+        their variable from the "env" of the settings file of the scope  */
+    async functionHooksDeactivate (action: string, scope: Scope): Promise<void> {
+        const file = this.settingsFile("claude", scope)
+
+        /*  a missing settings file means nothing to remove  */
+        try {
+            await fs.access(file)
+        }
+        catch {
+            return
+        }
+        const root   = await this.settingsReadAst(file)
+        const member = this.settingsFindMember(root, "env")
+        const env    = member?.query("/ * [ pos() == 2 ]")[0]
+        if (member === undefined || env === undefined || env.type() !== "object")
+            return
+        const target = this.settingsFindMember(env, this.functionHooksVar)
+        if (target === undefined)
+            return
+
+        /*  preserve a foreign value: skip and warn  */
+        if (this.functionHooksValue(env) !== "1") {
+            this.log.write("warning", `setup: ${action}: a non-ASE "${this.functionHooksVar}" ` +
+                `is present in "env" of ${file}: preserving it (skipped)`)
+            return
+        }
+
+        /*  remove the variable and, if it became empty, the "env" member  */
+        env.del(target)
+        if (env.query("/ member").length === 0)
+            this.settingsRemoveMember(root, member)
+        else
+            this.settingsNormalizeObject(env, 1, this.settingsTrailing(root, member))
+        await this.settingsWriteAst(file, root)
+        this.log.write("info", `setup: ${action}: disabling function hooks in "env" of ${file}`)
+    }
+
+    /*  probe the function hooks variables by inspecting the tool
+        settings files of all installation scopes (Anthropic Claude Code CLI only)  */
+    async functionHooksStatus (tool: Tool): Promise<{ file: string, scope: string, status: string }[]> {
+        if (tool !== "claude")
+            return []
+        const scopes: Scope[] = [ "user", "project", "local" ]
+        const entries: { file: string, scope: string, status: string }[] = []
+        for (const scope of scopes) {
+            const file = this.settingsFile(tool, scope)
+            let root: AstNode
+            try {
+                root = await this.settingsReadAst(file)
+            }
+            catch {
+                /*  an unparsable settings file carries no usable state  */
+                continue
+            }
+            const env   = this.settingsFindMember(root, "env")?.query("/ * [ pos() == 2 ]")[0]
+            const value = env !== undefined && env.type() === "object" ? this.functionHooksValue(env) : undefined
+            if (value === undefined)
+                continue
+            entries.push({
+                file:   this.fileDisplay(file),
+                scope,
+                status: value === "1" ? "enabled" : "foreign"
             })
         }
         return entries

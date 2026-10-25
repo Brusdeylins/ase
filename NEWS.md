@@ -89,7 +89,7 @@ topics**, and many more.
     `--until` (resp. `--grill-*` in `ase-{code,spec}-edit`) and batch grilling.
 
 -   **Clickable Grilling**: questions and answers of the grilling table are clickable
-    (requires `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`).
+    (requires `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`, set by `ase setup install`).
 
 -   **D2 Diagrams**: `ase util diagram --lang d2` renders also *D2* diagrams.
 

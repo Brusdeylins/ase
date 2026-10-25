@@ -34,6 +34,14 @@ and `--tool codex`, which have no output style concept, the `ase hook
 session-start` handler injects the identical style instructions into
 the session context instead (see `ase-hook`(1)).
 
+For `--tool claude`, the function hooks of the plugin-shipped
+*Claude Code* mods (e.g., the clickable grilling table and the help
+bands above the prompt) are additionally enabled by writing
+`"CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"` into the `env` of the
+`settings.json` of the installation scope, unless the variable is
+already present there: an *ASE* one (value `1`) is left as is, and a
+foreign one (any other value) is preserved with a warning.
+
 The *ASE* tool itself is not installed by this command, as it is
 already installed when running it (e.g., via `npm install -g
 @rse/ase`).
@@ -82,7 +90,8 @@ already installed when running it (e.g., via `npm install -g
 
 - `~/.claude/settings.json`, `.claude/settings.json`, `.claude/settings.local.json`:
   The settings file of the `user`, `project`, resp. `local` scope,
-  receiving the `outputStyle` selection for `--tool claude`.
+  receiving the `outputStyle` selection and the
+  `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` variable for `--tool claude`.
 
 ## EXIT STATUS
 

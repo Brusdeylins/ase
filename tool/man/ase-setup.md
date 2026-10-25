@@ -23,8 +23,8 @@ The target agent tool is either *Anthropic Claude Code CLI*
 (`codex`). All operations are performed through the plugin and MCP
 commands of the respective agent tool CLI (e.g., `claude plugin
 install`), which hence has to be found in `$PATH`, and through direct
-edits of its settings files (for the output style, the statusline,
-and the telemetry). Every sub-process command is logged (with API keys
+edits of its settings files (for the output style, the function
+hooks, the statusline, and the telemetry). Every sub-process command is logged (with API keys
 masked) and its output is shown only on failure.
 
 ## OPTIONS
@@ -79,8 +79,8 @@ individual manual pages for the exact applicability):
   `ase-setup-disable`(1).
 
 - `ase setup status` \[`-t`|`--tool` *tool*\]:
-  Report the plugin, MCP server, output style, statusline, and
-  telemetry registrations of all scopes. See `ase-setup-status`(1).
+  Report the plugin, MCP server, output style, function hooks,
+  statusline, and telemetry registrations of all scopes. See `ase-setup-status`(1).
 
 - `ase setup mcp` `list`|`activate`|`deactivate` \[...\]:
   List, activate, or deactivate the pre-defined foreign MCP servers.

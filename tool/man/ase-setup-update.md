@@ -42,6 +42,9 @@ carry no version change in the plugin manifest.
 Like `ase setup install`, for `--tool claude`, the output style
 `ase:ase-terse` is finally selected in the `settings.json` of the
 installation scope, unless a foreign `outputStyle` is already selected
+there, which is preserved with a warning, and the function hooks are
+enabled through `"CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"` in its
+`env`, unless a foreign value of the variable is already present
 there, which is preserved with a warning.
 
 ## OPTIONS

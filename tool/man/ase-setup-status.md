@@ -33,6 +33,12 @@ the agent tool to be found in `$PATH`. The rows are:
   (the *ASE* output style `ase:ase-terse`) or `foreign`
   (hand-selected).
 
+- `FUNCTIONHOOKS` (`--tool claude` only):
+  One row per settings file (of the scopes `user`, `project`, and
+  `local`) carrying a `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` variable in
+  its `env`, with the status `enabled` (value `1`) or `foreign` (any
+  other value).
+
 - `STATUSLINE` (`--tool claude` and `--tool copilot` only):
   One row per settings file carrying a `statusLine` entry, with the
   status `activated` (its command starts with `ase statusline`, i.e.,

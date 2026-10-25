@@ -20,7 +20,9 @@ steps are:
 2. For `--tool claude`, the selection of the output style
    `ase:ase-terse` is removed from the `settings.json` of the
    installation scope, while a foreign `outputStyle` is preserved with
-   a warning.
+   a warning. Likewise, the variable `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS`
+   (value `1`) is removed from its `env` (together with an `env` which
+   became empty), while a foreign value is preserved with a warning.
 3. The plugin `ase@ase` is uninstalled (`<cli> plugin uninstall
    ase@ase`, resp. `codex plugin remove ase@ase`) and the plugin
    marketplace `ase` is removed (`<cli> plugin marketplace remove

@@ -281,7 +281,7 @@ ase setup update                 # update     tool and plugin
 ase setup uninstall              # uninstall  tool and plugin
 ase setup enable                 # enable     plugin (without uninstalling)
 ase setup disable                # disable    plugin (without uninstalling)
-ase setup status                 # report     plugin, MCP server, output style, statusline, and telemetry registrations
+ase setup status                 # report     plugin, MCP server, output style, function hooks, statusline, and telemetry registrations
 ase setup mcp list               # list       pre-defined foreign MCP servers
 ase setup mcp activate           # activate   foreign MCP servers (keys in ASE_MCP_KEY_<ID>)
 ase setup mcp deactivate         # deactivate foreign MCP servers

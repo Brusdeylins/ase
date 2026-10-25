@@ -46,9 +46,12 @@ export default class SetupCommand {
         await this.runner.run(spec.cli, [ "plugin", "marketplace", "add", source, ...scopeArgs ])
         await this.runner.run(spec.cli, [ "plugin", spec.pInstall, "ase@ase", ...scopeArgs ], { retries: 3 })
 
-        /*  select the plugin-shipped ASE output style (Anthropic Claude Code CLI only)  */
-        if (tool === "claude")
+        /*  select the plugin-shipped ASE output style and enable the function
+            hooks of the plugin-shipped mods (Anthropic Claude Code CLI only)  */
+        if (tool === "claude") {
             await this.settings.outputStyleActivate(`install${dev ? "[dev]" : ""}`, scope)
+            await this.settings.functionHooksActivate(`install${dev ? "[dev]" : ""}`, scope)
+        }
         return 0
     }
 
@@ -115,9 +118,12 @@ export default class SetupCommand {
             }
         }
 
-        /*  select the plugin-shipped ASE output style (Anthropic Claude Code CLI only)  */
-        if (tool === "claude")
+        /*  select the plugin-shipped ASE output style and enable the function
+            hooks of the plugin-shipped mods (Anthropic Claude Code CLI only)  */
+        if (tool === "claude") {
             await this.settings.outputStyleActivate(`update${dev ? "[dev]" : ""}`, scope)
+            await this.settings.functionHooksActivate(`update${dev ? "[dev]" : ""}`, scope)
+        }
         return 0
     }
 
@@ -153,9 +159,12 @@ export default class SetupCommand {
         await this.runner.run("ase", [ "service", "stop" ],
             { quiet: true, ignoreError: "ASE service not running" })
 
-        /*  deselect the plugin-shipped ASE output style (Anthropic Claude Code CLI only)  */
-        if (tool === "claude")
+        /*  deselect the plugin-shipped ASE output style and disable the function
+            hooks of the plugin-shipped mods (Anthropic Claude Code CLI only)  */
+        if (tool === "claude") {
             await this.settings.outputStyleDeactivate(`uninstall${dev ? "[dev]" : ""}`, scope)
+            await this.settings.functionHooksDeactivate(`uninstall${dev ? "[dev]" : ""}`, scope)
+        }
 
         /*  uninstall ASE plugin  */
         this.log.write("info", `setup: uninstall${dev ? "[dev]" : ""}: ` +
@@ -204,6 +213,10 @@ export default class SetupCommand {
         /*  report the ASE output style selections  */
         for (const outputStyle of await this.settings.outputStyleStatus(tool))
             rows.push([ "OUTPUTSTYLE", chalk.bold(outputStyle.file), outputStyle.scope, outputStyle.status ])
+
+        /*  report the function hooks enablements  */
+        for (const functionHooks of await this.settings.functionHooksStatus(tool))
+            rows.push([ "FUNCTIONHOOKS", chalk.bold(functionHooks.file), functionHooks.scope, functionHooks.status ])
 
         /*  report the ASE statusline registrations  */
         for (const statusline of await this.settings.statuslineStatus(tool))
@@ -354,7 +367,7 @@ export default class SetupCommand {
         /*  register CLI sub-command "ase setup status"  */
         setupCmd
             .command("status")
-            .description("report the ASE plugin, MCP server, output style, statusline, and telemetry registrations for a tool")
+            .description("report the ASE plugin, MCP server, output style, function hooks, statusline, and telemetry registrations for a tool")
             .option("-t, --tool <tool>",   "target tool (\"claude\", \"copilot\", or \"codex\")", toolDflt)
             .action(async (opts: { tool: string }) => {
                 process.exit(await this.doStatus(parseTool(opts.tool)))

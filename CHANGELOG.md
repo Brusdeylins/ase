@@ -14,6 +14,12 @@ ChangeLog
     parsing is now shared with the grilling table via `ase-mods-common.ts`.
     Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`.
 
+-   IMPROVEMENT [code, docs]: Function Hooks Enabled by `ase setup`
+    For `--tool claude`, `ase setup install` and `ase setup update` now enable the function hooks
+    of the plugin-shipped mods by writing `"CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"` into the `env`
+    of the `settings.json` of the installation scope, `ase setup uninstall` removes it again, and
+    `ase setup status` reports it as `FUNCTIONHOOKS`, while a foreign value is preserved.
+
 -   IMPROVEMENT [code, docs]: Plugin Icon for Claude Code Plugin Validation
     The plugin now ships a square `plugin/.claude-plugin/icon.png` (1024x1024), rendered from the
     new `docs/ase-icon.svg` (the ASE logo centered on a white square), so the newer Claude Code
