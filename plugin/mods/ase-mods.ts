@@ -6,8 +6,9 @@
 
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
     Hooking infrastructure, registering the function hooks and dispatching
-    them into the grill table ("ase-mods-grill.ts"), the intent help
-    ("ase-mods-help-find.ts"), the synopsis form ("ase-mods-help-compose.ts"),
+    them into the grill table ("ase-mods-grill.ts"), the decision matrix
+    ("ase-mods-evaluate.ts"), the intent help ("ase-mods-help-find.ts"),
+    the synopsis form ("ase-mods-help-compose.ts"),
     the manual band ("ase-mods-help-show.ts"), the manpage browser
     ("ase-mods-help-browse.ts"), and the hint band ("ase-mods-help-hint.ts").
     As the engine loads only a module spelling "on", "$", and "next" literally,
@@ -17,6 +18,7 @@
 import type { Register, PromptBox, Timer } from "claude-code"
 import { type Band, TRIGGER } from "./ase-mods-common.ts"
 import { modGrill }           from "./ase-mods-grill.ts"
+import { modEvaluate }        from "./ase-mods-evaluate.ts"
 import { modHelpFind }        from "./ase-mods-help-find.ts"
 import { modHelpCompose }     from "./ase-mods-help-compose.ts"
 import { modHelpShow }        from "./ase-mods-help-show.ts"
@@ -29,14 +31,15 @@ export const register: Register = (on, options) => {
     if (options.enabled === false)
         return
 
-    /*  the grill table, the intent help, the synopsis form, the manual band,
-        the manpage browser, and the hint band  */
-    const grill  = modGrill()
-    const intent = modHelpFind()
-    const skill  = modHelpCompose()
-    const manual = modHelpShow()
-    const browse = modHelpBrowse()
-    const hint   = modHelpHint()
+    /*  the grill table, the decision matrix, the intent help, the synopsis form,
+        the manual band, the manpage browser, and the hint band  */
+    const grill    = modGrill()
+    const evaluate = modEvaluate()
+    const intent   = modHelpFind()
+    const skill    = modHelpCompose()
+    const manual   = modHelpShow()
+    const browse   = modHelpBrowse()
+    const hint     = modHelpHint()
 
     /*  the bands above the prompt (the synopsis form, the intent band, and the
         manpage browser, opened in this order), the shown one (as at most one is
@@ -198,16 +201,19 @@ export const register: Register = (on, options) => {
         next.called || shown() === undefined ? next(e) :
             { drop: "intent band or synopsis form failed" })
 
-    /*  redraw the replies which contain a grilling table (terminal only), where
-        the chain beneath runs, although its drawing is replaced by us (but this
-        at least silences a warning in the debug output of Claude Code)  */
+    /*  redraw the replies which contain a grilling table or a decision matrix
+        (terminal only), where the chain beneath runs, although its drawing is
+        replaced by us (but this at least silences a warning in the debug output
+        of Claude Code)  */
     on("ui.render", { component: "AssistantMessage", surface: "terminal" }, async ($, e, next) => {
-        const drawn = await next(e)
-        return grill.render(e, $.ui.resolve(e), {
-            invalidate: () => $.ui.invalidate("ui.render"),
+        const drawn      = await next(e)
+        const ui         = $.ui.resolve(e)
+        const invalidate = () => $.ui.invalidate("ui.render")
+        return grill.render(e, ui, {
+            invalidate,
             prompt:     () => $.prompt.read(),
             fill:       (text) => $.prompt.fill({ text })
-        }) ?? drawn
+        }) ?? evaluate.render(e, ui, { invalidate }) ?? drawn
     })
 
     /*  draw the intent band resp. the synopsis form, else the manual page,

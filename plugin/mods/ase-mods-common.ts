@@ -5,11 +5,12 @@
 */
 
 /*  Claude Code function hooks module ("mod", EARLY ACCESS):
-    Common parts, shared by the grill table, the intent help, the synopsis
-    form, the manual band, the manpage browser, and the hint band: the styled
-    characters of the terminal drawing, their Markdown conversion, wrapping,
-    and framing, and the contract, keys, geometry, and drawing of the
-    master/detail view in the band above the prompt.  */
+    Common parts, shared by the grill table, the decision matrix, the intent
+    help, the synopsis form, the manual band, the manpage browser, and the hint
+    band: the rows of the Markdown tables, the styled characters of the terminal
+    drawing, their Markdown conversion, wrapping, and framing, and the contract,
+    keys, geometry, and drawing of the master/detail view in the band above the
+    prompt.  */
 
 import type { Elements, Frozen, MatchedEvent, ModelCompleteRequest, ModelForkResult,
     PromptBox, PromptEditInput, PromptFilled, RenderElement } from "claude-code"
@@ -98,6 +99,35 @@ export const decode = (e: Frozen<PromptEditInput>): Key => {
             e.inputText === "" && !erased ? Math.sign(e.start - e.cursor) : 0,
         erase: erased ? (e.start < e.cursor ? -1 : 1) : 0
     }
+}
+
+/*  a row and the delimiter row of a Markdown table  */
+export const ROW  = /^ *\|.*\| *$/
+export const RULE = /^ *\|(?: *:?-+:? *\|)+ *$/
+
+/*  split a Markdown table row into its cells  */
+export const cells = (line: string): string[] => {
+    const result: string[] = []
+    const body = line.trim().replace(/^\|/, "").replace(/\|$/, "")
+    let cell = ""
+    let code = false
+    for (let i = 0; i < body.length; i++) {
+        const ch = body[i]!
+        if (ch === "`")
+            code = !code
+        if (!code && ch === "\\" && body[i + 1] === "|") {
+            cell += "|"
+            i++
+        }
+        else if (!code && ch === "|") {
+            result.push(cell.trim())
+            cell = ""
+        }
+        else
+            cell += ch
+    }
+    result.push(cell.trim())
+    return result
 }
 
 /*  a single styled character of the terminal drawing  */
@@ -214,7 +244,7 @@ export const uniform = (text: string, bold: boolean, color: string | undefined):
     Array.from(text, (ch) => ({ ch, bold, color }))
 
 /*  strip the single-asterisk emphasis outside the code spans of inline Markdown  */
-const strip = (text: string): string =>
+export const strip = (text: string): string =>
     text.split("`").map((part, i) => i % 2 === 0 ? part.replace(/(?<!\*)\*(?!\*)/g, "") : part).join("`")
 
 /*  convert the Markdown blocks of a manual page section (paragraphs, list items,

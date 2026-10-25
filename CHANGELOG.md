@@ -5,6 +5,15 @@ ChangeLog
 2.0.6 (2026-10-25)
 ------------------
 
+-   FEATURE [code]: Sortable Decision Matrix
+    The Claude Code function hooks module (new `plugin/mods/ase-mods-evaluate.ts`) now redraws the
+    weighted decision matrix of `ase-meta-evaluate` as a grid, rendering the column of the best
+    alternative (resp. of all tied best ones) in blue and bold. Its header cells reveal clickable
+    buttons on hover, sorting the criteria rows by their column (cycling the primary, the reverse,
+    and the original order), while the rating row stays the last one. The Markdown table row
+    parsing is now shared with the grilling table via `ase-mods-common.ts`.
+    Needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`.
+
 -   IMPROVEMENT [code, docs]: Plugin Icon for Claude Code Plugin Validation
     The plugin now ships a square `plugin/.claude-plugin/icon.png` (1024x1024), rendered from the
     new `docs/ase-icon.svg` (the ASE logo centered on a white square), so the newer Claude Code

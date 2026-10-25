@@ -13,15 +13,11 @@
     "n" or "nX" into the prompt.  */
 
 import type { Elements, Frozen, MatchedEvent, RenderElement } from "claude-code"
-import { type Engine, type Char, PICKED, style, width, wrap, split, paint } from "./ase-mods-common.ts"
+import { type Engine, type Char, PICKED, ROW, RULE, cells, style, width, wrap, split, paint } from "./ase-mods-common.ts"
 
 /*  the marker line above a grilling table (single-round and multi-round,
     optionally labeled with the perspective and/or grounding)  */
 const MARKER = /⧉ \*{0,2}ASE\*{0,2}: GRILLING(?: ROUND \d+\/\d+)?(?: \([^)]*\))?:/
-
-/*  a row and the delimiter row of a Markdown table  */
-const ROW  = /^ *\|.*\| *$/
-const RULE = /^ *\|(?: *:?-+:? *\|)+ *$/
 
 /*  the separator between two answers, the letter of
     an answer, and the number of a question  */
@@ -46,31 +42,6 @@ type Table = {
     after:  string,
     header: string[],
     rows:   { number: number, question: string, answers: { letter: string, text: string }[] }[]
-}
-
-/*  split a Markdown table row into its cells  */
-const cells = (line: string): string[] => {
-    const result: string[] = []
-    const body = line.trim().replace(/^\|/, "").replace(/\|$/, "")
-    let cell = ""
-    let code = false
-    for (let i = 0; i < body.length; i++) {
-        const ch = body[i]!
-        if (ch === "`")
-            code = !code
-        if (!code && ch === "\\" && body[i + 1] === "|") {
-            cell += "|"
-            i++
-        }
-        else if (!code && ch === "|") {
-            result.push(cell.trim())
-            cell = ""
-        }
-        else
-            cell += ch
-    }
-    result.push(cell.trim())
-    return result
 }
 
 /*  parse the grilling table out of the text of a reply  */
