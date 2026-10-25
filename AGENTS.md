@@ -19,7 +19,8 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `plugin/skills/ase-xxx-xxx/`: the 57 skills, each with a `SKILL.md`
         (agent instructions) and a `help.md` (Unix-style manual page), plus
         optional skill-specific files (like `ase-help-intent/data.md`, the
-        concatenation of all `help.md` files, generated at build-time);
+        concatenation of all `help.md` files, generated at build-time, or
+        `ase-help-skill/catalog.md`, the grouped catalog of all skills);
         the `help.md` files document only the user-facing skill surface
         (purpose, options, arguments, and usage examples), *not* the
         internals of the skills (the workflow steps of `SKILL.md`, the
@@ -48,7 +49,8 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         into the other modules, and binding the engine services for
         them), `ase-mods-common.ts` for the shared parts (styled
         characters, Markdown conversion, wrapping, framing, and the
-        geometry of the band above the prompt), `ase-mods-grill.ts` for
+        contract, keys, geometry, and drawing of the master/detail view
+        in the band above the prompt), `ase-mods-grill.ts` for
         re-rendering the grilling tables of ASE, `ase-mods-help-find.ts`
         for the intent help (a prompt, other than a skill command,
         suffixed with a blank and `!!` matched against the help of all
@@ -90,6 +92,11 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
         (`setup-common` for the shared types and sub-process runner,
         `setup-mcp` for the MCP server registry, and `setup-settings` for
         the statusline and output style settings)
+    -   `tool/src/ase-man-*.ts`: the parts of `ase man` (`man-catalog`
+        for the catalog of the manual pages of all commands and skills,
+        `man-render` for their Markdown rendering, including the Shiki
+        syntax highlighting of the code blocks, and `man-tui` for the
+        interactive, full-screen manual page browser)
     -   `tool/src/ase-config-*.ts`: the parts of `ase config`
         (`config-scope` for the scope chain and directory resolution,
         `config-schema` for the schema, presets, and write policies, and
@@ -185,8 +192,12 @@ Copilot CLI* and *OpenAI Codex CLI* are secondary targets, selected via
     -   `pages/src/components/*.astro`: the page sections (`Section-*`),
         modals (`Modal-*`), widgets (`Widget-*`), and client-side features
         (`Feature-*`)
+    -   `pages/src/styles/theme.css`: the global stylesheet (Tailwind CSS,
+        fonts, and theme) of the site
     -   `pages/src/data/*.ts`: the content data, especially `skills.ts` (the
-        single source of truth for skill grouping and ordering),
+        single source of truth for skill grouping and ordering, mirrored by
+        the skill groups of `tool/src/ase-man-catalog.ts`, so keep both in
+        sync),
         `manpages.ts` (the CLI command tree, read at build-time from
         `tool/man/*.md`), `news.ts` (the release news, read at build-time
         from `NEWS.md`), `terminology.ts` (the term definitions, imported at
