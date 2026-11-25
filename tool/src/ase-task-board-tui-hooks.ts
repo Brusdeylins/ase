@@ -7,10 +7,10 @@
 import fs                                     from "node:fs"
 import os                                     from "node:os"
 import path                                   from "node:path"
+import { fileURLToPath }                      from "node:url"
 
 import React                                  from "react"
 import { execa }                              from "execa"
-import which                                  from "which"
 import { useApp, measureElement }             from "ink"
 import type { DOMElement }                    from "ink"
 
@@ -23,7 +23,6 @@ import { editRefused, editPrompt, requestEdit, requestsOf } from "./ase-task-req
 import type { TaskRequests }                  from "./ase-task-request.js"
 import type { StatsRange }                    from "./ase-task-board-stats.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
-import { terminalArgs, terminalEnv, terminalResumeFailed } from "./ase-task-board-terminal.js"
 import { agentLogWidth, agentOpLines, agentOpHeight, AGENT_INFO_H } from "./ase-task-board-tui-view.js"
 import { agentLogLines, agentLogKey }         from "./ase-task-board-tui-popup.js"
 import { BUSY_DELAY, mouseReporting }         from "./ase-task-board-tui-model.js"
@@ -431,28 +430,15 @@ export const useEditorActions = (ctx: {
         }
     }
 
-    /*  chat about a task with the agent tool (resuming the session of the task), handing the
-        terminal over to it, until it ends  */
+    /*  chat about a task by attaching to its chat process kept running by the ASE service ("ase task chat"),
+        handing the terminal over to it, until the chat is detached from or ends  */
     const chat = async (id: string): Promise<void> => {
-        const cli = await which("claude").catch(() => "")
-        if (cli === "") {
-            setNotice("agent tool \"claude\" not found")
-            return
-        }
-        let args = terminalArgs(id)
-        for (let attempt = 0; attempt < 2; attempt++) {
-            const began = Date.now()
-            let code    = 0
-            await handOver(async () => {
-                code = (await execa(cli, args, { stdio: "inherit", cwd: Task.projectRoot(), env: terminalEnv(id, process.env, false), extendEnv: false, reject: false })).exitCode ?? 0
-            })
-
-            /*  resuming a session which does not exist ends at once: create it instead (once)  */
-            if (!terminalResumeFailed(id, args, code, Date.now() - began))
-                break
-            args = terminalArgs(id, { create: true })
-        }
-        setNotice(`chat about task "${id}" ended`)
+        const entry = fileURLToPath(new URL("./ase.js", import.meta.url))
+        let code = 0
+        await handOver(async () => {
+            code = (await execa(process.execPath, [ entry, "task", "chat", id ], { stdio: "inherit", cwd: Task.projectRoot(), reject: false })).exitCode ?? 0
+        })
+        setNotice(code === 0 ? `chat about task "${id}" left (it keeps running while not ended)` : `chat about task "${id}" ended with exit code ${code}`)
     }
 
     /*  edit a task with $EDITOR; a draft which failed to save is kept and

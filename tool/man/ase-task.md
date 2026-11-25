@@ -103,6 +103,10 @@ exits with status `1`.
   Show the interactive task board in the terminal or the browser. See
   `ase-task-board`(1).
 
+- `ase task chat` \[*id*\]:
+  Chat with the agent tool about a task, attached to its chat process
+  kept running by the ASE service. See `ase-task-chat`(1).
+
 ## TASK IDS
 
 A task id consists of the characters `A-Z`, `a-z`, `0-9`, `#`, `_`,
@@ -335,7 +339,7 @@ $ ase config --scope project set project.task.store.url ase://127.0.0.1:4711
 `ase-task-view`(1), `ase-task-edit`(1), `ase-task-save`(1),
 `ase-task-delete`(1), `ase-task-rename`(1), `ase-task-newid`(1),
 `ase-task-purge`(1), `ase-task-lifecycle`(1), `ase-task-idscheme`(1),
-`ase-task-store`(1), `ase-task-board`(1), `ase-config`(1),
+`ase-task-store`(1), `ase-task-board`(1), `ase-task-chat`(1), `ase-config`(1),
 `ase-agent`(1).
 
 ## AUTHOR

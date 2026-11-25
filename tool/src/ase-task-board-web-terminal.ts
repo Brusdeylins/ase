@@ -101,11 +101,16 @@ const end = (term: Terminal, forget: boolean): void => {
         terminals.delete(term.id)
 }
 
-/*  end the terminal after the idle time, while no client is attached  */
+/*  end the terminal after the idle time, while no client is attached, unless the agent tool still works on a
+    turn or runs background tasks, which a later check (after another idle time) then ends it after all  */
 const idle = (env: TerminalEnv, term: Terminal): void => {
     if (term.idle !== null)
         clearTimeout(term.idle)
     term.idle = term.clients.size > 0 ? null : setTimeout(() => {
+        if (term.pty !== null && (term.busy || (term.tasks !== null && terminalTasksPoll(term.tasks) > 0))) {
+            idle(env, term)
+            return
+        }
         env.log.write("info", `board: terminal of task "${term.id}" ended (idle)`)
         end(term, true)
     }, IDLE_MS)

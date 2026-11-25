@@ -259,7 +259,8 @@ per task.
 In the web board, the terminal of the task runs in a terminal emulator
 in the browser, whose process is shared by all browsers showing it
 (a late browser gets the entire output replayed) and ends after 30
-minutes without any browser. As the agent tool uses the mouse itself, a
+minutes without any browser (or terminal attached with `ase task chat`),
+unless the agent tool still works on a turn or runs background tasks. As the agent tool uses the mouse itself, a
 text is selected by dragging with `Shift` held and copied with
 `Cmd`+`C` (`Ctrl`+`C`). Changing the model or effort restarts the
 process, resuming the session. The terminal is reachable through a
@@ -269,8 +270,11 @@ as it is opened. Its colors follow the color theme of the board (also while cycl
 the SIL Open Font License, shipped with their licenses) are served by
 the board, and its code is loaded only when the first task dialog opens.
 
-In the terminal board, `X` hands the terminal over to the agent tool
-for the selected task and returns to the board once it exits.
+In the terminal board, `X` hands the terminal over to the chat of the
+selected task by running `ase task chat` (see `ase-task-chat`(1)), which
+attaches to the very same chat process of the ASE service, so the chat
+keeps running when detached with `Ctrl`+`Q` and is shared with the web
+board.
 
 ### Text Overview
 
@@ -783,9 +787,9 @@ $ ase task board --text --agent-relay ase://relay.example.com:42043
 
 ## SEE ALSO
 
-`ase`(1), `ase-task`(1), `ase-task-store`(1), `ase-agent`(1),
-`ase-agent-editor`(1), `ase-agent-relay`(1), `ase-service`(1),
-`ase-config`(1).
+`ase`(1), `ase-task`(1), `ase-task-chat`(1), `ase-task-store`(1),
+`ase-agent`(1), `ase-agent-editor`(1), `ase-agent-relay`(1),
+`ase-service`(1), `ase-config`(1).
 
 ## AUTHOR
 
