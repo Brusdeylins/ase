@@ -56,15 +56,101 @@ export const terminalConfigure = (id: string, model: string, effort: string): vo
     writeFileAtomic.sync(chatFile(), JSON.stringify(chats, null, 4), { encoding: "utf8" })
 }
 
-/*  whether the session of the agent tool already exists (as it then has to be resumed, not created)  */
-const sessionExists = (session: string): boolean => {
+/*  the transcript file of the session of the agent tool, if it exists  */
+const sessionFile = (session: string): string | null => {
     const root = path.join(process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude"), "projects")
     try {
-        return fs.readdirSync(root).some((dir) => fs.existsSync(path.join(root, dir, `${session}.jsonl`)))
+        for (const dir of fs.readdirSync(root))
+            if (fs.existsSync(path.join(root, dir, `${session}.jsonl`)))
+                return path.join(root, dir, `${session}.jsonl`)
     }
     catch {
-        return false
+        /*  no such directory  */
     }
+    return null
+}
+
+/*  whether the session of the agent tool already exists (as it then has to be resumed, not created)  */
+const sessionExists = (session: string): boolean =>
+    sessionFile(session) !== null
+
+/*  the background tasks (shell commands and agents) of the chat of a task, as the agent tool records them in the transcript of
+    its session: a task starts with a tool result carrying its "backgroundTaskId" resp. (for an agent) its "agentId" as asynchronously
+    launched, and ends with a "task-notification" it queues (completed, failed, or killed, where a monitor queues one per event before), or with the result of the tool stopping it;
+    the transcript is read incrementally from the offset of the last poll on (as it is only appended to), where an incomplete
+    last line is left to the next poll  */
+export type TerminalTasks = { session: string, file: string | null, offset: number, running: Set<string> }
+
+/*  start tracking the background tasks of a chat, which begin with its next process (as the tasks of an earlier one ended with it)  */
+export const terminalTasksNew = (id: string): TerminalTasks => {
+    const session = terminalChat(id).session
+    const file    = sessionFile(session)
+    return { session, file, offset: file !== null ? fs.statSync(file).size : 0, running: new Set() }
+}
+
+/*  take over the start or end of a background task from a line of the transcript  */
+const terminalTasksLine = (running: Set<string>, line: string): void => {
+    if (!line.includes("\"toolUseResult\"") && !line.includes("\"queue-operation\""))
+        return
+    let rec: { type?: string, operation?: string, content?: unknown, toolUseResult?: { backgroundTaskId?: unknown, agentId?: unknown, taskId?: unknown, timeoutMs?: unknown, isAsync?: unknown, status?: unknown, task_id?: unknown, message?: unknown } | null }
+    try {
+        rec = JSON.parse(line) as typeof rec
+    }
+    catch {
+        return
+    }
+    const result = rec.toolUseResult
+    if (typeof result === "object" && result !== null) {
+        if (typeof result.backgroundTaskId === "string")
+            running.add(result.backgroundTaskId)
+        else if (result.isAsync === true && result.status === "async_launched" && typeof result.agentId === "string")
+            running.add(result.agentId)
+
+        /*  a monitor (which also queues a notification per event of it, ending only with the one carrying its status)  */
+        else if (typeof result.taskId === "string" && typeof result.timeoutMs === "number")
+            running.add(result.taskId)
+
+        /*  stopping a shell command (unlike an agent) queues no notification, but is reported by the result of the stopping tool  */
+        else if (typeof result.task_id === "string" && typeof result.message === "string" && result.message.startsWith("Successfully stopped task"))
+            running.delete(result.task_id)
+    }
+    else if (rec.type === "queue-operation" && rec.operation === "enqueue" && typeof rec.content === "string") {
+        const id = /<task-id>([^<]+)<\/task-id>/.exec(rec.content)?.[1]
+        if (id !== undefined && rec.content.includes("<status>"))
+            running.delete(id)
+    }
+}
+
+/*  take over the new lines of the transcript, and get the number of the background tasks running  */
+export const terminalTasksPoll = (tasks: TerminalTasks): number => {
+    tasks.file ??= sessionFile(tasks.session)
+    if (tasks.file === null)
+        return 0
+    try {
+        const fd = fs.openSync(tasks.file, "r")
+        try {
+            const size = fs.fstatSync(fd).size
+            if (size < tasks.offset) {
+                tasks.offset = 0
+                tasks.running.clear()
+            }
+            if (size > tasks.offset) {
+                const buf = Buffer.alloc(size - tasks.offset)
+                const len = fs.readSync(fd, buf, 0, buf.length, tasks.offset)
+                const end = buf.subarray(0, len).lastIndexOf(0x0a) + 1
+                tasks.offset += end
+                for (const line of buf.subarray(0, end).toString("utf8").split("\n"))
+                    terminalTasksLine(tasks.running, line)
+            }
+        }
+        finally {
+            fs.closeSync(fd)
+        }
+    }
+    catch {
+        /*  an unreadable transcript keeps the tasks as they are  */
+    }
+    return tasks.running.size
 }
 
 /*  the file recording the context usage of the chat of a task (see "ase-task-board-statusline-cli")  */

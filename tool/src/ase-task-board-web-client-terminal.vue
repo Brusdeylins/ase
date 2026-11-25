@@ -6,7 +6,8 @@
 
 <!--  the terminal of a task: the chat of the agent tool about the task (one for all browsers), whose emulator
       takes the keys itself (listening on the window, which the board ignores for the keys within it), with the
-      drop-downs of its model and effort in the footer below it  -->
+      drop-downs of its model and effort in the footer below it, which (like its restart) are disabled while
+      it runs background tasks, as a restart would stop them  -->
 <template>
     <div class="term">
         <div class="tbody" :style="{ background: paper }">
@@ -17,13 +18,13 @@
             <span>Shift+drag to select, Cmd+C (Ctrl+C) to copy</span>
             <span class="gap"></span>
             <span v-if="exited !== null" class="warn">ended (exit code {{ exited }})</span>
-            <label>model <select v-model="model" title="model of the chat (restarts it)" @change="restart">
+            <label>model <select v-model="model" :disabled="background > 0" :title="busy ?? 'model of the chat (restarts it)'" @change="restart">
                 <option v-for="m in models" :key="m" :value="m">{{ m || "default" }}</option>
             </select></label>
-            <label>effort <select v-model="effort" title="effort of the chat (restarts it)" @change="restart">
+            <label>effort <select v-model="effort" :disabled="background > 0" :title="busy ?? 'effort of the chat (restarts it)'" @change="restart">
                 <option v-for="e in efforts" :key="e" :value="e">{{ e || "default" }}</option>
             </select></label>
-            <button title="restart Claude for this task (resumes the session; applies a changed theme)" @click="restart">↻</button>
+            <button :disabled="background > 0" :title="busy ?? 'restart Claude for this task (resumes the session; applies a changed theme)'" @click="restart">↻</button>
             <span class="ctx" :title="context !== null ? `context window: ${tokens(context.size)} tokens, ${tokens(context.tokens)} used` : 'context window used by the chat'">◔ <span class="bar">{{ bar }}</span> {{ context !== null ? `${Math.floor(context.pct)}% (${tokens(context.tokens)})` : "–" }}</span>
             <button :disabled="!chatFits" :title="!chatFits ? 'the window is too narrow to place the chat beside the task' : beside ? 'place the chat below the task (C)' : 'place the chat beside the task (C)'"
                 @click="chat.place = beside ? 'below' : 'beside'">{{ beside ? "◧" : "⬓" }}</button>
@@ -44,14 +45,15 @@ const props = defineProps<{ id: string }>()
 const models  = [ "", "opus", "sonnet", "haiku", "fable" ]
 const efforts = [ "", "low", "medium", "high", "xhigh", "max" ]
 
-/*  the state of the terminal: its model and effort, and the exit code of its ended process  */
+/*  the state of the terminal: its model and effort, the number of its running background tasks, and the exit code of its ended process  */
 type Context = { pct: number, tokens: number, size: number }
-type State   = { running: boolean, exited: number | null, model: string, effort: string, theme: "dark" | "light" | null, context: Context | null, url: string }
+type State   = { running: boolean, exited: number | null, model: string, effort: string, background: number, theme: "dark" | "light" | null, context: Context | null, url: string }
 const model  = ref("")
 const effort = ref("")
 const exited  = ref<number | null>(null)
 const running = ref(false)
 const context = ref<Context | null>(null)
+const background = ref(0)
 const gen    = ref(0)
 const starting = ref(true)
 const rootEl = ref<HTMLElement | null>(null)
@@ -77,6 +79,12 @@ const adopt = (state: State, fresh: boolean): void => {
         baseline = effective()
     context.value = state.context
     url           = state.url
+
+    /*  apply a change of the color theme deferred while background tasks ran, once they ended  */
+    const busyBefore = background.value > 0
+    background.value = state.background
+    if (!fresh && busyBefore && state.background === 0)
+        rethemed()
     if (fresh) {
         model.value  = state.model
         effort.value = state.effort
@@ -100,6 +108,10 @@ const connect = async (): Promise<void> => {
     restty.connectPty(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${url}`)
     restty.focus()
 }
+
+/*  the tooltip of the controls restarting the process, while background tasks run (which a restart would stop)  */
+const busy = computed(() =>
+    background.value > 0 ? `${background.value} background task${background.value === 1 ? "" : "s"} running — a restart would stop ${background.value === 1 ? "it" : "them"}` : null)
 
 /*  the bar of the context usage, drawn as the status line of ASE does: 20 characters, filled in proportion  */
 const bar = computed(() => {
@@ -135,9 +147,15 @@ const colors = (): void => {
         clearTimeout(retheme)
     retheme = setTimeout(() => {
         retheme = null
-        if (running.value && exited.value === null && effective() !== baseline)
-            restart()
+        rethemed()
     }, 500)
+}
+
+/*  restart the running agent tool if its theme differs from the one of the board, unless it runs background tasks, which
+    a restart would stop (then the restart is deferred until the state tells they ended, and the theme still differs)  */
+const rethemed = (): void => {
+    if (running.value && exited.value === null && background.value === 0 && effective() !== baseline)
+        restart()
 }
 const watcher = new MutationObserver(colors)
 const scheme  = window.matchMedia("(prefers-color-scheme: dark)")

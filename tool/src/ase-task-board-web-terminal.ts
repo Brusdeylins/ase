@@ -20,8 +20,10 @@ import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import * as TaskFormat           from "./ase-task-format.js"
 import {
-    terminalArgs, terminalChat, terminalConfigure, terminalReport, terminalEnv, terminalResumeFailed, terminalModels, terminalEfforts
+    terminalArgs, terminalChat, terminalConfigure, terminalReport, terminalEnv, terminalResumeFailed, terminalModels, terminalEfforts,
+    terminalTasksNew, terminalTasksPoll
 }                                from "./ase-task-board-terminal.js"
+import type { TerminalTasks }    from "./ase-task-board-terminal.js"
 import type { BoardAuth }        from "./ase-task-board-web-server.js"
 
 /*  the environment of the terminals: the log, the authentication of the board, and its port  */
@@ -62,6 +64,7 @@ type Terminal = {
     started:  number
     theme:    "dark" | "light" | null
     baseline: { model: string, effort: string } | null
+    tasks:    TerminalTasks | null
 }
 const terminals = new Map<string, Terminal>()
 const wss       = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
@@ -88,7 +91,8 @@ const end = (term: Terminal, forget: boolean): void => {
         clearTimeout(term.idle)
     term.idle = null
     const pty = term.pty
-    term.pty = null
+    term.pty   = null
+    term.tasks = null
     pty?.kill()
     if (forget)
         terminals.delete(term.id)
@@ -132,7 +136,7 @@ const terminalOf = (env: TerminalEnv, id: string): Terminal => {
     if (term === undefined) {
         term = {
             id, pty: null, starting: false, exited: null, history: [], size: 0,
-            clients: new Map(), cols: COLS_INIT, rows: ROWS_INIT, idle: null, started: 0, theme: null, baseline: null
+            clients: new Map(), cols: COLS_INIT, rows: ROWS_INIT, idle: null, started: 0, theme: null, baseline: null, tasks: null
         }
         terminals.set(id, term)
         idle(env, term)
@@ -167,6 +171,7 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
         term.started = began
         term.theme   = theme ?? null
         term.baseline = null
+        term.tasks    = terminalTasksNew(term.id)
         const child = pty.spawn(cli, args, {
             name: "xterm-256color", cols: term.cols, rows: term.rows, cwd: Task.projectRoot(), env: childEnv, encoding: null
         })
@@ -184,7 +189,8 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
         child.onExit(({ exitCode }) => {
             if (term.pty !== child)
                 return
-            term.pty = null
+            term.pty   = null
+            term.tasks = null
 
             /*  resuming a session which does not exist ends at once: create it instead (once)  */
             if (terminalResumeFailed(term.id, args, exitCode, Date.now() - began, Buffer.concat(term.history).toString("utf8"))) {
@@ -207,7 +213,7 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
     }
 }
 
-/*  the state of the terminal of a task, with its model and effort, and the WebSocket URL with its capability  */
+/*  the state of the terminal of a task, with its model and effort, the number of its running background tasks, and the WebSocket URL with its capability  */
 export const terminalState = (env: TerminalEnv, id: string) => {
     const term   = terminals.get(id)
     const route  = terminalRoute(id)
@@ -228,6 +234,7 @@ export const terminalState = (env: TerminalEnv, id: string) => {
     const chat = terminalChat(id)
     return {
         running: term?.pty != null, exited: term?.exited ?? null, model: chat.model, effort: chat.effort, theme: term?.theme ?? null,
+        background: term?.pty != null && term.tasks !== null ? terminalTasksPoll(term.tasks) : 0,
         context: report !== null ? { pct: report.pct, tokens: report.tokens, size: report.size } : null,
         url: `${route}?cap=${env.auth.capability(route)}`
     }
@@ -253,7 +260,8 @@ export const terminalRestart = async (env: TerminalEnv, id: string, model: strin
     terminalConfigure(id, model, effort)
     const term = terminalOf(env, id)
     const pty  = term.pty
-    term.pty = null
+    term.pty   = null
+    term.tasks = null
     pty?.kill()
     term.history = []
     term.size    = 0
