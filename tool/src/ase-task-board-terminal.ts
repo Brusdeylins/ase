@@ -174,6 +174,39 @@ export const terminalReport = (id: string, since: number): TerminalReport | null
     }
 }
 
+/*  the defaults of the agent tool, i.e., the model and effort it uses without the options "--model" and "--effort": the ones
+    it reported (as the model alias, resp. the effort of that model) for a process started without them since the start of the
+    service (not for a resumed one, which keeps the model of its session), else the ones of its settings (the most specific
+    settings file first), else unknown (the empty string)  */
+const observed = { model: "", efforts: new Map<string, string>() }
+const setting = (key: string): string => {
+    const config = process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude")
+    const dir    = Task.projectRoot()
+    for (const file of [ path.join(dir, ".claude", "settings.local.json"), path.join(dir, ".claude", "settings.json"), path.join(config, "settings.json") ])
+        try {
+            const value = (JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>)[key]
+            if (typeof value === "string")
+                return value
+        }
+        catch {
+            /*  no such settings file, or an unreadable one  */
+        }
+    return ""
+}
+export const terminalDefaults = (model: string): { model: string, effort: string } => {
+    const effort = setting("effortLevel")
+    return {
+        model:  observed.model !== "" ? observed.model : terminalModels.find((m) => m !== "" && setting("model").includes(m)) ?? "",
+        effort: observed.efforts.get(model) ?? (terminalEfforts.includes(effort) ? effort : "")
+    }
+}
+export const terminalLearn = (args: string[], report: TerminalReport): void => {
+    if (report.model !== "" && report.effort !== "" && !args.includes("--effort"))
+        observed.efforts.set(report.model, report.effort)
+    if (report.model !== "" && !args.includes("--model") && args[0] !== "--resume")
+        observed.model = report.model
+}
+
 /*  the system prompt appended to the chat of a task  */
 const terminalPrompt = (id: string): string =>
     `This session works on the ASE task "${id}" (the current task). You may edit only this task. ` +
@@ -203,8 +236,11 @@ const terminalGuard = (url: string | null): Record<string, unknown> => {
 export const terminalArgs = (id: string, options: { create?: boolean, guard?: string, theme?: "dark" | "light" } = {}): string[] => {
     const chat = terminalChat(id)
     const args = [ options.create !== true && sessionExists(chat.session) ? "--resume" : "--session-id", chat.session ]
-    if (chat.model !== "")
-        args.push("--model", chat.model)
+
+    /*  the default model is passed explicitly when resuming, as the agent tool otherwise keeps the model of the session  */
+    const model = chat.model !== "" ? chat.model : args[0] === "--resume" ? terminalDefaults("").model : ""
+    if (model !== "")
+        args.push("--model", model)
     if (chat.effort !== "")
         args.push("--effort", chat.effort)
     args.push("--append-system-prompt", terminalPrompt(id))

@@ -21,7 +21,7 @@ import { Task }                  from "./ase-task.js"
 import * as TaskFormat           from "./ase-task-format.js"
 import {
     terminalArgs, terminalChat, terminalConfigure, terminalReport, terminalEnv, terminalResumeFailed, terminalModels, terminalEfforts,
-    terminalTasksNew, terminalTasksPoll
+    terminalTasksNew, terminalTasksPoll, terminalDefaults, terminalLearn
 }                                from "./ase-task-board-terminal.js"
 import type { TerminalTasks }    from "./ase-task-board-terminal.js"
 import type { BoardAuth }        from "./ase-task-board-web-server.js"
@@ -65,6 +65,9 @@ type Terminal = {
     theme:    "dark" | "light" | null
     baseline: { model: string, effort: string } | null
     tasks:    TerminalTasks | null
+    args:     string[]
+    busy:     boolean
+    tail:     Buffer
 }
 const terminals = new Map<string, Terminal>()
 const wss       = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
@@ -122,6 +125,21 @@ const fit = (term: Terminal): void => {
     term.pty?.resize(cols, rows)
 }
 
+/*  follow whether the agent tool works on a turn, as it shows it in the title of its terminal (set with "ESC ] 0 ; title BEL"),
+    where it prefixes the title with "✳" while idle and with a spinner glyph while working (also after an interrupted turn, which
+    neither the hooks nor the transcript of the agent tool report), by the last complete title of the output (where the end of an
+    incomplete one is awaited with the tail of the output kept)  */
+const busyScan = (term: Terminal, buf: Buffer): void => {
+    const data = Buffer.concat([ term.tail, buf ])
+    const at   = Math.max(data.lastIndexOf("\x1b]0;"), data.lastIndexOf("\x1b]2;"))
+    if (at >= 0) {
+        const end = [ data.indexOf(0x07, at), data.indexOf(0x1b, at + 4) ].filter((i) => i >= 0).sort((a, b) => a - b)[0]
+        if (end !== undefined)
+            term.busy = !data.subarray(at + 4, end).toString("utf8").startsWith("✳")
+    }
+    term.tail = data.subarray(Math.max(0, data.length - 1024))
+}
+
 /*  the node-pty helper of the platform may lack its execute permission after the installation  */
 const helperFix = (): void => {
     const root   = path.dirname(createRequire(import.meta.url).resolve("node-pty/package.json"))
@@ -136,7 +154,7 @@ const terminalOf = (env: TerminalEnv, id: string): Terminal => {
     if (term === undefined) {
         term = {
             id, pty: null, starting: false, exited: null, history: [], size: 0,
-            clients: new Map(), cols: COLS_INIT, rows: ROWS_INIT, idle: null, started: 0, theme: null, baseline: null, tasks: null
+            clients: new Map(), cols: COLS_INIT, rows: ROWS_INIT, idle: null, started: 0, theme: null, baseline: null, tasks: null, args: [], busy: false, tail: Buffer.alloc(0)
         }
         terminals.set(id, term)
         idle(env, term)
@@ -172,6 +190,9 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
         term.theme   = theme ?? null
         term.baseline = null
         term.tasks    = terminalTasksNew(term.id)
+        term.args     = args
+        term.busy     = false
+        term.tail     = Buffer.alloc(0)
         const child = pty.spawn(cli, args, {
             name: "xterm-256color", cols: term.cols, rows: term.rows, cwd: Task.projectRoot(), env: childEnv, encoding: null
         })
@@ -184,6 +205,7 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
             term.size += buf.length
             while (term.size > HISTORY_MAX && term.history.length > 1)
                 term.size -= term.history.shift()!.length
+            busyScan(term, buf)
             sendAll(term, buf)
         })
         child.onExit(({ exitCode }) => {
@@ -191,6 +213,7 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
                 return
             term.pty   = null
             term.tasks = null
+            term.busy  = false
 
             /*  resuming a session which does not exist ends at once: create it instead (once)  */
             if (terminalResumeFailed(term.id, args, exitCode, Date.now() - began, Buffer.concat(term.history).toString("utf8"))) {
@@ -223,8 +246,10 @@ export const terminalState = (env: TerminalEnv, id: string) => {
         and "/effort" commands, which it then also saves as the defaults of the user), relative to those it reported first  */
     if (term !== undefined && report !== null) {
         const now = { model: report.model, effort: report.effort }
-        if (term.baseline === null)
+        if (term.baseline === null) {
             term.baseline = now
+            terminalLearn(term.args, report)
+        }
         else if (now.model !== term.baseline.model || now.effort !== term.baseline.effort) {
             const chat = terminalChat(id)
             terminalConfigure(id, now.model !== term.baseline.model ? now.model : chat.model, now.effort !== term.baseline.effort ? now.effort : chat.effort)
@@ -232,8 +257,14 @@ export const terminalState = (env: TerminalEnv, id: string) => {
         }
     }
     const chat = terminalChat(id)
+
+    /*  show the model and effort the chat really uses (the reported ones, else the chosen ones, else the defaults) and the defaults  */
+    const defaults = terminalDefaults("")
+    const model    = report !== null && report.model !== "" ? report.model : chat.model !== "" ? chat.model : defaults.model
+    const effort   = report !== null && report.effort !== "" ? report.effort : chat.effort !== "" ? chat.effort : terminalDefaults(model).effort
     return {
-        running: term?.pty != null, exited: term?.exited ?? null, model: chat.model, effort: chat.effort, theme: term?.theme ?? null,
+        running: term?.pty != null, exited: term?.exited ?? null, model, effort, defaults: { model: defaults.model, effort: terminalDefaults(model).effort },
+        theme: term?.theme ?? null, busy: term?.pty != null && term.busy,
         background: term?.pty != null && term.tasks !== null ? terminalTasksPoll(term.tasks) : 0,
         context: report !== null ? { pct: report.pct, tokens: report.tokens, size: report.size } : null,
         url: `${route}?cap=${env.auth.capability(route)}`
@@ -262,6 +293,7 @@ export const terminalRestart = async (env: TerminalEnv, id: string, model: strin
     const pty  = term.pty
     term.pty   = null
     term.tasks = null
+    term.busy  = false
     pty?.kill()
     term.history = []
     term.size    = 0

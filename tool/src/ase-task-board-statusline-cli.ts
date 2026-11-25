@@ -12,10 +12,10 @@ import { spawnSync }     from "node:child_process"
 /*  the standalone status line program of the chats of the task boards: it records the context usage of
     the chat (the percentage, its tokens and the size of the window, as reported by the agent tool) into the
     file of its first argument, for the footer of the chat, and then renders the status line of the chat with
-    the ASE status line of this very build, as two lines of the ASE parameters of the chat (project, persona,
-    guidance, boxing, and thinking, resp. the costs, duration, and lines of the session) only, as the
-    footer of the chat already shows the model, effort, and context  */
-const lines = [ "%p %P %h %B %t", "%X %H %a %r" ]
+    the ASE status line of this very build, as a single line of the ASE parameters of the chat (project, persona,
+    guidance, boxing, and thinking) only, as the footer of the chat already shows the model, effort, and context
+    and the costs and duration of the session are booked on the task  */
+const line = "%p %P %h %B %t"
 
 type Payload = {
     cwd?:       string
@@ -53,5 +53,5 @@ process.stdin.on("end", () => {
         /*  an unreadable input is not recorded  */
     }
     const program = path.join(path.dirname(fileURLToPath(import.meta.url)), "ase.js")
-    process.stdout.write(spawnSync(process.execPath, [ program, "statusline", "-w", "0", "-m", "2", ...lines ], { input, encoding: "utf8", cwd: dir }).stdout)
+    process.stdout.write(spawnSync(process.execPath, [ program, "statusline", "-w", "0", "-m", "2", line ], { input, encoding: "utf8", cwd: dir }).stdout)
 })

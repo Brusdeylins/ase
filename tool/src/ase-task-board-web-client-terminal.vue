@@ -7,7 +7,7 @@
 <!--  the terminal of a task: the chat of the agent tool about the task (one for all browsers), whose emulator
       takes the keys itself (listening on the window, which the board ignores for the keys within it), with the
       drop-downs of its model and effort in the footer below it, which (like its restart) are disabled while
-      it runs background tasks, as a restart would stop them  -->
+      it works on a turn or runs background tasks, as a restart would interrupt resp. stop them  -->
 <template>
     <div class="term">
         <div class="tbody" :style="{ background: paper }">
@@ -18,13 +18,13 @@
             <span>Shift+drag to select, Cmd+C (Ctrl+C) to copy</span>
             <span class="gap"></span>
             <span v-if="exited !== null" class="warn">ended (exit code {{ exited }})</span>
-            <label>model <select v-model="model" :disabled="background > 0" :title="busy ?? 'model of the chat (restarts it)'" @change="restart">
-                <option v-for="m in models" :key="m" :value="m">{{ m || "default" }}</option>
+            <label>model <select v-model="model" :disabled="locked" :title="why ?? 'model of the chat (restarts it); * marks the default of Claude'" @change="restart">
+                <option v-for="m in models" :key="m" :value="m">{{ m + (m === defaults.model ? " *" : "") }}</option>
             </select></label>
-            <label>effort <select v-model="effort" :disabled="background > 0" :title="busy ?? 'effort of the chat (restarts it)'" @change="restart">
-                <option v-for="e in efforts" :key="e" :value="e">{{ e || "default" }}</option>
+            <label>effort <select v-model="effort" :disabled="locked" :title="why ?? 'effort of the chat (restarts it); * marks the default of Claude'" @change="restart">
+                <option v-for="e in efforts" :key="e" :value="e">{{ e + (e === defaults.effort ? " *" : "") }}</option>
             </select></label>
-            <button :disabled="background > 0" :title="busy ?? 'restart Claude for this task (resumes the session; applies a changed theme)'" @click="restart">↻</button>
+            <button :disabled="locked" :title="why ?? 'restart Claude for this task (resumes the session; applies a changed theme)'" @click="restart">↻</button>
             <span class="ctx" :title="context !== null ? `context window: ${tokens(context.size)} tokens, ${tokens(context.tokens)} used` : 'context window used by the chat'">◔ <span class="bar">{{ bar }}</span> {{ context !== null ? `${Math.floor(context.pct)}% (${tokens(context.tokens)})` : "–" }}</span>
             <button :disabled="!chatFits" :title="!chatFits ? 'the window is too narrow to place the chat beside the task' : beside ? 'place the chat below the task (C)' : 'place the chat beside the task (C)'"
                 @click="chat.place = beside ? 'below' : 'beside'">{{ beside ? "◧" : "⬓" }}</button>
@@ -41,19 +41,22 @@ import { loadEmulator, terminalFonts, terminalTheme, terminalDark, terminalPaper
 /*  the task of the terminal  */
 const props = defineProps<{ id: string }>()
 
-/*  the models and efforts to choose from (where the empty one is the default of the agent tool)  */
-const models  = [ "", "opus", "sonnet", "haiku", "fable" ]
-const efforts = [ "", "low", "medium", "high", "xhigh", "max" ]
+/*  the models and efforts to choose from, where the default of the agent tool is marked, and chosen by
+    passing none (as the agent tool then uses its default, also with changed settings)  */
+const models  = [ "opus", "sonnet", "haiku", "fable" ]
+const efforts = [ "low", "medium", "high", "xhigh", "max" ]
 
 /*  the state of the terminal: its model and effort, the number of its running background tasks, and the exit code of its ended process  */
 type Context = { pct: number, tokens: number, size: number }
-type State   = { running: boolean, exited: number | null, model: string, effort: string, background: number, theme: "dark" | "light" | null, context: Context | null, url: string }
+type State   = { running: boolean, exited: number | null, model: string, effort: string, background: number, busy: boolean, defaults: { model: string, effort: string }, theme: "dark" | "light" | null, context: Context | null, url: string }
 const model  = ref("")
 const effort = ref("")
 const exited  = ref<number | null>(null)
 const running = ref(false)
 const context = ref<Context | null>(null)
 const background = ref(0)
+const busy = ref(false)
+const defaults = ref({ model: "", effort: "" })
 const gen    = ref(0)
 const starting = ref(true)
 const rootEl = ref<HTMLElement | null>(null)
@@ -80,10 +83,12 @@ const adopt = (state: State, fresh: boolean): void => {
     context.value = state.context
     url           = state.url
 
-    /*  apply a change of the color theme deferred while background tasks ran, once they ended  */
-    const busyBefore = background.value > 0
+    /*  apply a change of the color theme deferred while the agent tool was working or ran background tasks, once it is done  */
+    const lockedBefore = locked.value
     background.value = state.background
-    if (!fresh && busyBefore && state.background === 0)
+    busy.value        = state.busy
+    defaults.value    = state.defaults
+    if (!fresh && lockedBefore && !locked.value)
         rethemed()
     if (fresh) {
         model.value  = state.model
@@ -109,9 +114,15 @@ const connect = async (): Promise<void> => {
     restty.focus()
 }
 
-/*  the tooltip of the controls restarting the process, while background tasks run (which a restart would stop)  */
-const busy = computed(() =>
-    background.value > 0 ? `${background.value} background task${background.value === 1 ? "" : "s"} running — a restart would stop ${background.value === 1 ? "it" : "them"}` : null)
+/*  whether a restart of the process is to be avoided, as the agent tool works on a turn (which a restart would interrupt) or
+    runs background tasks (which a restart would stop), and the tooltip of the controls restarting the process then  */
+const locked = computed(() => busy.value || background.value > 0)
+const why    = computed(() => {
+    if (busy.value)
+        return "Claude is working — a restart would interrupt it"
+    const n = background.value
+    return n > 0 ? `${n} background task${n === 1 ? "" : "s"} running — a restart would stop ${n === 1 ? "it" : "them"}` : null
+})
 
 /*  the bar of the context usage, drawn as the status line of ASE does: 20 characters, filled in proportion  */
 const bar = computed(() => {
@@ -151,10 +162,10 @@ const colors = (): void => {
     }, 500)
 }
 
-/*  restart the running agent tool if its theme differs from the one of the board, unless it runs background tasks, which
-    a restart would stop (then the restart is deferred until the state tells they ended, and the theme still differs)  */
+/*  restart the running agent tool if its theme differs from the one of the board, unless it is working or runs background
+    tasks (then the restart is deferred until the state tells it is done, and the theme still differs)  */
 const rethemed = (): void => {
-    if (running.value && exited.value === null && background.value === 0 && effective() !== baseline)
+    if (running.value && exited.value === null && !locked.value && effective() !== baseline)
         restart()
 }
 const watcher = new MutationObserver(colors)
@@ -165,7 +176,11 @@ const restart = async (): Promise<void> => {
     const state = await api<State>(`/task-board/api/task/${encodeURIComponent(props.id)}/terminal`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ model: model.value, effort: effort.value, theme: terminalDark() ? "dark" : "light" })
+        body:    JSON.stringify({
+            model:  model.value === defaults.value.model ? "" : model.value,
+            effort: effort.value === defaults.value.effort ? "" : effort.value,
+            theme:  terminalDark() ? "dark" : "light"
+        })
     }, true)
     if (state.error !== undefined)
         return
