@@ -71,13 +71,17 @@ const sessionExists = (session: string): boolean => {
 const contextFile = (id: string): string =>
     path.join(userStateDir(), "board", `${Task.projectIdOf(Task.projectRoot())}-chat-context`, `${id}.json`)
 
-/*  the context usage of the chat of a task as last reported by the agent tool (its percentage, tokens, and
-    window size) since the given time (the start of its process), if any, as the report of an earlier process
-    (or session) is stale  */
-export const terminalContext = (id: string, since: number): { pct: number, tokens: number, size: number } | null => {
+/*  the context usage, model, and effort of the chat of a task as last reported by the agent tool since the given time (the start of
+    its process), if any, as the report of an earlier process (or session) is stale; the model as its alias, if it has one  */
+export type TerminalReport = { pct: number, tokens: number, size: number, model: string, effort: string }
+export const terminalReport = (id: string, since: number): TerminalReport | null => {
     try {
-        const { pct, tokens, size, at } = JSON.parse(fs.readFileSync(contextFile(id), "utf8")) as { pct: number, tokens: number, size: number, at?: number }
-        return typeof at === "number" && at >= since ? { pct, tokens, size } : null
+        const r = JSON.parse(fs.readFileSync(contextFile(id), "utf8")) as { pct: number, tokens: number, size: number, model?: string, effort?: string, at?: number }
+        if (typeof r.at !== "number" || r.at < since)
+            return null
+        const model  = terminalModels.find((m) => m !== "" && (r.model ?? "").includes(m)) ?? ""
+        const effort = terminalEfforts.includes(r.effort ?? "") ? r.effort ?? "" : ""
+        return { pct: r.pct, tokens: r.tokens, size: r.size, model, effort }
     }
     catch {
         return null

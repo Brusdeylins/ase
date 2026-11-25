@@ -20,7 +20,7 @@ import type Log                  from "./ase-lib-log.js"
 import { Task }                  from "./ase-task.js"
 import * as TaskFormat           from "./ase-task-format.js"
 import {
-    terminalArgs, terminalChat, terminalConfigure, terminalContext, terminalEnv, terminalResumeFailed, terminalModels, terminalEfforts
+    terminalArgs, terminalChat, terminalConfigure, terminalReport, terminalEnv, terminalResumeFailed, terminalModels, terminalEfforts
 }                                from "./ase-task-board-terminal.js"
 import type { BoardAuth }        from "./ase-task-board-web-server.js"
 
@@ -61,6 +61,7 @@ type Terminal = {
     idle:     ReturnType<typeof setTimeout> | null
     started:  number
     theme:    "dark" | "light" | null
+    baseline: { model: string, effort: string } | null
 }
 const terminals = new Map<string, Terminal>()
 const wss       = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 })
@@ -131,7 +132,7 @@ const terminalOf = (env: TerminalEnv, id: string): Terminal => {
     if (term === undefined) {
         term = {
             id, pty: null, starting: false, exited: null, history: [], size: 0,
-            clients: new Map(), cols: COLS_INIT, rows: ROWS_INIT, idle: null, started: 0, theme: null
+            clients: new Map(), cols: COLS_INIT, rows: ROWS_INIT, idle: null, started: 0, theme: null, baseline: null
         }
         terminals.set(id, term)
         idle(env, term)
@@ -165,6 +166,7 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
         const began = Date.now()
         term.started = began
         term.theme   = theme ?? null
+        term.baseline = null
         const child = pty.spawn(cli, args, {
             name: "xterm-256color", cols: term.cols, rows: term.rows, cwd: Task.projectRoot(), env: childEnv, encoding: null
         })
@@ -207,11 +209,26 @@ const start = async (env: TerminalEnv, term: Terminal, theme?: "dark" | "light",
 
 /*  the state of the terminal of a task, with its model and effort, and the WebSocket URL with its capability  */
 export const terminalState = (env: TerminalEnv, id: string) => {
-    const term  = terminals.get(id)
-    const chat  = terminalChat(id)
-    const route = terminalRoute(id)
+    const term   = terminals.get(id)
+    const route  = terminalRoute(id)
+    const report = term?.pty != null ? terminalReport(id, term.started) : null
+
+    /*  keep the model and effort of the chat of the task as the user changes them within the agent tool (by its "/model"
+        and "/effort" commands, which it then also saves as the defaults of the user), relative to those it reported first  */
+    if (term !== undefined && report !== null) {
+        const now = { model: report.model, effort: report.effort }
+        if (term.baseline === null)
+            term.baseline = now
+        else if (now.model !== term.baseline.model || now.effort !== term.baseline.effort) {
+            const chat = terminalChat(id)
+            terminalConfigure(id, now.model !== term.baseline.model ? now.model : chat.model, now.effort !== term.baseline.effort ? now.effort : chat.effort)
+            term.baseline = now
+        }
+    }
+    const chat = terminalChat(id)
     return {
-        running: term?.pty != null, exited: term?.exited ?? null, model: chat.model, effort: chat.effort, theme: term?.theme ?? null, context: term?.pty != null ? terminalContext(id, term.started) : null,
+        running: term?.pty != null, exited: term?.exited ?? null, model: chat.model, effort: chat.effort, theme: term?.theme ?? null,
+        context: report !== null ? { pct: report.pct, tokens: report.tokens, size: report.size } : null,
         url: `${route}?cap=${env.auth.capability(route)}`
     }
 }

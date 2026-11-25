@@ -17,6 +17,8 @@ import { spawnSync }     from "node:child_process"
 type Payload = {
     cwd?:       string
     workspace?: { current_dir?: string }
+    model?:     { id?: string }
+    effort?:    { level?: string }
     context_window?: {
         used_percentage?:     number | null
         context_window_size?: number
@@ -52,9 +54,11 @@ process.stdin.on("end", () => {
         const cw     = payload.context_window
         const usage  = cw?.current_usage
         const tokens = (usage?.input_tokens ?? 0) + (usage?.cache_creation_input_tokens ?? 0) + (usage?.cache_read_input_tokens ?? 0)
-        if (typeof cw?.used_percentage === "number" && typeof cw.context_window_size === "number") {
+        if (typeof cw?.context_window_size === "number") {
             fs.mkdirSync(path.dirname(process.argv[2]), { recursive: true })
-            fs.writeFileSync(process.argv[2], JSON.stringify({ pct: cw.used_percentage, tokens, size: cw.context_window_size, at: Date.now() }))
+            fs.writeFileSync(process.argv[2], JSON.stringify({
+                pct: cw.used_percentage ?? 0, tokens, size: cw.context_window_size, model: payload.model?.id, effort: payload.effort?.level, at: Date.now()
+            }))
         }
     }
     catch {

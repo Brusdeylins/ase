@@ -65,6 +65,12 @@ let timer: ReturnType<typeof setInterval> | null = null
 const adopt = (state: State, fresh: boolean): void => {
     exited.value  = state.exited
     running.value = state.running
+
+    /*  follow the model and effort the user changed within the agent tool (unless just choosing one)  */
+    if (!fresh && !(document.activeElement instanceof HTMLSelectElement)) {
+        model.value  = state.model
+        effort.value = state.effort
+    }
     if (state.theme !== null)
         baseline = state.theme
     else if (fresh)
