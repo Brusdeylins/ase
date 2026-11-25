@@ -6,25 +6,25 @@
 
 <!--  the terminal of a task: the chat of the agent tool about the task (one for all browsers), whose emulator
       takes the keys itself (listening on the window, which the board ignores for the keys within it), with the
-      drop-downs of its model and effort in the footer below it, which (like its restart) are disabled while
-      it works on a turn or runs background tasks, as a restart would interrupt resp. stop them  -->
+      drop-downs of its model and effort in the footer below it, which are disabled while it works on a turn
+      or runs background tasks, as a restart would interrupt resp. stop them, and, once its process ended, an
+      overlay to start it again  -->
 <template>
     <div class="term">
         <div class="tbody" :style="{ background: paper }">
             <div :key="gen" ref="rootEl" class="troot"></div>
             <div v-if="starting && exited === null" class="tstart"><span class="spin"></span>Starting Claude…</div>
+            <div v-if="exited !== null" class="tended">Claude ended (exit code {{ exited }}) <button title="start Claude again for this task (resumes the session)" @click="restart">Start again</button></div>
         </div>
         <div class="tfoot">
             <span>Shift+drag to select, Cmd+C (Ctrl+C) to copy</span>
             <span class="gap"></span>
-            <span v-if="exited !== null" class="warn">ended (exit code {{ exited }})</span>
             <label>model <select v-model="model" :disabled="locked" :title="why ?? 'model of the chat (restarts it); * marks the default of Claude'" @change="restart">
                 <option v-for="m in models" :key="m" :value="m">{{ m + (m === defaults.model ? " *" : "") }}</option>
             </select></label>
             <label>effort <select v-model="effort" :disabled="locked" :title="why ?? 'effort of the chat (restarts it); * marks the default of Claude'" @change="restart">
                 <option v-for="e in efforts" :key="e" :value="e">{{ e + (e === defaults.effort ? " *" : "") }}</option>
             </select></label>
-            <button :disabled="locked" :title="why ?? 'restart Claude for this task (resumes the session; applies a changed theme)'" @click="restart">↻</button>
             <span class="ctx" :title="context !== null ? `context window: ${tokens(context.size)} tokens, ${tokens(context.tokens)} used` : 'context window used by the chat'">◔ <span class="bar">{{ bar }}</span> {{ context !== null ? `${Math.floor(context.pct)}% (${tokens(context.tokens)})` : "–" }}</span>
             <button :disabled="!chatFits" :title="!chatFits ? 'the window is too narrow to place the chat beside the task' : beside ? 'place the chat below the task (C)' : 'place the chat beside the task (C)'"
                 @click="chat.place = beside ? 'below' : 'beside'">{{ beside ? "◧" : "⬓" }}</button>

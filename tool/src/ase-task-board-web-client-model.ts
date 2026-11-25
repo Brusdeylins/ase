@@ -345,9 +345,10 @@ export const tabScroll   = reactive({ less: false, more: false })
 export const tabScrolls  = new Map<number, number>()
 export const filter      = ref("")
 
-/*  the layout of the chat (the terminal of the task) in the task dialog, kept per browser: whether it is shown,
-    whether it is placed below or beside the task (beside only where the window is wide enough for both, else
-    below), and the share of the height (below) resp. width (beside) of the dialog content the task keeps  */
+/*  the layout of the chat (the terminal of the task) in the task dialog, kept per browser: whether it is placed below
+    or beside the task (beside only where the window is wide enough for both, else below), and the share of the
+    height (below) resp. width (beside) of the dialog content the task keeps, while whether it is shown is not kept
+    (see "openTask"), as showing it starts the chat of a task  */
 type ChatLayout = { shown: boolean, place: "below" | "beside", split: number, across: number }
 const chatKey         = "ase-task-board-chat"
 const CHAT_BESIDE_MIN = 1500
@@ -355,8 +356,6 @@ const chatLoad = (): ChatLayout => {
     const layout: ChatLayout = { shown: false, place: "below", split: 0.5, across: 0.5 }
     try {
         const kept = JSON.parse(localStorage.getItem(chatKey) ?? "null") as Partial<ChatLayout> | null
-        if (typeof kept?.shown === "boolean")
-            layout.shown = kept.shown
         if (kept?.place === "below" || kept?.place === "beside")
             layout.place = kept.place
         if (typeof kept?.split === "number" && kept.split >= 0.15 && kept.split <= 0.85)
@@ -373,9 +372,9 @@ export const chat     = reactive<ChatLayout>(chatLoad())
 export const width    = ref(window.innerWidth)
 export const chatFits = computed(() => width.value * 0.94 >= CHAT_BESIDE_MIN)
 export const beside   = computed(() => chat.place === "beside" && chatFits.value)
-watch(chat, () => {
+watch(() => [ chat.place, chat.split, chat.across ], () => {
     try {
-        localStorage.setItem(chatKey, JSON.stringify(chat))
+        localStorage.setItem(chatKey, JSON.stringify({ place: chat.place, split: chat.split, across: chat.across }))
     }
     catch {
         /*  an inaccessible storage just does not keep the layout  */
@@ -727,6 +726,13 @@ export const openTask = async (id: string, background = false) => {
     else {
         tab.value = 0
         tabScrolls.clear()
+
+        /*  show the chat of the task only if its process already runs (never starting it by opening the dialog)  */
+        chat.shown = false
+        api<{ running?: boolean }>(`/task-board/api/task/${encodeURIComponent(id)}/terminal`, undefined, true).then((state) => {
+            if (seq === openSeq && state.error === undefined && state.running === true)
+                chat.shown = true
+        }).catch(() => {})
     }
     openId = id
     const t = await api<Task>(`/task-board/api/task/${encodeURIComponent(id)}`, undefined, background)
