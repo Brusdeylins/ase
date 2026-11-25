@@ -43,8 +43,8 @@ const props = defineProps<{ id: string }>()
 
 /*  the models and efforts to choose from, where the default of the agent tool is marked, and chosen by
     passing none (as the agent tool then uses its default, also with changed settings)  */
-const models  = [ "opus", "sonnet", "haiku", "fable" ]
-const efforts = [ "low", "medium", "high", "xhigh", "max" ]
+const models  = [ "fable", "opus", "sonnet", "haiku" ]
+const efforts = [ "max", "xhigh", "high", "medium", "low" ]
 
 /*  the state of the terminal: its model and effort, the number of its running background tasks, and the exit code of its ended process  */
 type Context = { pct: number, tokens: number, size: number }

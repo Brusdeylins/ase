@@ -17,8 +17,8 @@ import { Task }                  from "./ase-task.js"
 
 /*  the models and efforts of the chat of a task (as accepted by the "--model" and "--effort" options
     of the agent tool, where the empty one is its default)  */
-export const terminalModels  = [ "", "opus", "sonnet", "haiku", "fable" ]
-export const terminalEfforts = [ "", "low", "medium", "high", "xhigh", "max" ]
+export const terminalModels  = [ "", "fable", "opus", "sonnet", "haiku" ]
+export const terminalEfforts = [ "", "max", "xhigh", "high", "medium", "low" ]
 
 /*  the persisted chat of a task: its session of the agent tool, and its model and effort  */
 export type TerminalChat = { session: string, model: string, effort: string }
