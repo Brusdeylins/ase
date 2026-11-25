@@ -549,6 +549,7 @@ export default class ServiceCommand {
             other CLI commands; its rendering dependencies marked, MRCS, and ELK load on
             first request only, its board core dependencies at service startup)  */
         const { registerBoardRoutes } = await import("./ase-task-board-web-server.js")
+        const { terminalsActive }     = await import("./ase-task-board-web-terminal.js")
         registerBoardRoutes(server, this.log, {
             token:   ctx.token,
             persist: ctx.auth === "persisted" && ctx.portPref === ctx.port,
@@ -601,6 +602,10 @@ export default class ServiceCommand {
 
             /*  never idle out while holding usage windows, as their sessions keep on reporting  */
             if (usage.active())
+                return
+
+            /*  nor while a terminal of the web board is in use  */
+            if (terminalsActive())
                 return
             if (Date.now() - lastActivity > IDLE_MS) {
                 this.log.write("info", "service: idle timeout reached, stopping")

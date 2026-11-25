@@ -34,7 +34,7 @@ export default defineConfig({
             input: path.join(basedir, "src", "ase-task-board-web-client.html"),
             output: {
                 entryFileNames: "ase-task-board-web-client.js",
-                chunkFileNames: "ase-task-board-web-client-[name].js",
+                chunkFileNames: "[name].js",
                 assetFileNames: "ase-task-board-web-client.[ext]"
             }
         }

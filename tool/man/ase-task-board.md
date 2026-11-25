@@ -226,11 +226,51 @@ Vim or Emacs key bindings of `board.web.editor.keymap`, `:w`/`:q` resp.
 `C-x C-s`/`C-x C-c` save resp. cancel instead. A text which failed to
 save is kept as a draft in the browser and offered on the next edit.
 
+The `⌨` button (or `c`) of the task dialog of the web board shows or hides the chat
+with the agent tool about the task (see **Task Chat**), which is hidden by
+default and keeps running while hidden. The chat is placed below the task,
+with a bar between both to drag for the split of their heights, or, if
+the window is wide enough for both (the dialog then doubles its width),
+beside it, as chosen by the button in the footer of the chat (or `C`), which also
+shows the share of the context window the chat uses. The browser keeps
+whether the chat is shown, its placement, and its split.
+
 A running service with other *ASE* code is never restarted, as this
 would break the MCP connections of the agent sessions using it: an
 older service without the web board fails `--web` (restart it with
 `ase service stop` once no agent session uses it), while a differing
 build is only warned about.
+
+### Task Chat
+
+The task chat is an interactive session of the agent tool (`claude`),
+started in the project directory with `ASE_TASK_ID` set to the task, so
+the task is its current task, and with a system prompt telling it to
+edit only this task and only to *create* other tasks (`ase task save
+-c`), as their further edits happen in their own chats. A hook of the
+session denies the tools which would change another task or purge
+tasks (a protection against mistakes, no security boundary). The
+session of the task is created on the first chat and resumed on every
+later one, in the terminal board as well as in the web board. Its model
+and effort (see the options `--model` and `--effort` of the agent tool)
+are chosen in the header of the terminal of the web board and are kept
+per task.
+
+In the web board, the terminal of the task runs in a terminal emulator
+in the browser, whose process is shared by all browsers showing it
+(a late browser gets the entire output replayed) and ends after 30
+minutes without any browser. As the agent tool uses the mouse itself, a
+text is selected by dragging with `Shift` held and copied with
+`Cmd`+`C` (`Ctrl`+`C`). Changing the model or effort restarts the
+process, resuming the session. The terminal is reachable through a
+WebSocket authenticated like the event stream of the board, shows the
+smallest size of all browsers showing it, and starts its process as soon
+as it is opened. Its colors follow the color theme of the board (also while cycling it with `L`), and the agent tool starts with the matching dark or light theme, which it takes from its settings, so a change of the board theme reaches it only with its next start (e.g. `restart`). Its fonts (JetBrains Mono and Noto Sans Symbols as TrueType files, under
+the SIL Open Font License, shipped with their licenses) are served by
+the board, and its code is loaded only when the first task dialog opens.
+
+In the terminal board, `X` hands the terminal over to the agent tool
+for the selected task and returns to the board once it exits.
 
 ### Text Overview
 
@@ -479,7 +519,7 @@ relay, the agent graph view is skipped.
 
 The following keys are supported by the terminal board (and, unless
 noted otherwise, equally by the web board). The keys `D`, `E`, `N`,
-`R`, `T`, `A`, `M`, `C`, and `V` are also accepted as `Shift` with the
+`R`, `T`, `A`, `X`, `M`, `C`, and `V` are also accepted as `Shift` with the
 lower-case letter under the kitty keyboard protocol.
 
 ### Every View
@@ -507,6 +547,9 @@ lower-case letter under the kitty keyboard protocol.
   task stats, agent logs, and agent graph views).
 - `R`: Request the selected task by a prompt under a request name (not
   in the task stats, agent logs, and agent graph views).
+- `X`: Chat about the selected task with the agent tool (terminal board
+  only, see **Task Chat**; not in the task stats, agent logs, and agent
+  graph views).
 - `M`: Disable or enable the mouse support (terminal board only).
 - `q`, `Ctrl`+`C`: Quit (terminal board only).
 
@@ -592,8 +635,11 @@ lower-case letter under the kitty keyboard protocol.
 - `↑`/`↓`: Scroll the content.
 - `PgUp`/`PgDn`: Scroll the content by one page.
 - `e`: Edit the task plan.
+- `c`: Show or hide the chat with the agent tool about the task (web board only; the terminal board
+  has `X`, as `c` collapses phases there).
+- `C`: Place the chat below or beside the task (web board only; not beside in a narrow window).
 - `#`: Clear the diff of the last change of the task plan.
-- `D`, `T`, `A`, `E`, `R`, `M`, `L`: As in every view.
+- `D`, `T`, `A`, `E`, `R`, `X`, `M`, `L`: As in every view.
 - `⏎`, `ESC`: Close the task dialog.
 
 ### Filter Field
@@ -693,6 +739,10 @@ The following configuration keys (on scope `user` or `project`, see
   The bearer token of an agent relay URL without an embedded token.
 
 ## FILES
+
+- *per-user state directory*`/board/`*project-id*`-chat.json`:
+  The chats of the tasks of the user per project: the session id, model,
+  and effort per task id (see **Task Chat**).
 
 - *per-user state directory*`/board/`*project-id*`.yaml`:
   The display state of the terminal board of the user per project (`tui`), where the

@@ -322,6 +322,9 @@
 @keyframes busy-spin
     to
         transform: rotate(360deg)
+@keyframes term-spin
+    to
+        transform: rotate(360deg)
 @keyframes busy-bounce
     from
         left: 0
@@ -344,6 +347,10 @@
     padding: 16px
     color: var(--c-signal)
     white-space: pre-line
+
+/*  the task dialog with the chat beside the task: twice as wide (if the window allows)  */
+#dlg.wide
+    width: unquote("min(1800px, 94vw)")
 
 /*  the task dialog: horizontally centered, of a fixed height, with its rows stacked  */
 #dlg
@@ -470,13 +477,110 @@
             &:hover
                 opacity: 0.8
 
-    /*  the content: the rendered task plan or attachment of the selected tab, filling the remaining
-        height of the fixed-height dialog, so the dialog keeps the same margin at the top and the bottom  */
+    /*  the content: the task (its plan or attachment, or its editor) and, while shown, the chat, below it (with a bar
+        between them to drag) or beside it, filling the remaining height of the fixed-height dialog, so the dialog keeps the same
+        margin at the top and the bottom  */
+    .dbody
+        flex: 1
+        min-height: 0
+        display: flex
+        flex-direction: column
+        &.beside
+            flex-direction: row
+    .dmain
+        flex: 1 1 0
+        min-height: 0
+        min-width: 0
+        display: flex
+        flex-direction: column
+    /*  the bar between the task and the chat: the grip of the board (see ".grip"), but in the layout flow, and vertical for
+        the chat beside the task  */
+    .dsplit
+        position: static
+        flex: none
+        width: auto
+        height: 12px
+        &.across
+            width: 12px
+            height: auto
+            cursor: ew-resize
+            &::before
+                width: 2px
+                height: 56px
+                border-top: 0
+                border-bottom: 0
+                border-left: 1px solid var(--c-border-strong)
+                border-right: 1px solid var(--c-border-strong)
+            &:hover::before
+                border-color: var(--c-signal)
     #plan
         flex: 1
         min-height: 0
         width: 100%
         border: 0
+
+    /*  the terminal of the task: the terminal emulator filling the remaining height, and its footer with the
+        always visible hint, the model and effort drop-downs, the restart button, the context usage, and the placement  */
+    .term
+        flex: 1
+        min-height: 0
+        min-width: 0
+        display: flex
+        flex-direction: column
+        .tbody
+            position: relative
+            flex: 1
+            min-height: 0
+            background: var(--c-paper)
+        .troot
+            position: absolute
+            inset: 0
+        .tstart
+            position: absolute
+            left: 12px
+            top: 8px
+            padding: 3px 10px
+            border-radius: 4px
+            background: unquote("color-mix(in srgb, #000 70%, transparent)")
+            color: #ddd
+            font-size: 0.75rem
+            pointer-events: none
+            .spin
+                display: inline-block
+                width: 0.7em
+                height: 0.7em
+                margin-right: 8px
+                border: 2px solid #888
+                border-top-color: #ddd
+                border-radius: 50%
+                animation: term-spin 0.8s linear infinite
+        .tfoot
+            display: flex
+            align-items: center
+            gap: 10px
+            padding: 2px 20px
+            background: var(--c-ground)
+            border-top: 1px solid var(--c-fill)
+            color: var(--c-text-soft)
+            font-size: 0.6875rem
+            .gap
+                flex: 1
+            .bar
+                font-family: "DejaVu Sans Mono", Menlo, monospace
+                letter-spacing: -0.02em
+            select, button
+                border: 1px solid var(--c-border)
+                border-radius: 4px
+                padding: 0 4px
+                background: var(--c-paper)
+                color: var(--c-text)
+                font: inherit
+                line-height: 1.3
+            button
+                cursor: pointer
+                &:disabled
+                    opacity: 0.4
+                    cursor: default
 
     /*  the task plan editor (CodeMirror), in the code font, with the
         same horizontal padding as the rows of the task dialog  */
@@ -568,6 +672,8 @@
     font-size: 1rem
     cursor: pointer
     color: var(--c-text)
+    &.on
+        color: var(--c-signal)
 
 /*  the task id references to the predecessors and successors, filled
     like the task id boxes: accent for active, dim for done, else default  */
@@ -785,3 +891,35 @@ body.plan
         &.defer::before
             content: "→"
 
+
+/*  the bar between the task and the chat in the light theme (where the paper is just as light) as a strip in the grey of the
+    header rows of the dialog, with their rule color on its long edges and dark grip strokes  */
+:root[data-theme="light"] #dlg .dsplit
+    background: var(--c-ground)
+    border: 0 solid var(--c-fill)
+    border-top-width: 1px
+    border-bottom-width: 1px
+    &::before
+        border-color: var(--c-text-soft)
+    &:hover::before
+        border-color: var(--c-signal)
+    &.across
+        border-top-width: 0
+        border-bottom-width: 0
+        border-left-width: 1px
+        border-right-width: 1px
+@media (prefers-color-scheme: light)
+    :root:not([data-theme="dark"]):not([data-theme="light"]) #dlg .dsplit
+        background: var(--c-ground)
+        border: 0 solid var(--c-fill)
+        border-top-width: 1px
+        border-bottom-width: 1px
+        &::before
+            border-color: var(--c-text-soft)
+        &:hover::before
+            border-color: var(--c-signal)
+        &.across
+            border-top-width: 0
+            border-bottom-width: 0
+            border-left-width: 1px
+            border-right-width: 1px

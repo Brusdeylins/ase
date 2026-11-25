@@ -10,6 +10,7 @@ import path                                   from "node:path"
 
 import React                                  from "react"
 import { execa }                              from "execa"
+import which                                  from "which"
 import { useApp, measureElement }             from "ink"
 import type { DOMElement }                    from "ink"
 
@@ -22,6 +23,7 @@ import { editRefused, editPrompt, requestEdit, requestsOf } from "./ase-task-req
 import type { TaskRequests }                  from "./ase-task-request.js"
 import type { StatsRange }                    from "./ase-task-board-stats.js"
 import type { GraphLayout, Place }            from "./ase-task-board-graph.js"
+import { terminalArgs, terminalEnv, terminalResumeFailed } from "./ase-task-board-terminal.js"
 import { agentLogWidth, agentOpLines, agentOpHeight, AGENT_INFO_H } from "./ase-task-board-tui-view.js"
 import { agentLogLines, agentLogKey }         from "./ase-task-board-tui-popup.js"
 import { BUSY_DELAY, mouseReporting }         from "./ase-task-board-tui-model.js"
@@ -389,6 +391,26 @@ export const useEditorActions = (ctx: {
     /*  the drafts of the texts which failed to save, per task (under the empty id for a new task)  */
     const drafts = React.useRef(new Map<string, string>())
 
+    /*  run a child process with the terminal handed over to it  */
+    const handOver = async (run: () => Promise<unknown>): Promise<void> => {
+        await suspendTerminal(async () => {
+            mouseReporting(false)
+
+            /*  stop the read of stdin still pending from Ink, which only removes its
+                listener, as it else takes the next input away from the child process and
+                passes it to the board afterwards (a pause in non-flowing mode does
+                not emit the event on which Node stops reading, and the stop is deferred)  */
+            process.stdin.emit("pause")
+            await new Promise((resolve) => { process.nextTick(resolve) })
+            try {
+                await run()
+            }
+            finally {
+                mouseReporting(mouseOn.current)
+            }
+        })
+    }
+
     /*  run $EDITOR on a text in a temporary file, handing the terminal over
         to the editor, and return the edited text  */
     const runEditor = async (name: string, text: string): Promise<string> => {
@@ -401,27 +423,36 @@ export const useEditorActions = (ctx: {
                 quoting), passing the file via the environment to avoid quoting it  */
             const editor = (process.env.EDITOR ?? "").trim() || "vi"
             const ref    = process.platform === "win32" ? "\"%ASE_TASK_FILE%\"" : "\"$ASE_TASK_FILE\""
-            await suspendTerminal(async () => {
-                mouseReporting(false)
-
-                /*  stop the read of stdin still pending from Ink, which only removes its
-                    listener, as it else takes the next input away from the editor and
-                    passes it to the board afterwards (a pause in non-flowing mode does
-                    not emit the event on which Node stops reading, and the stop is deferred)  */
-                process.stdin.emit("pause")
-                await new Promise((resolve) => { process.nextTick(resolve) })
-                try {
-                    await execa(`${editor} ${ref}`, { shell: true, stdio: "inherit", env: { ASE_TASK_FILE: file } })
-                }
-                finally {
-                    mouseReporting(mouseOn.current)
-                }
-            })
+            await handOver(() => execa(`${editor} ${ref}`, { shell: true, stdio: "inherit", env: { ASE_TASK_FILE: file } }))
             return await fs.promises.readFile(file, "utf8")
         }
         finally {
             await fs.promises.rm(dir, { recursive: true, force: true })
         }
+    }
+
+    /*  chat about a task with the agent tool (resuming the session of the task), handing the
+        terminal over to it, until it ends  */
+    const chat = async (id: string): Promise<void> => {
+        const cli = await which("claude").catch(() => "")
+        if (cli === "") {
+            setNotice("agent tool \"claude\" not found")
+            return
+        }
+        let args = terminalArgs(id)
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const began = Date.now()
+            let code    = 0
+            await handOver(async () => {
+                code = (await execa(cli, args, { stdio: "inherit", cwd: Task.projectRoot(), env: terminalEnv(id, process.env, false), extendEnv: false, reject: false })).exitCode ?? 0
+            })
+
+            /*  resuming a session which does not exist ends at once: create it instead (once)  */
+            if (!terminalResumeFailed(id, args, code, Date.now() - began))
+                break
+            args = terminalArgs(id, { create: true })
+        }
+        setNotice(`chat about task "${id}" ended`)
     }
 
     /*  edit a task with $EDITOR; a draft which failed to save is kept and
@@ -496,6 +527,6 @@ export const useEditorActions = (ctx: {
             setNotice(`creating task failed: ${msg} (press "N" to re-edit, or empty it to discard)`)
         }
     }
-    return { edit, create }
+    return { edit, create, chat }
 }
 

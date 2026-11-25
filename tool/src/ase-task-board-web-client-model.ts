@@ -7,6 +7,7 @@
 /*  the model of the browser client of the web board: the types of the board,
     the reactive state shared by all components, and the access to the service  */
 import { ref, shallowRef, reactive, computed, nextTick, watch } from "vue"
+import { prefetchEmulator } from "./ase-task-board-web-client-term"
 
 /*  the state of the edit requests of a task (see "ase agent editor"): requested, being processed, or failed  */
 export type EditState = "pending" | "active" | "failed"
@@ -343,6 +344,44 @@ export const taskDiff    = ref<string | null>(null)
 export const tabScroll   = reactive({ less: false, more: false })
 export const tabScrolls  = new Map<number, number>()
 export const filter      = ref("")
+
+/*  the layout of the chat (the terminal of the task) in the task dialog, kept per browser: whether it is shown,
+    whether it is placed below or beside the task (beside only where the window is wide enough for both, else
+    below), and the share of the height (below) resp. width (beside) of the dialog content the task keeps  */
+type ChatLayout = { shown: boolean, place: "below" | "beside", split: number, across: number }
+const chatKey         = "ase-task-board-chat"
+const CHAT_BESIDE_MIN = 1500
+const chatLoad = (): ChatLayout => {
+    const layout: ChatLayout = { shown: false, place: "below", split: 0.5, across: 0.5 }
+    try {
+        const kept = JSON.parse(localStorage.getItem(chatKey) ?? "null") as Partial<ChatLayout> | null
+        if (typeof kept?.shown === "boolean")
+            layout.shown = kept.shown
+        if (kept?.place === "below" || kept?.place === "beside")
+            layout.place = kept.place
+        if (typeof kept?.split === "number" && kept.split >= 0.15 && kept.split <= 0.85)
+            layout.split = kept.split
+        if (typeof kept?.across === "number" && kept.across >= 0.15 && kept.across <= 0.85)
+            layout.across = kept.across
+    }
+    catch {
+        /*  an inaccessible storage or unparsable layout leaves the defaults  */
+    }
+    return layout
+}
+export const chat     = reactive<ChatLayout>(chatLoad())
+export const width    = ref(window.innerWidth)
+export const chatFits = computed(() => width.value * 0.94 >= CHAT_BESIDE_MIN)
+export const beside   = computed(() => chat.place === "beside" && chatFits.value)
+watch(chat, () => {
+    try {
+        localStorage.setItem(chatKey, JSON.stringify(chat))
+    }
+    catch {
+        /*  an inaccessible storage just does not keep the layout  */
+    }
+})
+window.addEventListener("resize", () => { width.value = window.innerWidth })
 
 /*  the task of the task viewer (if any), and why it is currently not shown  */
 export const watched     = new URLSearchParams(window.location.search).get("task")
@@ -682,6 +721,7 @@ export const openTask = async (id: string, background = false) => {
     if (editing.value !== null && editing.value.id !== id)
         return
     const seq = ++openSeq
+    prefetchEmulator()
     if (openId === id)
         keepTabScroll()
     else {

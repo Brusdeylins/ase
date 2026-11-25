@@ -29,6 +29,8 @@ import type { Board, StoreState, AgentsState } from "./ase-task-board-core.js"
 import type { AgentPresence, AgentLine } from "./ase-agent-relay-core.js"
 import * as TaskFormat           from "./ase-task-format.js"
 import { editProbe, editRefused, requestsOf, RequestError } from "./ase-task-request.js"
+import { terminalState, terminalStart, terminalRestart, terminalUpgrade, terminalsEnd } from "./ase-task-board-web-terminal.js"
+import { taskGuardAnswer }       from "./ase-task-board-guard.js"
 import pkg                       from "../package.json" with { type: "json" }
 
 /*  the build stamp of the loaded code (version and content hash of the board modules
@@ -37,8 +39,11 @@ import pkg                       from "../package.json" with { type: "json" }
 export const BOARD_BUILD = (() => {
     const dir  = path.dirname(fileURLToPath(import.meta.url))
     const hash = crypto.createHash("sha1")
-    for (const f of [ "core.js", "diff.js", "filter.js", "flow.js", "graph.js", "stats.js", "web-server.js", "web-client.html", "web-client.css", "web-client.js" ])
+    const chunks = fs.readdirSync(dir).filter((f) => /^ase-task-board-web-client-.+\.js$/.test(f)).sort()
+    for (const f of [ "core.js", "diff.js", "filter.js", "flow.js", "graph.js", "stats.js", "web-server.js", "web-terminal.js", "terminal.js", "web-client.html", "web-client.css", "web-client.js" ])
         hash.update(fs.readFileSync(path.join(dir, `ase-task-board-${f}`)))
+    for (const f of chunks)
+        hash.update(fs.readFileSync(path.join(dir, f)))
     return `${pkg.version}:${hash.digest("hex")}`
 })()
 
@@ -54,6 +59,21 @@ const clientAsset = (ext: "html" | "css" | "js"): string => {
         clientAssets.set(ext, asset)
     }
     return asset
+}
+
+/*  a static file of the browser client next to this module (its lazily loaded code chunks, in "dst/", and the
+    fonts of its terminal, in "dst/font-terminal/"), if it exists, loaded once on first use  */
+const clientFiles = new Map<string, Buffer | null>()
+const clientFile = (dir: string, name: string): Buffer | null => {
+    const key = `${dir}/${name}`
+    if (!clientFiles.has(key))
+        try {
+            clientFiles.set(key, fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), dir, name)))
+        }
+        catch {
+            clientFiles.set(key, null)
+        }
+    return clientFiles.get(key) ?? null
 }
 
 /*  the authentication of the web board by the service: its bearer token, whether the browser
@@ -474,6 +494,32 @@ const registerPageRoutes = (server: Hapi.Server, log: Log): void => {
             .etag(BOARD_BUILD).header("Cache-Control", "no-cache")
     })
 
+    /*  the lazily loaded code chunks of the client (like the terminal emulator) and the fonts of its
+        terminal (public like the other client assets)  */
+    server.route({
+        method:  "GET",
+        path:    "/task-board/{file}",
+        options: { app: { public: true } },
+        handler: (request, h) => {
+            const file = String(request.params.file)
+            const code = /^ase-task-board-web-client-[A-Za-z0-9._-]+\.js$/.test(file) ? clientFile(".", file) : null
+            return code === null ? h.response({ error: "not found" }).code(404) :
+                h.response(code).type("text/javascript; charset=utf-8").etag(BOARD_BUILD).header("Cache-Control", "no-cache")
+        }
+    })
+    server.route({
+        method:  "GET",
+        path:    "/task-board/font/{file}",
+        options: { app: { public: true } },
+        handler: (request, h) => {
+            const file = String(request.params.file)
+            const data = /^[A-Za-z0-9._-]+\.(?:ttf|txt)$/.test(file) ? clientFile("font-terminal", file) : null
+            return data === null ? h.response({ error: "not found" }).code(404) :
+                h.response(data).type(file.endsWith(".txt") ? "text/plain; charset=utf-8" : "font/ttf")
+                    .header("Cache-Control", "public, max-age=86400")
+        }
+    })
+
     /*  the color spreads of the page (layer 1), onto which its stylesheet
         maps its semantic colors (layer 2), resolved on each page load  */
     server.route({
@@ -887,6 +933,59 @@ const registerUpdateRoutes = (server: Hapi.Server, log: Log): void => {
     })
 }
 
+/*  register the terminal routes of the web board: the state of the terminal of a task (with the WebSocket URL
+    of its capability), its start, and its restart with a model and effort, the hook of its agent tool guarding the
+    task against changes of other tasks, while the WebSocket itself is served by the upgrade handling of the
+    service, which authenticates it by the capability  */
+const registerTerminalRoutes = (server: Hapi.Server, log: Log, auth: BoardAuth): void => {
+    const env = { log, auth, port: () => Number(server.info.port) }
+    const route = (method: "GET" | "PUT" | "POST", path: string, handle: (id: string, request: Hapi.Request, h: Hapi.ResponseToolkit) => Hapi.Lifecycle.ReturnValue, post = false) =>
+        server.route({
+            method, path,
+            options: post ? { payload: { parse: true, allow: "application/json", maxBytes: 16 * 1024 * 1024 } } : {},
+            handler: guarded((request, h) => {
+                const id = String(request.params.id)
+                if (!TaskFormat.TASK_ID_RE.test(id))
+                    return h.response({ error: `invalid task id "${id}"` }).code(400)
+                return handle(id, request, h)
+            })
+        })
+    route("GET", "/task-board/api/task/{id}/terminal", (id, _request, h) =>
+        h.response(terminalState(env, id)))
+    const themeOf = (value: unknown): "dark" | "light" | undefined =>
+        value === "dark" || value === "light" ? value : undefined
+    route("PUT", "/task-board/api/task/{id}/terminal", async (id, request, h) => {
+        await terminalStart(env, id, themeOf(request.query.theme))
+        return h.response(terminalState(env, id))
+    })
+    route("POST", "/task-board/api/task/{id}/terminal", async (id, request, h) => {
+        const p = request.payload as { model?: unknown, effort?: unknown, theme?: unknown } | null
+        if (p === null || typeof p.model !== "string" || typeof p.effort !== "string")
+            return h.response({ error: "invalid terminal request" }).code(400)
+        try {
+            await terminalRestart(env, id, p.model, p.effort, themeOf(p.theme))
+        }
+        catch (err: unknown) {
+            return h.response({ error: err instanceof Error ? err.message : String(err) }).code(400)
+        }
+        return h.response(terminalState(env, id))
+    }, true)
+    route("POST", "/task-board/api/task/{id}/guard", (id, request, h) =>
+        h.response(taskGuardAnswer(id, request.payload) || "{}").type("application/json"), true)
+    server.listener.on("upgrade", (req, socket, head) => {
+        socket.on("error", () => { socket.destroy() })
+        try {
+            if (!terminalUpgrade(env, req, socket, head))
+                socket.destroy()
+        }
+        catch (err: unknown) {
+            log.write("error", `board: terminal upgrade failed: ${err instanceof Error ? err.message : String(err)}`)
+            socket.destroy()
+        }
+    })
+    server.events.on("stop", terminalsEnd)
+}
+
 /*  register the stream routes of the web board: keep-alive and change events (the surface
     state of the web board is kept per browser by the client, and hence not by the service)  */
 const registerStreamRoutes = (server: Hapi.Server, log: Log): void => {
@@ -984,6 +1083,7 @@ export const registerBoardRoutes = (server: Hapi.Server, log: Log, auth: BoardAu
     registerLoginRoutes(server, auth)
     registerViewRoutes(server, log, auth)
     registerUpdateRoutes(server, log)
+    registerTerminalRoutes(server, log, auth)
     registerStreamRoutes(server, log)
 }
 

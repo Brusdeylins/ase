@@ -7,12 +7,13 @@
 <!--  the task dialog: the rendered task plan and its attachments, or the task plan editor  -->
 <template>
     <div v-show="task !== null" id="scrim" @click.self="leaveEdit(true)">
-        <div v-if="task !== null" id="dlg" :class="{ full: watched !== null }">
+        <div v-if="task !== null" id="dlg" :class="{ full: watched !== null, wide: chat.shown && beside }">
             <!--  the header: task group (if any, and not for an epic), task id (behind "≡", and of an epic also behind "♛"),
                   and title on the left, lane group and lane on the right  -->
             <div class="dhd">
                 <h1 :class="`tone-${task.tone}`"><TaskTitle :id="task.id" :epic="task.epic" :title="task.title" /></h1>
                 <span v-if="editing?.id !== ''" class="where"><span class="val">{{ task.group }}</span> ▷ <span class="val">{{ task.status }}</span></span>
+                <button class="close" :class="{ on: chat.shown }" :title="chat.shown ? 'hide the chat about the task (c)' : 'show the chat about the task (c)'" @click="chat.shown = !chat.shown">⌨</button>
                 <button v-if="editing === null" class="close" title="edit (e)" @click="startEdit(false)">✎</button>
                 <button v-if="watched === null" class="close" title="close (ESC)" @click="leaveEdit(true)">✕</button>
             </div>
@@ -67,16 +68,22 @@
             <div v-if="actionNote !== null || (watched !== null && actionError !== null)" class="dnote">{{ actionNote ?? actionError }}</div>
 
             <!--  the content: the rendered task plan or attachment of the selected tab, or the task plan editor  -->
-            <iframe v-show="editing === null" id="plan" ref="planEl" title="task plan"
-                sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"
-                :srcdoc="planDoc" @load="restorePlanScroll"></iframe>
-            <div v-show="editing !== null" id="editor" ref="editorEl"></div>
+            <div class="dbody" :class="{ beside: chat.shown && beside }">
+                <div class="dmain" :style="chat.shown ? { flex: `0 0 ${(beside ? chat.across : chat.split) * 100}%` } : {}">
+                    <iframe v-show="editing === null" id="plan" ref="planEl" title="task plan"
+                        sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads"
+                        :srcdoc="planDoc" @load="restorePlanScroll"></iframe>
+                    <div v-show="editing !== null" id="editor" ref="editorEl"></div>
+                </div>
+                <div v-if="chat.shown" class="dsplit grip" :class="{ across: beside }" title="drag to resize the chat" @pointerdown="dragSplit"></div>
+                <Terminal v-if="chat.shown" :id="task.id" :key="task.id" />
+            </div>
 
             <!--  the footer: the key hints  -->
             <div v-if="editing?.keymap === 'vim'" class="dfoot"><kbd>:w</kbd><span class="action">saves</span><span class="sep">·</span><kbd>:q</kbd><span class="action">cancels</span><span class="sep">·</span><kbd>:q!</kbd><span class="action">discards</span></div>
             <div v-else-if="editing?.keymap === 'emacs'" class="dfoot"><kbd>C-x C-s</kbd><span class="action">saves</span><span class="sep">·</span><kbd>C-x C-c</kbd><span class="action">cancels</span></div>
             <div v-else-if="editing !== null" class="dfoot"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>S</kbd><span class="action">saves</span><span class="sep">·</span><kbd>ESC</kbd><span class="action">cancels</span></div>
-            <div v-else class="dfoot"><template v-if="tab === 0 && taskDiff !== null"><kbd>#</kbd><span class="action">clears diff</span><span class="sep">·</span></template><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>E</kbd><span class="action">edits by prompt</span><span class="sep">·</span><kbd>R</kbd><span class="action">requests by prompt</span><span class="sep">·</span><kbd>T</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>A</kbd><span class="action">assigns</span><span class="sep">·</span><kbd>D</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>L</kbd><span class="action">cycles theme</span><template v-if="watched === null"><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></template></div>
+            <div v-else class="dfoot"><template v-if="tab === 0 && taskDiff !== null"><kbd>#</kbd><span class="action">clears diff</span><span class="sep">·</span></template><kbd>←</kbd>/<kbd>→</kbd>/<kbd>⇤</kbd>/<kbd>⇥</kbd><span class="action">switches tab</span><span class="sep">·</span><kbd>↑</kbd>/<kbd>↓</kbd>/<kbd>⇈</kbd>/<kbd>⇊</kbd><span class="action">scrolls</span><span class="sep">·</span><kbd>e</kbd><span class="action">edits</span><span class="sep">·</span><kbd>E</kbd><span class="action">edits by prompt</span><span class="sep">·</span><kbd>R</kbd><span class="action">requests by prompt</span><span class="sep">·</span><kbd>c</kbd><span class="action">chats</span><span class="sep">·</span><kbd>C</kbd><span class="action">chat layout</span><span class="sep">·</span><kbd>T</kbd><span class="action">transitions</span><span class="sep">·</span><kbd>A</kbd><span class="action">assigns</span><span class="sep">·</span><kbd>D</kbd><span class="action">deletes</span><span class="sep">·</span><kbd>L</kbd><span class="action">cycles theme</span><template v-if="watched === null"><span class="sep">·</span><kbd>⏎</kbd>/<kbd>ESC</kbd><span class="action">closes</span></template></div>
         </div>
     </div>
 </template>
@@ -84,8 +91,9 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import TaskTitle from "./ase-task-board-web-client-title.vue"
+import Terminal from "./ase-task-board-web-client-terminal.vue"
 import {
-    task, editing, notice, tab, tabDocs, taskDiff, tabScroll, tabScrolls, planEl, tabsEl, actionError, actionNote, watched,
+    task, editing, notice, tab, chat, beside, tabDocs, taskDiff, tabScroll, tabScrolls, planEl, tabsEl, actionError, actionNote, watched,
     openTask, closeTask, selectTab, updateTabScroll, themed
 } from "./ase-task-board-web-client-model"
 import {
@@ -95,6 +103,27 @@ import {
 /*  the document of the selected tab, themed only when it changes, as a theme
     change adjusts the root element of the shown one and must not reload it  */
 const planDoc = computed(() => themed(tab.value === 0 ? (taskDiff.value ?? task.value?.doc ?? "") : (tabDocs.value[tab.value] ?? "")))
+
+/*  resize the split of the task and the chat below resp. beside it by dragging its bar  */
+const dragSplit = (ev: PointerEvent) => {
+    const bar  = ev.currentTarget as HTMLElement
+    const body = bar.parentElement!.getBoundingClientRect()
+    bar.setPointerCapture(ev.pointerId)
+    const move = (e: PointerEvent) => {
+        if (beside.value)
+            chat.across = Math.min(0.85, Math.max(0.15, (e.clientX - body.left) / body.width))
+        else
+            chat.split = Math.min(0.85, Math.max(0.15, (e.clientY - body.top) / body.height))
+    }
+    const stop = () => {
+        bar.removeEventListener("pointermove", move)
+        bar.removeEventListener("pointerup", stop)
+        bar.removeEventListener("pointercancel", stop)
+    }
+    bar.addEventListener("pointermove", move)
+    bar.addEventListener("pointerup", stop)
+    bar.addEventListener("pointercancel", stop)
+}
 
 /*  restore the scroll position of the document of the selected tab once it is loaded  */
 const restorePlanScroll = () => {

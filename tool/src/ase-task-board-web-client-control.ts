@@ -12,7 +12,7 @@ import {
     type Board, type Card, type Group, type Sel, type Surface,
     api, groupItems, rowLanes, relocate, setHeights, lanePreview, stopSnap, laneGeometry, snapLane,
     board, actionError, actionNote, view, graph, task, sel, grow, editing, confirmDel, transfer, assign, prompt, watched,
-    tab, taskDiff, drag, busy, boardEl, graphEl, flowEl, flowSel, planEl, filterEl, agentList, agentSel, logEl, showFlowAgent,
+    tab, chat, beside, chatFits, taskDiff, drag, busy, boardEl, graphEl, flowEl, flowSel, planEl, filterEl, agentList, agentSel, logEl, showFlowAgent,
     surface, growable, grown, openTask, closeTask, clearDiff, selectTab, selectAgent, toggle, cycleView, stepStatsRange
 } from "./ase-task-board-web-client-model"
 import { startEdit, startNew, onEditorKey } from "./ase-task-board-web-client-editor"
@@ -461,6 +461,17 @@ const onDialogKey = (ev: KeyboardEvent) => {
         ev.preventDefault()
         dialogKeys[ev.key](task.value.id)
     }
+    else if (ev.key === "c" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        ev.preventDefault()
+        chat.shown = !chat.shown
+    }
+    else if (ev.key === "C" && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+        ev.preventDefault()
+        if (chatFits.value)
+            chat.place = beside.value ? "below" : "beside"
+        else
+            notify("the window is too narrow to place the chat beside the task")
+    }
     else if (ev.key === "#" && tab.value === 0 && taskDiff.value !== null) {
         ev.preventDefault()
         clearDiff()
@@ -887,9 +898,20 @@ const onPromptKey = (ev: KeyboardEvent) => {
     }
 }
 
+/*  whether an event target is within the terminal of the chat (whose emulator listens for the keys on the window, so
+    they must neither be stopped nor be handled by the board)  */
+const inTerminal = (target: EventTarget | null): boolean =>
+    target instanceof Element && target.closest(".term") !== null
+
+/*  the default decision of Mousetrap whether to ignore a key (e.g. within input fields)  */
+const stopDefault = Mousetrap.stopCallback
+
 /*  dispatch a key to the deletion confirmation, the transfer popup, the assign popup,
     the prompt popup, the task plan editor, the task dialog, or the board  */
 const onKey = (ev: KeyboardEvent) => {
+    /*  all keys within the terminal of the chat belong to it (its emulator listens for them itself)  */
+    if (inTerminal(ev.target))
+        return
     if (confirmDel.value !== null)
         onConfirmKey(ev, confirmDel.value)
     else if (transfer.value !== null)
@@ -932,6 +954,9 @@ export const controlStart = () => {
             filterEl.value?.focus()
         })
     }
+
+    /*  the single-key bindings ignore the keys within the terminal of the chat  */
+    Mousetrap.stopCallback = (ev, element, combo) => inTerminal(element) || stopDefault.call(Mousetrap, ev, element, combo)
 
     /*  (in the task dialog, "onDialogKey" handles it, as only keydown passes from its document)  */
     Mousetrap.bind("L", () => { if (task.value === null) cycleTheme() })
