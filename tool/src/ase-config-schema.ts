@@ -191,7 +191,8 @@ export const configDescriptions: Record<string, string> = {
     "project.task.store.token":       "The bearer token of a remote task store, resp. the token of a GitHub, GitLab, or Gitea task store.",
     "project.task.store.crt":         "The PEM certificate (chain) file of the task store server, relative to the configuration file.",
     "project.task.store.key":         "The PEM private key file of the task store server, relative to the configuration file.",
-    "project.task.idscheme":          "The task id scheme: \"slug[:<words>]\", \"seq[:<template>]\", or \"any\".",
+    "project.task.idscheme":          "The task id scheme: \"slug[:<words>]\", \"seq[:<template>]\" (the template optionally ending with \"%s\" " +
+                                      "for the slug of the title), or \"any\".",
     "project.task.default.source":    "The default of the \"Source:\" key of the task plans: \"worktree\" or \"branch:<name>\".",
     "project.task.default.changeset": "The default of the \"Changeset:\" key of the task plans: \"worktree\", \"branch:<name>\", " +
                                       "or \"attachment:<name>\".",

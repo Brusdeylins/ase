@@ -48,9 +48,12 @@ set task id scheme of project from "`*from*`" to "`*scheme*`"`.
       rendered through the sprintf-style *template* (default: `%d`) with
       exactly one `%d` or `%0`*width*`d` (*width* `0`-`16`) and otherwise
       only the characters `A-Z`, `a-z`, `#`, `_`, and `-` (but not
-      starting with `_` or `-`), e.g., `FOO-%03d` or `#%d`. This scheme
-      is required by the GitHub, GitLab, and Gitea task stores, as their
-      task ids are the issue numbers (e.g., `seq:#%d`).
+      starting with `_` or `-`), e.g., `FOO-%03d` or `#%d`. The template
+      can end with one `%s`, standing for the slug of the first two
+      words of the task title (as for `slug`), e.g., `%03d-%s` for
+      `050-fleet-files`. This scheme (without `%s`) is required by the
+      GitHub, GitLab, and Gitea task stores, as their task ids are the
+      issue numbers (e.g., `seq:#%d`).
     - `any`: an arbitrary id, as proposed by the caller.
 
 ## FILES

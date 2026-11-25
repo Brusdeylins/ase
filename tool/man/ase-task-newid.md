@@ -31,7 +31,8 @@ via `--taken`, plus the reserved id `default`:
 
   The allocated number is *reserved* by raising the high-water mark
   atomically, so a concurrent allocation never yields the same id. The
-  *title* is not used.
+  *title* is used only if *template* ends with `%s`, for the slug of
+  its first two words (as for `slug`).
 
 - `any`:
   The proposed id of `--proposal`, sanitized (whitespace runs replaced

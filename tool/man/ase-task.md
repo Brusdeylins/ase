@@ -259,8 +259,11 @@ task store resp. registered in a remote task store (see
   sprintf-style *template* (default: `%d`) with exactly one `%d` or
   `%0`*width*`d` (*width* `0`-`16`) and otherwise only the characters
   `A-Z`, `a-z`, `#`, `_`, and `-` (but not starting with `_` or `-`),
-  e.g., `FOO-%03d` (`FOO-007`) or `#%d` (`#7`). Conforming ids match
-  *prefix*`([0-9]+)`*suffix* (resp. with at least *width* digits).
+  e.g., `FOO-%03d` (`FOO-007`) or `#%d` (`#7`). The template can end with
+  one `%s`, standing for the slug of the first two words of the task
+  title (as for `slug`), e.g., `%03d-%s` (`007-json-export`). Conforming
+  ids match *prefix*`([0-9]+)`*suffix* (resp. with at least *width*
+  digits), followed by a slug if the template ends with `%s`.
 
 - `any`:
   An arbitrary id, as proposed by the caller. Conforming ids match

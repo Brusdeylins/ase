@@ -197,14 +197,19 @@ export const DEFAULT_TASK_ID = "default"
 /*  a task id scheme (see "project.task.idscheme"): "slug[:<words>]" (the first
     <words> words of the title, lower-cased and joined with "-", default 2),
     "seq[:<template>]" (a sequence number rendered through a sprintf-style
-    template with exactly one "%d" or "%0<width>d", default "%d"), or "any"
+    template with exactly one "%d" or "%0<width>d", default "%d", optionally
+    followed by one trailing "%s" for the slug of the title), or "any"
     (an arbitrary id, proposed by the caller), each with the regular expression
     "match" of its conforming ids (for "seq" capturing the sequence number)  */
 export type TaskIdScheme = (
     { kind: "slug", words: number } |
-    { kind: "seq", prefix: string, width: number, suffix: string } |
+    { kind: "seq", prefix: string, width: number, suffix: string, slug: boolean } |
     { kind: "any" }
 ) & { match: string }
+
+/*  the regular expression of a slug of up to <words> words  */
+const slugMatch = (words: number): string =>
+    `[a-z][a-z0-9]*(?:-[a-z0-9]+){0,${words - 1}}`
 
 /*  the task id scheme callbacks, each mapping the optional argument
     <arg> of "<kind>[:<arg>]" onto the scheme or an error message  */
@@ -215,20 +220,20 @@ const idSchemes: Record<string, (arg: string | undefined) => TaskIdScheme | stri
         const words = arg !== undefined ? Number.parseInt(arg, 10) : 2
         if (words < 1 || words > 16)
             return "word count has to be 1-16"
-        return { kind: "slug", words, match: `^[a-z][a-z0-9]*(?:-[a-z0-9]+){0,${words - 1}}(?:-[0-9]+)?$` }
+        return { kind: "slug", words, match: `^${slugMatch(words)}(?:-[0-9]+)?$` }
     },
     seq: (arg) => {
-        const m = /^((?:[A-Za-z#][A-Za-z#_-]*)?)%(?:0(\d+))?d([A-Za-z#_-]*)$/.exec(arg ?? "%d")
+        const m = /^((?:[A-Za-z#][A-Za-z#_-]*)?)%(?:0(\d+))?d([A-Za-z#_-]*?)(%s)?$/.exec(arg ?? "%d")
         if (m === null)
-            return "template has to contain exactly one \"%d\" or \"%0<width>d\" " +
-                "and otherwise only the characters [A-Za-z#_-] (but not start with \"-\" or \"_\")"
+            return "template has to contain exactly one \"%d\" or \"%0<width>d\", optionally followed by " +
+                "one trailing \"%s\", and otherwise only the characters [A-Za-z#_-] (but not start with \"-\" or \"_\")"
         const width = m[2] !== undefined ? Number.parseInt(m[2], 10) : 0
         if (width > 16)
             return "width has to be 0-16"
 
         /*  prefix and suffix need no quoting, as [A-Za-z#_-] are no metacharacters  */
-        const match = `^${m[1]}([0-9]${width > 0 ? `{${width},}` : "+"})${m[3]}$`
-        return { kind: "seq", prefix: m[1], width, suffix: m[3], match }
+        const match = `^${m[1]}([0-9]${width > 0 ? `{${width},}` : "+"})${m[3]}${m[4] !== undefined ? slugMatch(2) : ""}$`
+        return { kind: "seq", prefix: m[1], width, suffix: m[3], slug: m[4] !== undefined, match }
     },
     any: (arg) => {
         if (arg !== undefined)
@@ -291,7 +296,8 @@ export const seqNumber = (scheme: TaskIdScheme, id: string): number => {
 
 /*  determine the next free task id of a task id scheme, given all existing
     task ids: for "seq" the highest number of all conforming ids and of the
-    high-water mark "seqmark" (of the removed ids) plus one, for "slug" the slug
+    high-water mark "seqmark" (of the removed ids) plus one (followed by the
+    slug of the title, if the template has a "%s"), for "slug" the slug
     of the title, and for "any" the proposed id (sanitized, else the slug of the
     title), where a taken slug or id gets a numeric suffix  */
 export const nextTaskId = (scheme: TaskIdScheme, ids: string[], title = "", proposal = "", seqmark = 0): string => {
@@ -299,7 +305,11 @@ export const nextTaskId = (scheme: TaskIdScheme, ids: string[], title = "", prop
     let base: string
     if (scheme.kind === "seq") {
         const n = ids.reduce((max, id) => Math.max(max, seqNumber(scheme, id)), seqmark) + 1
-        return `${scheme.prefix}${String(n).padStart(scheme.width, "0")}${scheme.suffix}`
+        const id = `${scheme.prefix}${String(n).padStart(scheme.width, "0")}${scheme.suffix}`
+        if (!scheme.slug)
+            return id
+        const slug = slugify(title, 2)
+        base = slug === "" ? "" : `${id}${slug}`
     }
     else if (scheme.kind === "slug")
         base = slugify(title, scheme.words)

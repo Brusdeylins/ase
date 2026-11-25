@@ -60,7 +60,8 @@ export const registryEntry = (description: string | null | undefined): RegistryE
 
 /*  reject a task id scheme of a project registration other than a "seq" one  */
 export const requireSeqScheme = (idscheme: string, service: string): void => {
-    if (TaskFormat.parseIdScheme(idscheme).kind !== "seq")
+    const scheme = TaskFormat.parseIdScheme(idscheme)
+    if (scheme.kind !== "seq" || scheme.slug)
         throw new Error(`task id scheme "${idscheme}" not supported, as task ids are ${service} issue numbers ` +
             "(use a \"seq\" task id scheme like \"seq:#%d\")")
 }
