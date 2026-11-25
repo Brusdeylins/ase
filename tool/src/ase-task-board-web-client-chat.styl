@@ -13,15 +13,42 @@
     terminal emulator filling it and its note on top of the emulator, framed in the
     signal color while it has the focus (and hence all keys), like the focused inputs  */
 #chat
-    position: relative
     flex: 1
     min-height: 0
     overflow: hidden
     min-width: 0
+    display: flex
+    flex-direction: column
     background: var(--c-paper)
     &:focus-within
         outline: 1px solid var(--c-signal)
         outline-offset: -1px
+
+    /*  the area of the terminal emulator and its note (extras)  */
+    .cmain
+        position: relative
+        flex: 1
+        min-height: 0
+
+    /*  the footer (extras): the selection hint, the model and effort, and the context usage  */
+    .cfoot
+        display: flex
+        align-items: center
+        gap: 10px
+        padding: 3px 10px
+        border-top: 1px solid var(--c-border)
+        background: var(--c-ground)
+        font-size: 0.75rem
+        color: var(--c-text-soft)
+        select
+            font: inherit
+            color: var(--c-text)
+            background: var(--c-paper)
+            border: 1px solid var(--c-border)
+            border-radius: 3px
+        .ctx .bar
+            font-family: "DejaVu Sans Mono", Menlo, monospace
+            letter-spacing: -1px
 
     /*  the terminal emulator, sized explicitly within the margins on all sides (as it
         sizes its root element to the full width and height otherwise, and else covers the frame)  */
@@ -44,6 +71,9 @@
         background: var(--c-paper)
         color: var(--c-signal)
         font-size: 0.8125rem
+        button
+            margin-left: 8px
+            font: inherit
 
 /*  the bar between the task plan and the chat, resizing both  */
 .dsplit

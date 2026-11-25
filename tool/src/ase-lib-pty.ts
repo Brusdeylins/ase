@@ -124,6 +124,9 @@ export class PtyHost {
         const s = this.sessions.get(key)
         return s !== undefined && (s.child !== null || s.pending !== null)
     }
+    exited (key: string): number | null {
+        return this.sessions.get(key)?.exited ?? null
+    }
     full (): boolean {
         return [ ...this.sessions.values() ].filter((s) => s.child !== null || s.pending !== null).length >= SESSIONS_MAX
     }
@@ -224,6 +227,19 @@ export class PtyHost {
             this.idle(key, session)
         }).catch(() => { /*  not rejecting, as "reject" is off  */ })
         this.log.write("info", `${this.label}: "${key}" started (pid ${child.pid ?? "none"})`)
+    }
+
+    /*  restart a session with another start, ending its running program first (clearing its
+        clients), where this end is no end by itself, so it is not reported (extras)  */
+    async restart (key: string, spec: PtySpec): Promise<void> {
+        const s     = this.sessions.get(key)
+        const child = s?.child ?? null
+        if (s !== undefined && child !== null) {
+            s.child = null
+            child.kill()
+            this.send(s, Buffer.from("\x1bc"))
+        }
+        await this.start(key, spec)
     }
 
     /*  attach a client by its (by the caller already authenticated) WebSocket handshake to a

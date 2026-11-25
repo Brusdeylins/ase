@@ -42,10 +42,6 @@ export const toggleChat = (id: string): void => {
     }
 }
 
-/*  the terminal size a chat starts with, until the emulator tells its own  */
-const COLS_INIT = 80
-const ROWS_INIT = 24
-
 /*  the fonts of the terminal emulator, which takes TrueType fonts only: the code font of the
     board, followed by the fallbacks for the symbols, mathematical symbols, arrows, and emojis
     the agent tool draws (which the code font lacks)  */
@@ -133,6 +129,32 @@ const chatTheme = (emulator: typeof import("restty")): GhosttyTheme | undefined 
     }
 }
 
+/*  the state of the chat of a task (with the extras: its model, effort, and their defaults, whether it
+    is busy, its background tasks, and its context usage)  */
+export type ChatContext = { pct: number, tokens: number, size: number }
+export type ChatState   = {
+    running: boolean, exited: number | null, model: string, effort: string, defaults: { model: string, effort: string },
+    busy: boolean, background: number, context: ChatContext | null, url: string
+}
+
+/*  request the state of the chat of a task, its start, resp. its restart with a model and effort,
+    each drawing with the palette the board maps (see "chatTheme")  */
+export const chatRequest = (id: string, method: "GET" | "POST" | "PUT", body: Record<string, unknown> = {}) =>
+    api<ChatState>(`/task-chat/${encodeURIComponent(id)}`, method === "GET" ? undefined : {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ ...body, cols: 80, rows: 24, palette: true })
+    }, true)
+
+/*  show the chat of an opened task automatically while it runs (extras)  */
+watch(() => task.value?.id, async (id) => {
+    if (id === undefined || chatTask.value === id)
+        return
+    const state = await chatRequest(id, "GET")
+    if (state.error === undefined && state.running && task.value?.id === id)
+        chatTask.value = id
+})
+
 /*  let the emulator render with at least two device pixels per CSS pixel (by a floor on the
     ratio of the board's window, which nothing else of the board reads): it draws its glyphs
     itself, without the subpixel smoothing of the browser, and reads the ratio at its start only,
@@ -150,25 +172,16 @@ const supersample = (): void => {
         Object.defineProperty(window, "devicePixelRatio", { configurable: true, get: () => Math.max(2, read() as number) })
 }
 
-/*  attach the terminal emulator in the element <root> to the chat about the task <id>, started by
-    the ASE service unless it runs already (as an ended one starts again when shown again),
-    reporting its starting, its end, and its failures by <note>, following the color theme of the
-    board, and return the detaching of it (on hiding the chat), where a chat hidden meanwhile
-    (<hidden>) is not attached at all  */
-export const chatAttach = async (id: string, root: HTMLElement,
+/*  attach the terminal emulator in the element <root> to the WebSocket <url> of a chat, reporting its
+    output, its end, and its failures by <note>, following the color theme of the board, and return
+    the detaching of it (on hiding the chat)  */
+export const chatAttach = async (url: string, root: HTMLElement,
     note: (text: string | null) => void, hidden: () => boolean): Promise<() => void> => {
-    const [ state, emulator ] = await Promise.all([
-        api<{ url: string }>(`/task-chat/${encodeURIComponent(id)}`, {
-            method:  "POST",
-            headers: { "Content-Type": "application/json" },
-            body:    JSON.stringify({ cols: COLS_INIT, rows: ROWS_INIT, palette: true })
-        }, true),
-        import("restty").catch((err: unknown) => err instanceof Error ? err : new Error(String(err)))
-    ])
+    const emulator = await import("restty").catch((err: unknown) => err instanceof Error ? err : new Error(String(err)))
     if (hidden())
         return () => {}
-    if (state.error !== undefined || emulator instanceof Error) {
-        note(`starting the chat failed: ${state.error ?? (emulator as Error).message}`)
+    if (emulator instanceof Error) {
+        note(`starting the chat failed: ${emulator.message}`)
         return () => {}
     }
 
@@ -186,10 +199,10 @@ export const chatAttach = async (id: string, root: HTMLElement,
                     options.callbacks.onExit?.(code)
 
                     /*  a regular end (like "/exit") hides the chat, a failed one stays with its note  */
-                    if (code === 0 && chatTask.value === id)
+                    if (code === 0)
                         chatTask.value = null
                     else
-                        note(`agent tool ended (exit code ${code}, show the chat again to restart it)`)
+                        note(`agent tool ended (exit code ${code})`)
                 },
                 onError: (message) => {
                     options.callbacks.onError?.(message)
@@ -232,12 +245,10 @@ export const chatAttach = async (id: string, root: HTMLElement,
             beforeRenderOutput: () => { note(null) }
         }
     })
-    restty.connectPty(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${state.url}`)
+    restty.connectPty(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}${url}`)
     restty.focus()
 
-    /*  follow the color theme of the board, which is cycled by the board, resp. changed by the
-        system for the theme "auto", by observing both, as the board passes it on to the
-        documents it renders only  */
+    /*  follow the color theme of the board (cycled, or changed by the system)  */
     const recolor = () => {
         const theme = chatTheme(emulator)
         surround(theme)

@@ -18,6 +18,7 @@ import * as v                from "valibot"
 import type Log              from "./ase-lib-log.js"
 import type { PtySpec }      from "./ase-lib-pty.js"
 import { userStateDir }      from "./ase-config-scope.js"
+import { chatExtraArgs }     from "./ase-task-chat-extras.js"
 import { Task }              from "./ase-task.js"
 import { toolSpecs }         from "./ase-setup-common.js"
 import type { Tool }         from "./ase-setup-common.js"
@@ -137,7 +138,7 @@ export const chatSupported = (tool: Tool): boolean =>
     instead of failing again (but not one of an agent tool ended by a signal, reported as 128 plus
     its number, nor one of a failed start of the companion, where the agent tool wrote nothing)  */
 export const chatSpec = async (log: Log, id: string, tool: Tool, cols: number, rows: number,
-    palette = false): Promise<PtySpec> => {
+    palette = false): Promise<PtySpec & { session: string, resume: boolean }> => {
     Task.validateId(id)
     const args = chatArgs[tool]
     if (args === null)
@@ -171,11 +172,13 @@ export const chatSpec = async (log: Log, id: string, tool: Tool, cols: number, r
     }
     return {
         file: cli,
-        args: [ ...args(session, resume), ...(mapped ? [ "--settings", JSON.stringify({ theme: "dark" }) ] : []) ],
+        args: [ ...args(session, resume), ...(tool === "claude" ? chatExtraArgs(id, resume, mapped) : []) ],
         cwd:  Task.projectRoot(),
         env,
         cols,
         rows,
+        session,
+        resume,
         exit: (code, output) => {
             if (code === 0 || code >= 128 || !output)
                 return
