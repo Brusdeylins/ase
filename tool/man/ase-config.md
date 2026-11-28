@@ -252,6 +252,19 @@ Agent relay (all writable on the `user` and `project` scopes only,
   server, relative to the directory of the configuration file defining
   them.
 
+Remote task chats (writable on the `user` and `project` scopes only,
+`project.chat.token` on the `user` scope only):
+
+- `project.chat.url` (*string*):
+  The URL of an ASE container running the task chats of the project, as
+  `ase://`*host*`:`*port* or `ases://`*host*`:`*port* (default: none).
+  With it, `ase task chat` and the chat of the web task board always run
+  in the container (never locally), reached through the ASE service.
+
+- `project.chat.token` (*string*, `user` scope only):
+  The bearer token of the remote task chats. Masked as `***` by `ase
+  config list`.
+
 Per-project service:
 
 - `project.service.port` (*port* `1024`..`65535`, `project` scope

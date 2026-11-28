@@ -36,6 +36,11 @@ and all chats end with the *ASE* service. When the
 agent tool ends (e.g., through its `/exit`), **ase task chat** ends,
 too, and a later chat about the task starts the agent tool again.
 
+With `project.chat.url` configured (see `ase-config`(1)), the chats of
+the project run in that *ASE* container instead, never locally: the
+*ASE* service starts them there and relays the terminal, so its chats
+are shared with every other client of the container.
+
 Each task has its own *task chat*: the first chat about a task starts
 a new session of the agent tool, and every later start of the agent
 tool for the task resumes this session, so the conversation continues

@@ -136,6 +136,8 @@ export const configWritableScopes: Record<string, ReadonlyArray<ScopeTerm["kind"
     "project.relay.token":            [ "user" ],
     "project.relay.crt":              [ "user", "project" ],
     "project.relay.key":              [ "user", "project" ],
+    "project.chat.url":               [ "user", "project" ],
+    "project.chat.token":             [ "user" ],
     "project.service.port":           [ "project" ],
     "project.service.auth":           [ "user" ],
     "project.artifact.spec.basedir":  [ "user", "project" ],
@@ -172,7 +174,7 @@ export const configWritableScopesDefault: ReadonlyArray<ScopeTerm["kind"]> =
     [ "user", "project", "task", "session" ]
 
 /*  keys carrying secrets, whose values are masked in listings  */
-export const configSecretKeys: ReadonlyArray<string> = [ "project.task.store.token", "project.relay.token", "telemetry.service.token" ]
+export const configSecretKeys: ReadonlyArray<string> = [ "project.task.store.token", "project.relay.token", "project.chat.token", "telemetry.service.token" ]
 
 /*  short descriptions of the configuration keys (shown by "ase config edit"),
     condensed from the CONFIGURATION KEYS section of the manual page ase-config(1)  */
@@ -207,6 +209,8 @@ export const configDescriptions: Record<string, string> = {
     "project.relay.token":            "The bearer token of the agent relay.",
     "project.relay.crt":              "The PEM certificate (chain) file of the agent relay server, relative to the configuration file.",
     "project.relay.key":              "The PEM private key file of the agent relay server, relative to the configuration file.",
+    "project.chat.url":               "The URL of the remote ASE container running the task chats, as \"ase[s]://<host>:<port>\".",
+    "project.chat.token":             "The bearer token of the remote task chats.",
     "project.service.port":           "The preferred port (1024-65535) of the per-project background service on 127.0.0.1, " +
                                       "falling back to a random port if unavailable.",
     "project.service.auth":           "The authentication of the per-project background service: none at all, a bearer token " +
@@ -447,6 +451,10 @@ export const configSchema = v.nullish(v.strictObject({
             token:     v.optional(v.pipe(v.string(), v.minLength(1))),
             crt:       v.optional(v.pipe(v.string(), v.minLength(1))),
             key:       v.optional(v.pipe(v.string(), v.minLength(1)))
+        })),
+        chat: v.optional(v.strictObject({
+            url:       v.optional(v.pipe(v.string(), v.minLength(1))),
+            token:     v.optional(v.pipe(v.string(), v.minLength(1)))
         })),
         service: v.optional(v.strictObject({
             port:      portSchema,
